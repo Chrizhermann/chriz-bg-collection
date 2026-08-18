@@ -1,0 +1,79 @@
+# WeiDU as an Automation Target — Research Brief (2026)
+
+**Current versions:** Latest stable is **v251.00** (2025-03-01, [GitHub releases](https://github.com/WeiDUorg/weidu/releases)); v252.01 nightlies ongoing. v249 (2023) is the long-time community baseline; many mods still bundle 246–249 binaries. Main docs: [README-WeiDU.html](https://weidu.org/~thebigg/README-WeiDU.html), [changelog](https://weidu.org/~thebigg/README-WeiDU-Changes.txt), [source](https://github.com/WeiDUorg/weidu).
+
+---
+
+## 1) Non-interactive install flags
+
+Exact semantics (README wording quoted, verified against v249/v251 behavior; items marked **[verified locally]** come from tested experiments on this project's reference install, recorded in the `bg-modding` skill):
+
+| Flag | Semantics |
+|---|---|
+| `--force-install-list X Y...` | "Installs component number X Y..., skips the others (cumulative)." Components identified by `DESIGNATED` number. Unlisted components are skipped without prompting. **[verified locally]** On an *already-installed* component this is a **silent no-op that exits 0** — nothing recompiles; never use exit code alone to confirm a reinstall. |
+| `--force-install X` | Single-component variant, cumulative (repeatable). `--force-install-rest X Y...` consumes remaining args. |
+| `--force-uninstall-list X Y...` | Uninstall counterpart. "If there is no --force-install, you don't get asked for the language." **[verified locally]** `--force-uninstall-list A --force-install-list B` in ONE invocation is the reliable idiom for mid-stack reinstall or subcomponent swap. |
+| `--language N` | "Sets the TP2 Language to the one passed here" — the mod's `LANGUAGE` index (0-based). "Has no effect if the value is bigger than the language count" (→ falls through to a prompt; validate N per mod). |
+| `--use-lang code` | Selects the EE *game* language dir (`lang/en_US`). **[verified locally] Required even for English-only setups** — without it WeiDU prints "Please choose the language in which you wish to play the game." and blocks on stdin; from outside it looks like a hang. v251.06-rc5 fixed case-precision of this on Linux (re-run `--use-lang` to repair a bad `weidu.conf`). |
+| `--no-exit-pause` | Suppresses "Press ENTER to exit." Source ([main.ml](https://github.com/WeiDUorg/weidu/blob/devel/src/main.ml)): pause fires when `not no_exit_pause && (pause_at_end || exit_status <> StatusSuccess)` — i.e. **failures pause by default**, so an unattended run without this flag deadlocks exactly when something goes wrong. Mandatory for your app. |
+| `--safe-exit` | "Save WeiDU.log every time a component installation is begun. This makes it impossible to uninstall components but allows the user to kill the weidu process without leaving the game in an unrecoverably inconsistent state." **[verified locally]** Incompatible with `--force-uninstall-*` → immediate `FATAL ERROR`. Use it on pure-install runs; drop it on uninstall/reinstall runs. |
+| `--skip-at-view` | "AT_* VIEW actions aren't processed, while still processing batch files and similia" — suppresses readme popups (`AT_INTERACTIVE_EXIT VIEW` etc.) that would launch a browser/notepad mid-run. |
+| `--quick-log` | Omits component *names* (the trailing `// ...` comments) from WeiDU.log — much faster log rewrites on huge stacks. Cost: WeiDU.log loses human-readable names; keep your own component-name map. |
+| `--log X` | "Log output and details to X. By default, log to the file setup-mymod.debug in the game directory, unless a directory called debugs exists." Landmine **[verified locally]**: for `--change-log` runs, `--log` names an *output* that defaults onto the live `WeiDU.log` and destroys it — always pass explicit `--log`/`--out` outside the game dir for diagnostics. |
+| `--autolog` / `--logapp` | Log to `WSETUP.DEBUG` / append instead of overwrite. Useful for one concatenated transcript across 84 mod runs. |
+| `--yes` | "Answer all TP2 questions with 'Yes'" — blunt; for `SUBCOMPONENT` groups it can't express a choice. Don't use it; enumerate exact numbers with `--force-install-list`. |
+| `--quick-menu N` | Installs QUICK_MENU selection N. **[verified locally]** Fails fatally (`--quick-menu given without a QUICK_MENU defined`) when the tp2's `ALWAYS_ASK` block is empty (EEex v1.0.0 does this) — fall back to listing per-tier component IDs. |
+| `--list-components`, `--list-languages`, `--list-components-json` | Machine-readable enumeration. JSON variant hardened in v247 (continues past TRA errors; exposes `WEIDU_ARCH/OS/VER`), "EXPERIMENTAL" label removed in v252.01 nightlies. Use it to pre-validate manifest numbers per mod version. |
+| `--ask-only X Y...` (v248+) | Prompt only for listed components — useful for a semi-interactive mode. |
+| `--args X` / `--args-list` | Injects `%argv[n]%` tp2 variables — the only sanctioned way to pass data *into* a tp2. |
+
+**Subcomponent choices:** these are NOT extra prompts under force flags — each `SUBCOMPONENT` option has its own `DESIGNATED` number; putting that exact number in `--force-install-list` selects it silently. Your manifest must therefore store subcomponent-level numbers (your install-order.tsv already does).
+
+**READLN prompts:** `ACTION_READLN` is plain `read_line()` on stdin — **there is no WeiDU flag to pre-feed answers** (no `--force-textin`; nothing equivalent exists through v252). Force flags do not suppress READLN; the process blocks. Automation options: (a) pipe newline-separated answers to stdin — works but is fragile (answer order must match execution order exactly, and the game-language/`Press ENTER` prompts share the same stdin; one miscount desyncs everything); (b) do what the ecosystem did — avoid READLN mods. Project Infinity ran a successful campaign to get READLN replaced with `SUBCOMPONENT`/INI settings because it "pauses waiting for manual input, choices can't be saved, and choices aren't recorded in WeiDU.log" ([Beamdog thread](https://forums.beamdog.com/discussion/72805/action-readln-its-bad-for-players-and-you-mods)); `mod_installer` watches stdout for prompt-keyword lists; `modda` just stops and waits. Recommendation: detect `READLN` in tp2s at manifest-build time and either pre-patch the tp2 or record a scripted stdin answer file per offending component.
+
+## 2) Exit codes and per-component success detection
+
+Exact mapping from [src/util.ml](https://github.com/WeiDUorg/weidu/blob/devel/src/util.ml):
+
+```
+StatusSuccess -> 0 | StatusArgumentInvalid -> 1 | StatusInstallFailure -> 2
+StatusInstallWarning -> 3 | StatusParseError -> 4 | StatusAutoUpdateRetry -> 5
+StatusArgumentWarning -> 6
+```
+
+- Exit 0 = run completed without component errors; **it does not prove your component installed** (already-installed no-op exits 0 **[verified locally]**; `--force-install-list` with a nonexistent number only sets ArgumentWarning=6).
+- Exit 2 = at least one component "NOT INSTALLED DUE TO ERRORS"; exit 3 = "INSTALLED WITH WARNINGS" occurred. Decide a warnings policy up front (cf. `mod_installer --abort-on-warnings`).
+- **Ground truth is WeiDU.log**: one line per installed component, format `~SETUP-MOD.TP2~ #<language> #<component> // <name>`; presence = installed, absence = not installed. Comment lines (`// Recently Uninstalled: ... #A`) are appended by mid-stack operations and are harmless — never hand-edit them away **[verified locally]**. The robust per-component check: snapshot WeiDU.log before the run, diff after.
+- `SETUP-<MOD>.DEBUG` (or your `--log` target) holds the full transcript; grep the per-component terminal status strings `SUCCESSFULLY INSTALLED`, `INSTALLED WITH WARNINGS`, `NOT INSTALLED DUE TO ERRORS`, and `SKIPPING`. Caveat **[verified locally]**: WeiDU scans every tp2 in the game dir and prints harmless `PARSE ERROR ... METADATA` noise for *other* mods' files — filter by your own mod name.
+- Precedent: Project Infinity's per-run `WeiDU-PI-Global.log` records `ExitCode:0/2/3` per invocation ([G3 thread](https://www.gibberlings3.net/forums/topic/35807-global-weidu-log-additional-installation-debug-info/)).
+
+## 3) The stack model
+
+WeiDU.log is a **stack**. Any operation targeting a component that is not top-of-stack forces WeiDU to temporarily uninstall everything above it (in reverse log order), perform the operation, then automatically re-push (re-install) the popped components — re-running their tp2 code. Interactively it asks `[R]e-install/[N]o change/[U]ninstall` per popped component; unattended you must avoid triggering this at all. Verified specifics **[verified locally, WeiDU 246]**:
+
+- The re-push happens in **tp2 order**, which can silently normalize a historically-grafted log order (dependency-safe, but log order changes). v251 additionally "changed uninstallation behaviour to prevent re-installation of temporarily uninstalled components in another order than the original order under certain circumstances" ([changelog](https://weidu.org/~thebigg/README-WeiDU-Changes.txt)).
+- `REQUIRE_COMPONENT` guards on popped components pass, because the target is reinstalled before the re-push (tested with 23 stacked components incl. hard REQUIRE chains — 24x SUCCESSFULLY INSTALLED).
+- `--reinstall` does NOT do what its help text says — observed reinstalling only the top-of-stack component, exit 0. Don't use it.
+
+**Implication for your app:** an installer that always installs in manifest order is strictly **append-only** and never triggers a cascade — this is the single biggest robustness win of the manifest-order design. Cascades on a ~414-component stack mean re-running hundreds of tp2s (hours, multiplied failure surface). Design consequences: (a) a failed component that you fix and retry later lands at the END of WeiDU.log, not its manifest slot — acceptable only for purely additive components (new override files, `ADD_KIT_EX`/`ADD_SPELL`), NOT for components that patch files later mods also patch in place **[verified locally]**; the correct general recovery is resume-from-failure-point, not skip-and-return. (b) Mid-stack repair must be an explicit `--force-uninstall-list X --force-install-list X` single invocation, without `--safe-exit`.
+
+## 4) Per-platform binaries and packaging
+
+- **Binaries:** each [GitHub release](https://github.com/WeiDUorg/weidu/releases) ships Windows (32-bit legacy/WinXP non-Unicode AND 64-bit Unicode — use the 64-bit one), macOS, and Linux builds.
+- **Setup-<mod>.exe copy pattern:** mods ship a renamed copy of weidu.exe; WeiDU inspects its own executable name (`Setup-Foo.exe` → auto-loads `foo.tp2`/`setup-foo.tp2`, also searching `foo/`). Consequence: a game dir accumulates dozens of weidu copies at different versions, and they **auto-update each other to the highest version present** at run time (`--noautoupdate` disables). For your app, prefer pinning ONE weidu binary and invoking `weidu.exe <mod>/<setup-mod>.tp2 --force-install-list ...` directly — works **[verified locally]**, with one trap: `%MOD_FOLDER%` may not resolve to the mod's folder when the tp2 is passed as a path argument (big mods SPRINT it themselves; most well-formed mods are fine, but test).
+- **Linux case sensitivity:** classic workflow was `tolower` (recursively lowercase the game tree) + `weinstall <mod>` (runner that lowercases names before invoking weidu; [issue #87](https://github.com/WeiDUorg/weidu/issues/87)). **This breaks EE games**: the engine itself needs exact case for `lang/en_US/` and for `data/*.bif` names matching `chitin.key` ([Infinity Engine mods on Linux](https://moebiusproject.gitlab.io/mods_on_linux)). Standard EE workarounds: case-insensitive mount (ciopfs) or selective lowercasing of mod folders only. As of **v251**: "WeiDU-Linux can be expected to work without tolower or a case-insensitive file system," and v251.06-rc5 handles game-language dir casing precisely — so pin ≥251 for any Linux support and drop tolower entirely.
+- **macOS:** binaries published per release; same tp2-path invocation model applies.
+
+## 5) Modern wrappers / alternatives (state of the art, 2026)
+
+- **Project Infinity** (ALIENQuake, [Beamdog thread](https://forums.beamdog.com/discussion/74335/project-infinity-mod-manager-for-baldurs-gate-icewind-dale-planescape-torment-and-eet), [GitHub](https://github.com/ALIENQuake/ProjectInfinity)) — Windows/.NET, the de-facto standard mod manager. Drives weidu via `--force-install-list`; imports/exports load order (WeiDU.log or CSV); defined the `mod.ini` metadata convention (`Install_After`, `Label_Type`) your manifest can reuse; writes a global per-run exit-code log. Closed-ish development, Windows-only — the main gap your app would fill for cross-platform/unattended EET.
+- **WeiDU Install Tool** ([InfinityTools/WeiduInstallTool](https://github.com/InfinityTools/WeiduInstallTool), Argent77) — Java/JavaFX GUI front end for single-mod installs; Windows/Linux/macOS packages; explicitly "not a full-fledged mod manager."
+- **mod_installer** ([dark0dave/mod_installer](https://github.com/dark0dave/mod_installer)) — Rust CLI: replays a saved weidu.log top to bottom, spawns weidu per mod, polls stdout against configurable prompt-keyword lists to detect interactivity, `--skip-installed`, `--abort-on-warnings`, `--timeout`. Closest existing analog to your design; also maintains a weidu fork with own binary releases ([The-Mod-Elephant/weidu](https://github.com/The-Mod-Elephant/weidu/releases/)).
+- **modda** ([mleduque/modda](https://github.com/mleduque/modda)) — Rust, declarative YAML manifest (mods + components + locations incl. GitHub releases/HTTP, pre-install patches/regex replacements), delegates to weidu found on PATH; blocks on READLN mods. The closest analog to your *manifest* concept.
+- **weinstall** — Linux runner shipped with WeiDU (legacy, pre-EE workflow).
+- **Legacy:** BiG World Setup (BWS) and the EET-era fork EE Mod Setup Tool — abandoned AutoIt-era tooling; study only for their conflict-rule data.
+- **WeiDU as a library: does not exist.** It's a monolithic OCaml binary with no embedding API; every tool above shells out to the subprocess. `--list-components-json` is the only structured machine interface.
+
+**Version guidance for the app:** pin one bundled WeiDU ≥ **v251.00** (Linux-without-tolower, uninstall-order fix, 64-bit Unicode Windows build), verify with `--version`, pass `--noautoupdate`, and standardize the invocation template: `<weidu> <tp2> --language N --use-lang en_US --force-install-list <ids> --no-exit-pause --skip-at-view [--safe-exit --quick-log on pure installs] --log <per-component.debug>`.
+
+Sources: [README-WeiDU.html](https://weidu.org/~thebigg/README-WeiDU.html) | [README-WeiDU-Changes.txt](https://weidu.org/~thebigg/README-WeiDU-Changes.txt) | [WeiDUorg/weidu](https://github.com/WeiDUorg/weidu) + [releases](https://github.com/WeiDUorg/weidu/releases) + [src/util.ml](https://github.com/WeiDUorg/weidu/blob/devel/src/util.ml) + [src/main.ml](https://github.com/WeiDUorg/weidu/blob/devel/src/main.ml) + [issue #87](https://github.com/WeiDUorg/weidu/issues/87) | [ACTION_READLN thread](https://forums.beamdog.com/discussion/72805/action-readln-its-bad-for-players-and-you-mods) | [Project Infinity](https://forums.beamdog.com/discussion/74335/project-infinity-mod-manager-for-baldurs-gate-icewind-dale-planescape-torment-and-eet) + [wiki](https://github.com/ALIENQuake/ProjectInfinity/wiki/Sorting-Order-feature) + [global log](https://www.gibberlings3.net/forums/topic/35807-global-weidu-log-additional-installation-debug-info/) | [WeiduInstallTool](https://github.com/InfinityTools/WeiduInstallTool) | [mod_installer](https://github.com/dark0dave/mod_installer) | [modda](https://github.com/mleduque/modda) | [IE mods on Linux](https://moebiusproject.gitlab.io/mods_on_linux) | Local verified experiments: `C:\Users\chris\.claude\skills\bg-modding\references\weidu.md` (items marked **[verified locally]**, tested on WeiDU 246/249 against this project's reference install).
