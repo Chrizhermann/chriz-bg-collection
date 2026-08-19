@@ -44,7 +44,9 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 3. **2.7 pin-list** — EET master SHA ≥ 2026-08-06, EEex ≥ v1.1.5, SCS 35.21 + WeiDU 249
    (per-mod WeiDU pins!), SR 4.21, cdtweaks v18, EEFP Beta 2; flag every divergence from
    the 2.6-era reference for user review (`game-version-landscape.md`).
-4. **Curation pass — HARD HUMAN GATE** (user directive 2026-08-19): the user curates
+4. **Curation pass — HARD HUMAN GATE** (user directive 2026-08-19): worksheet at
+   `docs/curation-worksheet.md` (mod inventory by source class, blank decision columns,
+   user's open questions). The user curates
    content (drop/add mods, toggles, choice groups, presets) exclusively himself. Agents
    deliver neutral inventories/option lists with factual compat notes only; suggestions
    only when explicitly asked. Output → `manifest/collection.toml` + `manifest/mods/*.toml`
