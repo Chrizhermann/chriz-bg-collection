@@ -38,9 +38,12 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 
 1. **Re-capture manifest** from the live reference WeiDU.log (resolves 414-vs-364 row
    discrepancy); reconcile with the 18-phase order in the game dir's EET_MODDING_GUIDE.md.
-2. **Fill `manifest/mod-sources.tsv`** — URL + version + sha256 per mod. The guide has no
-   URLs; use `docs/research/2026-08-19-installer-app/mod-hosting-downloads.md` (G3/SHS/PPG
-   GitHub orgs; weaselmods = manual; Artisan = commit-zip pin) + archive folder provenance.
+2. **Fill `manifest/mod-sources.tsv`** — DONE 2026-08-19 except sha256: all 89 mods
+   classified (37 auto-fetchable via GitHub, 2 manual [Bristlelick weaselmods, Evandra G3
+   page-gated], 1 private [BASTIL], 49 local/chriz-layer); all 30 pinned URLs
+   liveness-checked 200. Remaining: sha256 column — compute when first building the
+   download cache (downloads several GB; deferred). Note: BRISTLELICK v2.4 is no longer
+   publicly downloadable (site has 2.5.1 only) — local archive copy preserves the pin.
 3. **2.7 pin-list** — EET master SHA ≥ 2026-08-06, EEex ≥ v1.1.5, SCS 35.21 + WeiDU 249
    (per-mod WeiDU pins!), SR 4.21, cdtweaks v18, EEFP Beta 2; flag every divergence from
    the 2.6-era reference for user review (`game-version-landscape.md`).

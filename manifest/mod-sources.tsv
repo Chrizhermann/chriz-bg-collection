@@ -1,85 +1,90 @@
-mod_folder	version_installed	download_url	archive_path	notes
-EEFIXPACK	TODO	TODO	TODO	
-EET	TODO	TODO	TODO	
-EEEX	TODO	TODO	TODO	
-BUBB_SPELL_MENU_EXTENDED	TODO	TODO	TODO	
-BGGO	TODO	TODO	TODO	
-HIDDENGAMEPLAYOPTIONS	TODO	TODO	TODO	
-RR	TODO	TODO	TODO	
-BRANWEN	TODO	TODO	TODO	
-EVANDRA	TODO	TODO	TODO	
-FADE	TODO	TODO	TODO	
-PAINA	TODO	TODO	TODO	
-BRISTLELICK	TODO	TODO	TODO	
-SARAHTOB	TODO	TODO	TODO	
-AURA_BG1_2_EET	TODO	TODO	TODO	
-UB	TODO	TODO	TODO	
-XAN	TODO	TODO	TODO	
-YESLICKNPC	TODO	TODO	TODO	
-AJANTISBG2	TODO	TODO	TODO	
-SIRENE_BG2	TODO	TODO	TODO	
-WINGS	TODO	TODO	TODO	
-ASCENSION	TODO	TODO	TODO	
-SPELL_REV	TODO	TODO	TODO	
-ARTISANSKITPACK	TODO	TODO	TODO	
-BARDICWONDERS	TODO	TODO	TODO	
-ARTISANSKITPACK_NPC	TODO	TODO	TODO	
-IWDIFICATION	TODO	TODO	TODO	
-IEPBANTERS	TODO	TODO	TODO	
-CROSSMODBG2	TODO	TODO	TODO	
-ARTISANSKITPACK_TWEAK	TODO	TODO	TODO	
-BASTIL	TODO	TODO	TODO	
-AW_PF_SOUNDSETS	TODO	TODO	TODO	
-HQ_SOUNDCLIPS_BG2EE	TODO	TODO	TODO	
-C0WARLOCK	TODO	TODO	TODO	
-RANDOMISER	TODO	TODO	TODO	
-CDTWEAKS	TODO	TODO	TODO	
-STRATAGEMS	TODO	TODO	TODO	
-EET_END	TODO	TODO	TODO	
-NPC_KIT_CHANGES	TODO	TODO	TODO	
-BARD_SPELL_FIX	TODO	TODO	TODO	
-EVANDRA_SORCERER	TODO	TODO	TODO	
-SKIE_SKILL_FIX	TODO	TODO	TODO	
-SAFANA_SNARE_FIX	TODO	TODO	TODO	
-MAZZY_PROF_FIX	TODO	TODO	TODO	
-VICONIA_MULTICLASS	TODO	TODO	TODO	
-CD_RUMIKP	TODO	TODO	TODO	
-ALORA	TODO	TODO	TODO	
-AK_MULTICLASS_PROFS_FIX	TODO	TODO	TODO	
-XAN_EK_FIX	TODO	TODO	TODO	
-CD_AJANTI	TODO	TODO	TODO	
-CD_DRANGER	TODO	TODO	TODO	
-EDWIN_AMULET_FIX	TODO	TODO	TODO	
-KIVAN_QUEST_FIX	TODO	TODO	TODO	
-SR_SUBSPELL_FIX	TODO	TODO	TODO	
-AURA_BALANCE_PATCH	TODO	TODO	TODO	
-BEARSKIN_MAIL_FIX	TODO	TODO	TODO	
-AURA_BALANCE_PATCH_SPELLS	TODO	TODO	TODO	
-BRANWEN_HAMMER_FIX	TODO	TODO	TODO	
-BG2EE-EET-FIXPACK	TODO	TODO	TODO	
-XAN_SOUNDSET	TODO	TODO	TODO	
-RONDAK	TODO	TODO	TODO	
-ELEM_PRINCE_CLAB_FIX	TODO	TODO	TODO	
-YESLICK_KELDORN_DISPEL_FIX	TODO	TODO	TODO	
-ZG_BGNPC_VOICES_BGS	TODO	TODO	TODO	
-FADE_FT_FIX	TODO	TODO	TODO	
-EET_TWEAKS	TODO	TODO	TODO	
-CD_NEERA	TODO	TODO	TODO	
-FADE_FT_PATCH	TODO	TODO	TODO	
-CD_SAFANA	TODO	TODO	TODO	
-CD_JAHEBG1	TODO	TODO	TODO	
-CD_JAHEBG2	TODO	TODO	TODO	
-CD_YESLICK	TODO	TODO	TODO	
-CD_EDWNBG1	TODO	TODO	TODO	
-CD_EDWNBG2	TODO	TODO	TODO	
-CD_AERIE	TODO	TODO	TODO	
-CD_SAFSOD	TODO	TODO	TODO	
-__EXTRACT	TODO	TODO	TODO	
-__IDS	TODO	TODO	TODO	
-CHRIZ-BG-MODPACK	TODO	TODO	TODO	
-CBM_UAI_SCROLL	TODO	TODO	TODO	
-SAFANA	TODO	TODO	TODO	
-SAFANA_LATE_SPELLS	TODO	TODO	TODO	
-CD_IMOBG1	TODO	TODO	TODO	
-CD_IMOBG2	TODO	TODO	TODO	
-PRIEST_DELIVERY_FIX	TODO	TODO	TODO	
+mod_folder	source_class	version_installed	latest_version	latest_date	source_kind	canonical_url	pinned_version_url	archive_path	notes
+ABETTORHLAREBALANCE	chriz-repo	1.0.0			chriz-repo				chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+AJANTISBG2	third-party	21	v21	2025-09-19	github-release	https://github.com/Gibberlings3/Ajantis_BG2	https://github.com/Gibberlings3/Ajantis_BG2/releases/download/v21/win-ajantisbg2-v21.zip	win-ajantisbg2-v21	Repo name is Ajantis_BG2 (underscore), not AjantisBG2. Installed v21 IS the current latest release; asset name matches local archive win-ajantisbg2-v21. Release also ships .iemod, lin-, mac- variants. EET-compatible per repo description. G3 mod page: gibberlings3.net/mods/npcs/ajantis-bg2/.
+AKCB_BERSERKER	chriz-repo	2.0			chriz-repo				chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+AKCB_SHAPESHIFTER	chriz-repo	1.0			chriz-repo				chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+AK_MULTICLASS_PROFS_FIX	local-fix	2			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+ALORA	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+ARTISANSKITPACK	third-party	6.0	master (untagged; last git tag v4.81a, 2024-05-05)	2026-08-17	github-commit-zip	https://github.com/TheArtisanBG/The-Artisan-s-Kitpack		The-Artisan-s-Kitpack-master	Account renamed ArtemiusI -> TheArtisanBG (old URL redirects; mod .ini Download field still points to ArtemiusI). Author stopped tagging at v4.81a (2024-05-05) but master is actively developed (last push 2026-08-17); installed 6.0 exists only as a master snapshot — pin a commit SHA (archive candidate 'The-Artisan-s-Kitpack-master' confirms branch-zip install). No release ever had assets; tags carry only source archives. Current master ArtisansKitpack.TP2 declares no VERSION string, so fresh installs log versionless. Same repo also ships ArtisansKitpack_npc and ArtisansKitpack_tweak tp2s (covers ARTISANSKITPACK_NPC/_TWEAK entries). Homepage artisans-corner.com returns 403 to bots.
+ARTISANSKITPACK_NPC	third-party		6.x (master, last tag v4.81a)	2026-05-31	github-commit-zip	https://github.com/TheArtisanBG/The-Artisan-s-Kitpack		The-Artisan-s-Kitpack-master	One repo ships all three tp2s: ArtisansKitpack, ArtisansKitpack_npc, ArtisansKitpack_tweak — pin once, reuse for all three manifest entries. 30 tagged releases exist but ALL have empty assets and tags stop at v4.81a (2024-05-05); the installed 6.0-era code exists only as untagged master commits, so a commit-SHA pin is required (master head as of 2026-05-31: 85928f964f6965fd37980bf679d7eeb9af410256, zip via https://github.com/TheArtisanBG/The-Artisan-s-Kitpack/archive/<SHA>.zip). tp2 carries no VERSION keyword on current master. Site: theartisanbg.github.io/The-Artisans-Corner/.
+ARTISANSKITPACK_TWEAK	third-party		master (unversioned; tags stop at v4.81a)	2026-05-31	github-commit-zip	https://github.com/TheArtisanBG/The-Artisan-s-Kitpack		The-Artisan-s-Kitpack-master	Same repo/zip ships all three folders (ArtisansKitpack, _npc, _tweak); ArtisansKitpack_tweak.TP2 has no VERSION line, hence empty installed_version — main tp2 in the local snapshot says VERSION ~6.0~. Repo has 121 tags/releases but ALL without assets and they stop at v4.81a (2024-05-05); no 6.0 tag exists, and current master has since REMOVED the VERSION line entirely, so the installed 6.0 state is unrecoverable from tags — pin the exact commit SHA (local archive The-Artisan-s-Kitpack-master is the reference copy). ArtemiusI account renamed to TheArtisanBG (old URLs redirect). Site: theartisanbg.github.io/The-Artisans-Corner/.
+ASCENSION	third-party	2.1.0	2.1.0	2025-05-18	github-release	https://github.com/Gibberlings3/Ascension	https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip	ascension-2.1.0	Installed 2.1.0 is the current latest release (published 2025-05-18, UTF-8 translation conversion). Release assets: .zip and .iemod. Verified via GitHub API.
+AURA_BALANCE_PATCH	local-fix	v1.0			local-fix			Aura_BG1-master	local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+AURA_BALANCE_PATCH_SPELLS	chriz-repo	v1.0			chriz-repo			Aura_BG1-master	chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+AURA_BG1_2_EET	third-party		main (unversioned)	2026-05-31	github-commit-zip	https://github.com/TheArtisanBG/Aura_BG1_BG2_EET		Aura_BG1-master	Repo transferred ArtemiusI -> TheArtisanBG (old URL redirects, API full_name confirms). No tags and no releases — only moving main branch; installed copy came from a main-branch zip (archive 'Aura_BG1_BG2_EET-main'), so a commit SHA pin is needed. This is the all-in-one BG1+BG2 build with EET support (author calls EET 'loosely tested'). Separate older BG1-only repo Aura_BG1 also exists — do not confuse. Last push 2026-05-31.
+AW_PF_SOUNDSETS	uncertain		main branch (untagged)	2022-10-08	github-commit-zip	https://github.com/Arvendor/PathfinderVoices_for_EE		soundsets	Ports Pathfinder: Wrath of the Righteous companion voicelines to BG:EE/BG2:EE/IWD:EE as PC soundsets. In-repo mod folder is aw_PF_soundsets, built on CamDawg's EE Soundset Tool (cd_add_soundset.tph). No releases and no tags — main-branch zip only; commit SHA pin needed. Repo dormant since last push 2022-10-08, main HEAD = a60d33984983ed8d9d8bd1a5b25558861b605985, so a main zip today equals the installed snapshot (local archive PathfinderVoices_for_EE-main confirms a main-branch zip origin; codeload heads/main URL verified 200). WeiDU log carries no version string; tp2 has no VERSION. Was flagged uncertain but is a public GitHub mod, not local.
+BARDICWONDERS	third-party		master (latest tag v2.9c; branch ahead)	2026-05-31	github-commit-zip	https://github.com/TheArtisanBG/Bardic-Wonders	https://codeload.github.com/TheArtisanBG/Bardic-Wonders/zip/cfcd1c4babfd99b3ededfdec2c7bab9af000c554	ArtemiusI-Bardic-Wonders-v2.9c-103-gcfcd1c4	Account renamed ArtemiusI -> TheArtisanBG; old URLs redirect. No GitHub releases; tags exist up to v2.9c but official site (theartisanbg.github.io/The-Artisans-Corner/bardic-wonders) links the moving master.zip. Installed copy identified from archive name git-describe 'v2.9c-103-gcfcd1c4' = commit cfcd1c4babfd99b3ededfdec2c7bab9af000c554 (2026-01-23, verified via API); pinned commit-zip URL verified HTTP 200. Master pushed 2026-05-31, so HEAD has moved past the installed commit — pin the SHA, do not use master.zip.
+BARD_SPELL_FIX	local-fix	1			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+BASTIL	uncertain				local			bastilla sound	No public WeiDU mod found: searched web, Beamdog 'Awesome Soundsets' master thread, Graion's soundsets, Nexus (its old Custom Soundsets entry is deleted), SHS, GitHub — no Bastila Shan soundset anywhere. KOTOR character voice; archive folder 'bastilla sound' (misspelled) points to a privately assembled soundset. Treat as local/private: keep in private archive only, never redistribute (contains BioWare/LucasArts audio).
+BEARSKIN_MAIL_FIX	local-fix	1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+BG2EE-EET-FIXPACK	chriz-repo	1.0			chriz-repo			Aura_BG1_BG2_EET-main	chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+BGGO	third-party	v3.5	v3.6	2026-03-21	github-release	https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul	https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.5/baldurs-gate-graphical-overhaul-v3.5.zip		Installed v3.5 (2025-10-15) still downloadable; each release ships .zip + .iemod assets. Lives in the NEW Spellhold-Studios org; the old SpellholdStudios/BGGOEET repo is the dormant predecessor — do not use. Latest v3.6 (2026-03-21). Separate Android repo exists (Baldurs-Gate-Graphical-Overhaul-Android), irrelevant here.
+BRANWEN	third-party	v8pre	v8	2022-06-01	github-release	https://github.com/Pocket-Plane-Group/Branwen_for_BGII	https://github.com/Pocket-Plane-Group/Branwen_for_BGII/releases/download/v8/branwen-v8pre.zip	branwen-v8pre	Installed 'v8pre' IS the current release: GitHub tag v8 (latest, 2022-06-01) ships assets literally named branwen-v8pre.zip/.iemod — the tp2 VERSION string was never bumped from v8pre, so v8pre == v8 final; no separate v8-final asset exists. Playable modding-tutorial NPC ('for players and modders'). EET-compatible since v4.
+BRANWEN_HAMMER_FIX	local-fix	1.0			local-fix			branwen-v8pre	local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+BRISTLELICK	third-party	v2.4	2.5.1	2026-01-27	manual	https://downloads.weaselmods.net/download/bristlelick/		Bristlelick-v2.4	Weaselmods page-gated download (JS download button + Dropbox alternative link), no stable direct URLs. Current version is 2.5.1 (updated 2026-01-27); installed v2.4 is no longer downloadable from the site — keep the local Bristlelick-v2.4 archive to preserve the pin. Author does not redistribute old versions.
+BUBB_SPELL_MENU_EXTENDED	third-party	v5.1	v5.2	2026-05-11	github-tag-archive	https://github.com/Bubb13/Bubbs-Spell-Menu-Extended	https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.1	Bubbs-Spell-Menu-Extended-5.1	Repo has tagged releases but ALL releases carry zero binary assets (verified via API for v5.1) — the source zip IS the mod package, so codeload tag archive is the pin. Installed v5.1 (released 2024-10-26) still downloadable; archive name 'Bubbs-Spell-Menu-Extended-5.1' matches the GitHub source zip of tag v5.1. Latest is v5.2 (2026-05-11). Requires EEex.
+C0WARLOCK	third-party	3.0	master (untagged; last tagged release v2.51)	2026-06-04	github-commit-zip	https://github.com/TheArtisanBG/Warlock		Warlock	Account renamed: ArtemiusI/Warlock redirects to TheArtisanBG/Warlock (verified via API). Installed 3.0 was NEVER tagged — tags/releases stop at v2.51 (2024-02-05) and carry no uploaded assets; 3.0 shipped only as master-branch zips. Mod folder renamed C0Warlock -> Artisans_Warlock in commit 54e3e4e5 (2026-05-29); current master tp2 (Artisans_Warlock.TP2) has no VERSION line but still backs up to weidu_external/backup/C0Warlock. To pin the installed layout use a pre-rename commit zip, e.g. codeload.github.com/TheArtisanBG/Warlock/zip/67515c983c4c0c685514fb20edfdfe6c86e5aee1 (last pre-rename commit, 2026-05-16, C0Warlock.TP2 VERSION ~3.0~); exact installed snapshot commit unknown — local archive folder 'Warlock' holds the actual installed copy. Reinstalling from current master would change the WeiDU mod folder name.
+CBM_UAI_SCROLL	local-fix	1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+CDTWEAKS	third-party	v18	v18	2025-08-22	github-release	https://github.com/Gibberlings3/Tweaks-Anthology	https://github.com/Gibberlings3/Tweaks-Anthology/releases/download/v18/cdtweaks-v18.exe	cdtweaks-v18	Installed v18 IS the current latest release. v18 has no plain Windows zip — Windows asset is self-extracting cdtweaks-v18.exe; alternative platform-neutral asset: the-tweaks-anthology-v18.iemod (same release). Mod folder cdtweaks = Tweaks Anthology (successor of BG2 Tweaks).
+CD_AERIE	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_AJANTI	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_DRANGER	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_EDWNBG1	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_EDWNBG2	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_IMOBG1	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_IMOBG2	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_JAHEBG1	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_JAHEBG2	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_NEERA	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_RUMIKP	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_SAFANA	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_SAFSOD	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_SAREVOK	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CD_YESLICK	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+CHRIZ-BG-MODPACK	chriz-repo	v0.1.0			chriz-repo				chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+CHRIZ-BG-REBALANCE	chriz-repo	v0.1.0			chriz-repo				chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+CHRIZ-SOD-REMIX	chriz-repo	v0.5.0			chriz-repo				chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+CROSSMODBG2	third-party	v30	v30	2025-08-19	github-release	https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II	https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod	Crossmod_Banter_Pack_for_Baldurs_Gate_II-30	Installed v30 = current latest (verified via gh api releases/latest, published 2025-08-19). Each release has 4 assets: .iemod (plain zip of mod folder, pinned here), Windows self-extractor crossmodbg2-v30.exe, lin-/mac- zips. Archive candidate 'Crossmod_Banter_Pack_for_Baldurs_Gate_II-30' suggests original install used the tag source zip — release assets are equivalent. v30 fixed Yeslick NPC mod detection (relevant: YESLICKNPC is in this stack).
+EDWIN_AMULET_FIX	local-fix	1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+EEEX	third-party	v0.11.0-alpha	v1.2.0	2026-08-12	github-release	https://github.com/Bubb13/EEex	https://github.com/Bubb13/EEex/releases/download/v0.11.0-alpha/eeex-v0.11.0-alpha.zip	eeex-v0.11.0-alpha	Installed v0.11.0-alpha release (2025-08-27) still live with 3 assets: eeex-v0.11.0-alpha.zip (WeiDU), .iemod, and EEex-v0.11.0-alpha.exe installer. Versioning jumped 0.11.x-alpha -> v1.0.0..v1.2.0 (latest 2026-08-12, raises spell-state limit etc.) — upgrading is a meaningful engine-behavior change, keep the alpha pinned for reproducibility. Windows executable patcher; many mods (e.g. Bubb's Spell Menu) depend on the installed EEex version.
+EEEXREMOTE	chriz-repo	v0.2.0			chriz-repo				chriz-layer: source = own repo (pin release/SHA at manifest authoring)
+EEFIXPACK	third-party	Alpha 3	Beta 2	2026-05-04	github-release	https://github.com/Gibberlings3/EE_Fixpack	https://github.com/Gibberlings3/EE_Fixpack/releases/download/Alpha_3/eefixpack-Alpha_3.exe	eefixpack-Alpha_3	Installed Alpha 3 = tag Alpha_3 (2025-10-15), still downloadable; assets per release: win .exe, .iemod, lin/mac zips (iemod: .../Alpha_3/enhanced-edition-fixpack-alpha-3.iemod). Project has since moved to Beta line: Beta 1 (2026-05-02), Beta 2 (2026-05-04, reverts a script-trigger-parameter fix that broke downstream mods) — upgrade Alpha 3 -> Beta 2 may change fix behavior, keep pin.
+EET	third-party	v14.0	v14.1	2025-04-07	github-tag-archive	https://github.com/Gibberlings3/EET	https://codeload.github.com/Gibberlings3/EET/zip/refs/tags/v14.0	Aura_BG1_BG2_EET-main	Repo migrated from K4thos/EET to the Gibberlings3 org (old URL redirects). Releases exist but carry NO uploaded assets — only auto source archives — so pin via the codeload tag archive (verified HTTP 200, application/zip for v14.0). Installed v14.0 tag (2025-03-29) still present; latest is v14.1 (2025-04-07, EEFP-compat fixes).
+EET_END	third-party		v14.1	2025-04-07	github-tag-archive	https://github.com/Gibberlings3/EET	https://codeload.github.com/Gibberlings3/EET/zip/refs/tags/v14.0		Not a separate mod: the EET_end folder ships inside the EET package (Gibberlings3/EET, K4thos's project migrated to the G3 org). Must be pinned to the SAME tag as EET core — install log shows EET core v14.0, so pin v14.0 even though EET_END's own version string is empty. EET releases (incl. v14.0, 2025-03-29) have no binary assets — source tag archive is the download. Latest v14.1 (2025-04-07).
+EET_TWEAKS	third-party	1.12	v1.12	2019-08-01	github-tag-archive	https://github.com/K4thos/EET_Tweaks	https://codeload.github.com/K4thos/EET_Tweaks/zip/refs/tags/v1.12		NOT migrated to the Gibberlings3 org (Gibberlings3/EET_Tweaks is 404; only support thread lives on G3 forums). v1.12 (2019-08-01) is both the installed and the latest release; repo dormant since. Release exists but has no uploaded assets (auto-generated source archives only), so pin via codeload tag archive (URL verified 200). Installed '1.12' == tag v1.12.
+ELEM_PRINCE_CLAB_FIX	local-fix	1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+EVANDRA	third-party	v2.2	v2.2	2019-07-05	manual	https://www.gibberlings3.net/files/file/1008-evandra/		evandra-v2.2	G3-hosted, page-gated download (G3 file host returns Cloudflare 403 to non-browser fetches — needs manual/browser download). Installed v2.2 (2019-07-05) is still the latest. A dev repo exists at github.com/MattyGroove/Evandra but has zero releases and zero tags — not a pinnable source. The G3 Documentation readme (gibberlings3.github.io/Documentation/readmes/readme-evandra.html) is stale at v1.0.
+EVANDRA_SORCERER	local-fix	2			local-fix			evandra-v2.2	local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+FADE	third-party	5.6	v5.6	2020-08-03	github-release	https://github.com/Spellhold-Studios/Fade-NPC	https://github.com/Spellhold-Studios/Fade-NPC/releases/download/v5.6/Fade-v5.6.zip	Fade-v5.6	Hosted on the NEW Spellhold-Studios org (old SpellholdStudios org is a dormant archive; readme still served from spellholdstudios.github.io). Installed v5.6 is the only and latest GitHub release (2020-08-03), asset Fade-v5.6.zip verified present. EE/EET compatible per SHS release notes (v5.6 added Fade.ini Project Infinity metadata).
+FADE_FT_FIX	local-fix	2			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+FADE_FT_PATCH	local-fix	1			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+HIDDENGAMEPLAYOPTIONS	third-party	5.0	v5.1	2026-06-25	github-release	https://github.com/Argent77/A7-HiddenGameplayOptions	https://github.com/Argent77/A7-HiddenGameplayOptions/releases/download/v5.0/win-A7-HiddenGameplayOptions-v5.0.zip	win-A7-HiddenGameplayOptions-v5.0	Installed v5.0 (2025-10-26) still downloadable. Releases ship platform-specific zips (win-/lin-/mac- prefixes) — pin the win- asset to match the local archive win-A7-HiddenGameplayOptions-v5.0. Latest v5.1 (2026-06-25).
+HQ_SOUNDCLIPS_BG2EE	uncertain	1.3	v1.3	2023-09-16	github-release	https://github.com/Argent77/HQ-SoundClips-BG2EE	https://github.com/Argent77/HQ-SoundClips-BG2EE/releases/download/v1.3/win-A7-HQ-SoundClips-BG2EE-v1.3.zip	win-A7-HQ-SoundClips-BG2EE-v1.3	Batch flagged uncertain, but this is clearly Argent77's public mod. Repo name has NO 'A7-' prefix (Argent77/HQ-SoundClips-BG2EE) though release assets do (win-A7-...-v1.3.zip matches local archive). Installed v1.3 = latest release; also v1.3 .iemod available. Restores HQ voice files for BG2EE-specific content lost since game patch 1.3.
+IEPBANTERS	third-party	v5.9	v5.9	2024-12-15	github-release	https://github.com/Spellhold-Studios/IEP-Extended-Banters	https://github.com/Spellhold-Studios/IEP-Extended-Banters/releases/download/v5.9/iep-extended-banters-v5.9.zip		Migrated to the new Spellhold-Studios org and renamed (old dormant-archive repo: SpellholdStudios/IEP_Extended_Banter). New repo has a single release v5.9 (2024-12-15) matching the installed version; assets .zip and .iemod. Verified via GitHub API.
+IWDIFICATION	third-party	v11	v11	2025-07-12	github-release	https://github.com/Gibberlings3/iwdification	https://github.com/Gibberlings3/iwdification/releases/download/v11/iwdification-v11.iemod	iwdification-v11	Installed v11 IS the current latest release (2025-07-12), assets verified present. Per-release assets: iwdification-vN.exe (Windows self-extractor), .iemod (plain zip, pinned here — best for automated install), lin-/mac- zips. Windows exe alternative: https://github.com/Gibberlings3/iwdification/releases/download/v11/iwdification-v11.exe
+KIVAN_QUEST_FIX	local-fix	1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+MAZZY_PROF_FIX	local-fix	1			local-fix			mazzy-friendship-v3.5	local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+NPC_KIT_CHANGES	local-fix	v1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+PAINA	third-party		v1.9	2024-04-26	github-tag-archive	https://github.com/TheArtisanBG/Pai-Na-NPC-mod-for-BG2-EE	https://codeload.github.com/TheArtisanBG/Pai-Na-NPC-mod-for-BG2-EE/zip/refs/tags/v1.9	Pai-Na-NPC-mod-for-BG2-EE-1.9	Canonical full_name is TheArtisanBG/Pai-Na-NPC-mod-for-BG2-EE (old ArtemiusI URL redirects). Releases (v1.5/v1.8/v1.8a/v1.9) have no uploaded assets — source archives only, hence codeload tag zip (verified 200). WeiDU log records no version, but local archive folder 'Pai-Na-NPC-mod-for-BG2-EE-1.9' matches GitHub's v1.9 source-zip naming, so installed = v1.9 (inferred). Repo has unreleased post-v1.9 commits (pushed through 2026-05-07); v1.9 remains the latest tagged release. Mod page: artisans-corner.com.
+PRIEST_DELIVERY_FIX	local-fix	1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+RANDOMISER	third-party	7	v7	2018-09-23	github-release	https://github.com/FredrikLindgren/randomiser	https://github.com/FredrikLindgren/randomiser/releases/download/v7/win-randomiser-v7.exe	randomiser	Installed v7 IS the latest release (2018; mod is stable/dormant). Windows asset is self-extracting win-randomiser-v7.exe; lin/osx tar.gz also on the release. Personal account of Wisp, not a G3 org repo, though the mod is a G3-affiliated project (G3 files page 875-item-randomiser also mirrors it, page-gated).
+RONDAK	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+RR	third-party	v4.92	v4.92	2025-10-06	github-release	https://github.com/Spellhold-Studios/Rogue-Rebalancing	https://github.com/Spellhold-Studios/Rogue-Rebalancing/releases/download/v4.92/rr-v492.zip		Migrated to the new Spellhold-Studios GitHub org; v4.92 (the long-standing final version, originally distributed via SHS forums downloads / avenger981.github.io readme) was re-released on GitHub 2025-10-06 as the repo's only release. Installed v4.92 = latest and downloadable (rr-v492.zip; rr-v492.exe self-extractor also available).
+SAFANA	uncertain	v0.5	v05	2023-10-26	github-tag-archive	https://github.com/RoxanneSHS/SafanaBG2	https://codeload.github.com/RoxanneSHS/SafanaBG2/zip/refs/tags/v05		Uncertain flag resolved: this IS a public mod — 'Safana in Amn - continuous NPC for EET' by Roxanne. Installed 'v0.5' corresponds to tag 'v05' (2023-10-26, latest; only other tag v04). Releases have NO assets, so pin via codeload tag archive (verified HTTP 200, application/zip). Caveat: Roxanne is a community-controversial author (EET-Setup dispute); repo is the sole canonical source and remains up.
+SAFANA_LATE_SPELLS	local-fix	1			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+SAFANA_SNARE_FIX	local-fix	1			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+SARAHTOB	third-party	v8	v8	2025-02-16	github-release	https://github.com/Gibberlings3/Sarah	https://github.com/Gibberlings3/Sarah/releases/download/v8/sarahtob-v8.exe	sarahtob-v8	Installed v8 = latest release (2025-02-16, fixes Sarah leaving forever instead of relocating to Imnesvale Inn). Assets: sarahtob-v8.exe (win), lin/mac zips, iemod (sarah-npc-romance-mod-for-bg2-tob-v8.iemod). 'Revised audio from HalmyLyseas' is an install-time subcomponent inside the same package, not a separate download. v7 released only 3 days before v8 — avoid v7.
+SIRENE_BG2	third-party		master (unversioned)		github-commit-zip	https://github.com/TheArtisanBG/Sirene-NPC-for-BG2-EE		Sirene-BG1-3.1	Account renamed ArtemiusI -> TheArtisanBG (old URLs redirect). Releases API returns empty — no tags/releases, only the moving master branch; tp2 has no VERSION line (matches the empty installed_version and the local 'Sirene-NPC-for-BG2-EE-master' archive). Pin requires a commit SHA (codeload zip of a specific commit). Also listed on theartisanbg.github.io/The-Artisans-Corner/.
+SKIE_SKILL_FIX	local-fix	1			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+SPELL_REV	third-party	v4.19	v4.21	2026-08-17	github-release	https://github.com/Gibberlings3/SpellRevisions	https://codeload.github.com/Gibberlings3/SpellRevisions/zip/refs/tags/v4.19.rc5	Bubbs-Spell-Menu-Extended-5.1	VERSION PIN CAVEAT: WeiDU reports 'v4.19' but the local archive 'SpellRevisions-4.19.rc5' proves the installed build is prerelease tag v4.19.rc5 (tag exists, verified; NO GitHub release/assets for it — 404 on release API), so the exact installed bits are only available as the codeload tag archive pinned here. Final v4.19 release (2025-11-25, 'The Grown-Up release') has asset spell_rev-v4-19.zip (verified live) but is a LATER build than what is installed. Latest is v4.21 (2026-08-17).
+SR_SUBSPELL_FIX	local-fix	1.0			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+STRATAGEMS	third-party	35.21	35.21	2024-11-21	github-release	https://github.com/Gibberlings3/SwordCoastStratagems	https://github.com/Gibberlings3/SwordCoastStratagems/releases/download/v35.21/stratagems-35.21.exe	SwordCoastStratagems	Installed 35.21 == latest release (tag v35.21, 2024-11-21), assets still downloadable. Pinned URL is the Windows self-extracting exe; plain-zip alternatives on the same release: lin-stratagems-35.21.zip and osx-stratagems-35.21.zip (lin zip is the easiest scripted-unpack source of the mod folder). Repo lives in the Gibberlings3 org as expected.
+UB	third-party	v28	v28	2021-01-03	github-release	https://github.com/Pocket-Plane-Group/UnfinishedBusiness	https://github.com/Pocket-Plane-Group/UnfinishedBusiness/releases/download/v28/ub-v28.zip	Bubbs-Spell-Menu-Extended-5.1	Repo is named UnfinishedBusiness — github.com/Pocket-Plane-Group/UB 404s. Installed v28 IS the latest release ('WeiDU 247 and Imoen 4 Ever', 2021-01-03); plain ub-v28.zip asset matches local archive. The 'Bubbs-Spell-Menu-Extended-5.1' archive candidate is an unrelated false association (that is BUBB_SPELL_MENU_EXTENDED).
+VICONIA_MULTICLASS	local-fix	1			local-fix			Viconia-Friendship-v4.5	local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+WINGS	third-party		v1.08	2024-10-08	github-tag-archive	https://github.com/Skitia/Wings	https://codeload.github.com/Skitia/Wings/zip/refs/tags/v1.08	Wings-1.08	Aerie expansion for BG2:EE (EET compatible, EE-only). Releases are tags with NO assets -> codeload tag archive, verified HTTP 200; zip extracts to Wings-1.08 matching the archive candidate, so installed copy = v1.08 (WeiDU log versionless because tp2 lacks VERSION). Latest tag v1.08 (2024-10-08); ignore odd old tag v1.011 (sits between v1.01 and v1.02). RoxanneSHS/Wings is an unofficial mirror — canonical is Skitia; author site skitias-stories.com, also announced on weaselmods thread 971.
+XAN	third-party	v19	v19	2020-08-04	github-release	https://github.com/Pocket-Plane-Group/Xan_for_BGII	https://github.com/Pocket-Plane-Group/Xan_for_BGII/releases/download/v19/Xan_v19.zip	Xan_v19	Installed v19 is also the latest release (2020-08-04, asset Xan_v19.zip). Pocket Plane Group GitHub org is canonical (pocketplane.net site links to it; old mods.pocketplane.net direct files are legacy). Archive candidate xanbg1friend_v11 is a DIFFERENT PPG mod (Xan's Friendship path for BG1) — not this folder.
+XAN_EK_FIX	local-fix	1			local-fix				local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+XAN_SOUNDSET	local-soundset				local-soundset				locally built soundset; licensing review needed before any public release
+YESLICKNPC	third-party	v5.0	v5.0	2024-12-15	github-release	https://github.com/Spellhold-Studios/Yeslick-NPC	https://github.com/Spellhold-Studios/Yeslick-NPC/releases/download/v5.0/yeslick-npc-v5.0.zip	yeslick-npc-v5.0	Org migration: old SpellholdStudios/Yeslick_NPC (dormant archive, also has a v5.0 tag) -> new Spellhold-Studios/Yeslick-NPC (underscores->hyphens rename); use new org. v5.0 (2024-12-15) is the only/latest release there and matches installed version + local archive name yeslick-npc-v5.0; .iemod also available. v5.0 added Imoen 4 Ever compatibility; Alaghor of Clangeddin kit is an install-time subcomponent choice.
+YESLICK_KELDORN_DISPEL_FIX	local-fix	v1.0			local-fix			yeslick-npc-v5.0	local hotfix, reference install only; needs a home (chriz repo or standalone) - see curation worksheet
+ZG_BGNPC_VOICES_BGS	uncertain	0.3.1-bgs	0.3.1	2023-08-27	github-release	https://github.com/GraionDilach/Baldurs-Gate-NPC-Voice-Pack-for-EE-2.6	https://github.com/GraionDilach/Baldurs-Gate-NPC-Voice-Pack-for-EE-2.6/releases/download/version-0.3.1/zg-bgnpc-voices-0.3.1.zip		Flagged uncertain but is a public mod. Installed '0.3.1-bgs' = release 0.3.1 (tag 'version-0.3.1'); the '-bgs' suffix is the tp2 variant inside the same package (zg_bgnpc_voices_bgs = BG-style soundset naming scheme), not a separate release. 0.3.1 (2023-08-27) is still the latest; assets .zip and .iemod. Distinct from Graion's other Voice Pack / Soundsets repos.
