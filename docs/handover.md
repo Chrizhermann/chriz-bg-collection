@@ -9,7 +9,17 @@ The umbrella/orchestrator for the whole modded-BG stack: manifest + install orde
 mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalance
 `docs/plans/2026-07-03-umbrella-analysis.md` (user-approved 2026-07-03).
 
-## Status (2026-08-19 — installer app designed)
+## Status (2026-08-20 — Phase 0 data done, WAITING ON USER CURATION)
+
+**Current state: paused at the curation gate.** Phases 0.1–0.3 are done (manifest
+re-captured, all sources resolved + liveness-checked, 2.7 pin-list drafted). The user is
+now curating independently: he will produce his own list from `docs/curation-worksheet.md`
+(+ answer the 5 review questions in `docs/pin-list-2.7.md`) and then discuss it. Until
+then: no curation suggestions, no manifest authoring. Independent work that may proceed
+if asked: Phase 1 engine scaffolding (`engine/` crate — schema parser, WeiDU runner,
+session model are curation-independent).
+
+## Background (2026-08-19 — installer app designed)
 
 - **Installer-app design APPROVED**: `docs/plans/2026-08-19-installer-app-design.md` is the
   canonical plan (public curated-compilation installer, EET-only, 2.7.3.0, copy-then-install,
