@@ -9,6 +9,25 @@ decision column, never reorder rows into recommendations, never preselect. Legen
 Data source: `manifest/install-order.tsv` (2026-08-19 re-capture, 451 entries / 91 mods)
 + archive inventory. Component-level detail stays in the TSV — this sheet decides at mod
 level; component-level curation happens when `mods/*.toml` gets authored from your calls.
+This is now a living document — decisions are preserved, tables are not regenerated.
+
+## 0. Decisions recorded from Chris (2026-08-19, dictated in session)
+
+- **Versions**: installed versions are mostly outdated — the compilation targets *current*
+  mod versions (Phase 0.3 pin-list proposes the upgrades for review).
+- **BRISTLELICK**: drop ("wasn't that good anyway").
+- **EVANDRA**: keep. The sorcerer conversion (`EVANDRA_SORCERER` local fix) becomes an
+  **optional toggle**. (Note: Evandra is one of the two manual-download mods.)
+- **Voice packs / soundsets**: excluded from the collection entirely — offered separately
+  later (many are self-created). Covers all local soundsets + the third-party voice packs
+  (`AW_PF_SOUNDSETS`, `ZG_BGNPC_VOICES_BGS`, `BASTIL`). *Open:* does `HQ_SOUNDCLIPS_BG2EE`
+  count as a voice pack (it restores HQ audio for BG2EE content rather than adding NPC
+  voices) — Chris to rule.
+- **SAFANA**: keep — the Roxanne association is a non-issue. Known problem to fix: she
+  kept her SoD items in the EET game (hard no-go; needs a fix component in the manifest).
+  The bard conversion (via local patches, e.g. `BARD_SPELL_FIX`, `SAFANA_LATE_SPELLS`)
+  becomes an **optional toggle**.
+- **WINGS**: drop.
 
 ## 1. Third-party mods currently installed (35)
 
@@ -23,7 +42,7 @@ level; component-level curation happens when `mods/*.toml` gets authored from yo
 | BARDICWONDERS | 21 | — | Bardic Wonders | |
 | BGGO | 1 | v3.5 | Baldurs Gate Graphical Overhaul Core | |
 | BRANWEN | 1 | v8pre | Branwen BG2 NPC mod for players and modders | |
-| BRISTLELICK | 1 | v2.4 | Bristlelick—the gnoll companion for BGEE | |
+| BRISTLELICK | 1 | v2.4 | Bristlelick—the gnoll companion for BGEE | drop |
 | BUBB_SPELL_MENU_EXTENDED | 1 | v5.1 | Bubb's Spell Menu Extended | |
 | C0WARLOCK | 1 | 3.0 | Warlock Kit | |
 | CDTWEAKS | 62 | v18 | Change Viconia's Skin Color to Dark Blue | |
@@ -33,7 +52,7 @@ level; component-level curation happens when `mods/*.toml` gets authored from yo
 | EET | 2 | v14.0 | EET core (resource importation) | |
 | EET_END | 1 | — | EET end (last mod in install order) -> Standard installation | |
 | EET_TWEAKS | 1 | 1.12 | XP for Traps, Spells and Lockpicking -> Vanilla friendly pro | |
-| EVANDRA | 2 | v2.2 | Evandra NPC | |
+| EVANDRA | 2 | v2.2 | Evandra NPC | keep |
 | FADE | 1 | 5.6 | Fade | |
 | HIDDENGAMEPLAYOPTIONS | 27 | 5.0 | Add in-game option "Enable Debug Mode" | |
 | IEPBANTERS | 7 | v5.9 | Extended NPC-NPC Interaction SoA | |
@@ -46,7 +65,7 @@ level; component-level curation happens when `mods/*.toml` gets authored from yo
 | SPELL_REV | 7 | v4.19 | Spell Revisions | |
 | STRATAGEMS | 76 | 35.21 | Install all spell tweaks (if you don't select this, you will | |
 | UB | 22 | v28 | The Kidnapping of Boo by Cliffette | |
-| WINGS | 2 | — | Wings for BG2 | |
+| WINGS | 2 | — | Wings for BG2 | drop |
 | XAN | 2 | v19 | Xan NPC MOD for Baldur's Gate II | |
 | YESLICKNPC | 1 | v5.0 | Yeslick NPC for BGII | |
 
@@ -54,11 +73,11 @@ level; component-level curation happens when `mods/*.toml` gets authored from yo
 
 | Mod folder | Comps | Version | Identifies as | Decision |
 |---|---|---|---|---|
-| AW_PF_SOUNDSETS | 1 | — | Pathfinder Soundset | |
-| BASTIL | 1 | — | Bastila Shan Soundset | |
-| HQ_SOUNDCLIPS_BG2EE | 1 | 1.3 | Install high quality soundclips for new BG2EE content | |
-| SAFANA | 1 | v0.5 | Safana in Amn | |
-| ZG_BGNPC_VOICES_BGS | 1 | 0.3.1-bgs | Baldur's Gate NPC Voice Pack for EE 2.6+ | |
+| AW_PF_SOUNDSETS | 1 | — | Pathfinder Soundset | drop (voice packs excluded) |
+| BASTIL | 1 | — | Bastila Shan Soundset | drop (voice packs excluded) |
+| HQ_SOUNDCLIPS_BG2EE | 1 | 1.3 | Install high quality soundclips for new BG2EE content | ? (voice pack or audio restoration — Chris to rule) |
+| SAFANA | 1 | v0.5 | Safana in Amn | keep (fix SoD-items carryover; bard conversion = toggle) |
+| ZG_BGNPC_VOICES_BGS | 1 | 0.3.1-bgs | Baldur's Gate NPC Voice Pack for EE 2.6+ | drop (voice packs excluded) |
 
 ## 3. Chriz-layer repos (9)
 
@@ -84,20 +103,20 @@ of its own. Put the intended home in the Decision column.
 |---|---|---|---|---|
 | AK_MULTICLASS_PROFS_FIX | 1 | 2 | Fix missing multiclass proficiency stats in Artisan's Kitpac | |
 | AURA_BALANCE_PATCH | 1 | v1.0 | Aura NPC Balance Patch | |
-| BARD_SPELL_FIX | 1 | 1 | Add Bard spells to Aura and Safana CRE files | |
+| BARD_SPELL_FIX | 1 | 1 | Add Bard spells to Aura and Safana CRE files | part of Safana-bard toggle |
 | BEARSKIN_MAIL_FIX | 1 | 1.0 | Red Bearskin Mail - Rashemi Berserker Kit Usability Fix | |
 | BRANWEN_HAMMER_FIX | 1 | 1.0 | SR Branwen Spiritual Hammer (SPIN113) - Fix param1 for Creat | |
 | CBM_UAI_SCROLL | 1 | 1.0 | Use Any Item | |
 | EDWIN_AMULET_FIX | 1 | 1.0 | Remove bonus spell slots from Edwin's Amulet (MISC89) | |
 | ELEM_PRINCE_CLAB_FIX | 1 | 1.0 | Remove Elemental Prince Call (SPPR724) from Druid/Ranger CLA | |
-| EVANDRA_SORCERER | 1 | 2 | Convert Evandra from Illusionist Mage to Sorcerer | |
+| EVANDRA_SORCERER | 1 | 2 | Convert Evandra from Illusionist Mage to Sorcerer | toggle (optional sorcerer conversion) |
 | FADE_FT_FIX | 1 | 2 | Convert Fade NPC to Fighter/Thief multiclass | |
 | FADE_FT_PATCH | 1 | 1 | Fade F/T patch | |
 | KIVAN_QUEST_FIX | 1 | 1.0 | BG1NPC Kivan Sea Elf Quest - SCS Compatibility Fix | |
 | MAZZY_PROF_FIX | 1 | 1 | Cap Mazzy Short Bow to 4 pips, redistribute to Short Sword | |
 | NPC_KIT_CHANGES | 1 | v1.0 | NPC Kit & Class Changes (Tier 1-3) | |
 | PRIEST_DELIVERY_FIX | 1 | 1.0 | Priest spell CLAB delivery fix (AK 0x00/0x40/0x80 mis-sort) | |
-| SAFANA_LATE_SPELLS | 1 | 1 | Safana BG1 template | |
+| SAFANA_LATE_SPELLS | 1 | 1 | Safana BG1 template | part of Safana-bard toggle |
 | SAFANA_SNARE_FIX | 1 | 1 | Remove Thief Set Snare (SPCL412) from Safana CRE files | |
 | SKIE_SKILL_FIX | 1 | 1 | Redistribute Skie Move Silently points to Open Locks (Swashb | |
 | SR_SUBSPELL_FIX | 1 | 1.0 | Remove SR hidden subspells from joinable NPC spellbooks | |
@@ -110,6 +129,8 @@ of its own. Put the intended home in the Decision column.
 Built locally from archive assets (`soundsets/`, `bastilla sound/`, portrait packs…).
 For a public release these need a packaging/licensing decision (voice clips from other
 games/media may not be distributable at all).
+
+**Decision (Chris, 2026-08-19): ALL dropped from the collection — voice packs are excluded and offered separately later.**
 
 | Mod folder | Comps | Version | Identifies as | Decision |
 |---|---|---|---|---|
