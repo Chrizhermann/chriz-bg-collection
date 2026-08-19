@@ -16,8 +16,12 @@ This is now a living document — decisions are preserved, tables are not regene
 - **Versions**: installed versions are mostly outdated — the compilation targets *current*
   mod versions (Phase 0.3 pin-list proposes the upgrades for review).
 - **BRISTLELICK**: drop ("wasn't that good anyway").
-- **EVANDRA**: keep. The sorcerer conversion (`EVANDRA_SORCERER` local fix) becomes an
-  **optional toggle**. (Note: Evandra is one of the two manual-download mods.)
+- **EVANDRA**: keep as a **toggle whose GUI label states it requires a manual download**
+  (default on, per the recommended install). Licensing checked 2026-08-20: no license
+  (repo `license: null`, no LICENSE/readme grant) → default copyright, we may NOT
+  rehost her. Long-term fix: ask Rhaella/G3 for a GitHub release. The sorcerer
+  conversion (`EVANDRA_SORCERER` local fix) becomes its own **optional toggle**.
+  With Bristlelick dropped, Evandra is the only manual-download step in the install.
 - **Voice packs / soundsets**: excluded from the collection entirely — offered separately
   later (many are self-created). Covers all local soundsets + the third-party voice packs
   (`AW_PF_SOUNDSETS`, `ZG_BGNPC_VOICES_BGS`, `BASTIL`). *Open:* does `HQ_SOUNDCLIPS_BG2EE`
@@ -52,7 +56,7 @@ This is now a living document — decisions are preserved, tables are not regene
 | EET | 2 | v14.0 | EET core (resource importation) | |
 | EET_END | 1 | — | EET end (last mod in install order) -> Standard installation | |
 | EET_TWEAKS | 1 | 1.12 | XP for Traps, Spells and Lockpicking -> Vanilla friendly pro | |
-| EVANDRA | 2 | v2.2 | Evandra NPC | keep |
+| EVANDRA | 2 | v2.2 | Evandra NPC | keep — toggle, labeled "manual download required" |
 | FADE | 1 | 5.6 | Fade | |
 | HIDDENGAMEPLAYOPTIONS | 27 | 5.0 | Add in-game option "Enable Debug Mode" | |
 | IEPBANTERS | 7 | v5.9 | Extended NPC-NPC Interaction SoA | |
