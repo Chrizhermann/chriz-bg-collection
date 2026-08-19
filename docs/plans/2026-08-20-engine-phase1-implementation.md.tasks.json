@@ -1,0 +1,23 @@
+{
+  "planPath": "docs/plans/2026-08-20-engine-phase1-implementation.md",
+  "tasks": [
+    {"id": 0, "subject": "Task 0: Cargo workspace + crate scaffold", "status": "pending"},
+    {"id": 1, "subject": "Task 1: Manifest schema types + TOML parsing", "status": "pending", "blockedBy": [0]},
+    {"id": 2, "subject": "Task 2: Manifest loader", "status": "pending", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 3: Manifest validators", "status": "pending", "blockedBy": [2]},
+    {"id": 4, "subject": "Task 4: Resolve stage (selection -> InstallPlan)", "status": "pending", "blockedBy": [2]},
+    {"id": 5, "subject": "Task 5: Event model", "status": "pending", "blockedBy": [0]},
+    {"id": 6, "subject": "Task 6: Session persistence + resume", "status": "pending", "blockedBy": [4]},
+    {"id": 7, "subject": "Task 7: WeiDU invocation builder", "status": "pending", "blockedBy": [4]},
+    {"id": 8, "subject": "Task 8: WeiDU.log parsing + verification", "status": "pending", "blockedBy": [4]},
+    {"id": 9, "subject": "Task 9: Process runner (streaming/stdin/watchdog)", "status": "pending", "blockedBy": [5, 7]},
+    {"id": 10, "subject": "Task 10: Fake-game test builder", "status": "pending", "blockedBy": [0]},
+    {"id": 11, "subject": "Task 11: Real-WeiDU integration test (gated)", "status": "pending", "blockedBy": [8, 9, 10]},
+    {"id": 12, "subject": "Task 12: Stage (detect/copy/patch/preflight)", "status": "pending", "blockedBy": [5]},
+    {"id": 13, "subject": "Task 13: Acquire (cache/download/extract/manual)", "status": "pending", "blockedBy": [5]},
+    {"id": 14, "subject": "Task 14: Install orchestrator", "status": "pending", "blockedBy": [6, 8, 9, 12, 13]},
+    {"id": 15, "subject": "Task 15: CLI", "status": "pending", "blockedBy": [14]},
+    {"id": 16, "subject": "Task 16: Report + diagnostics bundle", "status": "pending", "blockedBy": [14]}
+  ],
+  "lastUpdated": "2026-08-20"
+}
