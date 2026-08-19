@@ -44,9 +44,11 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 3. **2.7 pin-list** — EET master SHA ≥ 2026-08-06, EEex ≥ v1.1.5, SCS 35.21 + WeiDU 249
    (per-mod WeiDU pins!), SR 4.21, cdtweaks v18, EEFP Beta 2; flag every divergence from
    the 2.6-era reference for user review (`game-version-landscape.md`).
-4. **Curation pass with the user** — drop/add mods (NPC review pending), toggle list,
-   choice groups (incl. game-UI selection), presets → author `manifest/collection.toml`
-   + `manifest/mods/*.toml` (schema v1 in the design doc).
+4. **Curation pass — HARD HUMAN GATE** (user directive 2026-08-19): the user curates
+   content (drop/add mods, toggles, choice groups, presets) exclusively himself. Agents
+   deliver neutral inventories/option lists with factual compat notes only; suggestions
+   only when explicitly asked. Output → `manifest/collection.toml` + `manifest/mods/*.toml`
+   (schema v1 in the design doc), authored from the user's filled worksheet.
 5. **Phase 1: engine crate + CLI** — milestone: full unattended EET test install from
    scratch on 2.7.3.0 (distinct `engine_name`, never in the reference game dir).
 6. **Phase 2: Tauri app**; **Phase 3: signing/updater/manifest release channel** — see

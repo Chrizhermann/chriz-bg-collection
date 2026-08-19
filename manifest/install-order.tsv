@@ -13,32 +13,32 @@ position	mod_folder	tp2	language	component	component_name
 12	EEEX	EEEX/EEEX.TP2	0	7	Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns: v0.11.0-alpha
 13	BUBB_SPELL_MENU_EXTENDED	BUBB_SPELL_MENU_EXTENDED/BUBB_SPELL_MENU_EXTENDED.TP2	0	0	Bubb's Spell Menu Extended: v5.1
 14	BGGO	BGGO/BGGO.TP2	0	0	Baldurs Gate Graphical Overhaul Core: v3.5
-15	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	10	Add in-game option "Enable Debug Mode": 5.0
-16	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	11	Add in-game option "Enable UI Edit Mode": 5.0
-17	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	12	Add in-game option "Show Strrefs": 5.0
-18	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	13	Add in-game option "Hotkeys On Tooltips": 5.0
-19	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	14	Add in-game option "Show trigger icons on tab": 5.0
-20	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	16	Add in-game option "Limit druidic spells for Cleric/Ranger": 5.0
-21	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	18	Add in-game option "Critical Hit Screen Shake": 5.0
-22	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	19	Add in-game option "Show extra combat info": 5.0
-23	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	20	Add in-game option "Show Game Date and Time on Pause": 5.0
-24	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	22	Add in-game option "Reverse Mouse Wheel Zoom": 5.0
-25	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	23	Add in-game option "Pause Game on Map Screen": 5.0
-26	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	24	Add in-game option "Enable Fog": 5.0
-27	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	25	Add in-game option "Disable Movies": 5.0
-28	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	27	Add in-game option "XP Bonus in Nightmare Mode": 5.0
-29	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	28	Add in-game option "Trigger Bored Sounds": 5.0
-30	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	29	Add in-game option "Frame Rate" (experimental): 5.0
-31	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	30	Add in-game option "Action Feedback": 5.0
-32	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	32	Add in-game option "Show Area of Effect Range": 5.0
-33	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	33	Add in-game option "Enhanced Path Search": 5.0
-34	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	34	Add in-game option "Expire Trap Highlights": 5.0
-35	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	35	Add in-game option "Show Learnable Spells": 5.0
-36	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	36	Add in-game option "Render Search Map": 5.0
-37	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	37	Add in-game option "Render Dynamic Search Map": 5.0
-38	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	39	Add in-game option "Force Dialog Pause": 5.0
-39	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	300	Improved "Death Screen" options: 5.0
-40	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	301	Improved "Quit Game" options: 5.0
+15	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	10	"Add in-game option ""Enable Debug Mode"": 5.0"
+16	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	11	"Add in-game option ""Enable UI Edit Mode"": 5.0"
+17	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	12	"Add in-game option ""Show Strrefs"": 5.0"
+18	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	13	"Add in-game option ""Hotkeys On Tooltips"": 5.0"
+19	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	14	"Add in-game option ""Show trigger icons on tab"": 5.0"
+20	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	16	"Add in-game option ""Limit druidic spells for Cleric/Ranger"": 5.0"
+21	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	18	"Add in-game option ""Critical Hit Screen Shake"": 5.0"
+22	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	19	"Add in-game option ""Show extra combat info"": 5.0"
+23	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	20	"Add in-game option ""Show Game Date and Time on Pause"": 5.0"
+24	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	22	"Add in-game option ""Reverse Mouse Wheel Zoom"": 5.0"
+25	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	23	"Add in-game option ""Pause Game on Map Screen"": 5.0"
+26	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	24	"Add in-game option ""Enable Fog"": 5.0"
+27	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	25	"Add in-game option ""Disable Movies"": 5.0"
+28	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	27	"Add in-game option ""XP Bonus in Nightmare Mode"": 5.0"
+29	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	28	"Add in-game option ""Trigger Bored Sounds"": 5.0"
+30	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	29	"Add in-game option ""Frame Rate"" (experimental): 5.0"
+31	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	30	"Add in-game option ""Action Feedback"": 5.0"
+32	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	32	"Add in-game option ""Show Area of Effect Range"": 5.0"
+33	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	33	"Add in-game option ""Enhanced Path Search"": 5.0"
+34	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	34	"Add in-game option ""Expire Trap Highlights"": 5.0"
+35	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	35	"Add in-game option ""Show Learnable Spells"": 5.0"
+36	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	36	"Add in-game option ""Render Search Map"": 5.0"
+37	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	37	"Add in-game option ""Render Dynamic Search Map"": 5.0"
+38	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	39	"Add in-game option ""Force Dialog Pause"": 5.0"
+39	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	300	"Improved ""Death Screen"" options: 5.0"
+40	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	301	"Improved ""Quit Game"" options: 5.0"
 41	HIDDENGAMEPLAYOPTIONS	HIDDENGAMEPLAYOPTIONS/HIDDENGAMEPLAYOPTIONS.TP2	0	103	Update key bindings -> for priest and mage spells: 5.0
 42	RR	RR/SETUP-RR.TP2	0	0	Proper dual-wielding implementation for Thieves and Bards: v4.92
 43	RR	RR/SETUP-RR.TP2	0	3	Proper racial adjustments for thieving skills: v4.92
@@ -61,13 +61,13 @@ position	mod_folder	tp2	language	component	component_name
 60	UB	UB/SETUP-UB.TP2	0	0	The Kidnapping of Boo by Cliffette: v28
 61	UB	UB/SETUP-UB.TP2	0	1	The Suna Seni/Valygar Relationship: v28
 62	UB	UB/SETUP-UB.TP2	0	2	Kalah and What He Was Promised: v28
-63	UB	UB/SETUP-UB.TP2	0	3	"Cat and Mouse" (Bodhi hunts you in Spellhold) by Ghreyfain: v28
+63	UB	UB/SETUP-UB.TP2	0	3	"""Cat and Mouse"" (Bodhi hunts you in Spellhold) by Ghreyfain: v28"
 64	UB	UB/SETUP-UB.TP2	0	4	Gorje Hilldark and the Extended Illithium Quest: v28
 65	UB	UB/SETUP-UB.TP2	0	5	The Pai'Na/Spider's Bane Quest: v28
 66	UB	UB/SETUP-UB.TP2	0	6	Restored Crooked Crane Inn: v28
 67	UB	UB/SETUP-UB.TP2	0	7	Restored Encounters: v28
 68	UB	UB/SETUP-UB.TP2	0	8	Artemis Entreri in Bodhi's Lair: v28
-69	UB	UB/SETUP-UB.TP2	0	9	Corrected "Xzar's Creations": v28
+69	UB	UB/SETUP-UB.TP2	0	9	"Corrected ""Xzar's Creations"": v28"
 70	UB	UB/SETUP-UB.TP2	0	10	Restored Hell Minions, by SimDing0: v28
 71	UB	UB/SETUP-UB.TP2	0	12	Item Restorations: v28
 72	UB	UB/SETUP-UB.TP2	0	15	NPC Portrait Restorations: v28
@@ -122,7 +122,7 @@ position	mod_folder	tp2	language	component	component_name
 121	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	10002	Artisan's Kitpack: Brawler Kit: 6.0
 122	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	10001	Artisan's Kitpack: Monk Revisions: 6.0
 123	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	10003	Artisan's Kitpack: Sacred Fist (Cleric) and Enlightened Fist (Sorcerer) Kits—EEEx required: 6.0
-124	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	10004	Artisan's Kitpack: Ninja "Class" (Monk Kit)—EEEx required: 6.0
+124	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	10004	"Artisan's Kitpack: Ninja ""Class"" (Monk Kit)—EEEx required: 6.0"
 125	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	1003	Artisan's Kitpack: Berserker Overhaul: 6.0
 126	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	1006	Artisan's Kitpack: Wizard Slayer Overhaul: 6.0
 127	ARTISANSKITPACK	ARTISANSKITPACK/ARTISANSKITPACK.TP2	0	1004	Artisan's Kitpack: Kensai Overhaul: 6.0
@@ -194,7 +194,7 @@ position	mod_folder	tp2	language	component	component_name
 193	IWDIFICATION	IWDIFICATION/SETUP-IWDIFICATION.TP2	0	40	IWD Divine Spell Pack: v11
 194	IEPBANTERS	IEPBANTERS/IEPBANTERS.TP2	0	0	Extended NPC-NPC Interaction SoA: v5.9
 195	IEPBANTERS	IEPBANTERS/IEPBANTERS.TP2	0	1	Extended Minsc/Aerie Interaction ToB: v5.9
-196	IEPBANTERS	IEPBANTERS/IEPBANTERS.TP2	0	2	Imoen "Retrospection" dialogue for BGII: ToB: v5.9
+196	IEPBANTERS	IEPBANTERS/IEPBANTERS.TP2	0	2	"Imoen ""Retrospection"" dialogue for BGII: ToB: v5.9"
 197	IEPBANTERS	IEPBANTERS/IEPBANTERS.TP2	0	3	Wake-Up dialogue for Anomen Romance (By David Gaider with additions from Kulyok): v5.9
 198	IEPBANTERS	IEPBANTERS/IEPBANTERS.TP2	0	4	NPC Conflict Revisions: v5.9
 199	IEPBANTERS	IEPBANTERS/IEPBANTERS.TP2	0	5	Restored Aerie/Jaheira/Anomen interjection in Underdark: v5.9
@@ -259,7 +259,7 @@ position	mod_folder	tp2	language	component	component_name
 258	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	2500	Exceptional Strength Weight Limit Changes [sarevok57]: v18
 259	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	2520	Allow Mages to Use Bucklers and Thieves to Use Small Shields [Angel]: v18
 260	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	2540	Speed Up de'Arnise Keep Stronghold Quests: v18
-261	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	2590	Thieves Can Backstab With More Weapons With "Use Any Item" or as Dual- and Multi-Classes: v18
+261	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	2590	"Thieves Can Backstab With More Weapons With ""Use Any Item"" or as Dual- and Multi-Classes: v18"
 262	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	2999	Max HP at Level One: v18
 263	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	3000	Higher HP on Level Up -> Maximum: v18
 264	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	3008	Allow HP Rolls Through Level 20 [Angel]: v18
@@ -341,7 +341,7 @@ position	mod_folder	tp2	language	component	component_name
 340	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8020	Spellcasting Demiliches: 35.21
 341	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8040	Tie difficulty of level-dependent monster groupings to the difficulty slider: 35.21
 342	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8050	Improved Random Encounters: 35.21
-343	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8060	Improved de'Arnise Keep ("Tactics Remix"): 35.21
+343	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8060	"Improved de'Arnise Keep (""Tactics Remix""): 35.21"
 344	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8070	Improved Unseeing Eye: 35.21
 345	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8080	Improved Bodhi: 35.21
 346	STRATAGEMS	STRATAGEMS/SETUP-STRATAGEMS.TP2	0	8085	Ascension version of Bodhi uses Improved-Bodhi abilities: 35.21
@@ -406,10 +406,47 @@ position	mod_folder	tp2	language	component	component_name
 405	CD_SAFSOD	CD_SAFSOD/CD_SAFSOD.TP2	0	0	Safana SoD Soundset
 406	__EXTRACT	__EXTRACT.TP2	0	0	?????? -> : ???
 407	__IDS	__IDS.TP2	0	0	?????? -> : ???
-408	CHRIZ-BG-MODPACK	SETUP-CHRIZ-BG-MODPACK.TP2	0	430	Use Any Item: item/scroll casting at a fair caster level for non-casters (CDTweaks #2170 fix): v0.1.0
+408	CHRIZ-BG-MODPACK	SETUP-CHRIZ-BG-MODPACK.TP2	0	430	Use Any Item: scrolls cast at a fair caster level for non-casters (CDTweaks #2170 fix): v0.1.0
 409	CBM_UAI_SCROLL	CBM_UAI_SCROLL/CBM_UAI_SCROLL.TP2	0	0	Use Any Item: scrolls cast at a fair caster level for non-casters (CDTweaks #2170 fix): 1.0
 410	SAFANA	SAFANA/SAFANA.TP2	0	0	Safana in Amn: v0.5
 411	SAFANA_LATE_SPELLS	SAFANA_LATE_SPELLS/SAFANA_LATE_SPELLS.TP2	0	0	Safana BG1 template: extend Bard known spells to L6 for SoA/ToB coverage: 1
 412	CD_IMOBG1	CD_IMOBG1/CD_IMOBG1.TP2	0	0	Imoen (BG1) Soundset
 413	CD_IMOBG2	CD_IMOBG2/CD_IMOBG2.TP2	0	0	Imoen (BG2) Soundset
 414	PRIEST_DELIVERY_FIX	PRIEST_DELIVERY_FIX/PRIEST_DELIVERY_FIX.TP2	0	0	Priest spell CLAB delivery fix (AK 0x00/0x40/0x80 mis-sort): 1.0
+415	CHRIZ-BG-MODPACK	SETUP-CHRIZ-BG-MODPACK.TP2	0	440	Ascension Improved Slayer Transformation: repair the EE Fixpack branch (fizzled transformation kills the player): v0.1.0
+416	CHRIZ-BG-MODPACK	SETUP-CHRIZ-BG-MODPACK.TP2	0	450	SCS shapeshift spell tweak: restore the five forms broken by EE Fixpack (Mind Flayer/Iron Golem/Giant Troll/Spider/Mustard Jelly): v0.1.0
+417	CHRIZ-BG-MODPACK	SETUP-CHRIZ-BG-MODPACK.TP2	0	600	"Disable UB ""Cat and Mouse"" Bodhi hunts in the Spellhold maze (and fix the ultimatum deadlock under SCS): v0.1.0"
+418	CDTWEAKS	CDTWEAKS/SETUP-CDTWEAKS.TP2	0	3347	Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Customize (via cdtweaks.txt): v18
+419	AKCB_BERSERKER	AKCB_BERSERKER/SETUP-AKCB_BERSERKER.TP2	0	0	Berserker Overhaul Rebalance: no self-harm, rage immunities, low-HP resistances, Hardiness restored: 2.0
+420	CD_SAREVOK	CD_SAREVOK/CD_SAREVOK.TP2	0	0	Sarevok Soundset
+421	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	100	SoD remix: rest-ambush chance reduced 5x (felt rate): v0.5.0
+422	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	110	SoD remix: keep all companions at SoD start: v0.5.0
+423	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	120	SoD remix: remove the hooded man from the mid-campaign: v0.5.0
+424	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	130	SoD remix: skip the four chapter rest-dreams: v0.5.0
+425	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	140	SoD remix: prologue - skip the Korlasz dungeon: v0.5.0
+426	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	150	SoD remix: prologue - no assassination night, crusade council: v0.5.0
+427	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	145	SoD remix: prologue - no auto-granted starting party (new/imported SoD): v0.5.0
+428	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	160	SoD remix: prologue - Imoen stays and is recruitable: v0.5.0
+429	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	170	SoD remix: prologue - the Korlasz jailbreak: v0.5.0
+430	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	180	SoD remix: prologue - celebration and Caelar's proclamation: v0.5.0
+431	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	185	SoD remix: prologue - Entar Silvershield removed (stays dead): v0.5.0
+432	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	190	SoD remix: prologue - Skie's second-night bedroom visit removed: v0.5.0
+433	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	195	SoD remix: prologue - assassination and poison references scrubbed: v0.5.0
+434	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	200	SoD remix: Coast Way Crossing - fewer spiders, fairer bridge fight: v0.5.0
+435	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	210	SoD remix: Coast Way Forest removed - Rasaad recruits at the camp: v0.5.0
+436	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	220	SoD remix: the dwarven dig site re-garrisoned: v0.5.0
+437	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	900	SoD remix: treasure from removed content -> Collected in the camp chest at the Coast Way crossing: v0.5.0
+438	EEEXREMOTE	SETUP-EEEXREMOTE.TP2	0	0	EEex Remote Console: v0.2.0
+439	CHRIZ-BG-REBALANCE	CHRIZ-BG-REBALANCE/SETUP-CHRIZ-BG-REBALANCE.TP2	0	101	?????? -> : ???
+440	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	175	SoD remix: prologue - the XP ledger: Liia's reward after the jailbreak: v0.5.0
+441	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	230	SoD remix: the road north - fewer, cleaner enemy camps: v0.5.0
+442	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	240	SoD remix: Forest of Wyrms - bugbear cave removed, temple behind the dragon: v0.5.0
+443	CHRIZ-SOD-REMIX	CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2	0	250	SoD remix: Morentherene - a real dragon on Hard and Insane: v0.5.0
+444	ABETTORHLAREBALANCE	SETUP-ABETTORHLAREBALANCE.TP2	0	0	Abettor of Mask: Symphony of the Dark Children finite-song rebalance: 1.0.0
+445	CHRIZ-BG-REBALANCE	SETUP-CHRIZ-BG-REBALANCE.TP2	0	400	Cleric of Tempus: weapon training — axe, longsword, crossbow, and two-pip mastery: v0.1.0
+446	CHRIZ-BG-REBALANCE	SETUP-CHRIZ-BG-REBALANCE.TP2	0	401	Cleric of Tempus: Holy Power compatibility -> Cleric of Tempus: Holy Power — automatic semantic detection (recommended): v0.1.0
+447	CHRIZ-BG-REBALANCE	SETUP-CHRIZ-BG-REBALANCE.TP2	0	404	Cleric of Tempus: Chaos of Battle — one announced battle tide per cast: v0.1.0
+448	CHRIZ-BG-REBALANCE	SETUP-CHRIZ-BG-REBALANCE.TP2	0	405	Cleric of Tempus: Divination toll — Tempus grants no future sight: v0.1.0
+449	AKCB_SHAPESHIFTER	AKCB_SHAPESHIFTER/SETUP-AKCB_SHAPESHIFTER.TP2	0	0	Shapeshifter Overhaul Rebalance: greater werewolf uses the humanoid pathfinding footprint (fits through doors): 1.0
+450	CHRIZ-BG-REBALANCE	SETUP-CHRIZ-BG-REBALANCE.TP2	0	407	Cleric of Tempus: weapon specialization grants extra attacks -> EEex variant: exactly +1/2 attack while wielding a specialized weapon (recommended): v0.1.0
+451	CHRIZ-BG-REBALANCE	SETUP-CHRIZ-BG-REBALANCE.TP2	0	408	Cleric of Tempus: updated kit and ability descriptions: v0.1.0
