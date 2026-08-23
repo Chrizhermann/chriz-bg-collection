@@ -37,41 +37,43 @@ This is now a living document — decisions are preserved, tables are not regene
 
 | Mod folder | Comps | Version | Identifies as | Decision |
 |---|---|---|---|---|
-| AJANTISBG2 | 1 | 21 | Sir Ajantis NPC for BGII | |
-| ARTISANSKITPACK | 47 | 6.0 | Artisan's Kitpack | |
-| ARTISANSKITPACK_NPC | 6 | — | Artisan's Kitpack | |
-| ARTISANSKITPACK_TWEAK | 7 | — | Artisan's Kitpack | |
-| ASCENSION | 16 | 2.1.0 | Rewritten Final Chapter of Throne of Bhaal | |
-| AURA_BG1_2_EET | 4 | — | Aura NPC for Baldur's Gate | |
-| BARDICWONDERS | 21 | — | Bardic Wonders | |
-| BGGO | 1 | v3.5 | Baldurs Gate Graphical Overhaul Core | |
-| BRANWEN | 1 | v8pre | Branwen BG2 NPC mod for players and modders | |
+| AJANTISBG2 | 1 | 21 | Sir Ajantis NPC for BGII | drop and maybe look for something else later |
+| ARTISANSKITPACK | 47 | 6.0 | Artisan's Kitpack | Important part of my collection, BUT we will use our own custom version, which has it's own repo (which is a fork, that we keep in sync with upstream |
+| ARTISANSKITPACK_NPC | 6 | — | Artisan's Kitpack | same as above |
+| ARTISANSKITPACK_TWEAK | 7 | — | Artisan's Kitpack | will have to do a quick check together later |
+| ASCENSION | 16 | 2.1.0 | Rewritten Final Chapter of Throne of Bhaal | newest version essential |
+| AURA_BG1_2_EET | 4 | — | Aura NPC for Baldur's Gate | optional (default not, mark as overpowered currently, I will have to nerf it more later) |
+| BARDICWONDERS | 21 | — | Bardic Wonders | Important part of my collection, BUT we will use our own custom version, which has it's own repo (which is a fork, that we keep in sync with upstream |
+| BGGO | 1 | v3.5 | Baldurs Gate Graphical Overhaul Core | optional, included by default |
+| BRANWEN | 1 | v8pre | Branwen BG2 NPC mod for players and modders | optional, included by default |
 | BRISTLELICK | 1 | v2.4 | Bristlelick—the gnoll companion for BGEE | drop |
-| BUBB_SPELL_MENU_EXTENDED | 1 | v5.1 | Bubb's Spell Menu Extended | |
+| BUBB_SPELL_MENU_EXTENDED | 1 | v5.1 | Bubb's Spell Menu Extended | newest version essential |
 | C0WARLOCK | 1 | 3.0 | Warlock Kit | |
-| CDTWEAKS | 62 | v18 | Change Viconia's Skin Color to Dark Blue | |
-| CROSSMODBG2 | 3 | v30 | Crossmod Banter Pack for Shadows of Amn Content | |
-| EEEX | 8 | v0.11.0-alpha | EEex | |
-| EEFIXPACK | 2 | Alpha 3 | Core Fixes | |
-| EET | 2 | v14.0 | EET core (resource importation) | |
-| EET_END | 1 | — | EET end (last mod in install order) -> Standard installation | |
-| EET_TWEAKS | 1 | 1.12 | XP for Traps, Spells and Lockpicking -> Vanilla friendly pro | |
+| CDTWEAKS | 62 | v18 | Change Viconia's Skin Color to Dark Blue | newest version essential |
+| CROSSMODBG2 | 3 | v30 | Crossmod Banter Pack for Shadows of Amn Content | essential |
+| EEEX | 8 | v0.11.0-alpha | EEex | essential, we will 1000% use the newest version, not the one you mentioned |
+| EEFIXPACK | 2 | Alpha 3 | Core Fixes | newest version essential |
+| EET | 2 | v14.0 | EET core (resource importation) | newest version essential |
+| EET_END | 1 | — | EET end (last mod in install order) -> Standard installation | newest version essential |
+| EET_TWEAKS | 1 | 1.12 | XP for Traps, Spells and Lockpicking -> Vanilla friendly pro | Drop, we will replace this with our own version before v1 of the collection |
 | EVANDRA | 2 | v2.2 | Evandra NPC | keep — toggle, labeled "manual download required" |
-| FADE | 1 | 5.6 | Fade | |
-| HIDDENGAMEPLAYOPTIONS | 27 | 5.0 | Add in-game option "Enable Debug Mode" | |
-| IEPBANTERS | 7 | v5.9 | Extended NPC-NPC Interaction SoA | |
-| IWDIFICATION | 8 | v11 | Icewind Dale Casting Graphics (Andyr) | |
-| PAINA | 1 | — | Pai'Na NPC for BG2 | |
-| RANDOMISER | 9 | 7 | Randomise scrolls | |
-| RR | 7 | v4.92 | Proper dual-wielding implementation for Thieves and Bards | |
-| SARAHTOB | 1 | v8 | Sarah NPC Romance Mod for BG2 | |
-| SIRENE_BG2 | 3 | — | Sirene NPC for BG2 | |
-| SPELL_REV | 7 | v4.19 | Spell Revisions | |
-| STRATAGEMS | 76 | 35.21 | Install all spell tweaks (if you don't select this, you will | |
-| UB | 22 | v28 | The Kidnapping of Boo by Cliffette | |
+| FADE | 1 | 5.6 | Fade | optional, included by default |
+| HIDDENGAMEPLAYOPTIONS | 27 | 5.0 | Add in-game option "Enable Debug Mode" | optional, included by default |
+| IEPBANTERS | 7 | v5.9 | Extended NPC-NPC Interaction SoA | optional, included by default |
+| IWDIFICATION | 8 | v11 | Icewind Dale Casting Graphics (Andyr) | newest version essential |
+| PAINA | 1 | — | Pai'Na NPC for BG2 | optional, included by default |
+| RANDOMISER | 9 | 7 | Randomise scrolls | newest version essential with my own tweaks, I think we already have a fork for this? |
+| RR | 7 | v4.92 | Proper dual-wielding implementation for Thieves and Bards | essential |
+| SARAHTOB | 1 | v8 | Sarah NPC Romance Mod for BG2 | optional, included by default |
+| SIRENE_BG2 | 3 | — | Sirene NPC for BG2 | optional, included by default --- BG1 version missing |
+| SPELL_REV | 7 | v4.19 | Spell Revisions | optional, included by default --- including or excluding has impact on a lot of other mods. |
+| STRATAGEMS | 76 | 35.21 | Install all spell tweaks (if you don't select this, you will | essential, will later replace with my own version |
+| UB | 22 | v28 | The Kidnapping of Boo by Cliffette |  |
 | WINGS | 2 | — | Wings for BG2 | drop |
-| XAN | 2 | v19 | Xan NPC MOD for Baldur's Gate II | |
-| YESLICKNPC | 1 | v5.0 | Yeslick NPC for BGII | |
+| XAN | 2 | v19 | Xan NPC MOD for Baldur's Gate II | optional, included by default, also needs optional change that makes him a fighter/mage in both games (and maybe even a eldritch knight, if Artisans is involved, all active by default) |
+| YESLICKNPC | 1 | v5.0 | Yeslick NPC for BGII | optional, included by default |
+
+!!! Lots of stuff missing here and a lot of options from SCS and CDTweaks and UB, etc etc, are not listed. !!!
 
 ## 2. Uncertain provenance (5) — research in progress
 
@@ -79,8 +81,8 @@ This is now a living document — decisions are preserved, tables are not regene
 |---|---|---|---|---|
 | AW_PF_SOUNDSETS | 1 | — | Pathfinder Soundset | drop (voice packs excluded) |
 | BASTIL | 1 | — | Bastila Shan Soundset | drop (voice packs excluded) |
-| HQ_SOUNDCLIPS_BG2EE | 1 | 1.3 | Install high quality soundclips for new BG2EE content | ? (voice pack or audio restoration — Chris to rule) |
-| SAFANA | 1 | v0.5 | Safana in Amn | keep (fix SoD-items carryover; bard conversion = toggle) |
+| HQ_SOUNDCLIPS_BG2EE | 1 | 1.3 | Install high quality soundclips for new BG2EE content | audio restoration, have a subagent check for peoples opinion, but imo it should be essential |
+| SAFANA | 1 | v0.5 | Safana in Amn | keep (fix SoD-items carryover; bard conversion = toggle) --- optional, included by default (including all changes) |
 | ZG_BGNPC_VOICES_BGS | 1 | 0.3.1-bgs | Baldur's Gate NPC Voice Pack for EE 2.6+ | drop (voice packs excluded) |
 
 ## 3. Chriz-layer repos (9)
