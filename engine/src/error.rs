@@ -50,6 +50,9 @@ pub enum EngineError {
     /// Manifest validation produced findings; rendered one per line.
     #[error("{}", .0.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n"))]
     Validation(Vec<crate::validate::Finding>),
+    /// A selection contains an unsupported platform or unknown toggle or choice id.
+    #[error("invalid selection: {0}")]
+    InvalidSelection(String),
 }
 
 /// Convenience alias for engine results.
