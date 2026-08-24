@@ -10,10 +10,8 @@
     {
       "id": 1,
       "subject": "Task 1: Manifest schema types + TOML parsing",
-      "status": "pending",
-      "blockedBy": [
-        0
-      ]
+      "status": "completed",
+      "commit": "6af63bb"
     },
     {
       "id": 2,
@@ -143,5 +141,5 @@
       ]
     }
   ],
-  "lastUpdated": "2026-08-23"
+  "lastUpdated": "2026-08-25"
 }
