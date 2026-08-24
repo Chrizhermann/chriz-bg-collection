@@ -1,6 +1,5 @@
 //! Progress and diagnostic events, and the sinks that consume them.
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -25,9 +24,10 @@ pub enum EngineEvent {
     StepProgress {
         /// Step id, as in [`EngineEvent::StepStarted`].
         id: String,
-        /// Units of work completed so far.
+        /// Units of work completed so far. Producers keep this within the JS-safe
+        /// integer range (`< 2^53`) — the bridge serialises it as a JSON number.
         done: u64,
-        /// Total units of work expected.
+        /// Total units of work expected (same range rule as `done`).
         total: u64,
     },
     /// One line of output captured from a child process.
@@ -54,8 +54,11 @@ pub enum EngineEvent {
         page: String,
         /// SHA-256 the downloaded archive must have.
         expected_sha256: String,
-        /// Directory the downloaded archive should be dropped into.
-        drop_dir: PathBuf,
+        /// Directory the downloaded archive should be dropped into, in native
+        /// display form. A `String` rather than `PathBuf` so the event always
+        /// serialises (serde rejects non-Unicode native paths); the engine keeps
+        /// the real `PathBuf` and only reports it here.
+        drop_dir: String,
     },
     /// Something went wrong, either inside a step or at the run level.
     Error {
@@ -107,16 +110,19 @@ impl<T: EventSink + Sync> EventSink for Arc<T> {
 }
 
 /// Writes one human-readable line per event to stderr.
+///
+/// Write failures (closed or non-blocking stderr) are ignored: reporting progress
+/// must never take the engine down. Each event is written under the stderr lock,
+/// so lines from concurrent sinks do not interleave mid-line.
 pub struct ConsoleSink;
 
-impl EventSink for ConsoleSink {
-    fn emit(&self, event: EngineEvent) {
+impl ConsoleSink {
+    /// Render `event` as the single line `ConsoleSink` prints for it (no newline).
+    pub fn render(event: &EngineEvent) -> String {
         match event {
-            EngineEvent::PhaseStarted { name } => eprintln!("== {name} =="),
-            EngineEvent::StepStarted { id, label } => eprintln!("-> [{id}] {label}"),
-            EngineEvent::StepProgress { id, done, total } => {
-                eprintln!("   [{id}] {done}/{total}");
-            }
+            EngineEvent::PhaseStarted { name } => format!("== {name} =="),
+            EngineEvent::StepStarted { id, label } => format!("-> [{id}] {label}"),
+            EngineEvent::StepProgress { id, done, total } => format!("   [{id}] {done}/{total}"),
             EngineEvent::ConsoleLine {
                 step_id,
                 stream,
@@ -126,34 +132,61 @@ impl EventSink for ConsoleSink {
                     Stream::Stdout => "   ",
                     Stream::Stderr => "!  ",
                 };
-                eprintln!("{prefix}[{step_id}] {line}");
+                format!("{prefix}[{step_id}] {line}")
             }
             EngineEvent::StepFinished { id, outcome } => {
                 let outcome = format!("{outcome:?}").to_lowercase();
-                eprintln!("<- [{id}] {outcome}");
+                format!("<- [{id}] {outcome}")
             }
             EngineEvent::ManualDownloadNeeded {
                 mod_id,
                 page,
                 expected_sha256,
                 drop_dir,
-            } => {
-                let drop_dir = drop_dir.display();
-                eprintln!(
-                    "?? manual download needed for {mod_id}: {page} \
-                     (drop into {drop_dir}, sha256 {expected_sha256})"
-                );
-            }
+            } => format!(
+                "?? manual download needed for {mod_id}: {page} \
+                 (drop into {drop_dir}, sha256 {expected_sha256})"
+            ),
             EngineEvent::Error { step_id, message } => {
                 let step_id = step_id.as_deref().unwrap_or("-");
-                eprintln!("!! [{step_id}] {message}");
+                format!("!! [{step_id}] {message}")
             }
         }
     }
 }
 
-/// Forwards events over a crossbeam channel (dropped receiver = events silently discarded).
-pub struct ChannelSink(pub crossbeam_channel::Sender<EngineEvent>);
+impl EventSink for ConsoleSink {
+    fn emit(&self, event: EngineEvent) {
+        use std::io::Write as _;
+        let line = Self::render(&event);
+        let stderr = std::io::stderr();
+        let mut out = stderr.lock();
+        // Deliberately fallible-and-ignored: a closed stderr must not panic the engine.
+        let _ = writeln!(out, "{line}");
+    }
+}
+
+/// Forwards events over a crossbeam channel.
+///
+/// Delivery policy: `emit` uses a blocking `send`. On an **unbounded** channel (the
+/// recommended configuration — see [`ChannelSink::unbounded`]) this never blocks. On a
+/// bounded channel it applies back-pressure: a consumer that stops draining will stall
+/// the engine, which is the intended trade-off over silently dropping progress events
+/// (a lost `StepFinished` would leave the UI hanging). A dropped receiver is not an
+/// error — events are silently discarded, so a UI that closes mid-run does not break
+/// the install.
+pub struct ChannelSink(
+    /// The sending half of the channel events are forwarded on.
+    pub crossbeam_channel::Sender<EngineEvent>,
+);
+
+impl ChannelSink {
+    /// Create a sink on a fresh unbounded channel and return it with its receiver.
+    pub fn unbounded() -> (ChannelSink, crossbeam_channel::Receiver<EngineEvent>) {
+        let (tx, rx) = crossbeam_channel::unbounded();
+        (ChannelSink(tx), rx)
+    }
+}
 
 impl EventSink for ChannelSink {
     fn emit(&self, event: EngineEvent) {
@@ -165,7 +198,6 @@ impl EventSink for ChannelSink {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use std::sync::Arc;
 
     /// One of every [`EngineEvent`] variant, for exhaustive smoke tests.
@@ -209,7 +241,7 @@ mod tests {
                 mod_id: "bg1re".to_string(),
                 page: "https://example.invalid/bg1re".to_string(),
                 expected_sha256: "abc123".to_string(),
-                drop_dir: PathBuf::from("downloads/manual"),
+                drop_dir: "downloads/manual".to_string(),
             },
             EngineEvent::Error {
                 step_id: Some("eet/0".to_string()),
@@ -290,20 +322,32 @@ mod tests {
         assert!(json.contains(r#""outcome":"succeeded""#), "{json}");
     }
 
+    /// Forces the call through the trait so wrapper impls (not autoderef) are exercised.
+    fn emit_via_trait<S: EventSink>(sink: &S, event: EngineEvent) {
+        sink.emit(event);
+    }
+
     #[test]
     fn box_and_arc_sinks_forward() {
-        let (tx, rx) = crossbeam_channel::unbounded();
+        let (sink, rx) = ChannelSink::unbounded();
+        let tx = sink.0.clone();
 
         let boxed: Box<dyn EventSink> = Box::new(ChannelSink(tx.clone()));
-        boxed.emit(EngineEvent::PhaseStarted {
-            name: "boxed".to_string(),
-        });
+        emit_via_trait(
+            &boxed,
+            EngineEvent::PhaseStarted {
+                name: "boxed".to_string(),
+            },
+        );
 
         let shared = Arc::new(ChannelSink(tx));
         let clone = Arc::clone(&shared);
-        clone.emit(EngineEvent::PhaseStarted {
-            name: "arced".to_string(),
-        });
+        emit_via_trait(
+            &clone,
+            EngineEvent::PhaseStarted {
+                name: "arced".to_string(),
+            },
+        );
 
         assert_eq!(
             rx.recv().unwrap(),
