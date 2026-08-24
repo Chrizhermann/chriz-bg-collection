@@ -47,8 +47,9 @@ pub enum EngineError {
         /// Path to the second mod manifest declaring the id.
         second: std::path::PathBuf,
     },
-    #[error("manifest validation: {0}")]
-    Validation(String),
+    /// Manifest validation produced findings; rendered one per line.
+    #[error("{}", .0.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n"))]
+    Validation(Vec<crate::validate::Finding>),
 }
 
 /// Convenience alias for engine results.
