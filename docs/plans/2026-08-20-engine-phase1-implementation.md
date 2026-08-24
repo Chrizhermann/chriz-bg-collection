@@ -359,7 +359,9 @@ removes_components = [{ mod_id = "testmod", component = 10 }]
 
 **Step 3: Implement** `loader.rs`: read `collection.toml`, walk `mods/*.toml`
 (walkdir, sorted), parse each with the file path in `ManifestParse` errors,
-reject duplicate ids.
+reject duplicate ids. Reject `collection.schema != 1` with a dedicated
+`EngineError::UnsupportedSchema { found, supported }` (test: fixture with `schema = 2`
+fails to load). Reject a mod file whose `id` differs from its file stem (`mods/<id>.toml`).
 
 **Step 4:** Run again → PASS
 
@@ -385,6 +387,19 @@ by mutating the parsed good fixture — no extra fixture files):
 6. Mods with phase `bg1-pre-merge` must precede `eet` in order; nothing may follow
    `eet_end` except mods with phase `post-eet-end` (encode as: order must be grouped
    bg1-pre-merge < main < post-eet-end, with `eet`/`eet_end` as main-phase anchors).
+7. Semantically mandatory lists are nonempty: `collection.order`, every `mod.components`,
+   every explicit `order[].components`, every `platforms` (Error — an empty list would
+   silently install nothing).
+8. Choice-option `adds_components` placement is deterministic: each added `ComponentRef`
+   must name a declared component of a mod in `order`; if that mod is split across
+   several `order` entries, the component must be listed in exactly one of them (Error
+   otherwise). Resolver (Task 4) then re-enables it in that slot; it never invents slots.
+9. Every `Component.stdin` ends with `
+` (Warning) — concatenating un-terminated inputs
+   in the runner would merge answers.
+
+Replace `EngineError::Validation(String)` with `Validation(Vec<Finding>)` (Display lists
+every finding, one per line) so multi-finding diagnostics survive the error boundary.
 
 **API:** `pub fn validate(m: &Manifest) -> Vec<Finding>` where
 `Finding { severity: Error|Warning, rule: &'static str, message: String }`.
@@ -442,6 +457,10 @@ pub fn resolve(m: &Manifest, sel: &Selection) -> Result<InstallPlan>
 Semantics: start from `order`; apply platform filter; apply toggles (off → remove); apply
 choice groups (default unless overridden); drop runs that end up with zero components;
 error if a removed mod is still referenced by a remaining `ComponentRef`.
+Choice `adds_components` re-enable the component in the order slot that lists it (or the
+mod's single unsplit run) — validator rule 8 guarantees exactly one such slot. A run that
+drops to zero components because of a toggle is removed silently; a run that was empty in
+the manifest is a validator error (rule 7), never a resolver concern.
 
 **Step 5: Commit** `engine: resolve stage (selection -> install plan)`
 
@@ -668,6 +687,11 @@ Commit per piece, final `engine: stage (detect/copy/patch/preflight)`.
 ---
 
 ## Task 13: Acquire — cache, downloads, extraction, manual queue
+
+> Decision needed before implementing (Codex review 2026-08-25): `ureq` is built with only
+> the `rustls` feature — static WebPKI roots, env-var-only proxy discovery, no Windows
+> system-proxy or platform-verifier. Confirm that is acceptable for the Windows-first
+> downloader or add `platform-verifier`.
 
 **Files:**
 - Create: `engine/src/acquire.rs`; register in `lib.rs`
