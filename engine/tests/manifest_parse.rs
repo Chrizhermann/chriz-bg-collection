@@ -1,4 +1,4 @@
-use bg_engine::manifest::{ModFile, Phase, SourceKind};
+use bg_engine::manifest::{Collection, ComponentRef, ModFile, Phase, SourceKind};
 
 fn fixture(name: &str) -> String {
     std::fs::read_to_string(format!(
@@ -6,6 +6,43 @@ fn fixture(name: &str) -> String {
         env!("CARGO_MANIFEST_DIR")
     ))
     .unwrap()
+}
+
+fn collection_fixture() -> String {
+    std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/manifest/collection.toml"
+    ))
+    .unwrap()
+}
+
+#[test]
+fn parses_collection() {
+    let collection: Collection = toml::from_str(&collection_fixture()).unwrap();
+    assert_eq!(collection.schema, 1);
+    assert_eq!(collection.game_build, "2.7.3.0");
+    assert_eq!(collection.order.len(), 3);
+    assert_eq!(collection.order[1].components, Some(vec![0]));
+    assert!(collection.order[0].components.is_none());
+    assert_eq!(
+        collection.toggles[0].removes_components[0],
+        ComponentRef {
+            mod_id: "testmod".to_owned(),
+            component: 10,
+        }
+    );
+    assert_eq!(collection.choice_groups[0].default, "plain");
+    assert_eq!(
+        collection.choice_groups[0].options[1].adds_components.len(),
+        1
+    );
+}
+
+#[test]
+fn rejects_unknown_collection_field() {
+    let text = collection_fixture().replace("game_build", "gamebuild");
+    let err = toml::from_str::<Collection>(&text).unwrap_err();
+    assert!(err.to_string().contains("gamebuild"), "{err}");
 }
 
 #[test]
@@ -37,5 +74,6 @@ fn rejects_unknown_field() {
 #[test]
 fn rejects_unknown_enum_value() {
     let text = fixture("testmod.toml").replace("phase = \"main\"", "phase = \"mian\"");
-    assert!(toml::from_str::<ModFile>(&text).is_err());
+    let err = toml::from_str::<ModFile>(&text).unwrap_err();
+    assert!(err.to_string().contains("mian"), "{err}");
 }

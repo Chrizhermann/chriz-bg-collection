@@ -1,0 +1,34 @@
+schema = 1
+game_build = "2.7.3.0"
+
+[[order]]
+id = "eet"
+
+[[order]]
+id = "testmod"
+components = [0]
+
+[[order]]
+id = "testmod"
+components = [10]
+
+[[toggles]]
+id = "testmod-optional"
+name = "Test optional bits"
+default_on = true
+removes_components = [{ mod_id = "testmod", component = 10 }]
+
+[[choice_groups]]
+id = "flavor"
+name = "Flavor"
+default = "plain"
+
+[[choice_groups.options]]
+id = "plain"
+name = "Plain"
+
+[[choice_groups.options]]
+id = "spicy"
+name = "Spicy"
+adds_components = [{ mod_id = "testmod", component = 10 }]
+removes_components = [{ mod_id = "testmod", component = 0 }]

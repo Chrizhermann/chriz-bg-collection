@@ -12,7 +12,10 @@ pub enum EngineError {
         source: std::io::Error,
     },
     #[error("toml parse error in {path}: {msg}")]
-    ManifestParse { path: String, msg: String },
+    ManifestParse {
+        path: std::path::PathBuf,
+        msg: String,
+    },
     #[error("manifest validation: {0}")]
     Validation(String),
 }
