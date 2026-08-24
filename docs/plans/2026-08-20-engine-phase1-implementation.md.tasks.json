@@ -16,7 +16,7 @@
     {
       "id": 2,
       "subject": "Task 2: Manifest loader",
-      "status": "pending",
+      "status": "in_progress",
       "blockedBy": [
         1
       ]
@@ -24,7 +24,7 @@
     {
       "id": 3,
       "subject": "Task 3: Manifest validators",
-      "status": "pending",
+      "status": "in_progress",
       "blockedBy": [
         2
       ]
@@ -32,7 +32,7 @@
     {
       "id": 4,
       "subject": "Task 4: Resolve stage (selection -> InstallPlan)",
-      "status": "pending",
+      "status": "in_progress",
       "blockedBy": [
         2
       ]
@@ -40,10 +40,8 @@
     {
       "id": 5,
       "subject": "Task 5: Event model",
-      "status": "pending",
-      "blockedBy": [
-        0
-      ]
+      "status": "completed",
+      "commit": "ebfc2dd (merged 3bb5f28)"
     },
     {
       "id": 6,
@@ -81,7 +79,7 @@
     {
       "id": 10,
       "subject": "Task 10: Fake-game test builder",
-      "status": "pending",
+      "status": "in_progress",
       "blockedBy": [
         0
       ]

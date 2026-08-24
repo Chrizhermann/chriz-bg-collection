@@ -377,7 +377,9 @@ fails to load). Reject a mod file whose `id` differs from its file stem (`mods/<
 
 Validation rules (each = one table-driven test case with a broken fixture built in-memory
 by mutating the parsed good fixture — no extra fixture files):
-1. Every `order[].id` references an existing mod; every mod appears in `order` exactly once.
+1. Every `order[].id` references an existing mod; every mod appears in `order` at least once.
+   A mod appearing more than once (split runs) must carry explicit `components` on every
+   entry, pairwise disjoint; an entry without `components` (= all) must be the mod's only one.
 2. `order[].components` (when present) and all `ComponentRef`s reference declared components.
 3. Component ids unique per mod.
 4. Toggle/choice ids unique; choice `default` is one of its options.
