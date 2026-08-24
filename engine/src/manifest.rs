@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Install phase a mod belongs to, relative to the EET merge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Phase {
     Bg1PreMerge,
@@ -22,21 +22,20 @@ pub enum SourceKind {
 }
 
 /// Where a mod's archive comes from and how it is verified.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Source {
     pub kind: SourceKind,
+    /// Download URL; for kind = manual this is the page the user is sent to.
     pub url: String,
     pub sha256: String,
-    /// For kind = manual: page the GUI/CLI opens for the user.
-    #[serde(default)]
-    pub manual_page: Option<String>,
 }
 
 /// One installable WeiDU component (DESIGNATED number).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Component {
     pub id: u32,
-    #[serde(default)]
     pub name: String,
     /// Scripted stdin for READLN prompts, verbatim (include trailing newline).
     #[serde(default)]
@@ -44,7 +43,8 @@ pub struct Component {
 }
 
 /// A single `manifest/mods/<id>.toml` file.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ModFile {
     pub id: String,
     pub name: String,
@@ -61,7 +61,8 @@ pub struct ModFile {
 }
 
 /// One position in the flat install order.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct OrderEntry {
     /// mod id; granularity finer than a whole mod uses `components`
     pub id: String,
@@ -71,18 +72,19 @@ pub struct OrderEntry {
 }
 
 /// Points at one component of one mod.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ComponentRef {
     pub mod_id: String,
     pub component: u32,
 }
 
 /// A user-facing on/off switch over mods and components.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Toggle {
     pub id: String,
     pub name: String,
-    #[serde(default)]
     pub default_on: bool,
     /// mod ids fully removed when off
     #[serde(default)]
@@ -93,7 +95,8 @@ pub struct Toggle {
 }
 
 /// A set of mutually exclusive options the user picks one of.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ChoiceGroup {
     pub id: String,
     pub name: String,
@@ -102,7 +105,8 @@ pub struct ChoiceGroup {
 }
 
 /// One selectable option inside a [`ChoiceGroup`].
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ChoiceOption {
     pub id: String,
     pub name: String,
@@ -113,8 +117,11 @@ pub struct ChoiceOption {
 }
 
 /// The collection-level `collection.toml`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Collection {
+    /// Manifest schema version; this engine understands 1.
+    pub schema: u32,
     pub game_build: String,
     #[serde(default)]
     pub order: Vec<OrderEntry>,

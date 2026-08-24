@@ -25,5 +25,17 @@ fn parses_commit_zip_source_and_defaults() {
     let m: ModFile = toml::from_str(&fixture("eet.toml")).unwrap();
     assert_eq!(m.source.kind, SourceKind::GithubCommitZip);
     assert_eq!(m.language, 0); // defaulted
-    assert!(m.source.manual_page.is_none());
+}
+
+#[test]
+fn rejects_unknown_field() {
+    let text = fixture("testmod.toml").replace("weidu = \"249.00\"", "wiedu = \"249.00\"");
+    let err = toml::from_str::<ModFile>(&text).unwrap_err();
+    assert!(err.to_string().contains("wiedu"), "{err}");
+}
+
+#[test]
+fn rejects_unknown_enum_value() {
+    let text = fixture("testmod.toml").replace("phase = \"main\"", "phase = \"mian\"");
+    assert!(toml::from_str::<ModFile>(&text).is_err());
 }

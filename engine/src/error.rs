@@ -5,8 +5,12 @@ use thiserror::Error;
 /// Anything that can go wrong inside the engine.
 #[derive(Debug, Error)]
 pub enum EngineError {
-    #[error("io: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("{path}: {source}")]
+    Io {
+        path: std::path::PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
     #[error("toml parse error in {path}: {msg}")]
     ManifestParse { path: String, msg: String },
     #[error("manifest validation: {0}")]
