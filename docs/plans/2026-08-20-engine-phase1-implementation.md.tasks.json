@@ -79,10 +79,8 @@
     {
       "id": 10,
       "subject": "Task 10: Fake-game test builder",
-      "status": "in_progress",
-      "blockedBy": [
-        0
-      ]
+      "status": "completed",
+      "commit": "0a79b4f (merged 4e10206)"
     },
     {
       "id": 11,
