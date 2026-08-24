@@ -49,7 +49,8 @@ const ENGINE_LUA: &str = "engine_name = 'FakeGame'\n";
 /// A BIFF-only resource to index in the fake game.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Resource {
-    /// Resource name without extension: 1–8 ASCII bytes, stored uppercase in the KEY.
+    /// Resource name without extension: 1–8 printable ASCII bytes (no spaces or
+    /// control characters), stored uppercase in the KEY.
     pub resref: String,
     /// IE resource type code (see the `RES_TYPE_*` constants).
     pub res_type: u16,
@@ -76,14 +77,19 @@ impl FakeGame {
     /// Same as [`FakeGame::build`], with `extra` BIFF-only resources appended after
     /// the defaults (KEY/BIF table order is defaults first, then `extra` in order).
     ///
-    /// A resref longer than 8 bytes, empty, or non-ASCII yields
-    /// `ErrorKind::InvalidInput` before anything is written.
+    /// Before anything is allocated or written, every resref is validated (see
+    /// [`Resource::resref`]) and the KEY/BIF layout is checked to fit `u32`
+    /// fields (see [`check_layout_fits_u32`]); violations yield
+    /// `ErrorKind::InvalidInput`.
     pub fn build_with(root: &Path, extra: &[Resource]) -> io::Result<FakeGame> {
-        let mut resources = Self::default_resources();
-        resources.extend_from_slice(extra);
-        for res in &resources {
+        let defaults = Self::default_resources();
+        for res in defaults.iter().chain(extra) {
             validate_resref(&res.resref)?;
         }
+        check_layout_fits_u32(defaults.iter().chain(extra).map(|r| r.payload.len()))?;
+
+        let mut resources = defaults;
+        resources.extend_from_slice(extra);
         let bif = encode_bif(&resources)?;
         let key = encode_key(&resources, bif.len())?;
         let tlk = encode_tlk();
@@ -153,29 +159,99 @@ impl FakeGame {
     }
 }
 
-/// Reject resrefs the KEY cannot represent: empty, longer than 8 bytes, or non-ASCII.
+/// Check, with overflow-safe arithmetic, that a single-BIF KEY/BIF layout for
+/// resources with the given payload sizes fits the `u32` fields of both formats:
+/// resource count, each payload size, each payload offset, the total BIF length,
+/// and the total KEY length. Fails with `ErrorKind::InvalidInput`.
+///
+/// Runs before any buffer is allocated so an oversized request never tries to
+/// reserve memory it cannot encode anyway.
+pub fn check_layout_fits_u32(payload_sizes: impl IntoIterator<Item = usize>) -> io::Result<()> {
+    let overflow = |what: &str| {
+        io::Error::new(
+            ErrorKind::InvalidInput,
+            format!("fake game layout: {what} does not fit in u32"),
+        )
+    };
+    let fits = |value: usize| u32::try_from(value).is_ok();
+
+    let mut count = 0usize;
+    let mut payload_total = 0usize;
+    for size in payload_sizes {
+        if !fits(size) {
+            return Err(overflow("payload size"));
+        }
+        count = count
+            .checked_add(1)
+            .ok_or_else(|| overflow("resource count"))?;
+        payload_total = payload_total
+            .checked_add(size)
+            .ok_or_else(|| overflow("payload total"))?;
+    }
+    if !fits(count) {
+        return Err(overflow("resource count"));
+    }
+
+    // BIF: header + var table, then payloads contiguously. The last payload's
+    // offset is `table_end + (payload_total - last_size)`, so every offset fits
+    // whenever the total length does.
+    let bif_table_end = BIF_VAR_ENTRY_LEN
+        .checked_mul(count)
+        .and_then(|table| table.checked_add(BIF_HEADER_LEN))
+        .ok_or_else(|| overflow("BIF table end"))?;
+    let bif_len = bif_table_end
+        .checked_add(payload_total)
+        .ok_or_else(|| overflow("BIF length"))?;
+    if !fits(bif_table_end) {
+        return Err(overflow("BIF payload offset"));
+    }
+    if !fits(bif_len) {
+        return Err(overflow("BIF length"));
+    }
+
+    let key_len = KEY_RES_ENTRY_LEN
+        .checked_mul(count)
+        .and_then(|table| {
+            table.checked_add(KEY_HEADER_LEN + KEY_BIF_ENTRY_LEN + BIF_NAME.len() + 1)
+        })
+        .ok_or_else(|| overflow("KEY length"))?;
+    if !fits(key_len) {
+        return Err(overflow("KEY length"));
+    }
+    Ok(())
+}
+
+/// Reject resrefs the KEY cannot represent: empty, longer than 8 bytes, or
+/// containing anything but printable ASCII (this excludes NUL, control
+/// characters and spaces).
 fn validate_resref(resref: &str) -> io::Result<()> {
-    if resref.is_empty() || resref.len() > 8 || !resref.is_ascii() {
+    let valid = (1..=8).contains(&resref.len()) && resref.bytes().all(|b| b.is_ascii_graphic());
+    if !valid {
         return Err(io::Error::new(
             ErrorKind::InvalidInput,
-            format!("resref {resref:?} must be 1-8 ASCII bytes"),
+            format!("resref {resref:?} must be 1-8 printable ASCII bytes without spaces"),
         ));
     }
     Ok(())
 }
 
 /// Ensure `root` is either absent (then create it) or an existing empty directory.
+/// An existing file, or a non-empty directory, yields `ErrorKind::AlreadyExists`.
 fn ensure_empty_root(root: &Path) -> io::Result<()> {
-    match fs::read_dir(root) {
-        Ok(mut entries) => {
-            if entries.next().is_some() {
-                return Err(io::Error::new(
-                    ErrorKind::AlreadyExists,
-                    format!("fake game root {} is not empty", root.display()),
-                ));
+    let already_exists = |what: &str| {
+        io::Error::new(
+            ErrorKind::AlreadyExists,
+            format!("fake game root {} {what}", root.display()),
+        )
+    };
+    match fs::metadata(root) {
+        Ok(meta) if meta.is_dir() => {
+            if fs::read_dir(root)?.next().is_some() {
+                return Err(already_exists("is not empty"));
             }
             Ok(())
         }
+        Ok(_) => Err(already_exists("exists and is not a directory")),
         Err(err) if err.kind() == ErrorKind::NotFound => fs::create_dir_all(root),
         Err(err) => Err(err),
     }
@@ -218,6 +294,9 @@ fn locator(var_index: usize) -> io::Result<u32> {
 /// Header (0x14): `BIFF`, `V1  `, u32 var count, u32 tileset count (0), u32 table
 /// offset (0x14). Var entry (0x10): u32 locator, u32 payload offset, u32 size,
 /// u16 type, u16 0. Payloads are laid out contiguously after the table.
+///
+/// Callers are expected to have run [`check_layout_fits_u32`]; the `to_u32`
+/// conversions here are a second line of defence and fail with `InvalidData`.
 fn encode_bif(resources: &[Resource]) -> io::Result<Vec<u8>> {
     let table_len = BIF_VAR_ENTRY_LEN * resources.len();
     let total: usize =
@@ -254,6 +333,9 @@ fn encode_bif(resources: &[Resource]) -> io::Result<Vec<u8>> {
 /// `<root>/data`). The NUL-terminated name follows the BIF table immediately;
 /// the resource table follows the name. Resource entry (14): 8-byte NUL-padded
 /// uppercase resref, u16 type, u32 locator.
+///
+/// Callers are expected to have run [`check_layout_fits_u32`]; the `to_u32`
+/// conversions here are a second line of defence and fail with `InvalidData`.
 fn encode_key(resources: &[Resource], bif_len: usize) -> io::Result<Vec<u8>> {
     let name_len = BIF_NAME.len() + 1;
     let name_off = KEY_HEADER_LEN + KEY_BIF_ENTRY_LEN;

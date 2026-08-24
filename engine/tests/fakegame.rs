@@ -1,40 +1,57 @@
 //! Self-test of the synthetic fake-game builder in `support::fakegame`.
 //!
-//! Every test builds into its own unique directory under the OS temp dir and
-//! removes it again when the test ends (including on assertion failure).
+//! Every test claims its own unique directory under the OS temp dir (created
+//! atomically) and removes it again when the test ends, including on assertion
+//! failure.
 
 mod support;
 
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicU64, Ordering};
 
-use support::fakegame::{FakeGame, Resource, RES_TYPE_ARE, RES_TYPE_IDS, RES_TYPE_SPL};
+use support::fakegame::{
+    check_layout_fits_u32, FakeGame, Resource, RES_TYPE_ARE, RES_TYPE_IDS, RES_TYPE_SPL,
+};
 
-/// A unique scratch directory that is removed on drop.
+static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
+
+/// A unique scratch directory, created by `new` and removed on drop.
 struct Scratch(PathBuf);
 
 impl Scratch {
-    fn new(name: &str) -> Self {
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
-        let dir = std::env::temp_dir().join(format!(
-            "bg-engine-fakegame-{name}-{}-{nanos}",
-            std::process::id()
-        ));
-        Scratch(dir)
+    /// Claim a fresh, empty directory atomically: `create_dir` either succeeds or
+    /// reports `AlreadyExists`, in which case the next counter value is tried.
+    fn new(test_name: &str) -> Self {
+        loop {
+            let sequence = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+            let dir = std::env::temp_dir().join(format!(
+                "chriz-bg-engine-fakegame-{test_name}-{}-{sequence}",
+                std::process::id()
+            ));
+            match fs::create_dir(&dir) {
+                Ok(()) => return Scratch(dir),
+                Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+                Err(err) => panic!("failed to create {}: {err}", dir.display()),
+            }
+        }
     }
 
+    /// The claimed (initially empty) directory.
     fn path(&self) -> &Path {
         &self.0
+    }
+
+    /// A not-yet-existing path inside the claimed directory.
+    fn fresh(&self, name: &str) -> PathBuf {
+        self.0.join(name)
     }
 }
 
 impl Drop for Scratch {
     fn drop(&mut self) {
+        // Only ever removes the directory this guard created; cleanup errors are ignored.
         let _ = fs::remove_dir_all(&self.0);
     }
 }
@@ -50,29 +67,28 @@ fn u32_at(bytes: &[u8], off: usize) -> u32 {
 #[test]
 fn builds_expected_tree() {
     let scratch = Scratch::new("tree");
-    let game = FakeGame::build(scratch.path()).unwrap();
+    // Nonexistent root: the builder must create it.
+    let root = scratch.fresh("game");
+    let game = FakeGame::build(&root).unwrap();
 
-    assert_eq!(game.root, scratch.path());
+    assert_eq!(game.root, root);
     assert!(game.key_path().is_file(), "chitin.key missing");
-    assert_eq!(game.key_path(), scratch.path().join("chitin.key"));
+    assert_eq!(game.key_path(), root.join("chitin.key"));
     assert!(game.bif_path().is_file(), "data/fake.bif missing");
-    assert_eq!(
-        game.bif_path(),
-        scratch.path().join("data").join("fake.bif")
-    );
-    assert!(scratch.path().join("data").is_dir());
-    assert!(scratch.path().join("lang").join("en_US").is_dir());
+    assert_eq!(game.bif_path(), root.join("data").join("fake.bif"));
+    assert!(root.join("data").is_dir());
+    assert!(root.join("lang").join("en_US").is_dir());
 
     let override_dir = game.override_dir();
-    assert_eq!(override_dir, scratch.path().join("override"));
+    assert_eq!(override_dir, root.join("override"));
     assert!(override_dir.is_dir(), "override/ missing");
     assert_eq!(fs::read_dir(&override_dir).unwrap().count(), 0);
 
-    let lua = fs::read_to_string(scratch.path().join("engine.lua")).unwrap();
+    let lua = fs::read_to_string(root.join("engine.lua")).unwrap();
     assert_eq!(lua, "engine_name = 'FakeGame'\n");
 
-    let root_tlk = fs::read(scratch.path().join("dialog.tlk")).unwrap();
-    let lang_tlk = fs::read(scratch.path().join("lang").join("en_US").join("dialog.tlk")).unwrap();
+    let root_tlk = fs::read(root.join("dialog.tlk")).unwrap();
+    let lang_tlk = fs::read(root.join("lang").join("en_US").join("dialog.tlk")).unwrap();
     assert_eq!(root_tlk.len(), 0x2C);
     assert_eq!(root_tlk, lang_tlk);
     assert_eq!(&root_tlk[0..8], b"TLK V1  ");
@@ -88,6 +104,7 @@ fn builds_expected_tree() {
 #[test]
 fn key_header_and_tables_are_consistent() {
     let scratch = Scratch::new("key");
+    // Existing empty root: the builder must accept it as-is.
     let game = FakeGame::build(scratch.path()).unwrap();
     let key = fs::read(game.key_path()).unwrap();
 
@@ -113,6 +130,23 @@ fn key_header_and_tables_are_consistent() {
 
     let bif_size = fs::metadata(game.bif_path()).unwrap().len();
     assert_eq!(bif_file_length, bif_size);
+
+    // Independent byte-level oracle: literal offsets and literal record bytes,
+    // without going through any of the builder's parsing helpers.
+    let mut bif_record = u32::try_from(bif_size).unwrap().to_le_bytes().to_vec();
+    bif_record.extend_from_slice(&[0x24, 0x00, 0x00, 0x00, 0x0E, 0x00, 0x01, 0x00]);
+    assert_eq!(&key[0x18..0x24], &bif_record[..], "BIF-table record");
+    assert_eq!(&key[0x24..0x32], b"data/fake.bif\0", "BIF name");
+    let expected_records: [[u8; 14]; 3] = [
+        *b"OH6000\0\0\xF2\x03\x00\x00\x00\x00",
+        *b"SPELL\0\0\0\xF0\x03\x01\x00\x00\x00",
+        *b"STATS\0\0\0\xF0\x03\x02\x00\x00\x00",
+    ];
+    for (i, expected) in expected_records.iter().enumerate() {
+        let off = 0x32 + 14 * i;
+        assert_eq!(&key[off..off + 14], &expected[..], "resource record {i}");
+    }
+    assert_eq!(key.len(), 0x32 + 14 * 3);
 
     let resources = game.read_key_resources().unwrap();
     assert_eq!(
@@ -187,6 +221,18 @@ fn build_with_appends_extra_resources() {
     assert_eq!(resources.len(), 4);
     assert_eq!(resources[3], ("TESTSPL".to_owned(), RES_TYPE_SPL, 3));
 
+    let key = fs::read(game.key_path()).unwrap();
+    assert_eq!(u32_at(&key, 12), 4, "key resource count");
+    assert_eq!(
+        &key[0x32 + 14 * 3..0x32 + 14 * 4],
+        b"TESTSPL\0\xEE\x03\x03\x00\x00\x00",
+        "4th resource record"
+    );
+    assert_eq!(
+        u32_at(&key, 0x18) as u64,
+        fs::metadata(game.bif_path()).unwrap().len()
+    );
+
     let bif = fs::read(game.bif_path()).unwrap();
     assert_eq!(u32_at(&bif, 8), 4, "bif var count");
     let entry = 0x14 + 0x10 * 3;
@@ -195,40 +241,97 @@ fn build_with_appends_extra_resources() {
     assert_eq!(u32_at(&bif, entry), 3);
     assert_eq!(u16_at(&bif, entry + 12), RES_TYPE_SPL);
     assert_eq!(&bif[offset..offset + size], b"SPL V1  ...");
+}
+
+#[test]
+fn build_with_uppercases_resref_in_key() {
+    let scratch = Scratch::new("upper");
+    let extra = Resource {
+        resref: "tstspl".to_owned(),
+        res_type: RES_TYPE_SPL,
+        payload: b"SPL V1  ".to_vec(),
+    };
+    let game = FakeGame::build_with(scratch.path(), &[extra]).unwrap();
 
     let key = fs::read(game.key_path()).unwrap();
     assert_eq!(
-        u32_at(&key, 0x18) as u64,
-        fs::metadata(game.bif_path()).unwrap().len()
+        &key[0x32 + 14 * 3..0x32 + 14 * 4],
+        b"TSTSPL\0\0\xEE\x03\x03\x00\x00\x00"
     );
+    let resources = game.read_key_resources().unwrap();
+    assert_eq!(resources[3], ("TSTSPL".to_owned(), RES_TYPE_SPL, 3));
 }
 
 #[test]
 fn refuses_nonempty_root() {
     let scratch = Scratch::new("nonempty");
-    fs::create_dir_all(scratch.path()).unwrap();
     fs::write(scratch.path().join("stale.txt"), b"x").unwrap();
 
     let err = FakeGame::build(scratch.path()).unwrap_err();
     assert_eq!(err.kind(), ErrorKind::AlreadyExists);
     assert!(!scratch.path().join("chitin.key").exists());
+    assert_eq!(fs::read_dir(scratch.path()).unwrap().count(), 1);
+}
+
+#[test]
+fn refuses_file_at_root() {
+    let scratch = Scratch::new("fileroot");
+    let root = scratch.fresh("game");
+    fs::write(&root, b"not a directory").unwrap();
+
+    let err = FakeGame::build(&root).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::AlreadyExists);
+    assert!(root.is_file(), "file must be left untouched");
+    assert_eq!(fs::read(&root).unwrap(), b"not a directory");
 }
 
 #[test]
 fn rejects_invalid_resrefs() {
+    let scratch = Scratch::new("badresref");
     for (resref, why) in [
         ("TOOLONG12", "9 bytes"),
         ("\u{c4}RGER", "non-ASCII"),
         ("", "empty"),
+        ("A\0B", "embedded NUL"),
+        ("A B", "space"),
+        ("A\tB", "control character"),
     ] {
-        let scratch = Scratch::new("badresref");
+        let root = scratch.fresh("game");
         let extra = Resource {
             resref: resref.to_owned(),
             res_type: RES_TYPE_SPL,
             payload: vec![0],
         };
-        let err = FakeGame::build_with(scratch.path(), &[extra]).unwrap_err();
+        let err = FakeGame::build_with(&root, &[extra]).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::InvalidInput, "{why}");
-        assert!(!scratch.path().join("chitin.key").exists(), "{why}");
+        assert!(!root.exists(), "{why}: nothing may be written");
     }
+}
+
+#[test]
+fn layout_preflight_accepts_defaults() {
+    let sizes = FakeGame::default_resources()
+        .iter()
+        .map(|r| r.payload.len())
+        .collect::<Vec<_>>();
+    check_layout_fits_u32(sizes).unwrap();
+    check_layout_fits_u32(std::iter::empty()).unwrap();
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn layout_preflight_rejects_sizes_exceeding_u32() {
+    let too_big = u32::MAX as usize + 1;
+    let err = check_layout_fits_u32([too_big]).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidInput, "single payload > u32");
+
+    // Each payload fits, but the BIF total (header + table + payloads) does not.
+    let half = u32::MAX as usize / 2 + 1;
+    let err = check_layout_fits_u32([half, half]).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidInput, "BIF total > u32");
+
+    // A payload total that would wrap usize itself must not panic or pass.
+    let err =
+        check_layout_fits_u32([u32::MAX as usize, u32::MAX as usize, usize::MAX]).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::InvalidInput, "usize wrap");
 }
