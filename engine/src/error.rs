@@ -47,6 +47,9 @@ pub enum EngineError {
         /// Path to the second mod manifest declaring the id.
         second: std::path::PathBuf,
     },
+    /// A selection contains an unsupported platform or unknown toggle or choice id.
+    #[error("invalid selection: {0}")]
+    InvalidSelection(String),
     #[error("manifest validation: {0}")]
     Validation(String),
 }
