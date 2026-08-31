@@ -1,16 +1,21 @@
 //! Loading a complete manifest directory from disk.
 
 use std::collections::BTreeMap;
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use serde::de::DeserializeOwned;
+use serde::Deserialize;
 
 use crate::error::EngineError;
 use crate::manifest::{Collection, ModFile};
 
 /// Manifest schema version understood by this engine.
 pub const SUPPORTED_SCHEMA: u32 = 1;
+
+#[derive(Deserialize)]
+struct SchemaProbe {
+    schema: u32,
+}
 
 /// A collection manifest and all of its per-mod manifest files.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,18 +31,23 @@ pub struct Manifest {
 impl Manifest {
     /// Loads and parses a manifest directory.
     pub fn load(dir: &Path) -> crate::error::Result<Manifest> {
-        let root = dir.to_path_buf();
-        let collection_path = root.join("collection.toml");
-        let collection: Collection = read_toml(&collection_path)?;
+        let collection_path = dir.join("collection.toml");
+        let collection_text = read_text(&collection_path)?;
+        let schema: SchemaProbe = parse_toml(&collection_path, &collection_text)?;
 
-        if collection.schema != SUPPORTED_SCHEMA {
+        if schema.schema != SUPPORTED_SCHEMA {
             return Err(EngineError::UnsupportedSchema {
                 path: collection_path,
-                found: collection.schema,
+                found: schema.schema,
                 supported: SUPPORTED_SCHEMA,
             });
         }
 
+        let collection: Collection = parse_toml(&collection_path, &collection_text)?;
+        let root = std::fs::canonicalize(dir).map_err(|source| EngineError::Io {
+            path: dir.to_path_buf(),
+            source,
+        })?;
         let mods_path = root.join("mods");
         let entries = std::fs::read_dir(&mods_path).map_err(|source| EngineError::Io {
             path: mods_path.clone(),
@@ -58,24 +68,33 @@ impl Manifest {
 
         for entry in entries {
             let path = entry.path();
-            if path.extension() != Some(OsStr::new("toml")) {
+            let is_toml = path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("toml"));
+            if !is_toml {
                 continue;
             }
 
-            let file_type = entry.file_type().map_err(|source| EngineError::Io {
+            let metadata = std::fs::metadata(&path).map_err(|source| EngineError::Io {
                 path: path.clone(),
                 source,
             })?;
-            if !file_type.is_file() {
+            if !metadata.is_file() {
                 continue;
             }
 
             let mod_file: ModFile = read_toml(&path)?;
             let stem = path
                 .file_stem()
-                .map(|value| value.to_string_lossy().into_owned())
-                .unwrap_or_default();
+                .and_then(|value| value.to_str())
+                .ok_or_else(|| EngineError::InvalidModFileStem { path: path.clone() })?
+                .to_owned();
             let id = mod_file.id.clone();
+
+            if id != stem {
+                return Err(EngineError::ModIdMismatch { path, id, stem });
+            }
 
             if let Some(first) = mod_paths.get(&id) {
                 return Err(EngineError::DuplicateModId {
@@ -83,10 +102,6 @@ impl Manifest {
                     first: first.clone(),
                     second: path,
                 });
-            }
-
-            if id != stem {
-                return Err(EngineError::ModIdMismatch { path, id, stem });
             }
 
             mod_paths.insert(id.clone(), path);
@@ -99,18 +114,33 @@ impl Manifest {
             mods,
         })
     }
+
+    /// Returns the conventional manifest path for a mod id.
+    pub fn mod_path(&self, id: &str) -> PathBuf {
+        self.root.join("mods").join(format!("{id}.toml"))
+    }
 }
 
 fn read_toml<T>(path: &Path) -> crate::error::Result<T>
 where
     T: DeserializeOwned,
 {
-    let text = std::fs::read_to_string(path).map_err(|source| EngineError::Io {
+    let text = read_text(path)?;
+    parse_toml(path, &text)
+}
+
+fn read_text(path: &Path) -> crate::error::Result<String> {
+    std::fs::read_to_string(path).map_err(|source| EngineError::Io {
         path: path.to_path_buf(),
         source,
-    })?;
+    })
+}
 
-    toml::from_str(&text).map_err(|source| EngineError::ManifestParse {
+fn parse_toml<T>(path: &Path, text: &str) -> crate::error::Result<T>
+where
+    T: DeserializeOwned,
+{
+    toml::from_str(text).map_err(|source| EngineError::ManifestParse {
         path: path.to_path_buf(),
         source,
     })

@@ -357,8 +357,8 @@ removes_components = [{ mod_id = "testmod", component = 10 }]
 
 **Step 2:** Run: `cargo test -p chriz-bg-engine --test manifest_load` → FAIL
 
-**Step 3: Implement** `loader.rs`: read `collection.toml`, walk `mods/*.toml`
-(walkdir, sorted), parse each with the file path in `ManifestParse` errors,
+**Step 3: Implement** `loader.rs`: read `collection.toml`, read `mods/*.toml`
+non-recursively in sorted filename order, parse each with the file path in `ManifestParse` errors,
 reject duplicate ids. Reject `collection.schema != 1` with a dedicated
 `EngineError::UnsupportedSchema { found, supported }` (test: fixture with `schema = 2`
 fails to load). Reject a mod file whose `id` differs from its file stem (`mods/<id>.toml`).

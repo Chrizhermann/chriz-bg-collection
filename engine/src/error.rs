@@ -37,6 +37,12 @@ pub enum EngineError {
         /// File stem required as the mod id.
         stem: String,
     },
+    /// A mod manifest path has no file stem representable as UTF-8.
+    #[error("mod manifest path does not have a valid UTF-8 file stem: {path}")]
+    InvalidModFileStem {
+        /// Path to the mod manifest with the invalid file stem.
+        path: std::path::PathBuf,
+    },
     /// More than one mod manifest declares the same id.
     #[error("duplicate mod id {id:?}: first declared in {first}, then in {second}")]
     DuplicateModId {

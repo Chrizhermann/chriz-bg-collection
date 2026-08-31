@@ -9,20 +9,21 @@ The umbrella/orchestrator for the whole modded-BG stack: manifest + install orde
 mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalance
 `docs/plans/2026-07-03-umbrella-analysis.md` (user-approved 2026-07-03).
 
-## Engine Phase 1 — status for the next agent (2026-08-26, branch `feat/engine-phase1`)
+## Engine Phase 1 — status for the next agent (updated 2026-09-01, branch `feat/engine-phase1`)
 
 Written for a ChatGPT/Codex pickup (Claude budget exhausted this week). Project files are
 the source of truth; this section is the entry point for the engine work.
 
-**Where:** branch `feat/engine-phase1` (pushed), 22 commits ahead of `main`. Plan =
+**Where:** branch `feat/engine-phase1`; 23 commits ahead of `main` after the local Task 2
+fix-up commit (not yet pushed). Plan =
 `docs/plans/2026-08-20-engine-phase1-implementation.md` (17 TDD tasks) + status file
 `…implementation.md.tasks.json`. Crate `engine/` (lib `bg_engine`, bin `chriz-bg-install`).
-79 tests green, `cargo fmt --check` + `cargo clippy --workspace --all-targets -D warnings` clean.
+84 tests green, `cargo fmt --check` + `cargo clippy --workspace --all-targets -D warnings` clean.
 
 | Task | State | Notes |
 |---|---|---|
 | 0 scaffold, 1 schema types (`manifest.rs`) | done, reviewed | |
-| 2 loader (`loader.rs`) | merged `a4cdb6a`, **review found 4 Important** | fix-up below |
+| 2 loader (`loader.rs`) | fix-up implemented + verified; independent re-review pending | original `a4cdb6a`; 14 loader tests |
 | 3 validators (`validate.rs`, 9 rules) | merged `65e3bb8`, **unreviewed** | 34 tests |
 | 4 resolve (`resolve.rs`) | merged `98c5515`, **unreviewed** | 15 tests |
 | 5 events (`events.rs`) | done, reviewed | |
@@ -30,21 +31,19 @@ the source of truth; this section is the entry point for the engine work.
 | 6 session, 7 WeiDU invocation, 8 log-diff verify, 9 runner, 11–16 | not started | 6/7/8 unblocked now |
 
 **Next, in order:**
-1. Task 2 fix-up (loader.rs): (a) probe `schema` with a permissive `struct SchemaProbe { schema: u32 }`
-   *before* the full `deny_unknown_fields` parse, else v2 manifests die as "unknown field" and
-   `UnsupportedSchema` never fires — add a test whose v2 fixture also has an unknown key;
-   (b) check id==stem *before* the duplicate check (today the variant depends on filename sort
-   order; `DuplicateModId` becomes defence-in-depth); (c) `.toml` match case-insensitive
-   (`eq_ignore_ascii_case`) so `EET.TOML` gives a loud `ModIdMismatch` instead of vanishing;
-   (d) use `fs::metadata` (follows symlinks) instead of `DirEntry::file_type`; minor: add
-   `Manifest::mod_path(id)`, `file_stem().to_str()` → error on non-UTF-8, canonicalize `root`,
-   copy the fixture `mods/` dir in tests instead of naming files.
-2. Independent reviews of Tasks 3 and 4 against the plan text (rules 1–9; resolver semantics
+1. Independently re-review the Task 2 fix-up, then review Tasks 3 and 4 against the plan text
+   (rules 1–9; resolver semantics
    incl. "components in any option's `adds_components` are excluded from the baseline").
-3. Tasks 6, 7, 8 (plan sections; all depend only on merged work), then 9 → 11 (real-WeiDU
+2. Tasks 6, 7, 8 (plan sections; all depend only on merged work), then 9 → 11 (real-WeiDU
    test gated on `CHRIZ_WEIDU_EXE`), 12–16.
-4. Open decision for Task 13: `ureq` is built with only `rustls` (static WebPKI roots, env-var
+3. Open decision for Task 13: `ureq` is built with only `rustls` (static WebPKI roots, env-var
    proxy only) — confirm with Chris or add `platform-verifier` before writing the downloader.
+
+**Task 2 fix-up completed locally (2026-09-01):** schema is probed before strict parsing;
+stem mismatch wins over duplicate-id defence; `.toml` matching is case-insensitive; file
+symlinks are followed and broken ones return pathful I/O errors; roots are canonicalized;
+non-UTF-8 stems have an explicit error; `Manifest::mod_path` exists; fixture mods are copied
+as a directory. The focused RED run failed in all five intended cases before implementation.
 
 **How to build (Windows):** Rust 1.97 stable-msvc via rustup; run cargo from **PowerShell**
 with `$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"` — Git Bash's coreutils `link.exe`
