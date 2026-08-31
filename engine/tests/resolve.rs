@@ -402,6 +402,29 @@ fn choice_addition_can_restore_an_emptied_split_run() {
 }
 
 #[test]
+fn choice_addition_uses_the_only_slot_of_an_unsplit_mod() {
+    let mut manifest = Manifest::load(&fixture_dir()).unwrap();
+    manifest.collection.order.remove(2);
+    manifest.collection.choice_groups[0].options[1]
+        .removes_components
+        .clear();
+    let mut selection = Selection::defaults("windows");
+    selection
+        .choices
+        .insert("flavor".to_owned(), "spicy".to_owned());
+
+    let plan = resolve(&manifest, &selection).unwrap();
+
+    assert_eq!(
+        run_summary(&plan),
+        vec![
+            ("eet", Phase::Main, vec![0, 100]),
+            ("testmod", Phase::Main, vec![0, 10]),
+        ]
+    );
+}
+
+#[test]
 fn invalid_platform_is_invalid_selection() {
     let message =
         invalid_selection_message(resolve(&test_manifest(), &Selection::defaults("solaris")));

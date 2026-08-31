@@ -226,19 +226,24 @@ fn apply_choices<'a>(
         remove_components(candidates, &option.removes_components);
 
         for component in &option.adds_components {
-            let mut target_mod_survives = false;
+            let target_run_count = candidates
+                .iter()
+                .filter(|candidate| candidate.mod_file.id == component.mod_id)
+                .count();
 
             for candidate in candidates
                 .iter_mut()
                 .filter(|candidate| candidate.mod_file.id == component.mod_id)
             {
-                target_mod_survives = true;
-                if candidate.eligible_components.contains(&component.component) {
+                if target_run_count == 1
+                    || candidate.eligible_components.contains(&component.component)
+                {
+                    candidate.eligible_components.insert(component.component);
                     candidate.enabled_components.insert(component.component);
                 }
             }
 
-            if !target_mod_survives {
+            if target_run_count == 0 {
                 return Err(EngineError::InvalidSelection(format!(
                     "choice option {:?} targets unavailable mod {:?}",
                     option.id, component.mod_id
