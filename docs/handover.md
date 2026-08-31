@@ -14,16 +14,16 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 Written for a ChatGPT/Codex pickup (Claude budget exhausted this week). Project files are
 the source of truth; this section is the entry point for the engine work.
 
-**Where:** branch `feat/engine-phase1`; 23 commits ahead of `main` after the local Task 2
-fix-up commit (not yet pushed). Plan =
+**Where:** branch `feat/engine-phase1`; 24 commits ahead of `main` after the local Task 2
+review follow-up commit (not yet pushed). Plan =
 `docs/plans/2026-08-20-engine-phase1-implementation.md` (17 TDD tasks) + status file
 `…implementation.md.tasks.json`. Crate `engine/` (lib `bg_engine`, bin `chriz-bg-install`).
-84 tests green, `cargo fmt --check` + `cargo clippy --workspace --all-targets -D warnings` clean.
+86 tests green, `cargo fmt --check` + `cargo clippy --workspace --all-targets -D warnings` clean.
 
 | Task | State | Notes |
 |---|---|---|
 | 0 scaffold, 1 schema types (`manifest.rs`) | done, reviewed | |
-| 2 loader (`loader.rs`) | fix-up implemented + verified; independent re-review pending | original `a4cdb6a`; 14 loader tests |
+| 2 loader (`loader.rs`) | done, independently reviewed | original `a4cdb6a`; fixes `05fe9f7` + review follow-up; 16 loader tests |
 | 3 validators (`validate.rs`, 9 rules) | merged `65e3bb8`, **unreviewed** | 34 tests |
 | 4 resolve (`resolve.rs`) | merged `98c5515`, **unreviewed** | 15 tests |
 | 5 events (`events.rs`) | done, reviewed | |
@@ -31,8 +31,7 @@ fix-up commit (not yet pushed). Plan =
 | 6 session, 7 WeiDU invocation, 8 log-diff verify, 9 runner, 11–16 | not started | 6/7/8 unblocked now |
 
 **Next, in order:**
-1. Independently re-review the Task 2 fix-up, then review Tasks 3 and 4 against the plan text
-   (rules 1–9; resolver semantics
+1. Independently review Tasks 3 and 4 against the plan text (rules 1–9; resolver semantics
    incl. "components in any option's `adds_components` are excluded from the baseline").
 2. Tasks 6, 7, 8 (plan sections; all depend only on merged work), then 9 → 11 (real-WeiDU
    test gated on `CHRIZ_WEIDU_EXE`), 12–16.
@@ -42,8 +41,12 @@ fix-up commit (not yet pushed). Plan =
 **Task 2 fix-up completed locally (2026-09-01):** schema is probed before strict parsing;
 stem mismatch wins over duplicate-id defence; `.toml` matching is case-insensitive; file
 symlinks are followed and broken ones return pathful I/O errors; roots are canonicalized;
-non-UTF-8 stems have an explicit error; `Manifest::mod_path` exists; fixture mods are copied
-as a directory. The focused RED run failed in all five intended cases before implementation.
+non-UTF-8 stems have an explicit error; `Manifest::conventional_mod_path` clearly documents
+that it is not an actual loaded-file lookup; fixture mods are copied as a directory. Follow-up
+tests cover a real duplicate id on case-sensitive filesystems and case-variant extensions;
+Windows symlink tests skip only unsupported/permission-denied link creation. Two independent
+reviews found no blocking issues; their bounded follow-up requests are now covered. The
+focused RED run failed in all five intended cases before implementation.
 
 **How to build (Windows):** Rust 1.97 stable-msvc via rustup; run cargo from **PowerShell**
 with `$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"` — Git Bash's coreutils `link.exe`

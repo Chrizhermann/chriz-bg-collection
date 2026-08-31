@@ -1,5 +1,6 @@
 use std::ffi::OsString;
 use std::io::ErrorKind;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -77,13 +78,47 @@ fn copy_dir(source: &Path, destination: &Path) {
 }
 
 #[cfg(unix)]
-fn symlink_file(target: &Path, link: &Path) {
+fn symlink_file(target: &Path, link: &Path) -> bool {
     std::os::unix::fs::symlink(target, link).unwrap();
+    true
 }
 
 #[cfg(windows)]
-fn symlink_file(target: &Path, link: &Path) {
-    std::os::windows::fs::symlink_file(target, link).unwrap();
+fn symlink_file(target: &Path, link: &Path) -> bool {
+    match std::os::windows::fs::symlink_file(target, link) {
+        Ok(()) => true,
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::PermissionDenied | ErrorKind::Unsupported
+            ) =>
+        {
+            false
+        }
+        Err(error) => panic!(
+            "failed to create test symlink {} -> {}: {error}",
+            link.display(),
+            target.display()
+        ),
+    }
+}
+
+fn create_case_distinct_copy(source: &Path, destination: &Path) -> bool {
+    let contents = std::fs::read(source).unwrap();
+    let mut destination_file = match std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(destination)
+    {
+        Ok(file) => file,
+        Err(error) if error.kind() == ErrorKind::AlreadyExists => return false,
+        Err(error) => panic!(
+            "failed to create case-distinct test file {}: {error}",
+            destination.display()
+        ),
+    };
+    destination_file.write_all(&contents).unwrap();
+    true
 }
 
 #[cfg(unix)]
@@ -122,7 +157,7 @@ fn loads_fixture_dir() {
 
     assert_eq!(manifest.root, root.canonicalize().unwrap());
     assert_eq!(
-        manifest.mod_path("eet"),
+        manifest.conventional_mod_path("eet"),
         manifest.root.join("mods/eet.toml")
     );
     assert_eq!(manifest.collection.order.len(), 3);
@@ -261,6 +296,32 @@ fn reports_stem_mismatch_before_duplicate_id() {
 }
 
 #[test]
+fn rejects_duplicate_id_from_case_distinct_toml_extensions() {
+    let temp = TestDir::from_fixture("duplicate-id-case-distinct-extension");
+    let lowercase = temp.path().join("mods/testmod.toml");
+    let uppercase = temp.path().join("mods/testmod.TOML");
+    if !create_case_distinct_copy(&lowercase, &uppercase) {
+        // Case-insensitive filesystems cannot represent both directory entries.
+        return;
+    }
+
+    let error = load_error(temp.path());
+
+    match error {
+        EngineError::DuplicateModId { id, first, second } => {
+            assert_eq!(id, "testmod");
+            let mut actual = vec![first, second];
+            actual.sort();
+            let root = temp.canonical_path().join("mods");
+            let mut expected = vec![root.join("testmod.toml"), root.join("testmod.TOML")];
+            expected.sort();
+            assert_eq!(actual, expected);
+        }
+        other => panic!("expected a duplicate mod id error, got {other:?}"),
+    }
+}
+
+#[test]
 fn uppercase_toml_extension_is_loaded_and_checked() {
     let temp = TestDir::from_fixture("uppercase-toml-extension");
     let source = temp.path().join("mods/eet.toml");
@@ -280,11 +341,29 @@ fn uppercase_toml_extension_is_loaded_and_checked() {
 }
 
 #[test]
+fn case_variant_toml_extension_loads_but_conventional_path_stays_lowercase() {
+    let temp = TestDir::from_fixture("case-variant-toml-extension");
+    let source = temp.path().join("mods/eet.toml");
+    let case_variant = temp.path().join("mods/eet.TOML");
+    std::fs::rename(source, case_variant).unwrap();
+
+    let manifest = Manifest::load(temp.path()).unwrap();
+
+    assert!(manifest.mods.contains_key("eet"));
+    assert_eq!(
+        manifest.conventional_mod_path("eet"),
+        manifest.root.join("mods/eet.toml")
+    );
+}
+
+#[test]
 fn follows_toml_file_symlinks() {
     let temp = TestDir::from_fixture("file-symlink");
     let target = temp.path().join("mods/eet.toml");
     let link = temp.path().join("mods/linked.toml");
-    symlink_file(&target, &link);
+    if !symlink_file(&target, &link) {
+        return;
+    }
 
     let error = load_error(temp.path());
 
@@ -303,7 +382,9 @@ fn broken_toml_symlink_is_io_error_with_path() {
     let temp = TestDir::from_fixture("broken-file-symlink");
     let missing_target = temp.path().join("missing.toml");
     let link = temp.path().join("mods/broken.toml");
-    symlink_file(&missing_target, &link);
+    if !symlink_file(&missing_target, &link) {
+        return;
+    }
 
     let error = load_error(temp.path());
 

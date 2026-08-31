@@ -16,10 +16,8 @@
     {
       "id": 2,
       "subject": "Task 2: Manifest loader",
-      "status": "in_progress",
-      "blockedBy": [
-        1
-      ]
+      "status": "completed",
+      "commit": "05fe9f7 (plus 2026-09-01 review follow-up)"
     },
     {
       "id": 3,
@@ -137,5 +135,5 @@
       ]
     }
   ],
-  "lastUpdated": "2026-08-25"
+  "lastUpdated": "2026-09-01"
 }

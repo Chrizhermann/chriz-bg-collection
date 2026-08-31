@@ -115,8 +115,12 @@ impl Manifest {
         })
     }
 
-    /// Returns the conventional manifest path for a mod id.
-    pub fn mod_path(&self, id: &str) -> PathBuf {
+    /// Constructs the conventional lowercase-extension path for a mod id.
+    ///
+    /// This does not inspect the filesystem. A loaded manifest may have used a
+    /// case-variant extension such as `.TOML`, so the returned path is an
+    /// authoring convention rather than a guarantee that the file exists.
+    pub fn conventional_mod_path(&self, id: &str) -> PathBuf {
         self.root.join("mods").join(format!("{id}.toml"))
     }
 }
