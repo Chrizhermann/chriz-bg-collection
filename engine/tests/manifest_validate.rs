@@ -327,6 +327,22 @@ fn non_hex_sha256_is_an_error() {
 }
 
 #[test]
+fn sha256_must_be_exactly_64_hex_characters() {
+    for length in [63, 65] {
+        let mut manifest = pinned();
+        manifest.mods.get_mut("testmod").unwrap().source.sha256 = "a".repeat(length);
+
+        let findings = validate(&manifest);
+
+        assert_error_rules(&findings, &["sources"]);
+        assert!(
+            findings[0].message.contains("not 64 hex characters"),
+            "length {length}: {findings:#?}"
+        );
+    }
+}
+
+#[test]
 fn uppercase_hex_sha256_is_accepted() {
     let mut manifest = pinned();
     manifest.mods.get_mut("testmod").unwrap().source.sha256 = REAL_SHA256.to_uppercase();
@@ -417,6 +433,26 @@ fn split_eet_end_entries_must_form_a_contiguous_final_main_phase_block() {
     let findings = validate(&manifest);
 
     assert_error_rules(&findings, &["phase-order"]);
+}
+
+#[test]
+fn adjacent_split_eet_end_entries_may_form_the_final_main_phase_block() {
+    let mut manifest = pinned();
+    let mut eet_end = manifest.mods.get("eet").unwrap().clone();
+    eet_end.id = "eet_end".to_owned();
+    manifest.mods.insert("eet_end".to_owned(), eet_end);
+    manifest
+        .collection
+        .order
+        .push(order_entry("eet_end", Some(vec![0])));
+    manifest
+        .collection
+        .order
+        .push(order_entry("eet_end", Some(vec![100])));
+
+    let findings = validate(&manifest);
+
+    assert_error_rules(&findings, &[]);
 }
 
 // ---------------------------------------------------------------- 7. nonempty
