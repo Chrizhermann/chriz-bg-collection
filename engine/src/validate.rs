@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use crate::error::EngineError;
-use crate::manifest::{ComponentRef, OrderEntry, Phase};
+use crate::manifest::{ComponentRef, OrderEntry, Phase, SourceKind};
 use crate::Manifest;
 
 /// Mod id of the EET merge anchor, if the collection installs it.
@@ -116,7 +116,8 @@ impl Findings {
 /// the order at least once. A mod may occupy several slots only if *every* one
 /// of its entries lists explicit components and those lists are pairwise
 /// disjoint — an entry without `components` means "all declared components",
-/// so it must be the mod's only entry.
+/// so it must be the mod's only entry. An explicit component list may not name
+/// the same component more than once, even when the mod has only one slot.
 pub const RULE_ORDER_REFS: &str = "order-refs";
 
 fn check_order_refs(manifest: &Manifest, findings: &mut Findings) {
@@ -143,21 +144,19 @@ fn check_order_refs(manifest: &Manifest, findings: &mut Findings) {
     }
 
     for (id, indices) in &slots {
-        if indices.len() < 2 {
-            continue;
-        }
-
         let mut seen: BTreeMap<u32, usize> = BTreeMap::new();
         for &index in indices {
             let Some(components) = manifest.collection.order[index].components.as_ref() else {
-                findings.error(
-                    RULE_ORDER_REFS,
-                    format!(
-                        "mod {id:?} occupies {} order entries, so order entry {index} must list \
-                         explicit components",
-                        indices.len()
-                    ),
-                );
+                if indices.len() > 1 {
+                    findings.error(
+                        RULE_ORDER_REFS,
+                        format!(
+                            "mod {id:?} occupies {} order entries, so order entry {index} must \
+                             list explicit components",
+                            indices.len()
+                        ),
+                    );
+                }
                 continue;
             };
 
@@ -349,11 +348,10 @@ fn check_selector_ids(manifest: &Manifest, findings: &mut Findings) {
 
 /// Rule `sources`: a mod's platforms and download are well-formed.
 ///
-/// `platforms` holds known names without duplicates, `source.url` is https,
-/// and `source.sha256` is exactly 64 lowercase hex characters. The digest is
-/// required for every [`crate::manifest::SourceKind`], `manual` included —
-/// there the user supplies the archive and the engine verifies it against the
-/// same pin.
+/// `platforms` holds known names without duplicates. For non-manual sources,
+/// `source.url` is https and `source.sha256` is exactly 64 hexadecimal
+/// characters. Manual sources intentionally allow authoring placeholders: a
+/// later acquire stage asks the user for the archive and records its digest.
 pub const RULE_SOURCES: &str = "sources";
 
 /// Rule `unpinned-source`: a source whose sha256 is all zeroes is a
@@ -381,6 +379,10 @@ fn check_sources(manifest: &Manifest, findings: &mut Findings) {
             }
         }
 
+        if mod_file.source.kind == SourceKind::Manual {
+            continue;
+        }
+
         if !mod_file.source.url.starts_with("https://") {
             findings.error(
                 RULE_SOURCES,
@@ -392,10 +394,10 @@ fn check_sources(manifest: &Manifest, findings: &mut Findings) {
         }
 
         let sha256 = mod_file.source.sha256.as_str();
-        if sha256.len() != 64 || !sha256.bytes().all(is_lowercase_hex) {
+        if sha256.len() != 64 || !sha256.bytes().all(is_hex) {
             findings.error(
                 RULE_SOURCES,
-                format!("mod {id:?} source sha256 {sha256:?} is not 64 lowercase hex characters"),
+                format!("mod {id:?} source sha256 {sha256:?} is not 64 hex characters"),
             );
         } else if sha256 == UNPINNED_SHA256 {
             findings.warning(
@@ -406,8 +408,8 @@ fn check_sources(manifest: &Manifest, findings: &mut Findings) {
     }
 }
 
-fn is_lowercase_hex(byte: u8) -> bool {
-    byte.is_ascii_digit() || matches!(byte, b'a'..=b'f')
+fn is_hex(byte: u8) -> bool {
+    byte.is_ascii_hexdigit()
 }
 
 /// Rule `phase-order`: the install order respects the EET merge.
@@ -453,6 +455,43 @@ fn check_phase_order(manifest: &Manifest, findings: &mut Findings) {
 
     check_main_anchor(manifest, &slots, findings, EET_ID, true);
     check_main_anchor(manifest, &slots, findings, EET_END_ID, false);
+    check_eet_end_block(manifest, &slots, findings);
+}
+
+fn check_eet_end_block(
+    manifest: &Manifest,
+    slots: &[(usize, &str, Phase)],
+    findings: &mut Findings,
+) {
+    if !manifest.mods.contains_key(EET_END_ID) {
+        return;
+    }
+
+    let last_main_is_eet_end = slots
+        .iter()
+        .rfind(|(_, _, phase)| *phase == Phase::Main)
+        .is_some_and(|(_, id, _)| *id == EET_END_ID);
+    if !last_main_is_eet_end {
+        // `check_main_anchor` already emits the precise last-main diagnostic.
+        return;
+    }
+
+    let Some(first_eet_end) = slots.iter().position(|(_, id, _)| *id == EET_END_ID) else {
+        return;
+    };
+
+    if let Some(&(index, id, _)) = slots[first_eet_end + 1..]
+        .iter()
+        .find(|(_, id, phase)| *phase == Phase::Main && *id != EET_END_ID)
+    {
+        findings.error(
+            RULE_PHASE_ORDER,
+            format!(
+                "order entry {index} (mod {id:?}) splits the final contiguous block of mod \
+                 {EET_END_ID:?}"
+            ),
+        );
+    }
 }
 
 fn check_main_anchor(

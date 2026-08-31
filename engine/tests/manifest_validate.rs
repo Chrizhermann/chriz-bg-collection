@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
-use bg_engine::manifest::{ChoiceGroup, ChoiceOption, Component, ComponentRef, OrderEntry, Phase};
+use bg_engine::manifest::{
+    ChoiceGroup, ChoiceOption, Component, ComponentRef, OrderEntry, Phase, SourceKind,
+};
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
 
@@ -144,6 +146,24 @@ fn split_mod_entries_must_be_disjoint() {
     let findings = validate(&manifest);
 
     assert_has(&findings, "order-refs", Severity::Error);
+}
+
+#[test]
+fn one_explicit_order_entry_may_not_list_a_component_twice() {
+    let mut manifest = pinned();
+    manifest.collection.order.remove(2);
+    manifest.collection.order[1].components = Some(vec![0, 0, 10]);
+
+    let findings = validate(&manifest);
+
+    assert_error_rules(&findings, &["order-refs"]);
+    assert!(
+        findings
+            .iter()
+            .any(|finding| finding.message.contains("component 0")
+                && finding.message.contains("twice")),
+        "{findings:#?}"
+    );
 }
 
 // -------------------------------------------------------- 2. component-refs
@@ -297,13 +317,39 @@ fn non_https_url_is_an_error() {
 }
 
 #[test]
-fn malformed_sha256_is_an_error() {
+fn non_hex_sha256_is_an_error() {
+    let mut manifest = pinned();
+    manifest.mods.get_mut("testmod").unwrap().source.sha256 = "g".repeat(64);
+
+    let findings = validate(&manifest);
+
+    assert_error_rules(&findings, &["sources"]);
+}
+
+#[test]
+fn uppercase_hex_sha256_is_accepted() {
     let mut manifest = pinned();
     manifest.mods.get_mut("testmod").unwrap().source.sha256 = REAL_SHA256.to_uppercase();
 
     let findings = validate(&manifest);
 
-    assert_error_rules(&findings, &["sources"]);
+    assert_error_rules(&findings, &[]);
+}
+
+#[test]
+fn manual_source_may_use_an_unpinned_non_https_authoring_placeholder() {
+    let mut manifest = pinned();
+    let source = &mut manifest.mods.get_mut("testmod").unwrap().source;
+    source.kind = SourceKind::Manual;
+    source.url = "http://example.invalid/manual-download-page".to_owned();
+    source.sha256.clear();
+
+    let findings = validate(&manifest);
+
+    assert_error_rules(&findings, &[]);
+    assert!(!findings
+        .iter()
+        .any(|finding| { matches!(finding.rule, "sources" | "unpinned-source") }));
 }
 
 #[test]
@@ -347,6 +393,26 @@ fn eet_end_must_be_the_last_main_phase_entry() {
         .collection
         .order
         .insert(1, order_entry("eet_end", None));
+
+    let findings = validate(&manifest);
+
+    assert_error_rules(&findings, &["phase-order"]);
+}
+
+#[test]
+fn split_eet_end_entries_must_form_a_contiguous_final_main_phase_block() {
+    let mut manifest = pinned();
+    let mut eet_end = manifest.mods.get("eet").unwrap().clone();
+    eet_end.id = "eet_end".to_owned();
+    manifest.mods.insert("eet_end".to_owned(), eet_end);
+    manifest
+        .collection
+        .order
+        .insert(2, order_entry("eet_end", Some(vec![0])));
+    manifest
+        .collection
+        .order
+        .push(order_entry("eet_end", Some(vec![100])));
 
     let findings = validate(&manifest);
 
@@ -462,6 +528,25 @@ fn check_reports_every_finding_including_warnings() {
     assert!(rendered.contains("error[component-refs]:"), "{rendered}");
     assert!(rendered.contains("warning[unpinned-source]:"), "{rendered}");
     assert_eq!(rendered.lines().count(), findings.len(), "{rendered}");
+}
+
+#[test]
+fn check_preserves_two_independent_error_findings() {
+    let mut manifest = pinned();
+    manifest.collection.order.push(order_entry("nope", None));
+    manifest.mods.get_mut("testmod").unwrap().platforms = vec!["haiku".to_owned()];
+
+    let error = check(&manifest).unwrap_err();
+
+    let EngineError::Validation(findings) = &error else {
+        panic!("expected a validation error, got {error:?}");
+    };
+    assert_error_rules(findings, &["order-refs", "sources"]);
+
+    let rendered = error.to_string();
+    assert!(rendered.contains("error[order-refs]:"), "{rendered}");
+    assert!(rendered.contains("error[sources]:"), "{rendered}");
+    assert_eq!(rendered.lines().count(), 2, "{rendered}");
 }
 
 #[test]
