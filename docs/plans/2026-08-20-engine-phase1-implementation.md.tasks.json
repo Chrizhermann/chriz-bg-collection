@@ -17,23 +17,19 @@
       "id": 2,
       "subject": "Task 2: Manifest loader",
       "status": "completed",
-      "commit": "05fe9f7 (plus 2026-09-01 review follow-up)"
+      "commit": "05fe9f7 + 05b8058"
     },
     {
       "id": 3,
       "subject": "Task 3: Manifest validators",
-      "status": "in_progress",
-      "blockedBy": [
-        2
-      ]
+      "status": "completed",
+      "commit": "5feb0a8 (merged 65e3bb8) + a0c812b + 71f0387"
     },
     {
       "id": 4,
       "subject": "Task 4: Resolve stage (selection -> InstallPlan)",
-      "status": "in_progress",
-      "blockedBy": [
-        2
-      ]
+      "status": "completed",
+      "commit": "13df297 (merged 98c5515) + 4c61a8c"
     },
     {
       "id": 5,

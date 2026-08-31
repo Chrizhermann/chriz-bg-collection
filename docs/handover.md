@@ -14,28 +14,28 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 Written for a ChatGPT/Codex pickup (Claude budget exhausted this week). Project files are
 the source of truth; this section is the entry point for the engine work.
 
-**Where:** branch `feat/engine-phase1`; 24 commits ahead of `main` after the local Task 2
-review follow-up commit (not yet pushed). Plan =
+**Where:** branch `feat/engine-phase1`. Five engine-review commits after `745f0a9`, plus
+this documentation/prototype update, are local and not yet pushed. The branch has diverged
+from `main`, where Chris's curation work is being consolidated; do not merge it over that
+dirty checkout. Plan =
 `docs/plans/2026-08-20-engine-phase1-implementation.md` (17 TDD tasks) + status file
 `…implementation.md.tasks.json`. Crate `engine/` (lib `bg_engine`, bin `chriz-bg-install`).
-86 tests green, `cargo fmt --check` + `cargo clippy --workspace --all-targets -D warnings` clean.
+94 tests green, `cargo fmt --check` + `cargo clippy --workspace --all-targets -D warnings` clean.
 
 | Task | State | Notes |
 |---|---|---|
 | 0 scaffold, 1 schema types (`manifest.rs`) | done, reviewed | |
-| 2 loader (`loader.rs`) | done, independently reviewed | original `a4cdb6a`; fixes `05fe9f7` + review follow-up; 16 loader tests |
-| 3 validators (`validate.rs`, 9 rules) | merged `65e3bb8`, **unreviewed** | 34 tests |
-| 4 resolve (`resolve.rs`) | merged `98c5515`, **unreviewed** | 15 tests |
+| 2 loader (`loader.rs`) | done, independently reviewed | original `a4cdb6a`; fixes `05fe9f7` + `05b8058`; 16 loader tests |
+| 3 validators (`validate.rs`, 9 rules) | done, independently reviewed | original `5feb0a8` (merged `65e3bb8`); fix `a0c812b`; coverage `71f0387`; 41 tests |
+| 4 resolve (`resolve.rs`) | done, independently reviewed | original `13df297` (merged `98c5515`); fix `4c61a8c`; 16 tests |
 | 5 events (`events.rs`) | done, reviewed | |
 | 10 fake-game builder (`tests/support/fakegame.rs`) | done, reviewed | KEY/BIF/TLK writer |
 | 6 session, 7 WeiDU invocation, 8 log-diff verify, 9 runner, 11–16 | not started | 6/7/8 unblocked now |
 
 **Next, in order:**
-1. Independently review Tasks 3 and 4 against the plan text (rules 1–9; resolver semantics
-   incl. "components in any option's `adds_components` are excluded from the baseline").
-2. Tasks 6, 7, 8 (plan sections; all depend only on merged work), then 9 → 11 (real-WeiDU
+1. Tasks 6, 7, 8 (plan sections; all depend only on reviewed work), then 9 → 11 (real-WeiDU
    test gated on `CHRIZ_WEIDU_EXE`), 12–16.
-3. Open decision for Task 13: `ureq` is built with only `rustls` (static WebPKI roots, env-var
+2. Open decision for Task 13: `ureq` is built with only `rustls` (static WebPKI roots, env-var
    proxy only) — confirm with Chris or add `platform-verifier` before writing the downloader.
 
 **Task 2 fix-up completed locally (2026-09-01):** schema is probed before strict parsing;
@@ -48,6 +48,23 @@ Windows symlink tests skip only unsupported/permission-denied link creation. Two
 reviews found no blocking issues; their bounded follow-up requests are now covered. The
 focused RED run failed in all five intended cases before implementation.
 
+**Task 3 review completed locally (2026-09-01):** manual sources no longer inherit the
+non-manual HTTPS/hash rule; hexadecimal hashes accept either case; one explicit order slot
+cannot repeat a component; split `eet_end` entries must form the final contiguous main-phase
+block; and aggregation is covered with two independent errors. The four intended regressions
+failed before implementation and pass after `a0c812b`.
+
+**Task 4 review completed locally (2026-09-01):** a selected choice may add a component to
+the only explicit slot of an unsplit mod even when that slot did not list it originally.
+Split mods still require unambiguous explicit placement. The regression failed before the
+fix and passes after `4c61a8c`.
+
+**Installer v0 design:** `docs/plans/2026-09-01-installer-v0-design.md` and its implementation
+plan define a guided campaign-build wizard, engine-owned availability explanations, immutable
+install receipts, and update notices that distinguish current-save applicability. The static
+prototype at `docs/prototypes/installer-v0/index.html` deliberately stops at a no-op Recipe
+Preview; it does not download, copy, or install anything.
+
 **How to build (Windows):** Rust 1.97 stable-msvc via rustup; run cargo from **PowerShell**
 with `$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"` — Git Bash's coreutils `link.exe`
 shadows the MSVC linker. Work in a git worktree (e.g. `.claude/worktrees/engine-phase1`),
@@ -59,15 +76,12 @@ never in the main checkout while Chris curates on `main`. Repo files are CRLF.
 `C:\Games\…` (read-only reference); never hand-edit `manifest/install-order.tsv`;
 curation content is Chris-only — the engine is curation-independent.
 
-## Status (2026-08-20 — Phase 0 data done, WAITING ON USER CURATION)
+## Status (2026-09-01 — curation consolidation on `main`; engine reviews closed here)
 
-**Current state: paused at the curation gate.** Phases 0.1–0.3 are done (manifest
-re-captured, all sources resolved + liveness-checked, 2.7 pin-list drafted). The user is
-now curating independently: he will produce his own list from `docs/curation-worksheet.md`
-(+ answer the 5 review questions in `docs/pin-list-2.7.md`) and then discuss it. Until
-then: no curation suggestions, no manifest authoring. Independent work that may proceed
-if asked: Phase 1 engine scaffolding (`engine/` crate — schema parser, WeiDU runner,
-session model are curation-independent).
+Chris has completed the broad component-catalog pass on the dirty `main` checkout. A short
+tomorrow list, detailed follow-up queue, and legacy-fix migration inventory are being kept
+there. Do not merge or copy this branch over that work. On this branch, Tasks 0–5 and 10 are
+implemented and reviewed; Tasks 6, 7, and 8 are the next independent TDD slices.
 
 ## Background (2026-08-19 — installer app designed)
 
@@ -77,9 +91,10 @@ session model are curation-independent).
   version pins and hosting facts: `docs/research/2026-08-19-installer-app/`.
 - `manifest/install-order.tsv` — captured 2026-07-03 from the reference WeiDU.log
   (414 rows) — ⚠ the live WeiDU.log now shows **364** entries; re-capture is Phase 0.1.
-- `manifest/mod-sources.tsv` — SKELETON, all TODO (the reference EET_MODDING_GUIDE
-  documents zero URLs; sources must come from research — see mod-hosting brief).
-- `presets/` — empty; `engine/`, `app/` — not started (Phase 1/2).
+- This branch's `manifest/mod-sources.tsv` predates the completed curation consolidation.
+  Use the dirty `main` checkout's source inventory and follow-up queue for curation work.
+- `presets/` and `app/` are not started; the headless `engine/` is in Phase 1 and a static
+  no-op installer-v0 prototype documents the intended app boundary.
 - Parked: [#1 EET XP scaling fix](https://github.com/Chrizhermann/chriz-bg-collection/issues/1)
   (future chriz-layer component; home repo TBD).
 

@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Campaign Builder — Installer v0</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --iron: #151819;
+      --charcoal: #23282a;
+      --slate: #343b3e;
+      --slate-light: #465054;
+      --vellum: #f1e7d2;
+      --vellum-dim: #bdb3a0;
+      --brass: #c59a51;
+      --brass-dark: #806436;
+      --teal: #67aaa4;
+      --teal-dark: #325f5c;
+      --ember: #d36b58;
+      --ok: #89b780;
+      --focus: #f1c873;
+      --radius: 8px;
+      --shadow: 0 18px 60px rgba(0, 0, 0, .28);
+      font-family: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+      font-size: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 300px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--vellum);
+      background: var(--iron);
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      content: "";
+      border: 1px solid rgba(197, 154, 81, .09);
+      background-color: var(--iron);
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      min-height: 44px;
+      border: 1px solid var(--slate-light);
+      border-radius: 6px;
+      color: var(--vellum);
+      background: var(--charcoal);
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) { border-color: var(--brass); }
+    button:disabled { cursor: not-allowed; opacity: .68; }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    button[aria-current="page"] {
+      border-color: var(--brass);
+      color: var(--focus);
+      background: #2c2b27;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 244px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      display: flex;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      flex-direction: column;
+      padding: 24px 18px;
+      border-right: 1px solid var(--slate);
+      background: #191d1e;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin: 0 6px 34px;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid var(--brass);
+      color: var(--brass);
+      font-family: Georgia, serif;
+      font-size: 22px;
+      transform: rotate(45deg);
+    }
+
+    .brand-mark span { transform: rotate(-45deg); }
+
+    .brand-copy strong {
+      display: block;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+
+    .brand-copy small { color: var(--vellum-dim); }
+
+    .nav-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-button {
+      display: flex;
+      width: 100%;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      text-align: left;
+    }
+
+    .nav-icon {
+      width: 22px;
+      color: var(--brass);
+      text-align: center;
+    }
+
+    .count {
+      min-width: 22px;
+      margin-left: auto;
+      padding: 2px 6px;
+      border-radius: 999px;
+      color: var(--iron);
+      background: var(--brass);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .sidebar-note {
+      margin-top: auto;
+      padding: 14px;
+      border: 1px solid var(--slate);
+      border-radius: var(--radius);
+      color: var(--vellum-dim);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    main { min-width: 0; }
+
+    .topbar {
+      display: flex;
+      min-height: 72px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px clamp(20px, 4vw, 58px);
+      border-bottom: 1px solid var(--slate);
+      background: rgba(21, 24, 25, .96);
+    }
+
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--brass);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .topbar p:last-child { margin: 0; color: var(--vellum-dim); font-size: 14px; }
+
+    .quiet-button { padding: 0 16px; }
+
+    .view {
+      display: none;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 44px clamp(20px, 5vw, 70px) 70px;
+    }
+
+    .view.is-active { display: block; }
+
+    .page-heading {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 30px;
+    }
+
+    h1, h2, h3 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+
+    h1 { margin: 0 0 10px; font-size: clamp(32px, 5vw, 48px); line-height: 1.05; }
+    h2 { margin: 0; font-size: 23px; }
+    h3 { margin: 0; font-size: 18px; }
+
+    .lede {
+      max-width: 68ch;
+      margin: 0;
+      color: var(--vellum-dim);
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .primary-button {
+      padding: 0 20px;
+      border-color: var(--brass);
+      color: #151819;
+      background: var(--brass);
+      font-weight: 800;
+    }
+
+    .primary-button:hover { background: var(--focus); }
+
+    .card {
+      border: 1px solid var(--slate);
+      border-radius: var(--radius);
+      background: var(--charcoal);
+      box-shadow: var(--shadow);
+    }
+
+    .install-card { overflow: hidden; }
+
+    .install-card-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      padding: 24px;
+      border-bottom: 1px solid var(--slate);
+    }
+
+    .path {
+      margin: 8px 0 0;
+      color: var(--vellum-dim);
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .badge {
+      display: inline-flex;
+      min-height: 26px;
+      align-items: center;
+      gap: 7px;
+      padding: 3px 9px;
+      border: 1px solid var(--slate-light);
+      border-radius: 999px;
+      color: var(--vellum-dim);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .badge.ok { border-color: var(--teal-dark); color: var(--teal); }
+    .badge.deferred { border-color: var(--brass-dark); color: var(--brass); }
+    .badge.unavailable { border-color: #a85d50; color: #ff9b89; }
+    .badge-row, .change-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .install-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      margin: 0;
+      padding: 18px 24px;
+    }
+
+    .install-meta div { padding-right: 18px; }
+    .install-meta div + div { padding-left: 18px; border-left: 1px solid var(--slate); }
+    .install-meta dt { color: var(--vellum-dim); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .install-meta dd { margin: 6px 0 0; font-weight: 700; }
+
+    .notice {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid var(--brass-dark);
+      border-left: 4px solid var(--brass);
+      border-radius: var(--radius);
+      background: #292823;
+    }
+
+    .notice-symbol { color: var(--brass); font-size: 24px; }
+    .notice strong { display: block; }
+    .notice p { margin: 4px 0 0; color: var(--vellum-dim); }
+
+    .steps {
+      display: flex;
+      gap: 8px;
+      margin: 0 0 28px;
+      padding: 0;
+      list-style: none;
+      overflow-x: auto;
+    }
+
+    .steps li {
+      display: flex;
+      min-width: max-content;
+      gap: 8px;
+      align-items: center;
+      color: var(--vellum-dim);
+      font-size: 13px;
+    }
+
+    .steps li:not(:last-child)::after { content: "—"; margin-left: 4px; color: var(--slate-light); }
+    .steps .current { color: var(--focus); font-weight: 800; }
+
+    .layout-two {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .section-card { padding: 22px; }
+    .section-card + .section-card { margin-top: 16px; }
+    .section-header { display: flex; gap: 16px; align-items: start; justify-content: space-between; margin-bottom: 16px; }
+    .section-header p { margin: 5px 0 0; color: var(--vellum-dim); font-size: 14px; }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 15px 0;
+      border-top: 1px solid var(--slate);
+    }
+
+    .control-row input { width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--teal); }
+    .control-row label, .control-row .control-title { font-weight: 750; cursor: pointer; }
+    .control-row small { display: block; margin-top: 5px; color: var(--vellum-dim); line-height: 1.45; }
+    .control-row.is-disabled input { opacity: .65; }
+    .control-row.is-disabled small { color: var(--vellum); }
+    .control-row.is-disabled label { cursor: not-allowed; }
+
+    fieldset { margin: 0; padding: 0; border: 0; }
+    legend { margin-bottom: 11px; font-weight: 800; }
+    .radio-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .radio-option { display: flex; min-height: 44px; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--slate-light); border-radius: 6px; }
+    .radio-option:has(input:checked) { border-color: var(--teal); background: #20302f; }
+    .radio-option input { accent-color: var(--teal); }
+
+    .review-card { position: sticky; top: 20px; padding: 20px; }
+    .review-card .eyebrow { margin-top: 0; }
+    .summary-number { margin: 10px 0 0; color: var(--focus); font-family: Georgia, serif; font-size: 40px; }
+    .summary-label { margin: 0 0 20px; color: var(--vellum-dim); }
+
+    .ledger {
+      display: grid;
+      gap: 0;
+      margin: 18px 0 22px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .ledger li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; min-height: 54px; color: var(--vellum-dim); }
+    .ledger li::before { content: ""; width: 10px; height: 10px; margin: 5px 0 0 3px; border: 2px solid var(--teal); border-radius: 50%; box-shadow: 0 18px 0 -4px var(--teal); }
+    .ledger li:last-child::before { box-shadow: none; }
+    .ledger strong { display: block; color: var(--vellum); }
+    .full-width { width: 100%; }
+
+    .update-grid { display: grid; gap: 16px; }
+    .update-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 22px; padding: 22px; }
+    .update-card p { margin: 8px 0 0; color: var(--vellum-dim); line-height: 1.5; }
+    .update-actions { display: flex; align-items: start; }
+    .changes { margin: 17px 0 0; padding: 16px 0 0; border-top: 1px solid var(--slate); }
+    .change { display: grid; grid-template-columns: auto 1fr; gap: 11px; align-items: start; }
+    .change + .change { margin-top: 14px; }
+    .change p { margin-top: 3px; }
+
+    .prototype-note {
+      margin-top: 34px;
+      color: var(--vellum-dim);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .prototype-action-note { max-width: 220px; margin: 8px 0 0; color: var(--vellum-dim); font-size: 12px; line-height: 1.4; }
+
+    @media (max-width: 850px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; padding: 14px 18px; border-right: 0; border-bottom: 1px solid var(--slate); }
+      .brand { margin: 0 0 12px; }
+      .nav-list { grid-template-columns: repeat(3, 1fr); }
+      .sidebar-note { display: none; }
+      .topbar { display: none; }
+      .view { padding-top: 28px; }
+      .layout-two { grid-template-columns: 1fr; }
+      .review-card { position: static; }
+    }
+
+    @media (max-width: 610px) {
+      .brand-copy small { display: none; }
+      .nav-button { justify-content: center; padding-inline: 8px; }
+      .nav-button .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .page-heading, .install-card-top, .update-card { grid-template-columns: 1fr; }
+      .page-heading .primary-button { width: 100%; }
+      .install-meta { grid-template-columns: 1fr; gap: 14px; }
+      .install-meta div + div { padding: 14px 0 0; border-top: 1px solid var(--slate); border-left: 0; }
+      .notice { grid-template-columns: auto 1fr; }
+      .notice button { grid-column: 1 / -1; width: 100%; }
+      .control-row { grid-template-columns: 24px minmax(0, 1fr); }
+      .control-row .badge { grid-column: 2; justify-self: start; }
+      .change { grid-template-columns: 1fr; }
+      h1 { font-size: 34px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span>C</span></div>
+        <div class="brand-copy">
+          <strong>Campaign Builder</strong>
+          <small>Installer concept v0</small>
+        </div>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav-button" type="button" data-view="home" aria-current="page">
+          <span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">Campaigns</span>
+        </button>
+        <button class="nav-button" type="button" data-view="setup">
+          <span class="nav-icon" aria-hidden="true">✦</span><span class="nav-label">New build</span>
+        </button>
+        <button class="nav-button" type="button" data-view="updates">
+          <span class="nav-icon" aria-hidden="true">↻</span><span class="nav-label">Updates</span><span class="count" aria-label="1 update">1</span>
+        </button>
+      </nav>
+
+      <p class="sidebar-note">Prototype only. No download, copy, install, update, or game-directory access is possible.</p>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Recipe channel</p>
+          <p>chriz-eet · 2026.09 preview</p>
+        </div>
+        <button class="quiet-button" type="button" disabled>Help & diagnostics — preview only</button>
+      </header>
+
+      <section id="view-home" class="view is-active" aria-labelledby="home-title">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Your campaigns</p>
+            <h1 id="home-title" tabindex="-1">One carefully built world.</h1>
+            <p class="lede">Your originals stay pristine. Every collection build lives in its own copy with its own saves and immutable install report.</p>
+          </div>
+          <button class="primary-button" type="button" data-go="setup">Start a new build</button>
+        </div>
+
+        <article class="card install-card">
+          <div class="install-card-top">
+            <div>
+              <p class="eyebrow">Installed copy</p>
+              <h2>Chriz EET — Current campaign</h2>
+              <p class="path">D:\Modded Games\EET Campaign Copy</p>
+            </div>
+            <span class="badge ok">Ready to play</span>
+          </div>
+          <dl class="install-meta">
+            <div><dt>Recipe</dt><dd>2026.08.0</dd></div>
+            <div><dt>Game build</dt><dd>2.7.3.0</dd></div>
+            <div><dt>Last built</dt><dd>26 Aug 2026</dd></div>
+          </dl>
+        </article>
+
+        <div class="notice" role="status">
+          <span class="notice-symbol" aria-hidden="true">✦</span>
+          <div>
+            <strong>Available for your next playthrough</strong>
+            <p>Your current save will not benefit. This working copy remains untouched.</p>
+          </div>
+          <button type="button" data-go="updates">Review changes</button>
+        </div>
+
+        <p class="prototype-note">Fixture content for interaction review — not a detected installation.</p>
+      </section>
+
+      <section id="view-setup" class="view" aria-labelledby="setup-title" hidden>
+        <ol class="steps" aria-label="Build steps">
+          <li>Games</li><li>Destination</li><li class="current" aria-current="step">Setup</li><li>Review</li><li>Build</li>
+        </ol>
+
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Recommended setup</p>
+            <h1 id="setup-title" tabindex="-1">Shape the campaign, not the stack.</h1>
+            <p class="lede">The recipe owns component order and dependencies. You choose only the curated decisions that are safe to expose.</p>
+          </div>
+        </div>
+
+        <div class="layout-two">
+          <div>
+            <section class="card section-card" aria-labelledby="rules-heading">
+              <div class="section-header">
+                <div><h2 id="rules-heading">Rules & systems</h2><p>Recommended choices are already selected.</p></div>
+                <span class="badge ok" id="section-selected-count">1 selected</span>
+              </div>
+
+              <div class="control-row">
+                <input id="spell-revisions" type="checkbox" checked>
+                <div><label for="spell-revisions">Spell Revisions</label><small>Reworks spells and finalizes joinable NPC spellbooks late in the build.</small></div>
+                <span class="badge ok">Default</span>
+              </div>
+
+              <div class="control-row is-disabled" id="scs-4240-row">
+                <input id="scs-4240" type="checkbox" aria-describedby="scs-4240-reason" disabled>
+                <div><label for="scs-4240">SCS: Treat mage and priest HLAs as innate abilities</label><small id="scs-4240-reason">Unavailable with Spell Revisions.</small></div>
+                <span class="badge unavailable" id="scs-4240-badge">Unavailable</span>
+              </div>
+
+              <div class="control-row">
+                <input id="hidden-options" type="checkbox">
+                <div><label for="hidden-options">Hidden Gameplay Options</label><small>Exposes the reviewed quality-of-life options; individual choices remain editable.</small></div>
+                <span class="badge">Optional</span>
+              </div>
+
+              <div class="control-row">
+                <input id="randomiser" type="checkbox">
+                <div><label for="randomiser">Item Randomiser</label><small>Uses Mode 1 and installs after SCS so item and store patches see the final stack.</small></div>
+                <span class="badge">Optional</span>
+              </div>
+
+              <div class="control-row">
+                <span aria-hidden="true">◆</span>
+                <div><span class="control-title">EEex v1.2 core</span><small>Required by selected interface and scripting features; included automatically.</small></div>
+                <span class="badge ok">Mandatory</span>
+              </div>
+            </section>
+
+            <section class="card section-card" aria-labelledby="difficulty-heading">
+              <fieldset>
+                <legend id="difficulty-heading">Tactical difficulty</legend>
+                <div class="radio-row">
+                  <label class="radio-option"><input type="radio" name="difficulty" value="recommended" checked> Recommended</label>
+                  <label class="radio-option"><input type="radio" name="difficulty" value="relaxed"> Relaxed</label>
+                  <label class="radio-option"><input type="radio" name="difficulty" value="hardcore"> Hardcore</label>
+                </div>
+              </fieldset>
+            </section>
+          </div>
+
+          <aside class="card review-card" aria-labelledby="review-heading">
+            <p class="eyebrow">Resolved preview</p>
+            <h2 id="review-heading">Campaign ledger</h2>
+            <p class="summary-number" id="selected-count">2</p>
+            <p class="summary-label">editable choices selected in this preview</p>
+            <ol class="ledger">
+              <li><div><strong>BG1 preparation</strong><span>Fixes, content, source setup</span></div></li>
+              <li><div><strong>EET merge</strong><span>One pinned EET artifact</span></div></li>
+              <li><div><strong>Main campaign</strong><span>NPCs, rules, tactics</span></div></li>
+              <li><div><strong>Post-EET</strong><span>Audited collection tail</span></div></li>
+            </ol>
+            <button class="primary-button full-width" type="button" id="review-button" disabled>Review 2 choices — preview only</button>
+          </aside>
+        </div>
+
+        <p class="prototype-note">The real frontend will receive enabled states and reasons from Rust. This prototype uses fixture behavior.</p>
+      </section>
+
+      <section id="view-updates" class="view" aria-labelledby="updates-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Update center</p>
+            <h1 id="updates-title" tabindex="-1">What changes—and when it matters.</h1>
+            <p class="lede">App updates, recipe releases, and existing campaign copies are separate. No update edits an append-only WeiDU stack in place.</p>
+          </div>
+        </div>
+
+        <div class="update-grid">
+          <article class="card update-card">
+            <div>
+              <span class="badge ok">App up to date</span>
+              <h2>Campaign Builder 0.1.0</h2>
+              <p>Signed application updates will be handled separately from collection recipes.</p>
+            </div>
+          </article>
+
+          <article class="card update-card">
+            <div>
+              <div class="badge-row"><span class="badge deferred">Next playthrough</span><span class="badge">Non-urgent</span></div>
+              <h2>Recipe 2026.09.0 is available</h2>
+              <p><strong>Your current save will not benefit.</strong> Keep playing normally, or use this recipe when you are ready to build a fresh campaign copy.</p>
+
+              <div class="changes" aria-label="Recipe changes">
+                <div class="change">
+                  <div class="change-meta"><span class="badge deferred">New game only</span><span class="badge">Non-urgent</span></div>
+                  <div><h3>Kivan starts as an Archer</h3><p>The semantic kit assignment is included in newly built campaign copies; existing saves are not rewritten.</p></div>
+                </div>
+                <div class="change">
+                  <div class="change-meta"><span class="badge deferred">New game only</span><span class="badge">Non-urgent</span></div>
+                  <div><h3>Faldorn starts as an Avenger</h3><p>Existing saved creatures are not rewritten.</p></div>
+                </div>
+              </div>
+            </div>
+            <div class="update-actions"><div><button class="primary-button" type="button" disabled>Build updated copy — preview only</button><p class="prototype-action-note">Intentionally disabled until the safe build pipeline exists.</p></div></div>
+          </article>
+        </div>
+
+        <p class="prototype-note">Illustrative update ledger. Applicability is author-declared and never inferred from a save.</p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const navButtons = Array.from(document.querySelectorAll('[data-view]'));
+    const views = Array.from(document.querySelectorAll('.view'));
+
+    function showView(name) {
+      views.forEach((view) => {
+        const active = view.id === `view-${name}`;
+        view.classList.toggle('is-active', active);
+        view.hidden = !active;
+      });
+      navButtons.forEach((button) => {
+        if (button.dataset.view === name) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      });
+      const heading = document.querySelector(`#view-${name} h1`);
+      if (heading) heading.focus({ preventScroll: true });
+    }
+
+    navButtons.forEach((button) => button.addEventListener('click', () => showView(button.dataset.view)));
+    document.querySelectorAll('[data-go]').forEach((button) => button.addEventListener('click', () => showView(button.dataset.go)));
+
+    const countedInputs = Array.from(document.querySelectorAll('#view-setup input[type="checkbox"]'));
+    const spellRevisions = document.getElementById('spell-revisions');
+    const scs4240 = document.getElementById('scs-4240');
+    const scs4240Row = document.getElementById('scs-4240-row');
+    const scs4240Reason = document.getElementById('scs-4240-reason');
+    const scs4240Badge = document.getElementById('scs-4240-badge');
+    const selectedCount = document.getElementById('selected-count');
+    const sectionSelectedCount = document.getElementById('section-selected-count');
+    const reviewButton = document.getElementById('review-button');
+    function refreshSelectionCount() {
+      const selectedRules = countedInputs.filter((input) => input.checked).length;
+      const selectedChoices = selectedRules + document.querySelectorAll('#view-setup input[type="radio"]:checked').length;
+      selectedCount.textContent = String(selectedChoices);
+      sectionSelectedCount.textContent = `${selectedRules} selected`;
+      reviewButton.textContent = `Review ${selectedChoices} choices — preview only`;
+    }
+    function refreshCompatibility() {
+      const blocked = spellRevisions.checked;
+      if (blocked) scs4240.checked = false;
+      scs4240.disabled = blocked;
+      scs4240Row.classList.toggle('is-disabled', blocked);
+      scs4240Badge.classList.toggle('unavailable', blocked);
+      scs4240Badge.textContent = blocked ? 'Unavailable' : 'Optional';
+      scs4240Reason.textContent = blocked
+        ? 'Unavailable with Spell Revisions.'
+        : 'Optional when Spell Revisions is not selected.';
+      refreshSelectionCount();
+    }
+
+    countedInputs.forEach((input) => input.addEventListener('change', refreshSelectionCount));
+    document.querySelectorAll('#view-setup input[type="radio"]').forEach((input) => input.addEventListener('change', refreshSelectionCount));
+    spellRevisions.addEventListener('change', refreshCompatibility);
+
+    function runSelfCheck() {
+      const ids = Array.from(document.querySelectorAll('[id]')).map((element) => element.id);
+      const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+      const unlabeled = Array.from(document.querySelectorAll('input')).filter((input) => {
+        return !document.querySelector(`label[for="${input.id}"]`) && !input.closest('label');
+      });
+      if (duplicates.length || unlabeled.length) {
+        throw new Error(`Prototype self-check failed: ${duplicates.length} duplicate ids, ${unlabeled.length} unlabeled inputs`);
+      }
+      document.documentElement.dataset.selfCheck = 'passed';
+    }
+
+    runSelfCheck();
+    refreshCompatibility();
+    refreshSelectionCount();
+  </script>
+</body>
+</html>

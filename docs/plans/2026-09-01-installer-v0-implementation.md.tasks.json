@@ -1,0 +1,47 @@
+{
+  "planPath": "docs/plans/2026-09-01-installer-v0-implementation.md",
+  "tasks": [
+    {
+      "id": 0,
+      "subject": "Task 1: Static interaction prototype",
+      "status": "completed",
+      "evidence": "DOM self-check, desktop interaction check, and 390px responsive browser check passed"
+    },
+    {
+      "id": 1,
+      "subject": "Task 2: Recipe release-ledger types",
+      "status": "pending",
+      "blockedBy": []
+    },
+    {
+      "id": 2,
+      "subject": "Task 3: Update classification",
+      "status": "pending",
+      "blockedBy": [1]
+    },
+    {
+      "id": 3,
+      "subject": "Task 4: Engine-owned recipe projection",
+      "status": "pending",
+      "blockedBy": []
+    },
+    {
+      "id": 4,
+      "subject": "Task 5: Tauri Recipe Preview",
+      "status": "pending",
+      "blockedBy": [1, 2, 3],
+      "externalPrerequisites": [
+        "Engine Phase 1 Tasks 6, 7, and 8 completed and reviewed",
+        "Recipe-view contract approved",
+        "Frontend framework decision recorded"
+      ]
+    },
+    {
+      "id": 5,
+      "subject": "Task 6: Connect later engine capabilities",
+      "status": "pending",
+      "blockedBy": [4]
+    }
+  ],
+  "lastUpdated": "2026-09-01"
+}
