@@ -1,0 +1,5 @@
+BACKUP ~mod/backup~
+AUTHOR ~fixture~
+
+BEGIN ~Fixture component~
+COPY ~mod/data.txt~ ~override/fixture.txt~
