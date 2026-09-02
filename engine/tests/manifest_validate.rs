@@ -1,222 +1,234 @@
 use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
-use bg_engine::manifest::{
-    ChoiceGroup, ChoiceOption, Component, ComponentRef, OrderEntry, Phase, SourceKind,
-};
+use bg_engine::manifest::{Component, Phase, Run, SourceKind};
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
 
-/// sha256 of the empty input - any real-looking pin works here.
-const REAL_SHA256: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-
 fn good() -> Manifest {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest");
-    Manifest::load(&root).unwrap()
+    Manifest::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest"))
+        .unwrap()
 }
 
-/// Pins every source so `unpinned-source` warnings do not mask the assertion
-/// under test.
-fn pinned() -> Manifest {
-    let mut manifest = good();
-    for mod_file in manifest.mods.values_mut() {
-        mod_file.source.sha256 = REAL_SHA256.to_owned();
+fn run(run_id: &str, phase: Phase, components: &[u32]) -> Run {
+    Run {
+        run_id: run_id.to_owned(),
+        mod_id: "eefixpack".to_owned(),
+        phase,
+        components: components.to_vec(),
+        args: Vec::new(),
     }
-    manifest
 }
 
-fn rules_of(findings: &[Finding], severity: Severity) -> Vec<&str> {
+fn error_rules(findings: &[Finding]) -> Vec<&str> {
     findings
         .iter()
-        .filter(|finding| finding.severity == severity)
+        .filter(|finding| finding.severity == Severity::Error)
         .map(|finding| finding.rule)
         .collect()
 }
 
 #[track_caller]
-fn assert_has(findings: &[Finding], rule: &str, severity: Severity) {
+fn assert_has_error(findings: &[Finding], rule: &str) {
     assert!(
         findings
             .iter()
-            .any(|finding| finding.rule == rule && finding.severity == severity),
-        "expected a {severity:?} finding for rule {rule:?}, got {findings:#?}"
-    );
-}
-
-#[track_caller]
-fn assert_error_rules(findings: &[Finding], expected: &[&str]) {
-    assert_eq!(
-        rules_of(findings, Severity::Error),
-        expected,
-        "unexpected error findings: {findings:#?}"
-    );
-}
-
-fn component_ref(mod_id: &str, component: u32) -> ComponentRef {
-    ComponentRef {
-        mod_id: mod_id.to_owned(),
-        component,
-    }
-}
-
-fn order_entry(id: &str, components: Option<Vec<u32>>) -> OrderEntry {
-    OrderEntry {
-        id: id.to_owned(),
-        components,
-    }
-}
-
-// ---------------------------------------------------------------- good fixture
-
-#[test]
-fn good_fixture_has_no_errors() {
-    let findings = validate(&good());
-
-    assert_error_rules(&findings, &[]);
-}
-
-#[test]
-fn good_fixture_warnings_are_exactly_the_unpinned_sources() {
-    let findings = validate(&good());
-
-    // Both fixture mods carry an all-zero sha256, and the only `stdin` in the
-    // fixture ("1\n") is newline-terminated.
-    assert_eq!(
-        rules_of(&findings, Severity::Warning),
-        vec!["unpinned-source", "unpinned-source"]
-    );
-    assert_eq!(findings.len(), 2, "{findings:#?}");
-    assert!(findings[0].message.contains("\"eet\""), "{findings:#?}");
-    assert!(findings[1].message.contains("\"testmod\""), "{findings:#?}");
-}
-
-#[test]
-fn check_accepts_a_manifest_with_only_warnings() {
-    assert!(check(&good()).is_ok());
-}
-
-// ------------------------------------------------------------ 1. order-refs
-
-#[test]
-fn order_entry_naming_an_unknown_mod_is_an_error() {
-    let mut manifest = pinned();
-    manifest.collection.order.push(order_entry("nope", None));
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["order-refs"]);
-    assert!(
-        findings
-            .iter()
-            .any(|finding| finding.message.contains("nope")),
-        "{findings:#?}"
+            .any(|finding| finding.rule == rule && finding.severity == Severity::Error),
+        "expected error rule {rule:?}, got {findings:#?}"
     );
 }
 
 #[test]
-fn mod_missing_from_the_order_is_an_error() {
-    let mut manifest = pinned();
-    manifest
-        .collection
-        .order
-        .retain(|entry| entry.id != "testmod");
+fn fixture_is_valid_and_repeats_one_component_across_game_roots() {
+    let manifest = good();
 
-    let findings = validate(&manifest);
-
-    assert_has(&findings, "order-refs", Severity::Error);
+    assert_eq!(manifest.collection.runs[0].components, vec![0, 2]);
+    assert_eq!(manifest.collection.runs[1].components, vec![0]);
+    assert_eq!(error_rules(&validate(&manifest)), Vec::<&str>::new());
 }
 
 #[test]
-fn split_mod_entry_without_components_is_an_error() {
-    let mut manifest = pinned();
-    manifest.collection.order[1].components = None;
+fn run_ids_are_globally_unique() {
+    let mut manifest = good();
+    manifest.collection.runs[1].run_id = manifest.collection.runs[0].run_id.clone();
 
     let findings = validate(&manifest);
 
-    // An "all components" entry also puts component 10 in two slots at once,
-    // so `option-slot` legitimately fires alongside `order-refs` here.
-    assert_has(&findings, "order-refs", Severity::Error);
+    assert_has_error(&findings, "run-ids");
 }
 
 #[test]
-fn split_mod_entries_must_be_disjoint() {
-    let mut manifest = pinned();
-    manifest.collection.order[1].components = Some(vec![0, 10]);
+fn every_run_has_an_explicit_nonempty_component_list() {
+    let mut manifest = good();
+    manifest.collection.runs[0].components.clear();
 
     let findings = validate(&manifest);
 
-    assert_has(&findings, "order-refs", Severity::Error);
+    assert_has_error(&findings, "run-components");
 }
 
 #[test]
-fn one_explicit_order_entry_may_not_list_a_component_twice() {
-    let mut manifest = pinned();
-    manifest.collection.order.remove(2);
-    manifest.collection.order[1].components = Some(vec![0, 0, 10]);
+fn run_must_reference_an_existing_installer() {
+    let mut manifest = good();
+    manifest.collection.runs[0].mod_id = "missing-installer".to_owned();
 
     let findings = validate(&manifest);
 
-    assert_error_rules(&findings, &["order-refs"]);
-    assert!(
-        findings
-            .iter()
-            .any(|finding| finding.message.contains("component 0")
-                && finding.message.contains("twice")),
-        "{findings:#?}"
-    );
+    assert_has_error(&findings, "references");
 }
 
-// -------------------------------------------------------- 2. component-refs
-
 #[test]
-fn order_components_must_be_declared() {
-    let mut manifest = pinned();
-    manifest.collection.order[1].components = Some(vec![7]);
+fn installer_must_reference_an_existing_payload_artifact() {
+    let mut manifest = good();
+    manifest.mods.get_mut("eefixpack").unwrap().artifact_id = "missing-payload".to_owned();
 
     let findings = validate(&manifest);
 
-    assert_has(&findings, "component-refs", Severity::Error);
+    assert_has_error(&findings, "references");
 }
 
 #[test]
-fn toggle_component_refs_must_be_declared() {
-    let mut manifest = pinned();
-    manifest.collection.toggles[0].removes_components = vec![component_ref("testmod", 99)];
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["component-refs"]);
-}
-
-#[test]
-fn toggle_removes_mods_must_exist() {
-    let mut manifest = pinned();
-    manifest.collection.toggles[0].removes_mods = vec!["ghost".to_owned()];
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["component-refs"]);
-}
-
-#[test]
-fn option_component_refs_must_name_an_existing_mod() {
-    let mut manifest = pinned();
-    manifest.collection.choice_groups[0].options[1].removes_components =
-        vec![component_ref("ghost", 0)];
-
-    let findings = validate(&manifest);
-
-    assert_has(&findings, "component-refs", Severity::Error);
-}
-
-// -------------------------------------------------- 3. component-ids-unique
-
-#[test]
-fn duplicate_component_ids_within_a_mod_are_an_error() {
-    let mut manifest = pinned();
+fn installer_must_reference_an_existing_weidu_artifact() {
+    let mut manifest = good();
     manifest
         .mods
-        .get_mut("testmod")
+        .get_mut("eefixpack")
+        .unwrap()
+        .weidu_artifact_id = "missing-weidu".to_owned();
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "references");
+}
+
+#[test]
+fn run_components_must_be_declared_by_the_installer() {
+    let mut manifest = good();
+    manifest.collection.runs[0].components.push(999);
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "references");
+}
+
+#[test]
+fn tp2_path_must_be_relative_and_traversal_free() {
+    for path in ["C:\\games\\setup.tp2", "../outside/setup.tp2"] {
+        let mut manifest = good();
+        manifest.mods.get_mut("eefixpack").unwrap().tp2 = path.to_owned();
+
+        let findings = validate(&manifest);
+
+        assert_has_error(&findings, "paths");
+    }
+}
+
+#[test]
+fn archive_path_must_be_relative_and_traversal_free() {
+    for path in ["C:\\downloads\\payload", "../payload"] {
+        let mut manifest = good();
+        manifest
+            .artifacts
+            .get_mut("eefixpack")
+            .unwrap()
+            .archive
+            .path = path.to_owned();
+
+        let findings = validate(&manifest);
+
+        assert_has_error(&findings, "paths");
+    }
+}
+
+#[test]
+fn one_component_cannot_repeat_on_one_game_root() {
+    let mut manifest = good();
+    manifest
+        .collection
+        .runs
+        .push(run("eefixpack-bg1-again", Phase::Bg1Preparation, &[2]));
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "component-placement");
+}
+
+#[test]
+fn one_run_cannot_repeat_a_component_number() {
+    let mut manifest = good();
+    manifest.collection.runs[0].components.push(2);
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "component-placement");
+}
+
+#[test]
+fn phase_order_must_be_monotonic() {
+    let mut manifest = good();
+    manifest.collection.runs[0].phase = Phase::Bg2Preparation;
+    manifest.collection.runs[1].phase = Phase::Bg1Preparation;
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "phase-order");
+}
+
+#[test]
+fn eet_initialization_is_required_first_after_preparation() {
+    let mut manifest = good();
+    manifest.collection.runs = vec![run("ordinary-main", Phase::Main, &[0])];
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "eet-anchors");
+}
+
+#[test]
+fn eet_finalization_is_required_last_before_tail_runs() {
+    let mut manifest = good();
+    manifest.collection.runs = vec![
+        run("eet-init", Phase::EetInitialization, &[0]),
+        run("ordinary-main", Phase::Main, &[2]),
+        run("tail", Phase::PostEetEnd, &[0]),
+    ];
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "eet-anchors");
+}
+
+#[test]
+fn finalization_then_explicit_tail_is_valid() {
+    let mut manifest = good();
+    manifest
+        .mods
+        .get_mut("eefixpack")
+        .unwrap()
+        .components
+        .extend([3, 4].map(|id| Component {
+            id,
+            name: format!("Synthetic component {id}"),
+            stdin: None,
+        }));
+    manifest.collection.runs = vec![
+        run("eet-init", Phase::EetInitialization, &[0]),
+        run("ordinary-main", Phase::Main, &[2]),
+        run("eet-final", Phase::EetFinalization, &[3]),
+        run("tail", Phase::PostEetEnd, &[4]),
+    ];
+
+    let findings = validate(&manifest);
+
+    assert_eq!(error_rules(&findings), Vec::<&str>::new(), "{findings:#?}");
+}
+
+#[test]
+fn duplicate_installer_component_ids_remain_invalid() {
+    let mut manifest = good();
+    manifest
+        .mods
+        .get_mut("eefixpack")
         .unwrap()
         .components
         .push(Component {
@@ -227,404 +239,114 @@ fn duplicate_component_ids_within_a_mod_are_an_error() {
 
     let findings = validate(&manifest);
 
-    assert_error_rules(&findings, &["component-ids-unique"]);
+    assert_has_error(&findings, "component-ids-unique");
 }
 
-// ------------------------------------------------------------ 4. selector-ids
-
 #[test]
-fn a_choice_group_may_not_reuse_a_toggle_id() {
-    let mut manifest = pinned();
-    manifest.collection.choice_groups[0].id = "testmod-optional".to_owned();
+fn fetched_artifact_url_must_use_https() {
+    let mut manifest = good();
+    manifest.artifacts.get_mut("eefixpack").unwrap().source.url =
+        "http://example.invalid/archive.zip".to_owned();
 
     let findings = validate(&manifest);
 
-    assert_error_rules(&findings, &["selector-ids"]);
+    assert_has_error(&findings, "sources");
 }
 
 #[test]
-fn duplicate_choice_group_ids_are_an_error() {
-    let mut manifest = pinned();
-    manifest.collection.choice_groups.push(ChoiceGroup {
-        id: "flavor".to_owned(),
-        name: "Flavor again".to_owned(),
-        default: "plain".to_owned(),
-        options: vec![ChoiceOption {
-            id: "plain".to_owned(),
-            name: "Plain".to_owned(),
-            adds_components: Vec::new(),
-            removes_components: Vec::new(),
-        }],
-    });
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["selector-ids"]);
-}
-
-#[test]
-fn option_ids_must_be_unique_within_a_group() {
-    let mut manifest = pinned();
-    manifest.collection.choice_groups[0].options[1].id = "plain".to_owned();
-
-    let findings = validate(&manifest);
-
-    assert_has(&findings, "selector-ids", Severity::Error);
-}
-
-#[test]
-fn choice_default_must_name_an_option() {
-    let mut manifest = pinned();
-    manifest.collection.choice_groups[0].default = "mild".to_owned();
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["selector-ids"]);
-}
-
-// ---------------------------------------------------------------- 5. sources
-
-#[test]
-fn unknown_platform_is_an_error() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().platforms = vec!["haiku".to_owned()];
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["sources"]);
-}
-
-#[test]
-fn duplicate_platform_is_an_error() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().platforms =
-        vec!["windows".to_owned(), "windows".to_owned()];
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["sources"]);
-}
-
-#[test]
-fn non_https_url_is_an_error() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().source.url =
-        "http://example.invalid/testmod-1.0.zip".to_owned();
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["sources"]);
-}
-
-#[test]
-fn non_hex_sha256_is_an_error() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().source.sha256 = "g".repeat(64);
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["sources"]);
-}
-
-#[test]
-fn sha256_must_be_exactly_64_hex_characters() {
-    for length in [63, 65] {
-        let mut manifest = pinned();
-        manifest.mods.get_mut("testmod").unwrap().source.sha256 = "a".repeat(length);
+fn fetched_artifact_sha256_must_be_exactly_hexadecimal() {
+    for sha256 in ["a".repeat(63), "g".repeat(64), "a".repeat(65)] {
+        let mut manifest = good();
+        manifest
+            .artifacts
+            .get_mut("eefixpack")
+            .unwrap()
+            .source
+            .sha256 = sha256;
 
         let findings = validate(&manifest);
 
-        assert_error_rules(&findings, &["sources"]);
-        assert!(
-            findings[0].message.contains("not 64 hex characters"),
-            "length {length}: {findings:#?}"
-        );
+        assert_has_error(&findings, "sources");
     }
 }
 
 #[test]
-fn uppercase_hex_sha256_is_accepted() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().source.sha256 = REAL_SHA256.to_uppercase();
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &[]);
-}
-
-#[test]
-fn manual_source_may_use_an_unpinned_non_https_authoring_placeholder() {
-    let mut manifest = pinned();
-    let source = &mut manifest.mods.get_mut("testmod").unwrap().source;
-    source.kind = SourceKind::Manual;
-    source.url = "http://example.invalid/manual-download-page".to_owned();
-    source.sha256.clear();
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &[]);
-    assert!(!findings
-        .iter()
-        .any(|finding| { matches!(finding.rule, "sources" | "unpinned-source") }));
-}
-
-#[test]
-fn all_zero_sha256_is_a_warning_not_an_error() {
-    let findings = validate(&good());
-
-    assert_error_rules(&findings, &[]);
-    assert_has(&findings, "unpinned-source", Severity::Warning);
-}
-
-// ------------------------------------------------------------- 6. phase-order
-
-#[test]
-fn phases_must_not_go_backwards_along_the_order() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().phase = Phase::Bg1PreMerge;
-
-    let findings = validate(&manifest);
-
-    assert_has(&findings, "phase-order", Severity::Error);
-}
-
-#[test]
-fn eet_must_be_the_first_main_phase_entry() {
-    let mut manifest = pinned();
-    let eet = manifest.collection.order.remove(0);
-    manifest.collection.order.push(eet);
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["phase-order"]);
-}
-
-#[test]
-fn eet_end_must_be_the_last_main_phase_entry() {
-    let mut manifest = pinned();
-    let mut eet_end = manifest.mods.get("eet").unwrap().clone();
-    eet_end.id = "eet_end".to_owned();
-    manifest.mods.insert("eet_end".to_owned(), eet_end);
+fn uppercase_sha256_is_accepted() {
+    let mut manifest = good();
     manifest
-        .collection
-        .order
-        .insert(1, order_entry("eet_end", None));
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["phase-order"]);
-}
-
-#[test]
-fn split_eet_end_entries_must_form_a_contiguous_final_main_phase_block() {
-    let mut manifest = pinned();
-    let mut eet_end = manifest.mods.get("eet").unwrap().clone();
-    eet_end.id = "eet_end".to_owned();
-    manifest.mods.insert("eet_end".to_owned(), eet_end);
-    manifest
-        .collection
-        .order
-        .insert(2, order_entry("eet_end", Some(vec![0])));
-    manifest
-        .collection
-        .order
-        .push(order_entry("eet_end", Some(vec![100])));
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["phase-order"]);
-}
-
-#[test]
-fn adjacent_split_eet_end_entries_may_form_the_final_main_phase_block() {
-    let mut manifest = pinned();
-    let mut eet_end = manifest.mods.get("eet").unwrap().clone();
-    eet_end.id = "eet_end".to_owned();
-    manifest.mods.insert("eet_end".to_owned(), eet_end);
-    manifest
-        .collection
-        .order
-        .push(order_entry("eet_end", Some(vec![0])));
-    manifest
-        .collection
-        .order
-        .push(order_entry("eet_end", Some(vec![100])));
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &[]);
-}
-
-// ---------------------------------------------------------------- 7. nonempty
-
-#[test]
-fn empty_order_is_an_error() {
-    let mut manifest = pinned();
-    manifest.collection.order.clear();
-
-    let findings = validate(&manifest);
-
-    assert_has(&findings, "nonempty", Severity::Error);
-}
-
-#[test]
-fn empty_explicit_order_components_is_an_error() {
-    let mut manifest = pinned();
-    manifest.collection.order[1].components = Some(Vec::new());
-
-    let findings = validate(&manifest);
-
-    assert_has(&findings, "nonempty", Severity::Error);
-}
-
-#[test]
-fn empty_mod_components_is_an_error() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("eet").unwrap().components.clear();
-
-    let findings = validate(&manifest);
-
-    assert_has(&findings, "nonempty", Severity::Error);
-}
-
-#[test]
-fn empty_platforms_is_an_error() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().platforms.clear();
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["nonempty"]);
-}
-
-// ------------------------------------------------------------- 8. option-slot
-
-#[test]
-fn added_component_must_sit_in_exactly_one_slot_of_a_split_mod() {
-    let mut manifest = pinned();
-    // testmod is split across two order entries; point the second slot at a
-    // different component so the added component 10 has no slot at all.
-    manifest
-        .mods
-        .get_mut("testmod")
+        .artifacts
+        .get_mut("eefixpack")
         .unwrap()
-        .components
-        .push(Component {
-            id: 20,
-            name: "Extra".to_owned(),
-            stdin: None,
-        });
-    manifest.collection.order[2].components = Some(vec![20]);
+        .source
+        .sha256 = "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855".to_owned();
 
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &["option-slot"]);
+    assert_eq!(error_rules(&validate(&manifest)), Vec::<&str>::new());
 }
 
 #[test]
-fn added_component_of_an_unsplit_mod_is_fine() {
-    let mut manifest = pinned();
-    manifest.collection.order.remove(2);
-    manifest.collection.order[1].components = Some(vec![0, 10]);
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &[]);
-}
-
-// ----------------------------------------------------------- 9. stdin-newline
-
-#[test]
-fn stdin_without_trailing_newline_is_a_warning() {
-    let mut manifest = pinned();
-    manifest.mods.get_mut("testmod").unwrap().components[1].stdin = Some("1".to_owned());
-
-    let findings = validate(&manifest);
-
-    assert_error_rules(&findings, &[]);
-    assert_has(&findings, "stdin-newline", Severity::Warning);
-}
-
-// -------------------------------------------------------------- check / order
-
-#[test]
-fn check_reports_every_finding_including_warnings() {
+fn manual_source_keeps_its_authoring_placeholder_semantics() {
     let mut manifest = good();
-    manifest.collection.toggles[0].removes_mods = vec!["ghost".to_owned()];
+    let source = &mut manifest.artifacts.get_mut("eefixpack").unwrap().source;
+    source.kind = SourceKind::Manual;
+    source.url = "http://example.invalid/download-page".to_owned();
+    source.sha256 = "pending-user-supplied-file".to_owned();
+
+    assert_eq!(error_rules(&validate(&manifest)), Vec::<&str>::new());
+}
+
+#[test]
+fn all_zero_fetched_digest_remains_an_authoring_warning() {
+    let mut manifest = good();
+    manifest
+        .artifacts
+        .get_mut("eefixpack")
+        .unwrap()
+        .source
+        .sha256 = "0".repeat(64);
+
+    let findings = validate(&manifest);
+
+    assert_eq!(error_rules(&findings), Vec::<&str>::new());
+    assert!(findings.iter().any(|finding| {
+        finding.rule == "unpinned-source" && finding.severity == Severity::Warning
+    }));
+}
+
+#[test]
+fn legacy_stdin_without_newline_remains_a_warning() {
+    let mut manifest = good();
+    manifest.mods.get_mut("eefixpack").unwrap().components[1].stdin = Some("1".to_owned());
+
+    let findings = validate(&manifest);
+
+    assert!(findings.iter().any(|finding| {
+        finding.rule == "stdin-newline" && finding.severity == Severity::Warning
+    }));
+    assert_eq!(error_rules(&findings), Vec::<&str>::new());
+}
+
+#[test]
+fn check_returns_all_independent_findings() {
+    let mut manifest = good();
+    manifest.collection.runs[0].run_id = manifest.collection.runs[1].run_id.clone();
+    manifest.mods.get_mut("eefixpack").unwrap().tp2 = "../escape.tp2".to_owned();
 
     let error = check(&manifest).unwrap_err();
-
-    let EngineError::Validation(findings) = &error else {
-        panic!("expected a validation error, got {error:?}");
+    let EngineError::Validation(findings) = error else {
+        panic!("expected validation error");
     };
-    assert_has(findings, "component-refs", Severity::Error);
-    assert_has(findings, "unpinned-source", Severity::Warning);
 
-    let rendered = error.to_string();
-    assert!(rendered.contains("error[component-refs]:"), "{rendered}");
-    assert!(rendered.contains("warning[unpinned-source]:"), "{rendered}");
-    assert_eq!(rendered.lines().count(), findings.len(), "{rendered}");
+    assert_has_error(&findings, "run-ids");
+    assert_has_error(&findings, "paths");
 }
 
 #[test]
-fn check_preserves_two_independent_error_findings() {
-    let mut manifest = pinned();
-    manifest.collection.order.push(order_entry("nope", None));
-    manifest.mods.get_mut("testmod").unwrap().platforms = vec!["haiku".to_owned()];
-
-    let error = check(&manifest).unwrap_err();
-
-    let EngineError::Validation(findings) = &error else {
-        panic!("expected a validation error, got {error:?}");
-    };
-    assert_error_rules(findings, &["order-refs", "sources"]);
-
-    let rendered = error.to_string();
-    assert!(rendered.contains("error[order-refs]:"), "{rendered}");
-    assert!(rendered.contains("error[sources]:"), "{rendered}");
-    assert_eq!(rendered.lines().count(), 2, "{rendered}");
-}
-
-#[test]
-fn findings_are_reported_in_rule_order_and_are_stable() {
-    let mut manifest = good();
-    manifest.collection.order.push(order_entry("nope", None));
-    manifest.mods.get_mut("testmod").unwrap().components[1].stdin = Some("1".to_owned());
-
-    let findings = validate(&manifest);
-    assert_eq!(findings, validate(&manifest));
-
-    let rules = findings
-        .iter()
-        .map(|finding| finding.rule)
-        .collect::<Vec<_>>();
-    assert_eq!(
-        rules,
-        vec![
-            "order-refs",
-            "unpinned-source",
-            "unpinned-source",
-            "stdin-newline"
-        ],
-        "{findings:#?}"
-    );
-}
-
-#[test]
-fn finding_display_shows_severity_rule_and_message() {
+fn finding_display_includes_severity_rule_and_message() {
     let finding = Finding {
         severity: Severity::Error,
-        rule: "order-refs",
+        rule: "references",
         message: "boom".to_owned(),
     };
 
-    assert_eq!(finding.to_string(), "error[order-refs]: boom");
-    assert_eq!(
-        Finding {
-            severity: Severity::Warning,
-            ..finding
-        }
-        .to_string(),
-        "warning[order-refs]: boom"
-    );
+    assert_eq!(finding.to_string(), "error[references]: boom");
 }

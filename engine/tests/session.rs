@@ -8,8 +8,6 @@ use bg_engine::Manifest;
 
 fn selection() -> Selection {
     Selection {
-        toggles_off: vec!["optional-npcs".to_owned()],
-        toggles_on: vec!["extra-tweaks".to_owned()],
         choices: BTreeMap::from([("difficulty".to_owned(), "tactical".to_owned())]),
         platform: "windows".to_owned(),
     }

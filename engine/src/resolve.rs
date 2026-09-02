@@ -67,6 +67,8 @@ pub struct InstallPlan {
 /// Recipe-v2 alpha is Windows-only. Other target values fail explicitly; no
 /// installer run is removed because of platform metadata.
 pub fn resolve(manifest: &Manifest, selection: &Selection) -> Result<InstallPlan> {
+    crate::validate::check(manifest)?;
+
     if selection.platform != "windows" {
         return Err(EngineError::InvalidSelection(format!(
             "unsupported platform {:?}; recipe-v2 alpha supports windows",

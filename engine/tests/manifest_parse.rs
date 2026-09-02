@@ -1,4 +1,7 @@
-use bg_engine::manifest::{Collection, GameRoot, InvocationMode, ModFile, Phase, RunArg};
+use bg_engine::manifest::{
+    AcquisitionPolicy, Artifact, Collection, GameRoot, InvocationMode, ModFile, Phase, RunArg,
+    SourceKind,
+};
 
 fn collection_fixture() -> String {
     std::fs::read_to_string(concat!(
@@ -11,6 +14,14 @@ fn collection_fixture() -> String {
 fn mod_fixture(name: &str) -> String {
     std::fs::read_to_string(format!(
         "{}/tests/fixtures/manifest/mods/{name}",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap()
+}
+
+fn artifact_fixture(name: &str) -> String {
+    std::fs::read_to_string(format!(
+        "{}/tests/fixtures/manifest/artifacts/{name}",
         env!("CARGO_MANIFEST_DIR")
     ))
     .unwrap()
@@ -64,6 +75,16 @@ fn parses_installer_referencing_separate_mod_and_weidu_artifacts() {
     assert_eq!(installer.invocation_mode, InvocationMode::ExplicitTp2);
     assert_eq!(installer.components.len(), 2);
     assert_eq!(installer.components[1].stdin.as_deref(), Some("1\n"));
+}
+
+#[test]
+fn parses_artifact_acquisition_and_provenance_independently() {
+    let artifact: Artifact = toml::from_str(&artifact_fixture("eefixpack.toml")).unwrap();
+
+    assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
+    assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
+    assert_eq!(artifact.archive.path, "EE_Fixpack");
+    assert_eq!(artifact.provenance.license, "MIT");
 }
 
 #[test]
