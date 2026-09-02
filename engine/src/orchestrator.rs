@@ -188,17 +188,40 @@ impl StepFailure {
     }
 }
 
-/// Minimal success receipt hand-off; Task 14 replaces the fake sink with immutable output.
+/// Terminal result serialized into an immutable attempt receipt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReceiptDraftOutcome {
+    /// The complete plan and final verification succeeded.
+    Succeeded,
+    /// A retryable step failed.
+    Failed {
+        /// Stable pipeline step id.
+        step_id: String,
+        /// Durable failure detail.
+        detail: String,
+    },
+    /// Existing evidence made further mutation unsafe.
+    FreshCopyRequired {
+        /// Stable pipeline step id.
+        step_id: String,
+        /// Durable reconciliation detail.
+        detail: String,
+    },
+}
+
+/// Immutable terminal receipt hand-off assembled from the durable campaign ledger.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReceiptDraft {
     /// Frozen install identity.
     pub install_id: String,
     /// Frozen campaign-attempt identity.
     pub attempt_id: String,
-    /// Timestamp captured immediately before receipt publication.
+    /// Durable campaign-attempt start timestamp from ledger record zero.
     pub started_at_millis: u64,
-    /// Timestamp captured after all final verification completed.
+    /// Durable terminal timestamp from the last ledger record before publication.
     pub completed_at_millis: u64,
+    /// Successful, failed, or unsafe-to-resume terminal outcome.
+    pub outcome: ReceiptDraftOutcome,
     /// Complete frozen campaign identity used to derive receipt digests and source pins.
     pub created: CampaignCreated,
     /// Exact plan whose digest was frozen in [`Self::created`].
@@ -246,6 +269,9 @@ pub enum OrchestratorError {
         /// Exact ownership/safety failure.
         reason: String,
     },
+    /// A terminal result could not be persisted as an immutable attempt receipt.
+    #[error("could not publish terminal receipt: {0}")]
+    TerminalReceipt(String),
 }
 
 /// Performs full initial validation and the last-moment process/TLK rechecks.
@@ -342,9 +368,9 @@ pub trait InstallLogVerifier {
     fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure>;
 }
 
-/// Accepts the fully verified campaign hand-off. Task 14 supplies immutable persistence.
+/// Accepts every terminal campaign hand-off. Task 14 supplies immutable persistence.
 pub trait ReceiptWriter {
-    /// Publish success evidence without replacing an earlier successful receipt.
+    /// Publish terminal evidence without replacing an earlier attempt receipt.
     fn write(&mut self, draft: &ReceiptDraft) -> Result<(), StepFailure>;
 }
 
@@ -422,10 +448,12 @@ where
                 message: reason.clone(),
             });
             emit_finished(sink, "preflight", StepOutcome::Failed);
-            return Ok(CampaignOutcome::Failed {
+            let outcome = CampaignOutcome::Failed {
                 step_id: "preflight".to_owned(),
                 reason,
-            });
+            };
+            write_terminal_receipt(dependencies, request, &store.replay()?, &outcome)?;
+            return Ok(outcome);
         }
         emit_finished(sink, "preflight", StepOutcome::Succeeded);
     }
@@ -751,6 +779,78 @@ impl Progress {
     }
 }
 
+fn build_receipt_draft(
+    request: &CampaignRequest,
+    replay: &SessionReplay,
+    outcome: ReceiptDraftOutcome,
+) -> Result<ReceiptDraft, OrchestratorError> {
+    let first = replay.records.first().ok_or_else(|| {
+        OrchestratorError::InvalidCampaign("campaign ledger has no creation record".to_owned())
+    })?;
+    let last = replay.records.last().ok_or_else(|| {
+        OrchestratorError::InvalidCampaign("campaign ledger has no terminal timestamp".to_owned())
+    })?;
+    let attempt_id = if matches!(outcome, ReceiptDraftOutcome::Succeeded) {
+        request.created.attempt_id.clone()
+    } else {
+        let outcome_identity = match &outcome {
+            ReceiptDraftOutcome::Succeeded => unreachable!("success uses the campaign attempt id"),
+            ReceiptDraftOutcome::Failed { step_id, detail } => {
+                format!("failed\0{step_id}\0{detail}")
+            }
+            ReceiptDraftOutcome::FreshCopyRequired { step_id, detail } => {
+                format!("fresh-copy-required\0{step_id}\0{detail}")
+            }
+        };
+        format!(
+            "terminal-{:010}-{}",
+            last.sequence,
+            &sha256_bytes(outcome_identity.as_bytes())[..16]
+        )
+    };
+    Ok(ReceiptDraft {
+        install_id: request.created.install_id.clone(),
+        attempt_id,
+        started_at_millis: first.recorded_at,
+        completed_at_millis: last.recorded_at,
+        outcome,
+        created: request.created.clone(),
+        plan: request.plan.clone(),
+    })
+}
+
+fn write_terminal_receipt<D>(
+    dependencies: &mut D,
+    request: &CampaignRequest,
+    replay: &SessionReplay,
+    outcome: &CampaignOutcome,
+) -> Result<(), OrchestratorError>
+where
+    D: ReceiptWriter,
+{
+    let draft_outcome = match outcome {
+        CampaignOutcome::Complete => {
+            return Err(OrchestratorError::InvalidCampaign(
+                "success receipt must be written by the receipt pipeline step".to_owned(),
+            ));
+        }
+        CampaignOutcome::Failed { step_id, reason } => ReceiptDraftOutcome::Failed {
+            step_id: step_id.clone(),
+            detail: reason.clone(),
+        },
+        CampaignOutcome::FreshCopyRequired { step_id, reason } => {
+            ReceiptDraftOutcome::FreshCopyRequired {
+                step_id: step_id.clone(),
+                detail: reason.clone(),
+            }
+        }
+    };
+    let draft = build_receipt_draft(request, replay, draft_outcome)?;
+    dependencies
+        .write(&draft)
+        .map_err(|failure| OrchestratorError::TerminalReceipt(failure.into_message()))
+}
+
 struct CampaignMachine<'a, D, S> {
     request: &'a CampaignRequest,
     dependencies: &'a mut D,
@@ -774,6 +874,8 @@ where
                 _ => self.run_simple(&step)?,
             };
             if let Some(outcome) = outcome {
+                let replay = self.store.replay()?;
+                write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
                 return Ok(outcome);
             }
         }
@@ -820,16 +922,13 @@ where
                 .verify_final(&self.request.plan)
                 .map(|()| SimpleExecution::Complete),
             PipelineKind::Receipt => (|| {
-                let started_at_millis = self.dependencies.now_millis()?;
-                let completed_at_millis = self.dependencies.now_millis()?;
-                let draft = ReceiptDraft {
-                    install_id: self.request.created.install_id.clone(),
-                    attempt_id: self.request.created.attempt_id.clone(),
-                    started_at_millis,
-                    completed_at_millis,
-                    created: self.request.created.clone(),
-                    plan: self.request.plan.clone(),
-                };
+                let replay = self
+                    .store
+                    .replay()
+                    .map_err(|error| StepFailure::new(error.to_string()))?;
+                let draft =
+                    build_receipt_draft(self.request, &replay, ReceiptDraftOutcome::Succeeded)
+                        .map_err(|error| StepFailure::new(error.to_string()))?;
                 self.dependencies
                     .write(&draft)
                     .map(|()| SimpleExecution::Complete)

@@ -31,6 +31,12 @@ fn setup() -> (TempDir, PathBuf, PathBuf, ManagedInstallRegistry) {
         b"immutable receipt",
     )
     .unwrap();
+    std::fs::create_dir_all(managed.join("game")).unwrap();
+    std::fs::write(
+        managed.join("game/InfinityLoader.exe"),
+        b"verified launcher",
+    )
+    .unwrap();
     let registry = ManagedInstallRegistry::open_or_create(&app_data).unwrap();
     (temp, app_data, managed, registry)
 }
@@ -83,6 +89,8 @@ fn duplicate_ids_with_different_roots_are_rejected_without_data_loss() {
         b"immutable receipt",
     )
     .unwrap();
+    std::fs::create_dir_all(other.join("game")).unwrap();
+    std::fs::write(other.join("game/InfinityLoader.exe"), b"verified launcher").unwrap();
     let mut duplicate = original.clone();
     duplicate.managed_root = other.clone();
     duplicate.launch_path = other.join("game/InfinityLoader.exe");
@@ -94,4 +102,29 @@ fn duplicate_ids_with_different_roots_are_rejected_without_data_loss() {
         "{error}"
     );
     assert_eq!(std::fs::read(path).unwrap(), before);
+}
+
+#[test]
+fn missing_launch_executable_marks_an_install_stale() {
+    let (_temp, _app_data, managed, registry) = setup();
+    let mut expected = record(&managed);
+    expected.receipt_sha256 = bg_engine::digest::sha256_bytes(b"immutable receipt");
+    registry.publish(&expected).unwrap();
+    std::fs::remove_file(&expected.launch_path).unwrap();
+
+    let listed = registry.list().unwrap();
+
+    assert_eq!(listed[0].availability, InstallAvailability::Stale);
+}
+
+#[test]
+fn launch_path_cannot_escape_the_managed_root_with_parent_segments() {
+    let (_temp, _app_data, managed, registry) = setup();
+    let mut unsafe_record = record(&managed);
+    unsafe_record.receipt_sha256 = bg_engine::digest::sha256_bytes(b"immutable receipt");
+    unsafe_record.launch_path = managed.join("game/../../outside.exe");
+
+    let error = registry.publish(&unsafe_record).unwrap_err();
+
+    assert!(error.to_string().contains("launch path"), "{error}");
 }

@@ -1,5 +1,6 @@
 //! Create-once machine-readable receipts for managed installation attempts.
 
+use std::collections::BTreeSet;
 #[cfg(not(windows))]
 use std::fs::File;
 use std::fs::{self, OpenOptions};
@@ -12,7 +13,8 @@ use thiserror::Error;
 
 use crate::games::{GameRole, Storefront};
 use crate::manifest::GameRoot;
-use crate::orchestrator::{ReceiptDraft, ReceiptWriter, StepFailure};
+use crate::orchestrator::{ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter, StepFailure};
+use crate::recipe_view::NormalizedSelection;
 use crate::registry::{
     ManagedInstallRecord, ManagedInstallRegistry, RegistryError, REGISTRY_SCHEMA_VERSION,
 };
@@ -248,6 +250,12 @@ pub struct InstallReceipt {
     pub install_id: String,
     /// Stable attempt id naming the receipt directory.
     pub attempt_id: String,
+    /// Canonical root of the managed installation.
+    pub managed_root: PathBuf,
+    /// Frozen managed BG1 pre-merge staging root.
+    pub staged_bg1: PathBuf,
+    /// Frozen managed BG2/EET game root.
+    pub staged_bg2: PathBuf,
     /// Attempt start in Unix epoch milliseconds.
     pub started_at_millis: u64,
     /// Terminal receipt time in Unix epoch milliseconds.
@@ -264,6 +272,8 @@ pub struct InstallReceipt {
     pub recipe_envelope_sha256: String,
     /// Canonical normalized-selection digest.
     pub selection_sha256: String,
+    /// Exact normalized semantic selection used to resolve the plan.
+    pub normalized_selection: NormalizedSelection,
     /// Canonical resolved-plan digest.
     pub plan_sha256: String,
     /// Exact resolved plan executed by the orchestrator.
@@ -409,30 +419,67 @@ impl ManagedReceiptWriter {
         &mut self,
         draft: &ReceiptDraft,
     ) -> Result<PublishedReceipt, ManagedReceiptError> {
-        self.validate_frozen_evidence(draft)?;
-        let final_state = self.evidence.final_state.clone().ok_or_else(|| {
-            ManagedReceiptError::Evidence("successful campaign has no final state".to_owned())
-        })?;
+        if !matches!(draft.outcome, ReceiptDraftOutcome::Succeeded) {
+            return Err(ManagedReceiptError::Evidence(
+                "publish_success received a non-success draft".to_owned(),
+            ));
+        }
+        self.publish_terminal(draft)
+    }
+
+    fn publish_terminal(
+        &mut self,
+        draft: &ReceiptDraft,
+    ) -> Result<PublishedReceipt, ManagedReceiptError> {
+        let succeeded = matches!(draft.outcome, ReceiptDraftOutcome::Succeeded);
+        self.validate_frozen_evidence(draft, succeeded)?;
+        let final_state = if succeeded {
+            Some(self.evidence.final_state.clone().ok_or_else(|| {
+                ManagedReceiptError::Evidence("successful campaign has no final state".to_owned())
+            })?)
+        } else {
+            None
+        };
+        let outcome = match &draft.outcome {
+            ReceiptDraftOutcome::Succeeded => ReceiptOutcome::Succeeded,
+            ReceiptDraftOutcome::Failed { step_id, detail } => ReceiptOutcome::Failed {
+                step_id: step_id.clone(),
+                detail: detail.clone(),
+            },
+            ReceiptDraftOutcome::FreshCopyRequired { step_id, detail } => {
+                ReceiptOutcome::FreshCopyRequired {
+                    step_id: step_id.clone(),
+                    detail: detail.clone(),
+                }
+            }
+        };
         let receipt = InstallReceipt {
             schema_version: RECEIPT_SCHEMA_VERSION,
             install_id: draft.install_id.clone(),
             attempt_id: draft.attempt_id.clone(),
+            managed_root: draft.created.managed_root.clone(),
+            staged_bg1: draft.created.staged_bg1.clone(),
+            staged_bg2: draft.created.staged_bg2.clone(),
             started_at_millis: draft.started_at_millis,
             completed_at_millis: draft.completed_at_millis,
-            outcome: ReceiptOutcome::Succeeded,
+            outcome,
             versions: self.evidence.versions.clone(),
             source_games: self.evidence.source_games.clone(),
             recipe_payload_sha256: draft.created.recipe_payload_sha256.clone(),
             recipe_envelope_sha256: draft.created.recipe_envelope_sha256.clone(),
             selection_sha256: draft.created.selection_sha256.clone(),
+            normalized_selection: draft.created.normalized_selection.clone(),
             plan_sha256: draft.created.plan_sha256.clone(),
             plan: draft.plan.clone(),
             artifacts: self.evidence.artifacts.clone(),
             weidu_tools: self.evidence.weidu_tools.clone(),
             runs: self.evidence.runs.clone(),
-            final_state: Some(final_state.clone()),
+            final_state: final_state.clone(),
         };
         let published = self.store.publish(&receipt)?;
+        let Some(final_state) = final_state else {
+            return Ok(published);
+        };
         let install_path = published.install_receipt.as_ref().ok_or_else(|| {
             ManagedReceiptError::Evidence(
                 "successful receipt publisher omitted install-receipt.json".to_owned(),
@@ -459,17 +506,38 @@ impl ManagedReceiptWriter {
         Ok(published)
     }
 
-    fn validate_frozen_evidence(&self, draft: &ReceiptDraft) -> Result<(), ManagedReceiptError> {
+    fn validate_frozen_evidence(
+        &self,
+        draft: &ReceiptDraft,
+        require_complete: bool,
+    ) -> Result<(), ManagedReceiptError> {
         if self.display_name.trim().is_empty() {
             return Err(ManagedReceiptError::Evidence(
                 "managed-install display name is empty".to_owned(),
             ));
         }
-        if draft.install_id != draft.created.install_id
-            || draft.attempt_id != draft.created.attempt_id
+        if draft.install_id != draft.created.install_id {
+            return Err(ManagedReceiptError::Evidence(
+                "draft install id differs from CampaignCreated".to_owned(),
+            ));
+        }
+        if require_complete {
+            if draft.attempt_id != draft.created.attempt_id {
+                return Err(ManagedReceiptError::Evidence(
+                    "successful draft attempt id differs from CampaignCreated".to_owned(),
+                ));
+            }
+        } else if !is_terminal_attempt_id(&draft.attempt_id) {
+            return Err(ManagedReceiptError::Evidence(
+                "failed draft does not use a stable terminal attempt id".to_owned(),
+            ));
+        }
+        if crate::digest::selection_digest(&draft.created.normalized_selection)
+            .map_err(|error| ManagedReceiptError::Evidence(error.to_string()))?
+            != draft.created.selection_sha256
         {
             return Err(ManagedReceiptError::Evidence(
-                "draft ids differ from CampaignCreated".to_owned(),
+                "normalized selection does not match its frozen digest".to_owned(),
             ));
         }
         if crate::digest::plan_digest(&draft.plan)
@@ -480,7 +548,7 @@ impl ManagedReceiptWriter {
                 "exact plan does not match its frozen digest".to_owned(),
             ));
         }
-        validate_source_evidence(&self.evidence.source_games, draft)?;
+        validate_source_evidence(&self.evidence.source_games, draft, require_complete)?;
         validate_identity_evidence(
             "artifact",
             &self.evidence.artifacts,
@@ -493,28 +561,37 @@ impl ManagedReceiptWriter {
                     &artifact.sha256,
                 )
             },
+            require_complete,
         )?;
         validate_identity_evidence(
             "WeiDU tool",
             &self.evidence.weidu_tools,
             &draft.created.tool_identities,
             |tool| (&tool.id, &tool.version, tool.length, &tool.sha256),
+            require_complete,
         )?;
-        if self.evidence.runs.len() != draft.plan.runs.len() {
+        if require_complete && self.evidence.runs.len() != draft.plan.runs.len() {
             return Err(ManagedReceiptError::Evidence(format!(
                 "run evidence count {} differs from plan count {}",
                 self.evidence.runs.len(),
                 draft.plan.runs.len()
             )));
         }
-        for (evidence, planned) in self.evidence.runs.iter().zip(&draft.plan.runs) {
-            if evidence.run_id != planned.run_id
-                || evidence.target != planned.target
-                || evidence.components != planned.components
+        let mut seen_runs = BTreeSet::new();
+        for evidence in &self.evidence.runs {
+            let planned = draft
+                .plan
+                .runs
+                .iter()
+                .find(|planned| planned.run_id == evidence.run_id);
+            if !seen_runs.insert(&evidence.run_id)
+                || !planned.is_some_and(|planned| {
+                    evidence.target == planned.target && evidence.components == planned.components
+                })
             {
                 return Err(ManagedReceiptError::Evidence(format!(
-                    "run evidence for {:?} differs from the exact plan",
-                    planned.run_id
+                    "run evidence for {:?} differs from the exact plan or is duplicated",
+                    evidence.run_id
                 )));
             }
         }
@@ -524,7 +601,7 @@ impl ManagedReceiptWriter {
 
 impl ReceiptWriter for ManagedReceiptWriter {
     fn write(&mut self, draft: &ReceiptDraft) -> Result<(), StepFailure> {
-        self.publish_success(draft)
+        self.publish_terminal(draft)
             .map(|_| ())
             .map_err(|error| StepFailure::new(error.to_string()))
     }
@@ -533,29 +610,30 @@ impl ReceiptWriter for ManagedReceiptWriter {
 fn validate_source_evidence(
     sources: &[SourceGameReceipt],
     draft: &ReceiptDraft,
+    require_complete: bool,
 ) -> Result<(), ManagedReceiptError> {
-    let bg1 = sources
-        .iter()
-        .filter(|source| source.role == GameRole::BgeeSod)
-        .collect::<Vec<_>>();
-    let bg2 = sources
-        .iter()
-        .filter(|source| source.role == GameRole::Bg2ee)
-        .collect::<Vec<_>>();
-    if bg1.len() != 1 || bg2.len() != 1 || sources.len() != 2 {
-        return Err(ManagedReceiptError::Evidence(
-            "source evidence must contain exactly one BG1 and one BG2 record".to_owned(),
-        ));
+    let mut bg1 = 0_usize;
+    let mut bg2 = 0_usize;
+    for source in sources {
+        let expected = match source.role {
+            GameRole::BgeeSod => {
+                bg1 += 1;
+                &draft.created.source_games.bg1
+            }
+            GameRole::Bg2ee => {
+                bg2 += 1;
+                &draft.created.source_games.bg2
+            }
+        };
+        if !source.fingerprint.eq_ignore_ascii_case(expected) {
+            return Err(ManagedReceiptError::Evidence(
+                "source fingerprints differ from CampaignCreated".to_owned(),
+            ));
+        }
     }
-    if !bg1[0]
-        .fingerprint
-        .eq_ignore_ascii_case(&draft.created.source_games.bg1)
-        || !bg2[0]
-            .fingerprint
-            .eq_ignore_ascii_case(&draft.created.source_games.bg2)
-    {
+    if bg1 > 1 || bg2 > 1 || (require_complete && (bg1 != 1 || bg2 != 1)) {
         return Err(ManagedReceiptError::Evidence(
-            "source fingerprints differ from CampaignCreated".to_owned(),
+            "source evidence is duplicated or incomplete".to_owned(),
         ));
     }
     Ok(())
@@ -566,33 +644,47 @@ fn validate_identity_evidence<'a, T, F>(
     evidence: &'a [T],
     frozen: &[FrozenIdentity],
     fields: F,
+    require_complete: bool,
 ) -> Result<(), ManagedReceiptError>
 where
     F: Fn(&'a T) -> (&'a String, &'a String, u64, &'a String),
 {
-    if evidence.len() != frozen.len() {
+    if require_complete && evidence.len() != frozen.len() {
         return Err(ManagedReceiptError::Evidence(format!(
             "{label} evidence count {} differs from frozen count {}",
             evidence.len(),
             frozen.len()
         )));
     }
-    for identity in frozen {
-        let matches = evidence.iter().filter(|item| {
-            let (id, version, length, sha256) = fields(item);
+    let mut seen = BTreeSet::new();
+    for item in evidence {
+        let (id, version, length, sha256) = fields(item);
+        let matches = frozen.iter().filter(|identity| {
             id == &identity.id
                 && version == &identity.version
                 && length == identity.length
                 && sha256.eq_ignore_ascii_case(&identity.sha256)
         });
-        if matches.count() != 1 {
+        if !seen.insert(id) || matches.count() != 1 {
             return Err(ManagedReceiptError::Evidence(format!(
                 "{label} {:?} does not exactly match its frozen identity",
-                identity.id
+                id
             )));
         }
     }
     Ok(())
+}
+
+fn is_terminal_attempt_id(value: &str) -> bool {
+    value
+        .strip_prefix("terminal-")
+        .and_then(|suffix| suffix.split_once('-'))
+        .is_some_and(|(sequence, digest)| {
+            sequence.len() == 10
+                && sequence.bytes().all(|byte| byte.is_ascii_digit())
+                && digest.len() == 16
+                && digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+        })
 }
 
 impl ReceiptStore {
@@ -619,7 +711,7 @@ impl ReceiptStore {
     pub fn publish(&self, receipt: &InstallReceipt) -> Result<PublishedReceipt, ReceiptError> {
         self.validate(receipt)?;
         let attempt_root = self.attempts_root.join(&receipt.attempt_id);
-        validate_direct_directory(&attempt_root)?;
+        ensure_attempt_directory(&self.attempts_root, &attempt_root)?;
         let attempt_receipt = attempt_root.join(ATTEMPT_RECEIPT_FILE);
         let install_receipt = receipt
             .outcome
@@ -709,8 +801,15 @@ fn reconcile_existing(path: &Path, expected: &[u8]) -> Result<(), ReceiptError> 
 }
 
 fn publish_if_missing(path: &Path, bytes: &[u8]) -> Result<(), ReceiptError> {
-    if path.exists() {
-        return Ok(());
+    match fs::symlink_metadata(path) {
+        Ok(_) => return reconcile_existing(path, bytes),
+        Err(source) if source.kind() == std::io::ErrorKind::NotFound => {}
+        Err(source) => {
+            return Err(ReceiptError::Io {
+                path: path.to_path_buf(),
+                source,
+            });
+        }
     }
     let parent = path
         .parent()
@@ -737,11 +836,19 @@ fn publish_if_missing(path: &Path, bytes: &[u8]) -> Result<(), ReceiptError> {
         drop(file);
         match fs::hard_link(&temporary, path) {
             Ok(()) => Ok(()),
-            Err(_source) if path.exists() => reconcile_existing(path, bytes),
-            Err(source) => Err(ReceiptError::Io {
-                path: path.to_path_buf(),
-                source,
-            }),
+            Err(link_source) => match fs::symlink_metadata(path) {
+                Ok(_) => reconcile_existing(path, bytes),
+                Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
+                    Err(ReceiptError::Io {
+                        path: path.to_path_buf(),
+                        source: link_source,
+                    })
+                }
+                Err(source) => Err(ReceiptError::Io {
+                    path: path.to_path_buf(),
+                    source,
+                }),
+            },
         }
     })();
     let cleanup = fs::remove_file(&temporary);
@@ -754,6 +861,29 @@ fn publish_if_missing(path: &Path, bytes: &[u8]) -> Result<(), ReceiptError> {
         source,
     })?;
     sync_directory(parent)
+}
+
+fn ensure_attempt_directory(attempts_root: &Path, attempt_root: &Path) -> Result<(), ReceiptError> {
+    validate_direct_directory(attempts_root)?;
+    match fs::symlink_metadata(attempt_root) {
+        Ok(_) => validate_direct_directory(attempt_root),
+        Err(source) if source.kind() == std::io::ErrorKind::NotFound => {
+            match fs::create_dir(attempt_root) {
+                Ok(()) => sync_directory(attempts_root),
+                Err(source) if source.kind() == std::io::ErrorKind::AlreadyExists => {
+                    validate_direct_directory(attempt_root)
+                }
+                Err(source) => Err(ReceiptError::Io {
+                    path: attempt_root.to_path_buf(),
+                    source,
+                }),
+            }
+        }
+        Err(source) => Err(ReceiptError::Io {
+            path: attempt_root.to_path_buf(),
+            source,
+        }),
+    }
 }
 
 fn temporary_sibling(path: &Path) -> Result<PathBuf, ReceiptError> {

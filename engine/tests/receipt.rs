@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use bg_engine::games::{GameRole, Storefront};
 use bg_engine::manifest::GameRoot;
-use bg_engine::orchestrator::{ReceiptDraft, ReceiptWriter};
+use bg_engine::orchestrator::{ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter};
 use bg_engine::receipt::{
     ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
     LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter, PromptReceipt, ReceiptEvidence,
@@ -30,6 +30,19 @@ fn plan() -> InstallPlan {
     }
 }
 
+fn frozen(id: &str, byte: &str, length: u64) -> FrozenIdentity {
+    FrozenIdentity {
+        id: id.to_owned(),
+        version: if id == "weidu" {
+            "24900".to_owned()
+        } else {
+            "2.7.3".to_owned()
+        },
+        sha256: byte.repeat(32),
+        length,
+    }
+}
+
 fn success_receipt(root: &Path) -> InstallReceipt {
     let component = LogComponentReceipt {
         tp2: "eet/eet.tp2".to_owned(),
@@ -40,6 +53,9 @@ fn success_receipt(root: &Path) -> InstallReceipt {
         schema_version: RECEIPT_SCHEMA_VERSION,
         install_id: "install-001".to_owned(),
         attempt_id: "attempt-001".to_owned(),
+        managed_root: root.to_path_buf(),
+        staged_bg1: root.join("bg1"),
+        staged_bg2: root.join("game"),
         started_at_millis: 10,
         completed_at_millis: 20,
         outcome: ReceiptOutcome::Succeeded,
@@ -66,6 +82,11 @@ fn success_receipt(root: &Path) -> InstallReceipt {
         recipe_payload_sha256: "33".repeat(32),
         recipe_envelope_sha256: "44".repeat(32),
         selection_sha256: "55".repeat(32),
+        normalized_selection: NormalizedSelection {
+            platform: "windows".to_owned(),
+            features: std::collections::BTreeMap::from([("recommended".to_owned(), true)]),
+            inputs: std::collections::BTreeMap::new(),
+        },
         plan_sha256: "66".repeat(32),
         plan: plan(),
         artifacts: vec![ArtifactReceipt {
@@ -151,6 +172,10 @@ fn publishes_a_complete_success_receipt_create_once_in_both_locations() {
     let stored: InstallReceipt =
         serde_json::from_slice(&std::fs::read(&published.attempt_receipt).unwrap()).unwrap();
     assert_eq!(stored, receipt);
+    assert_eq!(stored.managed_root, root);
+    assert_eq!(stored.staged_bg1, root.join("bg1"));
+    assert_eq!(stored.staged_bg2, root.join("game"));
+    assert!(stored.normalized_selection.features["recommended"]);
     assert_eq!(
         std::fs::read(root.join(".chriz/install-receipt.json")).unwrap(),
         std::fs::read(&published.attempt_receipt).unwrap()
@@ -217,6 +242,12 @@ fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
     let cache = temp.path().join("cache");
     let app_data = temp.path().join("app-data");
     std::fs::create_dir_all(managed.join(".chriz/attempts/attempt-001")).unwrap();
+    std::fs::create_dir_all(managed.join("game")).unwrap();
+    std::fs::write(
+        managed.join("game/InfinityLoader.exe"),
+        b"verified launcher",
+    )
+    .unwrap();
     std::fs::create_dir_all(&cache).unwrap();
     let store = ReceiptStore::open(&managed, "install-001").unwrap();
     let registry = bg_engine::registry::ManagedInstallRegistry::open_or_create(&app_data).unwrap();
@@ -272,6 +303,7 @@ fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
         attempt_id: "attempt-001".to_owned(),
         started_at_millis: 10,
         completed_at_millis: 20,
+        outcome: ReceiptDraftOutcome::Succeeded,
         created,
         plan: frozen_plan,
     };
@@ -301,4 +333,85 @@ fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
     assert_eq!(cards.len(), 1);
     assert_eq!(cards[0].record.install_id, "install-001");
     assert_eq!(cards[0].record.managed_root, draft.created.managed_root);
+}
+
+#[test]
+fn real_writer_publishes_failure_attempt_without_claiming_or_registering_success() {
+    let temp = TempDir::new().unwrap();
+    let managed = temp.path().join("managed");
+    let cache = temp.path().join("cache");
+    let app_data = temp.path().join("app-data");
+    std::fs::create_dir_all(managed.join(".chriz/attempts/attempt-001")).unwrap();
+    std::fs::create_dir_all(&cache).unwrap();
+    let store = ReceiptStore::open(&managed, "install-001").unwrap();
+    let registry = bg_engine::registry::ManagedInstallRegistry::open_or_create(&app_data).unwrap();
+    let canonical_managed = std::fs::canonicalize(&managed).unwrap();
+    let full = success_receipt(&canonical_managed);
+    let evidence = ReceiptEvidence {
+        versions: full.versions,
+        source_games: full.source_games,
+        artifacts: Vec::new(),
+        weidu_tools: Vec::new(),
+        runs: Vec::new(),
+        final_state: None,
+    };
+    let selected = full.normalized_selection;
+    let frozen_plan = plan();
+    let created = CampaignCreated {
+        install_id: "install-001".to_owned(),
+        attempt_id: "attempt-001".to_owned(),
+        managed_root: canonical_managed.clone(),
+        cache_root: std::fs::canonicalize(cache).unwrap(),
+        recipe_payload: b"recipe".to_vec(),
+        recipe_payload_sha256: bg_engine::digest::sha256_bytes(b"recipe"),
+        recipe_envelope: b"envelope".to_vec(),
+        recipe_envelope_sha256: bg_engine::digest::sha256_bytes(b"envelope"),
+        selection_sha256: bg_engine::digest::selection_digest(&selected).unwrap(),
+        normalized_selection: selected,
+        plan_sha256: bg_engine::digest::plan_digest(&frozen_plan).unwrap(),
+        source_games: SourceGameFingerprints {
+            bg1: "11".repeat(32),
+            bg2: "22".repeat(32),
+        },
+        artifact_identities: vec![frozen("eet", "77", 1_024)],
+        tool_identities: vec![frozen("weidu", "88", 2_048)],
+        staged_bg1: canonical_managed.join("bg1"),
+        staged_bg2: canonical_managed.join("game"),
+    };
+    let draft = ReceiptDraft {
+        install_id: "install-001".to_owned(),
+        attempt_id: "terminal-0000000004-aaaaaaaaaaaaaaaa".to_owned(),
+        started_at_millis: 10,
+        completed_at_millis: 15,
+        outcome: ReceiptDraftOutcome::Failed {
+            step_id: "stage:bg2".to_owned(),
+            detail: "copy failed".to_owned(),
+        },
+        created,
+        plan: frozen_plan,
+    };
+    let mut writer = ManagedReceiptWriter::new(
+        store,
+        registry,
+        "Chriz BG Collection Alpha".to_owned(),
+        evidence,
+    );
+
+    ReceiptWriter::write(&mut writer, &draft).unwrap();
+
+    let attempt = managed.join(".chriz/attempts/terminal-0000000004-aaaaaaaaaaaaaaaa/receipt.json");
+    let receipt: InstallReceipt = serde_json::from_slice(&std::fs::read(attempt).unwrap()).unwrap();
+    assert!(matches!(
+        receipt.outcome,
+        ReceiptOutcome::Failed { ref step_id, .. } if step_id == "stage:bg2"
+    ));
+    assert!(receipt.final_state.is_none());
+    assert!(!managed.join(".chriz/install-receipt.json").exists());
+    assert!(
+        bg_engine::registry::ManagedInstallRegistry::open_or_create(&app_data)
+            .unwrap()
+            .list()
+            .unwrap()
+            .is_empty()
+    );
 }

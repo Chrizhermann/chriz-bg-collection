@@ -11,8 +11,8 @@ use bg_engine::orchestrator::{
     run_campaign, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
     CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRequest, InstallLogVerifier,
     InstallReconciliation, InvocationBuilder, MaterializationOutcome, MaterializationTask,
-    MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter, StagingService,
-    StepAttempt, StepFailure,
+    MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter,
+    StagingService, StepAttempt, StepFailure,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -163,6 +163,7 @@ struct FakeDeps {
     runner_active: bool,
     lock_probe: Option<(PathBuf, PathBuf)>,
     lock_was_held_at_receipt: bool,
+    receipts: Vec<ReceiptDraft>,
     now: u64,
 }
 
@@ -330,8 +331,9 @@ impl InstallLogVerifier for FakeDeps {
 }
 
 impl ReceiptWriter for FakeDeps {
-    fn write(&mut self, _draft: &ReceiptDraft) -> Result<(), StepFailure> {
+    fn write(&mut self, draft: &ReceiptDraft) -> Result<(), StepFailure> {
         self.trace.push("receipt".to_owned());
+        self.receipts.push(draft.clone());
         if let Some((registry, target)) = &self.lock_probe {
             self.lock_was_held_at_receipt = matches!(
                 TargetLock::try_acquire(registry, target),
@@ -509,6 +511,16 @@ fn failure_stops_at_the_same_step_and_resume_does_not_repeat_completed_work() {
         .iter()
         .any(|entry| entry.starts_with("materialize:")));
     assert!(!deps.trace.iter().any(|entry| entry.starts_with("run:")));
+    assert_eq!(deps.receipts.len(), 1);
+    assert!(matches!(
+        &deps.receipts[0].outcome,
+        ReceiptDraftOutcome::Failed { step_id, detail }
+            if step_id == "stage:bg2" && detail.contains("injected failure")
+    ));
+    assert_ne!(
+        deps.receipts[0].attempt_id,
+        fixture.request.created.attempt_id
+    );
 
     let split = deps.trace.len();
     let second = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
@@ -518,6 +530,87 @@ fn failure_stops_at_the_same_step_and_resume_does_not_repeat_completed_work() {
     assert!(resumed.iter().any(|entry| entry == "stage:bg2"));
     assert!(!resumed.iter().any(|entry| entry == "stage:bg1"));
     assert!(!resumed.iter().any(|entry| entry.starts_with("acquire:")));
+    assert!(matches!(
+        deps.receipts.last().map(|draft| &draft.outcome),
+        Some(ReceiptDraftOutcome::Succeeded)
+    ));
+    assert_eq!(
+        deps.receipts.last().unwrap().attempt_id,
+        fixture.request.created.attempt_id
+    );
+}
+
+#[test]
+fn receipt_bytes_are_stable_after_a_crash_before_ledger_completion() {
+    let fixture = Fixture::new();
+    let sink = RecordingSink::default();
+    let mut first_deps = FakeDeps {
+        now: 100,
+        ..FakeDeps::default()
+    };
+
+    assert_eq!(
+        run_campaign(&fixture.request, &mut first_deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    let first = first_deps.receipts.last().unwrap().clone();
+    let replay = SessionStore::open(&fixture.request.created.managed_root)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let last = replay.records.last().unwrap();
+    assert!(matches!(
+        last.event,
+        SessionEvent::StepCompleted { ref step_id, .. } if step_id == "receipt"
+    ));
+    std::fs::remove_file(
+        fixture
+            .request
+            .created
+            .managed_root
+            .join(".chriz/ledger")
+            .join(format!("{:010}.json", last.sequence)),
+    )
+    .unwrap();
+
+    let mut resumed_deps = FakeDeps {
+        now: 900,
+        ..FakeDeps::default()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed_deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+
+    assert_eq!(resumed_deps.receipts, vec![first]);
+}
+
+#[test]
+fn resumed_preflight_failure_gets_its_own_terminal_receipt() {
+    let fixture = Fixture::new();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        fail_once: Some("stage:bg2".to_owned()),
+        ..FakeDeps::default()
+    };
+    assert!(matches!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { ref step_id, .. } if step_id == "stage:bg2"
+    ));
+    let first_id = deps.receipts.last().unwrap().attempt_id.clone();
+
+    deps.fail_once = Some("preflight".to_owned());
+    assert!(matches!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { ref step_id, .. } if step_id == "preflight"
+    ));
+
+    let resumed = deps.receipts.last().unwrap();
+    assert!(matches!(
+        &resumed.outcome,
+        ReceiptDraftOutcome::Failed { step_id, .. } if step_id == "preflight"
+    ));
+    assert_ne!(resumed.attempt_id, first_id);
 }
 
 #[test]
@@ -555,6 +648,10 @@ fn unresolved_materialization_with_unknown_or_truncated_bytes_requires_a_fresh_c
         assert!(matches!(
             outcome,
             CampaignOutcome::FreshCopyRequired { reason: ref found, .. } if found == reason
+        ));
+        assert!(matches!(
+            deps.receipts.last().map(|draft| &draft.outcome),
+            Some(ReceiptDraftOutcome::FreshCopyRequired { detail, .. }) if detail == reason
         ));
         assert!(!deps.trace.iter().any(|entry| entry.starts_with("run:")));
         assert_eq!(
@@ -737,8 +834,11 @@ fn final_identity_or_receipt_failure_never_claims_campaign_completion() {
         ));
         if failed_step == "identity:final" {
             assert!(!deps.trace.iter().any(|entry| entry == "verify:final"));
-            assert!(!deps.trace.iter().any(|entry| entry == "receipt"));
         }
+        assert!(matches!(
+            deps.receipts.last().map(|draft| &draft.outcome),
+            Some(ReceiptDraftOutcome::Failed { step_id, .. }) if step_id == failed_step
+        ));
 
         assert_eq!(
             run_campaign(&fixture.request, &mut deps, &sink).unwrap(),

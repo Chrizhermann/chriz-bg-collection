@@ -2,7 +2,7 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
@@ -235,7 +235,10 @@ impl ManagedInstallRegistry {
     fn validate_record(&self, record: &ManagedInstallRecord) -> Result<(), RegistryError> {
         validate_stored_record(record)?;
         validate_direct_directory(&record.managed_root)?;
-        if !record.launch_path.starts_with(&record.managed_root) {
+        validate_direct_file(&record.launch_path)?;
+        let canonical_root = canonicalize(&record.managed_root)?;
+        let canonical_launch = canonicalize(&record.launch_path)?;
+        if !canonical_launch.starts_with(&canonical_root) {
             return Err(RegistryError::InvalidRecord(
                 "launch path must be inside the managed root".to_owned(),
             ));
@@ -285,6 +288,15 @@ fn validate_stored_record(record: &ManagedInstallRecord) -> Result<(), RegistryE
                 path.display()
             )));
         }
+        if path
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
+        {
+            return Err(RegistryError::InvalidRecord(format!(
+                "{label} must not contain parent or current-directory segments: {}",
+                path.display()
+            )));
+        }
     }
     Ok(())
 }
@@ -293,6 +305,8 @@ fn availability(record: &ManagedInstallRecord) -> InstallAvailability {
     let receipt = record.managed_root.join(".chriz/install-receipt.json");
     let available = direct_directory_exists(&record.managed_root)
         && direct_file_exists(&receipt)
+        && direct_file_exists(&record.launch_path)
+        && canonical_launch_is_contained(record)
         && hash_file(&receipt)
             .map(|hash| hash == record.receipt_sha256.to_ascii_lowercase())
             .unwrap_or(false);
@@ -301,6 +315,20 @@ fn availability(record: &ManagedInstallRecord) -> InstallAvailability {
     } else {
         InstallAvailability::Stale
     }
+}
+
+fn canonical_launch_is_contained(record: &ManagedInstallRecord) -> bool {
+    canonicalize(&record.managed_root)
+        .and_then(|root| canonicalize(&record.launch_path).map(|launch| (root, launch)))
+        .map(|(root, launch)| launch.starts_with(root))
+        .unwrap_or(false)
+}
+
+fn canonicalize(path: &Path) -> Result<PathBuf, RegistryError> {
+    fs::canonicalize(path).map_err(|source| RegistryError::Io {
+        path: path.to_path_buf(),
+        source,
+    })
 }
 
 fn hash_file(path: &Path) -> Result<String, RegistryError> {
