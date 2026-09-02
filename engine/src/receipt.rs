@@ -905,6 +905,7 @@ fn temporary_sibling(path: &Path) -> Result<PathBuf, ReceiptError> {
 
 fn validate_identifier(value: &str, label: &str, path: &Path) -> Result<(), ReceiptError> {
     if value.is_empty()
+        || matches!(value, "." | "..")
         || value.len() > 128
         || !value
             .bytes()

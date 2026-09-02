@@ -128,3 +128,15 @@ fn launch_path_cannot_escape_the_managed_root_with_parent_segments() {
 
     assert!(error.to_string().contains("launch path"), "{error}");
 }
+
+#[test]
+fn install_identifier_cannot_be_a_relative_path_component() {
+    let (_temp, _app_data, managed, registry) = setup();
+    let mut unsafe_record = record(&managed);
+    unsafe_record.install_id = "..".to_owned();
+    unsafe_record.receipt_sha256 = bg_engine::digest::sha256_bytes(b"immutable receipt");
+
+    let error = registry.publish(&unsafe_record).unwrap_err();
+
+    assert!(error.to_string().contains("path-safe"), "{error}");
+}

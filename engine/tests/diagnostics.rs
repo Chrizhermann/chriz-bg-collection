@@ -219,6 +219,27 @@ fn terminal_failure_bundle_follows_its_receipted_step_evidence_attempt() {
 }
 
 #[test]
+fn receipt_evidence_attempt_cannot_escape_the_attempts_directory() {
+    let fixture = fixture(false);
+    let terminal_id = "terminal-0000000009-bbbbbbbbbbbbbbbb";
+    write(
+        &fixture.managed,
+        &format!(".chriz/attempts/{terminal_id}/receipt.json"),
+        br#"{"evidence_attempt_id":".."}"#,
+    );
+
+    let error = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: terminal_id.to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap_err();
+
+    assert!(error.to_string().contains("path-safe"), "{error}");
+}
+
+#[test]
 fn redacts_serde_escaped_windows_paths_in_json_evidence() {
     let fixture = fixture(false);
     let windows_home = PathBuf::from(r"C:\Users\Christopher");

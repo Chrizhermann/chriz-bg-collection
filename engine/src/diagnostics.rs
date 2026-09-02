@@ -670,6 +670,7 @@ fn temporary_sibling(path: &Path) -> Result<PathBuf, DiagnosticsError> {
 
 fn validate_identifier(value: &str, path: &Path) -> Result<(), DiagnosticsError> {
     if value.is_empty()
+        || matches!(value, "." | "..")
         || value.len() > 128
         || !value
             .bytes()

@@ -218,6 +218,18 @@ fn a_retry_cannot_replace_an_existing_success_receipt() {
 }
 
 #[test]
+fn attempt_identifier_cannot_escape_its_attempts_directory() {
+    let (_temp, root, store) = setup();
+    let mut receipt = success_receipt(&root);
+    receipt.attempt_id = "..".to_owned();
+
+    let error = store.publish(&receipt).unwrap_err();
+
+    assert!(error.to_string().contains("path-safe"), "{error}");
+    assert!(!root.join(".chriz/receipt.json").exists());
+}
+
+#[test]
 fn failure_receipts_are_immutable_and_never_claim_install_success() {
     let (_temp, root, store) = setup();
     let mut receipt = success_receipt(&root);

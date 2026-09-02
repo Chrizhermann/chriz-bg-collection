@@ -429,6 +429,7 @@ fn validate_hash(label: &str, value: &str) -> Result<(), RegistryError> {
 
 fn validate_identifier(value: &str, label: &str, path: &Path) -> Result<(), RegistryError> {
     if value.is_empty()
+        || matches!(value, "." | "..")
         || value.len() > 128
         || !value
             .bytes()
