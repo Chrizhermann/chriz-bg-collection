@@ -1,0 +1,168 @@
+{
+  "planPath": "docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md",
+  "lastUpdated": "2026-09-02T20:49:15+09:00",
+  "tasks": [
+    {
+      "id": 0,
+      "subject": "Task 0: Preserve and integrate the authoritative curation snapshot",
+      "status": "pending",
+      "blockedBy": []
+    },
+    {
+      "id": 1,
+      "subject": "Task 1: Replace manifest v1 with the executable recipe-v2 contract",
+      "status": "pending",
+      "blockedBy": []
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: Add additive curation, presets, typed inputs, and UI projections",
+      "status": "pending",
+      "blockedBy": [1]
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Replace snapshot resume with a create-once campaign ledger",
+      "status": "pending",
+      "blockedBy": [2]
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Build production-safe WeiDU invocations",
+      "status": "pending",
+      "blockedBy": [1]
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Parse and reconcile ordered WeiDU.log evidence",
+      "status": "pending",
+      "blockedBy": [4]
+    },
+    {
+      "id": 6,
+      "subject": "Task 6: Stream and supervise WeiDU without guessing at prompts",
+      "status": "pending",
+      "blockedBy": [2, 4]
+    },
+    {
+      "id": 7,
+      "subject": "Task 7: Prove the production invocation with real WeiDU",
+      "status": "pending",
+      "blockedBy": [4, 5, 6]
+    },
+    {
+      "id": 8,
+      "subject": "Task 8: Discover Steam/GOG games and fail closed on freshness",
+      "status": "pending",
+      "blockedBy": [1]
+    },
+    {
+      "id": 9,
+      "subject": "Task 9: Stage independent game copies and isolate save identity",
+      "status": "pending",
+      "blockedBy": [8]
+    },
+    {
+      "id": 10,
+      "subject": "Task 10: Enforce disk, process, TLK, target, and cache locks",
+      "status": "pending",
+      "blockedBy": [8, 9]
+    },
+    {
+      "id": 11,
+      "subject": "Task 11: Download immutable artifacts into a content-addressed cache",
+      "status": "pending",
+      "blockedBy": [1]
+    },
+    {
+      "id": 12,
+      "subject": "Task 12: Extract, validate, and materialize mod payloads safely",
+      "status": "pending",
+      "blockedBy": [1, 11]
+    },
+    {
+      "id": 13,
+      "subject": "Task 13: Orchestrate the complete two-root build and reconcile crashes",
+      "status": "pending",
+      "blockedBy": [2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
+    },
+    {
+      "id": 14,
+      "subject": "Task 14: Produce immutable receipts, diagnostics, and managed-install records",
+      "status": "pending",
+      "blockedBy": [13]
+    },
+    {
+      "id": 15,
+      "subject": "Task 15: Expose the safe engine as a CLI vertical slice",
+      "status": "pending",
+      "blockedBy": [14]
+    },
+    {
+      "id": 16,
+      "subject": "Task 16: Capture and re-curate the missing BG1 pre-merge recipe",
+      "status": "pending",
+      "blockedBy": [0, 5, 7, 11, 12]
+    },
+    {
+      "id": 17,
+      "subject": "Task 17: Audit every catalog decision into an explicit recipe outcome",
+      "status": "pending",
+      "blockedBy": [0, 2]
+    },
+    {
+      "id": 18,
+      "subject": "Task 18: Freeze immutable sources and author the production alpha recipe",
+      "status": "pending",
+      "blockedBy": [11, 12, 15, 16, 17]
+    },
+    {
+      "id": 19,
+      "subject": "Task 19: Make alpha omissions and acceptance evidence release-enforced",
+      "status": "pending",
+      "blockedBy": [14, 15, 18]
+    },
+    {
+      "id": 20,
+      "subject": "Task 20: Sign immutable recipe releases and classify updates",
+      "status": "pending",
+      "blockedBy": [1, 2, 18, 19]
+    },
+    {
+      "id": 21,
+      "subject": "Task 21: Scaffold the smallest real Tauri application",
+      "status": "pending",
+      "blockedBy": []
+    },
+    {
+      "id": 22,
+      "subject": "Task 22: Implement all screens against an engine-shaped fixture backend",
+      "status": "pending",
+      "blockedBy": [2, 21]
+    },
+    {
+      "id": 23,
+      "subject": "Task 23: Connect Tauri commands and live build events to the engine",
+      "status": "pending",
+      "blockedBy": [13, 14, 15, 22]
+    },
+    {
+      "id": 24,
+      "subject": "Task 24: Add managed installations and signed update UX",
+      "status": "pending",
+      "blockedBy": [20, 23]
+    },
+    {
+      "id": 25,
+      "subject": "Task 25: Package and rehearse the Windows alpha pipeline",
+      "status": "pending",
+      "blockedBy": [7, 19, 23, 24]
+    },
+    {
+      "id": 26,
+      "subject": "Task 26: Build Christopher's release candidate and publish the public alpha",
+      "status": "pending",
+      "blockedBy": [25]
+    }
+  ]
+}
