@@ -7,12 +7,18 @@ use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use thiserror::Error;
-use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
 const STATE_DIRECTORY: &str = ".chriz";
 const TEMP_SUFFIX: &str = "diagnostics-tmp";
+const STEP_EVIDENCE_FILES: [&str; 5] = [
+    "weidu.debug.log",
+    "process-output.log",
+    "before.log",
+    "after.log",
+    "invocation.json",
+];
 static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Inputs for one create-once sanitized diagnostics export.
@@ -75,14 +81,6 @@ pub enum DiagnosticsError {
         /// Temporary or final ZIP path.
         path: PathBuf,
         /// ZIP library detail.
-        message: String,
-    },
-    /// Recursive log inspection failed.
-    #[error("could not inspect diagnostics logs at {path}: {message}")]
-    Walk {
-        /// Attempt log root.
-        path: PathBuf,
-        /// Traversal detail.
         message: String,
     },
 }
@@ -208,37 +206,7 @@ fn select_entries(
     let steps_root = attempt_root.join("steps");
     if steps_root.exists() {
         validate_direct_directory(&steps_root)?;
-        for entry in WalkDir::new(&steps_root).follow_links(false) {
-            let entry = entry.map_err(|source| DiagnosticsError::Walk {
-                path: steps_root.clone(),
-                message: source.to_string(),
-            })?;
-            let source = entry.path();
-            let metadata =
-                fs::symlink_metadata(source).map_err(|source_error| DiagnosticsError::Io {
-                    path: source.to_path_buf(),
-                    source: source_error,
-                })?;
-            if metadata.file_type().is_symlink() {
-                return Err(unsafe_path(
-                    source,
-                    "links are forbidden in diagnostics logs",
-                ));
-            }
-            if !metadata.is_file() || !is_allowlisted_log(source) {
-                continue;
-            }
-            let relative = source.strip_prefix(&steps_root).map_err(|_| {
-                unsafe_path(source, "walked log escaped the attempt steps directory")
-            })?;
-            let portable = portable_relative(relative)?;
-            add_required(
-                &mut selected,
-                source.to_path_buf(),
-                &format!("logs/steps/{portable}"),
-                false,
-            )?;
-        }
+        add_step_evidence(&mut selected, &steps_root)?;
     }
 
     Ok(selected.into_values().collect())
@@ -276,9 +244,110 @@ fn source_path(error: &DiagnosticsError) -> PathBuf {
         | DiagnosticsError::UnsafePath { path, .. }
         | DiagnosticsError::MissingEvidence { path }
         | DiagnosticsError::OutputExists { path }
-        | DiagnosticsError::Zip { path, .. }
-        | DiagnosticsError::Walk { path, .. } => path.clone(),
+        | DiagnosticsError::Zip { path, .. } => path.clone(),
     }
+}
+
+fn add_step_evidence(
+    entries: &mut BTreeMap<String, SelectedEntry>,
+    steps_root: &Path,
+) -> Result<(), DiagnosticsError> {
+    for step_entry in read_directory(steps_root)? {
+        let step_path = step_entry.path();
+        let metadata = direct_metadata(&step_path)?;
+        if !metadata.is_dir() {
+            continue;
+        }
+        let step_name = step_entry.file_name();
+        let Some(step_name) = step_name.to_str() else {
+            continue;
+        };
+        if !is_task13_step_directory(step_name) {
+            continue;
+        }
+
+        for attempt_entry in read_directory(&step_path)? {
+            let attempt_path = attempt_entry.path();
+            let metadata = direct_metadata(&attempt_path)?;
+            if !metadata.is_dir() {
+                continue;
+            }
+            let attempt_name = attempt_entry.file_name();
+            let Some(attempt_name) = attempt_name.to_str() else {
+                continue;
+            };
+            if !is_task13_attempt_directory(attempt_name) {
+                continue;
+            }
+
+            for evidence_entry in read_directory(&attempt_path)? {
+                let evidence_path = evidence_entry.path();
+                let metadata = direct_metadata(&evidence_path)?;
+                if !metadata.is_file() {
+                    continue;
+                }
+                let evidence_name = evidence_entry.file_name();
+                let Some(evidence_name) = evidence_name.to_str() else {
+                    continue;
+                };
+                if !STEP_EVIDENCE_FILES.contains(&evidence_name) {
+                    continue;
+                }
+                let relative = Path::new(step_name).join(attempt_name).join(evidence_name);
+                let portable = portable_relative(&relative)?;
+                add_required(
+                    entries,
+                    evidence_path,
+                    &format!("logs/steps/{portable}"),
+                    false,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn read_directory(path: &Path) -> Result<Vec<fs::DirEntry>, DiagnosticsError> {
+    fs::read_dir(path)
+        .map_err(|source| DiagnosticsError::Io {
+            path: path.to_path_buf(),
+            source,
+        })?
+        .map(|entry| {
+            entry.map_err(|source| DiagnosticsError::Io {
+                path: path.to_path_buf(),
+                source,
+            })
+        })
+        .collect()
+}
+
+fn direct_metadata(path: &Path) -> Result<fs::Metadata, DiagnosticsError> {
+    let metadata = fs::symlink_metadata(path).map_err(|source| DiagnosticsError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+    if metadata.file_type().is_symlink() {
+        return Err(unsafe_path(path, "links are forbidden in diagnostics logs"));
+    }
+    Ok(metadata)
+}
+
+fn is_task13_step_directory(name: &str) -> bool {
+    name.len() == 21
+        && name.as_bytes()[..4]
+            .iter()
+            .all(|byte| byte.is_ascii_digit())
+        && name.as_bytes()[4] == b'-'
+        && name.as_bytes()[5..]
+            .iter()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte))
+}
+
+fn is_task13_attempt_directory(name: &str) -> bool {
+    name.strip_prefix("attempt-").is_some_and(|attempt| {
+        attempt.len() == 4 && attempt.bytes().all(|byte| byte.is_ascii_digit())
+    })
 }
 
 fn add_optional(
@@ -354,10 +423,6 @@ fn sanitize_text(text: &str, redactions: &[String]) -> String {
     let mut redacted = text.to_owned();
     for root in redactions {
         redacted = replace_ascii_case_insensitive(&redacted, root, "<redacted-home>");
-        redacted =
-            replace_ascii_case_insensitive(&redacted, &root.replace('\\', "/"), "<redacted-home>");
-        redacted =
-            replace_ascii_case_insensitive(&redacted, &root.replace('/', "\\"), "<redacted-home>");
     }
 
     let mut output = String::new();
@@ -375,7 +440,7 @@ fn sanitize_text(text: &str, redactions: &[String]) -> String {
             }
             continue;
         }
-        if contains_sensitive_marker(&lowercase) {
+        if contains_sensitive_marker(line) {
             output.push_str("<redacted-sensitive-line>\n");
         } else {
             output.push_str(line);
@@ -384,8 +449,9 @@ fn sanitize_text(text: &str, redactions: &[String]) -> String {
     output
 }
 
-fn contains_sensitive_marker(lowercase: &str) -> bool {
-    [
+fn contains_sensitive_marker(line: &str) -> bool {
+    let lowercase = line.to_ascii_lowercase();
+    let has_marker = [
         "authorization:",
         "bearer ",
         "password",
@@ -393,15 +459,55 @@ fn contains_sensitive_marker(lowercase: &str) -> bool {
         "api_key",
         "api-key",
         "client_secret",
+        "clientsecret",
         "private_key",
         "secret-token",
         "access_token",
         "refresh_token",
         "ghp_",
+        "gho_",
         "github_pat_",
+        "cookie:",
     ]
     .iter()
-    .any(|marker| lowercase.contains(marker))
+    .any(|marker| lowercase.contains(marker));
+    has_marker || contains_aws_access_key(line) || contains_query_secret(&lowercase)
+}
+
+fn contains_aws_access_key(line: &str) -> bool {
+    line.as_bytes().windows(20).any(|candidate| {
+        matches!(&candidate[..4], b"AKIA" | b"ASIA")
+            && candidate[4..]
+                .iter()
+                .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit())
+    })
+}
+
+fn contains_query_secret(lowercase: &str) -> bool {
+    let Some((_, query)) = lowercase.split_once('?') else {
+        return false;
+    };
+    query.split('&').any(|parameter| {
+        let key = parameter.split_once('=').map_or(parameter, |(key, _)| key);
+        matches!(
+            key,
+            "token"
+                | "access_token"
+                | "refresh_token"
+                | "api_key"
+                | "api-key"
+                | "apikey"
+                | "client_secret"
+                | "client-secret"
+                | "clientsecret"
+                | "password"
+                | "passwd"
+                | "signature"
+                | "sig"
+                | "x-amz-signature"
+                | "cookie"
+        )
+    })
 }
 
 fn replace_ascii_case_insensitive(input: &str, needle: &str, replacement: &str) -> String {
@@ -423,11 +529,12 @@ fn replace_ascii_case_insensitive(input: &str, needle: &str, replacement: &str) 
 }
 
 fn collect_redactions(authored: &[PathBuf]) -> Vec<String> {
-    let mut values = authored
+    let roots = authored
         .iter()
         .map(|path| path.to_string_lossy().into_owned())
         .filter(|value| !value.is_empty())
         .collect::<Vec<_>>();
+    let mut values = roots;
     for variable in ["USERPROFILE", "HOME"] {
         if let Some(value) = std::env::var_os(variable) {
             let value = value.to_string_lossy().into_owned();
@@ -436,29 +543,24 @@ fn collect_redactions(authored: &[PathBuf]) -> Vec<String> {
             }
         }
     }
+    values = values
+        .into_iter()
+        .flat_map(|root| {
+            let slash = root.replace('\\', "/");
+            let backslash = root.replace('/', "\\");
+            [root, slash, backslash]
+                .into_iter()
+                .flat_map(|variant| {
+                    let json_escaped = variant.replace('\\', "\\\\");
+                    [variant, json_escaped]
+                })
+                .collect::<Vec<_>>()
+        })
+        .filter(|value| !value.is_empty())
+        .collect();
     values.sort_by_key(|value| std::cmp::Reverse(value.len()));
     values.dedup_by(|left, right| left.eq_ignore_ascii_case(right));
     values
-}
-
-fn is_allowlisted_log(path: &Path) -> bool {
-    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
-        return false;
-    };
-    let lowercase = name.to_ascii_lowercase();
-    if ["credential", "private", "secret", "token", "password"]
-        .iter()
-        .any(|marker| lowercase.contains(marker))
-    {
-        return false;
-    }
-    matches!(
-        path.extension()
-            .and_then(|extension| extension.to_str())
-            .map(str::to_ascii_lowercase)
-            .as_deref(),
-        Some("log" | "txt" | "json")
-    )
 }
 
 fn is_ledger_record_name(name: &str) -> bool {

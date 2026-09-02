@@ -56,14 +56,29 @@ fn fixture(include_success: bool) -> Fixture {
     );
     write(
         &managed,
-        ".chriz/attempts/attempt-001/steps/0001/stdout.log",
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
         format!("reading {raw_home}\\Games\\RC\nAuthorization: Bearer top-secret\nvisible line\n")
             .as_bytes(),
     );
     write(
         &managed,
-        ".chriz/attempts/attempt-001/steps/0001/debug.log",
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/weidu.debug.log",
         b"-----BEGIN PRIVATE KEY-----\nsecret material\n-----END PRIVATE KEY-----\nafter key\n",
+    );
+    write(
+        &managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/before.log",
+        b"before snapshot\n",
+    );
+    write(
+        &managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/after.log",
+        b"after snapshot\n",
+    );
+    write(
+        &managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/invocation.json",
+        br#"{"identity_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
     );
     if include_success {
         write(
@@ -121,8 +136,12 @@ fn success_bundle_uses_an_explicit_allowlist_and_redacts_personal_or_secret_text
     assert!(names.contains(&"ledger/0000000000.json"));
     assert!(names.contains(&"recipe/payload.zip"));
     assert!(names.contains(&"recipe/envelope.json"));
-    assert!(names.contains(&"logs/steps/0001/stdout.log"));
-    assert!(names.contains(&"logs/steps/0001/debug.log"));
+    let evidence_root = "logs/steps/0001-0123456789abcdef/attempt-0001";
+    assert!(names.contains(&format!("{evidence_root}/process-output.log").as_str()));
+    assert!(names.contains(&format!("{evidence_root}/weidu.debug.log").as_str()));
+    assert!(names.contains(&format!("{evidence_root}/before.log").as_str()));
+    assert!(names.contains(&format!("{evidence_root}/after.log").as_str()));
+    assert!(names.contains(&format!("{evidence_root}/invocation.json").as_str()));
     assert!(!names.iter().any(|name| name.contains("archive")));
     assert!(!names.iter().any(|name| name.contains("private-key")));
     assert!(!names.iter().any(|name| name.contains("credentials")));
@@ -166,4 +185,124 @@ fn failure_bundle_does_not_require_a_success_receipt_and_never_overwrites_output
         .collect::<Vec<_>>();
     assert!(!names.contains(&"receipt/install-receipt.json".to_owned()));
     assert!(names.contains(&"receipt/attempt-receipt.json".to_owned()));
+}
+
+#[test]
+fn redacts_serde_escaped_windows_paths_in_json_evidence() {
+    let fixture = fixture(false);
+    let windows_home = PathBuf::from(r"C:\Users\Christopher");
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/receipt.json",
+        &serde_json::to_vec_pretty(&serde_json::json!({
+            "managed_save_root": r"C:\Users\Christopher\Documents\Chriz BG Collection"
+        }))
+        .unwrap(),
+    );
+
+    let result = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![windows_home],
+    })
+    .unwrap();
+
+    let entries = zip_entries(&result.path);
+    let receipt = entries
+        .iter()
+        .find(|(name, _)| name == "receipt/attempt-receipt.json")
+        .map(|(_, bytes)| String::from_utf8(bytes.clone()).unwrap())
+        .unwrap();
+    assert!(!receipt.contains(r"C:\\Users\\Christopher"), "{receipt}");
+    assert!(receipt.contains("<redacted-home>"), "{receipt}");
+}
+
+#[test]
+fn exports_only_fixed_evidence_names_at_the_task13_attempt_depth() {
+    let fixture = fixture(false);
+    let valid_root = ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001";
+    write(
+        &fixture.managed,
+        &format!("{valid_root}/notes.txt"),
+        b"not engine evidence",
+    );
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/steps/freeform/attempt-0001/process-output.log",
+        b"invalid step directory",
+    );
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/steps/0002-fedcba9876543210/attempt-current/process-output.log",
+        b"invalid attempt directory",
+    );
+    write(
+        &fixture.managed,
+        &format!("{valid_root}/nested/process-output.log"),
+        b"invalid extra depth",
+    );
+
+    let result = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let names = zip_entries(&result.path)
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect::<Vec<_>>();
+
+    assert!(!names.iter().any(|name| name.ends_with("notes.txt")));
+    assert!(!names.iter().any(|name| name.contains("/freeform/")));
+    assert!(!names.iter().any(|name| name.contains("/attempt-current/")));
+    assert!(!names.iter().any(|name| name.contains("/nested/")));
+}
+
+#[test]
+fn redacts_oauth_aws_camelcase_cookie_and_query_credentials() {
+    let fixture = fixture(false);
+    let evidence = fixture.managed.join(
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/process-output.log",
+    );
+    std::fs::write(
+        evidence,
+        b"github oauth gho_abcdefghijklmnopqrstuvwxyz123456\n\
+aws access key AKIAIOSFODNN7EXAMPLE\n\
+{\"clientSecret\":\"camel-case-value\"}\n\
+Cookie: session=browser-cookie-value\n\
+GET https://example.invalid/archive?download=1&token=query-value\n\
+safe diagnostic line\n",
+    )
+    .unwrap();
+
+    let result = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let searchable = zip_entries(&result.path)
+        .into_iter()
+        .filter(|(name, _)| !name.ends_with("payload.zip"))
+        .flat_map(|(_, bytes)| bytes)
+        .collect::<Vec<_>>();
+    let searchable = String::from_utf8(searchable).unwrap();
+
+    for secret in [
+        "gho_abcdefghijklmnopqrstuvwxyz123456",
+        "AKIAIOSFODNN7EXAMPLE",
+        "camel-case-value",
+        "browser-cookie-value",
+        "query-value",
+    ] {
+        assert!(
+            !searchable.contains(secret),
+            "leaked {secret}: {searchable}"
+        );
+    }
+    assert!(searchable.contains("safe diagnostic line"));
 }
