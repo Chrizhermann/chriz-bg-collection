@@ -1,0 +1,16 @@
+[package]
+name = "chriz-bg-app"
+version = "0.1.0-alpha.1"
+description = "Guided installer for Chriz's Baldur's Gate collection"
+edition = "2021"
+
+[lib]
+name = "chriz_bg_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+bg_engine = { package = "chriz-bg-engine", path = "../../engine" }
+tauri = { version = "=2.11.5", features = [] }

@@ -1,0 +1,119 @@
+:root {
+  color: #1d2622;
+  background: #171d1b;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+#app {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: clamp(1.25rem, 5vw, 4rem);
+}
+
+.welcome-shell {
+  position: relative;
+  width: min(100%, 48rem);
+  padding: clamp(2rem, 7vw, 5.5rem);
+  overflow: hidden;
+  border: 1px solid #b8aa84;
+  background: #f1ead7;
+}
+
+.welcome-shell::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.45rem;
+  background: #9b742f;
+  content: "";
+}
+
+.product-name {
+  margin: 0 0 2.75rem;
+  color: #436862;
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+}
+
+h1,
+h2,
+p {
+  max-width: 42rem;
+}
+
+h1,
+h2 {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+h1 {
+  margin: 0;
+  color: #18221e;
+  font-size: clamp(3.25rem, 11vw, 6.4rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+}
+
+.introduction {
+  margin: 1.65rem 0 3.25rem;
+  color: #34433d;
+  font-size: clamp(1.15rem, 2.7vw, 1.45rem);
+  line-height: 1.55;
+}
+
+.safety-promise {
+  padding: 1.4rem 0 1.35rem 1.4rem;
+  border-left: 2px solid #2f6e68;
+}
+
+.safety-promise h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.safety-promise p,
+.requirement {
+  margin: 0;
+  color: #47534e;
+  line-height: 1.65;
+}
+
+.requirement {
+  margin-top: 2rem;
+  font-size: 0.95rem;
+}
+
+.developer-status {
+  margin: 2.8rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid #c7bb9a;
+  color: #665d47;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 34rem) {
+  #app {
+    padding: 0;
+  }
+
+  .welcome-shell {
+    min-height: 100vh;
+    border: 0;
+  }
+}
