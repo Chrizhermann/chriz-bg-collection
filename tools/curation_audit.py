@@ -600,12 +600,15 @@ def audit_curation_map(rows: Iterable[CatalogRow], curation_map: CurationMap) ->
                 )
         else:
             defaults = [row for row in option_rows if row.decision == Decision.DEFAULT]
-            expected_default = (
-                str(RowKey(defaults[0].catalog, defaults[0].component_id))
-                if len(defaults) == 1
-                else None
+            if len(defaults) != 1:
+                raise AuditError(
+                    f"choice group {group.group_id!r} must contain exactly one "
+                    "authored default unless every option is optional"
+                )
+            expected_default = str(
+                RowKey(defaults[0].catalog, defaults[0].component_id)
             )
-            if expected_default is not None and group.default != expected_default:
+            if group.default != expected_default:
                 raise AuditError(
                     f"choice group {group.group_id!r} must use authored default "
                     f"{expected_default!r}"

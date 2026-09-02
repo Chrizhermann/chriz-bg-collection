@@ -303,6 +303,49 @@ targets = [
             with self.assertRaisesRegex(AuditError, "omission.*reason"):
                 load_curation_map(map_path)
 
+    def test_rejects_a_choice_group_with_multiple_authored_defaults(self) -> None:
+        rows = parse_catalog_text(
+            "EXAMPLE",
+            HEADER
+            + "| 1 | First default | | Mode | | default |\n"
+            + "| 2 | Second default | | Mode | | default |\n",
+            Path("EXAMPLE.md"),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            map_path = self._write_map(
+                Path(temp_dir),
+                """\
+schema = 1
+expected_rows = 2
+expected_choice_groups = 1
+expected_optional_none_groups = 0
+parents = []
+
+[[catalogs]]
+id = "EXAMPLE"
+excluded = []
+
+[[targets]]
+id = "feature:first"
+kind = "feature"
+rows = ["EXAMPLE:1"]
+
+[[targets]]
+id = "feature:second"
+kind = "feature"
+rows = ["EXAMPLE:2"]
+
+[[choice_groups]]
+id = "choice:ambiguous"
+catalog = "EXAMPLE"
+subgroup = "Mode"
+options = ["EXAMPLE:1", "EXAMPLE:2"]
+default = "none"
+""",
+            )
+            with self.assertRaisesRegex(AuditError, "exactly one authored default"):
+                audit_curation_map(rows, load_curation_map(map_path))
+
     def test_current_map_covers_every_reviewed_catalog_row(self) -> None:
         root = Path(__file__).resolve().parents[2]
         rows = load_catalogs(root / "docs" / "curation" / "components")
@@ -315,6 +358,7 @@ targets = [
         self.assertEqual(result.feature_rows + result.omission_rows, 581)
         self.assertEqual(result.choice_groups, 60)
         self.assertEqual(result.optional_none_groups, 13)
+        self.assertEqual(result.fixed_groups, 10)
         self.assertIn("rows=1173", coverage_report(rows, result))
 
     def test_current_map_freezes_reviewed_omissions_and_atomic_bundles(self) -> None:
@@ -361,6 +405,48 @@ targets = [
         self.assertEqual(
             targets["feature:buffbot:mandatory-components"].rows,
             (RowKey("BUFFBOT", 1), RowKey("BUFFBOT", 0)),
+        )
+        self.assertEqual(
+            targets["feature:eeex:mandatory-components"].rows,
+            tuple(RowKey("EEEX", component_id) for component_id in range(9)),
+        )
+        self.assertEqual(
+            targets["feature:chriz-sod-remix:mandatory-components"].rows,
+            tuple(
+                RowKey("CHRIZ-SOD-REMIX", component_id)
+                for component_id in (
+                    100,
+                    110,
+                    120,
+                    130,
+                    140,
+                    150,
+                    145,
+                    160,
+                    170,
+                    180,
+                    175,
+                    185,
+                    190,
+                    195,
+                    197,
+                    187,
+                    200,
+                    210,
+                    215,
+                    220,
+                    225,
+                    245,
+                    230,
+                    240,
+                    250,
+                    255,
+                    260,
+                    270,
+                    280,
+                    900,
+                )
+            ),
         )
 
 
