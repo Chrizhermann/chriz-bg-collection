@@ -2,13 +2,16 @@ use std::path::{Path, PathBuf};
 
 use bg_engine::games::{GameRole, Storefront};
 use bg_engine::manifest::GameRoot;
+use bg_engine::orchestrator::{ReceiptDraft, ReceiptWriter};
 use bg_engine::receipt::{
     ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
-    LogComponentReceipt, LogDiffReceipt, PromptReceipt, ReceiptOutcome, ReceiptStore,
-    ReceiptVersions, RunReceipt, RunTiming, SourceGameReceipt, WeiDuToolReceipt,
-    RECEIPT_SCHEMA_VERSION,
+    LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter, PromptReceipt, ReceiptEvidence,
+    ReceiptOutcome, ReceiptStore, ReceiptVersions, RunReceipt, RunTiming, SourceGameReceipt,
+    WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
 };
+use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
+use bg_engine::session::{CampaignCreated, FrozenIdentity, SourceGameFingerprints};
 use tempfile::TempDir;
 
 fn plan() -> InstallPlan {
@@ -205,4 +208,97 @@ fn failure_receipts_are_immutable_and_never_claim_install_success() {
     let stored: InstallReceipt =
         serde_json::from_slice(&std::fs::read(published.attempt_receipt).unwrap()).unwrap();
     assert_eq!(stored.outcome, receipt.outcome);
+}
+
+#[test]
+fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
+    let temp = TempDir::new().unwrap();
+    let managed = temp.path().join("managed");
+    let cache = temp.path().join("cache");
+    let app_data = temp.path().join("app-data");
+    std::fs::create_dir_all(managed.join(".chriz/attempts/attempt-001")).unwrap();
+    std::fs::create_dir_all(&cache).unwrap();
+    let store = ReceiptStore::open(&managed, "install-001").unwrap();
+    let registry = bg_engine::registry::ManagedInstallRegistry::open_or_create(&app_data).unwrap();
+    let canonical_managed = std::fs::canonicalize(&managed).unwrap();
+    let full = success_receipt(&canonical_managed);
+    let evidence = ReceiptEvidence {
+        versions: full.versions.clone(),
+        source_games: full.source_games.clone(),
+        artifacts: full.artifacts.clone(),
+        weidu_tools: full.weidu_tools.clone(),
+        runs: full.runs.clone(),
+        final_state: full.final_state.clone(),
+    };
+    let selected = NormalizedSelection {
+        platform: "windows".to_owned(),
+        features: std::collections::BTreeMap::new(),
+        inputs: std::collections::BTreeMap::new(),
+    };
+    let frozen_plan = plan();
+    let created = CampaignCreated {
+        install_id: "install-001".to_owned(),
+        attempt_id: "attempt-001".to_owned(),
+        managed_root: canonical_managed,
+        cache_root: std::fs::canonicalize(cache).unwrap(),
+        recipe_payload: b"recipe".to_vec(),
+        recipe_payload_sha256: bg_engine::digest::sha256_bytes(b"recipe"),
+        recipe_envelope: b"envelope".to_vec(),
+        recipe_envelope_sha256: bg_engine::digest::sha256_bytes(b"envelope"),
+        selection_sha256: bg_engine::digest::selection_digest(&selected).unwrap(),
+        normalized_selection: selected,
+        plan_sha256: bg_engine::digest::plan_digest(&frozen_plan).unwrap(),
+        source_games: SourceGameFingerprints {
+            bg1: "11".repeat(32),
+            bg2: "22".repeat(32),
+        },
+        artifact_identities: vec![FrozenIdentity {
+            id: "eet".to_owned(),
+            version: "2.7.3".to_owned(),
+            sha256: "77".repeat(32),
+            length: 1_024,
+        }],
+        tool_identities: vec![FrozenIdentity {
+            id: "weidu".to_owned(),
+            version: "24900".to_owned(),
+            sha256: "88".repeat(32),
+            length: 2_048,
+        }],
+        staged_bg1: managed.join("bg1"),
+        staged_bg2: managed.join("game"),
+    };
+    let draft = ReceiptDraft {
+        install_id: "install-001".to_owned(),
+        attempt_id: "attempt-001".to_owned(),
+        started_at_millis: 10,
+        completed_at_millis: 20,
+        created,
+        plan: frozen_plan,
+    };
+    let mut writer = ManagedReceiptWriter::new(
+        store,
+        registry,
+        "Chriz BG Collection Alpha".to_owned(),
+        evidence,
+    );
+
+    ReceiptWriter::write(&mut writer, &draft).unwrap();
+
+    let published: InstallReceipt = serde_json::from_slice(
+        &std::fs::read(managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(published.plan, draft.plan);
+    assert_eq!(published.plan_sha256, draft.created.plan_sha256);
+    assert_eq!(
+        published.recipe_payload_sha256,
+        draft.created.recipe_payload_sha256
+    );
+    let cards = bg_engine::registry::ManagedInstallRegistry::open_or_create(&app_data)
+        .unwrap()
+        .list()
+        .unwrap();
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].record.install_id, "install-001");
+    assert_eq!(cards[0].record.managed_root, draft.created.managed_root);
 }

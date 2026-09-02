@@ -199,6 +199,10 @@ pub struct ReceiptDraft {
     pub started_at_millis: u64,
     /// Timestamp captured after all final verification completed.
     pub completed_at_millis: u64,
+    /// Complete frozen campaign identity used to derive receipt digests and source pins.
+    pub created: CampaignCreated,
+    /// Exact plan whose digest was frozen in [`Self::created`].
+    pub plan: InstallPlan,
 }
 
 /// Terminal state of one orchestration call.
@@ -823,6 +827,8 @@ where
                     attempt_id: self.request.created.attempt_id.clone(),
                     started_at_millis,
                     completed_at_millis,
+                    created: self.request.created.clone(),
+                    plan: self.request.plan.clone(),
                 };
                 self.dependencies
                     .write(&draft)

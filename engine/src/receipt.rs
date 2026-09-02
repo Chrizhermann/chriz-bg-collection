@@ -12,7 +12,12 @@ use thiserror::Error;
 
 use crate::games::{GameRole, Storefront};
 use crate::manifest::GameRoot;
+use crate::orchestrator::{ReceiptDraft, ReceiptWriter, StepFailure};
+use crate::registry::{
+    ManagedInstallRecord, ManagedInstallRegistry, RegistryError, REGISTRY_SCHEMA_VERSION,
+};
 use crate::resolve::InstallPlan;
+use crate::session::FrozenIdentity;
 
 /// Receipt schema emitted by this engine version.
 pub const RECEIPT_SCHEMA_VERSION: u32 = 1;
@@ -329,6 +334,265 @@ pub struct ReceiptStore {
     state_root: PathBuf,
     attempts_root: PathBuf,
     install_id: String,
+}
+
+/// Evidence accumulated by acquisition, execution, and final verification services.
+///
+/// Frozen digests and the exact plan come from [`ReceiptDraft`], so a caller cannot
+/// accidentally substitute current recipe data when resuming an older campaign.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReceiptEvidence {
+    /// Application, engine, schema, and signed recipe versions.
+    pub versions: ReceiptVersions,
+    /// Exact BG1 and BG2 source metadata and fingerprints.
+    pub source_games: Vec<SourceGameReceipt>,
+    /// Acquisition provenance and cache outcomes for every payload.
+    pub artifacts: Vec<ArtifactReceipt>,
+    /// Verified WeiDU executable identities.
+    pub weidu_tools: Vec<WeiDuToolReceipt>,
+    /// Exact per-run process and log evidence.
+    pub runs: Vec<RunReceipt>,
+    /// Final log, identity, save-root, and launch evidence.
+    pub final_state: Option<FinalReceiptState>,
+}
+
+/// Failure to assemble, publish, or register a real orchestration receipt.
+#[derive(Debug, Error)]
+pub enum ManagedReceiptError {
+    /// Accumulated evidence contradicts the frozen campaign.
+    #[error("receipt evidence does not match the frozen campaign: {0}")]
+    Evidence(String),
+    /// Create-once receipt publication failed.
+    #[error(transparent)]
+    Receipt(#[from] ReceiptError),
+    /// Create-once managed-install registration failed.
+    #[error(transparent)]
+    Registry(#[from] RegistryError),
+    /// Reading the just-published receipt for its registry digest failed.
+    #[error("{path}: {source}")]
+    Io {
+        /// Published successful receipt path.
+        path: PathBuf,
+        /// Underlying read failure.
+        #[source]
+        source: std::io::Error,
+    },
+}
+
+/// Real Task-13 receipt sink: publish full evidence, then register the successful install.
+#[derive(Debug)]
+pub struct ManagedReceiptWriter {
+    store: ReceiptStore,
+    registry: ManagedInstallRegistry,
+    display_name: String,
+    evidence: ReceiptEvidence,
+}
+
+impl ManagedReceiptWriter {
+    /// Construct a writer from already synchronized evidence services.
+    pub fn new(
+        store: ReceiptStore,
+        registry: ManagedInstallRegistry,
+        display_name: String,
+        evidence: ReceiptEvidence,
+    ) -> Self {
+        Self {
+            store,
+            registry,
+            display_name,
+            evidence,
+        }
+    }
+
+    /// Assemble, publish, and register the successful campaign hand-off.
+    pub fn publish_success(
+        &mut self,
+        draft: &ReceiptDraft,
+    ) -> Result<PublishedReceipt, ManagedReceiptError> {
+        self.validate_frozen_evidence(draft)?;
+        let final_state = self.evidence.final_state.clone().ok_or_else(|| {
+            ManagedReceiptError::Evidence("successful campaign has no final state".to_owned())
+        })?;
+        let receipt = InstallReceipt {
+            schema_version: RECEIPT_SCHEMA_VERSION,
+            install_id: draft.install_id.clone(),
+            attempt_id: draft.attempt_id.clone(),
+            started_at_millis: draft.started_at_millis,
+            completed_at_millis: draft.completed_at_millis,
+            outcome: ReceiptOutcome::Succeeded,
+            versions: self.evidence.versions.clone(),
+            source_games: self.evidence.source_games.clone(),
+            recipe_payload_sha256: draft.created.recipe_payload_sha256.clone(),
+            recipe_envelope_sha256: draft.created.recipe_envelope_sha256.clone(),
+            selection_sha256: draft.created.selection_sha256.clone(),
+            plan_sha256: draft.created.plan_sha256.clone(),
+            plan: draft.plan.clone(),
+            artifacts: self.evidence.artifacts.clone(),
+            weidu_tools: self.evidence.weidu_tools.clone(),
+            runs: self.evidence.runs.clone(),
+            final_state: Some(final_state.clone()),
+        };
+        let published = self.store.publish(&receipt)?;
+        let install_path = published.install_receipt.as_ref().ok_or_else(|| {
+            ManagedReceiptError::Evidence(
+                "successful receipt publisher omitted install-receipt.json".to_owned(),
+            )
+        })?;
+        let receipt_bytes = fs::read(install_path).map_err(|source| ManagedReceiptError::Io {
+            path: install_path.clone(),
+            source,
+        })?;
+        let record = ManagedInstallRecord {
+            schema_version: REGISTRY_SCHEMA_VERSION,
+            install_id: draft.install_id.clone(),
+            display_name: self.display_name.clone(),
+            managed_root: draft.created.managed_root.clone(),
+            recipe_version: self.evidence.versions.recipe.clone(),
+            recipe_sha256: draft.created.recipe_payload_sha256.clone(),
+            engine_name: final_state.bg2_engine_name,
+            managed_save_root: final_state.managed_save_root,
+            launch_path: final_state.launch_path,
+            receipt_sha256: crate::digest::sha256_bytes(&receipt_bytes),
+            completed_at_millis: draft.completed_at_millis,
+        };
+        self.registry.publish(&record)?;
+        Ok(published)
+    }
+
+    fn validate_frozen_evidence(&self, draft: &ReceiptDraft) -> Result<(), ManagedReceiptError> {
+        if self.display_name.trim().is_empty() {
+            return Err(ManagedReceiptError::Evidence(
+                "managed-install display name is empty".to_owned(),
+            ));
+        }
+        if draft.install_id != draft.created.install_id
+            || draft.attempt_id != draft.created.attempt_id
+        {
+            return Err(ManagedReceiptError::Evidence(
+                "draft ids differ from CampaignCreated".to_owned(),
+            ));
+        }
+        if crate::digest::plan_digest(&draft.plan)
+            .map_err(|error| ManagedReceiptError::Evidence(error.to_string()))?
+            != draft.created.plan_sha256
+        {
+            return Err(ManagedReceiptError::Evidence(
+                "exact plan does not match its frozen digest".to_owned(),
+            ));
+        }
+        validate_source_evidence(&self.evidence.source_games, draft)?;
+        validate_identity_evidence(
+            "artifact",
+            &self.evidence.artifacts,
+            &draft.created.artifact_identities,
+            |artifact| {
+                (
+                    &artifact.id,
+                    &artifact.version,
+                    artifact.length,
+                    &artifact.sha256,
+                )
+            },
+        )?;
+        validate_identity_evidence(
+            "WeiDU tool",
+            &self.evidence.weidu_tools,
+            &draft.created.tool_identities,
+            |tool| (&tool.id, &tool.version, tool.length, &tool.sha256),
+        )?;
+        if self.evidence.runs.len() != draft.plan.runs.len() {
+            return Err(ManagedReceiptError::Evidence(format!(
+                "run evidence count {} differs from plan count {}",
+                self.evidence.runs.len(),
+                draft.plan.runs.len()
+            )));
+        }
+        for (evidence, planned) in self.evidence.runs.iter().zip(&draft.plan.runs) {
+            if evidence.run_id != planned.run_id
+                || evidence.target != planned.target
+                || evidence.components != planned.components
+            {
+                return Err(ManagedReceiptError::Evidence(format!(
+                    "run evidence for {:?} differs from the exact plan",
+                    planned.run_id
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl ReceiptWriter for ManagedReceiptWriter {
+    fn write(&mut self, draft: &ReceiptDraft) -> Result<(), StepFailure> {
+        self.publish_success(draft)
+            .map(|_| ())
+            .map_err(|error| StepFailure::new(error.to_string()))
+    }
+}
+
+fn validate_source_evidence(
+    sources: &[SourceGameReceipt],
+    draft: &ReceiptDraft,
+) -> Result<(), ManagedReceiptError> {
+    let bg1 = sources
+        .iter()
+        .filter(|source| source.role == GameRole::BgeeSod)
+        .collect::<Vec<_>>();
+    let bg2 = sources
+        .iter()
+        .filter(|source| source.role == GameRole::Bg2ee)
+        .collect::<Vec<_>>();
+    if bg1.len() != 1 || bg2.len() != 1 || sources.len() != 2 {
+        return Err(ManagedReceiptError::Evidence(
+            "source evidence must contain exactly one BG1 and one BG2 record".to_owned(),
+        ));
+    }
+    if !bg1[0]
+        .fingerprint
+        .eq_ignore_ascii_case(&draft.created.source_games.bg1)
+        || !bg2[0]
+            .fingerprint
+            .eq_ignore_ascii_case(&draft.created.source_games.bg2)
+    {
+        return Err(ManagedReceiptError::Evidence(
+            "source fingerprints differ from CampaignCreated".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_identity_evidence<'a, T, F>(
+    label: &str,
+    evidence: &'a [T],
+    frozen: &[FrozenIdentity],
+    fields: F,
+) -> Result<(), ManagedReceiptError>
+where
+    F: Fn(&'a T) -> (&'a String, &'a String, u64, &'a String),
+{
+    if evidence.len() != frozen.len() {
+        return Err(ManagedReceiptError::Evidence(format!(
+            "{label} evidence count {} differs from frozen count {}",
+            evidence.len(),
+            frozen.len()
+        )));
+    }
+    for identity in frozen {
+        let matches = evidence.iter().filter(|item| {
+            let (id, version, length, sha256) = fields(item);
+            id == &identity.id
+                && version == &identity.version
+                && length == identity.length
+                && sha256.eq_ignore_ascii_case(&identity.sha256)
+        });
+        if matches.count() != 1 {
+            return Err(ManagedReceiptError::Evidence(format!(
+                "{label} {:?} does not exactly match its frozen identity",
+                identity.id
+            )));
+        }
+    }
+    Ok(())
 }
 
 impl ReceiptStore {
