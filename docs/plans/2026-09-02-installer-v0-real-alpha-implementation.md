@@ -1306,7 +1306,7 @@ catalog batch, and commit each reviewed batch as `recipe: map <catalog batch> cu
 **Step 4: Add catalog/map coverage tests**
 
 Extend the Python fixtures to test that all 60 exposed choice subgroups are represented and
-the seven optional-only groups declare an explicit `none` default; every mandatory row has
+the 13 optional-only groups declare an explicit `none` default; every mandatory row has
 a parent or collection root; no blank row maps to a selectable outcome; and every mapping
 target is uniquely defined. These tests do not load a production recipe.
 
