@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
-use bg_engine::manifest::{Component, Phase, Run, SourceKind};
+use bg_engine::manifest::{AcquisitionPolicy, Component, Phase, Run, SourceKind};
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
 
@@ -45,6 +45,31 @@ fn fixture_is_valid_and_repeats_one_component_across_game_roots() {
     assert_eq!(manifest.collection.runs[0].components, vec![0, 2]);
     assert_eq!(manifest.collection.runs[1].components, vec![0]);
     assert_eq!(error_rules(&validate(&manifest)), Vec::<&str>::new());
+}
+
+#[test]
+fn collection_must_contain_at_least_one_explicit_run() {
+    let mut manifest = good();
+    manifest.collection.runs.clear();
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "nonempty");
+}
+
+#[test]
+fn installer_must_declare_at_least_one_component() {
+    let mut manifest = good();
+    manifest
+        .mods
+        .get_mut("eefixpack")
+        .unwrap()
+        .components
+        .clear();
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "nonempty");
 }
 
 #[test]
@@ -254,6 +279,45 @@ fn fetched_artifact_url_must_use_https() {
 }
 
 #[test]
+fn fetch_only_manual_source_is_inconsistent_and_cannot_bypass_integrity_checks() {
+    let mut manifest = good();
+    let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+    artifact.acquisition = AcquisitionPolicy::FetchOnly;
+    artifact.source.kind = SourceKind::Manual;
+    artifact.source.url = "http://example.invalid/download-page".to_owned();
+    artifact.source.sha256 = "pending".to_owned();
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "acquisition-policy");
+    assert_has_error(&findings, "sources");
+}
+
+#[test]
+fn manual_user_supplied_policy_controls_source_relaxation() {
+    let mut manifest = good();
+    let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+    artifact.acquisition = AcquisitionPolicy::ManualUserSupplied;
+    artifact.source.url = "http://example.invalid/download-page".to_owned();
+    artifact.source.sha256 = "pending-user-supplied-file".to_owned();
+
+    assert_eq!(error_rules(&validate(&manifest)), Vec::<&str>::new());
+}
+
+#[test]
+fn bundle_permitted_artifact_still_requires_https_and_sha256() {
+    let mut manifest = good();
+    let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+    artifact.acquisition = AcquisitionPolicy::BundlePermitted;
+    artifact.source.url = "http://example.invalid/archive.zip".to_owned();
+    artifact.source.sha256 = "pending".to_owned();
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "sources");
+}
+
+#[test]
 fn fetched_artifact_sha256_must_be_exactly_hexadecimal() {
     for sha256 in ["a".repeat(63), "g".repeat(64), "a".repeat(65)] {
         let mut manifest = good();
@@ -284,9 +348,11 @@ fn uppercase_sha256_is_accepted() {
 }
 
 #[test]
-fn manual_source_keeps_its_authoring_placeholder_semantics() {
+fn manual_user_supplied_artifact_may_use_an_authoring_placeholder() {
     let mut manifest = good();
-    let source = &mut manifest.artifacts.get_mut("eefixpack").unwrap().source;
+    let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+    artifact.acquisition = AcquisitionPolicy::ManualUserSupplied;
+    let source = &mut artifact.source;
     source.kind = SourceKind::Manual;
     source.url = "http://example.invalid/download-page".to_owned();
     source.sha256 = "pending-user-supplied-file".to_owned();
@@ -310,6 +376,19 @@ fn all_zero_fetched_digest_remains_an_authoring_warning() {
     assert!(findings.iter().any(|finding| {
         finding.rule == "unpinned-source" && finding.severity == Severity::Warning
     }));
+}
+
+#[test]
+fn check_accepts_a_recipe_with_only_warnings() {
+    let mut manifest = good();
+    manifest
+        .artifacts
+        .get_mut("eefixpack")
+        .unwrap()
+        .source
+        .sha256 = "0".repeat(64);
+
+    assert!(check(&manifest).is_ok());
 }
 
 #[test]
@@ -341,6 +420,61 @@ fn check_returns_all_independent_findings() {
 }
 
 #[test]
+fn validation_error_preserves_warnings_alongside_errors() {
+    let mut manifest = good();
+    manifest.collection.runs[0].run_id = manifest.collection.runs[1].run_id.clone();
+    manifest
+        .artifacts
+        .get_mut("eefixpack")
+        .unwrap()
+        .source
+        .sha256 = "0".repeat(64);
+
+    let error = check(&manifest).unwrap_err();
+    let EngineError::Validation(findings) = &error else {
+        panic!("expected validation error, got {error:?}");
+    };
+
+    assert_has_error(findings, "run-ids");
+    assert!(findings.iter().any(|finding| {
+        finding.rule == "unpinned-source" && finding.severity == Severity::Warning
+    }));
+    assert_eq!(error.to_string().lines().count(), findings.len());
+}
+
+#[test]
+fn findings_have_exact_stable_rule_order() {
+    let mut manifest = good();
+    manifest.collection.runs[0].run_id = manifest.collection.runs[1].run_id.clone();
+    manifest.collection.runs[0].components.clear();
+    manifest.mods.get_mut("eefixpack").unwrap().tp2 = "../escape.tp2".to_owned();
+    manifest
+        .artifacts
+        .get_mut("eefixpack")
+        .unwrap()
+        .source
+        .sha256 = "0".repeat(64);
+    manifest.mods.get_mut("eefixpack").unwrap().components[1].stdin = Some("1".to_owned());
+
+    let findings = validate(&manifest);
+
+    assert_eq!(findings, validate(&manifest));
+    assert_eq!(
+        findings
+            .iter()
+            .map(|finding| finding.rule)
+            .collect::<Vec<_>>(),
+        vec![
+            "run-ids",
+            "run-components",
+            "paths",
+            "unpinned-source",
+            "stdin-newline",
+        ]
+    );
+}
+
+#[test]
 fn finding_display_includes_severity_rule_and_message() {
     let finding = Finding {
         severity: Severity::Error,
@@ -349,4 +483,18 @@ fn finding_display_includes_severity_rule_and_message() {
     };
 
     assert_eq!(finding.to_string(), "error[references]: boom");
+}
+
+#[test]
+fn warning_display_includes_severity_rule_and_message() {
+    let finding = Finding {
+        severity: Severity::Warning,
+        rule: "unpinned-source",
+        message: "digest is pending".to_owned(),
+    };
+
+    assert_eq!(
+        finding.to_string(),
+        "warning[unpinned-source]: digest is pending"
+    );
 }

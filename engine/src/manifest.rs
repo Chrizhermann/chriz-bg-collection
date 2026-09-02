@@ -46,7 +46,12 @@ impl Phase {
 
 /// One typed extra argument supplied to a WeiDU installer run.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "kebab-case")]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "kebab-case",
+    deny_unknown_fields
+)]
 pub enum RunArg {
     /// A literal argument authored in the recipe.
     Literal(String),
@@ -168,14 +173,12 @@ pub struct ModFile {
     /// Relative path to the installer's TP2 file.
     pub tp2: String,
     /// WeiDU language number.
-    #[serde(default)]
     pub language: u32,
     /// Artifact providing the WeiDU executable used for this installer.
     pub weidu_artifact_id: String,
     /// Method used to locate the TP2 at invocation time.
     pub invocation_mode: InvocationMode,
     /// Components declared by this installer.
-    #[serde(default)]
     pub components: Vec<Component>,
 }
 
@@ -190,10 +193,8 @@ pub struct Run {
     /// EET install phase.
     pub phase: Phase,
     /// Exact ordered component numbers installed by this run.
-    #[serde(default)]
     pub components: Vec<u32>,
     /// Typed extra invocation arguments.
-    #[serde(default)]
     pub args: Vec<RunArg>,
 }
 
@@ -226,6 +227,5 @@ pub struct Collection {
     /// Required Enhanced Edition game build.
     pub game_build: String,
     /// Explicit ordered installer invocations.
-    #[serde(default)]
     pub runs: Vec<Run>,
 }

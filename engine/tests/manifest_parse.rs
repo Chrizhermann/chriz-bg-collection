@@ -27,6 +27,21 @@ fn artifact_fixture(name: &str) -> String {
     .unwrap()
 }
 
+fn remove_first_line(text: &str, line_to_remove: &str) -> String {
+    let mut removed = false;
+    text.lines()
+        .filter(|line| {
+            if !removed && *line == line_to_remove {
+                removed = true;
+                false
+            } else {
+                true
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn installer(id: &str, artifact_id: &str, tp2: &str) -> String {
     format!(
         r#"
@@ -137,4 +152,67 @@ fn rejects_unknown_installer_field() {
     let error = toml::from_str::<ModFile>(&text).unwrap_err();
 
     assert!(error.to_string().contains("tp22"), "{error}");
+}
+
+#[test]
+fn installer_language_is_required() {
+    let text = remove_first_line(&mod_fixture("eefixpack.toml"), "language = 0");
+    let error = toml::from_str::<ModFile>(&text).unwrap_err();
+
+    assert!(error.to_string().contains("language"), "{error}");
+}
+
+#[test]
+fn installer_components_are_required() {
+    let text = installer("test", "eefixpack", "test/test.tp2");
+    let without_components = text.split("[[components]]").next().unwrap();
+    let error = toml::from_str::<ModFile>(without_components).unwrap_err();
+
+    assert!(error.to_string().contains("components"), "{error}");
+}
+
+#[test]
+fn run_components_are_required() {
+    let text = remove_first_line(&collection_fixture(), "components = [0, 2]");
+    let error = toml::from_str::<Collection>(&text).unwrap_err();
+
+    assert!(error.to_string().contains("components"), "{error}");
+}
+
+#[test]
+fn run_arguments_are_required() {
+    let text = remove_first_line(
+        &collection_fixture(),
+        "args = [{ kind = \"staged-root\", value = \"bg1\" }]",
+    );
+    let error = toml::from_str::<Collection>(&text).unwrap_err();
+
+    assert!(error.to_string().contains("args"), "{error}");
+}
+
+#[test]
+fn collection_runs_are_required() {
+    let error = toml::from_str::<Collection>("schema = 2\ngame_build = \"2.7.3.0\"\n").unwrap_err();
+
+    assert!(error.to_string().contains("runs"), "{error}");
+}
+
+#[test]
+fn typed_run_argument_rejects_unknown_fields() {
+    let text = collection_fixture().replacen(
+        "{ kind = \"staged-root\", value = \"bg1\" }",
+        "{ kind = \"staged-root\", value = \"bg1\", extra = true }",
+        1,
+    );
+    let error = toml::from_str::<Collection>(&text).unwrap_err();
+
+    assert!(error.to_string().contains("extra"), "{error}");
+}
+
+#[test]
+fn rejects_unknown_enum_value() {
+    let text = mod_fixture("eefixpack.toml").replace("explicit-tp2", "implicit-tp2");
+    let error = toml::from_str::<ModFile>(&text).unwrap_err();
+
+    assert!(error.to_string().contains("implicit-tp2"), "{error}");
 }

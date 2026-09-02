@@ -5,7 +5,7 @@ use std::fmt;
 use std::path::{Component as PathComponent, Path};
 
 use crate::error::EngineError;
-use crate::manifest::{GameRoot, Phase, SourceKind};
+use crate::manifest::{AcquisitionPolicy, GameRoot, Phase, SourceKind};
 use crate::Manifest;
 
 /// Placeholder digest used only while authoring an artifact entry.
@@ -45,6 +45,8 @@ impl fmt::Display for Finding {
 pub const RULE_COMPONENT_IDS_UNIQUE: &str = "component-ids-unique";
 /// Rule requiring every logical run id to be globally unique.
 pub const RULE_RUN_IDS: &str = "run-ids";
+/// Rule requiring the recipe and every installer to contain executable work.
+pub const RULE_NONEMPTY: &str = "nonempty";
 /// Rule requiring every run to list at least one component explicitly.
 pub const RULE_RUN_COMPONENTS: &str = "run-components";
 /// Rule requiring all artifact, installer, tool, and component references to exist.
@@ -53,6 +55,8 @@ pub const RULE_REFERENCES: &str = "references";
 pub const RULE_PATHS: &str = "paths";
 /// Rule preventing one installer component from running twice against one game root.
 pub const RULE_COMPONENT_PLACEMENT: &str = "component-placement";
+/// Rule requiring acquisition policy and source kind to describe one coherent flow.
+pub const RULE_ACQUISITION_POLICY: &str = "acquisition-policy";
 /// Rule requiring fetchable source identity to be well formed.
 pub const RULE_SOURCES: &str = "sources";
 /// Warning emitted for an all-zero authoring digest.
@@ -68,11 +72,13 @@ pub const RULE_STDIN_NEWLINE: &str = "stdin-newline";
 pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     let mut findings = Vec::new();
     check_run_ids(manifest, &mut findings);
+    check_nonempty(manifest, &mut findings);
     check_run_components(manifest, &mut findings);
     check_references(manifest, &mut findings);
     check_paths(manifest, &mut findings);
     check_component_ids(manifest, &mut findings);
     check_component_placement(manifest, &mut findings);
+    check_acquisition_policy(manifest, &mut findings);
     check_sources(manifest, &mut findings);
     check_phase_order(manifest, &mut findings);
     check_eet_anchors(manifest, &mut findings);
@@ -119,6 +125,26 @@ fn check_run_ids(manifest: &Manifest, findings: &mut Vec<Finding>) {
                     "run id {:?} is declared by both run {first} and run {index}",
                     run.run_id
                 ),
+            );
+        }
+    }
+}
+
+fn check_nonempty(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    if manifest.collection.runs.is_empty() {
+        error(
+            findings,
+            RULE_NONEMPTY,
+            "the collection contains no installer runs".to_owned(),
+        );
+    }
+
+    for (id, mod_file) in &manifest.mods {
+        if mod_file.components.is_empty() {
+            error(
+                findings,
+                RULE_NONEMPTY,
+                format!("installer {id:?} declares no components"),
             );
         }
     }
@@ -276,9 +302,34 @@ fn check_component_placement(manifest: &Manifest, findings: &mut Vec<Finding>) {
     }
 }
 
+fn check_acquisition_policy(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    for (id, artifact) in &manifest.artifacts {
+        let inconsistent = match artifact.acquisition {
+            AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
+                artifact.source.kind == SourceKind::Manual
+            }
+            AcquisitionPolicy::ManualUserSupplied | AcquisitionPolicy::Blocked => false,
+        };
+
+        if inconsistent {
+            error(
+                findings,
+                RULE_ACQUISITION_POLICY,
+                format!(
+                    "artifact {id:?} acquisition {:?} is inconsistent with source kind {:?}",
+                    artifact.acquisition, artifact.source.kind
+                ),
+            );
+        }
+    }
+}
+
 fn check_sources(manifest: &Manifest, findings: &mut Vec<Finding>) {
     for (id, artifact) in &manifest.artifacts {
-        if artifact.source.kind == SourceKind::Manual {
+        if matches!(
+            artifact.acquisition,
+            AcquisitionPolicy::ManualUserSupplied | AcquisitionPolicy::Blocked
+        ) {
             continue;
         }
 
