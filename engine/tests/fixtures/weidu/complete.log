@@ -1,0 +1,8 @@
+// WeiDU.log generated for the synthetic Task 5 fixture.
+
+~DLCMERGER/SETUP-DLCMERGER.TP2~ #0 #1 // Merge DLC: v2.1
+
+// Recently Uninstalled: ~OLD/SETUP-OLD.TP2~ #0 #99
+~EEFIXPACK/SETUP-EEFIXPACK.TP2~ #0 #0 // Core fixes
+~TestMod/Setup-TestMod.tp2~ #0 #0 // First expected component
+~TESTMOD/SETUP-TESTMOD.TP2~ #0 #10 // Expected component name
