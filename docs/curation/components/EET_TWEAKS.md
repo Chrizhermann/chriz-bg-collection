@@ -3,6 +3,22 @@
 Listed at installed version **1.12**.
 64 entries, 1 installed. ✓ = installed. Subgroup = choose one.
 
+## Review/UI notes
+
+- Version `1.12` is still the latest release; there is no newer upstream patch series to
+  absorb. These 64 rows cover every active component. Source component `3040` (Ironman
+  Mode) is deliberately omitted because upstream marks it deprecated and broken.
+- Do not install upstream component `2042` in the curated stack. Its intended progressive
+  XP behavior needs a collection replacement with revised values; make that replacement
+  an optional component selected by default once it exists.
+- Component `4020` is not required by EEex. EEex v1.x separates render FPS from game
+  speed; EET Tweaks `4020` instead rewrites suitable script `Wait()` calls for players
+  who deliberately raise the engine's `Maximum Frame Rate`. It remains excluded. If it
+  is exposed later, make it optional and install it near the tail because it scans all
+  existing BCS files.
+- Custom-value components `2003`, `2013`, `2023`, `2033`, `2044`, `2056`, and `2066`
+  require positive integer input. The last three values are percentages.
+
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
 | 1000 | BG1 | Consistent NPCs | Edwin appearance |  | |

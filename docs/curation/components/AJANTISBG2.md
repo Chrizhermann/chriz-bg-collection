@@ -3,6 +3,14 @@
 Listed at installed version **21**.
 9 entries, 1 installed. ✓ = installed. Subgroup = choose one.
 
+## Curation/readiness note
+
+Ajantis BG2 remains excluded because Chris considers the current mod too unreliable for
+this collection. That is a personal curation decision, not a verified general
+incompatibility claim. If revisited, component `0` is the core; every portrait, content,
+speed, and kit component depends on it, and the mod must install before `EET_END`.
+BG2EE-EET-FIXPACK `100` is unavailable while Ajantis is excluded.
+
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
 | 0 | Sir Ajantis NPC for BGII |  |  | ✓ | |

@@ -9,15 +9,23 @@ The umbrella/orchestrator for the whole modded-BG stack: manifest + install orde
 mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalance
 `docs/plans/2026-07-03-umbrella-analysis.md` (user-approved 2026-07-03).
 
-## Status (2026-08-20 — Phase 0 data done, WAITING ON USER CURATION)
+## Status (2026-09-01 — curation reviewed; consolidation and engine work active)
 
-**Current state: paused at the curation gate.** Phases 0.1–0.3 are done (manifest
-re-captured, all sources resolved + liveness-checked, 2.7 pin-list drafted). The user is
-now curating independently: he will produce his own list from `docs/curation-worksheet.md`
-(+ answer the 5 review questions in `docs/pin-list-2.7.md`) and then discuss it. Until
-then: no curation suggestions, no manifest authoring. Independent work that may proceed
-if asked: Phase 1 engine scaffolding (`engine/` crate — schema parser, WeiDU runner,
-session model are curation-independent).
+Chris has completed the component-catalog pass. The normalized decision semantics,
+catalog notes, 22-fix migration inventory, and durable unresolved queue live under
+`docs/curation/components/`. Start the next session with
+[`docs/next-session.md`](next-session.md); use
+[`FOLLOW_UPS.md`](curation/components/FOLLOW_UPS.md) for the complete evidence-backed
+queue. A small set of explicit choices and multiple source/release/acceptance gates remain,
+so do not treat every `default` row as currently installable.
+
+Engine Phase 1 is developed in the isolated `feat/engine-phase1` worktree/branch. Loader
+Task 2 is now independently reviewed and closed by local commits `05fe9f7` + `05b8058`;
+validator Task 3 is closed by `a0c812b` plus test coverage `71f0387`, and resolver Task 4
+by `4c61a8c`. All three reviews are complete and 94 tests are green. Tasks 6, 7, and 8 are
+next. Commit `f398127` adds the bounded installer-v0 design, implementation plan, and
+no-op static Recipe Preview. The branch's top handover section is authoritative for
+commit-level state. Do not merge it over this dirty curation checkout.
 
 ## Background (2026-08-19 — installer app designed)
 
@@ -27,9 +35,12 @@ session model are curation-independent).
   version pins and hosting facts: `docs/research/2026-08-19-installer-app/`.
 - `manifest/install-order.tsv` — captured 2026-07-03 from the reference WeiDU.log
   (414 rows) — ⚠ the live WeiDU.log now shows **364** entries; re-capture is Phase 0.1.
-- `manifest/mod-sources.tsv` — SKELETON, all TODO (the reference EET_MODDING_GUIDE
-  documents zero URLs; sources must come from research — see mod-hosting brief).
-- `presets/` — empty; `engine/`, `app/` — not started (Phase 1/2).
+- `manifest/mod-sources.tsv` — source inventory exists, but completed curation has made
+  several pins and all legacy local-fix notes stale; refresh it from the catalogs before
+  manifest authoring.
+- `presets/` and `app/` are not started on `main`. Engine work exists on
+  `feat/engine-phase1`; the app has an approved product design and a bounded v0 design on
+  that branch.
 - Parked: [#1 EET XP scaling fix](https://github.com/Chrizhermann/chriz-bg-collection/issues/1)
   (future chriz-layer component; home repo TBD).
 
@@ -57,13 +68,10 @@ session model are curation-independent).
 3. **2.7 pin-list** — EET master SHA ≥ 2026-08-06, EEex ≥ v1.1.5, SCS 35.21 + WeiDU 249
    (per-mod WeiDU pins!), SR 4.21, cdtweaks v18, EEFP Beta 2; flag every divergence from
    the 2.6-era reference for user review (`game-version-landscape.md`).
-4. **Curation pass — HARD HUMAN GATE** (user directive 2026-08-19): worksheet at
-   `docs/curation-worksheet.md` (mod inventory by source class, blank decision columns,
-   user's open questions). The user curates
-   content (drop/add mods, toggles, choice groups, presets) exclusively himself. Agents
-   deliver neutral inventories/option lists with factual compat notes only; suggestions
-   only when explicitly asked. Output → `manifest/collection.toml` + `manifest/mods/*.toml`
-   (schema v1 in the design doc), authored from the user's filled worksheet.
+4. **Curation pass:** component review is substantially complete. Resolve the remaining
+   choices in `docs/next-session.md`, then author only release-ready rows into
+   `manifest/collection.toml` and `manifest/mods/*.toml`. Blocked components remain
+   unavailable until their owning repositories and acceptance evidence are ready.
 5. **Phase 1: engine crate + CLI** — milestone: full unattended EET test install from
    scratch on 2.7.3.0 (distinct `engine_name`, never in the reference game dir).
 6. **Phase 2: Tauri app**; **Phase 3: signing/updater/manifest release channel** — see
