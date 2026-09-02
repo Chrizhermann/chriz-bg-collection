@@ -5,9 +5,14 @@ import unittest
 from pathlib import Path
 
 from tools.curation_audit import (
+    AuditError,
     CatalogError,
     Decision,
+    RowKey,
+    audit_curation_map,
+    coverage_report,
     decision_totals,
+    load_curation_map,
     load_catalogs,
     parse_catalog_text,
 )
@@ -128,6 +133,234 @@ class CatalogParserTests(unittest.TestCase):
                 Decision.DEFAULT: 290,
                 Decision.MANDATORY: 133,
             },
+        )
+
+
+class CurationMapTests(unittest.TestCase):
+    def _write_map(self, root: Path, text: str) -> Path:
+        path = root / "curation-map.toml"
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def test_audits_explicit_feature_omission_and_excluded_outcomes(self) -> None:
+        rows = parse_catalog_text(
+            "EXAMPLE",
+            HEADER
+            + "| 0 | Hidden | | | | |\n"
+            + "| 1 | Root child | | | ✓ | mandatory |\n"
+            + "| 2 | Choice A | | Mode | | optional |\n"
+            + "| 3 | Choice B | | Mode | ✓ | default |\n"
+            + "| 4 | Deferred | | | | default |\n",
+            Path("EXAMPLE.md"),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            map_path = self._write_map(
+                root,
+                """\
+schema = 1
+expected_rows = 5
+expected_choice_groups = 1
+expected_optional_none_groups = 0
+parents = ["mod:EXAMPLE"]
+
+[[catalogs]]
+id = "EXAMPLE"
+excluded = [0]
+
+[[targets]]
+id = "feature:example-core"
+kind = "feature"
+rows = ["EXAMPLE:1"]
+parent = "mod:EXAMPLE"
+
+[[targets]]
+id = "feature:example-a"
+kind = "feature"
+rows = ["EXAMPLE:2"]
+
+[[targets]]
+id = "feature:example-b"
+kind = "feature"
+rows = ["EXAMPLE:3"]
+
+[[targets]]
+id = "omission:example-deferred"
+kind = "omission"
+rows = ["EXAMPLE:4"]
+reason = "The required maintained implementation has not been released."
+
+[[choice_groups]]
+id = "choice:example-mode"
+catalog = "EXAMPLE"
+subgroup = "Mode"
+options = ["EXAMPLE:2", "EXAMPLE:3"]
+default = "EXAMPLE:3"
+""",
+            )
+
+            curation_map = load_curation_map(map_path)
+            result = audit_curation_map(rows, curation_map)
+
+        self.assertEqual(result.mapped_rows, 5)
+        self.assertEqual(result.feature_rows, 3)
+        self.assertEqual(result.omission_rows, 1)
+        self.assertEqual(result.excluded_rows, 1)
+        self.assertEqual(result.choice_groups, 1)
+
+    def test_rejects_a_blank_row_mapped_to_a_selectable_feature(self) -> None:
+        rows = parse_catalog_text(
+            "EXAMPLE",
+            HEADER + "| 0 | Hidden | | | | |\n",
+            Path("EXAMPLE.md"),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            map_path = self._write_map(
+                Path(temp_dir),
+                """\
+schema = 1
+expected_rows = 1
+expected_choice_groups = 0
+expected_optional_none_groups = 0
+parents = []
+
+[[catalogs]]
+id = "EXAMPLE"
+excluded = []
+
+[[targets]]
+id = "feature:hidden"
+kind = "feature"
+rows = ["EXAMPLE:0"]
+""",
+            )
+            with self.assertRaisesRegex(AuditError, "blank Decision.*selectable"):
+                audit_curation_map(rows, load_curation_map(map_path))
+
+    def test_rejects_mandatory_row_without_parent_or_collection_root(self) -> None:
+        rows = parse_catalog_text(
+            "EXAMPLE",
+            HEADER + "| 1 | Child | | | | mandatory |\n",
+            Path("EXAMPLE.md"),
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            map_path = self._write_map(
+                Path(temp_dir),
+                """\
+schema = 1
+expected_rows = 1
+expected_choice_groups = 0
+expected_optional_none_groups = 0
+parents = []
+
+[[catalogs]]
+id = "EXAMPLE"
+excluded = []
+
+[[targets]]
+id = "feature:orphan"
+kind = "feature"
+rows = ["EXAMPLE:1"]
+""",
+            )
+            with self.assertRaisesRegex(AuditError, "mandatory.*parent or collection_root"):
+                audit_curation_map(rows, load_curation_map(map_path))
+
+    def test_rejects_duplicate_target_definitions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            map_path = self._write_map(
+                Path(temp_dir),
+                """\
+schema = 1
+expected_rows = 0
+expected_choice_groups = 0
+expected_optional_none_groups = 0
+parents = []
+targets = [
+  { id = "feature:same", kind = "feature", rows = ["EXAMPLE:1"] },
+  { id = "feature:same", kind = "feature", rows = ["EXAMPLE:2"] },
+]
+""",
+            )
+            with self.assertRaisesRegex(AuditError, "duplicate target.*feature:same"):
+                load_curation_map(map_path)
+
+    def test_rejects_an_omission_without_an_authored_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            map_path = self._write_map(
+                Path(temp_dir),
+                """\
+schema = 1
+expected_rows = 0
+expected_choice_groups = 0
+expected_optional_none_groups = 0
+parents = []
+targets = [
+  { id = "omission:no-reason", kind = "omission", rows = ["EXAMPLE:1"] },
+]
+""",
+            )
+            with self.assertRaisesRegex(AuditError, "omission.*reason"):
+                load_curation_map(map_path)
+
+    def test_current_map_covers_every_reviewed_catalog_row(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        rows = load_catalogs(root / "docs" / "curation" / "components")
+        curation_map = load_curation_map(root / "manifest" / "curation-map.toml")
+
+        result = audit_curation_map(rows, curation_map)
+
+        self.assertEqual(result.mapped_rows, 1_173)
+        self.assertEqual(result.excluded_rows, 592)
+        self.assertEqual(result.feature_rows + result.omission_rows, 581)
+        self.assertEqual(result.choice_groups, 60)
+        self.assertEqual(result.optional_none_groups, 13)
+        self.assertIn("rows=1173", coverage_report(rows, result))
+
+    def test_current_map_freezes_reviewed_omissions_and_atomic_bundles(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        curation_map = load_curation_map(root / "manifest" / "curation-map.toml")
+        targets = {target.target_id: target for target in curation_map.targets}
+
+        omission_rows = {
+            row
+            for target in curation_map.targets
+            if target.kind == "omission"
+            for row in target.rows
+        }
+        self.assertEqual(
+            omission_rows,
+            {
+                RowKey("ARTISANSKITPACK", 5110),
+                RowKey("ARTISANSKITPACK_NPC", 20002),
+                RowKey("ASCENSION", 40),
+                RowKey("AURA_BG1_2_EET", 2),
+                RowKey("AURA_BG1_2_EET", 3),
+                RowKey("AURA_BG1_2_EET", 7),
+                RowKey("AURA_BG1_2_EET", 14),
+                RowKey("C0WARLOCK", 0),
+                RowKey("DLCMERGER", 2),
+                RowKey("DLCMERGER", 3),
+                RowKey("HIDDENGAMEPLAYOPTIONS", 40),
+                RowKey("IWDIFICATION", 120),
+                RowKey("SAFANA", 0),
+                RowKey("UB", 19),
+            },
+        )
+        self.assertEqual(
+            targets["feature:chriz-bg-rebalance:tempus-bundle"].rows,
+            (
+                RowKey("CHRIZ-BG-REBALANCE", 400),
+                RowKey("CHRIZ-BG-REBALANCE", 401),
+                RowKey("CHRIZ-BG-REBALANCE", 404),
+                RowKey("CHRIZ-BG-REBALANCE", 405),
+                RowKey("CHRIZ-BG-REBALANCE", 407),
+                RowKey("CHRIZ-BG-REBALANCE", 408),
+            ),
+        )
+        self.assertEqual(
+            targets["feature:buffbot:mandatory-components"].rows,
+            (RowKey("BUFFBOT", 1), RowKey("BUFFBOT", 0)),
         )
 
 
