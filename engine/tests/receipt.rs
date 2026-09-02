@@ -1,0 +1,208 @@
+use std::path::{Path, PathBuf};
+
+use bg_engine::games::{GameRole, Storefront};
+use bg_engine::manifest::GameRoot;
+use bg_engine::receipt::{
+    ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
+    LogComponentReceipt, LogDiffReceipt, PromptReceipt, ReceiptOutcome, ReceiptStore,
+    ReceiptVersions, RunReceipt, RunTiming, SourceGameReceipt, WeiDuToolReceipt,
+    RECEIPT_SCHEMA_VERSION,
+};
+use bg_engine::resolve::{InstallPlan, PlannedRun};
+use tempfile::TempDir;
+
+fn plan() -> InstallPlan {
+    InstallPlan {
+        runs: vec![PlannedRun {
+            run_id: "eet-core".to_owned(),
+            mod_id: "eet".to_owned(),
+            target: GameRoot::Bg2,
+            phase: bg_engine::manifest::Phase::EetInitialization,
+            components: vec![0],
+            args: Vec::new(),
+            artifact_id: "eet".to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        }],
+    }
+}
+
+fn success_receipt(root: &Path) -> InstallReceipt {
+    let component = LogComponentReceipt {
+        tp2: "eet/eet.tp2".to_owned(),
+        language: 0,
+        component: 0,
+    };
+    InstallReceipt {
+        schema_version: RECEIPT_SCHEMA_VERSION,
+        install_id: "install-001".to_owned(),
+        attempt_id: "attempt-001".to_owned(),
+        started_at_millis: 10,
+        completed_at_millis: 20,
+        outcome: ReceiptOutcome::Succeeded,
+        versions: ReceiptVersions {
+            application: "0.1.0-alpha.1".to_owned(),
+            engine: "0.1.0".to_owned(),
+            manifest_schema: 2,
+            recipe: "2026.09.03-alpha.1".to_owned(),
+        },
+        source_games: vec![
+            SourceGameReceipt {
+                role: GameRole::BgeeSod,
+                storefront: Storefront::Steam,
+                version: "2.7.3.0".to_owned(),
+                fingerprint: "11".repeat(32),
+            },
+            SourceGameReceipt {
+                role: GameRole::Bg2ee,
+                storefront: Storefront::Steam,
+                version: "2.7.3.0".to_owned(),
+                fingerprint: "22".repeat(32),
+            },
+        ],
+        recipe_payload_sha256: "33".repeat(32),
+        recipe_envelope_sha256: "44".repeat(32),
+        selection_sha256: "55".repeat(32),
+        plan_sha256: "66".repeat(32),
+        plan: plan(),
+        artifacts: vec![ArtifactReceipt {
+            id: "eet".to_owned(),
+            version: "2.7.3".to_owned(),
+            original_url: "https://example.invalid/eet.zip".to_owned(),
+            final_url: "https://cdn.example.invalid/eet.zip".to_owned(),
+            length: 1_024,
+            sha256: "77".repeat(32),
+            cache_outcome: ArtifactCacheOutcome::Downloaded,
+        }],
+        weidu_tools: vec![WeiDuToolReceipt {
+            id: "weidu".to_owned(),
+            version: "24900".to_owned(),
+            length: 2_048,
+            sha256: "88".repeat(32),
+        }],
+        runs: vec![RunReceipt {
+            run_id: "eet-core".to_owned(),
+            target: GameRoot::Bg2,
+            components: vec![0],
+            prompts: vec![PromptReceipt {
+                expected_output: "BG1 path?".to_owned(),
+                answer: "<staged-bg1>".to_owned(),
+                matched: true,
+            }],
+            timing: RunTiming {
+                started_at_millis: 12,
+                completed_at_millis: 18,
+            },
+            exit_code: 0,
+            warnings: vec!["upstream informational warning".to_owned()],
+            invocation_sha256: "99".repeat(32),
+            stdout_sha256: "aa".repeat(32),
+            stderr_sha256: "bb".repeat(32),
+            debug_sha256: "cc".repeat(32),
+            log_diff: LogDiffReceipt {
+                before_sha256: "dd".repeat(32),
+                after_sha256: "ee".repeat(32),
+                added: vec![component.clone()],
+                removed: Vec::new(),
+            },
+        }],
+        final_state: Some(FinalReceiptState {
+            logs: vec![FinalLogReceipt {
+                target: GameRoot::Bg2,
+                sha256: "ff".repeat(32),
+                components: vec![component],
+            }],
+            bg1_engine_name: "Chriz BG Collection - BG1 - abc123".to_owned(),
+            bg2_engine_name: "Chriz BG Collection - abc123".to_owned(),
+            managed_save_root: root.join("Documents/Chriz BG Collection - abc123"),
+            launch_path: root.join("game/InfinityLoader.exe"),
+            verification_summary: "exact final WeiDU.log matched".to_owned(),
+        }),
+    }
+}
+
+fn setup() -> (TempDir, PathBuf, ReceiptStore) {
+    let temp = TempDir::new().unwrap();
+    let root = temp.path().join("managed");
+    std::fs::create_dir_all(root.join(".chriz/attempts/attempt-001")).unwrap();
+    let store = ReceiptStore::open(&root, "install-001").unwrap();
+    (temp, root, store)
+}
+
+#[test]
+fn publishes_a_complete_success_receipt_create_once_in_both_locations() {
+    let (_temp, root, store) = setup();
+    let receipt = success_receipt(&root);
+    let canonical_root = std::fs::canonicalize(&root).unwrap();
+
+    let published = store.publish(&receipt).unwrap();
+
+    assert_eq!(
+        published.attempt_receipt,
+        canonical_root.join(".chriz/attempts/attempt-001/receipt.json")
+    );
+    assert_eq!(
+        published.install_receipt,
+        Some(canonical_root.join(".chriz/install-receipt.json"))
+    );
+    let stored: InstallReceipt =
+        serde_json::from_slice(&std::fs::read(&published.attempt_receipt).unwrap()).unwrap();
+    assert_eq!(stored, receipt);
+    assert_eq!(
+        std::fs::read(root.join(".chriz/install-receipt.json")).unwrap(),
+        std::fs::read(&published.attempt_receipt).unwrap()
+    );
+
+    // Exact replay is crash-safe and does not replace either create-once file.
+    let before = std::fs::metadata(&published.attempt_receipt)
+        .unwrap()
+        .modified()
+        .unwrap();
+    assert_eq!(store.publish(&receipt).unwrap(), published);
+    assert_eq!(
+        std::fs::metadata(&published.attempt_receipt)
+            .unwrap()
+            .modified()
+            .unwrap(),
+        before
+    );
+}
+
+#[test]
+fn a_retry_cannot_replace_an_existing_success_receipt() {
+    let (_temp, root, store) = setup();
+    let original = success_receipt(&root);
+    let published = store.publish(&original).unwrap();
+    let before = std::fs::read(&published.attempt_receipt).unwrap();
+    let mut changed = original;
+    changed.completed_at_millis += 1;
+
+    let error = store.publish(&changed).unwrap_err();
+
+    assert!(error.to_string().contains("create-once"), "{error}");
+    assert_eq!(std::fs::read(&published.attempt_receipt).unwrap(), before);
+    assert_eq!(
+        std::fs::read(root.join(".chriz/install-receipt.json")).unwrap(),
+        before
+    );
+}
+
+#[test]
+fn failure_receipts_are_immutable_and_never_claim_install_success() {
+    let (_temp, root, store) = setup();
+    let mut receipt = success_receipt(&root);
+    receipt.outcome = ReceiptOutcome::Failed {
+        step_id: "install:eet-core".to_owned(),
+        detail: "unexpected prompt".to_owned(),
+    };
+    receipt.final_state = None;
+
+    let published = store.publish(&receipt).unwrap();
+
+    assert!(published.attempt_receipt.is_file());
+    assert_eq!(published.install_receipt, None);
+    assert!(!root.join(".chriz/install-receipt.json").exists());
+    let stored: InstallReceipt =
+        serde_json::from_slice(&std::fs::read(published.attempt_receipt).unwrap()).unwrap();
+    assert_eq!(stored.outcome, receipt.outcome);
+}

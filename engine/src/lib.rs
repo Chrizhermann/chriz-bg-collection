@@ -9,6 +9,7 @@ pub mod manifest;
 pub mod orchestrator;
 pub mod preflight;
 pub mod recipe_view;
+pub mod receipt;
 pub mod resolve;
 pub mod session;
 pub mod stage;
