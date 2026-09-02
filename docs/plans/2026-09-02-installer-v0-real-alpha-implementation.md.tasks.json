@@ -1,6 +1,6 @@
 {
   "planPath": "docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md",
-  "lastUpdated": "2026-09-03T00:58:00+09:00",
+  "lastUpdated": "2026-09-03T01:58:58+09:00",
   "tasks": [
     {
       "id": 0,
@@ -53,7 +53,7 @@
     {
       "id": 8,
       "subject": "Task 8: Discover Steam/GOG games and fail closed on freshness",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [1]
     },
     {

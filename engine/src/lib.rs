@@ -1,5 +1,6 @@
 pub mod error;
 pub mod events;
+pub mod games;
 pub mod loader;
 pub mod manifest;
 pub mod recipe_view;

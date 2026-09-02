@@ -1,0 +1,91 @@
+schema = 1
+id = "gog-bgee-sod-2.7.3-en-us"
+role = "bgee_sod"
+storefront = "gog"
+locale = "en_US"
+executable = "Baldur.exe"
+product_version = "2.7.3.0"
+gog_game_ids = ["gog-bgee-sod"]
+required_files = [
+  "Baldur.exe",
+  "chitin.key",
+  "dialog.tlk",
+  "lang/en_US/dialog.tlk",
+  "engine.lua",
+  "data/base.bif",
+  "dlc/sod-dlc.zip",
+]
+sod_files = ["dlc/sod-dlc.zip"]
+fingerprint_files = ["Baldur.exe", "data/base.bif", "dlc/sod-dlc.zip"]
+
+[[inventory_surfaces]]
+path = "chitin.key"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "engine.lua"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "override"
+kind = "tree"
+
+[[inventory_surfaces]]
+path = "."
+kind = "matching"
+patterns = ["setup-*", "weidu*", "*.debug", "*.debug.log", "dlcmerger", "eet", "stratagems"]
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "setup-dlcmerger*"
+recursive = false
+message = "Stale DLC Merger files are present."
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "dlcmerger"
+recursive = false
+message = "Stale DLC Merger 1.7 residue is present."
+
+[[allowed_clean_variants]]
+id = "fixture-gog-bgee-sod"
+
+[[allowed_clean_variants.fingerprints]]
+path = "Baldur.exe"
+sha256 = "161c47576089bdd1ee6fd166e5ae107e96782a11dd4dcc3da302b7436a212b50"
+
+[[allowed_clean_variants.fingerprints]]
+path = "data/base.bif"
+sha256 = "219ec6a5e52e6da49839a9ca2e288421048ee7d62c0ba2ff9f746a5a024a4af2"
+
+[[allowed_clean_variants.fingerprints]]
+path = "dlc/sod-dlc.zip"
+sha256 = "371ba289ebdaf2fb8888ed3b212e412cddd00136e870b9918c5f8d3038fc3669"
+
+[[allowed_clean_variants.inventory]]
+path = "chitin.key"
+kind = "file"
+sha256 = "e014e49a4a3d451e4a0b87ef55cdb2250749359d0ce2dae96b99a766512f1174"
+
+[[allowed_clean_variants.inventory]]
+path = "dialog.tlk"
+kind = "file"
+sha256 = "cf906f7a4221146563d42a5963712185915aae5122145e5197dd19b249555b06"
+
+[[allowed_clean_variants.inventory]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+sha256 = "cf906f7a4221146563d42a5963712185915aae5122145e5197dd19b249555b06"
+
+[[allowed_clean_variants.inventory]]
+path = "engine.lua"
+kind = "file"
+sha256 = "5d9691eeabc09787fd3d083f83695ea35ebc7815633fe3bfbbfa65cca732970f"

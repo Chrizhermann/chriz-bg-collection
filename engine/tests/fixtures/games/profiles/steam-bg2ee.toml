@@ -1,0 +1,87 @@
+schema = 1
+id = "steam-bg2ee-2.7.3-en-us"
+role = "bg2ee"
+storefront = "steam"
+locale = "en_US"
+executable = "Baldur.exe"
+product_version = "2.7.3.0"
+steam_app_id = 257350
+gog_game_ids = []
+required_files = [
+  "Baldur.exe",
+  "chitin.key",
+  "dialog.tlk",
+  "lang/en_US/dialog.tlk",
+  "engine.lua",
+  "data/base.bif",
+]
+sod_files = []
+fingerprint_files = ["Baldur.exe", "data/base.bif"]
+
+[[inventory_surfaces]]
+path = "chitin.key"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "engine.lua"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "override"
+kind = "tree"
+
+[[inventory_surfaces]]
+path = "."
+kind = "matching"
+patterns = ["setup-*", "weidu*", "*.debug", "*.debug.log", "dlcmerger", "eet", "stratagems"]
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "setup-dlcmerger*"
+recursive = false
+message = "Stale DLC Merger files are present."
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "dlcmerger"
+recursive = false
+message = "Stale DLC Merger 1.7 residue is present."
+
+[[allowed_clean_variants]]
+id = "fixture-steam-bg2ee"
+
+[[allowed_clean_variants.fingerprints]]
+path = "Baldur.exe"
+sha256 = "36726d25e91f3b92c26d14b474272ba9a6e5441f996359e15f5ba114385b8fce"
+
+[[allowed_clean_variants.fingerprints]]
+path = "data/base.bif"
+sha256 = "fb825b72765a90c2c42953134746642c78648f55fa66c983fbd803e4247d1e2c"
+
+[[allowed_clean_variants.inventory]]
+path = "chitin.key"
+kind = "file"
+sha256 = "1545d6e8489bd62dd5415f4eed88b810e8db1bf5f88e40e905a9646736924a7a"
+
+[[allowed_clean_variants.inventory]]
+path = "dialog.tlk"
+kind = "file"
+sha256 = "843d6c1d158b59096a2bec14275911d7e2eb4acc956406dd7dea1ddee0f63f9e"
+
+[[allowed_clean_variants.inventory]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+sha256 = "843d6c1d158b59096a2bec14275911d7e2eb4acc956406dd7dea1ddee0f63f9e"
+
+[[allowed_clean_variants.inventory]]
+path = "engine.lua"
+kind = "file"
+sha256 = "60927ccde17c9c4b2dffe253524ac4d39347668c2b6bac8327aa5725b6a12643"
