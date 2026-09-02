@@ -5,11 +5,22 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod archive;
 mod cache;
 mod http;
+mod manual;
+mod materialize;
 
+pub use archive::{
+    extract_archive, ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact,
+};
 pub use cache::ArtifactCache;
 pub use http::validate_redirect_target;
+pub use manual::{provide_manual_archive, VerifiedManualArchive};
+pub use materialize::{
+    materialize, MaterializationRequest, MaterializationResult, PublicationManifest, PublishedPath,
+    SignedCollisionRule,
+};
 
 /// One immutable HTTP artifact requested by a recipe.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -73,6 +84,31 @@ pub enum AcquireError {
     /// A request field violates the acquisition contract.
     #[error("invalid download request: {0}")]
     InvalidRequest(String),
+    /// An archive could not be parsed or did not satisfy the supported ZIP profile.
+    #[error("invalid archive `{path}`: {message}")]
+    ArchiveFormat {
+        /// Archive being inspected.
+        path: PathBuf,
+        /// Parser or policy detail.
+        message: String,
+    },
+    /// An archive entry could escape or alias another destination path.
+    #[error("unsafe archive entry `{entry}`: {message}")]
+    UnsafeArchiveEntry {
+        /// Rejected archive entry name.
+        entry: String,
+        /// Validation detail.
+        message: String,
+    },
+    /// An archive exceeded a recipe-authored extraction bound.
+    #[error("archive limit exceeded: {0}")]
+    ArchiveLimitExceeded(String),
+    /// The archive did not contain one exact recipe-declared payload layout.
+    #[error("archive payload layout is invalid: {0}")]
+    ArchiveLayout(String),
+    /// Public recipes may not use this archive form or digest.
+    #[error("public archive rejected: {0}")]
+    PublicArchiveRejected(String),
     /// A URL could not be parsed.
     #[error("invalid download URL `{url}`: {message}")]
     InvalidUrl {
@@ -155,6 +191,31 @@ pub enum AcquireError {
         /// Observed lowercase digest.
         actual: String,
     },
+    /// A destination file exists with bytes that no signed rule permits replacing.
+    #[error("undeclared overwrite of `{path}`")]
+    UndeclaredOverwrite {
+        /// Destination-relative path.
+        path: String,
+    },
+    /// A collision rule exists but does not match both owners and exact byte hashes.
+    #[error("signed collision rule rejected for `{path}`: {message}")]
+    CollisionRuleRejected {
+        /// Destination-relative path.
+        path: String,
+        /// Validation detail.
+        message: String,
+    },
+    /// Previously published bytes no longer match their durable manifest.
+    #[error("published payload mismatch at `{path}`: {message}")]
+    PublicationMismatch {
+        /// Destination-relative path.
+        path: String,
+        /// Validation detail.
+        message: String,
+    },
+    /// A materialization request or destination violates the publication contract.
+    #[error("invalid materialization: {0}")]
+    InvalidMaterialization(String),
     /// An existing cache object or its metadata was internally inconsistent.
     #[error("corrupt cache entry for {digest}: {message}")]
     CorruptCache {
