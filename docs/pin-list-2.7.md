@@ -1,7 +1,8 @@
 # Pin-list for the 2.7.3.0 stack — reviewed targets
 
 Originally generated 2026-08-20; synchronized with completed component review on
-2026-09-01. Immutable source/release work still open is indexed in
+2026-09-01, with the Randomiser pin refreshed on 2026-09-03. Immutable
+source/release work still open is indexed in
 `docs/curation/components/FOLLOW_UPS.md`.
 Principle (Chris, 2026-08-19): the compilation targets CURRENT versions, not the
 reference install's. Every pin below is validated by the Phase 1 test-install
@@ -40,7 +41,7 @@ except AJANTISBG2 (language 1).
 | IEPBANTERS | v5.9 | v5.9 | unchanged (installed = latest) |
 | IWDIFICATION | v11 | v11 | unchanged (installed = latest) |
 | PAINA | — | v1.9 | upgrade ? -> v1.9 |
-| RANDOMISER | 7 | maintained fork v8.1 | Same component ids; Mode 1 uses the documented legacy-BCS fallback with EEex v1.2. |
+| RANDOMISER | 7 | maintained fork v8.1.1 @ `f4a9dfb` | Immutable release asset pinned; same component ids and documented EEex-v1.2 legacy-BCS fallback. Clean rebuild and new-game live validation remain open. |
 | RR | v4.92 | v4.92 | unchanged (installed = latest) |
 | SAFANA | v0.5 | v05 | unchanged (tag is spelled v05); SoD-items carryover fix component still to be built |
 | SARAHTOB | v8 | v8 | unchanged (installed = latest) |

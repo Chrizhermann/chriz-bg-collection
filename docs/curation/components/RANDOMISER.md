@@ -1,8 +1,8 @@
 # RANDOMISER — components
 
-Listed at installed version **7**. The maintained fork target is **8.1**; it preserves
-the same 26 component IDs. `manifest/mod-sources.tsv` still needs to be repinned from
-upstream v7 to that fork release during manifest authoring.
+Listed at installed version **7**. The maintained fork target is **v8.1.1** at commit
+`f4a9dfb1281269629e4a6fcedb6a064147dfde32`; it preserves the same 26 component IDs.
+`manifest/mod-sources.tsv` pins the immutable release asset, SHA-256, and size.
 26 entries, 9 installed. ✓ = installed. Subgroup = choose one.
 
 ## UI/dependency notes
@@ -21,16 +21,19 @@ upstream v7 to that fork release during manifest authoring.
 
 ## Integration notes
 
-- Fork v8.1's safer manifest-driven Mode 1 backend does not yet support EEex v1.x's
+- Fork v8.1.1's safer manifest-driven Mode 1 backend does not yet support EEex v1.x's
   root `EEex_scripts` layout. With the collection's EEex v1.2 target, component `1100`
   falls back to legacy BCS delivery. It remains installable, but does not get the fork's
   safer delivery path until the fork gains EEex v1.x support.
+- Do not use fork v8.1: its physical CRE-item removal can leave inventory slot offsets
+  and references invalid. v8.1.1 fixes that source defect. A clean rebuilt collection,
+  new game, and Tarnesh loot smoke still gate live acceptance.
 - The collection uses Mode 1. SCS's weapon-proficiency concern about installing
   Randomiser first applies to Mode 2's install-time equipment shuffle, so it does not
   create an ordering conflict for this preset. Keep the fresh-stack Randomiser-after-SCS
   order so its order-sensitive item and store patches see the final stack.
 - Planned fork work will extend Mode 1's item pool to cover items currently exclusive to
-  Mode 2. This is not implemented in v8.1; do not advertise the expanded pool yet.
+  Mode 2. This is not implemented in v8.1.1; do not advertise the expanded pool yet.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
