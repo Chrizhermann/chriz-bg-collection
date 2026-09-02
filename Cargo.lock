@@ -389,6 +389,7 @@ dependencies = [
  "fs4",
  "hex",
  "pelite",
+ "same-file",
  "serde",
  "serde_json",
  "sha2",
