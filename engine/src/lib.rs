@@ -1,4 +1,5 @@
 pub mod acquire;
+pub mod digest;
 pub mod error;
 pub mod events;
 pub mod games;

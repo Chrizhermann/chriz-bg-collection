@@ -114,26 +114,41 @@ pub enum EngineError {
         #[source]
         source: serde_json::Error,
     },
-    /// Canonical manifest content could not be serialized for hashing.
-    #[error("could not fingerprint manifest at {path}: {source}")]
-    ManifestFingerprint {
-        /// Root of the manifest being fingerprinted.
+    /// A create-once campaign already exists at the requested managed root.
+    #[error("campaign state already exists at {path}")]
+    SessionAlreadyExists {
+        /// Existing campaign state root.
         path: std::path::PathBuf,
-        /// Underlying JSON serialization error.
+    },
+    /// An append-only ledger violates its filename, sequence, hash, or event contract.
+    #[error("invalid campaign ledger at {path}: {message}")]
+    SessionLedger {
+        /// Ledger file or directory involved.
+        path: std::path::PathBuf,
+        /// Validation detail.
+        message: String,
+    },
+    /// Frozen campaign inputs differ from the identity supplied for resume.
+    #[error("resume identity mismatch for {field}: expected {expected}, found {found}")]
+    SessionIdentityMismatch {
+        /// Consequential identity field.
+        field: &'static str,
+        /// Frozen identity summary.
+        expected: String,
+        /// Resume identity summary.
+        found: String,
+    },
+    /// The system clock cannot provide a durable record timestamp.
+    #[error("system clock is earlier than the Unix epoch")]
+    SessionClock,
+    /// Canonical JSON could not be produced for a semantic digest.
+    #[error("could not digest {context}: {source}")]
+    CanonicalDigest {
+        /// Semantic object being digested.
+        context: &'static str,
+        /// Serialization failure.
         #[source]
         source: serde_json::Error,
-    },
-    /// A persisted session belongs to different manifest content.
-    #[error(
-        "resume with changed manifest is forbidden for {path}: expected fingerprint {expected}, found {found}; rebuild instead"
-    )]
-    ManifestFingerprintMismatch {
-        /// Path to the persisted session.
-        path: std::path::PathBuf,
-        /// Fingerprint of the current manifest.
-        expected: String,
-        /// Fingerprint recorded in the persisted session.
-        found: String,
     },
     /// Manifest validation produced findings; rendered one per line.
     #[error("{}", .0.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n"))]
