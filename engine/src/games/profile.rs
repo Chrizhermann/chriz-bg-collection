@@ -137,7 +137,8 @@ pub struct AllowedCleanVariant {
 }
 
 /// Validated deterministic collection of source profiles.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct GameProfiles {
     profiles: Vec<GameProfile>,
 }
