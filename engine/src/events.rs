@@ -8,6 +8,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum EngineEvent {
+    /// A frozen campaign has been locked and opened for new execution or resume.
+    CampaignStarted {
+        /// Stable managed-install identity.
+        install_id: String,
+        /// Whether an existing append-only campaign ledger was resumed.
+        resumed: bool,
+    },
     /// An install phase (see [`crate::manifest::Phase`]) has begun.
     PhaseStarted {
         /// Human-readable phase name.
@@ -54,6 +61,11 @@ pub enum EngineEvent {
         id: String,
         /// How the step ended.
         outcome: StepOutcome,
+    },
+    /// Every selected campaign step and its final receipt completed.
+    CampaignFinished {
+        /// Stable managed-install identity.
+        install_id: String,
     },
     /// A mod cannot be fetched automatically; the user has to download it.
     ManualDownloadNeeded {
@@ -112,7 +124,7 @@ impl EventSink for Box<dyn EventSink> {
     }
 }
 
-impl<T: EventSink + Sync> EventSink for Arc<T> {
+impl<T: EventSink + Sync + ?Sized> EventSink for Arc<T> {
     fn emit(&self, event: EngineEvent) {
         (**self).emit(event);
     }
@@ -129,6 +141,13 @@ impl ConsoleSink {
     /// Render `event` as the single line `ConsoleSink` prints for it (no newline).
     pub fn render(event: &EngineEvent) -> String {
         match event {
+            EngineEvent::CampaignStarted {
+                install_id,
+                resumed,
+            } => {
+                let action = if *resumed { "Resuming" } else { "Starting" };
+                format!("{action} campaign {install_id}")
+            }
             EngineEvent::PhaseStarted { name } => format!("== {name} =="),
             EngineEvent::StepStarted { id, label } => format!("-> [{id}] {label}"),
             EngineEvent::StepProgress { id, done, total } => format!("   [{id}] {done}/{total}"),
@@ -151,6 +170,9 @@ impl ConsoleSink {
             EngineEvent::StepFinished { id, outcome } => {
                 let outcome = format!("{outcome:?}").to_lowercase();
                 format!("<- [{id}] {outcome}")
+            }
+            EngineEvent::CampaignFinished { install_id } => {
+                format!("Campaign {install_id} complete")
             }
             EngineEvent::ManualDownloadNeeded {
                 mod_id,
@@ -217,6 +239,10 @@ mod tests {
     /// One of every [`EngineEvent`] variant, for exhaustive smoke tests.
     fn sample_events() -> Vec<EngineEvent> {
         vec![
+            EngineEvent::CampaignStarted {
+                install_id: "install-001".to_string(),
+                resumed: false,
+            },
             EngineEvent::PhaseStarted {
                 name: "bg1-pre-merge".to_string(),
             },
@@ -255,6 +281,9 @@ mod tests {
             EngineEvent::StepFinished {
                 id: "eet/2".to_string(),
                 outcome: StepOutcome::Skipped,
+            },
+            EngineEvent::CampaignFinished {
+                install_id: "install-001".to_string(),
             },
             EngineEvent::ManualDownloadNeeded {
                 mod_id: "bg1re".to_string(),

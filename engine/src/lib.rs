@@ -6,6 +6,7 @@ pub mod games;
 pub mod loader;
 pub mod lock;
 pub mod manifest;
+pub mod orchestrator;
 pub mod preflight;
 pub mod recipe_view;
 pub mod resolve;
