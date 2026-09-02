@@ -1,0 +1,86 @@
+schema = 1
+id = "gog-bg2ee-2.7.3-en-us"
+role = "bg2ee"
+storefront = "gog"
+locale = "en_US"
+executable = "Baldur.exe"
+product_version = "2.7.3.0"
+gog_game_ids = ["gog-bg2ee"]
+required_files = [
+  "Baldur.exe",
+  "chitin.key",
+  "dialog.tlk",
+  "lang/en_US/dialog.tlk",
+  "engine.lua",
+  "data/base.bif",
+]
+sod_files = []
+fingerprint_files = ["Baldur.exe", "data/base.bif"]
+
+[[inventory_surfaces]]
+path = "chitin.key"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "engine.lua"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "override"
+kind = "tree"
+
+[[inventory_surfaces]]
+path = "."
+kind = "matching"
+patterns = ["setup-*", "weidu*", "*.debug", "*.debug.log", "dlcmerger", "eet", "stratagems"]
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "setup-dlcmerger*"
+recursive = false
+message = "Stale DLC Merger files are present."
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "dlcmerger"
+recursive = false
+message = "Stale DLC Merger 1.7 residue is present."
+
+[[allowed_clean_variants]]
+id = "fixture-gog-bg2ee"
+
+[[allowed_clean_variants.fingerprints]]
+path = "Baldur.exe"
+sha256 = "2377336b961e3f2898e7dd872401ddb39d18bf996847741fc5f1f421483e821b"
+
+[[allowed_clean_variants.fingerprints]]
+path = "data/base.bif"
+sha256 = "a785f0f60393cb490d53854b714e0df92cd9e0941b0cf2b4977b06efeb9afd58"
+
+[[allowed_clean_variants.inventory]]
+path = "chitin.key"
+kind = "file"
+sha256 = "4c7bb6d4eb9d9d2fa31c824890e3706a12149827c31c473060bd8ed6de85b2ce"
+
+[[allowed_clean_variants.inventory]]
+path = "dialog.tlk"
+kind = "file"
+sha256 = "f3849f851f308b494022d84a51a5b61efbaed667b3928a907a0cf7d60dac019d"
+
+[[allowed_clean_variants.inventory]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+sha256 = "f3849f851f308b494022d84a51a5b61efbaed667b3928a907a0cf7d60dac019d"
+
+[[allowed_clean_variants.inventory]]
+path = "engine.lua"
+kind = "file"
+sha256 = "60927ccde17c9c4b2dffe253524ac4d39347668c2b6bac8327aa5725b6a12643"

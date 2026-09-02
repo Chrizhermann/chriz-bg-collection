@@ -53,7 +53,7 @@
     {
       "id": 8,
       "subject": "Task 8: Discover Steam/GOG games and fail closed on freshness",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [1]
     },
     {
