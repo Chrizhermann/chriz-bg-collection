@@ -149,7 +149,11 @@ fn prospective_target_identity(path: &Path) -> Result<PathBuf, LockError> {
             path: absolute.clone(),
             reason: "target could not be resolved below its existing ancestor".to_owned(),
         })?;
-    Ok(canonical.join(suffix))
+    if suffix.as_os_str().is_empty() {
+        Ok(canonical)
+    } else {
+        Ok(canonical.join(suffix))
+    }
 }
 
 fn target_identity_digest(target: &Path) -> String {

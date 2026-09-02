@@ -58,6 +58,21 @@ fn target_lock_canonicalizes_aliases_without_creating_the_target() {
 }
 
 #[test]
+fn target_lock_identity_is_stable_when_a_missing_target_is_created() {
+    let temp = tempfile::tempdir().unwrap();
+    let registry = temp.path().join("registry");
+    let target = temp.path().join("managed");
+    std::fs::create_dir(&registry).unwrap();
+
+    let first = TargetLock::try_acquire(&registry, &target).unwrap();
+    std::fs::create_dir(&target).unwrap();
+
+    assert_contended(TargetLock::try_acquire(&registry, &target).unwrap_err());
+    drop(first);
+    assert!(TargetLock::try_acquire(&registry, &target).is_ok());
+}
+
+#[test]
 fn cache_locks_are_exclusive_per_valid_digest() {
     let temp = tempfile::tempdir().unwrap();
     let cache = temp.path().join("cache");
