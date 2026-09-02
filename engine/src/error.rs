@@ -53,6 +53,36 @@ pub enum EngineError {
         /// Path to the second mod manifest declaring the id.
         second: std::path::PathBuf,
     },
+    /// Session JSON could not be serialized or parsed.
+    #[error("session JSON error in {path}: {source}")]
+    SessionJson {
+        /// Path to the session file being serialized or parsed.
+        path: std::path::PathBuf,
+        /// Underlying JSON error.
+        #[source]
+        source: serde_json::Error,
+    },
+    /// Canonical manifest content could not be serialized for hashing.
+    #[error("could not fingerprint manifest at {path}: {source}")]
+    ManifestFingerprint {
+        /// Root of the manifest being fingerprinted.
+        path: std::path::PathBuf,
+        /// Underlying JSON serialization error.
+        #[source]
+        source: serde_json::Error,
+    },
+    /// A persisted session belongs to different manifest content.
+    #[error(
+        "resume with changed manifest is forbidden for {path}: expected fingerprint {expected}, found {found}; rebuild instead"
+    )]
+    ManifestFingerprintMismatch {
+        /// Path to the persisted session.
+        path: std::path::PathBuf,
+        /// Fingerprint of the current manifest.
+        expected: String,
+        /// Fingerprint recorded in the persisted session.
+        found: String,
+    },
     /// Manifest validation produced findings; rendered one per line.
     #[error("{}", .0.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n"))]
     Validation(Vec<crate::validate::Finding>),
