@@ -5,7 +5,8 @@ use std::fmt;
 use std::path::{Component as PathComponent, Path};
 
 use crate::error::EngineError;
-use crate::manifest::{AcquisitionPolicy, GameRoot, Phase, SourceKind};
+use crate::manifest::{AcquisitionPolicy, GameRoot, InvocationMode, Phase, SourceKind};
+use crate::weidu::invocation::setup_executable_name;
 use crate::Manifest;
 
 /// Placeholder digest used only while authoring an artifact entry.
@@ -55,6 +56,8 @@ pub const RULE_REFERENCES: &str = "references";
 pub const RULE_BLOCKED_ARTIFACTS: &str = "blocked-artifacts";
 /// Rule requiring authored archive and TP2 paths to remain within staged roots.
 pub const RULE_PATHS: &str = "paths";
+/// Rule preventing setup-name aliases from selecting the same TP2 implicitly.
+pub const RULE_SETUP_NAME_AMBIGUITY: &str = "setup-name-ambiguity";
 /// Rule preventing one installer component from running twice against one game root.
 pub const RULE_COMPONENT_PLACEMENT: &str = "component-placement";
 /// Rule requiring acquisition policy and source kind to describe one coherent flow.
@@ -79,6 +82,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_references(manifest, &mut findings);
     check_blocked_artifacts(manifest, &mut findings);
     check_paths(manifest, &mut findings);
+    check_setup_name_ambiguity(manifest, &mut findings);
     check_component_ids(manifest, &mut findings);
     check_component_placement(manifest, &mut findings);
     check_acquisition_policy(manifest, &mut findings);
@@ -270,6 +274,29 @@ fn check_paths(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 format!(
                     "installer {id:?} TP2 path {:?} is not a traversal-free relative path",
                     mod_file.tp2
+                ),
+            );
+        }
+    }
+}
+
+fn check_setup_name_ambiguity(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    let mut seen: BTreeMap<String, &str> = BTreeMap::new();
+    for (id, mod_file) in &manifest.mods {
+        if mod_file.invocation_mode != InvocationMode::SetupName {
+            continue;
+        }
+        let Ok(executable) = setup_executable_name(&mod_file.tp2) else {
+            // The path rule reports malformed TP2 paths independently.
+            continue;
+        };
+        let key = executable.to_ascii_lowercase();
+        if let Some(first) = seen.insert(key, id) {
+            error(
+                findings,
+                RULE_SETUP_NAME_AMBIGUITY,
+                format!(
+                    "installers {first:?} and {id:?} both map to setup executable {executable:?}"
                 ),
             );
         }

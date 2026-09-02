@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
-use bg_engine::manifest::{AcquisitionPolicy, Component, Phase, Run, SourceKind};
+use bg_engine::manifest::{AcquisitionPolicy, Component, InvocationMode, Phase, Run, SourceKind};
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
 
@@ -70,6 +70,21 @@ fn installer_must_declare_at_least_one_component() {
     let findings = validate(&manifest);
 
     assert_has_error(&findings, "nonempty");
+}
+
+#[test]
+fn setup_name_aliases_are_rejected_during_recipe_validation() {
+    let mut manifest = good();
+    let original = manifest.mods.get_mut("eefixpack").unwrap();
+    original.invocation_mode = InvocationMode::SetupName;
+    let mut alias = original.clone();
+    alias.id = "eefixpack-alias".to_owned();
+    alias.tp2 = "other/setup-EE_Fixpack.tp2".to_owned();
+    manifest.mods.insert(alias.id.clone(), alias);
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "setup-name-ambiguity");
 }
 
 #[test]
