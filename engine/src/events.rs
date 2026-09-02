@@ -30,14 +30,23 @@ pub enum EngineEvent {
         /// Total units of work expected (same range rule as `done`).
         total: u64,
     },
-    /// One line of output captured from a child process.
+    /// One bounded display chunk captured from a child process.
     ConsoleLine {
         /// Step id the line belongs to.
         step_id: String,
         /// Which of the child's streams the line came from.
         stream: Stream,
-        /// The line itself, without its trailing newline.
+        /// Lossy display text. It may contain newlines; raw bytes live in the attempt log.
         line: String,
+    },
+    /// A running step needs a user decision but has not failed or been terminated.
+    AttentionRequired {
+        /// Step whose child process is still alive and awaiting a decision.
+        step_id: String,
+        /// Human-readable explanation of why attention is needed.
+        reason: String,
+        /// Bounded lossy display tail; the attempt log retains the original bytes.
+        last_output: String,
     },
     /// A step ended; `outcome` says how.
     StepFinished {
@@ -134,6 +143,11 @@ impl ConsoleSink {
                 };
                 format!("{prefix}[{step_id}] {line}")
             }
+            EngineEvent::AttentionRequired {
+                step_id,
+                reason,
+                last_output,
+            } => format!("?? [{step_id}] {reason} Last output: {last_output}"),
             EngineEvent::StepFinished { id, outcome } => {
                 let outcome = format!("{outcome:?}").to_lowercase();
                 format!("<- [{id}] {outcome}")
@@ -224,6 +238,11 @@ mod tests {
                 step_id: "eet/0".to_string(),
                 stream: Stream::Stderr,
                 line: "WARNING: something".to_string(),
+            },
+            EngineEvent::AttentionRequired {
+                step_id: "eet/0".to_string(),
+                reason: "WeiDU has gone quiet".to_string(),
+                last_output: "Choose an option".to_string(),
             },
             EngineEvent::StepFinished {
                 id: "eet/0".to_string(),
