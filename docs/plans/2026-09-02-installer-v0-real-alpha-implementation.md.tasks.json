@@ -1,6 +1,6 @@
 {
   "planPath": "docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md",
-  "lastUpdated": "2026-09-02T23:46:16+09:00",
+  "lastUpdated": "2026-09-03T00:14:00+09:00",
   "tasks": [
     {
       "id": 0,
@@ -17,7 +17,7 @@
     {
       "id": 2,
       "subject": "Task 2: Add additive curation, presets, typed inputs, and UI projections",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [1]
     },
     {
