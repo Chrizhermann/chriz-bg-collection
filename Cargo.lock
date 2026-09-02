@@ -400,7 +400,7 @@ dependencies = [
  "url",
  "walkdir",
  "windows-sys 0.61.2",
- "winreg",
+ "winreg 0.55.0",
  "zip",
 ]
 

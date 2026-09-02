@@ -1,0 +1,2 @@
+# Game fixture payloads model byte-exact binary resources; never rewrite their line endings.
+engine/tests/fixtures/games/content/** binary
