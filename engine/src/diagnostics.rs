@@ -6,6 +6,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use serde::Deserialize;
 use thiserror::Error;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
@@ -83,6 +84,14 @@ pub enum DiagnosticsError {
         /// ZIP library detail.
         message: String,
     },
+    /// Attempt receipt JSON could not be read as an evidence link.
+    #[error("could not parse attempt receipt at {path}: {message}")]
+    ReceiptJson {
+        /// Attempt receipt path.
+        path: PathBuf,
+        /// JSON parsing detail.
+        message: String,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -90,6 +99,12 @@ struct SelectedEntry {
     source: PathBuf,
     archive_name: String,
     binary: bool,
+}
+
+#[derive(Deserialize)]
+struct ReceiptEvidenceLink {
+    #[serde(default)]
+    evidence_attempt_id: Option<String>,
 }
 
 /// Export receipt, ledger, frozen recipe, and attempt logs through a fixed allowlist.
@@ -149,12 +164,15 @@ fn select_entries(
     let mut selected = BTreeMap::<String, SelectedEntry>::new();
     let attempt_root = state_root.join("attempts").join(attempt_id);
     validate_direct_directory(&attempt_root)?;
+    let receipt_path = attempt_root.join("receipt.json");
     add_required(
         &mut selected,
-        attempt_root.join("receipt.json"),
+        receipt_path.clone(),
         "receipt/attempt-receipt.json",
         false,
     )?;
+    let evidence_attempt_id = receipt_evidence_attempt_id(&receipt_path, attempt_id)?;
+    validate_identifier(&evidence_attempt_id, &receipt_path)?;
     add_optional(
         &mut selected,
         state_root.join("install-receipt.json"),
@@ -203,13 +221,33 @@ fn select_entries(
         return Err(DiagnosticsError::MissingEvidence { path: ledger_root });
     }
 
-    let steps_root = attempt_root.join("steps");
+    let evidence_attempt_root = state_root.join("attempts").join(evidence_attempt_id);
+    validate_direct_directory(&evidence_attempt_root)?;
+    let steps_root = evidence_attempt_root.join("steps");
     if steps_root.exists() {
         validate_direct_directory(&steps_root)?;
         add_step_evidence(&mut selected, &steps_root)?;
     }
 
     Ok(selected.into_values().collect())
+}
+
+fn receipt_evidence_attempt_id(
+    receipt_path: &Path,
+    fallback: &str,
+) -> Result<String, DiagnosticsError> {
+    let bytes = fs::read(receipt_path).map_err(|source| DiagnosticsError::Io {
+        path: receipt_path.to_path_buf(),
+        source,
+    })?;
+    let link: ReceiptEvidenceLink =
+        serde_json::from_slice(&bytes).map_err(|source| DiagnosticsError::ReceiptJson {
+            path: receipt_path.to_path_buf(),
+            message: source.to_string(),
+        })?;
+    Ok(link
+        .evidence_attempt_id
+        .unwrap_or_else(|| fallback.to_owned()))
 }
 
 fn add_required(
@@ -244,7 +282,8 @@ fn source_path(error: &DiagnosticsError) -> PathBuf {
         | DiagnosticsError::UnsafePath { path, .. }
         | DiagnosticsError::MissingEvidence { path }
         | DiagnosticsError::OutputExists { path }
-        | DiagnosticsError::Zip { path, .. } => path.clone(),
+        | DiagnosticsError::Zip { path, .. }
+        | DiagnosticsError::ReceiptJson { path, .. } => path.clone(),
     }
 }
 

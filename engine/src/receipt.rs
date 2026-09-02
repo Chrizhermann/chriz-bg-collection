@@ -250,6 +250,8 @@ pub struct InstallReceipt {
     pub install_id: String,
     /// Stable attempt id naming the receipt directory.
     pub attempt_id: String,
+    /// Campaign attempt directory containing the Task 13 step evidence for this outcome.
+    pub evidence_attempt_id: String,
     /// Canonical root of the managed installation.
     pub managed_root: PathBuf,
     /// Frozen managed BG1 pre-merge staging root.
@@ -457,6 +459,7 @@ impl ManagedReceiptWriter {
             schema_version: RECEIPT_SCHEMA_VERSION,
             install_id: draft.install_id.clone(),
             attempt_id: draft.attempt_id.clone(),
+            evidence_attempt_id: draft.created.attempt_id.clone(),
             managed_root: draft.created.managed_root.clone(),
             staged_bg1: draft.created.staged_bg1.clone(),
             staged_bg2: draft.created.staged_bg2.clone(),
@@ -748,6 +751,11 @@ impl ReceiptStore {
             )));
         }
         validate_identifier(&receipt.attempt_id, "attempt id", &self.managed_root)?;
+        validate_identifier(
+            &receipt.evidence_attempt_id,
+            "evidence attempt id",
+            &self.managed_root,
+        )?;
         if receipt.completed_at_millis < receipt.started_at_millis {
             return Err(ReceiptError::InvalidReceipt(
                 "completion timestamp precedes start timestamp".to_owned(),

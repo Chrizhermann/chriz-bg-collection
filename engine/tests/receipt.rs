@@ -53,6 +53,7 @@ fn success_receipt(root: &Path) -> InstallReceipt {
         schema_version: RECEIPT_SCHEMA_VERSION,
         install_id: "install-001".to_owned(),
         attempt_id: "attempt-001".to_owned(),
+        evidence_attempt_id: "attempt-001".to_owned(),
         managed_root: root.to_path_buf(),
         staged_bg1: root.join("bg1"),
         staged_bg2: root.join("game"),
@@ -172,6 +173,7 @@ fn publishes_a_complete_success_receipt_create_once_in_both_locations() {
     let stored: InstallReceipt =
         serde_json::from_slice(&std::fs::read(&published.attempt_receipt).unwrap()).unwrap();
     assert_eq!(stored, receipt);
+    assert_eq!(stored.evidence_attempt_id, "attempt-001");
     assert_eq!(stored.managed_root, root);
     assert_eq!(stored.staged_bg1, root.join("bg1"));
     assert_eq!(stored.staged_bg2, root.join("game"));

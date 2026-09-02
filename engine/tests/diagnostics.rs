@@ -41,7 +41,12 @@ fn fixture(include_success: bool) -> Fixture {
     write(
         &managed,
         ".chriz/attempts/attempt-001/receipt.json",
-        format!(r#"{{"outcome":"failed","path":"{raw_home}","token":"secret-token"}}"#).as_bytes(),
+        &serde_json::to_vec(&serde_json::json!({
+            "outcome": "failed",
+            "path": raw_home.as_ref(),
+            "token": "secret-token"
+        }))
+        .unwrap(),
     );
     write(
         &managed,
@@ -185,6 +190,32 @@ fn failure_bundle_does_not_require_a_success_receipt_and_never_overwrites_output
         .collect::<Vec<_>>();
     assert!(!names.contains(&"receipt/install-receipt.json".to_owned()));
     assert!(names.contains(&"receipt/attempt-receipt.json".to_owned()));
+}
+
+#[test]
+fn terminal_failure_bundle_follows_its_receipted_step_evidence_attempt() {
+    let fixture = fixture(false);
+    let terminal_id = "terminal-0000000009-aaaaaaaaaaaaaaaa";
+    write(
+        &fixture.managed,
+        &format!(".chriz/attempts/{terminal_id}/receipt.json"),
+        br#"{"attempt_id":"terminal-0000000009-aaaaaaaaaaaaaaaa","evidence_attempt_id":"attempt-001","outcome":{"status":"failed"}}"#,
+    );
+
+    let result = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: terminal_id.to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+
+    let names = zip_entries(&result.path)
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect::<Vec<_>>();
+    assert!(names
+        .contains(&"logs/steps/0001-0123456789abcdef/attempt-0001/process-output.log".to_owned()));
 }
 
 #[test]
