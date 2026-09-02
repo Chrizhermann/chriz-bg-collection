@@ -29,6 +29,9 @@ or a file-specific UI/dependency note, not in the `Decision` value.
 
 | Mod | Listed | ✓ count | File |
 |---|---|---|---|
+| DLCMERGER | 4 | 1 | [DLCMERGER.md](DLCMERGER.md) |
+| BG1UB | 35 | 16 | [BG1UB.md](BG1UB.md) |
+| BG1NPC | 49 | 9 | [BG1NPC.md](BG1NPC.md) |
 | EEFIXPACK | 3 | 2 | [EEFIXPACK.md](EEFIXPACK.md) |
 | EET | 2 | 2 | [EET.md](EET.md) |
 | EEEX | 9 | 8 | [EEEX.md](EEEX.md) |
