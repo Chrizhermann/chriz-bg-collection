@@ -1,3 +1,4 @@
+pub mod acquire;
 pub mod error;
 pub mod events;
 pub mod loader;
