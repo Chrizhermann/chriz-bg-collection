@@ -141,6 +141,60 @@ pub enum EngineError {
     /// A selection contains an unsupported platform or unknown toggle or choice id.
     #[error("invalid selection: {0}")]
     InvalidSelection(String),
+    /// A source and managed destination overlap or otherwise alias one another.
+    #[error("unsafe staging relationship between {source_root} and {target}: {reason}")]
+    UnsafeStagingRelationship {
+        /// Read-only source path.
+        source_root: std::path::PathBuf,
+        /// Proposed managed destination path.
+        target: std::path::PathBuf,
+        /// Explanation of the containment or aliasing violation.
+        reason: String,
+    },
+    /// Staging encountered a link, reparse point, special file, or unexpected entry.
+    #[error("unsafe staging entry {path}: {reason}")]
+    UnsafeStagingEntry {
+        /// Entry rejected before it could be followed or overwritten.
+        path: std::path::PathBuf,
+        /// Explanation of the rejected entry kind or ownership conflict.
+        reason: String,
+    },
+    /// Source bytes changed while a regular-file stage was in progress.
+    #[error(
+        "source {source_root} changed during staging: expected fingerprint {expected}, found {found}"
+    )]
+    StagingSourceChanged {
+        /// Canonical source root.
+        source_root: std::path::PathBuf,
+        /// Fingerprint captured before copying.
+        expected: String,
+        /// Fingerprint observed later, or a description when a complete rescan failed.
+        found: String,
+    },
+    /// A completed copy did not reproduce the source tree exactly.
+    #[error("staging verification failed at {path}: {reason}")]
+    StagingVerification {
+        /// Managed path whose content or identity was unexpected.
+        path: std::path::PathBuf,
+        /// Explanation of the verification failure.
+        reason: String,
+    },
+    /// A derived save directory already belongs to something other than this install.
+    #[error("save root collision at {path}: {reason}")]
+    SaveRootCollision {
+        /// Exact Documents child that cannot safely be claimed.
+        path: std::path::PathBuf,
+        /// Explanation of the ownership mismatch.
+        reason: String,
+    },
+    /// A game's `engine.lua` cannot safely receive or prove the unique save identity.
+    #[error("game identity error at {path}: {reason}")]
+    GameIdentity {
+        /// `engine.lua` or the identity input that failed validation.
+        path: std::path::PathBuf,
+        /// Explanation of the validation failure.
+        reason: String,
+    },
 }
 
 /// Convenience alias for engine results.

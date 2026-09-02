@@ -7,6 +7,7 @@ pub mod manifest;
 pub mod recipe_view;
 pub mod resolve;
 pub mod session;
+pub mod stage;
 pub mod validate;
 pub mod weidu;
 
