@@ -27,6 +27,13 @@ and `docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md` plus its s
 release milestone. The new plan explicitly selects `ureq`'s `rustls`,
 `platform-verifier`, and `win-system-proxy` features.
 
+**Current RC status (2026-09-03):** `C:\BG-EET-RC-20260902` has been played for an
+extended session without a crash, and BuffBot works. It is not suitable as the public
+alpha: Item Randomiser v8.1's physical CRE-item removal left invalid inventory offsets
+and references in 95 post-Randomiser creature resources, which can duplicate or omit loot
+and equipment. There is no evidence of a crash or save-file corruption. Released v8.1.1
+fixes the source defect; a clean rebuilt RC, new game, and Tarnesh loot smoke remain open.
+
 ## Engine Phase 1 baseline
 
 The branch includes the `feat/engine-phase1` lineage through Task 6. Historical plan =

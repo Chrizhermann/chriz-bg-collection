@@ -22,7 +22,8 @@ remains unavailable or excluded.
   nine-component all-on preset.
 - [ ] [Hidden Gameplay Options](HIDDENGAMEPLAYOPTIONS.md): update the manifest/pin list
   from the old v5.0/v5.1 state to the reviewed v5.2 target.
-- [ ] [Randomiser](RANDOMISER.md): repin upstream v7 to the maintained fork release v8.1.
+- [x] [Randomiser](RANDOMISER.md): immutable maintained-fork release v8.1.1 is pinned at
+  commit `f4a9dfb1281269629e4a6fcedb6a064147dfde32` with its release-asset SHA-256 and size.
 - [ ] [Artisan's Kitpack](ARTISANSKITPACK.md): replace all three stale upstream
   manifest entries with the released `chriz-v1.2.0` fork artifact at commit
   `f623045f58cb5c84ebb438f9ce32b1741405c637`. Publish a later fork release containing
@@ -49,7 +50,7 @@ remains unavailable or excluded.
   unmodified `401` cannot install on the curated stack.
 - [ ] Resolve every “master SHA at authoring” and own-repository row in
   [the 2.7 pin list](../../pin-list-2.7.md) to an immutable SHA or release. Synchronize its
-  stale pending conclusions for HGO, Randomiser, Spell Revisions, HQ soundclips, EEex,
+  stale pending conclusions for HGO, Spell Revisions, HQ soundclips, EEex,
   EE Fixpack, and EET with the completed catalog reviews.
 - [ ] [Evandra](EVANDRA.md): define the approved user-provided/manual-archive acquisition
   path; the page-gated archive may not be rehosted.
@@ -74,9 +75,10 @@ remains unavailable or excluded.
 - [ ] Install [Spell Revisions](SPELL_REV.md) `60` after every NPC/class assignment.
   Enforce the documented conflicts with SCS `4240`, Artisan `8101/8102`, Artisan NPC
   `5102/10004`, and Bardic Wonders `1006`; migrate `SR_SUBSPELL_FIX` into maintained code.
-- [ ] Validate [Randomiser](RANDOMISER.md) `1100` after `500`–`570` and after SCS, including
-  the EEex-v1.2 legacy-BCS fallback, numeric input for `510`, the `570` conflict, and
-  disabling `10300` when SCS `8040` is selected.
+- [ ] Validate [Randomiser](RANDOMISER.md) v8.1.1 `1100` after `500`–`570` and after SCS
+  on a clean rebuilt collection and new game. Include the Tarnesh loot smoke, EEex-v1.2
+  legacy-BCS fallback, numeric input for `510`, the `570` conflict, and disabling `10300`
+  when SCS `8040` is selected.
 - [ ] Validate [Hidden Gameplay Options](HIDDENGAMEPLAYOPTIONS.md) late ordering and the
   special handling for `38`, `40`, `200/201`, key-binding choices, and GUI exclusions.
 - [ ] Validate [Tweaks Anthology](CDTWEAKS.md) `2312` against the final SR/IWDification/SCS
