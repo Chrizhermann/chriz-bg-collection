@@ -4,20 +4,22 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{EngineError, Result};
-use crate::manifest::{GameRoot, Phase, RunArg};
+use crate::error::Result;
+use crate::manifest::{GameRoot, InputValue, Phase, RunArg};
+use crate::recipe_view::PromptScript;
 use crate::Manifest;
 
 /// User overrides applied to a recipe.
 ///
-/// Recipe-v2 has no component selectors yet. The platform remains explicit so
+/// Values are keyed by stable feature ids or `feature-id/input-id`; component
+/// numbers never appear in user selections. The platform remains explicit so
 /// unsupported targets are rejected rather than silently filtering runs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Selection {
     /// Requested target platform; recipe-v2 alpha supports Windows only.
     pub platform: String,
-    /// Reserved semantic choices, empty until curated selection is introduced.
+    /// Semantic feature states (`on`/`off`) and typed input values.
     #[serde(default)]
     pub choices: BTreeMap<String, String>,
 }
@@ -29,6 +31,25 @@ impl Selection {
             platform: platform.to_owned(),
             choices: BTreeMap::new(),
         }
+    }
+
+    /// Sets one feature by semantic id.
+    pub fn set_feature(&mut self, feature_id: &str, selected: bool) {
+        self.choices.insert(
+            feature_id.to_owned(),
+            if selected { "on" } else { "off" }.to_owned(),
+        );
+    }
+
+    /// Sets one typed feature input by semantic ids.
+    pub fn set_input(&mut self, feature_id: &str, input_id: &str, value: InputValue) {
+        let value = match value {
+            InputValue::Boolean(value) => format!("boolean:{value}"),
+            InputValue::Choice(value) => format!("choice:{value}"),
+            InputValue::Integer(value) => format!("integer:{value}"),
+        };
+        self.choices
+            .insert(format!("{feature_id}/{input_id}"), value);
     }
 }
 
@@ -52,6 +73,8 @@ pub struct PlannedRun {
     pub artifact_id: String,
     /// Artifact containing the WeiDU executable.
     pub weidu_artifact_id: String,
+    /// Output-gated prompts grouped by their selected component.
+    pub prompt_scripts: Vec<PromptScript>,
 }
 
 /// Fully resolved install work in recipe order.
@@ -62,45 +85,20 @@ pub struct InstallPlan {
     pub runs: Vec<PlannedRun>,
 }
 
+impl InstallPlan {
+    /// Returns the exact ordered components for `run_id` when that run resolves.
+    pub fn components_for(&self, run_id: &str) -> Option<&[u32]> {
+        self.runs
+            .iter()
+            .find(|run| run.run_id == run_id)
+            .map(|run| run.components.as_slice())
+    }
+}
+
 /// Resolves a validated recipe and semantic selection into an install plan.
 ///
 /// Recipe-v2 alpha is Windows-only. Other target values fail explicitly; no
 /// installer run is removed because of platform metadata.
 pub fn resolve(manifest: &Manifest, selection: &Selection) -> Result<InstallPlan> {
-    crate::validate::check(manifest)?;
-
-    if selection.platform != "windows" {
-        return Err(EngineError::InvalidSelection(format!(
-            "unsupported platform {:?}; recipe-v2 alpha supports windows",
-            selection.platform
-        )));
-    }
-
-    if !selection.choices.is_empty() {
-        return Err(EngineError::InvalidSelection(
-            "recipe-v2 does not define semantic choices yet".to_owned(),
-        ));
-    }
-
-    let mut runs = Vec::with_capacity(manifest.collection.runs.len());
-    for run in &manifest.collection.runs {
-        let Some(mod_file) = manifest.mods.get(&run.mod_id) else {
-            return Err(EngineError::InvalidSelection(format!(
-                "run {:?} references unknown installer {:?}",
-                run.run_id, run.mod_id
-            )));
-        };
-        runs.push(PlannedRun {
-            run_id: run.run_id.clone(),
-            mod_id: run.mod_id.clone(),
-            target: run.phase.game_root(),
-            phase: run.phase,
-            components: run.components.clone(),
-            args: run.args.clone(),
-            artifact_id: mod_file.artifact_id.clone(),
-            weidu_artifact_id: mod_file.weidu_artifact_id.clone(),
-        });
-    }
-
-    Ok(InstallPlan { runs })
+    Ok(crate::recipe_view::evaluate(manifest, selection)?.plan)
 }
