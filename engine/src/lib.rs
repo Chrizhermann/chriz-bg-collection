@@ -1,4 +1,5 @@
 pub mod acquire;
+pub mod diagnostics;
 pub mod digest;
 pub mod error;
 pub mod events;
@@ -8,8 +9,8 @@ pub mod lock;
 pub mod manifest;
 pub mod orchestrator;
 pub mod preflight;
-pub mod recipe_view;
 pub mod receipt;
+pub mod recipe_view;
 pub mod resolve;
 pub mod session;
 pub mod stage;
