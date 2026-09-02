@@ -1,5 +1,7 @@
 //! Executable recipe schema v2.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 /// Game installation root targeted by an installer run.
@@ -158,6 +160,9 @@ pub struct Component {
     /// Legacy scripted stdin, retained until typed prompt steps replace it.
     #[serde(default)]
     pub stdin: Option<String>,
+    /// Ordered output-gated prompt answers for this component.
+    #[serde(default)]
+    pub prompts: Vec<PromptStep>,
 }
 
 /// A single installer definition from `mods/<id>.toml`.
@@ -208,6 +213,193 @@ pub struct ComponentRef {
     pub component: u32,
 }
 
+/// Curator decision controlling player visibility and default selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Decision {
+    /// Omit the feature entirely from selection and execution.
+    Excluded,
+    /// Expose the feature unchecked by default.
+    Optional,
+    /// Expose the feature checked by default.
+    Default,
+    /// Include the feature whenever its parent is active, without an independent control.
+    Mandatory,
+}
+
+/// Release readiness attached to one curated feature.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Readiness {
+    /// The feature is ready for the selected recipe channel.
+    Ready,
+    /// The feature may resolve but must be labeled experimental.
+    Experimental,
+    /// The feature is documented but cannot resolve.
+    Blocked,
+}
+
+/// A directional compatibility rule that makes its owning feature unavailable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Conflict {
+    /// Semantic id of the feature whose effective selection triggers the conflict.
+    pub feature_id: String,
+    /// Authored player-facing explanation.
+    pub reason: String,
+}
+
+/// One selectable value for a choice input.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InputOption {
+    /// Stable semantic option id stored in selections and receipts.
+    pub id: String,
+    /// Player-facing option title.
+    pub title: String,
+    /// Exact answer text emitted when a prompt references this option.
+    pub answer: String,
+}
+
+/// Typed configuration accepted by a curated feature.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
+pub enum InputSpec {
+    /// A true/false setting.
+    Boolean {
+        /// Stable input id within the feature.
+        id: String,
+        /// Initial value.
+        default: bool,
+    },
+    /// A single choice from authored semantic options.
+    Choice {
+        /// Stable input id within the feature.
+        id: String,
+        /// Initial option id, including explicit `none` for optional-only groups.
+        default: String,
+        /// Available options in player-facing order.
+        options: Vec<InputOption>,
+    },
+    /// A bounded whole-number setting.
+    Integer {
+        /// Stable input id within the feature.
+        id: String,
+        /// Initial value.
+        default: i64,
+        /// Inclusive minimum value.
+        min: i64,
+        /// Inclusive maximum value.
+        max: i64,
+    },
+}
+
+impl InputSpec {
+    /// Returns the stable id of this input.
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Boolean { id, .. } | Self::Choice { id, .. } | Self::Integer { id, .. } => id,
+        }
+    }
+
+    /// Returns the authored default as a typed value.
+    pub fn default_value(&self) -> InputValue {
+        match self {
+            Self::Boolean { default, .. } => InputValue::Boolean(*default),
+            Self::Choice { default, .. } => InputValue::Choice(default.clone()),
+            Self::Integer { default, .. } => InputValue::Integer(*default),
+        }
+    }
+}
+
+/// A validated value for one feature input.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "kebab-case",
+    deny_unknown_fields
+)]
+pub enum InputValue {
+    /// A true/false value.
+    Boolean(bool),
+    /// A semantic option id.
+    Choice(String),
+    /// A whole-number value.
+    Integer(i64),
+}
+
+/// Semantic address of one input owned by one feature.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureInputRef {
+    /// Stable owning feature id.
+    pub feature_id: String,
+    /// Stable input id within that feature.
+    pub input_id: String,
+}
+
+/// Typed source of one prompt response.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "kebab-case",
+    deny_unknown_fields
+)]
+pub enum PromptAnswer {
+    /// A typed literal authored directly on the component.
+    Literal(InputValue),
+    /// A reference resolved from one validated feature input.
+    Input(FeatureInputRef),
+}
+
+/// One output-gated prompt response, retained as an individual step.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PromptStep {
+    /// Output text that must be observed before sending the answer.
+    pub expected_output: String,
+    /// Typed literal or feature-input reference providing the answer.
+    pub answer: PromptAnswer,
+}
+
+/// One player-facing semantic feature and its exact component expansion.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Feature {
+    /// Stable selection identity.
+    pub id: String,
+    /// Player-facing title.
+    pub title: String,
+    /// Player-facing description.
+    pub description: String,
+    /// Player-facing category id; first occurrence defines category order.
+    pub category: String,
+    /// Curated visibility/default decision.
+    pub decision: Decision,
+    /// Release readiness.
+    pub readiness: Readiness,
+    /// Authored reason shown when readiness is blocked.
+    #[serde(default)]
+    pub unavailable_reason: Option<String>,
+    /// Optional parent feature whose effective state gates this feature.
+    #[serde(default)]
+    pub parent: Option<String>,
+    /// Exact component ownership in authored recipe runs.
+    #[serde(default)]
+    pub components: Vec<ComponentRef>,
+    /// Other features that must be effective first.
+    #[serde(default)]
+    pub requires: Vec<String>,
+    /// Directional compatibility rules that disable this feature.
+    #[serde(default)]
+    pub conflicts: Vec<Conflict>,
+    /// Typed configuration owned by this feature.
+    #[serde(default)]
+    pub inputs: Vec<InputSpec>,
+}
+
 /// Minimal preset metadata loaded from `presets/<id>.toml`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -216,6 +408,9 @@ pub struct PresetFile {
     pub id: String,
     /// User-facing preset name.
     pub name: String,
+    /// Semantic feature and input values, using the same keys as [`crate::resolve::Selection`].
+    #[serde(default)]
+    pub selections: BTreeMap<String, String>,
 }
 
 /// Collection-level executable recipe from `collection.toml`.
@@ -228,4 +423,7 @@ pub struct Collection {
     pub game_build: String,
     /// Explicit ordered installer invocations.
     pub runs: Vec<Run>,
+    /// Player-facing semantic features in authored display order.
+    #[serde(default)]
+    pub features: Vec<Feature>,
 }

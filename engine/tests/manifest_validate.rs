@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
-use bg_engine::manifest::{AcquisitionPolicy, Component, InvocationMode, Phase, Run, SourceKind};
+use bg_engine::manifest::{
+    AcquisitionPolicy, Component, ComponentRef, Conflict, Decision, Feature, FeatureInputRef,
+    InputOption, InputSpec, InvocationMode, Phase, PromptAnswer, PromptStep, Readiness, Run,
+    SourceKind,
+};
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
 
@@ -17,6 +21,23 @@ fn run(run_id: &str, phase: Phase, components: &[u32]) -> Run {
         phase,
         components: components.to_vec(),
         args: Vec::new(),
+    }
+}
+
+fn feature(id: &str, decision: Decision) -> Feature {
+    Feature {
+        id: id.to_owned(),
+        title: id.to_owned(),
+        description: format!("Description for {id}"),
+        category: "test".to_owned(),
+        decision,
+        readiness: Readiness::Ready,
+        unavailable_reason: None,
+        parent: None,
+        components: Vec::new(),
+        requires: Vec::new(),
+        conflicts: Vec::new(),
+        inputs: Vec::new(),
     }
 }
 
@@ -310,6 +331,7 @@ fn finalization_then_explicit_tail_is_valid() {
             id,
             name: format!("Synthetic component {id}"),
             stdin: None,
+            prompts: Vec::new(),
         }));
     manifest.collection.runs = vec![
         run("eet-init", Phase::EetInitialization, &[0]),
@@ -335,6 +357,7 @@ fn duplicate_installer_component_ids_remain_invalid() {
             id: 0,
             name: "Core again".to_owned(),
             stdin: None,
+            prompts: Vec::new(),
         });
 
     let findings = validate(&manifest);
@@ -547,6 +570,139 @@ fn findings_have_exact_stable_rule_order() {
             "stdin-newline",
         ]
     );
+}
+
+#[test]
+fn feature_parents_and_requirements_must_exist() {
+    let mut manifest = good();
+    let mut child = feature("child", Decision::Optional);
+    child.parent = Some("missing-parent".to_owned());
+    child.requires.push("missing-requirement".to_owned());
+    manifest.collection.features.push(child);
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-references");
+}
+
+#[test]
+fn feature_parent_and_requirement_cycles_are_rejected() {
+    let mut manifest = good();
+    let mut first = feature("first", Decision::Default);
+    first.parent = Some("second".to_owned());
+    let mut second = feature("second", Decision::Mandatory);
+    second.requires.push("first".to_owned());
+    manifest.collection.features = vec![first, second];
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-cycles");
+}
+
+#[test]
+fn directly_conflicting_default_features_are_rejected() {
+    let mut manifest = good();
+    let mut first = feature("first", Decision::Default);
+    first.conflicts.push(Conflict {
+        feature_id: "second".to_owned(),
+        reason: "Choose one default.".to_owned(),
+    });
+    manifest.collection.features = vec![first, feature("second", Decision::Default)];
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-default-conflicts");
+}
+
+#[test]
+fn one_run_component_has_exactly_one_feature_owner() {
+    let mut manifest = good();
+    let owned = ComponentRef {
+        run_id: "eefixpack-bg1".to_owned(),
+        component: 0,
+    };
+    let mut first = feature("first", Decision::Default);
+    first.components.push(owned.clone());
+    let mut second = feature("second", Decision::Optional);
+    second.components.push(owned);
+    manifest.collection.features = vec![first, second];
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-component-ownership");
+}
+
+#[test]
+fn feature_components_must_reference_declared_run_components() {
+    let mut manifest = good();
+    let mut selected = feature("selected", Decision::Default);
+    selected.components.push(ComponentRef {
+        run_id: "missing-run".to_owned(),
+        component: 999,
+    });
+    manifest.collection.features.push(selected);
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-references");
+}
+
+#[test]
+fn input_defaults_and_bounds_are_validated() {
+    let mut manifest = good();
+    let mut configured = feature("configured", Decision::Default);
+    configured.inputs = vec![
+        InputSpec::Choice {
+            id: "choice".to_owned(),
+            default: "missing".to_owned(),
+            options: vec![InputOption {
+                id: "none".to_owned(),
+                title: "None".to_owned(),
+                answer: String::new(),
+            }],
+        },
+        InputSpec::Integer {
+            id: "count".to_owned(),
+            default: 11,
+            min: 1,
+            max: 10,
+        },
+    ];
+    manifest.collection.features.push(configured);
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-inputs");
+}
+
+#[test]
+fn prompt_input_references_must_name_a_declared_feature_input() {
+    let mut manifest = good();
+    manifest.mods.get_mut("eefixpack").unwrap().components[0]
+        .prompts
+        .push(PromptStep {
+            expected_output: "Choose".to_owned(),
+            answer: PromptAnswer::Input(FeatureInputRef {
+                feature_id: "missing-feature".to_owned(),
+                input_id: "missing-input".to_owned(),
+            }),
+        });
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "prompt-input-references");
+}
+
+#[test]
+fn blocked_visible_features_require_an_authored_reason() {
+    let mut manifest = good();
+    let mut blocked = feature("blocked", Decision::Default);
+    blocked.readiness = Readiness::Blocked;
+    manifest.collection.features.push(blocked);
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-readiness");
 }
 
 #[test]

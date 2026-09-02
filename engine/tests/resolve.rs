@@ -1,13 +1,44 @@
 use std::path::PathBuf;
 
 use bg_engine::error::{EngineError, Result};
-use bg_engine::manifest::{AcquisitionPolicy, GameRoot, Phase, RunArg};
+use bg_engine::manifest::{
+    AcquisitionPolicy, ComponentRef, Decision, Feature, GameRoot, Phase, Readiness, RunArg,
+};
 use bg_engine::resolve::{resolve, InstallPlan, Selection};
 use bg_engine::Manifest;
 
 fn fixture() -> Manifest {
-    Manifest::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest"))
-        .unwrap()
+    let mut manifest =
+        Manifest::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest"))
+            .unwrap();
+    manifest.collection.features = vec![Feature {
+        id: "eefixpack".to_owned(),
+        title: "EE Fixpack".to_owned(),
+        description: "Install the curated EE Fixpack components.".to_owned(),
+        category: "fixes".to_owned(),
+        decision: Decision::Default,
+        readiness: Readiness::Ready,
+        unavailable_reason: None,
+        parent: None,
+        components: vec![
+            ComponentRef {
+                run_id: "eefixpack-bg1".to_owned(),
+                component: 0,
+            },
+            ComponentRef {
+                run_id: "eefixpack-bg1".to_owned(),
+                component: 2,
+            },
+            ComponentRef {
+                run_id: "eefixpack-bg2".to_owned(),
+                component: 0,
+            },
+        ],
+        requires: Vec::new(),
+        conflicts: Vec::new(),
+        inputs: Vec::new(),
+    }];
+    manifest
 }
 
 fn invalid_selection_message(result: Result<InstallPlan>) -> String {
@@ -70,7 +101,18 @@ fn undeclared_semantic_choice_is_rejected() {
 
     let message = invalid_selection_message(resolve(&fixture(), &selection));
 
-    assert!(message.contains("semantic choices"), "{message}");
+    assert!(message.contains("future-choice"), "{message}");
+}
+
+#[test]
+fn resolution_starts_empty_and_adds_only_effective_features() {
+    let manifest = fixture();
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("eefixpack", false);
+
+    let plan = resolve(&manifest, &selection).unwrap();
+
+    assert!(plan.runs.is_empty());
 }
 
 #[test]
