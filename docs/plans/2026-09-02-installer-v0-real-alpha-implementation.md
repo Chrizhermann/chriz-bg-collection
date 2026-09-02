@@ -1285,9 +1285,10 @@ Expected: FAIL before the parser exists.
 **Step 2: Implement the audit, not an autonomous curator**
 
 The tool reads table cells and emits a coverage report; prose dependencies and semantic
-grouping remain authored data. Freeze the preservation snapshot's expected totals as a
-regression oracle: 1,169 rows—592 blank, 158 optional, 289 default, 130 mandatory—then
-update that oracle only with a reviewed curation commit.
+grouping remain authored data. Freeze the current reviewed catalogs' expected totals as a
+regression oracle: 1,173 rows—592 blank, 158 optional, 290 default, 133 mandatory. This
+includes the accepted BG Rebalance `120`/`121` rows and BuffBot's two mandatory child
+components; update the oracle only with a reviewed curation commit.
 
 Run the focused Python suite and commit this parser slice as
 `tools: parse component curation tables` before mapping any decisions.

@@ -43,10 +43,10 @@ remains unavailable or excluded.
 - [ ] [CHRIZ-SOD-REMIX](CHRIZ-SOD-REMIX.md): pin fetchable v0.6.3 commit
   `d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4`, or publish an equivalent release. Keep
   planned, unimplemented component `290` out of this preset.
-- [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md): choose the 12-component `main` menu or
-  the branch containing unaccepted `120`/`121`; push the chosen fixed source with an
-  unambiguous tag/release or exact pin and re-list it. **Never fetch remote v0.1.0 with
-  component `407` selected.**
+- [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md): publish and pin the test-first
+  component-`401` compatibility correction for Artisan-packed `AP_C0PR#CL` cells. Release
+  v0.3.0 now contains the accepted 14-component menu, including `120`/`121`, but its
+  unmodified `401` cannot install on the curated stack.
 - [ ] Resolve every “master SHA at authoring” and own-repository row in
   [the 2.7 pin list](../../pin-list-2.7.md) to an immutable SHA or release. Synchronize its
   stale pending conclusions for HGO, Randomiser, Spell Revisions, HQ soundclips, EEex,
@@ -163,8 +163,10 @@ These are nonblocking while their parent feature remains unavailable.
   exists; keep it mutually exclusive with Fade `2`.
 - [ ] [Xan](XAN.md): move coverage for EET variants `XAN4`, `XAN6`, and `TTXAN` into the
   maintained Eldritch Knight path before enabling that dependent conversion.
-- [ ] Keep rebalance `120/121`, Randomiser's expanded Mode-1 pool, SoD remix `290`, and
-  other planned-but-unimplemented work unavailable until separately curated and accepted.
+- [ ] Keep Randomiser's expanded Mode-1 pool, SoD remix `290`, and other
+  planned-but-unimplemented work unavailable until separately curated and accepted.
+- [ ] [BuffBot](BUFFBOT.md): preserve `1` then `0` as the absolute final mod layer and
+  complete the collection-specific InfinityLoader boot plus BG1 start/save/reload smoke.
 
 ## Curation decisions still in Chris's review queue
 

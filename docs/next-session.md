@@ -67,7 +67,7 @@ Chris explicitly wants the much larger save-analysis project.
 | Aura fork | Reconcile the seven missing upstream commits, compare the old spell-patch snapshot, verify all six legacy item changes, fix component `6` EEex detection, then release. |
 | Spell Revisions fork | Publish immutable `v4.21-chriz.1` and absorb `SR_SUBSPELL_FIX`; do not rebuild it as modpack `180`. |
 | BG2EE/EET fix layer | Migrate Branwen `101` to a narrow maintained home; redesign stat transfer `200`; audit Edwin `400`; retire duplicate `300`. Do not expose the historical parent package. |
-| `chriz-bg-rebalance` | Choose the 12-component main source or the unaccepted `120/121` branch, publish an unambiguous pin/release, refresh its stale component docs, and run the Tempus APR check on EEex 1.2. Never use remote v0.1.0 with `407`. |
+| `chriz-bg-rebalance` | Publish the narrow component-`401` Artisan-CLAB compatibility fix discovered and test-proven by the isolated RC, then pin that successor to v0.3.0. Components `120/121` are accepted and selected. The Tempus APR gameplay check on EEex 1.2 remains. |
 | `chriz-sod-rebalance` | Publish or pin v0.6.3; keep `290` deferred; complete the natural five-item/save-reload acceptance for `225`. |
 | EEex Remote Console | Refresh the repository's stale EEex-compatibility documentation and rerun the target-stack handshake/watchdog smoke. |
 | Collection tail | Build the curated EET Tweaks progressive-XP replacement and the IWDification Arcane Trickster Evasion patch. Identify the eight ownerless CIMC/CDMC animation INIs. |
@@ -95,6 +95,6 @@ excluded; test it only in a dedicated legacy-UB fixture.
 ## Deliberately nonblocking
 
 Do not let these consume the next session unless their parent feature is selected:
-rebalance `120/121`, Randomiser's expanded Mode-1 pool, SoD Remix `290`, the full Safana
+Randomiser's expanded Mode-1 pool, SoD Remix `290`, the full Safana
 composite, priest-delivery redesign, cross-platform no-EEex support, app branding, or
 automated save inspection.

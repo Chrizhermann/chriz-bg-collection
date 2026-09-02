@@ -1,18 +1,23 @@
 # CHRIZ-BG-REBALANCE — components
 
-The 12-component target menu below is local `main` commit
-`f9badd5fd5987ea660d74acdbf248e9391092e1c`, which declares **v0.2.0**. It is not yet
-fetchable from GitHub: `origin/main` still exposes the older
-11-component **v0.1.0** menu. Do not let the collection resolve that remote version while
-the Tempus bundle is enabled; its component `407` is the documented runaway-APR build.
+The 14-component target menu below is release **v0.3.0**, tag commit
+`94ecd323b9177f469d2c187322e4ef5c9a57bd69`. It includes the accepted component `120`
+weapon-protection repair and component `121` EEex/SCS ambient-readiness bridge. The first
+clean curated-stack installation also exposed a narrow component `401` compatibility gap:
+v0.3.0 rejects Artisan's legitimate `AP_C0PR#CL` cells when they are packed into
+`ABILITY1`. The private release candidate uses the test-first staged correction, but the
+public collection must pin a follow-up release containing it rather than silently patching
+v0.3.0.
 
-12 entries, 7 reference-installed. ✓ = installed in the captured reference WeiDU log.
-Subgroup = choose one.
+14 entries, 10 current-alpha selections. ✓ = selected and receipt-verified in the isolated
+2026-09-03 release candidate. Subgroup = choose one.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
-| 100 | SCS: Telekinetic Storm — restore save vs. spell for half damage (+ bypass Mirror Image) | SCS adjustments |  |  | mandatory |
+| 100 | SCS: Telekinetic Storm — restore save vs. spell for half damage (+ bypass Mirror Image) | SCS adjustments |  | ✓ | mandatory |
 | 101 | SCS: Adventurer's Mart — restore the five Freedom scrolls (spell tweak orphaned in v35) | SCS adjustments |  | ✓ | default |
+| 120 | SCS + Spell Revisions: repair false weapon-protection semantics | SCS adjustments |  | ✓ | mandatory |
+| 121 | EEex + SCS: ambient caster readiness and one honest first-contact defense | SCS adjustments |  | ✓ | default |
 | 400 | Cleric of Tempus: weapon training — axe, longsword, crossbow, and two-pip mastery | Class and kit revisions |  | ✓ | default |
 | 401 | Cleric of Tempus: Holy Power — automatic semantic detection (recommended) | Class and kit revisions | Cleric of Tempus: Holy Power compatibility | ✓ | default |
 | 402 | Cleric of Tempus: Holy Power — force true-doubling compatibility | Class and kit revisions | Cleric of Tempus: Holy Power compatibility |  | |
@@ -38,6 +43,8 @@ Subgroup = choose one.
 
 - Component `100` requires SCS `2500` (`extra_arcane_spells`); the curated SCS preset
   includes it. Component `101` requires SCS `2000` or `5900`. Both run after SCS.
+- Components `120` and `121` inspect the effective SCS/SR/EEex stack and therefore run as
+  late compatibility components. On the researched stack, run `120` before `121`.
 - Run the Tempus bundle after SCS, final Spell Revisions processing, Artisan's Kitpack
   proficiency infrastructure, and EEex.
 - Component `400` requires Artisan's `C0PR#C4`, its permission spells, and its custom
@@ -48,16 +55,16 @@ Subgroup = choose one.
 
 ## Release blockers and follow-up
 
-- Choose whether the release contains this 12-component `main` menu or also the unaccepted
-  `120`/`121` work on `codex/ambient-readiness-121`; both currently call themselves
-  v0.2.0, so the version string alone is ambiguous.
-- Push the chosen fixed source, give it an unambiguous exact tag/release or commit pin,
-  update `manifest/mod-sources.tsv`, and re-list the component menu. Never fetch current
-  remote v0.1.0 with `407` enabled.
+- Publish and pin the narrow component `401` Artisan-CLAB compatibility correction proven
+  by the isolated release candidate; do not use unmodified v0.3.0 for the curated Tempus
+  bundle.
+- Update `manifest/mod-sources.tsv` to the resulting immutable release and its hash.
 - Stage the fixed APR implementation against EEex v1.2 and verify 1.5 APR with a two-pip
   weapon, 2.5 under Holy Power, no cycling, and prompt return to normal with a zero-pip
   weapon. The earlier installed test used EEex v0.11, so it is not target acceptance.
-- Do not expose `120` or `121` without fresh curation decisions and staged v1.2 runtime
-  acceptance. Revisit planned `110`, `200`, and `301` only if they enter the real menu.
+- Components `120` and `121` are now curated and selected. Current-version component `121`
+  passed ambient delivery/accounting and the neutral-to-hostile urgent path; its older-EEex
+  fallback remains a nonblocking compatibility check.
+- Revisit planned `110`, `200`, and `301` only if they enter the real menu.
 - Recheck whether the final SCS release supersedes `100` or `101`, and refresh the source
   repository's stale component documentation before publishing.
