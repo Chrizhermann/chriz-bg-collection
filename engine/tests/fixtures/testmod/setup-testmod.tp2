@@ -1,0 +1,38 @@
+BACKUP ~testmod/backup~
+AUTHOR ~chriz-bg-collection integration tests~
+VERSION ~v1.0.0-test~
+
+LANGUAGE ~English~ ~english~ ~testmod/english/setup.tra~
+
+BEGIN ~Copy an existing BIFF resource~
+DESIGNATED 0
+
+COPY_EXISTING ~spell.ids~ ~override/tmcopy.ids~
+
+BEGIN ~Record setup-name mod folder~
+DESIGNATED 10
+
+COPY ~testmod/mod-folder.txt~ ~override/tmfolder.txt~
+  EVALUATE_BUFFER
+
+BEGIN ~Answer one authored prompt~
+DESIGNATED 20
+
+PRINT ~TESTMOD_PROMPT: type alpha~
+ACTION_READLN testmod_answer
+COPY ~testmod/prompt-result.txt~ ~override/tmprompt.txt~
+  EVALUATE_BUFFER
+
+BEGIN ~Fail after publishing a file~
+DESIGNATED 30
+
+COPY ~testmod/failure.txt~ ~override/tmfail.txt~
+FAIL ~TESTMOD_CONTROLLED_FAILURE~
+
+BEGIN ~Wait at an unauthored prompt~
+DESIGNATED 40
+
+PRINT ~TESTMOD_UNEXPECTED_PROMPT: type beta~
+ACTION_READLN testmod_unexpected_answer
+COPY ~testmod/unexpected-result.txt~ ~override/tmunexpected.txt~
+  EVALUATE_BUFFER
