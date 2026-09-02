@@ -9,18 +9,29 @@ The umbrella/orchestrator for the whole modded-BG stack: manifest + install orde
 mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalance
 `docs/plans/2026-07-03-umbrella-analysis.md` (user-approved 2026-07-03).
 
-## Engine Phase 1 — status for the next agent (updated 2026-09-01, branch `feat/engine-phase1`)
+## Status (2026-09-02 — curation snapshot integrated; real-alpha implementation active)
 
-Written for a ChatGPT/Codex pickup (Claude budget exhausted this week). Project files are
-the source of truth; this section is the entry point for the engine work.
+The authoritative component-catalog snapshot from the dirty `main` checkout is preserved
+in commit `1eedd8e` and integrated here without modifying that checkout. The normalized
+decision semantics and per-component notes live under `docs/curation/components/`. Start
+with [`docs/next-session.md`](next-session.md), use
+[`FOLLOW_UPS.md`](curation/components/FOLLOW_UPS.md) for the complete evidence-backed queue,
+and use [`COLLECTION_TAIL_FIXES.md`](curation/components/COLLECTION_TAIL_FIXES.md) for the
+22-fix migration inventory. Explicit choices and source/release/acceptance gates remain;
+do not treat every `default` row as currently installable.
 
-**Where:** branch `feat/engine-phase1`. Five engine-review commits after `745f0a9`, plus
-this documentation/prototype update, are local and not yet pushed. The branch has diverged
-from `main`, where Chris's curation work is being consolidated; do not merge it over that
-dirty checkout. Plan =
-`docs/plans/2026-08-20-engine-phase1-implementation.md` (17 TDD tasks) + status file
-`…implementation.md.tasks.json`. Crate `engine/` (lib `bg_engine`, bin `chriz-bg-install`).
-94 tests green, `cargo fmt --check` + `cargo clippy --workspace --all-targets -D warnings` clean.
+The active implementation branch is `codex/installer-v0-real-alpha`. The approved current
+milestone is defined by `docs/plans/2026-09-02-installer-v0-real-alpha-design.md` (`ae5855d`)
+and `docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md` plus its separate
+27-task ledger (`fd73921`). This supersedes the fixture-only Recipe Preview as the first
+release milestone. The new plan explicitly selects `ureq`'s `rustls`,
+`platform-verifier`, and `win-system-proxy` features.
+
+## Engine Phase 1 baseline
+
+The branch includes the `feat/engine-phase1` lineage through Task 6. Historical plan =
+`docs/plans/2026-08-20-engine-phase1-implementation.md` plus its status ledger. Crate
+`engine/` provides lib `bg_engine` and bin `chriz-bg-install`.
 
 | Task | State | Notes |
 |---|---|---|
@@ -29,14 +40,13 @@ dirty checkout. Plan =
 | 3 validators (`validate.rs`, 9 rules) | done, independently reviewed | original `5feb0a8` (merged `65e3bb8`); fix `a0c812b`; coverage `71f0387`; 41 tests |
 | 4 resolve (`resolve.rs`) | done, independently reviewed | original `13df297` (merged `98c5515`); fix `4c61a8c`; 16 tests |
 | 5 events (`events.rs`) | done, reviewed | |
+| 6 snapshot session persistence (`session.rs`) | done | `39a6692`; nine focused tests |
 | 10 fake-game builder (`tests/support/fakegame.rs`) | done, reviewed | KEY/BIF/TLK writer |
-| 6 session, 7 WeiDU invocation, 8 log-diff verify, 9 runner, 11–16 | not started | 6/7/8 unblocked now |
+| 7 WeiDU invocation, 8 log-diff verify, 9 runner, 11–16 | not started | historical Phase-1 ledger only |
 
-**Next, in order:**
-1. Tasks 6, 7, 8 (plan sections; all depend only on reviewed work), then 9 → 11 (real-WeiDU
-   test gated on `CHRIZ_WEIDU_EXE`), 12–16.
-2. Open decision for Task 13: `ureq` is built with only `rustls` (static WebPKI roots, env-var
-   proxy only) — confirm with Chris or add `platform-verifier` before writing the downloader.
+The real-alpha plan is authoritative for next-work order. Its Task 3 intentionally replaces
+the Phase-1 Task 6 snapshot model with a create-once, append-only hash-chained campaign
+ledger; do not confuse those two separately numbered tasks.
 
 **Task 2 fix-up completed locally (2026-09-01):** schema is probed before strict parsing;
 stem mismatch wins over duplicate-id defence; `.toml` matching is case-insensitive; file
@@ -59,16 +69,15 @@ the only explicit slot of an unsplit mod even when that slot did not list it ori
 Split mods still require unambiguous explicit placement. The regression failed before the
 fix and passes after `4c61a8c`.
 
-**Installer v0 design:** `docs/plans/2026-09-01-installer-v0-design.md` and its implementation
-plan define a guided campaign-build wizard, engine-owned availability explanations, immutable
-install receipts, and update notices that distinguish current-save applicability. The static
-prototype at `docs/prototypes/installer-v0/index.html` deliberately stops at a no-op Recipe
-Preview; it does not download, copy, or install anything.
+**Historical installer v0 preview:** `docs/plans/2026-09-01-installer-v0-design.md` and its
+implementation plan established the guided wizard and engine-owned UI boundaries. The
+static prototype at `docs/prototypes/installer-v0/index.html` remains a no-op Recipe Preview;
+it does not download, copy, or install anything and is not the current release milestone.
 
 **How to build (Windows):** Rust 1.97 stable-msvc via rustup; run cargo from **PowerShell**
 with `$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"` — Git Bash's coreutils `link.exe`
-shadows the MSVC linker. Work in a git worktree (e.g. `.claude/worktrees/engine-phase1`),
-never in the main checkout while Chris curates on `main`. Repo files are CRLF.
+shadows the MSVC linker. Work in an isolated worktree; never develop in the dirty primary
+checkout or either protected game/archive directory. Repo files are CRLF.
 
 **Conventions:** TDD per task (failing test → implement → green → commit "engine: …");
 `#[serde(deny_unknown_fields)]` on all manifest structs; errors carry `PathBuf`s; no
@@ -76,25 +85,19 @@ never in the main checkout while Chris curates on `main`. Repo files are CRLF.
 `C:\Games\…` (read-only reference); never hand-edit `manifest/install-order.tsv`;
 curation content is Chris-only — the engine is curation-independent.
 
-## Status (2026-09-01 — curation consolidation on `main`; engine reviews closed here)
-
-Chris has completed the broad component-catalog pass on the dirty `main` checkout. A short
-tomorrow list, detailed follow-up queue, and legacy-fix migration inventory are being kept
-there. Do not merge or copy this branch over that work. On this branch, Tasks 0–5 and 10 are
-implemented and reviewed; Tasks 6, 7, and 8 are the next independent TDD slices.
-
 ## Background (2026-08-19 — installer app designed)
 
-- **Installer-app design APPROVED**: `docs/plans/2026-08-19-installer-app-design.md` is the
-  canonical plan (public curated-compilation installer, EET-only, 2.7.3.0, copy-then-install,
-  Tauri 2.x with a headless Rust engine crate living in this repo). Research base with all
-  version pins and hosting facts: `docs/research/2026-08-19-installer-app/`.
-- `manifest/install-order.tsv` — captured 2026-07-03 from the reference WeiDU.log
-  (414 rows) — ⚠ the live WeiDU.log now shows **364** entries; re-capture is Phase 0.1.
-- This branch's `manifest/mod-sources.tsv` predates the completed curation consolidation.
-  Use the dirty `main` checkout's source inventory and follow-up queue for curation work.
-- `presets/` and `app/` are not started; the headless `engine/` is in Phase 1 and a static
-  no-op installer-v0 prototype documents the intended app boundary.
+- **Installer-app foundation:** `docs/plans/2026-08-19-installer-app-design.md` established
+  the public EET-only, copy-then-install architecture with Tauri 2 and a headless Rust
+  engine. The 2026-09-02 real-alpha design linked above is the current extension.
+- `manifest/install-order.tsv` — recaptured by `fbd914b` from the reference WeiDU.log:
+  **451 entries / 91 mods**. This resolved the earlier 414-vs-364 discrepancy; the 364
+  figure was wrong. Never regenerate it except from the live reference install.
+- `manifest/mod-sources.tsv` — 89 source rows are classified. The integrated curation
+  snapshot points historical local fixes at the migration inventory, but several immutable
+  pins and release artifacts still need refreshing before recipe freeze.
+- `presets/` and `app/` are not started. The headless `engine/` contains the Phase-1
+  baseline; the current real-alpha plan owns the remaining engine, UI, and release work.
 - Parked: [#1 EET XP scaling fix](https://github.com/Chrizhermann/chriz-bg-collection/issues/1)
   (future chriz-layer component; home repo TBD).
 
@@ -109,30 +112,21 @@ implemented and reviewed; Tasks 6, 7, and 8 are the next independent TDD slices.
 3. `gh` CLI auth is shared across concurrent agent sessions — `gh auth status` before any
    gh op; this repo needs `Chrizhermann`.
 
-## Work queue (in order — from the approved installer-app design, Phase 0 first)
+## Work queue
 
-1. **Re-capture manifest** from the live reference WeiDU.log (resolves 414-vs-364 row
-   discrepancy); reconcile with the 18-phase order in the game dir's EET_MODDING_GUIDE.md.
-2. **Fill `manifest/mod-sources.tsv`** — DONE 2026-08-19 except sha256: all 89 mods
-   classified (37 auto-fetchable via GitHub, 2 manual [Bristlelick weaselmods, Evandra G3
-   page-gated], 1 private [BASTIL], 49 local/chriz-layer); all 30 pinned URLs
-   liveness-checked 200. Remaining: sha256 column — compute when first building the
-   download cache (downloads several GB; deferred). Note: BRISTLELICK v2.4 is no longer
-   publicly downloadable (site has 2.5.1 only) — local archive copy preserves the pin.
-3. **2.7 pin-list** — EET master SHA ≥ 2026-08-06, EEex ≥ v1.1.5, SCS 35.21 + WeiDU 249
-   (per-mod WeiDU pins!), SR 4.21, cdtweaks v18, EEFP Beta 2; flag every divergence from
-   the 2.6-era reference for user review (`game-version-landscape.md`).
-4. **Curation pass — HARD HUMAN GATE** (user directive 2026-08-19): worksheet at
-   `docs/curation-worksheet.md` (mod inventory by source class, blank decision columns,
-   user's open questions). The user curates
-   content (drop/add mods, toggles, choice groups, presets) exclusively himself. Agents
-   deliver neutral inventories/option lists with factual compat notes only; suggestions
-   only when explicitly asked. Output → `manifest/collection.toml` + `manifest/mods/*.toml`
-   (schema v1 in the design doc), authored from the user's filled worksheet.
-5. **Phase 1: engine crate + CLI** — milestone: full unattended EET test install from
-   scratch on 2.7.3.0 (distinct `engine_name`, never in the reference game dir).
-6. **Phase 2: Tauri app**; **Phase 3: signing/updater/manifest release channel** — see
-   design doc. Config layer (ini tweaks as per-preset diffs) folds into the manifest work.
+1. Follow the dependency graph and delivery waves in
+   `docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md.tasks.json`; do not use
+   the older Phase-0 list or Recipe Preview as the schedule.
+2. Resolve only Chris's remaining content choices in `docs/next-session.md`, then normalize
+   those catalog rows. Its curation decisions remain authoritative, but its older engine/UI
+   scheduling paragraphs are superseded by the real-alpha plan.
+3. Refresh and freeze every selected immutable source, hash, license/provenance record, and
+   split BG1/BG2 run. Keep blocked or unimplemented choices unavailable.
+4. Implement engine and UI slices with TDD in isolated worktrees, integrating reviewed
+   commits only after their focused and workspace checks pass.
+5. Treat Christopher's cold-cache install, recovery rehearsal, InfinityLoader boot,
+   BG1 start, and save/reload as separate live acceptance evidence—not as implied by static
+   tests or catalog review.
 
 ## Known wrinkles for the driver (from the reference install's history)
 
