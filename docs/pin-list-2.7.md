@@ -1,6 +1,8 @@
-# Pin-list for the 2.7.3.0 stack — Phase 0.3 (for Chris's review)
+# Pin-list for the 2.7.3.0 stack — reviewed targets
 
-Generated 2026-08-20 from manifest/mod-sources.tsv + live GitHub checks.
+Originally generated 2026-08-20; synchronized with completed component review on
+2026-09-01. Immutable source/release work still open is indexed in
+`docs/curation/components/FOLLOW_UPS.md`.
 Principle (Chris, 2026-08-19): the compilation targets CURRENT versions, not the
 reference install's. Every pin below is validated by the Phase 1 test-install
 milestone before it ships. Dropped mods (worksheet) are excluded.
@@ -14,16 +16,16 @@ except AJANTISBG2 (language 1).
 | Mod | Installed | Proposed target | Notes |
 |---|---|---|---|
 | AJANTISBG2 | 21 | v21 | unchanged (installed = latest) |
-| ARTISANSKITPACK | 6.0 | master SHA at authoring | no tags/releases - resolve+pin current commit SHA when authoring mods/*.toml |
-| ARTISANSKITPACK_NPC | — | master SHA at authoring | no tags/releases - resolve+pin current commit SHA when authoring mods/*.toml |
-| ARTISANSKITPACK_TWEAK | — | master SHA at authoring | no tags/releases - resolve+pin current commit SHA when authoring mods/*.toml |
+| ARTISANSKITPACK | 6.0 | chriz-v1.2.0 fork @ `f623045f` | Released selected fork; a later release is required before Shapeshifter `5110/5111` is available. |
+| ARTISANSKITPACK_NPC | — | same chriz-v1.2.0 artifact | One artifact supplies all three TP2s; use the exact same source hash. |
+| ARTISANSKITPACK_TWEAK | — | same chriz-v1.2.0 artifact | One artifact supplies all three TP2s; use the exact same source hash. |
 | ASCENSION | 2.1.0 | 2.1.0 | unchanged (installed = latest) |
-| AURA_BG1_2_EET | — | master SHA at authoring | no tags/releases - resolve+pin current commit SHA when authoring mods/*.toml |
-| BARDICWONDERS | — | master SHA at authoring | no tags/releases - resolve+pin current commit SHA when authoring mods/*.toml |
+| AURA_BG1_2_EET | — | reconciled Chris fork, pending release | Reconcile local balance work with seven newer upstream commits beyond reviewed upstream `285dabbc`, then publish an immutable source. |
+| BARDICWONDERS | — | v2.9c-balance.2 @ `db0cf815` | Released selected fork; later finite-Abettor-HLA work still needs integration/release. |
 | BGGO | v3.5 | v3.6 | upgrade v3.5 -> v3.6 |
 | BRANWEN | v8pre | v8 | upgrade v8pre -> v8 |
 | BUBB_SPELL_MENU_EXTENDED | v5.1 | v5.2 | v5.1 -> v5.2 (2026-05-11) |
-| C0WARLOCK | 3.0 | master SHA at authoring | no tags/releases - resolve+pin current commit SHA when authoring mods/*.toml |
+| C0WARLOCK | 3.0 | commit `a8219922` | Pin the exact post-v4.0 commit and renamed `Artisans_Warlock/Artisans_Warlock.TP2` path. |
 | CDTWEAKS | v18 | v18 | unchanged; reference already on v18 |
 | CROSSMODBG2 | v30 | v30 | unchanged (installed = latest) |
 | EEEX | v0.11.0-alpha | v1.2.0 | REQUIRED >=v1.1.5 for game 2.7.3.0; big jump from 0.11-alpha (stable line, scripts moved to EEex_scripts/) - retest hotkeys/UI modules |
@@ -33,26 +35,21 @@ except AJANTISBG2 (language 1).
 | EET_TWEAKS | 1.12 | v1.12 | unchanged (installed = latest) |
 | EVANDRA | v2.2 | v2.2 | manual download |
 | FADE | 5.6 | v5.6 | unchanged (installed = latest) |
-| HIDDENGAMEPLAYOPTIONS | 5.0 | v5.1 | upgrade 5.0 -> v5.1 |
+| HIDDENGAMEPLAYOPTIONS | 5.0 | v5.2 | Reviewed refreshed 44-component menu; update stale source data. |
+| HQ_SOUNDCLIPS_BG2EE | 1.3 | v1.3 | Kept and default; installed equals latest reviewed release. |
 | IEPBANTERS | v5.9 | v5.9 | unchanged (installed = latest) |
 | IWDIFICATION | v11 | v11 | unchanged (installed = latest) |
 | PAINA | — | v1.9 | upgrade ? -> v1.9 |
-| RANDOMISER | 7 | v7 | unchanged (installed = latest) |
+| RANDOMISER | 7 | maintained fork v8.1 | Same component ids; Mode 1 uses the documented legacy-BCS fallback with EEex v1.2. |
 | RR | v4.92 | v4.92 | unchanged (installed = latest) |
 | SAFANA | v0.5 | v05 | unchanged (tag is spelled v05); SoD-items carryover fix component still to be built |
 | SARAHTOB | v8 | v8 | unchanged (installed = latest) |
-| SIRENE_BG2 | — | master SHA at authoring | no tags/releases - resolve+pin current commit SHA when authoring mods/*.toml |
-| SPELL_REV | v4.19 | v4.21 | left beta: v4.19.rc5 -> stable v4.21 (2026-08-17) |
+| SIRENE_BG2 | — | commit `00beda90` | Exact unversioned BG2 source; the separate BG1 package remains a curation decision. |
+| SPELL_REV | v4.19 | v4.21-chriz.1, pending release | Publish a fetchable immutable fork source containing the protection-refresh/subspell work. |
 | STRATAGEMS | 35.21 | v35.21 | unchanged; MUST run under WeiDU 249 (breaks on 251); unverified-by-author on 2.7, community installs work |
 | UB | v28 | v28 | unchanged (installed = latest) |
 | XAN | v19 | v19 | unchanged (installed = latest) |
 | YESLICKNPC | v5.0 | v5.0 | unchanged (installed = latest) |
-
-## Pending curation ruling
-
-| Mod | Installed | Proposed target | Notes |
-|---|---|---|---|
-| HQ_SOUNDCLIPS_BG2EE | 1.3 | v1.3 (latest) | awaiting voice-pack ruling in worksheet |
 
 ## Chriz-layer repos
 
@@ -64,14 +61,10 @@ ABETTORHLAREBALANCE, AKCB_BERSERKER, AKCB_SHAPESHIFTER, AURA_BALANCE_PATCH_SPELL
 No public versions to pin — each needs its home decision (worksheet section 4)
 before it can be pinned to a chriz-repo release.
 
-## Review asks for Chris
+## Remaining freeze checks
 
-1. EEex 0.11-alpha -> 1.2.0 is the riskiest jump (your B3Hotkey.lua, UI-scale,
-   timer-module configs may need porting) — OK to target 1.2.0?
-2. SCS 35.21 on 2.7: author-unverified. Accept with test-install validation?
-3. EE Fixpack Beta_2 replaces Alpha_3 — accept beta risk (design said yes)?
-4. EET master SHA pin (no tag): OK until v14.2?
-5. Commit-zip mods (Artisan Kitpack/NPC/Tweak, Bardic Wonders, ...): pin the
-   then-current SHA at manifest authoring, or the SHAs matching your installed
-   versions where known (Bardic Wonders cfcd1c4)? Current = newer features,
-   installed = closest to what you've tested.
+- Recheck packaged EET and EE Fixpack releases immediately before manifest freeze; do not
+  silently follow moving branches.
+- Publish or pin every selected Chris-owned fork listed in the central follow-up queue.
+- A reviewed target is not runtime acceptance: EEex 1.2, SCS 35.21/WeiDU 249, both EE
+  Fixpack runs, and the EET merge still require the staged 2.7 tests.
