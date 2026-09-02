@@ -1,0 +1,29 @@
+position	source_label	source_line	tp2	language	component	component_name
+1	BG1 premerge release candidate, verified 2026-09-03	4	DLCMERGER\DLCMERGER.TP2	0	1	Merge DLC into game -> Merge "Siege of Dragonspear" DLC: 2.1
+2	BG1 premerge release candidate, verified 2026-09-03	5	EEFIXPACK\SETUP-EEFIXPACK.TP2	0	0	Core Fixes: Beta 2
+3	BG1 premerge release candidate, verified 2026-09-03	6	EEFIXPACK\SETUP-EEFIXPACK.TP2	0	2	Game Text Update: Beta 2
+4	BG1 premerge release candidate, verified 2026-09-03	7	BG1UB/BG1UB.TP2	0	0	Ice Island Level Two Restoration: v17.1
+5	BG1 premerge release candidate, verified 2026-09-03	8	BG1UB/BG1UB.TP2	0	11	Scar and the Sashenstar's Daughter: v17.1
+6	BG1 premerge release candidate, verified 2026-09-03	9	BG1UB/BG1UB.TP2	0	12	Quoningar, the Cleric: v17.1
+7	BG1 premerge release candidate, verified 2026-09-03	10	BG1UB/BG1UB.TP2	0	13	Shilo Chen and the Ogre-Magi: v17.1
+8	BG1 premerge release candidate, verified 2026-09-03	11	BG1UB/BG1UB.TP2	0	14	Edie, the Merchant League Applicant: v17.1
+9	BG1 premerge release candidate, verified 2026-09-03	12	BG1UB/BG1UB.TP2	0	16	Creature Corrections: v17.1
+10	BG1 premerge release candidate, verified 2026-09-03	13	BG1UB/BG1UB.TP2	0	17	Creature Restorations: v17.1
+11	BG1 premerge release candidate, verified 2026-09-03	14	BG1UB/BG1UB.TP2	0	18	Creature Name Restorations: v17.1
+12	BG1 premerge release candidate, verified 2026-09-03	15	BG1UB/BG1UB.TP2	0	19	Minor Dialogue Restorations: v17.1
+13	BG1 premerge release candidate, verified 2026-09-03	16	BG1UB/BG1UB.TP2	0	21	Store, Tavern and Inn Fixes and Restorations: v17.1
+14	BG1 premerge release candidate, verified 2026-09-03	17	BG1UB/BG1UB.TP2	0	22	Item Corrections and Restorations: v17.1
+15	BG1 premerge release candidate, verified 2026-09-03	18	BG1UB/BG1UB.TP2	0	29	Duke Eltan in the Harbor Master's Building: v17.1
+16	BG1 premerge release candidate, verified 2026-09-03	19	BG1UB/BG1UB.TP2	0	30	Nim Furlwing Encounter: v17.1
+17	BG1 premerge release candidate, verified 2026-09-03	20	BG1UB/BG1UB.TP2	0	32	Svlast, the Fallen Paladin Encounter: v17.1
+18	BG1 premerge release candidate, verified 2026-09-03	21	BG1UB/BG1UB.TP2	0	33	Mal-Kalen, the Ulcaster Ghost: v17.1
+19	BG1 premerge release candidate, verified 2026-09-03	22	BG1UB/BG1UB.TP2	0	34	Chapter 6 Dialogue Restorations: v17.1
+20	BG1 premerge release candidate, verified 2026-09-03	23	BG1NPC/BG1NPC.TP2	0	0	The BG1 NPC Project: Required Modifications: v32
+21	BG1 premerge release candidate, verified 2026-09-03	24	BG1NPC/BG1NPC.TP2	0	10	The BG1 NPC Project: Banters, Quests, and Interjections: v32
+22	BG1 premerge release candidate, verified 2026-09-03	25	BG1NPC/BG1NPC.TP2	0	90	The BG1 NPC Project: NPCs can be sent to wait in an inn: v32
+23	BG1 premerge release candidate, verified 2026-09-03	26	BG1NPC/BG1NPC.TP2	0	111	BGEE Banter Timing Tweak -> Banter Timing: Fast (about 20 minutes between banter dialogs): v32
+24	BG1 premerge release candidate, verified 2026-09-03	27	BG1NPC/BG1NPC.TP2	0	120	The BG1 NPC Project: Bardic Reputation Adjustment: v32
+25	BG1 premerge release candidate, verified 2026-09-03	28	BG1NPC/BG1NPC.TP2	0	130	The BG1 NPC Project: Sarevok's Diary Adjustments -> SixofSpades Extended Sarevok's Diary: v32
+26	BG1 premerge release candidate, verified 2026-09-03	29	BG1NPC/BG1NPC.TP2	0	240	The BG1 NPC Project: Kivan's Proficiency -> Kivan uses spears: v32
+27	BG1 premerge release candidate, verified 2026-09-03	30	BG1NPC/BG1NPC.TP2	0	160	The BG1 NPC Project: Add Non-Joinable NPC portraits to quests and dialogues: v32
+28	BG1 premerge release candidate, verified 2026-09-03	31	BG1NPC/BG1NPC.TP2	0	200	The BG1 NPC Project: Player-Initiated Dialogues: v32

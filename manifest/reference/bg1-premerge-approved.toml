@@ -1,0 +1,56 @@
+schema_version = 1
+status = "alpha-default"
+approved_on = "2026-09-03"
+approval_scope = "Current v0.1 alpha default, not permanent component curation"
+source_capture = "manifest/reference/bg1-premerge.tsv"
+
+# These are exact candidate identities for the reviewed fragment. Task 18 must bind each
+# identity to an immutable source and content digest in the production recipe.
+[[runs]]
+id = "dlcmerger-bg1"
+artifact_id = "dlcmerger-2.1"
+target = "bg1"
+phase = "bg1-preparation"
+components = [1]
+decision = "mandatory"
+
+[[runs]]
+id = "eefixpack-bg1"
+artifact_id = "eefixpack-beta2"
+target = "bg1"
+phase = "bg1-preparation"
+components = [0, 2]
+decision = "mandatory"
+
+[[runs]]
+id = "bg1ub-bg1"
+artifact_id = "bg1ub-17.1"
+target = "bg1"
+phase = "bg1-only"
+components = [0, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 29, 30, 32, 33, 34]
+decision = "default"
+
+[[runs]]
+id = "bg1npc-bg1"
+artifact_id = "bg1npc-32"
+target = "bg1"
+phase = "bg1-only"
+components = [0, 10, 90, 111, 120, 130, 240, 160, 200]
+decision = "default"
+
+[[runs]]
+id = "eefixpack-bg2"
+artifact_id = "eefixpack-beta2"
+target = "bg2"
+phase = "bg2-preparation"
+components = [0, 2]
+decision = "mandatory"
+
+[[runs]]
+id = "eet-initialize-bg2"
+artifact_id = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+target = "bg2"
+phase = "eet-initialization"
+components = [0, 100]
+decision = "mandatory"
+staged_bg1 = true
