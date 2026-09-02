@@ -1286,7 +1286,7 @@ Expected: FAIL before the parser exists.
 
 The tool reads table cells and emits a coverage report; prose dependencies and semantic
 grouping remain authored data. Freeze the preservation snapshot's expected totals as a
-regression oracle: 1,081 rows—568 blank, 120 optional, 264 default, 129 mandatory—then
+regression oracle: 1,169 rows—592 blank, 158 optional, 289 default, 130 mandatory—then
 update that oracle only with a reviewed curation commit.
 
 Run the focused Python suite and commit this parser slice as

@@ -1,6 +1,6 @@
 {
   "planPath": "docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md",
-  "lastUpdated": "2026-09-03T02:50:00+09:00",
+  "lastUpdated": "2026-09-03T03:17:00+09:00",
   "tasks": [
     {
       "id": 0,
@@ -101,7 +101,7 @@
     {
       "id": 16,
       "subject": "Task 16: Capture and re-curate the missing BG1 pre-merge recipe",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [0, 5, 7, 11, 12]
     },
     {
