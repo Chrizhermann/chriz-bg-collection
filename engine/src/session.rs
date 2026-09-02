@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::error::{EngineError, Result};
-use crate::manifest::{Collection, ModFile};
+use crate::manifest::{Artifact, Collection, ModFile, PresetFile};
 use crate::resolve::Selection;
 use crate::Manifest;
 
@@ -18,7 +18,9 @@ const SESSION_TEMP_FILE_NAME: &str = "session.json.tmp";
 #[derive(Serialize)]
 struct CanonicalManifest<'a> {
     collection: &'a Collection,
+    artifacts: &'a BTreeMap<String, Artifact>,
     mods: &'a BTreeMap<String, ModFile>,
+    presets: &'a BTreeMap<String, PresetFile>,
 }
 
 /// Persisted state for one install attempt.
@@ -132,12 +134,15 @@ impl Session {
 /// Computes a deterministic SHA-256 over parsed manifest content.
 ///
 /// The manifest root is excluded, so relocating identical manifest content
-/// does not invalidate a session. The collection and sorted mod map are
-/// serialized together, making TOML whitespace and comments irrelevant.
+/// does not invalidate a session. The collection and all sorted artifact,
+/// installer, and preset maps are serialized together, making TOML whitespace
+/// and comments irrelevant.
 pub fn manifest_fingerprint(manifest: &Manifest) -> Result<String> {
     let canonical = CanonicalManifest {
         collection: &manifest.collection,
+        artifacts: &manifest.artifacts,
         mods: &manifest.mods,
+        presets: &manifest.presets,
     };
     let json =
         serde_json::to_vec(&canonical).map_err(|source| EngineError::ManifestFingerprint {

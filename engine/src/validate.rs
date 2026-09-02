@@ -51,6 +51,8 @@ pub const RULE_NONEMPTY: &str = "nonempty";
 pub const RULE_RUN_COMPONENTS: &str = "run-components";
 /// Rule requiring all artifact, installer, tool, and component references to exist.
 pub const RULE_REFERENCES: &str = "references";
+/// Rule preventing declared runs from using blocked payload or WeiDU artifacts.
+pub const RULE_BLOCKED_ARTIFACTS: &str = "blocked-artifacts";
 /// Rule requiring authored archive and TP2 paths to remain within staged roots.
 pub const RULE_PATHS: &str = "paths";
 /// Rule preventing one installer component from running twice against one game root.
@@ -75,6 +77,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_nonempty(manifest, &mut findings);
     check_run_components(manifest, &mut findings);
     check_references(manifest, &mut findings);
+    check_blocked_artifacts(manifest, &mut findings);
     check_paths(manifest, &mut findings);
     check_component_ids(manifest, &mut findings);
     check_component_placement(manifest, &mut findings);
@@ -218,6 +221,33 @@ fn check_references(manifest: &Manifest, findings: &mut Vec<Finding>) {
     }
 }
 
+fn check_blocked_artifacts(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    for (index, run) in manifest.collection.runs.iter().enumerate() {
+        let Some(mod_file) = manifest.mods.get(&run.mod_id) else {
+            continue;
+        };
+
+        for (role, artifact_id) in [
+            ("payload", mod_file.artifact_id.as_str()),
+            ("WeiDU", mod_file.weidu_artifact_id.as_str()),
+        ] {
+            let Some(artifact) = manifest.artifacts.get(artifact_id) else {
+                continue;
+            };
+            if artifact.acquisition == AcquisitionPolicy::Blocked {
+                error(
+                    findings,
+                    RULE_BLOCKED_ARTIFACTS,
+                    format!(
+                        "run {index} ({:?}) uses blocked {role} artifact {artifact_id:?}",
+                        run.run_id
+                    ),
+                );
+            }
+        }
+    }
+}
+
 fn check_paths(manifest: &Manifest, findings: &mut Vec<Finding>) {
     for (id, artifact) in &manifest.artifacts {
         if !is_safe_relative_path(&artifact.archive.path) {
@@ -251,11 +281,6 @@ fn is_safe_relative_path(value: &str) -> bool {
         return false;
     }
 
-    let first_separator = value.find(['/', '\\']).unwrap_or(value.len());
-    if value[..first_separator].contains(':') {
-        return false;
-    }
-
     let path = Path::new(value);
     !path.is_absolute()
         && path.components().all(|component| {
@@ -264,7 +289,9 @@ fn is_safe_relative_path(value: &str) -> bool {
                 PathComponent::ParentDir | PathComponent::RootDir | PathComponent::Prefix(_)
             )
         })
-        && !value.split(['/', '\\']).any(|component| component == "..")
+        && !value
+            .split(['/', '\\'])
+            .any(|component| component == ".." || component.contains(':'))
 }
 
 fn check_component_ids(manifest: &Manifest, findings: &mut Vec<Finding>) {

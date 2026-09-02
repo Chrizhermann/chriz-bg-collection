@@ -127,6 +127,37 @@ fn installer_must_reference_an_existing_weidu_artifact() {
 }
 
 #[test]
+fn run_cannot_use_a_blocked_payload_artifact() {
+    let mut manifest = good();
+    manifest.artifacts.get_mut("eefixpack").unwrap().acquisition = AcquisitionPolicy::Blocked;
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "blocked-artifacts");
+}
+
+#[test]
+fn run_cannot_use_a_blocked_weidu_artifact() {
+    let mut manifest = good();
+    manifest.artifacts.get_mut("weidu").unwrap().acquisition = AcquisitionPolicy::Blocked;
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "blocked-artifacts");
+}
+
+#[test]
+fn unused_blocked_artifact_declaration_is_legal() {
+    let mut manifest = good();
+    let mut unused = manifest.artifacts["eefixpack"].clone();
+    unused.id = "unused-blocked".to_owned();
+    unused.acquisition = AcquisitionPolicy::Blocked;
+    manifest.artifacts.insert(unused.id.clone(), unused);
+
+    assert_eq!(error_rules(&validate(&manifest)), Vec::<&str>::new());
+}
+
+#[test]
 fn run_components_must_be_declared_by_the_installer() {
     let mut manifest = good();
     manifest.collection.runs[0].components.push(999);
@@ -151,6 +182,35 @@ fn tp2_path_must_be_relative_and_traversal_free() {
 #[test]
 fn archive_path_must_be_relative_and_traversal_free() {
     for path in ["C:\\downloads\\payload", "../payload"] {
+        let mut manifest = good();
+        manifest
+            .artifacts
+            .get_mut("eefixpack")
+            .unwrap()
+            .archive
+            .path = path.to_owned();
+
+        let findings = validate(&manifest);
+
+        assert_has_error(&findings, "paths");
+    }
+}
+
+#[test]
+fn tp2_path_rejects_nested_windows_ads_components() {
+    for path in ["mods/setup.tp2:stream", "mods\\setup.tp2::$DATA"] {
+        let mut manifest = good();
+        manifest.mods.get_mut("eefixpack").unwrap().tp2 = path.to_owned();
+
+        let findings = validate(&manifest);
+
+        assert_has_error(&findings, "paths");
+    }
+}
+
+#[test]
+fn archive_path_rejects_nested_windows_ads_components() {
+    for path in ["payload/file:stream", "payload\\file::$DATA"] {
         let mut manifest = good();
         manifest
             .artifacts

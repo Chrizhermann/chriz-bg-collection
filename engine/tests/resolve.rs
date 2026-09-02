@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use bg_engine::error::{EngineError, Result};
-use bg_engine::manifest::{GameRoot, Phase, RunArg};
+use bg_engine::manifest::{AcquisitionPolicy, GameRoot, Phase, RunArg};
 use bg_engine::resolve::{resolve, InstallPlan, Selection};
 use bg_engine::Manifest;
 
@@ -86,6 +86,21 @@ fn invalid_recipe_is_rejected_before_plan_materialization() {
     assert!(findings
         .iter()
         .any(|finding| finding.rule == "run-components"));
+}
+
+#[test]
+fn blocked_artifact_cannot_become_a_planned_run() {
+    let mut manifest = fixture();
+    manifest.artifacts.get_mut("eefixpack").unwrap().acquisition = AcquisitionPolicy::Blocked;
+
+    let error = resolve(&manifest, &Selection::defaults("windows")).unwrap_err();
+
+    let EngineError::Validation(findings) = error else {
+        panic!("expected manifest validation error");
+    };
+    assert!(findings
+        .iter()
+        .any(|finding| finding.rule == "blocked-artifacts"));
 }
 
 #[test]

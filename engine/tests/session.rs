@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
+use bg_engine::manifest::AcquisitionPolicy;
 use bg_engine::resolve::Selection;
 use bg_engine::session::{manifest_fingerprint, Session, StepRecord, StepStatus};
 use bg_engine::Manifest;
@@ -202,4 +203,66 @@ fn manifest_fingerprint_changes_with_semantic_manifest_content() {
         manifest_fingerprint(&manifest).unwrap(),
         manifest_fingerprint(&changed).unwrap()
     );
+}
+
+fn assert_recipe_change_breaks_resume(
+    original: &Manifest,
+    target: &std::path::Path,
+    label: &str,
+    mutate: impl FnOnce(&mut Manifest),
+) {
+    let original_fingerprint = manifest_fingerprint(original).unwrap();
+    let mut changed = original.clone();
+    mutate(&mut changed);
+    let changed_fingerprint = manifest_fingerprint(&changed).unwrap();
+
+    assert_ne!(
+        original_fingerprint, changed_fingerprint,
+        "{label} did not change the recipe fingerprint"
+    );
+    let error = Session::load(target, &changed_fingerprint).unwrap_err();
+    assert!(
+        matches!(error, EngineError::ManifestFingerprintMismatch { .. }),
+        "{label} did not reject resume: {error:?}"
+    );
+}
+
+#[test]
+fn artifact_and_preset_changes_invalidate_fingerprint_and_resume() {
+    let manifest = Manifest::load(&fixture_dir()).unwrap();
+    let target = tempfile::tempdir().unwrap();
+    let mut persisted = session();
+    persisted.manifest_fingerprint = manifest_fingerprint(&manifest).unwrap();
+    persisted.save(target.path()).unwrap();
+
+    assert_recipe_change_breaks_resume(&manifest, target.path(), "artifact URL", |changed| {
+        changed.artifacts.get_mut("eefixpack").unwrap().source.url =
+            "https://example.invalid/changed.zip".to_owned();
+    });
+    assert_recipe_change_breaks_resume(&manifest, target.path(), "artifact SHA-256", |changed| {
+        changed
+            .artifacts
+            .get_mut("eefixpack")
+            .unwrap()
+            .source
+            .sha256 = "a".repeat(64);
+    });
+    assert_recipe_change_breaks_resume(&manifest, target.path(), "archive path", |changed| {
+        changed.artifacts.get_mut("eefixpack").unwrap().archive.path = "changed-root".to_owned();
+    });
+    assert_recipe_change_breaks_resume(&manifest, target.path(), "acquisition policy", |changed| {
+        changed.artifacts.get_mut("eefixpack").unwrap().acquisition =
+            AcquisitionPolicy::BundlePermitted;
+    });
+    assert_recipe_change_breaks_resume(&manifest, target.path(), "provenance", |changed| {
+        changed
+            .artifacts
+            .get_mut("eefixpack")
+            .unwrap()
+            .provenance
+            .license = "changed-license".to_owned();
+    });
+    assert_recipe_change_breaks_resume(&manifest, target.path(), "preset content", |changed| {
+        changed.presets.get_mut("recommended").unwrap().name = "Changed preset".to_owned();
+    });
 }
