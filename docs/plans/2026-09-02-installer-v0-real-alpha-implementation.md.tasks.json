@@ -1,11 +1,11 @@
 {
   "planPath": "docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md",
-  "lastUpdated": "2026-09-02T20:49:15+09:00",
+  "lastUpdated": "2026-09-02T22:02:17+09:00",
   "tasks": [
     {
       "id": 0,
       "subject": "Task 0: Preserve and integrate the authoritative curation snapshot",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": []
     },
     {
