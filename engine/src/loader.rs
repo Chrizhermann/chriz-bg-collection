@@ -1,4 +1,4 @@
-//! Loading a complete manifest directory from disk.
+//! Loading a complete executable recipe directory from disk.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -7,29 +7,40 @@ use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
 use crate::error::EngineError;
-use crate::manifest::{Collection, ModFile};
+use crate::manifest::{Artifact, Collection, ModFile, PresetFile};
 
 /// Manifest schema version understood by this engine.
-pub const SUPPORTED_SCHEMA: u32 = 1;
+pub const SUPPORTED_SCHEMA: u32 = 2;
 
 #[derive(Deserialize)]
 struct SchemaProbe {
     schema: u32,
 }
 
-/// A collection manifest and all of its per-mod manifest files.
+#[derive(Clone, Copy)]
+enum EntryKind {
+    Artifact,
+    Mod,
+    Preset,
+}
+
+/// A collection recipe and all independently authored manifest files it references.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
-    /// Directory containing `collection.toml` and the `mods` directory.
+    /// Canonical directory containing the recipe.
     pub root: PathBuf,
-    /// Parsed collection-level manifest.
+    /// Parsed collection-level recipe.
     pub collection: Collection,
-    /// Parsed mod manifests keyed by mod id.
+    /// Parsed artifact manifests keyed by artifact id.
+    pub artifacts: BTreeMap<String, Artifact>,
+    /// Parsed installer manifests keyed by installer id.
     pub mods: BTreeMap<String, ModFile>,
+    /// Parsed preset manifests keyed by preset id.
+    pub presets: BTreeMap<String, PresetFile>,
 }
 
 impl Manifest {
-    /// Loads and parses a manifest directory.
+    /// Loads and parses an executable recipe directory.
     pub fn load(dir: &Path) -> crate::error::Result<Manifest> {
         let collection_path = dir.join("collection.toml");
         let collection_text = read_text(&collection_path)?;
@@ -48,80 +59,152 @@ impl Manifest {
             path: dir.to_path_buf(),
             source,
         })?;
-        let mods_path = root.join("mods");
-        let entries = std::fs::read_dir(&mods_path).map_err(|source| EngineError::Io {
-            path: mods_path.clone(),
-            source,
+        let artifacts = load_entries(
+            &root.join("artifacts"),
+            EntryKind::Artifact,
+            |artifact: &Artifact| &artifact.id,
+        )?;
+        let mods = load_entries(&root.join("mods"), EntryKind::Mod, |mod_file: &ModFile| {
+            &mod_file.id
         })?;
-        let mut entries = entries
-            .map(|entry| {
-                entry.map_err(|source| EngineError::Io {
-                    path: mods_path.clone(),
-                    source,
-                })
-            })
-            .collect::<crate::error::Result<Vec<_>>>()?;
-        entries.sort_by_key(std::fs::DirEntry::file_name);
-
-        let mut mods = BTreeMap::new();
-        let mut mod_paths: BTreeMap<String, PathBuf> = BTreeMap::new();
-
-        for entry in entries {
-            let path = entry.path();
-            let is_toml = path
-                .extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| extension.eq_ignore_ascii_case("toml"));
-            if !is_toml {
-                continue;
-            }
-
-            let metadata = std::fs::metadata(&path).map_err(|source| EngineError::Io {
-                path: path.clone(),
-                source,
-            })?;
-            if !metadata.is_file() {
-                continue;
-            }
-
-            let mod_file: ModFile = read_toml(&path)?;
-            let stem = path
-                .file_stem()
-                .and_then(|value| value.to_str())
-                .ok_or_else(|| EngineError::InvalidModFileStem { path: path.clone() })?
-                .to_owned();
-            let id = mod_file.id.clone();
-
-            if id != stem {
-                return Err(EngineError::ModIdMismatch { path, id, stem });
-            }
-
-            if let Some(first) = mod_paths.get(&id) {
-                return Err(EngineError::DuplicateModId {
-                    id,
-                    first: first.clone(),
-                    second: path,
-                });
-            }
-
-            mod_paths.insert(id.clone(), path);
-            mods.insert(id, mod_file);
-        }
+        let presets = load_entries(
+            &root.join("presets"),
+            EntryKind::Preset,
+            |preset: &PresetFile| &preset.id,
+        )?;
 
         Ok(Manifest {
             root,
             collection,
+            artifacts,
             mods,
+            presets,
         })
     }
 
-    /// Constructs the conventional lowercase-extension path for a mod id.
+    /// Constructs the conventional lowercase-extension path for an artifact id.
     ///
-    /// This does not inspect the filesystem. A loaded manifest may have used a
-    /// case-variant extension such as `.TOML`, so the returned path is an
-    /// authoring convention rather than a guarantee that the file exists.
+    /// This does not inspect the filesystem. A loaded recipe may have used a
+    /// case-variant extension such as `.TOML`.
+    pub fn conventional_artifact_path(&self, id: &str) -> PathBuf {
+        self.root.join("artifacts").join(format!("{id}.toml"))
+    }
+
+    /// Constructs the conventional lowercase-extension path for an installer id.
+    ///
+    /// This does not inspect the filesystem. A loaded recipe may have used a
+    /// case-variant extension such as `.TOML`.
     pub fn conventional_mod_path(&self, id: &str) -> PathBuf {
         self.root.join("mods").join(format!("{id}.toml"))
+    }
+
+    /// Constructs the conventional lowercase-extension path for a preset id.
+    ///
+    /// This does not inspect the filesystem. A loaded recipe may have used a
+    /// case-variant extension such as `.TOML`.
+    pub fn conventional_preset_path(&self, id: &str) -> PathBuf {
+        self.root.join("presets").join(format!("{id}.toml"))
+    }
+}
+
+fn load_entries<T, F>(
+    directory: &Path,
+    kind: EntryKind,
+    id_of: F,
+) -> crate::error::Result<BTreeMap<String, T>>
+where
+    T: DeserializeOwned,
+    F: Fn(&T) -> &String,
+{
+    let entries = std::fs::read_dir(directory).map_err(|source| EngineError::Io {
+        path: directory.to_path_buf(),
+        source,
+    })?;
+    let mut entries = entries
+        .map(|entry| {
+            entry.map_err(|source| EngineError::Io {
+                path: directory.to_path_buf(),
+                source,
+            })
+        })
+        .collect::<crate::error::Result<Vec<_>>>()?;
+    entries.sort_by(|left, right| {
+        let left_name = left.file_name();
+        let right_name = right.file_name();
+        left_name
+            .to_string_lossy()
+            .to_lowercase()
+            .cmp(&right_name.to_string_lossy().to_lowercase())
+            .then_with(|| left_name.cmp(&right_name))
+    });
+
+    let mut values = BTreeMap::new();
+    let mut paths: BTreeMap<String, PathBuf> = BTreeMap::new();
+
+    for entry in entries {
+        let path = entry.path();
+        if !has_toml_extension(&path) {
+            continue;
+        }
+
+        let metadata = std::fs::metadata(&path).map_err(|source| EngineError::Io {
+            path: path.clone(),
+            source,
+        })?;
+        if !metadata.is_file() {
+            continue;
+        }
+
+        let value: T = read_toml(&path)?;
+        let stem = path
+            .file_stem()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| invalid_stem(kind, path.clone()))?
+            .to_owned();
+        let id = id_of(&value).clone();
+
+        if id != stem {
+            return Err(id_mismatch(kind, path, id, stem));
+        }
+
+        if let Some(first) = paths.get(&id) {
+            return Err(duplicate_id(kind, id, first.clone(), path));
+        }
+
+        paths.insert(id.clone(), path);
+        values.insert(id, value);
+    }
+
+    Ok(values)
+}
+
+fn has_toml_extension(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("toml"))
+}
+
+fn invalid_stem(kind: EntryKind, path: PathBuf) -> EngineError {
+    match kind {
+        EntryKind::Artifact => EngineError::InvalidArtifactFileStem { path },
+        EntryKind::Mod => EngineError::InvalidModFileStem { path },
+        EntryKind::Preset => EngineError::InvalidPresetFileStem { path },
+    }
+}
+
+fn id_mismatch(kind: EntryKind, path: PathBuf, id: String, stem: String) -> EngineError {
+    match kind {
+        EntryKind::Artifact => EngineError::ArtifactIdMismatch { path, id, stem },
+        EntryKind::Mod => EngineError::ModIdMismatch { path, id, stem },
+        EntryKind::Preset => EngineError::PresetIdMismatch { path, id, stem },
+    }
+}
+
+fn duplicate_id(kind: EntryKind, id: String, first: PathBuf, second: PathBuf) -> EngineError {
+    match kind {
+        EntryKind::Artifact => EngineError::DuplicateArtifactId { id, first, second },
+        EntryKind::Mod => EngineError::DuplicateModId { id, first, second },
+        EntryKind::Preset => EngineError::DuplicatePresetId { id, first, second },
     }
 }
 

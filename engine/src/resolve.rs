@@ -1,295 +1,104 @@
-//! Resolve a validated manifest and user selection into ordered install runs.
+//! Resolve a validated recipe into exact ordered installer runs.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::{EngineError, Result};
-use crate::manifest::{Component, ComponentRef, ModFile, Phase};
+use crate::manifest::{GameRoot, Phase, RunArg};
 use crate::Manifest;
 
-/// User overrides applied on top of manifest toggle and choice defaults.
+/// User overrides applied to a recipe.
+///
+/// Recipe-v2 has no component selectors yet. The platform remains explicit so
+/// unsupported targets are rejected rather than silently filtering runs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Selection {
-    /// Default-on toggle ids to turn off.
-    pub toggles_off: Vec<String>,
-    /// Default-off toggle ids to turn on.
-    pub toggles_on: Vec<String>,
-    /// Choice group id to selected option id.
-    pub choices: BTreeMap<String, String>,
-    /// Target platform: "windows", "macos", or "linux".
+    /// Requested target platform; recipe-v2 alpha supports Windows only.
     pub platform: String,
+    /// Reserved semantic choices, empty until curated selection is introduced.
+    #[serde(default)]
+    pub choices: BTreeMap<String, String>,
 }
 
 impl Selection {
-    /// Creates a selection that uses every manifest default for the requested platform.
+    /// Creates an empty semantic selection for `platform`.
     pub fn defaults(platform: &str) -> Selection {
         Selection {
-            toggles_off: Vec::new(),
-            toggles_on: Vec::new(),
-            choices: BTreeMap::new(),
             platform: platform.to_owned(),
+            choices: BTreeMap::new(),
         }
     }
 }
 
-/// One ordered invocation of a mod installer.
+/// One exact ordered invocation of a WeiDU installer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlannedRun {
-    /// Id of the mod installed by this run.
+    /// Globally unique logical run id.
+    pub run_id: String,
+    /// Installer id executed by this run.
     pub mod_id: String,
-    /// Install phase declared by the mod.
+    /// Derived staged game root targeted by this run.
+    pub target: GameRoot,
+    /// Install phase declared by the run.
     pub phase: Phase,
-    /// Resolved components in the mod's declared component order.
-    pub components: Vec<Component>,
+    /// Exact ordered WeiDU component numbers.
+    pub components: Vec<u32>,
+    /// Typed extra invocation arguments.
+    pub args: Vec<RunArg>,
+    /// Artifact containing the installer payload.
+    pub artifact_id: String,
+    /// Artifact containing the WeiDU executable.
+    pub weidu_artifact_id: String,
 }
 
-/// Fully resolved install work in collection order.
+/// Fully resolved install work in recipe order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct InstallPlan {
-    /// Installer runs, preserving separate entries for split mods.
+    /// Exact installer runs in recipe order.
     pub runs: Vec<PlannedRun>,
 }
 
-struct CandidateRun<'a> {
-    mod_file: &'a ModFile,
-    eligible_components: BTreeSet<u32>,
-    enabled_components: BTreeSet<u32>,
-}
-
-/// Resolves a valid manifest and selection into an ordered install plan.
+/// Resolves a validated recipe and semantic selection into an install plan.
 ///
-/// # Errors
-///
-/// Returns EngineError::InvalidSelection when the selection names an
-/// unsupported platform, unknown toggle, unknown choice group or option, or a
-/// selected option adds a component to a mod removed by platform or toggle
-/// filtering.
-pub fn resolve(m: &Manifest, sel: &Selection) -> Result<InstallPlan> {
-    validate_selection(m, sel)?;
-
-    let baseline_exclusions = baseline_exclusions(m);
-    let mut candidates = build_candidates(m, sel.platform.as_str(), &baseline_exclusions);
-
-    apply_toggles(m, sel, &mut candidates);
-    apply_choices(m, sel, &mut candidates)?;
-
-    Ok(InstallPlan {
-        runs: materialize_runs(candidates),
-    })
-}
-
-fn validate_selection(m: &Manifest, sel: &Selection) -> Result<()> {
-    if !matches!(sel.platform.as_str(), "windows" | "macos" | "linux") {
+/// Recipe-v2 alpha is Windows-only. Other target values fail explicitly; no
+/// installer run is removed because of platform metadata.
+pub fn resolve(manifest: &Manifest, selection: &Selection) -> Result<InstallPlan> {
+    if selection.platform != "windows" {
         return Err(EngineError::InvalidSelection(format!(
-            "unsupported platform {:?}; expected windows, macos, or linux",
-            sel.platform
+            "unsupported platform {:?}; recipe-v2 alpha supports windows",
+            selection.platform
         )));
     }
 
-    for toggle_id in sel.toggles_off.iter().chain(&sel.toggles_on) {
-        if !m
-            .collection
-            .toggles
-            .iter()
-            .any(|toggle| toggle.id == *toggle_id)
-        {
-            return Err(EngineError::InvalidSelection(format!(
-                "unknown toggle id {toggle_id:?}"
-            )));
-        }
+    if !selection.choices.is_empty() {
+        return Err(EngineError::InvalidSelection(
+            "recipe-v2 does not define semantic choices yet".to_owned(),
+        ));
     }
 
-    for (group_id, option_id) in &sel.choices {
-        let Some(group) = m
-            .collection
-            .choice_groups
-            .iter()
-            .find(|group| group.id == *group_id)
-        else {
+    let mut runs = Vec::with_capacity(manifest.collection.runs.len());
+    for run in &manifest.collection.runs {
+        let Some(mod_file) = manifest.mods.get(&run.mod_id) else {
             return Err(EngineError::InvalidSelection(format!(
-                "unknown choice group id {group_id:?}"
+                "run {:?} references unknown installer {:?}",
+                run.run_id, run.mod_id
             )));
         };
-
-        if !group.options.iter().any(|option| option.id == *option_id) {
-            return Err(EngineError::InvalidSelection(format!(
-                "unknown option id {option_id:?} for choice group {group_id:?}"
-            )));
-        }
-    }
-
-    Ok(())
-}
-
-fn baseline_exclusions(m: &Manifest) -> BTreeMap<&str, BTreeSet<u32>> {
-    let mut exclusions = BTreeMap::new();
-
-    for group in &m.collection.choice_groups {
-        for option in &group.options {
-            for component in &option.adds_components {
-                exclusions
-                    .entry(component.mod_id.as_str())
-                    .or_insert_with(BTreeSet::new)
-                    .insert(component.component);
-            }
-        }
-    }
-
-    exclusions
-}
-
-fn build_candidates<'a>(
-    m: &'a Manifest,
-    platform: &str,
-    baseline_exclusions: &BTreeMap<&str, BTreeSet<u32>>,
-) -> Vec<CandidateRun<'a>> {
-    let mut candidates = Vec::new();
-
-    for entry in &m.collection.order {
-        let Some(mod_file) = m.mods.get(&entry.id) else {
-            continue;
-        };
-        if !mod_file
-            .platforms
-            .iter()
-            .any(|supported| supported == platform)
-        {
-            continue;
-        }
-
-        let eligible_components: BTreeSet<u32> = mod_file
-            .components
-            .iter()
-            .filter(|component| match &entry.components {
-                Some(explicit) => explicit.contains(&component.id),
-                None => true,
-            })
-            .map(|component| component.id)
-            .collect();
-
-        let excluded_for_mod = baseline_exclusions.get(mod_file.id.as_str());
-        let enabled_components = eligible_components
-            .iter()
-            .copied()
-            .filter(|component| match excluded_for_mod {
-                Some(excluded) => !excluded.contains(component),
-                None => true,
-            })
-            .collect();
-
-        candidates.push(CandidateRun {
-            mod_file,
-            eligible_components,
-            enabled_components,
+        runs.push(PlannedRun {
+            run_id: run.run_id.clone(),
+            mod_id: run.mod_id.clone(),
+            target: run.phase.game_root(),
+            phase: run.phase,
+            components: run.components.clone(),
+            args: run.args.clone(),
+            artifact_id: mod_file.artifact_id.clone(),
+            weidu_artifact_id: mod_file.weidu_artifact_id.clone(),
         });
     }
 
-    candidates
-}
-
-fn apply_toggles<'a>(m: &'a Manifest, sel: &Selection, candidates: &mut Vec<CandidateRun<'a>>) {
-    for toggle in &m.collection.toggles {
-        let effective_on = (toggle.default_on && !sel.toggles_off.contains(&toggle.id))
-            || sel.toggles_on.contains(&toggle.id);
-        if effective_on {
-            continue;
-        }
-
-        candidates.retain(|candidate| {
-            !toggle
-                .removes_mods
-                .iter()
-                .any(|mod_id| mod_id == &candidate.mod_file.id)
-        });
-        remove_components(candidates, &toggle.removes_components);
-    }
-}
-
-fn apply_choices<'a>(
-    m: &'a Manifest,
-    sel: &Selection,
-    candidates: &mut [CandidateRun<'a>],
-) -> Result<()> {
-    for group in &m.collection.choice_groups {
-        let option_id = match sel.choices.get(&group.id) {
-            Some(option_id) => option_id,
-            None => &group.default,
-        };
-        let Some(option) = group.options.iter().find(|option| option.id == *option_id) else {
-            continue;
-        };
-
-        remove_components(candidates, &option.removes_components);
-
-        for component in &option.adds_components {
-            let target_run_count = candidates
-                .iter()
-                .filter(|candidate| candidate.mod_file.id == component.mod_id)
-                .count();
-
-            for candidate in candidates
-                .iter_mut()
-                .filter(|candidate| candidate.mod_file.id == component.mod_id)
-            {
-                if target_run_count == 1
-                    || candidate.eligible_components.contains(&component.component)
-                {
-                    candidate.eligible_components.insert(component.component);
-                    candidate.enabled_components.insert(component.component);
-                }
-            }
-
-            if target_run_count == 0 {
-                return Err(EngineError::InvalidSelection(format!(
-                    "choice option {:?} targets unavailable mod {:?}",
-                    option.id, component.mod_id
-                )));
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn remove_components(candidates: &mut [CandidateRun<'_>], components: &[ComponentRef]) {
-    for component in components {
-        for candidate in candidates
-            .iter_mut()
-            .filter(|candidate| candidate.mod_file.id == component.mod_id)
-        {
-            candidate.enabled_components.remove(&component.component);
-        }
-    }
-}
-
-fn materialize_runs(candidates: Vec<CandidateRun<'_>>) -> Vec<PlannedRun> {
-    candidates
-        .into_iter()
-        .filter_map(|candidate| {
-            let components: Vec<Component> = candidate
-                .mod_file
-                .components
-                .iter()
-                .filter(|component| {
-                    candidate.eligible_components.contains(&component.id)
-                        && candidate.enabled_components.contains(&component.id)
-                })
-                .cloned()
-                .collect();
-
-            if components.is_empty() {
-                None
-            } else {
-                Some(PlannedRun {
-                    mod_id: candidate.mod_file.id.clone(),
-                    phase: candidate.mod_file.phase,
-                    components,
-                })
-            }
-        })
-        .collect()
+    Ok(InstallPlan { runs })
 }

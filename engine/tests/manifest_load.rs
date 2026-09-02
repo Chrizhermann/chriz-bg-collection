@@ -37,7 +37,9 @@ impl TestDir {
             temp.path().join("collection.toml"),
         )
         .unwrap();
-        copy_dir(&fixture.join("mods"), &temp.path().join("mods"));
+        for directory in ["artifacts", "mods", "presets"] {
+            copy_dir(&fixture.join(directory), &temp.path().join(directory));
+        }
 
         temp
     }
@@ -160,10 +162,19 @@ fn loads_fixture_dir() {
         manifest.conventional_mod_path("eet"),
         manifest.root.join("mods/eet.toml")
     );
-    assert_eq!(manifest.collection.order.len(), 3);
+    assert_eq!(manifest.collection.runs.len(), 2);
+    assert_eq!(manifest.artifacts.len(), 2);
     assert_eq!(
         manifest.mods.keys().map(String::as_str).collect::<Vec<_>>(),
-        vec!["eet", "testmod"]
+        vec!["eefixpack"]
+    );
+    assert_eq!(
+        manifest
+            .presets
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        vec!["recommended"]
     );
 }
 
@@ -184,14 +195,14 @@ fn missing_dir_is_io_error_with_path() {
 #[test]
 fn parse_error_carries_path() {
     let temp = TestDir::from_fixture("parse-error");
-    let mod_path = temp.path().join("mods/testmod.toml");
+    let mod_path = temp.path().join("mods/eefixpack.toml");
     std::fs::write(&mod_path, "id = [").unwrap();
 
     let error = load_error(temp.path());
 
     match error {
         EngineError::ManifestParse { path, .. } => {
-            assert_eq!(path, temp.canonical_path().join("mods/testmod.toml"));
+            assert_eq!(path, temp.canonical_path().join("mods/eefixpack.toml"));
         }
         other => panic!("expected a manifest parse error, got {other:?}"),
     }
@@ -202,9 +213,9 @@ fn rejects_unsupported_schema() {
     let temp = TestDir::from_fixture("unsupported-schema");
     let collection_path = temp.path().join("collection.toml");
     let collection = std::fs::read_to_string(&collection_path).unwrap();
-    let schema_two = collection.replacen("schema = 1", "schema = 2", 1);
-    assert_ne!(schema_two, collection, "fixture schema marker changed");
-    std::fs::write(&collection_path, schema_two).unwrap();
+    let schema_three = collection.replacen("schema = 2", "schema = 3", 1);
+    assert_ne!(schema_three, collection, "fixture schema marker changed");
+    std::fs::write(&collection_path, schema_three).unwrap();
 
     let error = load_error(temp.path());
 
@@ -215,9 +226,9 @@ fn rejects_unsupported_schema() {
             supported,
         } => {
             assert_eq!(path, collection_path);
-            assert_eq!(found, 2);
+            assert_eq!(found, 3);
             assert_eq!(supported, SUPPORTED_SCHEMA);
-            assert_eq!(SUPPORTED_SCHEMA, 1);
+            assert_eq!(SUPPORTED_SCHEMA, 2);
         }
         other => panic!("expected an unsupported schema error, got {other:?}"),
     }
@@ -228,15 +239,15 @@ fn rejects_unsupported_schema_before_strict_future_field_validation() {
     let temp = TestDir::from_fixture("unsupported-schema-future-field");
     let collection_path = temp.path().join("collection.toml");
     let collection = std::fs::read_to_string(&collection_path).unwrap();
-    let schema_two = collection.replacen("schema = 1", "schema = 2", 1);
-    assert_ne!(schema_two, collection, "fixture schema marker changed");
-    let future_collection = schema_two.replacen(
+    let schema_three = collection.replacen("schema = 2", "schema = 3", 1);
+    assert_ne!(schema_three, collection, "fixture schema marker changed");
+    let future_collection = schema_three.replacen(
         "game_build = \"2.7.3.0\"",
         "game_build = \"2.7.3.0\"\nfuture_collection_setting = true",
         1,
     );
     assert_ne!(
-        future_collection, schema_two,
+        future_collection, schema_three,
         "fixture game-build marker changed"
     );
     std::fs::write(&collection_path, future_collection).unwrap();
@@ -250,7 +261,7 @@ fn rejects_unsupported_schema_before_strict_future_field_validation() {
             supported,
         } => {
             assert_eq!(path, collection_path);
-            assert_eq!(found, 2);
+            assert_eq!(found, 3);
             assert_eq!(supported, SUPPORTED_SCHEMA);
         }
         other => panic!("expected an unsupported schema error, got {other:?}"),
@@ -260,7 +271,7 @@ fn rejects_unsupported_schema_before_strict_future_field_validation() {
 #[test]
 fn rejects_id_file_stem_mismatch() {
     let temp = TestDir::from_fixture("id-stem-mismatch");
-    let source = temp.path().join("mods/testmod.toml");
+    let source = temp.path().join("mods/eefixpack.toml");
     let other = temp.path().join("mods/other.toml");
     std::fs::copy(source, &other).unwrap();
 
@@ -269,7 +280,7 @@ fn rejects_id_file_stem_mismatch() {
     match error {
         EngineError::ModIdMismatch { path, id, stem } => {
             assert_eq!(path, temp.canonical_path().join("mods/other.toml"));
-            assert_eq!(id, "testmod");
+            assert_eq!(id, "eefixpack");
             assert_eq!(stem, "other");
         }
         other => panic!("expected a mod id mismatch error, got {other:?}"),
@@ -279,7 +290,7 @@ fn rejects_id_file_stem_mismatch() {
 #[test]
 fn reports_stem_mismatch_before_duplicate_id() {
     let temp = TestDir::from_fixture("mismatch-before-duplicate");
-    let first = temp.path().join("mods/testmod.toml");
+    let first = temp.path().join("mods/eefixpack.toml");
     let second = temp.path().join("mods/zduplicate.toml");
     std::fs::copy(&first, &second).unwrap();
 
@@ -287,7 +298,7 @@ fn reports_stem_mismatch_before_duplicate_id() {
 
     match error {
         EngineError::ModIdMismatch { path, id, stem } => {
-            assert_eq!(id, "testmod");
+            assert_eq!(id, "eefixpack");
             assert_eq!(path, temp.canonical_path().join("mods/zduplicate.toml"));
             assert_eq!(stem, "zduplicate");
         }
@@ -298,8 +309,8 @@ fn reports_stem_mismatch_before_duplicate_id() {
 #[test]
 fn rejects_duplicate_id_from_case_distinct_toml_extensions() {
     let temp = TestDir::from_fixture("duplicate-id-case-distinct-extension");
-    let lowercase = temp.path().join("mods/testmod.toml");
-    let uppercase = temp.path().join("mods/testmod.TOML");
+    let lowercase = temp.path().join("mods/eefixpack.toml");
+    let uppercase = temp.path().join("mods/eefixpack.TOML");
     if !create_case_distinct_copy(&lowercase, &uppercase) {
         // Case-insensitive filesystems cannot represent both directory entries.
         return;
@@ -309,11 +320,11 @@ fn rejects_duplicate_id_from_case_distinct_toml_extensions() {
 
     match error {
         EngineError::DuplicateModId { id, first, second } => {
-            assert_eq!(id, "testmod");
+            assert_eq!(id, "eefixpack");
             let mut actual = vec![first, second];
             actual.sort();
             let root = temp.canonical_path().join("mods");
-            let mut expected = vec![root.join("testmod.toml"), root.join("testmod.TOML")];
+            let mut expected = vec![root.join("eefixpack.toml"), root.join("eefixpack.TOML")];
             expected.sort();
             assert_eq!(actual, expected);
         }
@@ -324,17 +335,17 @@ fn rejects_duplicate_id_from_case_distinct_toml_extensions() {
 #[test]
 fn uppercase_toml_extension_is_loaded_and_checked() {
     let temp = TestDir::from_fixture("uppercase-toml-extension");
-    let source = temp.path().join("mods/eet.toml");
-    let uppercase = temp.path().join("mods/EET.TOML");
+    let source = temp.path().join("mods/eefixpack.toml");
+    let uppercase = temp.path().join("mods/EEFIXPACK.TOML");
     std::fs::rename(source, &uppercase).unwrap();
 
     let error = load_error(temp.path());
 
     match error {
         EngineError::ModIdMismatch { path, id, stem } => {
-            assert_eq!(path, temp.canonical_path().join("mods/EET.TOML"));
-            assert_eq!(id, "eet");
-            assert_eq!(stem, "EET");
+            assert_eq!(path, temp.canonical_path().join("mods/EEFIXPACK.TOML"));
+            assert_eq!(id, "eefixpack");
+            assert_eq!(stem, "EEFIXPACK");
         }
         other => panic!("expected a mod id mismatch error, got {other:?}"),
     }
@@ -343,23 +354,23 @@ fn uppercase_toml_extension_is_loaded_and_checked() {
 #[test]
 fn case_variant_toml_extension_loads_but_conventional_path_stays_lowercase() {
     let temp = TestDir::from_fixture("case-variant-toml-extension");
-    let source = temp.path().join("mods/eet.toml");
-    let case_variant = temp.path().join("mods/eet.TOML");
+    let source = temp.path().join("mods/eefixpack.toml");
+    let case_variant = temp.path().join("mods/eefixpack.TOML");
     std::fs::rename(source, case_variant).unwrap();
 
     let manifest = Manifest::load(temp.path()).unwrap();
 
-    assert!(manifest.mods.contains_key("eet"));
+    assert!(manifest.mods.contains_key("eefixpack"));
     assert_eq!(
-        manifest.conventional_mod_path("eet"),
-        manifest.root.join("mods/eet.toml")
+        manifest.conventional_mod_path("eefixpack"),
+        manifest.root.join("mods/eefixpack.toml")
     );
 }
 
 #[test]
 fn follows_toml_file_symlinks() {
     let temp = TestDir::from_fixture("file-symlink");
-    let target = temp.path().join("mods/eet.toml");
+    let target = temp.path().join("mods/eefixpack.toml");
     let link = temp.path().join("mods/linked.toml");
     if !symlink_file(&target, &link) {
         return;
@@ -370,7 +381,7 @@ fn follows_toml_file_symlinks() {
     match error {
         EngineError::ModIdMismatch { path, id, stem } => {
             assert_eq!(path, temp.canonical_path().join("mods/linked.toml"));
-            assert_eq!(id, "eet");
+            assert_eq!(id, "eefixpack");
             assert_eq!(stem, "linked");
         }
         other => panic!("expected a mod id mismatch error, got {other:?}"),
@@ -399,7 +410,7 @@ fn broken_toml_symlink_is_io_error_with_path() {
 #[test]
 fn rejects_non_utf8_mod_file_stem_explicitly() {
     let temp = TestDir::from_fixture("non-utf8-stem");
-    let source = temp.path().join("mods/testmod.toml");
+    let source = temp.path().join("mods/eefixpack.toml");
     let invalid_path = temp.path().join("mods").join(non_utf8_toml_name());
     std::fs::copy(source, invalid_path).unwrap();
 
@@ -439,9 +450,8 @@ fn ignores_non_toml_files() {
 
     let manifest = Manifest::load(temp.path()).unwrap();
 
-    assert_eq!(manifest.mods.len(), 2);
-    assert!(manifest.mods.contains_key("eet"));
-    assert!(manifest.mods.contains_key("testmod"));
+    assert_eq!(manifest.mods.len(), 1);
+    assert!(manifest.mods.contains_key("eefixpack"));
 }
 
 #[test]
@@ -451,7 +461,6 @@ fn ignores_toml_subdirectories() {
 
     let manifest = Manifest::load(temp.path()).unwrap();
 
-    assert_eq!(manifest.mods.len(), 2);
-    assert!(manifest.mods.contains_key("eet"));
-    assert!(manifest.mods.contains_key("testmod"));
+    assert_eq!(manifest.mods.len(), 1);
+    assert!(manifest.mods.contains_key("eefixpack"));
 }

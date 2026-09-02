@@ -1,34 +1,16 @@
-schema = 1
+schema = 2
 game_build = "2.7.3.0"
 
-[[order]]
-id = "eet"
+[[runs]]
+run_id = "eefixpack-bg1"
+mod_id = "eefixpack"
+phase = "bg1-preparation"
+components = [0, 2]
+args = [{ kind = "staged-root", value = "bg1" }]
 
-[[order]]
-id = "testmod"
+[[runs]]
+run_id = "eefixpack-bg2"
+mod_id = "eefixpack"
+phase = "bg2-preparation"
 components = [0]
-
-[[order]]
-id = "testmod"
-components = [10]
-
-[[toggles]]
-id = "testmod-optional"
-name = "Test optional bits"
-default_on = true
-removes_components = [{ mod_id = "testmod", component = 10 }]
-
-[[choice_groups]]
-id = "flavor"
-name = "Flavor"
-default = "plain"
-
-[[choice_groups.options]]
-id = "plain"
-name = "Plain"
-
-[[choice_groups.options]]
-id = "spicy"
-name = "Spicy"
-adds_components = [{ mod_id = "testmod", component = 10 }]
-removes_components = [{ mod_id = "testmod", component = 0 }]
+args = []

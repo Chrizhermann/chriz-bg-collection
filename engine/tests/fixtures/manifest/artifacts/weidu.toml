@@ -1,0 +1,16 @@
+id = "weidu"
+name = "WeiDU"
+version = "249.00"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://example.invalid/weidu.zip"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[archive]
+path = "weidu.exe"
+
+[provenance]
+homepage = "https://weidu.org"
+license = "GPL-2.0-or-later"

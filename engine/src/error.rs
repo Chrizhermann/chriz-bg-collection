@@ -53,6 +53,58 @@ pub enum EngineError {
         /// Path to the second mod manifest declaring the id.
         second: std::path::PathBuf,
     },
+    /// An artifact's declared id does not match its TOML file name.
+    #[error("artifact id {id:?} in {path} does not match file stem {stem:?}")]
+    ArtifactIdMismatch {
+        /// Path to the artifact manifest with the mismatched id.
+        path: std::path::PathBuf,
+        /// Id declared inside the artifact manifest.
+        id: String,
+        /// File stem required as the artifact id.
+        stem: String,
+    },
+    /// An artifact manifest path has no file stem representable as UTF-8.
+    #[error("artifact manifest path does not have a valid UTF-8 file stem: {path}")]
+    InvalidArtifactFileStem {
+        /// Path to the artifact manifest with the invalid file stem.
+        path: std::path::PathBuf,
+    },
+    /// More than one artifact manifest declares the same id.
+    #[error("duplicate artifact id {id:?}: first declared in {first}, then in {second}")]
+    DuplicateArtifactId {
+        /// Id declared by both artifact manifests.
+        id: String,
+        /// Path to the first artifact manifest declaring the id.
+        first: std::path::PathBuf,
+        /// Path to the second artifact manifest declaring the id.
+        second: std::path::PathBuf,
+    },
+    /// A preset's declared id does not match its TOML file name.
+    #[error("preset id {id:?} in {path} does not match file stem {stem:?}")]
+    PresetIdMismatch {
+        /// Path to the preset manifest with the mismatched id.
+        path: std::path::PathBuf,
+        /// Id declared inside the preset manifest.
+        id: String,
+        /// File stem required as the preset id.
+        stem: String,
+    },
+    /// A preset manifest path has no file stem representable as UTF-8.
+    #[error("preset manifest path does not have a valid UTF-8 file stem: {path}")]
+    InvalidPresetFileStem {
+        /// Path to the preset manifest with the invalid file stem.
+        path: std::path::PathBuf,
+    },
+    /// More than one preset manifest declares the same id.
+    #[error("duplicate preset id {id:?}: first declared in {first}, then in {second}")]
+    DuplicatePresetId {
+        /// Id declared by both preset manifests.
+        id: String,
+        /// Path to the first preset manifest declaring the id.
+        first: std::path::PathBuf,
+        /// Path to the second preset manifest declaring the id.
+        second: std::path::PathBuf,
+    },
     /// Session JSON could not be serialized or parsed.
     #[error("session JSON error in {path}: {source}")]
     SessionJson {

@@ -1,0 +1,16 @@
+id = "eefixpack"
+artifact_id = "eefixpack"
+name = "EE Fixpack"
+tp2 = "EE_Fixpack/EE_Fixpack.tp2"
+language = 0
+weidu_artifact_id = "weidu"
+invocation_mode = "explicit-tp2"
+
+[[components]]
+id = 0
+name = "Core fixes"
+
+[[components]]
+id = 2
+name = "BG1 preparation fixes"
+stdin = "1\n"

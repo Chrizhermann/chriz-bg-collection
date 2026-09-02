@@ -1,0 +1,16 @@
+id = "eefixpack"
+name = "EE Fixpack"
+version = "2026.08"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://example.invalid/ee-fixpack.zip"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[archive]
+path = "EE_Fixpack"
+
+[provenance]
+homepage = "https://example.invalid/ee-fixpack"
+license = "MIT"

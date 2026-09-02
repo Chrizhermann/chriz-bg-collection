@@ -1,12 +1,4 @@
-use bg_engine::manifest::{Collection, ComponentRef, ModFile, Phase, SourceKind};
-
-fn fixture(name: &str) -> String {
-    std::fs::read_to_string(format!(
-        "{}/tests/fixtures/manifest/mods/{name}",
-        env!("CARGO_MANIFEST_DIR")
-    ))
-    .unwrap()
-}
+use bg_engine::manifest::{Collection, GameRoot, InvocationMode, ModFile, Phase, RunArg};
 
 fn collection_fixture() -> String {
     std::fs::read_to_string(concat!(
@@ -16,64 +8,112 @@ fn collection_fixture() -> String {
     .unwrap()
 }
 
+fn mod_fixture(name: &str) -> String {
+    std::fs::read_to_string(format!(
+        "{}/tests/fixtures/manifest/mods/{name}",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap()
+}
+
+fn installer(id: &str, artifact_id: &str, tp2: &str) -> String {
+    format!(
+        r#"
+id = "{id}"
+artifact_id = "{artifact_id}"
+name = "{id}"
+tp2 = "{tp2}"
+language = 0
+weidu_artifact_id = "weidu"
+invocation_mode = "explicit-tp2"
+
+[[components]]
+id = 0
+name = "Core"
+"#
+    )
+}
+
 #[test]
-fn parses_collection() {
+fn parses_explicit_runs_and_typed_arguments() {
     let collection: Collection = toml::from_str(&collection_fixture()).unwrap();
-    assert_eq!(collection.schema, 1);
+
+    assert_eq!(collection.schema, 2);
     assert_eq!(collection.game_build, "2.7.3.0");
-    assert_eq!(collection.order.len(), 3);
-    assert_eq!(collection.order[1].components, Some(vec![0]));
-    assert!(collection.order[0].components.is_none());
+    assert_eq!(collection.runs[0].run_id, "eefixpack-bg1");
+    assert_eq!(collection.runs[0].phase, Phase::Bg1Preparation);
+    assert_eq!(collection.runs[0].components, vec![0, 2]);
     assert_eq!(
-        collection.toggles[0].removes_components[0],
-        ComponentRef {
-            mod_id: "testmod".to_owned(),
-            component: 10,
-        }
+        collection.runs[0].args,
+        vec![RunArg::StagedRoot(GameRoot::Bg1)]
     );
-    assert_eq!(collection.choice_groups[0].default, "plain");
-    assert_eq!(
-        collection.choice_groups[0].options[1].adds_components.len(),
-        1
-    );
+    assert_eq!(collection.runs[1].run_id, "eefixpack-bg2");
+    assert_eq!(collection.runs[1].phase, Phase::Bg2Preparation);
+    assert_eq!(Phase::Bg1Preparation.game_root(), GameRoot::Bg1);
+    assert_eq!(Phase::EetInitialization.game_root(), GameRoot::Bg2);
+    assert_eq!(Phase::Main.game_root(), GameRoot::Bg2);
+}
+
+#[test]
+fn parses_installer_referencing_separate_mod_and_weidu_artifacts() {
+    let installer: ModFile = toml::from_str(&mod_fixture("eefixpack.toml")).unwrap();
+
+    assert_eq!(installer.id, "eefixpack");
+    assert_eq!(installer.artifact_id, "eefixpack");
+    assert_eq!(installer.weidu_artifact_id, "weidu");
+    assert_eq!(installer.invocation_mode, InvocationMode::ExplicitTp2);
+    assert_eq!(installer.components.len(), 2);
+    assert_eq!(installer.components[1].stdin.as_deref(), Some("1\n"));
+}
+
+#[test]
+fn eet_and_eet_end_can_share_one_artifact() {
+    let eet: ModFile = toml::from_str(&installer("eet", "eet", "EET/EET.tp2")).unwrap();
+    let eet_end: ModFile = toml::from_str(&installer("eet_end", "eet", "EET/EET_end.tp2")).unwrap();
+
+    assert_eq!(eet.artifact_id, eet_end.artifact_id);
+    assert_ne!(eet.tp2, eet_end.tp2);
+}
+
+#[test]
+fn artisan_installers_can_share_one_artifact_and_keep_distinct_tp2_paths() {
+    let main: ModFile = toml::from_str(&installer(
+        "artisan-kitpack",
+        "artisan-kitpack",
+        "ArtisansKitpack/ArtisansKitpack.tp2",
+    ))
+    .unwrap();
+    let npcs: ModFile = toml::from_str(&installer(
+        "artisan-npcs",
+        "artisan-kitpack",
+        "ArtisansKitpack/ArtisansKitpack-NPCs.tp2",
+    ))
+    .unwrap();
+    let tweaks: ModFile = toml::from_str(&installer(
+        "artisan-tweaks",
+        "artisan-kitpack",
+        "ArtisansKitpack/ArtisansKitpack-Tweaks.tp2",
+    ))
+    .unwrap();
+
+    assert_eq!(main.artifact_id, npcs.artifact_id);
+    assert_eq!(npcs.artifact_id, tweaks.artifact_id);
+    assert_ne!(main.tp2, npcs.tp2);
+    assert_ne!(npcs.tp2, tweaks.tp2);
 }
 
 #[test]
 fn rejects_unknown_collection_field() {
     let text = collection_fixture().replace("game_build", "gamebuild");
-    let err = toml::from_str::<Collection>(&text).unwrap_err();
-    assert!(err.to_string().contains("gamebuild"), "{err}");
+    let error = toml::from_str::<Collection>(&text).unwrap_err();
+
+    assert!(error.to_string().contains("gamebuild"), "{error}");
 }
 
 #[test]
-fn parses_mod_file() {
-    let m: ModFile = toml::from_str(&fixture("testmod.toml")).unwrap();
-    assert_eq!(m.id, "testmod");
-    assert_eq!(m.weidu, "249.00");
-    assert_eq!(m.phase, Phase::Main);
-    assert_eq!(m.source.kind, SourceKind::GithubRelease);
-    assert_eq!(m.components.len(), 2);
-    assert_eq!(m.components[1].stdin.as_deref(), Some("1\n"));
-    assert_eq!(m.platforms, vec!["windows", "macos", "linux"]);
-}
+fn rejects_unknown_installer_field() {
+    let text = mod_fixture("eefixpack.toml").replace("tp2 =", "tp22 =");
+    let error = toml::from_str::<ModFile>(&text).unwrap_err();
 
-#[test]
-fn parses_commit_zip_source_and_defaults() {
-    let m: ModFile = toml::from_str(&fixture("eet.toml")).unwrap();
-    assert_eq!(m.source.kind, SourceKind::GithubCommitZip);
-    assert_eq!(m.language, 0); // defaulted
-}
-
-#[test]
-fn rejects_unknown_field() {
-    let text = fixture("testmod.toml").replace("weidu = \"249.00\"", "wiedu = \"249.00\"");
-    let err = toml::from_str::<ModFile>(&text).unwrap_err();
-    assert!(err.to_string().contains("wiedu"), "{err}");
-}
-
-#[test]
-fn rejects_unknown_enum_value() {
-    let text = fixture("testmod.toml").replace("phase = \"main\"", "phase = \"mian\"");
-    let err = toml::from_str::<ModFile>(&text).unwrap_err();
-    assert!(err.to_string().contains("mian"), "{err}");
+    assert!(error.to_string().contains("tp22"), "{error}");
 }
