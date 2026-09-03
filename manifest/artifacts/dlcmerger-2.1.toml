@@ -19,11 +19,11 @@ publish_roots = ["DlcMerger"]
 tp2_paths = ["DlcMerger/DlcMerger.tp2"]
 
 [archive.limits]
-max_depth = 32
-max_entries = 2048
-max_entry_uncompressed_bytes = 134217728
-max_total_uncompressed_bytes = 268435456
-max_compression_ratio = 1000
+max_depth = 8
+max_entries = 128
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
 
 [provenance]
 homepage = "https://github.com/Argent77/A7-DlcMerger"

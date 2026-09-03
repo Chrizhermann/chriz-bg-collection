@@ -173,6 +173,32 @@ fn pins_exact_core_artifact_identities_and_archive_contracts() {
         );
     }
 
+    let expected_limits = BTreeMap::from([
+        ("weidu-249-amd64", (8, 64, 8 << 20, 16 << 20, 100)),
+        ("dlcmerger-2.1", (8, 128, 1 << 20, 4 << 20, 100)),
+        ("eefixpack-beta2", (16, 8_192, 16 << 20, 256 << 20, 100)),
+        ("bg1ub-17.1", (16, 2_048, 16 << 20, 64 << 20, 100)),
+        ("bg1npc-32", (16, 4_096, 8 << 20, 128 << 20, 1_000)),
+        (
+            "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d",
+            (16, 2_048, 64 << 20, 512 << 20, 100),
+        ),
+    ]);
+    for (id, expected) in expected_limits {
+        let limits = &manifest.artifacts[id].archive.limits;
+        assert_eq!(
+            (
+                limits.max_depth,
+                limits.max_entries,
+                limits.max_entry_uncompressed_bytes,
+                limits.max_total_uncompressed_bytes,
+                limits.max_compression_ratio,
+            ),
+            expected,
+            "{id} archive limits"
+        );
+    }
+
     let weidu = &manifest.artifacts["weidu-249-amd64"];
     let tool = weidu
         .tool

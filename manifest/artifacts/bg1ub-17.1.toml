@@ -19,11 +19,11 @@ publish_roots = ["bg1ub"]
 tp2_paths = ["bg1ub/bg1ub.tp2"]
 
 [archive.limits]
-max_depth = 32
-max_entries = 10000
-max_entry_uncompressed_bytes = 134217728
-max_total_uncompressed_bytes = 536870912
-max_compression_ratio = 1000
+max_depth = 16
+max_entries = 2048
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 100
 
 [provenance]
 homepage = "https://www.pocketplane.net/bg1-unfinished-business/"
