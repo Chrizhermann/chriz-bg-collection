@@ -669,6 +669,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "crossmodbg2-30",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 2_084,
+                    max_entry_uncompressed_bytes: 2_107_960,
+                    total_uncompressed_bytes: 6_785_926,
+                    max_compression_ratio: 12,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

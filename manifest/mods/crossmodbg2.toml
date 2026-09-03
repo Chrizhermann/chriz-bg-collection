@@ -1,0 +1,19 @@
+id = "crossmodbg2"
+artifact_id = "crossmodbg2-30"
+name = "Crossmod Banter Pack for Baldur's Gate II"
+tp2 = "crossmodbg2/setup-crossmodbg2.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Crossmod Banter Pack for Shadows of Amn Content"
+
+[[components]]
+id = 1
+name = "Crossmod Banter Pack for Throne of Bhaal Content"
+
+[[components]]
+id = 2
+name = "Crossmod Romance Conflicts"

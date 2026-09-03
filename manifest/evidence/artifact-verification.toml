@@ -295,3 +295,30 @@ entry_count = 187
 max_entry_uncompressed_bytes = 36163
 total_uncompressed_bytes = 1157816
 max_compression_ratio = 7
+
+[[artifacts]]
+artifact_id = "crossmodbg2-30"
+immutable_source_url = "https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod"
+source_reference = "v30"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 3715445
+actual_sha256 = "6b1555d1cf6f146f13a0c12a32008f5b586d3e063265387f42fca679ef8fe3e3"
+wrapper_kind = "direct"
+materialized_publish_roots = ["crossmodbg2"]
+declared_tp2_paths = ["crossmodbg2/setup-crossmodbg2.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 2084
+max_entry_uncompressed_bytes = 2107960
+total_uncompressed_bytes = 6785926
+max_compression_ratio = 12

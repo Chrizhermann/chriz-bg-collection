@@ -128,6 +128,13 @@ components = [0, 2, 5, 6, 7, 8]
 args = []
 
 [[runs]]
+run_id = "crossmodbg2-bg2"
+mod_id = "crossmodbg2"
+phase = "main"
+components = [0, 1, 2]
+args = []
+
+[[runs]]
 run_id = "ascension-bg2"
 mod_id = "ascension"
 phase = "main"
@@ -1180,6 +1187,34 @@ conflicts = [
   { feature_id = "feature:sirene-bg2:component-7", reason = "Choose at most one alternate class for Sirene." },
 ]
 components = [{ run_id = "sirene-bg2", component = 8 }]
+
+[[features]]
+id = "feature:crossmodbg2:component-0"
+title = "Crossmod banters for Shadows of Amn"
+description = "Add interactions between the supported BG2 NPC and quest mods. Crossmod installs after all currently selected NPC content."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "crossmodbg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:crossmodbg2:component-1"
+title = "Crossmod banters for Throne of Bhaal"
+description = "Add the supported crossmod interactions in Throne of Bhaal."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+requires = ["feature:crossmodbg2:component-0"]
+components = [{ run_id = "crossmodbg2-bg2", component = 1 }]
+
+[[features]]
+id = "feature:crossmodbg2:component-2"
+title = "Crossmod romance conflicts"
+description = "Enable Crossmod's romance-conflict content. This will become unavailable if a multi-romance route is added to the recipe."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "crossmodbg2-bg2", component = 2 }]
 
 [[features]]
 id = "mod:ascension"

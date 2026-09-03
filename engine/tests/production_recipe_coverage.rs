@@ -66,6 +66,7 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "randomiser" => "RANDOMISER",
         "buffbot" => "BUFFBOT",
         "chriz-sod-remix" => "CHRIZ-SOD-REMIX",
+        "crossmodbg2" => "CROSSMODBG2",
         other => panic!("production run has unknown curation catalog: {other}"),
     }
 }
@@ -140,6 +141,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "bubb-spell-menu",
             "buffbot",
             "chriz-sod-remix",
+            "crossmodbg2",
             "dlcmerger",
             "eeex",
             "eefixpack",
