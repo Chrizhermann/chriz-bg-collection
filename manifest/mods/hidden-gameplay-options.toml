@@ -1,0 +1,147 @@
+id = "hidden-gameplay-options"
+artifact_id = "hidden-gameplay-options-5.2"
+name = "Hidden Gameplay Options"
+tp2 = "HiddenGameplayOptions/HiddenGameplayOptions.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 10
+name = "Add in-game option Enable Debug Mode"
+
+[[components]]
+id = 11
+name = "Add in-game option Enable UI Edit Mode"
+
+[[components]]
+id = 12
+name = "Add in-game option Show Strrefs"
+
+[[components]]
+id = 13
+name = "Add in-game option Hotkeys On Tooltips"
+
+[[components]]
+id = 14
+name = "Add in-game option Show trigger icons on tab"
+
+[[components]]
+id = 16
+name = "Add in-game option Limit druidic spells for Cleric/Ranger"
+
+[[components]]
+id = 17
+name = "Add in-game option 3E Sneak Attack"
+
+[[components]]
+id = 18
+name = "Add in-game option Critical Hit Screen Shake"
+
+[[components]]
+id = 19
+name = "Add in-game option Show extra combat info"
+
+[[components]]
+id = 20
+name = "Add in-game option Show Game Date and Time on Pause"
+
+[[components]]
+id = 22
+name = "Add in-game option Reverse Mouse Wheel Zoom"
+
+[[components]]
+id = 23
+name = "Add in-game option Pause Game on Map Screen"
+
+[[components]]
+id = 24
+name = "Add in-game option Enable Fog"
+
+[[components]]
+id = 25
+name = "Add in-game option Disable Movies"
+
+[[components]]
+id = 27
+name = "Add in-game option XP Bonus in Nightmare Mode"
+
+[[components]]
+id = 28
+name = "Add in-game option Trigger Bored Sounds"
+
+[[components]]
+id = 29
+name = "Add in-game option Frame Rate (experimental)"
+
+[[components]]
+id = 30
+name = "Add in-game option Action Feedback"
+
+[[components]]
+id = 32
+name = "Add in-game option Show Area of Effect Range"
+
+[[components]]
+id = 33
+name = "Add in-game option Enhanced Path Search"
+
+[[components]]
+id = 34
+name = "Add in-game option Expire Trap Highlights"
+
+[[components]]
+id = 35
+name = "Add in-game option Show Learnable Spells"
+
+[[components]]
+id = 36
+name = "Add in-game option Render Search Map"
+
+[[components]]
+id = 37
+name = "Add in-game option Render Dynamic Search Map"
+
+[[components]]
+id = 38
+name = "Add in-game options for Tweaks Anthology Create Interval Saves"
+
+[[components]]
+id = 39
+name = "Add in-game option Force Dialog Pause"
+
+[[components]]
+id = 40
+name = "Add in-game options for Tweaks Anthology Restored Loading Hints"
+
+[[components]]
+id = 200
+name = "Improved Cheat Menu"
+
+[[components]]
+id = 300
+name = "Improved Death Screen options"
+
+[[components]]
+id = 301
+name = "Improved Quit Game options"
+
+[[components]]
+id = 302
+name = "Game Menu: Fire animation over SoD logo"
+
+[[components]]
+id = 304
+name = "Game Menu: Improved Load Game options"
+
+[[components]]
+id = 101
+name = "Update key bindings for priest spells only"
+
+[[components]]
+id = 102
+name = "Update key bindings for mage spells only"
+
+[[components]]
+id = 103
+name = "Update key bindings for priest and mage spells"

@@ -1,0 +1,15 @@
+id = "fade"
+artifact_id = "fade-5.6"
+name = "Fade NPC"
+tp2 = "fade/Setup-Fade.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Fade: An NPC for Baldur's Gate II: SoA and ToB"
+
+[[components]]
+id = 2
+name = "Fade EE: give Fade Shadowdancer kit"

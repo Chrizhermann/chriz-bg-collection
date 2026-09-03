@@ -1,0 +1,32 @@
+id = "ub-28"
+name = "Unfinished Business for BG2"
+version = "28"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Pocket-Plane-Group/UnfinishedBusiness/releases/download/v28/ub-v28.zip"
+reference = "v28"
+expected_filename = "ub-v28.zip"
+expected_length = 6969494
+sha256 = "1d5aff32d760c54486eacf09c4904c3cf2cd52cb76ba15c8f050430fd7a73d62"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["ub"]
+tp2_paths = ["ub/kalah/kalah.tp2", "ub/setup-ub.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Pocket-Plane-Group/UnfinishedBusiness"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Pocket-Plane-Group/UnfinishedBusiness/releases/tag/v28"
+reviewed_on = "2026-09-04"

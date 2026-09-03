@@ -1,0 +1,32 @@
+id = "xan-19"
+name = "Xan NPC for BGII"
+version = "19"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Pocket-Plane-Group/Xan_for_BGII/releases/download/v19/Xan_v19.zip"
+reference = "v19"
+expected_filename = "Xan_v19.zip"
+expected_length = 74295924
+sha256 = "47cd6622678f56d1e67b7c01579f943bf9ced813a26d3d72bc0866088cf195d7"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Xan"]
+tp2_paths = ["Xan/xan.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Pocket-Plane-Group/Xan_for_BGII"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Pocket-Plane-Group/Xan_for_BGII/releases/tag/v19"
+reviewed_on = "2026-09-04"

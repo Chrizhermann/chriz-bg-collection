@@ -1,0 +1,31 @@
+id = "sirene-bg2"
+artifact_id = "sirene-bg2-00beda909a4a791a35016069b4ebb77f27279723"
+name = "Sirene NPC for BG2:EE"
+tp2 = "Sirene_BG2/Sirene_BG2.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Sirene NPC for BG2:EE"
+
+[[components]]
+id = 2
+name = "Alternate portrait: Sirick, Light Armor"
+
+[[components]]
+id = 5
+name = "True Paladin"
+
+[[components]]
+id = 6
+name = "Cavalier"
+
+[[components]]
+id = 7
+name = "Inquisitor"
+
+[[components]]
+id = 8
+name = "Undead Hunter"

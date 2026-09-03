@@ -51,6 +51,90 @@ args = [
 ]
 
 [[runs]]
+run_id = "eeex-bg2"
+mod_id = "eeex"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+args = []
+
+[[runs]]
+run_id = "bubb-spell-menu-bg2"
+mod_id = "bubb-spell-menu"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "bggo-bg2"
+mod_id = "bggo"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "rr-bg2"
+mod_id = "rr"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 999]
+args = []
+
+[[runs]]
+run_id = "fade-bg2"
+mod_id = "fade"
+phase = "main"
+components = [0, 2]
+args = []
+
+[[runs]]
+run_id = "paina-bg2"
+mod_id = "paina"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "sarahtob-bg2"
+mod_id = "sarahtob"
+phase = "main"
+components = [1]
+args = []
+
+[[runs]]
+run_id = "ub-bg2"
+mod_id = "ub"
+phase = "main"
+components = [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 20, 21, 22, 23, 24, 25]
+args = []
+
+[[runs]]
+run_id = "xan-bg2"
+mod_id = "xan"
+phase = "main"
+components = [0, 1, 2, 3, 4]
+args = []
+
+[[runs]]
+run_id = "yeslicknpc-bg2"
+mod_id = "yeslicknpc"
+phase = "main"
+components = [0, 1]
+args = []
+
+[[runs]]
+run_id = "sirene-bg2"
+mod_id = "sirene-bg2"
+phase = "main"
+components = [0, 2, 5, 6, 7, 8]
+args = []
+
+[[runs]]
+run_id = "ascension-bg2"
+mod_id = "ascension"
+phase = "main"
+components = [0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2100, 2300, 2400]
+args = []
+
+[[runs]]
 run_id = "eet-end-bg2"
 mod_id = "eet-end"
 phase = "eet-finalization"
@@ -418,3 +502,778 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:eet-end"
 components = [{ run_id = "eet-end-bg2", component = 0 }]
+
+[[features]]
+id = "mod:eeex"
+title = "EEex"
+description = "Install the reviewed EEex 1.2 runtime and its required modules. Launch the game through InfinityLoader."
+category = "engine"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:eeex:mandatory-components"
+title = "EEex full runtime with LuaJIT"
+description = "Installs Quick Menu Core, EEex, all six reviewed modules, and the LuaJIT component required by this collection."
+category = "engine"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [
+  { run_id = "eeex-bg2", component = 0 },
+  { run_id = "eeex-bg2", component = 1 },
+  { run_id = "eeex-bg2", component = 2 },
+  { run_id = "eeex-bg2", component = 3 },
+  { run_id = "eeex-bg2", component = 4 },
+  { run_id = "eeex-bg2", component = 5 },
+  { run_id = "eeex-bg2", component = 6 },
+  { run_id = "eeex-bg2", component = 7 },
+  { run_id = "eeex-bg2", component = 8 },
+]
+
+[[features]]
+id = "feature:bubb-spell-menu-extended:component-0"
+title = "Bubb's Spell Menu Extended"
+description = "Use the reviewed EEex-powered spell-selection interface."
+category = "interface"
+decision = "default"
+readiness = "ready"
+requires = ["mod:eeex"]
+components = [{ run_id = "bubb-spell-menu-bg2", component = 0 }]
+
+[[features]]
+id = "feature:bggo:component-0"
+title = "Baldur's Gate Graphical Overhaul"
+description = "Install the reviewed BGGO v3.6 core graphics."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "bggo-bg2", component = 0 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-38"
+title = "Interval-save options"
+description = "Approved optional Hidden Gameplay Options integration, deferred until the Tweaks run and late HGO placement are authored."
+category = "interface"
+decision = "optional"
+readiness = "blocked"
+unavailable_reason = "This option requires a selected Tweaks Anthology interval-save component and Hidden Gameplay Options must run later in the stack."
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-40"
+title = "Restored-loading-hints options"
+description = "Approved optional Hidden Gameplay Options integration, deferred until the Tweaks run and late HGO placement are authored."
+category = "interface"
+decision = "optional"
+readiness = "blocked"
+unavailable_reason = "This option requires Tweaks Anthology component 3400 and Hidden Gameplay Options must run later in the stack."
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-200"
+title = "Improved Cheat Menu"
+description = "Approved optional Hidden Gameplay Options component, deferred until its required late install position is authored."
+category = "interface"
+decision = "optional"
+readiness = "blocked"
+unavailable_reason = "This component must be installed after content and UI mods, so it is unavailable until the late Hidden Gameplay Options run is wired."
+
+[[features]]
+id = "feature:rr:component-0"
+title = "Proper dual-wielding for Thieves and Bards"
+description = "Install Rogue Rebalancing's reviewed dual-wielding implementation."
+category = "rules"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 0 }]
+
+[[features]]
+id = "feature:rr:component-1"
+title = "RR Thief kit revisions"
+description = "Optional and not exercised by the current release-candidate receipt; later kit layers may partially supersede it."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 1 }]
+
+[[features]]
+id = "feature:rr:component-2"
+title = "RR Thief High Level Ability revisions"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 2 }]
+
+[[features]]
+id = "feature:rr:component-3"
+title = "Racial adjustments for thieving skills"
+description = "Apply Rogue Rebalancing's reviewed racial thieving-skill adjustments."
+category = "rules"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 3 }]
+
+[[features]]
+id = "feature:rr:component-4"
+title = "RR Bard kit revisions"
+description = "Optional and not exercised by the current release-candidate receipt; later Bardic Wonders selections may supersede it."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 4 }]
+
+[[features]]
+id = "feature:rr:component-5"
+title = "RR Bard High Level Ability revisions"
+description = "Optional and not exercised by the current release-candidate receipt; later bard-HLA selections may overlap it."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 5 }]
+
+[[features]]
+id = "feature:rr:component-6"
+title = "RR Bard spell progression"
+description = "Optional and not exercised by the current release-candidate receipt; later Tweaks selections may conflict with it."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 6 }]
+
+[[features]]
+id = "feature:rr:component-7"
+title = "Additional equipment for Thieves and Bards"
+description = "Add the reviewed Rogue Rebalancing equipment."
+category = "items"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 7 }]
+
+[[features]]
+id = "feature:rr:component-8"
+title = "Upgradeable RR equipment"
+description = "Enable the reviewed Rogue Rebalancing equipment upgrades."
+category = "items"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 8 }]
+
+[[features]]
+id = "feature:rr:component-9"
+title = "PnP thievery potions"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:rr:component-10", reason = "Choose at most one Revised Thievery potion route." }]
+components = [{ run_id = "rr-bg2", component = 9 }]
+
+[[features]]
+id = "feature:rr:component-10"
+title = "Default non-stacking thievery potions"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:rr:component-9", reason = "Choose at most one Revised Thievery potion route." }]
+components = [{ run_id = "rr-bg2", component = 10 }]
+
+[[features]]
+id = "feature:rr:component-11"
+title = "Chosen of Cyric encounter"
+description = "Install Rogue Rebalancing's reviewed Chosen of Cyric encounter."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 11 }]
+
+[[features]]
+id = "feature:rr:component-12"
+title = "Shadow Thief Improvements"
+description = "Install Rogue Rebalancing's reviewed Shadow Thief improvements."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 12 }]
+
+[[features]]
+id = "feature:rr:component-999"
+title = "BG2-style icons for RR content"
+description = "Use BG2-style icons for installed Rogue Rebalancing content."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "rr-bg2", component = 999 }]
+
+[[features]]
+id = "mod:evandra"
+title = "Evandra NPC"
+description = "Evandra remains part of the curated collection, but the public alpha does not yet have a verified user-supplied archive contract."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Manual v2.2 acquisition, the exact archive hash, the Sorcerer conversion, and custom portrait provenance still need to be frozen together."
+
+[[features]]
+id = "mod:fade"
+title = "Fade NPC"
+description = "Add Fade to the BG2 campaign."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:fade:mandatory-components"
+title = "Fade core"
+description = "Install Fade's core NPC component whenever Fade is selected."
+category = "npcs"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:fade"
+components = [{ run_id = "fade-bg2", component = 0 }]
+
+[[features]]
+id = "feature:fade:component-2"
+title = "Make Fade a Shadowdancer"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:fade"
+components = [{ run_id = "fade-bg2", component = 2 }]
+
+[[features]]
+id = "mod:paina"
+title = "Pai'Na NPC"
+description = "Add Pai'Na to the BG2 campaign."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:paina:mandatory-components"
+title = "Pai'Na core"
+description = "Install Pai'Na's sole component whenever the NPC is selected."
+category = "npcs"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:paina"
+components = [{ run_id = "paina-bg2", component = 0 }]
+
+[[features]]
+id = "mod:sarahtob"
+title = "Sarah NPC"
+description = "Add Sarah to the BG2 campaign using the curated audio route."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:sarahtob:mandatory-components"
+title = "Sarah with revised audio"
+description = "Install Sarah's full revised-audio component whenever Sarah is selected."
+category = "npcs"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:sarahtob"
+components = [{ run_id = "sarahtob-bg2", component = 1 }]
+
+[[features]]
+id = "feature:ub:component-0"
+title = "The Kidnapping of Boo"
+description = "Restore the reviewed Unfinished Business quest."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ub:component-1"
+title = "The Suna Seni and Valygar Relationship"
+description = "Restore the reviewed Unfinished Business content."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 1 }]
+
+[[features]]
+id = "feature:ub:component-2"
+title = "Kalah and What He Was Promised"
+description = "Restore the reviewed Unfinished Business content."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 2 }]
+
+[[features]]
+id = "feature:ub:component-4"
+title = "Gorje Hilldark and the Extended Illithium Quest"
+description = "Restore the reviewed Unfinished Business quest."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 4 }]
+
+[[features]]
+id = "feature:ub:component-5"
+title = "The Pai'Na and Spider's Bane Quest"
+description = "Restore the reviewed Unfinished Business quest."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 5 }]
+
+[[features]]
+id = "feature:ub:component-6"
+title = "Restored Crooked Crane Inn"
+description = "Restore the reviewed Crooked Crane Inn content."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 6 }]
+
+[[features]]
+id = "feature:ub:component-7"
+title = "Restored Encounters"
+description = "Restore the reviewed Unfinished Business encounters."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 7 }]
+
+[[features]]
+id = "feature:ub:component-8"
+title = "Artemis Entreri in Bodhi's Lair"
+description = "Restore the reviewed Unfinished Business encounter."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 8 }]
+
+[[features]]
+id = "feature:ub:component-9"
+title = "Corrected Xzar's Creations"
+description = "Apply the reviewed Unfinished Business correction."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 9 }]
+
+[[features]]
+id = "feature:ub:component-10"
+title = "Restored Hell Minions"
+description = "Restore the reviewed Unfinished Business content."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ub:component-12"
+title = "Item Restorations"
+description = "Install the reviewed Unfinished Business item restorations."
+category = "items"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 12 }]
+
+[[features]]
+id = "feature:ub:component-13"
+title = "Yoshimo's Original Portrait"
+description = "Use Yoshimo's reviewed original portrait."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 13 }]
+
+[[features]]
+id = "feature:ub:component-14"
+title = "Anomen's Original Portrait"
+description = "Use Anomen's reviewed original portrait."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 14 }]
+
+[[features]]
+id = "feature:ub:component-15"
+title = "NPC Portrait Restorations"
+description = "Install the reviewed NPC portrait restorations."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 15 }]
+
+[[features]]
+id = "feature:ub:component-17"
+title = "Corrected Character Names and Biographies"
+description = "Apply the reviewed name and biography corrections."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 17 }]
+
+[[features]]
+id = "feature:ub:component-18"
+title = "Restored Minor Dialogs"
+description = "Restore the reviewed minor dialogs."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 18 }]
+
+[[features]]
+id = "feature:ub:component-20"
+title = "Extended ToB Item Descriptions"
+description = "Install the reviewed Throne of Bhaal item descriptions."
+category = "items"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 20 }]
+
+[[features]]
+id = "feature:ub:component-21"
+title = "Throne of Bhaal Minor Restorations"
+description = "Install the reviewed Throne of Bhaal minor restorations."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 21 }]
+
+[[features]]
+id = "feature:ub:component-22"
+title = "Justifier Kit"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "kits"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 22 }]
+
+[[features]]
+id = "feature:ub:component-23"
+title = "Feralan Kit"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "kits"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 23 }]
+
+[[features]]
+id = "feature:ub:component-24"
+title = "Sarevok's Remorse"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "quests"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 24 }]
+
+[[features]]
+id = "feature:ub:component-25"
+title = "The Murder of Acton Balthis"
+description = "Install the reviewed Kulyok quest."
+category = "quests"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "ub-bg2", component = 25 }]
+
+[[features]]
+id = "mod:xan"
+title = "Xan NPC"
+description = "Add Xan to the BG2 campaign."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:xan:mandatory-components"
+title = "Xan core"
+description = "Install Xan's core component whenever Xan is selected."
+category = "npcs"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:xan"
+components = [{ run_id = "xan-bg2", component = 0 }]
+
+[[features]]
+id = "feature:xan:component-1"
+title = "Make Xan a Fighter/Mage"
+description = "Use the curated default Xan class route."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:xan"
+conflicts = [
+  { feature_id = "feature:xan:component-2", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-3", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-4", reason = "Choose at most one alternate class for Xan." },
+]
+components = [{ run_id = "xan-bg2", component = 1 }]
+
+[[features]]
+id = "feature:xan:component-2"
+title = "Make Xan a Mage"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:xan"
+conflicts = [
+  { feature_id = "feature:xan:component-1", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-3", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-4", reason = "Choose at most one alternate class for Xan." },
+]
+components = [{ run_id = "xan-bg2", component = 2 }]
+
+[[features]]
+id = "feature:xan:component-3"
+title = "Make Xan a Sorcerer"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:xan"
+conflicts = [
+  { feature_id = "feature:xan:component-1", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-2", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-4", reason = "Choose at most one alternate class for Xan." },
+]
+components = [{ run_id = "xan-bg2", component = 3 }]
+
+[[features]]
+id = "feature:xan:component-4"
+title = "Make Xan a Wild Mage (ToB only)"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:xan"
+conflicts = [
+  { feature_id = "feature:xan:component-1", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-2", reason = "Choose at most one alternate class for Xan." },
+  { feature_id = "feature:xan:component-3", reason = "Choose at most one alternate class for Xan." },
+]
+components = [{ run_id = "xan-bg2", component = 4 }]
+
+[[features]]
+id = "feature:yeslicknpc:component-0"
+title = "Yeslick as a regular Fighter-Cleric"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:yeslicknpc:component-1", reason = "Choose exactly one Yeslick class route when installing Yeslick." }]
+components = [{ run_id = "yeslicknpc-bg2", component = 0 }]
+
+[[features]]
+id = "feature:yeslicknpc:component-1"
+title = "Yeslick as a Fighter-Alaghor"
+description = "Use the curated default Yeslick class route."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:yeslicknpc:component-0", reason = "Choose exactly one Yeslick class route when installing Yeslick." }]
+components = [{ run_id = "yeslicknpc-bg2", component = 1 }]
+
+[[features]]
+id = "feature:sirene-bg2:component-0"
+title = "Sirene NPC for BG2"
+description = "Add Sirene to the BG2 campaign."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "sirene-bg2", component = 0 }]
+
+[[features]]
+id = "feature:sirene-bg2:component-2"
+title = "Sirene portrait: Sirick, Light Armor"
+description = "Use Christopher's curated Sirene portrait option."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg2:component-0"
+components = [{ run_id = "sirene-bg2", component = 2 }]
+
+[[features]]
+id = "feature:sirene-bg2:component-5"
+title = "Sirene as a True Paladin"
+description = "Use the curated default Sirene class route."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg2:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg2:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-8", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg2", component = 5 }]
+
+[[features]]
+id = "feature:sirene-bg2:component-6"
+title = "Sirene as a Cavalier"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg2:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg2:component-5", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-8", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg2", component = 6 }]
+
+[[features]]
+id = "feature:sirene-bg2:component-7"
+title = "Sirene as an Inquisitor"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg2:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg2:component-5", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-8", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg2", component = 7 }]
+
+[[features]]
+id = "feature:sirene-bg2:component-8"
+title = "Sirene as an Undead Hunter"
+description = "Optional and not exercised by the current release-candidate receipt."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg2:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg2:component-5", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg2:component-7", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg2", component = 8 }]
+
+[[features]]
+id = "mod:ascension"
+title = "Ascension"
+description = "Install the reviewed Ascension endgame overhaul before Spell Revisions and SCS."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:ascension:component-0"
+title = "Rewritten Final Chapter of Throne of Bhaal"
+description = "Install Ascension's rewritten final chapter."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ascension:component-10"
+title = "Balthazar can be redeemed"
+description = "Enable the reviewed Balthazar redemption route."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ascension:component-20"
+title = "Improved Sarevok interactions"
+description = "Install the reviewed Sarevok-player interactions."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 20 }]
+
+[[features]]
+id = "feature:ascension:component-30"
+title = "Improved Imoen interactions"
+description = "Install the reviewed Imoen-player interactions."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 30 }]
+
+[[features]]
+id = "feature:ascension:component-50"
+title = "Improved Slayer Transformation"
+description = "Install Ascension's reviewed Slayer transformation."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 50 }]
+
+[[features]]
+id = "feature:ascension:component-60"
+title = "David Gaider's expanded epilogues"
+description = "Use the curated Bioware-NPC epilogue route."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 60 }]
+
+[[features]]
+id = "feature:ascension:mandatory-components"
+title = "Tougher Throne of Bhaal battles"
+description = "Install all six curated Ascension boss improvements whenever Ascension is selected."
+category = "endgame"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:ascension"
+components = [
+  { run_id = "ascension-bg2", component = 1000 },
+  { run_id = "ascension-bg2", component = 1100 },
+  { run_id = "ascension-bg2", component = 1200 },
+  { run_id = "ascension-bg2", component = 1300 },
+  { run_id = "ascension-bg2", component = 1400 },
+  { run_id = "ascension-bg2", component = 1500 },
+]
+
+[[features]]
+id = "feature:ascension:component-2000"
+title = "Full-body portrait for Bodhi"
+description = "Install the curated full-body Bodhi portrait."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 2000 }]
+
+[[features]]
+id = "feature:ascension:component-2100"
+title = "Alternate Balthazar portrait"
+description = "Install the curated alternate Balthazar portrait."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 2100 }]
+
+[[features]]
+id = "feature:ascension:component-2300"
+title = "Sharper Abazigal and Gromnir portraits"
+description = "Install the curated Enhanced Edition portraits."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 2300 }]
+
+[[features]]
+id = "feature:ascension:component-2400"
+title = "Slightly improved cutscenes"
+description = "Install Ascension's reviewed cutscene improvements."
+category = "endgame"
+decision = "default"
+readiness = "ready"
+parent = "mod:ascension"
+components = [{ run_id = "ascension-bg2", component = 2400 }]

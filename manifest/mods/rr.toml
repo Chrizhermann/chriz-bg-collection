@@ -1,0 +1,63 @@
+id = "rr"
+artifact_id = "rr-4.92"
+name = "Rogue Rebalancing"
+tp2 = "rr/setup-rr.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Proper dual-wielding implementation for Thieves and Bards"
+
+[[components]]
+id = 1
+name = "Thief kit revisions"
+
+[[components]]
+id = 2
+name = "Thief High Level Ability revisions"
+
+[[components]]
+id = 3
+name = "Proper racial adjustments for thieving skills"
+
+[[components]]
+id = 4
+name = "Bard kit revisions"
+
+[[components]]
+id = 5
+name = "Bard High Level Ability revisions"
+
+[[components]]
+id = 6
+name = "Proper spell progression for Bards"
+
+[[components]]
+id = 7
+name = "Additional equipment for Thieves and Bards"
+
+[[components]]
+id = 8
+name = "Upgradeable Equipment"
+
+[[components]]
+id = 9
+name = "Use PnP thievery potions and prevent their effects from stacking"
+
+[[components]]
+id = 10
+name = "Retain default thievery potions and prevent their effects from stacking"
+
+[[components]]
+id = 11
+name = "Chosen of Cyric encounter"
+
+[[components]]
+id = 12
+name = "Shadow Thief Improvements"
+
+[[components]]
+id = 999
+name = "BG2-style icons for RR content"

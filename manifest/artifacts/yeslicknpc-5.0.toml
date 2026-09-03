@@ -1,0 +1,32 @@
+id = "yeslicknpc-5.0"
+name = "Yeslick NPC"
+version = "5.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Spellhold-Studios/Yeslick-NPC/releases/download/v5.0/yeslick-npc-v5.0.zip"
+reference = "v5.0"
+expected_filename = "yeslick-npc-v5.0.zip"
+expected_length = 9393233
+sha256 = "d9b403a6feb8638cc70ac778ccaed73f4eadd3b780d1e10605265763fe6414fe"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["yeslicknpc"]
+tp2_paths = ["yeslicknpc/yeslicknpc.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Spellhold-Studios/Yeslick-NPC"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Spellhold-Studios/Yeslick-NPC/releases/tag/v5.0"
+reviewed_on = "2026-09-04"

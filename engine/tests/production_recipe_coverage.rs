@@ -50,7 +50,19 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "bg1npc" => "BG1NPC",
         "eet" => "EET",
         "eet-end" => "EET_END",
-        other => panic!("production core run has unknown curation catalog: {other}"),
+        "eeex" => "EEEX",
+        "bubb-spell-menu" => "BUBB_SPELL_MENU_EXTENDED",
+        "bggo" => "BGGO",
+        "rr" => "RR",
+        "fade" => "FADE",
+        "paina" => "PAINA",
+        "sarahtob" => "SARAHTOB",
+        "ub" => "UB",
+        "xan" => "XAN",
+        "yeslicknpc" => "YESLICKNPC",
+        "sirene-bg2" => "SIRENE_BG2",
+        "ascension" => "ASCENSION",
+        other => panic!("production run has unknown curation catalog: {other}"),
     }
 }
 
@@ -117,12 +129,25 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
     assert_eq!(
         manifest.mods.keys().cloned().collect::<Vec<_>>(),
         [
+            "ascension",
             "bg1npc",
             "bg1ub",
+            "bggo",
+            "bubb-spell-menu",
             "dlcmerger",
+            "eeex",
             "eefixpack",
             "eet",
             "eet-end",
+            "fade",
+            "hidden-gameplay-options",
+            "paina",
+            "rr",
+            "sarahtob",
+            "sirene-bg2",
+            "ub",
+            "xan",
+            "yeslicknpc",
         ]
     );
     let collection = std::fs::read_to_string(repo_root().join("manifest/collection.toml")).unwrap();
