@@ -294,7 +294,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
 }
 
 #[test]
-fn declares_the_reviewed_component_menus_without_a_premature_hgo_run() {
+fn declares_the_reviewed_component_menus_and_late_hgo_run() {
     let manifest = recipe();
     let expected = BTreeMap::from([
         ("eeex", EEEX_COMPONENTS),
@@ -319,11 +319,13 @@ fn declares_the_reviewed_component_menus_without_a_premature_hgo_run() {
     }
     assert_eq!(manifest.mods["bubb-spell-menu"].components[0].id, 0);
     assert_eq!(manifest.mods["bggo"].components[0].id, 0);
-    assert!(manifest
+    let hgo = manifest
         .collection
         .runs
         .iter()
-        .all(|run| run.mod_id != "hidden-gameplay-options"));
+        .find(|run| run.mod_id == "hidden-gameplay-options")
+        .expect("late HGO run");
+    assert_eq!(hgo.components, HGO_COMPONENTS);
 }
 
 #[test]
@@ -381,6 +383,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "randomiser-bg2",
             "eet-end-bg2",
             "chriz-sod-remix-bg2",
+            "hiddengameplayoptions-bg2",
             "buffbot-bg2",
         ]
     );
@@ -429,17 +432,23 @@ fn recommended_preset_reproduces_the_proven_official_defaults_except_recorded_om
     assert_eq!(plan.components_for("yeslicknpc-bg2"), Some(&[1][..]));
     assert_eq!(plan.components_for("sirene-bg2"), Some(&[0, 2, 5][..]));
     assert_eq!(
+        plan.components_for("hiddengameplayoptions-bg2"),
+        Some(
+            &[
+                10, 11, 12, 13, 14, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 30, 32, 33, 34, 35,
+                36, 37, 39, 300, 301, 103,
+            ][..]
+        )
+    );
+    assert_eq!(
         plan.components_for("ascension-bg2"),
         Some(ASCENSION_COMPONENTS)
     );
-    assert!(plan
-        .runs
-        .iter()
-        .all(|run| run.mod_id != "hidden-gameplay-options" && run.mod_id != "evandra"));
+    assert!(plan.runs.iter().all(|run| run.mod_id != "evandra"));
 }
 
 #[test]
-fn keeps_manual_evandra_and_late_hgo_options_visible_but_unavailable() {
+fn keeps_manual_evandra_and_dependency_blocked_hgo_options_unavailable() {
     let manifest = recipe();
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
 
@@ -447,7 +456,6 @@ fn keeps_manual_evandra_and_late_hgo_options_visible_but_unavailable() {
         "mod:evandra",
         "feature:hiddengameplayoptions:component-38",
         "feature:hiddengameplayoptions:component-40",
-        "feature:hiddengameplayoptions:component-200",
     ] {
         let control = evaluation
             .view
@@ -462,4 +470,11 @@ fn keeps_manual_evandra_and_late_hgo_options_visible_but_unavailable() {
         evaluation.view.control("mod:evandra").unwrap().decision,
         Decision::Default
     );
+    let cheat_menu = evaluation
+        .view
+        .control("feature:hiddengameplayoptions:component-200")
+        .unwrap();
+    assert_eq!(cheat_menu.readiness, Readiness::Ready);
+    assert!(cheat_menu.interactive);
+    assert!(!cheat_menu.selected);
 }

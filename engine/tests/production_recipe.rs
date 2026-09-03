@@ -697,6 +697,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "hidden-gameplay-options-5.2",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 116,
+                    max_entry_uncompressed_bytes: 1_390_080,
+                    total_uncompressed_bytes: 3_388_636,
+                    max_compression_ratio: 15,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

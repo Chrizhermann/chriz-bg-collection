@@ -349,3 +349,30 @@ entry_count = 93
 max_entry_uncompressed_bytes = 1487545
 total_uncompressed_bytes = 3361828
 max_compression_ratio = 10
+
+[[artifacts]]
+artifact_id = "hidden-gameplay-options-5.2"
+immutable_source_url = "https://github.com/Argent77/A7-HiddenGameplayOptions/releases/download/v5.2/win-A7-HiddenGameplayOptions-v5.2.zip"
+source_reference = "v5.2"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 2767061
+actual_sha256 = "a7b173f811b1d2137e9836e8dec7118e0a1927ff85e26956d211e0d1b53c2029"
+wrapper_kind = "direct"
+materialized_publish_roots = ["HiddenGameplayOptions"]
+declared_tp2_paths = ["HiddenGameplayOptions/HiddenGameplayOptions.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 116
+max_entry_uncompressed_bytes = 1390080
+total_uncompressed_bytes = 3388636
+max_compression_ratio = 15

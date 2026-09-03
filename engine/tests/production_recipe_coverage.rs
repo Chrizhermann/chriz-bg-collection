@@ -67,6 +67,7 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "buffbot" => "BUFFBOT",
         "chriz-sod-remix" => "CHRIZ-SOD-REMIX",
         "crossmodbg2" => "CROSSMODBG2",
+        "hidden-gameplay-options" => "HIDDENGAMEPLAYOPTIONS",
         "iepbanters" => "IEPBANTERS",
         other => panic!("production run has unknown curation catalog: {other}"),
     }

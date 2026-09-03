@@ -177,6 +177,13 @@ components = [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 1
 args = []
 
 [[runs]]
+run_id = "hiddengameplayoptions-bg2"
+mod_id = "hidden-gameplay-options"
+phase = "post-eet-end"
+components = [10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 40, 200, 300, 301, 302, 304, 101, 102, 103]
+args = []
+
+[[runs]]
 run_id = "buffbot-bg2"
 mod_id = "buffbot"
 phase = "post-eet-end"
@@ -593,31 +600,377 @@ readiness = "ready"
 components = [{ run_id = "bggo-bg2", component = 0 }]
 
 [[features]]
+id = "mod:hidden-gameplay-options"
+title = "Hidden Gameplay Options"
+description = "Expose the reviewed in-game engine, interface, and key-binding options. The whole mod can be disabled."
+category = "interface"
+decision = "optional"
+readiness = "ready"
+requires = ["mod:eet-end"]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-10"
+title = "Enable Debug Mode option"
+description = "Add the in-game toggle for the engine's debug mode."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 10 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-11"
+title = "Enable UI Edit Mode option"
+description = "Add the in-game toggle for UI Edit Mode."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 11 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-12"
+title = "Show string references option"
+description = "Add the in-game toggle for displaying dialogue string references."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 12 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-13"
+title = "Hotkeys on tooltips option"
+description = "Add the in-game toggle for showing hotkeys on tooltips."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 13 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-14"
+title = "Trigger icons on Tab option"
+description = "Add the in-game toggle for showing trigger icons while Tab is held."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 14 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-16"
+title = "Cleric/Ranger druid spell limit option"
+description = "Add the in-game toggle for limiting Cleric/Ranger druid spells."
+category = "rules"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 16 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-17"
+title = "3E Sneak Attack option"
+description = "Optionally expose the engine's 3E Sneak Attack rule."
+category = "rules"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 17 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-18"
+title = "Critical-hit screen shake option"
+description = "Add the in-game toggle for critical-hit screen shake."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 18 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-19"
+title = "Extra combat information option"
+description = "Add the in-game toggle for extra combat feedback."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 19 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-20"
+title = "Game date and time on pause option"
+description = "Add the in-game toggle for displaying game date and time while paused."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 20 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-22"
+title = "Reverse mouse-wheel zoom option"
+description = "Add the in-game toggle for reversing mouse-wheel zoom."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 22 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-23"
+title = "Pause on map screen option"
+description = "Add the in-game toggle for pausing on the map screen."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 23 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-24"
+title = "Fog option"
+description = "Add the in-game toggle for fog rendering."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 24 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-25"
+title = "Disable movies option"
+description = "Add the in-game toggle for disabling movies."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 25 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-27"
+title = "Nightmare XP bonus option"
+description = "Add the in-game toggle for the Nightmare Mode experience bonus."
+category = "rules"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 27 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-28"
+title = "Bored sounds option"
+description = "Add the in-game toggle for idle companion sounds."
+category = "audio"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 28 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-29"
+title = "Frame-rate option"
+description = "Add the experimental in-game frame-rate control."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 29 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-30"
+title = "Action feedback option"
+description = "Add the in-game action-feedback controls."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 30 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-32"
+title = "Area-of-effect range option"
+description = "Add the in-game toggle for showing area-of-effect ranges."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 32 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-33"
+title = "Enhanced path search option"
+description = "Add the in-game toggle for enhanced path search."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 33 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-34"
+title = "Expire trap highlights option"
+description = "Add the in-game toggle for expiring trap highlights."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 34 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-35"
+title = "Show learnable spells option"
+description = "Add the in-game toggle for highlighting learnable spells."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 35 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-36"
+title = "Render search map option"
+description = "Add the in-game toggle for rendering the search map."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 36 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-37"
+title = "Render dynamic search map option"
+description = "Add the in-game toggle for rendering the dynamic search map."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 37 }]
+
+[[features]]
 id = "feature:hiddengameplayoptions:component-38"
 title = "Interval-save options"
-description = "Approved optional Hidden Gameplay Options integration, deferred until the Tweaks run and late HGO placement are authored."
+description = "Expose settings for Tweaks Anthology interval saves when that prerequisite is installed."
 category = "interface"
 decision = "optional"
 readiness = "blocked"
-unavailable_reason = "This option requires a selected Tweaks Anthology interval-save component and Hidden Gameplay Options must run later in the stack."
+unavailable_reason = "This option requires a selected Tweaks Anthology interval-save component; none is in the current alpha recipe."
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 38 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-39"
+title = "Force dialog pause option"
+description = "Add the in-game toggle for forcing pause during dialogue."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 39 }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-40"
 title = "Restored-loading-hints options"
-description = "Approved optional Hidden Gameplay Options integration, deferred until the Tweaks run and late HGO placement are authored."
+description = "Expose settings for Tweaks Anthology restored loading hints when that prerequisite is installed."
 category = "interface"
 decision = "optional"
 readiness = "blocked"
-unavailable_reason = "This option requires Tweaks Anthology component 3400 and Hidden Gameplay Options must run later in the stack."
+unavailable_reason = "This option requires Tweaks Anthology component 3400, which is excluded from the current collection."
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 40 }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-200"
 title = "Improved Cheat Menu"
-description = "Approved optional Hidden Gameplay Options component, deferred until its required late install position is authored."
+description = "Optionally install the improved in-game cheat menu at the reviewed late position."
 category = "interface"
 decision = "optional"
-readiness = "blocked"
-unavailable_reason = "This component must be installed after content and UI mods, so it is unavailable until the late Hidden Gameplay Options run is wired."
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 200 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-300"
+title = "Improved death-screen options"
+description = "Install the reviewed improvements to the death screen."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 300 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-301"
+title = "Improved quit-game options"
+description = "Install the reviewed improvements to the quit-game screen."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 301 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-302"
+title = "SoD logo fire animation"
+description = "Optionally add the fire animation over the Siege of Dragonspear logo."
+category = "visuals"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 302 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-304"
+title = "Improved load-game options"
+description = "Optionally install the improved load-game controls."
+category = "interface"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 304 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-101"
+title = "Priest-spell key bindings"
+description = "Update only priest-spell key bindings. Choosing no update is also valid."
+category = "interface"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+conflicts = [
+  { feature_id = "feature:hiddengameplayoptions:component-102", reason = "Choose at most one key-binding update." },
+  { feature_id = "feature:hiddengameplayoptions:component-103", reason = "Choose at most one key-binding update." },
+]
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 101 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-102"
+title = "Mage-spell key bindings"
+description = "Update only mage-spell key bindings. Choosing no update is also valid."
+category = "interface"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+conflicts = [
+  { feature_id = "feature:hiddengameplayoptions:component-101", reason = "Choose at most one key-binding update." },
+  { feature_id = "feature:hiddengameplayoptions:component-103", reason = "Choose at most one key-binding update." },
+]
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 102 }]
+
+[[features]]
+id = "feature:hiddengameplayoptions:component-103"
+title = "Priest and mage spell key bindings"
+description = "Use the curated key-binding update for both priest and mage spells."
+category = "interface"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+conflicts = [
+  { feature_id = "feature:hiddengameplayoptions:component-101", reason = "Choose at most one key-binding update." },
+  { feature_id = "feature:hiddengameplayoptions:component-102", reason = "Choose at most one key-binding update." },
+]
+components = [{ run_id = "hiddengameplayoptions-bg2", component = 103 }]
 
 [[features]]
 id = "feature:rr:component-0"
