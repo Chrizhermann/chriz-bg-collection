@@ -1,6 +1,6 @@
 {
   "planPath": "docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md",
-  "lastUpdated": "2026-09-03T08:51:47+09:00",
+  "lastUpdated": "2026-09-03T23:32:57+09:00",
   "tasks": [
     {
       "id": 0,
@@ -162,7 +162,13 @@
       "id": 26,
       "subject": "Task 26: Build Christopher's release candidate and publish the public alpha",
       "status": "pending",
-      "blockedBy": [25]
+      "blockedBy": [25, 27]
+    },
+    {
+      "id": 27,
+      "subject": "Task 27: Offer the newest BG Radar Overlay as an optional managed utility",
+      "status": "pending",
+      "blockedBy": [11, 12, 23, 24]
     }
   ]
 }

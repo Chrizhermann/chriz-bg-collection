@@ -2054,6 +2054,85 @@ the same explicit release authorization.
 Do not call the milestone complete until the published installer itself reproduces the
 cold-cache flow and its receipt/log/launch evidence has been inspected.
 
+### Task 27: Offer the newest BG Radar Overlay as an optional managed utility
+
+**Design:**
+
+- Read: `docs/plans/2026-09-03-bg-radar-overlay-integration-design.md`
+
+**Files:**
+
+- Create: `engine/src/companion.rs`
+- Create: `engine/src/acquire/seven_zip.rs`
+- Modify: `engine/src/acquire/mod.rs`
+- Modify: `engine/src/lib.rs`
+- Extend: `engine/tests/acquire_archive.rs`
+- Create: `engine/tests/companion.rs`
+- Modify: `app/src/contracts.ts`
+- Modify: `app/src/backend.ts`
+- Modify: `app/src/state.ts`
+- Modify: `app/src/screens/home.ts`
+- Modify: `app/src/screens/updates.ts`
+- Create: `app/src-tauri/src/companion.rs`
+- Modify: `app/src-tauri/src/commands.rs`
+- Modify: `app/src-tauri/src/lib.rs`
+- Extend: `app/src-tauri/tests/command_contract.rs`
+- Extend: `app/tests/wizard.test.ts`
+
+This task follows the first installer-built local test copy. It must be green before the
+public-alpha publication task, but it does not block Tasks 15, 18, or 23.
+
+**Step 1: Write failing release-discovery tests**
+
+Drive the GitHub client through deterministic local HTTP fixtures. Require the fixed
+`tapahob/BG2RadarOverlay` repository, stable `releases/latest`, an exact single
+`BG.Radar.Overlay.7z` asset, ETag reuse, one automatic check per process, a forced manual
+check, and graceful offline/403/429/malformed responses. Test that drafts, prereleases,
+redirect downgrades, and ambiguous assets are never offered.
+
+**Step 2: Write failing trust and receipt tests**
+
+Model `collection-tested` separately from `latest-upstream`. Matching signed metadata
+promotes only the exact tag, length, and SHA-256. An explicitly accepted upstream-latest
+download records its resolved release/asset URLs, length, and calculated digest without
+claiming collection verification.
+
+**Step 3: Write failing bounded-7z and atomic-publication tests**
+
+Use synthetic 7z fixtures for valid payloads, traversal, absolute paths, case collisions,
+links, Windows device names, depth/entry/expanded-size/ratio limits, missing executable,
+and unexpected roots. Prove extraction occurs under an owned temporary directory; an
+invalid or interrupted update leaves the previous utility byte-identical. Preserve only
+`config.cfg` while replacing the payload.
+
+**Step 4: Implement the smallest safe engine path**
+
+Add a narrowly scoped 7z reader after dependency and license review; do not shell out to
+an ambient 7-Zip executable. Reuse the existing HTTPS redirect, content-addressed cache,
+path normalization, ownership-marker, locking, and hashing rules. Publish only to
+`<managed root>/Tools/BG Radar Overlay/` and reject a running game, loader, Radar process,
+or active target build.
+
+**Step 5: Connect the update UI**
+
+Add Radar as a fourth update target. Show installed/available tag, last checked time,
+publisher/release link, and the explicit trust label. Provide Install/Update only after
+confirmation. Radar failure remains nonfatal for the game, recipe, and app update states;
+never create Defender exclusions or silently launch the executable.
+
+**Step 6: Verify and commit**
+
+```powershell
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+Push-Location app
+npm run check
+Pop-Location
+git add engine app docs/plans
+git commit -m "app: manage optional BG Radar Overlay updates"
+```
+
 ## Final verification matrix
 
 Before the release decision, all rows must be green or explicitly nonblocking and visible
@@ -2071,6 +2150,7 @@ in known limitations:
 | Packaging | Normal-user NSIS install, updater signature, recipe signature, uninstall preserves games |
 | Runtime | InfinityLoader boot, BG1 start, save/reload, targeted EET/EEex/SCS/Chriz checks |
 | Publication | Empty-cache download of published assets and honest alpha limitations |
+| Companion utility | Latest-stable discovery, explicit trust state, bounded 7z extraction, atomic replacement |
 
 ## Superseded plan assumptions
 
