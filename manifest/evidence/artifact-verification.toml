@@ -1,0 +1,184 @@
+# Re-run the ignored production_recipe real-verification test with an external cache to
+# reproduce these byte, redirect-host, archive-layout, archive-shape, and PE observations.
+schema = 1
+evidence_kind = "production-artifact-verification"
+verified_on = "2026-09-03"
+cache_namespace = "sha256-v2"
+extraction_marker_version = 2
+
+[generated_by]
+command = "chriz-bg-author artifact verify <artifact.toml> --cache-root <new-empty-scratch-dir>"
+version = "chriz-bg-engine 0.1.0"
+
+[[artifacts]]
+artifact_id = "weidu-249-amd64"
+immutable_source_url = "https://github.com/WeiDUorg/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip"
+source_reference = "v249.00"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 2154755
+actual_sha256 = "b156910cbec69359fc2e42f6739aa959d49047d6fd3dc172f6bed88ffad8f927"
+wrapper_kind = "single-wrapper"
+wrapper_directory = "WeiDU-Windows"
+materialized_publish_roots = ["weidu.exe"]
+declared_tp2_paths = []
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 56
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 3101972
+max_compression_ratio = 18
+
+[artifacts.pe]
+executable = "weidu.exe"
+machine = "x86-64"
+
+[[artifacts]]
+artifact_id = "dlcmerger-2.1"
+immutable_source_url = "https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod"
+source_reference = "v2.1"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 125691
+actual_sha256 = "ea7584fd7285330cfaa52cfc217677ef4f8cf8151fdec666ea8af199e479db0e"
+wrapper_kind = "direct"
+materialized_publish_roots = ["DlcMerger"]
+declared_tp2_paths = ["DlcMerger/DlcMerger.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 128
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 27
+max_entry_uncompressed_bytes = 204800
+total_uncompressed_bytes = 261719
+max_compression_ratio = 5
+
+[[artifacts]]
+artifact_id = "eefixpack-beta2"
+immutable_source_url = "https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod"
+source_reference = "Beta_2"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 130716647
+actual_sha256 = "7a57e43bd6c30c7e36b7c2b7c5531c7a0834de164da186808da03d24474592bf"
+wrapper_kind = "direct"
+materialized_publish_roots = ["eefixpack"]
+declared_tp2_paths = ["eefixpack/setup-eefixpack.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 16
+max_entries = 8192
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 268435456
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 6
+entry_count = 5234
+max_entry_uncompressed_bytes = 6124066
+total_uncompressed_bytes = 137694750
+max_compression_ratio = 25
+
+[[artifacts]]
+artifact_id = "bg1ub-17.1"
+immutable_source_url = "https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod"
+source_reference = "v17.1"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 14579031
+actual_sha256 = "5a525eb37f68f63706a5120fc4900b68b00b46ff755583fa6ced1fc456cf8104"
+wrapper_kind = "direct"
+materialized_publish_roots = ["bg1ub"]
+declared_tp2_paths = ["bg1ub/bg1ub.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 16
+max_entries = 2048
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 917
+max_entry_uncompressed_bytes = 5779952
+total_uncompressed_bytes = 20508513
+max_compression_ratio = 13
+
+[[artifacts]]
+artifact_id = "bg1npc-32"
+immutable_source_url = "https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod"
+source_reference = "v32"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 27617013
+actual_sha256 = "8e34f397e960b1b990350b5ef101562db066cbe91d8c35eda60baf24f452b1bc"
+wrapper_kind = "direct"
+materialized_publish_roots = ["bg1npc"]
+declared_tp2_paths = ["bg1npc/bg1npc.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 16
+max_entries = 4096
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 1000
+
+[artifacts.observed_shape]
+max_depth = 6
+entry_count = 1931
+max_entry_uncompressed_bytes = 1487545
+total_uncompressed_bytes = 55174685
+max_compression_ratio = 615
+
+[[artifacts]]
+artifact_id = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+immutable_source_url = "https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+source_reference = "74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+observed_final_host = "codeload.github.com"
+actual_length = 211137765
+actual_sha256 = "9834a53322b7fe9d8923bfde36c0e6bc8bef54d730d32ac29286b80d6f08287e"
+wrapper_kind = "single-wrapper"
+wrapper_directory = "EET-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+materialized_publish_roots = ["EET", "EET_end"]
+declared_tp2_paths = [
+  "EET/EET.tp2",
+  "EET/other/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker.tp2",
+  "EET/other/EET_modConverter/EET_modConverter/EET_modConverter.tp2",
+  "EET_end/EET_end.tp2",
+]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 16
+max_entries = 2048
+max_entry_uncompressed_bytes = 67108864
+max_total_uncompressed_bytes = 536870912
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 7
+entry_count = 793
+max_entry_uncompressed_bytes = 26266375
+total_uncompressed_bytes = 229893521
+max_compression_ratio = 25
