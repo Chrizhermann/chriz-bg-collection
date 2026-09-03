@@ -80,7 +80,7 @@ fn requirements(path: &Path) -> ArchiveRequirements {
 }
 
 fn published_path(cache: &Path, digest: &str) -> PathBuf {
-    cache.join("sha256").join(&digest[..2]).join(digest)
+    cache.join("sha256-v2").join(&digest[..2]).join(digest)
 }
 
 fn assert_rejected_before_publish(archive: &Path, cache: &Path, request: &ArchiveRequirements) {
@@ -122,17 +122,21 @@ fn rejects_links_duplicates_and_prefix_collisions_before_writing() {
     let cases = [
         vec![
             Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
-            Entry::Symlink("mod/link", "../outside"),
+            Entry::Symlink("unpublished/link", "../outside"),
         ],
         vec![
             Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
-            Entry::File("mod/File.txt", b"one", CompressionMethod::Stored),
-            Entry::File("MOD/file.TXT", b"two", CompressionMethod::Stored),
+            Entry::File("unpublished/File.txt", b"one", CompressionMethod::Stored),
+            Entry::File("UNPUBLISHED/file.TXT", b"two", CompressionMethod::Stored),
         ],
         vec![
             Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
-            Entry::File("mod/prefix", b"file", CompressionMethod::Stored),
-            Entry::File("mod/prefix/child", b"child", CompressionMethod::Stored),
+            Entry::File("unpublished/prefix", b"file", CompressionMethod::Stored),
+            Entry::File(
+                "unpublished/prefix/child",
+                b"child",
+                CompressionMethod::Stored,
+            ),
         ],
     ];
 
@@ -152,7 +156,11 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
         (
             vec![
                 Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
-                Entry::File("mod/deep/path/file", b"x", CompressionMethod::Stored),
+                Entry::File(
+                    "unpublished/deep/path/file",
+                    b"x",
+                    CompressionMethod::Stored,
+                ),
             ],
             ArchiveLimits {
                 max_depth: 3,
@@ -162,7 +170,7 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
         (
             vec![
                 Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
-                Entry::File("mod/data", b"x", CompressionMethod::Stored),
+                Entry::File("unpublished/data", b"x", CompressionMethod::Stored),
             ],
             ArchiveLimits {
                 max_entries: 1,
@@ -170,11 +178,10 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
             },
         ),
         (
-            vec![Entry::File(
-                "mod/setup-mod.tp2",
-                TP2,
-                CompressionMethod::Stored,
-            )],
+            vec![
+                Entry::File("mod/setup-mod.tp2", b"x", CompressionMethod::Stored),
+                Entry::File("unpublished/large", TP2, CompressionMethod::Stored),
+            ],
             ArchiveLimits {
                 max_entry_uncompressed_bytes: (TP2.len() - 1) as u64,
                 ..ArchiveLimits::default()
@@ -183,7 +190,7 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
         (
             vec![
                 Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
-                Entry::File("mod/data", DATA, CompressionMethod::Stored),
+                Entry::File("unpublished/data", DATA, CompressionMethod::Stored),
             ],
             ArchiveLimits {
                 max_total_uncompressed_bytes: TP2.len() as u64,
@@ -193,7 +200,11 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
         (
             vec![
                 Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
-                Entry::File("mod/bomb", &[0_u8; 32_768], CompressionMethod::Deflated),
+                Entry::File(
+                    "unpublished/bomb",
+                    &[0_u8; 32_768],
+                    CompressionMethod::Deflated,
+                ),
             ],
             ArchiveLimits {
                 max_compression_ratio: 2,
@@ -218,21 +229,30 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
 fn rejects_encrypted_and_unsupported_entries_before_writing() {
     let temp = TempDir::new().unwrap();
     let encrypted = temp.path().join("encrypted.zip");
-    write_zip(&encrypted, &[Entry::Encrypted("mod/setup-mod.tp2", TP2)]);
+    write_zip(
+        &encrypted,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::Encrypted("unpublished/encrypted.bin", DATA),
+        ],
+    );
     let encrypted_cache = temp.path().join("encrypted-cache");
     assert_rejected_before_publish(&encrypted, &encrypted_cache, &requirements(&encrypted));
 
     let unsupported = temp.path().join("unsupported.zip");
     write_zip(
         &unsupported,
-        &[Entry::File(
-            "mod/setup-mod.tp2",
-            TP2,
-            CompressionMethod::Stored,
-        )],
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File(
+                "unpublished/unsupported.bin",
+                DATA,
+                CompressionMethod::Stored,
+            ),
+        ],
     );
     let mut bytes = std::fs::read(&unsupported).unwrap();
-    patch_compression_method(&mut bytes, 12);
+    patch_last_compression_method(&mut bytes, 12);
     std::fs::write(&unsupported, bytes).unwrap();
     let unsupported_cache = temp.path().join("unsupported-cache");
     assert_rejected_before_publish(
@@ -242,14 +262,22 @@ fn rejects_encrypted_and_unsupported_entries_before_writing() {
     );
 }
 
-fn patch_compression_method(bytes: &mut [u8], method: u16) {
-    for index in 0..bytes.len().saturating_sub(12) {
-        if bytes[index..].starts_with(b"PK\x03\x04") {
-            bytes[index + 8..index + 10].copy_from_slice(&method.to_le_bytes());
-        } else if bytes[index..].starts_with(b"PK\x01\x02") {
-            bytes[index + 10..index + 12].copy_from_slice(&method.to_le_bytes());
-        }
-    }
+fn patch_last_compression_method(bytes: &mut [u8], method: u16) {
+    let local = bytes
+        .windows(4)
+        .enumerate()
+        .filter_map(|(index, value)| (value == b"PK\x03\x04").then_some(index))
+        .next_back()
+        .unwrap();
+    bytes[local + 8..local + 10].copy_from_slice(&method.to_le_bytes());
+
+    let central = bytes
+        .windows(4)
+        .enumerate()
+        .filter_map(|(index, value)| (value == b"PK\x01\x02").then_some(index))
+        .next_back()
+        .unwrap();
+    bytes[central + 10..central + 12].copy_from_slice(&method.to_le_bytes());
 }
 
 #[test]
@@ -357,7 +385,80 @@ fn tp2_publish_root_matching_is_case_insensitive_and_component_bounded() {
     )
     .unwrap();
 
-    assert!(extracted.root.join("mod-live/setup-live.tp2").is_file());
+    assert!(!extracted.root.join("mod-live/setup-live.tp2").exists());
+}
+
+#[test]
+fn extracts_and_records_only_files_within_declared_publish_roots() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("publish-roots-only.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/data.txt", DATA, CompressionMethod::Stored),
+            Entry::File(
+                "unpublished/setup-helper.exe",
+                b"unused executable",
+                CompressionMethod::Stored,
+            ),
+            Entry::File("unpublished/setup-live.tp2", TP2, CompressionMethod::Stored),
+            Entry::File(
+                "unpublished/readme.txt",
+                b"outside the payload",
+                CompressionMethod::Stored,
+            ),
+        ],
+    );
+
+    let extracted = extract_archive(
+        &archive,
+        &temp.path().join("extract"),
+        &requirements(&archive),
+    )
+    .unwrap();
+
+    assert!(extracted.root.join("mod/setup-mod.tp2").is_file());
+    assert!(extracted.root.join("mod/data.txt").is_file());
+    assert!(!extracted.root.join("unpublished").exists());
+    let marker = std::fs::read_to_string(extracted.root.join(".chriz-bg-extraction.json")).unwrap();
+    assert!(marker.contains("\"version\": 2"));
+    assert!(!marker.contains("unpublished"));
+}
+
+#[test]
+fn ignores_the_unreleased_v1_extraction_namespace() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("valid.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let digest = sha256(&archive);
+    let legacy = temp
+        .path()
+        .join("extract/sha256")
+        .join(&digest[..2])
+        .join(&digest);
+    std::fs::create_dir_all(&legacy).unwrap();
+    std::fs::write(legacy.join("untrusted-v1-file"), b"ignore me").unwrap();
+
+    let extracted = extract_archive(
+        &archive,
+        &temp.path().join("extract"),
+        &requirements(&archive),
+    )
+    .unwrap();
+
+    assert_eq!(
+        extracted.root,
+        published_path(&temp.path().join("extract"), &digest)
+    );
+    assert!(legacy.join("untrusted-v1-file").is_file());
 }
 
 #[test]

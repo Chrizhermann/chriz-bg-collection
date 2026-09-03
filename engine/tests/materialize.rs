@@ -142,7 +142,7 @@ fn publishes_only_declared_payload_and_skips_archive_setup_executables() {
 }
 
 #[test]
-fn accepts_but_does_not_materialize_auxiliary_tp2_outside_publish_roots() {
+fn keeps_auxiliary_tp2_outside_publish_roots_archive_only() {
     let temp = TempDir::new().unwrap();
     let payload = extracted(
         &temp,
@@ -155,10 +155,7 @@ fn accepts_but_does_not_materialize_auxiliary_tp2_outside_publish_roots() {
         &["mod"],
         &["mod/setup-mod.tp2"],
     );
-    assert!(payload
-        .root
-        .join("live-patch/setup-live-patch.tp2")
-        .is_file());
+    assert!(!payload.root.join("live-patch").exists());
     let destination = temp.path().join("game");
     std::fs::create_dir(&destination).unwrap();
 

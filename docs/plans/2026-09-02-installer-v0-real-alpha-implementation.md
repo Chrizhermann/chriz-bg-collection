@@ -978,9 +978,10 @@ cargo test -p chriz-bg-engine --test acquire_archive --test acquire_manual --tes
 **Step 4: Implement bounded extraction**
 
 Validate the complete central directory and case-folded destination map before writing.
-Extract regular files only into a new temporary directory, enforce recipe limits, verify
-exact expected TP2 paths, sync, then publish under the artifact digest. Public mode rejects
-all-zero hashes and SFX executables.
+After that global validation, extract only regular files within declared publish roots into
+a new temporary directory; unrelated archive members remain archive-only. Enforce recipe
+limits, verify exact expected TP2 paths, sync, then publish under the artifact digest. Public
+mode rejects all-zero hashes and SFX executables.
 
 **Step 5: Implement declared materialization**
 

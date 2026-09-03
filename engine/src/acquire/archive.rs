@@ -13,6 +13,8 @@ use super::AcquireError;
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const EXTRACTION_MARKER: &str = ".chriz-bg-extraction.json";
+const EXTRACTION_MARKER_VERSION: u32 = 2;
+const EXTRACTION_CACHE_NAMESPACE: &str = "sha256-v2";
 static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Resource limits applied before any archive entry is written.
@@ -118,8 +120,8 @@ struct ExtractedFile {
     sha256: String,
 }
 
-/// Validate a complete ZIP central directory, extract into a private temporary, and
-/// publish it under the verified archive digest.
+/// Validate a complete ZIP central directory, extract only approved payload roots into a
+/// private temporary, and publish them under the verified archive digest.
 pub fn extract_archive(
     archive_path: &Path,
     extraction_cache: &Path,
@@ -186,7 +188,7 @@ pub fn extract_archive(
 
     let digest = actual_digest;
     let final_root = extraction_cache
-        .join("sha256")
+        .join(EXTRACTION_CACHE_NAMESPACE)
         .join(&digest[..2])
         .join(&digest);
     if final_root.exists() {
@@ -510,6 +512,11 @@ fn validate_central_directory<R: Read + std::io::Seek>(
             )));
         }
     }
+    entries.retain(|entry| {
+        expected_roots
+            .iter()
+            .any(|root| path_is_within_root(root, &entry.relative_path))
+    });
     Ok((entries, wrapper))
 }
 
@@ -675,7 +682,7 @@ fn extract_validated_entries<R: Read + std::io::Seek>(
     }
     records.sort_by_key(|record| casefold(&record.relative_path));
     let marker = ExtractionMarker {
-        version: 1,
+        version: EXTRACTION_MARKER_VERSION,
         artifact_sha256: digest.to_owned(),
         wrapper_directory,
         expected_roots: expected_roots.to_vec(),
@@ -746,7 +753,7 @@ fn validate_published_extraction(
             path: marker_path,
             message: source.to_string(),
         })?;
-    if marker.version != 1
+    if marker.version != EXTRACTION_MARKER_VERSION
         || marker.artifact_sha256 != digest
         || marker.expected_roots != expected_roots
         || marker.expected_tp2_paths != expected_tp2_paths
