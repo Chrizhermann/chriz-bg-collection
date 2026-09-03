@@ -116,6 +116,22 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
             },
         ),
         (
+            "hq-soundclips-bg2ee-1.3",
+            ExpectedArtifact {
+                version: "1.3",
+                source_kind: SourceKind::GithubRelease,
+                url: "https://github.com/Argent77/HQ-SoundClips-BG2EE/releases/download/v1.3/win-A7-HQ-SoundClips-BG2EE-v1.3.zip",
+                reference: "v1.3",
+                filename: "win-A7-HQ-SoundClips-BG2EE-v1.3.zip",
+                length: 206_363_285,
+                sha256: "712af8ab21048c0a1dbba7257c33b3dc6beba12d86d4d4c7a1b80982adc6ee63",
+                archive_kind: ArchiveKind::Zip,
+                root_rule: ArchiveRootRule::Direct,
+                publish_roots: &["HQ_SoundClips_BG2EE"],
+                tp2_paths: &["HQ_SoundClips_BG2EE/HQ_SoundClips_BG2EE.tp2"],
+            },
+        ),
+        (
             "rr-4.92",
             ExpectedArtifact {
                 version: "4.92",
@@ -379,6 +395,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "iepbanters-bg2",
             "crossmodbg2-bg2",
             "ascension-bg2",
+            "hq-soundclips-bg2ee-bg2",
             "stratagems-bg2",
             "randomiser-bg2",
             "eet-end-bg2",
@@ -387,7 +404,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "buffbot-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..22]
+    assert!(manifest.collection.runs[6..23]
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);

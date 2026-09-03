@@ -1,0 +1,32 @@
+id = "hq-soundclips-bg2ee-1.3"
+name = "HQ SoundClips BG2EE"
+version = "1.3"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Argent77/HQ-SoundClips-BG2EE/releases/download/v1.3/win-A7-HQ-SoundClips-BG2EE-v1.3.zip"
+reference = "v1.3"
+expected_filename = "win-A7-HQ-SoundClips-BG2EE-v1.3.zip"
+expected_length = 206363285
+sha256 = "712af8ab21048c0a1dbba7257c33b3dc6beba12d86d4d4c7a1b80982adc6ee63"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["HQ_SoundClips_BG2EE"]
+tp2_paths = ["HQ_SoundClips_BG2EE/HQ_SoundClips_BG2EE.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 8192
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 268435456
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Argent77/HQ-SoundClips-BG2EE"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Argent77/HQ-SoundClips-BG2EE/releases/tag/v1.3"
+reviewed_on = "2026-09-04"

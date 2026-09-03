@@ -711,6 +711,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "hq-soundclips-bg2ee-1.3",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 4,
+                    entry_count: 7_674,
+                    max_entry_uncompressed_bytes: 1_364_992,
+                    total_uncompressed_bytes: 210_442_873,
+                    max_compression_ratio: 4,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

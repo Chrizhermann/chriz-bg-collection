@@ -149,6 +149,13 @@ components = [0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2
 args = []
 
 [[runs]]
+run_id = "hq-soundclips-bg2ee-bg2"
+mod_id = "hq-soundclips-bg2ee"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
 run_id = "stratagems-bg2"
 mod_id = "stratagems"
 phase = "main"
@@ -1697,6 +1704,15 @@ conflicts = [
   { feature_id = "feature:iepbanters:component-10", reason = "Choose at most one banter interval." },
 ]
 components = [{ run_id = "iepbanters-bg2", component = 11 }]
+
+[[features]]
+id = "feature:hq-soundclips-bg2ee:component-0"
+title = "High-quality BG2EE voice clips"
+description = "Restore the high-quality versions of voice lines added for BG2EE and The Black Pits II."
+category = "audio"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "hq-soundclips-bg2ee-bg2", component = 0 }]
 
 [[features]]
 id = "feature:crossmodbg2:component-0"

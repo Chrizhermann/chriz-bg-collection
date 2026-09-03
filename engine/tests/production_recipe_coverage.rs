@@ -68,6 +68,7 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "chriz-sod-remix" => "CHRIZ-SOD-REMIX",
         "crossmodbg2" => "CROSSMODBG2",
         "hidden-gameplay-options" => "HIDDENGAMEPLAYOPTIONS",
+        "hq-soundclips-bg2ee" => "HQ_SOUNDCLIPS_BG2EE",
         "iepbanters" => "IEPBANTERS",
         other => panic!("production run has unknown curation catalog: {other}"),
     }
@@ -151,6 +152,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "eet-end",
             "fade",
             "hidden-gameplay-options",
+            "hq-soundclips-bg2ee",
             "iepbanters",
             "paina",
             "randomiser",

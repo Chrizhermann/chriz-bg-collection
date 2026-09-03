@@ -376,3 +376,30 @@ entry_count = 116
 max_entry_uncompressed_bytes = 1390080
 total_uncompressed_bytes = 3388636
 max_compression_ratio = 15
+
+[[artifacts]]
+artifact_id = "hq-soundclips-bg2ee-1.3"
+immutable_source_url = "https://github.com/Argent77/HQ-SoundClips-BG2EE/releases/download/v1.3/win-A7-HQ-SoundClips-BG2EE-v1.3.zip"
+source_reference = "v1.3"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 206363285
+actual_sha256 = "712af8ab21048c0a1dbba7257c33b3dc6beba12d86d4d4c7a1b80982adc6ee63"
+wrapper_kind = "direct"
+materialized_publish_roots = ["HQ_SoundClips_BG2EE"]
+declared_tp2_paths = ["HQ_SoundClips_BG2EE/HQ_SoundClips_BG2EE.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 8192
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 268435456
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 7674
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 210442873
+max_compression_ratio = 4
