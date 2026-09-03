@@ -387,7 +387,7 @@ fn campaign_identity_freezes_payload_archives_and_extracted_tool_bytes_separatel
     assert_eq!(created.tool_identities.len(), 1, "{created:#?}");
     let tool = &created.tool_identities[0];
     assert_eq!(tool.id, "weidu");
-    assert_eq!(tool.version, "249.00");
+    assert_eq!(tool.version, "24900");
     assert_eq!(tool.length, 1_364_992);
     assert_eq!(
         tool.sha256,

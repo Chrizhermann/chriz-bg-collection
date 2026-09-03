@@ -1171,7 +1171,7 @@ fn frozen_tool_identity(frozen: &FrozenCliRecipe, id: &str) -> Result<FrozenIden
     })?;
     Ok(FrozenIdentity {
         id: artifact.id.clone(),
-        version: artifact.version.clone(),
+        version: tool.weidu_version.clone(),
         sha256: tool.sha256.to_ascii_lowercase(),
         length: tool.expected_length,
     })
