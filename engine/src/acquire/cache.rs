@@ -236,10 +236,10 @@ fn validate_request(request: &DownloadRequest) -> Result<String, AcquireError> {
         || !request
             .request_id
             .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
     {
         return Err(AcquireError::InvalidRequest(
-            "request_id must contain 1-128 ASCII letters, digits, '-' or '_'".to_owned(),
+            "request_id must contain 1-128 ASCII letters, digits, '-', '_' or '.'".to_owned(),
         ));
     }
     if request.max_attempts == 0 {
@@ -708,5 +708,26 @@ fn remove_if_exists(path: &Path) -> Result<(), AcquireError> {
             path: path.to_path_buf(),
             source,
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_request;
+    use crate::acquire::DownloadRequest;
+
+    #[test]
+    fn accepts_versioned_artifact_ids_with_dots() {
+        let request = DownloadRequest {
+            request_id: "bg1ub-17.1".to_owned(),
+            url: "https://example.invalid/bg1ub.iemod".to_owned(),
+            expected_length: 1,
+            expected_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                .to_owned(),
+            redirect_hosts: Vec::new(),
+            max_attempts: 1,
+        };
+
+        assert!(validate_request(&request).is_ok());
     }
 }
