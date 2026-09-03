@@ -1,0 +1,32 @@
+id = "iepbanters-5.9"
+name = "IEP Extended Banters"
+version = "5.9"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Spellhold-Studios/IEP-Extended-Banters/releases/download/v5.9/iep-extended-banters-v5.9.iemod"
+reference = "v5.9"
+expected_filename = "iep-extended-banters-v5.9.iemod"
+expected_length = 2545102
+sha256 = "a79b06ec3b70f680da323703a0a5ef7fb59fa01bef80e371c518d1bebe4375e8"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["iepbanters"]
+tp2_paths = ["iepbanters/iepbanters.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Spellhold-Studios/IEP-Extended-Banters"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Spellhold-Studios/IEP-Extended-Banters/releases/tag/v5.9"
+reviewed_on = "2026-09-04"

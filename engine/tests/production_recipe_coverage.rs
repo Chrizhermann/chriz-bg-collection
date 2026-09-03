@@ -67,6 +67,7 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "buffbot" => "BUFFBOT",
         "chriz-sod-remix" => "CHRIZ-SOD-REMIX",
         "crossmodbg2" => "CROSSMODBG2",
+        "iepbanters" => "IEPBANTERS",
         other => panic!("production run has unknown curation catalog: {other}"),
     }
 }
@@ -149,6 +150,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "eet-end",
             "fade",
             "hidden-gameplay-options",
+            "iepbanters",
             "paina",
             "randomiser",
             "rr",

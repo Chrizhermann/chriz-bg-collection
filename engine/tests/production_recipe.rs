@@ -683,6 +683,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "iepbanters-5.9",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 4,
+                    entry_count: 93,
+                    max_entry_uncompressed_bytes: 1_487_545,
+                    total_uncompressed_bytes: 3_361_828,
+                    max_compression_ratio: 10,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

@@ -322,3 +322,30 @@ entry_count = 2084
 max_entry_uncompressed_bytes = 2107960
 total_uncompressed_bytes = 6785926
 max_compression_ratio = 12
+
+[[artifacts]]
+artifact_id = "iepbanters-5.9"
+immutable_source_url = "https://github.com/Spellhold-Studios/IEP-Extended-Banters/releases/download/v5.9/iep-extended-banters-v5.9.iemod"
+source_reference = "v5.9"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 2545102
+actual_sha256 = "a79b06ec3b70f680da323703a0a5ef7fb59fa01bef80e371c518d1bebe4375e8"
+wrapper_kind = "direct"
+materialized_publish_roots = ["iepbanters"]
+declared_tp2_paths = ["iepbanters/iepbanters.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 93
+max_entry_uncompressed_bytes = 1487545
+total_uncompressed_bytes = 3361828
+max_compression_ratio = 10
