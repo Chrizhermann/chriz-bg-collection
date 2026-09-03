@@ -403,3 +403,31 @@ entry_count = 7674
 max_entry_uncompressed_bytes = 1364992
 total_uncompressed_bytes = 210442873
 max_compression_ratio = 4
+
+[[artifacts]]
+artifact_id = "eeexremote-0.2.0"
+immutable_source_url = "https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164"
+source_reference = "661927e56e28435541a3128568cd4ee6d5d80164"
+observed_final_host = "codeload.github.com"
+actual_length = 26360
+actual_sha256 = "d634b1e8f0a253bb1100b924d9a400c2cc7eb74b0d919881739b8cc680a7483a"
+wrapper_kind = "single-wrapper"
+wrapper_directory = "eeex-remote-console-661927e56e28435541a3128568cd4ee6d5d80164"
+materialized_publish_roots = ["eeexremote", "setup-eeexremote.tp2"]
+declared_tp2_paths = ["setup-eeexremote.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 2097152
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 19
+max_entry_uncompressed_bytes = 14527
+total_uncompressed_bytes = 52541
+max_compression_ratio = 4

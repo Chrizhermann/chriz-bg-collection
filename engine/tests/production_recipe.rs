@@ -725,6 +725,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "eeexremote-0.2.0",
+            (
+                "codeload.github.com",
+                Some("eeex-remote-console-661927e56e28435541a3128568cd4ee6d5d80164"),
+                ObservedArchiveShape {
+                    max_depth: 4,
+                    entry_count: 19,
+                    max_entry_uncompressed_bytes: 14_527,
+                    total_uncompressed_bytes: 52_541,
+                    max_compression_ratio: 4,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

@@ -142,6 +142,55 @@ fn publishes_only_declared_payload_and_skips_archive_setup_executables() {
 }
 
 #[test]
+fn publishes_a_declared_root_level_tp2_file_and_skips_a_root_setup_executable() {
+    let temp = TempDir::new().unwrap();
+    let payload = extracted(
+        &temp,
+        "root-level-tp2",
+        &[
+            ("eeexremote/data.txt", b"payload"),
+            ("setup-eeexremote.tp2", TP2),
+            ("setup-eeexremote.exe", b"untrusted archive executable"),
+        ],
+        &["eeexremote", "setup-eeexremote.tp2", "setup-eeexremote.exe"],
+        &["setup-eeexremote.tp2"],
+    );
+    let destination = temp.path().join("game");
+    std::fs::create_dir(&destination).unwrap();
+
+    let result = materialize(
+        &payload,
+        &destination,
+        &request(
+            "root-level-tp2-run",
+            "eeexremote",
+            &["eeexremote", "setup-eeexremote.tp2", "setup-eeexremote.exe"],
+            &["setup-eeexremote.tp2"],
+        ),
+    )
+    .unwrap();
+
+    assert_eq!(
+        std::fs::read(destination.join("eeexremote/data.txt")).unwrap(),
+        b"payload"
+    );
+    assert_eq!(
+        std::fs::read(destination.join("setup-eeexremote.tp2")).unwrap(),
+        TP2
+    );
+    assert!(!destination.join("setup-eeexremote.exe").exists());
+    assert_eq!(
+        result
+            .manifest
+            .entries
+            .iter()
+            .map(|entry| entry.relative_path.as_str())
+            .collect::<Vec<_>>(),
+        vec!["eeexremote/data.txt", "setup-eeexremote.tp2"]
+    );
+}
+
+#[test]
 fn keeps_auxiliary_tp2_outside_publish_roots_archive_only() {
     let temp = TempDir::new().unwrap();
     let payload = extracted(

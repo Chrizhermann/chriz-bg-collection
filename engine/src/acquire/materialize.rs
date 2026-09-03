@@ -351,7 +351,26 @@ fn collect_payload(
     let mut selected = BTreeMap::<String, PathBuf>::new();
     for root in roots {
         let source_root = join_relative(&artifact.root, root);
-        validate_directory(&source_root, "declared payload root")?;
+        let metadata = fs::symlink_metadata(&source_root).map_err(|source| AcquireError::Io {
+            action: "inspect declared payload root",
+            path: source_root.clone(),
+            source,
+        })?;
+        if metadata.file_type().is_symlink() || (!metadata.is_dir() && !metadata.is_file()) {
+            return Err(AcquireError::InvalidMaterialization(format!(
+                "declared payload root `{root}` must be a regular file or non-symlink directory"
+            )));
+        }
+        if metadata.is_file() {
+            if !is_archive_setup_executable(root)
+                && selected.insert(casefold(root), source_root).is_some()
+            {
+                return Err(AcquireError::InvalidMaterialization(format!(
+                    "duplicate payload path `{root}`"
+                )));
+            }
+            continue;
+        }
         for entry in WalkDir::new(&source_root).follow_links(false) {
             let entry =
                 entry.map_err(|error| AcquireError::InvalidMaterialization(error.to_string()))?;

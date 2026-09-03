@@ -191,6 +191,13 @@ components = [10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29
 args = []
 
 [[runs]]
+run_id = "eeexremote-bg2"
+mod_id = "eeexremote"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
 run_id = "buffbot-bg2"
 mod_id = "buffbot"
 phase = "post-eet-end"
@@ -586,6 +593,16 @@ components = [
   { run_id = "eeex-bg2", component = 7 },
   { run_id = "eeex-bg2", component = 8 },
 ]
+
+[[features]]
+id = "feature:eeexremote:component-0"
+title = "EEex Remote Console"
+description = "Advanced testing tool that accepts arbitrary Lua over a local console connection. Ordinary players do not need it."
+category = "engine"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "eeexremote-bg2", component = 0 }]
 
 [[features]]
 id = "feature:bubb-spell-menu-extended:component-0"
