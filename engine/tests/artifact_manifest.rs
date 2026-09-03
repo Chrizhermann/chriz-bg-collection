@@ -41,6 +41,9 @@ max_compression_ratio = 100
 
 [tool]
 executable = "WeiDU.exe"
+expected_length = 1364992
+sha256 = "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a"
+weidu_version = "24900"
 pe_machine = "x86-64"
 
 [provenance]
@@ -55,6 +58,13 @@ fn parses_complete_immutable_tool_artifact_contract() {
     let artifact: Artifact = toml::from_str(COMPLETE_WEIDU_ARTIFACT).unwrap();
 
     assert_eq!(artifact.id, "weidu");
+    let tool = artifact.tool.expect("tool contract");
+    assert_eq!(tool.expected_length, 1_364_992);
+    assert_eq!(
+        tool.sha256,
+        "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a"
+    );
+    assert_eq!(tool.weidu_version, "24900");
 }
 
 #[test]
@@ -69,7 +79,7 @@ fn one_artifact_can_publish_multiple_roots_and_tp2s() {
             "tp2_paths = [\"EET/EET.tp2\", \"EET_END/EET_END.tp2\"]",
         )
         .replace(
-            "[tool]\nexecutable = \"WeiDU.exe\"\npe_machine = \"x86-64\"\n\n",
+            "[tool]\nexecutable = \"WeiDU.exe\"\nexpected_length = 1364992\nsha256 = \"ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a\"\nweidu_version = \"24900\"\npe_machine = \"x86-64\"\n\n",
             "",
         );
     let artifact: Artifact = toml::from_str(&text).unwrap();
@@ -299,6 +309,34 @@ fn public_contract_requires_complete_identity_and_x64_weidu() {
 
     assert_finding(&manifest, "artifact-contract", Severity::Warning);
     assert_finding(&manifest, "tool-architecture", Severity::Warning);
+}
+
+#[test]
+fn public_contract_requires_unambiguous_extracted_weidu_identity() {
+    for mutation in ["zero-length", "unpinned-hash", "ambiguous-version"] {
+        let mut manifest = recipe();
+        let tool = manifest
+            .artifacts
+            .get_mut("weidu")
+            .unwrap()
+            .tool
+            .as_mut()
+            .unwrap();
+        match mutation {
+            "zero-length" => tool.expected_length = 0,
+            "unpinned-hash" => tool.sha256 = "0".repeat(64),
+            "ambiguous-version" => tool.weidu_version = "WeiDU version 24900".to_owned(),
+            _ => unreachable!(),
+        }
+
+        assert!(
+            validate(&manifest)
+                .iter()
+                .any(|finding| finding.rule == "artifact-contract"),
+            "mutation {mutation:?} escaped the executable identity gate: {:#?}",
+            validate(&manifest)
+        );
+    }
 }
 
 #[test]
@@ -622,7 +660,7 @@ fn verify_rejects_non_x64_tool_contract_before_acquisition() {
     )
     .replace(
         "[provenance]",
-        "[tool]\nexecutable = \"WeiDU.exe\"\npe_machine = \"x86\"\n\n[provenance]",
+            "[tool]\nexecutable = \"WeiDU.exe\"\nexpected_length = 1364992\nsha256 = \"ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a\"\nweidu_version = \"24900\"\npe_machine = \"x86\"\n\n[provenance]",
     );
 
     assert_verify_rejects_contract_before_acquisition(&artifact, "tool-architecture");
@@ -722,6 +760,7 @@ fn verify_fails_when_downloaded_bytes_drift_from_the_contract() {
 #[test]
 fn verify_rejects_pe_machine_drift_for_tool_artifacts() {
     let archive = sample_archive(Some(0x014c));
+    let executable_sha256 = sha256(&minimal_pe(0x014c));
     let digest = sha256(&archive);
     let (url, server) = serve_once(archive.clone());
     let temp = tempfile::tempdir().unwrap();
@@ -730,7 +769,7 @@ fn verify_rejects_pe_machine_drift_for_tool_artifacts() {
         .replacen("id = \"sample\"", "id = \"weidu\"", 1)
         .replace(
             "[provenance]",
-            "[tool]\nexecutable = \"WeiDU.exe\"\npe_machine = \"x86-64\"\n\n[provenance]",
+            &format!("[tool]\nexecutable = \"WeiDU.exe\"\nexpected_length = 136\nsha256 = \"{executable_sha256}\"\nweidu_version = \"24900\"\npe_machine = \"x86-64\"\n\n[provenance]"),
         )
         .replace(
             "publish_roots = [\"sample\"]",
@@ -750,6 +789,42 @@ fn verify_rejects_pe_machine_drift_for_tool_artifacts() {
     assert!(!output.status.success());
     assert!(
         String::from_utf8_lossy(&output.stderr).contains("PE machine"),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn verify_rejects_extracted_tool_digest_drift() {
+    let archive = sample_archive(Some(0x8664));
+    let digest = sha256(&archive);
+    let (url, server) = serve_once(archive.clone());
+    let temp = tempfile::tempdir().unwrap();
+    let artifact_path = temp.path().join("weidu.toml");
+    let artifact = payload_artifact_toml(&url, &archive, &digest)
+        .replacen("id = \"sample\"", "id = \"weidu\"", 1)
+        .replace(
+            "[provenance]",
+            &format!("[tool]\nexecutable = \"WeiDU.exe\"\nexpected_length = 136\nsha256 = \"{}\"\nweidu_version = \"24900\"\npe_machine = \"x86-64\"\n\n[provenance]", "f".repeat(64)),
+        )
+        .replace(
+            "publish_roots = [\"sample\"]",
+            "publish_roots = [\"sample\", \"WeiDU.exe\"]",
+        );
+    std::fs::write(&artifact_path, artifact).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_chriz-bg-author"))
+        .args(["artifact", "verify"])
+        .arg(&artifact_path)
+        .arg("--cache-root")
+        .arg(temp.path().join("cache"))
+        .output()
+        .unwrap();
+    server.join().unwrap();
+
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("WeiDU hash mismatch"),
         "stderr: {}",
         String::from_utf8_lossy(&output.stderr)
     );

@@ -40,6 +40,10 @@ max_compression_ratio = 18
 
 [artifacts.pe]
 executable = "weidu.exe"
+length = 1364992
+sha256 = "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a"
+weidu_version = "24900"
+version_command = "weidu.exe --version"
 machine = "x86-64"
 
 [[artifacts]]

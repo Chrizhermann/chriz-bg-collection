@@ -11,6 +11,7 @@ use bg_engine::acquire::{
 use bg_engine::events::ChannelSink;
 use bg_engine::manifest::{AcquisitionPolicy, ArchiveKind, ArchiveRootRule, Artifact, PeMachine};
 use bg_engine::validate::validate_artifact_for_verification;
+use bg_engine::weidu::invocation::verify_tool_contract;
 use bg_engine::weidu::log::parse_active_entries;
 use clap::{Args, Parser, Subcommand};
 use serde::Serialize;
@@ -205,6 +206,7 @@ struct VerificationReport {
     cache_disposition: &'static str,
     archive: VerifiedArchiveEvidence,
     pe_machine: Option<PeMachine>,
+    tool: Option<VerifiedToolEvidence>,
 }
 
 #[derive(Debug, Serialize)]
@@ -212,6 +214,15 @@ struct VerifiedArchiveEvidence {
     wrapper_directory: Option<String>,
     publish_roots: Vec<String>,
     tp2_paths: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct VerifiedToolEvidence {
+    executable: String,
+    length: u64,
+    sha256: String,
+    weidu_version: String,
+    version_command: String,
 }
 
 fn verify_artifact(
@@ -272,18 +283,20 @@ fn verify_artifact(
         _ => {}
     }
 
-    let pe_machine = if let Some(tool) = &artifact.tool {
-        let actual = read_pe_machine(&extracted.root.join(&tool.executable))?;
-        if actual != tool.pe_machine {
-            return Err(format!(
-                "PE machine drift for {:?}: expected {:?}, got {:?}",
-                tool.executable, tool.pe_machine, actual
-            )
-            .into());
-        }
-        Some(actual)
+    let (pe_machine, tool_evidence) = if let Some(tool) = &artifact.tool {
+        let (_, evidence) = verify_tool_contract(&extracted.root.join(&tool.executable), tool)?;
+        (
+            Some(evidence.pe_machine),
+            Some(VerifiedToolEvidence {
+                executable: tool.executable.clone(),
+                length: evidence.length,
+                sha256: evidence.sha256,
+                weidu_version: evidence.weidu_version,
+                version_command: format!("{} --version", tool.executable),
+            }),
+        )
     } else {
-        None
+        (None, None)
     };
 
     Ok(VerificationReport {
@@ -302,6 +315,7 @@ fn verify_artifact(
             tp2_paths: extracted.expected_tp2_paths,
         },
         pe_machine,
+        tool: tool_evidence,
     })
 }
 
@@ -353,29 +367,6 @@ fn verify_standalone_contract(
         .into());
     }
     Ok(())
-}
-
-fn read_pe_machine(path: &Path) -> Result<PeMachine, Box<dyn std::error::Error>> {
-    let bytes = fs::read(path)?;
-    if bytes.len() < 0x40 || &bytes[..2] != b"MZ" {
-        return Err(format!("tool {:?} is not a PE executable", path).into());
-    }
-    let pe_offset = u32::from_le_bytes(bytes[0x3c..0x40].try_into()?) as usize;
-    let machine_offset = pe_offset
-        .checked_add(4)
-        .ok_or("PE header offset overflow")?;
-    if machine_offset + 2 > bytes.len()
-        || bytes.get(pe_offset..machine_offset) != Some(b"PE\0\0".as_slice())
-    {
-        return Err(format!("tool {:?} has an invalid PE header", path).into());
-    }
-    let machine = u16::from_le_bytes(bytes[machine_offset..machine_offset + 2].try_into()?);
-    match machine {
-        0x014c => Ok(PeMachine::X86),
-        0x8664 => Ok(PeMachine::X86_64),
-        0xaa64 => Ok(PeMachine::Arm64),
-        _ => Err(format!("tool {:?} has unsupported PE machine 0x{machine:04x}", path).into()),
-    }
 }
 
 fn inspect_archive(

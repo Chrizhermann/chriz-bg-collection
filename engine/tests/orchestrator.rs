@@ -112,7 +112,11 @@ impl Fixture {
                 bg1: "11".repeat(32),
                 bg2: "22".repeat(32),
             },
-            artifact_identities: vec![frozen("eefix", "33", 10), frozen("eet", "44", 20)],
+            artifact_identities: vec![
+                frozen("eefix", "33", 10),
+                frozen("weidu", "66", 40),
+                frozen("eet", "44", 20),
+            ],
             tool_identities: vec![frozen("weidu", "55", 30)],
             staged_bg1: managed_root.join("bg1"),
             staged_bg2: managed_root.join("game"),
@@ -164,6 +168,7 @@ fn executable_run(
 struct FakeDeps {
     trace: Vec<String>,
     acquisitions: BTreeMap<String, usize>,
+    acquired_identities: Vec<(String, u64, ArtifactKind)>,
     fail_once: Option<String>,
     materialization_results: VecDeque<MaterializationOutcome>,
     recovery_results: VecDeque<InstallReconciliation>,
@@ -207,11 +212,13 @@ impl ArtifactAcquirer for FakeDeps {
     fn acquire(
         &mut self,
         identity: &FrozenIdentity,
-        _kind: ArtifactKind,
+        kind: ArtifactKind,
     ) -> Result<(), StepFailure> {
         let operation = format!("acquire:{}", identity.id);
         self.trace.push(operation.clone());
         *self.acquisitions.entry(identity.id.clone()).or_default() += 1;
+        self.acquired_identities
+            .push((identity.id.clone(), identity.length, kind));
         self.maybe_fail(&operation)
     }
 }
@@ -478,6 +485,15 @@ fn complete_build_uses_stable_order_one_acquisition_per_identity_and_holds_targe
             ("eet".to_owned(), 1),
             ("weidu".to_owned(), 1),
         ])
+    );
+    assert_eq!(
+        deps.acquired_identities
+            .iter()
+            .filter(|(id, _, _)| id == "weidu")
+            .cloned()
+            .collect::<Vec<_>>(),
+        vec![("weidu".to_owned(), 40, ArtifactKind::Tool)],
+        "the enclosing WeiDU archive must be acquired once as a tool"
     );
     assert!(deps.lock_was_held_at_receipt);
     assert!(deps.trace.iter().any(|entry| entry == "stage:bg1"));

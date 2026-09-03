@@ -522,28 +522,26 @@ fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, Orches
         )));
     }
 
-    let mut identities = BTreeMap::<String, (FrozenIdentity, ArtifactKind)>::new();
-    for (identity, kind) in request
-        .created
-        .artifact_identities
-        .iter()
-        .cloned()
-        .map(|identity| (identity, ArtifactKind::Payload))
-        .chain(
-            request
-                .created
-                .tool_identities
-                .iter()
-                .cloned()
-                .map(|identity| (identity, ArtifactKind::Tool)),
-        )
-    {
-        if identities
-            .insert(identity.id.clone(), (identity.clone(), kind))
+    let mut archive_identities = BTreeMap::<String, FrozenIdentity>::new();
+    for identity in request.created.artifact_identities.iter().cloned() {
+        if archive_identities
+            .insert(identity.id.clone(), identity.clone())
             .is_some()
         {
             return Err(OrchestratorError::InvalidCampaign(format!(
-                "frozen artifact id {:?} appears more than once",
+                "frozen archive id {:?} appears more than once",
+                identity.id
+            )));
+        }
+    }
+    let mut tool_identities = BTreeMap::<String, FrozenIdentity>::new();
+    for identity in request.created.tool_identities.iter().cloned() {
+        if tool_identities
+            .insert(identity.id.clone(), identity.clone())
+            .is_some()
+        {
+            return Err(OrchestratorError::InvalidCampaign(format!(
+                "frozen tool id {:?} appears more than once",
                 identity.id
             )));
         }
@@ -552,7 +550,7 @@ fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, Orches
     let mut acquisition_ids = Vec::new();
     let mut seen_acquisitions = BTreeSet::new();
     for run in &request.plan.runs {
-        validate_run(run, &identities)?;
+        validate_run(run, &archive_identities, &tool_identities)?;
         for id in [&run.artifact_id, &run.weidu_artifact_id] {
             if seen_acquisitions.insert(id.clone()) {
                 acquisition_ids.push(id.clone());
@@ -578,11 +576,14 @@ fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, Orches
         kind: PipelineKind::Preflight,
     }];
     for id in acquisition_ids {
-        let (identity, kind) = identities.get(&id).cloned().ok_or_else(|| {
-            OrchestratorError::InvalidCampaign(format!(
-                "run references unfrozen artifact id {id:?}"
-            ))
+        let identity = archive_identities.get(&id).cloned().ok_or_else(|| {
+            OrchestratorError::InvalidCampaign(format!("run references unfrozen archive id {id:?}"))
         })?;
+        let kind = if tool_identities.contains_key(&id) {
+            ArtifactKind::Tool
+        } else {
+            ArtifactKind::Payload
+        };
         schedule.push(PipelineStep {
             id: format!("acquire:{id}"),
             label: format!("Acquire {id}"),
@@ -652,7 +653,8 @@ fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, Orches
 
 fn validate_run(
     run: &PlannedRun,
-    identities: &BTreeMap<String, (FrozenIdentity, ArtifactKind)>,
+    archive_identities: &BTreeMap<String, FrozenIdentity>,
+    tool_identities: &BTreeMap<String, FrozenIdentity>,
 ) -> Result<(), OrchestratorError> {
     validate_step_fragment("run id", &run.run_id)?;
     if run.components.is_empty() {
@@ -670,23 +672,21 @@ fn validate_run(
             run.phase.game_root()
         )));
     }
-    match identities.get(&run.artifact_id) {
-        Some((_, ArtifactKind::Payload)) => {}
-        _ => {
-            return Err(OrchestratorError::InvalidCampaign(format!(
-                "run {:?} references missing payload {:?}",
-                run.run_id, run.artifact_id
-            )))
-        }
+    if !archive_identities.contains_key(&run.artifact_id)
+        || tool_identities.contains_key(&run.artifact_id)
+    {
+        return Err(OrchestratorError::InvalidCampaign(format!(
+            "run {:?} references missing payload {:?}",
+            run.run_id, run.artifact_id
+        )));
     }
-    match identities.get(&run.weidu_artifact_id) {
-        Some((_, ArtifactKind::Tool)) => {}
-        _ => {
-            return Err(OrchestratorError::InvalidCampaign(format!(
-                "run {:?} references missing tool {:?}",
-                run.run_id, run.weidu_artifact_id
-            )))
-        }
+    if !archive_identities.contains_key(&run.weidu_artifact_id)
+        || !tool_identities.contains_key(&run.weidu_artifact_id)
+    {
+        return Err(OrchestratorError::InvalidCampaign(format!(
+            "run {:?} references missing tool {:?}",
+            run.run_id, run.weidu_artifact_id
+        )));
     }
     Ok(())
 }

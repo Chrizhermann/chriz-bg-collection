@@ -658,6 +658,23 @@ fn check_one_artifact_contract(id: &str, artifact: &Artifact, findings: &mut Vec
     if !is_https_url(&artifact.provenance.url) {
         missing.push("HTTPS provenance URL");
     }
+    if let Some(tool) = &artifact.tool {
+        if tool.expected_length == 0 {
+            missing.push("extracted tool length");
+        }
+        if tool.sha256.len() != 64
+            || !tool.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
+            || tool.sha256.eq_ignore_ascii_case(UNPINNED_SHA256)
+        {
+            missing.push("extracted tool SHA-256");
+        }
+        if tool.weidu_version.is_empty()
+            || tool.weidu_version.len() > 10
+            || !tool.weidu_version.bytes().all(|byte| byte.is_ascii_digit())
+        {
+            missing.push("numeric WeiDU version");
+        }
+    }
     if !missing.is_empty() {
         warning(
             findings,

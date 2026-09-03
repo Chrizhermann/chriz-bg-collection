@@ -355,7 +355,7 @@ fn source_target_overlap_is_rejected_before_campaign_state_is_created() {
 }
 
 #[test]
-fn campaign_identity_freezes_the_authored_nonzero_artifact_lengths() {
+fn campaign_identity_freezes_payload_archives_and_extracted_tool_bytes_separately() {
     let (_temp, recipe, bg1, bg2, managed, cache) = failed_install_fixture();
     let app_data = managed.parent().unwrap().join("app-data");
     let mut command = cli();
@@ -371,9 +371,27 @@ fn campaign_identity_freezes_the_authored_nonzero_artifact_lengths() {
         created
             .artifact_identities
             .iter()
-            .chain(&created.tool_identities)
             .all(|identity| identity.length == 1),
-        "frozen identities: {created:#?}"
+        "payload identities must retain archive lengths: {created:#?}"
+    );
+    let tool_archive = created
+        .artifact_identities
+        .iter()
+        .find(|identity| identity.id == "weidu")
+        .expect("WeiDU archive identity must remain frozen for acquisition");
+    assert_eq!(tool_archive.version, "249.00");
+    assert_eq!(
+        tool_archive.sha256,
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+    assert_eq!(created.tool_identities.len(), 1, "{created:#?}");
+    let tool = &created.tool_identities[0];
+    assert_eq!(tool.id, "weidu");
+    assert_eq!(tool.version, "249.00");
+    assert_eq!(tool.length, 1_364_992);
+    assert_eq!(
+        tool.sha256,
+        "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a"
     );
 }
 

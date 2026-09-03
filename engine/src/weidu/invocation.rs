@@ -5,11 +5,12 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-use crate::manifest::{GameRoot, InvocationMode, RunArg};
+use crate::manifest::{GameRoot, InvocationMode, PeMachine, RunArg, ToolSpec};
 
 const DEBUG_LOG_NAME: &str = "weidu.debug.log";
 
@@ -105,6 +106,158 @@ impl VerifiedWeidu {
     }
 }
 
+/// Immutable observations proven directly from one extracted WeiDU executable.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VerifiedToolEvidence {
+    /// Exact executable length in bytes.
+    pub length: u64,
+    /// Lowercase SHA-256 of the executable bytes.
+    pub sha256: String,
+    /// Numeric version parsed from `weidu.exe --version` without its path prefix.
+    pub weidu_version: String,
+    /// PE COFF machine read from the executable header.
+    pub pe_machine: PeMachine,
+}
+
+/// Verifies the complete executable contract and returns bytes safe to materialize.
+pub fn verify_tool_contract(
+    path: &Path,
+    contract: &ToolSpec,
+) -> Result<(VerifiedWeidu, VerifiedToolEvidence), InvocationError> {
+    let verified = VerifiedWeidu::verify(path, &contract.sha256)?;
+    let length =
+        u64::try_from(verified.bytes.len()).map_err(|_| InvocationError::ToolLengthMismatch {
+            path: verified.source_path.clone(),
+            expected: contract.expected_length,
+            actual: u64::MAX,
+        })?;
+    if length != contract.expected_length {
+        return Err(InvocationError::ToolLengthMismatch {
+            path: verified.source_path.clone(),
+            expected: contract.expected_length,
+            actual: length,
+        });
+    }
+
+    let pe_machine = read_pe_machine(&verified.source_path, &verified.bytes)?;
+    if pe_machine != contract.pe_machine {
+        return Err(InvocationError::ToolArchitectureMismatch {
+            path: verified.source_path.clone(),
+            expected: contract.pe_machine,
+            actual: pe_machine,
+        });
+    }
+
+    let output = Command::new(&verified.source_path)
+        .arg("--version")
+        .current_dir(verified.source_path.parent().ok_or_else(|| {
+            InvocationError::UnsafeToolPath {
+                path: verified.source_path.clone(),
+            }
+        })?)
+        .output()
+        .map_err(|source| InvocationError::ToolVersionProbe {
+            path: verified.source_path.clone(),
+            source,
+        })?;
+    if !output.status.success() {
+        return Err(InvocationError::ToolVersionProbeFailed {
+            path: verified.source_path.clone(),
+            status: output.status.to_string(),
+        });
+    }
+    let weidu_version = parse_weidu_version_output(&output.stdout)?;
+    if weidu_version != contract.weidu_version {
+        return Err(InvocationError::ToolVersionMismatch {
+            path: verified.source_path.clone(),
+            expected: contract.weidu_version.clone(),
+            actual: weidu_version,
+        });
+    }
+
+    let evidence = VerifiedToolEvidence {
+        length,
+        sha256: verified.sha256.clone(),
+        weidu_version,
+        pe_machine,
+    };
+    Ok((verified, evidence))
+}
+
+/// Parses WeiDU's path-prefixed version line while excluding the unstable path itself.
+pub fn parse_weidu_version_output(stdout: &[u8]) -> Result<String, InvocationError> {
+    let text =
+        std::str::from_utf8(stdout).map_err(|_| InvocationError::InvalidToolVersionOutput {
+            detail: "stdout is not UTF-8".to_owned(),
+        })?;
+    let lines = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>();
+    if lines.len() != 1 {
+        return Err(InvocationError::InvalidToolVersionOutput {
+            detail: "expected exactly one non-empty stdout line".to_owned(),
+        });
+    }
+    let (path, version) = lines[0].rsplit_once("] WeiDU version ").ok_or_else(|| {
+        InvocationError::InvalidToolVersionOutput {
+            detail: "expected `[path] WeiDU version <digits>`".to_owned(),
+        }
+    })?;
+    if !path.starts_with('[')
+        || path.len() == 1
+        || version.is_empty()
+        || !version.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return Err(InvocationError::InvalidToolVersionOutput {
+            detail: "expected one non-empty path and one numeric version".to_owned(),
+        });
+    }
+    Ok(version.to_owned())
+}
+
+fn read_pe_machine(path: &Path, bytes: &[u8]) -> Result<PeMachine, InvocationError> {
+    if bytes.len() < 0x40 || &bytes[..2] != b"MZ" {
+        return Err(InvocationError::InvalidToolPe {
+            path: path.to_path_buf(),
+        });
+    }
+    let pe_offset = u32::from_le_bytes(bytes[0x3c..0x40].try_into().map_err(|_| {
+        InvocationError::InvalidToolPe {
+            path: path.to_path_buf(),
+        }
+    })?) as usize;
+    let machine_offset =
+        pe_offset
+            .checked_add(4)
+            .ok_or_else(|| InvocationError::InvalidToolPe {
+                path: path.to_path_buf(),
+            })?;
+    if machine_offset + 2 > bytes.len()
+        || bytes.get(pe_offset..machine_offset) != Some(b"PE\0\0".as_slice())
+    {
+        return Err(InvocationError::InvalidToolPe {
+            path: path.to_path_buf(),
+        });
+    }
+    let machine = u16::from_le_bytes(
+        bytes[machine_offset..machine_offset + 2]
+            .try_into()
+            .map_err(|_| InvocationError::InvalidToolPe {
+                path: path.to_path_buf(),
+            })?,
+    );
+    match machine {
+        0x014c => Ok(PeMachine::X86),
+        0x8664 => Ok(PeMachine::X86_64),
+        0xaa64 => Ok(PeMachine::Arm64),
+        _ => Err(InvocationError::InvalidToolPe {
+            path: path.to_path_buf(),
+        }),
+    }
+}
+
 /// Narrow, already-resolved input needed to construct one install invocation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InvocationInput {
@@ -175,6 +328,65 @@ pub enum InvocationError {
         /// Recipe-pinned hash.
         expected: String,
         /// Hash of the bytes read.
+        actual: String,
+    },
+    /// Actual executable length differed from the pinned contract.
+    #[error("WeiDU length mismatch for {path}: expected {expected}, found {actual}")]
+    ToolLengthMismatch {
+        /// Canonical checked tool path.
+        path: PathBuf,
+        /// Recipe-pinned length.
+        expected: u64,
+        /// Measured executable length.
+        actual: u64,
+    },
+    /// The extracted executable was not a supported PE image.
+    #[error("WeiDU tool is not a supported PE executable: {path}")]
+    InvalidToolPe {
+        /// Canonical checked tool path.
+        path: PathBuf,
+    },
+    /// The executable architecture differed from the pinned contract.
+    #[error("PE machine drift for {path}: expected {expected:?}, got {actual:?}")]
+    ToolArchitectureMismatch {
+        /// Canonical checked tool path.
+        path: PathBuf,
+        /// Recipe-pinned architecture.
+        expected: PeMachine,
+        /// Observed architecture.
+        actual: PeMachine,
+    },
+    /// Starting the immutable version probe failed.
+    #[error("could not run WeiDU --version for {path}: {source}")]
+    ToolVersionProbe {
+        /// Canonical checked tool path.
+        path: PathBuf,
+        /// Process spawn or wait error.
+        #[source]
+        source: std::io::Error,
+    },
+    /// The immutable executable rejected its version probe.
+    #[error("WeiDU --version failed for {path} with {status}")]
+    ToolVersionProbeFailed {
+        /// Canonical checked tool path.
+        path: PathBuf,
+        /// OS-independent exit-status rendering.
+        status: String,
+    },
+    /// Version stdout was not the one unambiguous WeiDU version line.
+    #[error("invalid WeiDU --version output: {detail}")]
+    InvalidToolVersionOutput {
+        /// Stable reason without path-dependent stdout.
+        detail: String,
+    },
+    /// Parsed semantic version differed from the pinned contract.
+    #[error("WeiDU version mismatch for {path}: expected {expected}, found {actual}")]
+    ToolVersionMismatch {
+        /// Canonical checked tool path.
+        path: PathBuf,
+        /// Recipe-pinned semantic version.
+        expected: String,
+        /// Parsed semantic version.
         actual: String,
     },
     /// The recipe TP2 path could escape or alias its staged root.
@@ -728,8 +940,8 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        build, validate_setup_name_declarations, InvocationError, InvocationInput, ResolvedPrompt,
-        StagedRoots, VerifiedWeidu,
+        build, parse_weidu_version_output, validate_setup_name_declarations, InvocationError,
+        InvocationInput, ResolvedPrompt, StagedRoots, VerifiedWeidu,
     };
     use crate::manifest::{GameRoot, InvocationMode, RunArg};
 
@@ -789,6 +1001,24 @@ mod tests {
 
     fn canonical(path: &Path) -> PathBuf {
         path.canonicalize().unwrap()
+    }
+
+    #[test]
+    fn parses_only_one_path_prefixed_numeric_weidu_version() {
+        assert_eq!(
+            parse_weidu_version_output(b"[C:\\tools\\weidu.exe] WeiDU version 24900\r\n").unwrap(),
+            "24900"
+        );
+
+        for ambiguous in [
+            b"WeiDU version 24900\r\n".as_slice(),
+            b"[C:\\a\\weidu.exe] WeiDU version 24900 extra\r\n".as_slice(),
+            b"[C:\\a\\weidu.exe] WeiDU version 24900\r\nnoise\r\n".as_slice(),
+            b"[C:\\a\\weidu.exe] WeiDU version 24900\r\n[C:\\b\\weidu.exe] WeiDU version 24900\r\n"
+                .as_slice(),
+        ] {
+            assert!(parse_weidu_version_output(ambiguous).is_err());
+        }
     }
 
     #[test]

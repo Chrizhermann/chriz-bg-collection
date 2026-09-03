@@ -208,6 +208,12 @@ pub enum PeMachine {
 pub struct ToolSpec {
     /// Exact executable path after archive wrapper removal.
     pub executable: String,
+    /// Exact extracted executable byte length.
+    pub expected_length: u64,
+    /// Exact lowercase or uppercase SHA-256 of the extracted executable bytes.
+    pub sha256: String,
+    /// Numeric WeiDU version parsed from the executable's path-prefixed `--version` output.
+    pub weidu_version: String,
     /// Expected PE COFF machine field.
     pub pe_machine: PeMachine,
 }

@@ -16,6 +16,7 @@ use serde::Deserialize;
 use zip::ZipArchive;
 
 const WEIDU_SHA256: &str = "b156910cbec69359fc2e42f6739aa959d49047d6fd3dc172f6bed88ffad8f927";
+const WEIDU_EXE_SHA256: &str = "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a";
 const DLCMERGER_SHA256: &str = "ea7584fd7285330cfaa52cfc217677ef4f8cf8151fdec666ea8af199e479db0e";
 const EEFIXPACK_SHA256: &str = "7a57e43bd6c30c7e36b7c2b7c5531c7a0834de164da186808da03d24474592bf";
 const BG1UB_SHA256: &str = "5a525eb37f68f63706a5120fc4900b68b00b46ff755583fa6ced1fc456cf8104";
@@ -208,6 +209,9 @@ fn pins_exact_core_artifact_identities_and_archive_contracts() {
         .as_ref()
         .expect("WeiDU must be an executable tool");
     assert_eq!(tool.executable, "weidu.exe");
+    assert_eq!(tool.expected_length, 1_364_992);
+    assert_eq!(tool.sha256, WEIDU_EXE_SHA256);
+    assert_eq!(tool.weidu_version, "24900");
     assert_eq!(tool.pe_machine, PeMachine::X86_64);
     assert!(
         manifest
@@ -489,6 +493,10 @@ struct ObservedArchiveShape {
 #[serde(deny_unknown_fields)]
 struct PeEvidence {
     executable: String,
+    length: u64,
+    sha256: String,
+    weidu_version: String,
+    version_command: String,
     machine: String,
 }
 
@@ -673,6 +681,10 @@ fn committed_real_verification_evidence_matches_every_core_artifact_contract() {
         match (&artifact.tool, &record.pe) {
             (Some(tool), Some(pe)) => {
                 assert_eq!(pe.executable, tool.executable);
+                assert_eq!(pe.length, tool.expected_length);
+                assert_eq!(pe.sha256, tool.sha256);
+                assert_eq!(pe.weidu_version, tool.weidu_version);
+                assert_eq!(pe.version_command, "weidu.exe --version");
                 assert_eq!(pe.machine, "x86-64");
                 assert_eq!(tool.pe_machine, PeMachine::X86_64);
             }
@@ -790,6 +802,18 @@ fn real_artifact_verification_matches_committed_evidence() {
         assert_eq!(
             report["pe_machine"].as_str(),
             record.pe.as_ref().map(|pe| pe.machine.as_str())
+        );
+        assert_eq!(
+            report["tool"]["length"].as_u64(),
+            record.pe.as_ref().map(|pe| pe.length)
+        );
+        assert_eq!(
+            report["tool"]["sha256"].as_str(),
+            record.pe.as_ref().map(|pe| pe.sha256.as_str())
+        );
+        assert_eq!(
+            report["tool"]["weidu_version"].as_str(),
+            record.pe.as_ref().map(|pe| pe.weidu_version.as_str())
         );
 
         let archive_path = cache_root

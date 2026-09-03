@@ -1111,30 +1111,21 @@ fn validate_frozen_cli_recipe(
 }
 
 fn frozen_payload_identities(frozen: &FrozenCliRecipe) -> Result<Vec<FrozenIdentity>, CliError> {
-    let tool_ids = selected_tool_ids(&frozen.plan);
-    let mut identities = Vec::new();
-    for id in frozen
+    frozen
         .plan
         .runs
         .iter()
-        .map(|run| run.artifact_id.as_str())
+        .flat_map(|run| [run.artifact_id.as_str(), run.weidu_artifact_id.as_str()])
         .collect::<BTreeSet<_>>()
-    {
-        if tool_ids.contains(id) {
-            return Err(CliError::new(
-                "validation_failed",
-                format!("artifact {id:?} is selected as both a payload and a WeiDU tool"),
-            ));
-        }
-        identities.push(frozen_identity(frozen, id)?);
-    }
-    Ok(identities)
+        .into_iter()
+        .map(|id| frozen_identity(frozen, id))
+        .collect()
 }
 
 fn frozen_tool_identities(frozen: &FrozenCliRecipe) -> Result<Vec<FrozenIdentity>, CliError> {
     selected_tool_ids(&frozen.plan)
         .into_iter()
-        .map(|id| frozen_identity(frozen, id))
+        .map(|id| frozen_tool_identity(frozen, id))
         .collect()
 }
 
@@ -1162,6 +1153,27 @@ fn frozen_identity(frozen: &FrozenCliRecipe, id: &str) -> Result<FrozenIdentity,
                 format!("selected artifact {id:?} has no expected length"),
             )
         })?,
+    })
+}
+
+fn frozen_tool_identity(frozen: &FrozenCliRecipe, id: &str) -> Result<FrozenIdentity, CliError> {
+    let artifact = frozen.artifacts.get(id).ok_or_else(|| {
+        CliError::new(
+            "validation_failed",
+            format!("selected plan references missing WeiDU artifact {id:?}"),
+        )
+    })?;
+    let tool = artifact.tool.as_ref().ok_or_else(|| {
+        CliError::new(
+            "validation_failed",
+            format!("selected WeiDU artifact {id:?} has no executable identity"),
+        )
+    })?;
+    Ok(FrozenIdentity {
+        id: artifact.id.clone(),
+        version: artifact.version.clone(),
+        sha256: tool.sha256.to_ascii_lowercase(),
+        length: tool.expected_length,
     })
 }
 
