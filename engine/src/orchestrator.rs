@@ -12,6 +12,7 @@ use crate::events::{EngineEvent, EventSink, StepOutcome};
 use crate::games::GameRole;
 use crate::lock::{LockError, TargetLock};
 use crate::manifest::{GameRoot, Phase};
+use crate::postcondition;
 use crate::preflight::is_creator_protected_destination;
 use crate::resolve::{InstallPlan, PlannedRun};
 use crate::session::{CampaignCreated, FrozenIdentity, SessionEvent, SessionReplay, SessionStore};
@@ -439,6 +440,23 @@ where
     });
 
     let progress = Progress::from_replay(&replay, &schedule)?;
+    if let Some((step_id, reason)) = progress.fresh_copy_required.clone() {
+        let outcome = CampaignOutcome::FreshCopyRequired {
+            step_id: step_id.clone(),
+            reason: reason.clone(),
+        };
+        sink.emit(EngineEvent::Error {
+            step_id: Some(step_id.clone()),
+            message: format!(
+                "A fresh managed copy is required: {}",
+                nonempty_detail(&reason)
+            ),
+        });
+        emit_finished(sink, &step_id, StepOutcome::Failed);
+        write_terminal_receipt(dependencies, request, &replay, &outcome)?;
+        drop(target_lock);
+        return Ok(outcome);
+    }
     if resumed && progress.completed_prefix > 0 {
         emit_started(sink, "preflight", "Recheck campaign safety before resume");
         if let Err(failure) = dependencies.initial(request, &replay) {
@@ -679,6 +697,7 @@ struct Progress {
     attempts: BTreeMap<String, u32>,
     unresolved: Option<(String, u32)>,
     last_failed: BTreeMap<String, u32>,
+    fresh_copy_required: Option<(String, String)>,
 }
 
 impl Progress {
@@ -695,6 +714,7 @@ impl Progress {
         let mut attempts = BTreeMap::<String, u32>::new();
         let mut unresolved = None;
         let mut last_failed = BTreeMap::new();
+        let mut fresh_copy_required = None;
 
         for record in replay.records.iter().skip(1) {
             match &record.event {
@@ -749,6 +769,22 @@ impl Progress {
                     unresolved = None;
                     last_failed.insert(step_id.clone(), *attempt);
                 }
+                SessionEvent::FreshCopyRequired {
+                    step_id,
+                    attempt,
+                    detail,
+                } => {
+                    let matches_active = unresolved.as_ref() == Some(&(step_id.clone(), *attempt));
+                    let upgrades_failure = last_failed.get(step_id) == Some(attempt);
+                    if !matches_active && !upgrades_failure {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "fresh-copy seal for {step_id:?} has no matching intent"
+                        )));
+                    }
+                    unresolved = None;
+                    last_failed.remove(step_id);
+                    fresh_copy_required = Some((step_id.clone(), detail.clone()));
+                }
                 SessionEvent::Created(_) => {
                     return Err(OrchestratorError::InvalidCampaign(
                         "ledger repeats campaign creation".to_owned(),
@@ -762,6 +798,7 @@ impl Progress {
             attempts,
             unresolved,
             last_failed,
+            fresh_copy_required,
         })
     }
 
@@ -984,6 +1021,9 @@ where
             emit_started(self.sink, &step.id, &format!("Resume {}", step.label));
             match self.dependencies.recover(&run, &attempt) {
                 Ok(InstallReconciliation::ProvenDone) => {
+                    if let Some(outcome) = self.postcondition_failure(step, &run, &attempt)? {
+                        return Ok(Some(outcome));
+                    }
                     self.complete_step(step, &attempt)?;
                     return Ok(None);
                 }
@@ -1017,6 +1057,11 @@ where
             let evidence_attempt = self.attempt(step, attempt);
             match self.dependencies.recover(&run, &evidence_attempt) {
                 Ok(InstallReconciliation::ProvenDone) => {
+                    if let Some(outcome) =
+                        self.postcondition_failure(step, &run, &evidence_attempt)?
+                    {
+                        return Ok(Some(outcome));
+                    }
                     let reconciliation = self.begin_new(step)?;
                     self.complete_step(step, &reconciliation)?;
                     return Ok(None);
@@ -1061,6 +1106,9 @@ where
             };
             match reconciliation {
                 InstallReconciliation::ProvenDone => {
+                    if let Some(outcome) = self.postcondition_failure(step, &run, &current)? {
+                        return Ok(Some(outcome));
+                    }
                     self.complete_step(step, &current)?;
                     return Ok(None);
                 }
@@ -1126,6 +1174,38 @@ where
         self.recheck(step, run.target, MutationKind::ProcessSpawn)?;
         let result = self.dependencies.run(built.invocation, attempt)?;
         self.dependencies.sync_and_reconcile(run, attempt, result)
+    }
+
+    fn postcondition_failure(
+        &mut self,
+        step: &PipelineStep,
+        run: &PlannedRun,
+        attempt: &StepAttempt,
+    ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
+        let root = match run.target {
+            GameRoot::Bg1 => &self.request.created.staged_bg1,
+            GameRoot::Bg2 => &self.request.created.staged_bg2,
+        };
+        let Err(error) = postcondition::verify(root, &run.postconditions) else {
+            return Ok(None);
+        };
+        let reason = format!(
+            "run {:?} postcondition verification failed after installed state was proven: {error}",
+            run.run_id
+        );
+        self.store.append(SessionEvent::FreshCopyRequired {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            detail: reason.clone(),
+        })?;
+        self.progress.unresolved = None;
+        self.progress.last_failed.remove(&step.id);
+        self.progress.fresh_copy_required = Some((step.id.clone(), reason.clone()));
+        self.emit_fresh_copy(step, &reason);
+        Ok(Some(CampaignOutcome::FreshCopyRequired {
+            step_id: step.id.clone(),
+            reason,
+        }))
     }
 
     fn begin_or_resume(&mut self, step: &PipelineStep) -> Result<StepAttempt, OrchestratorError> {

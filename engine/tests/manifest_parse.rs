@@ -1,6 +1,6 @@
 use bg_engine::manifest::{
-    AcquisitionPolicy, Artifact, Collection, GameRoot, InvocationMode, ModFile, Phase, RunArg,
-    SourceKind,
+    AcquisitionPolicy, Artifact, Collection, GameRoot, InvocationMode, ModFile, Phase,
+    Postcondition, RunArg, SourceKind,
 };
 
 fn collection_fixture() -> String {
@@ -78,6 +78,31 @@ fn parses_explicit_runs_and_typed_arguments() {
     assert_eq!(Phase::Bg1Preparation.game_root(), GameRoot::Bg1);
     assert_eq!(Phase::EetInitialization.game_root(), GameRoot::Bg2);
     assert_eq!(Phase::Main.game_root(), GameRoot::Bg2);
+}
+
+#[test]
+fn parses_typed_run_postconditions() {
+    let text = collection_fixture().replacen(
+        "args = [{ kind = \"staged-root\", value = \"bg1\" }]",
+        concat!(
+            "args = [{ kind = \"staged-root\", value = \"bg1\" }]\n",
+            "postconditions = [{ kind = \"text-file-markers\", path = \"weidu.conf\", ",
+            "required = [\"lang_dir = en_US\"], forbidden = [\"lang_dir = ko_KR\"], ",
+            "max_bytes = 4096 }]"
+        ),
+        1,
+    );
+
+    let collection: Collection = toml::from_str(&text).unwrap();
+    assert_eq!(
+        collection.runs[0].postconditions,
+        vec![Postcondition::TextFileMarkers {
+            path: "weidu.conf".to_owned(),
+            required: vec!["lang_dir = en_US".to_owned()],
+            forbidden: vec!["lang_dir = ko_KR".to_owned()],
+            max_bytes: 4096,
+        }]
+    );
 }
 
 #[test]

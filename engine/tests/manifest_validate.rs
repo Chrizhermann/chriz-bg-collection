@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use bg_engine::error::EngineError;
 use bg_engine::manifest::{
     AcquisitionPolicy, Component, ComponentRef, Conflict, Decision, Feature, FeatureInputRef,
-    InputOption, InputSpec, InvocationMode, Phase, PromptAnswer, PromptStep, Readiness, Run,
-    SourceKind,
+    InputOption, InputSpec, InvocationMode, Phase, Postcondition, PromptAnswer, PromptStep,
+    Readiness, Run, SourceKind,
 };
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
@@ -21,6 +21,7 @@ fn run(run_id: &str, phase: Phase, components: &[u32]) -> Run {
         phase,
         components: components.to_vec(),
         args: Vec::new(),
+        postconditions: Vec::new(),
     }
 }
 
@@ -47,6 +48,23 @@ fn error_rules(findings: &[Finding]) -> Vec<&str> {
         .filter(|finding| finding.severity == Severity::Error)
         .map(|finding| finding.rule)
         .collect()
+}
+
+fn text_file_markers(
+    path: &str,
+    required: &[&str],
+    forbidden: &[&str],
+    max_bytes: u64,
+) -> Postcondition {
+    Postcondition::TextFileMarkers {
+        path: path.to_owned(),
+        required: required.iter().map(|marker| (*marker).to_owned()).collect(),
+        forbidden: forbidden
+            .iter()
+            .map(|marker| (*marker).to_owned())
+            .collect(),
+        max_bytes,
+    }
 }
 
 #[track_caller]
@@ -126,6 +144,76 @@ fn every_run_has_an_explicit_nonempty_component_list() {
     let findings = validate(&manifest);
 
     assert_has_error(&findings, "run-components");
+}
+
+#[test]
+fn text_marker_postcondition_accepts_a_bounded_normalized_target_relative_path() {
+    let mut manifest = good();
+    manifest.collection.runs[0]
+        .postconditions
+        .push(text_file_markers(
+            "override/ui.menu",
+            &["required marker"],
+            &["forbidden marker"],
+            4096,
+        ));
+
+    assert!(!validate(&manifest)
+        .iter()
+        .any(|finding| finding.rule == "run-postconditions"));
+}
+
+#[test]
+fn text_marker_postcondition_rejects_unsafe_or_non_normalized_paths() {
+    for path in [
+        "",
+        "/weidu.conf",
+        "C:/weidu.conf",
+        "../weidu.conf",
+        "override/../weidu.conf",
+        "override\\weidu.conf",
+        "override//weidu.conf",
+        "./weidu.conf",
+        "override/./weidu.conf",
+        "override/weidu.conf:stream",
+        "override/trailing.",
+        "override/trailing ",
+        "override/NUL.txt",
+        "override/control\u{0001}.txt",
+        "override/wild*.txt",
+        "override/question?.txt",
+        "override/pipe|.txt",
+        "override/quote\".txt",
+        "override/less<than.txt",
+        "override/greater>than.txt",
+    ] {
+        let mut manifest = good();
+        manifest.collection.runs[0]
+            .postconditions
+            .push(text_file_markers(path, &["marker"], &[], 4096));
+
+        assert_has_error(&validate(&manifest), "run-postconditions");
+    }
+}
+
+#[test]
+fn text_marker_postcondition_rejects_empty_markers_and_unbounded_reads() {
+    for postcondition in [
+        text_file_markers("weidu.conf", &[], &[], 4096),
+        text_file_markers("weidu.conf", &[""], &[], 4096),
+        text_file_markers("weidu.conf", &["marker"], &[""], 4096),
+        text_file_markers("weidu.conf", &["marker"], &[], 0),
+        text_file_markers("weidu.conf", &["marker"], &[], 64 * 1024 * 1024 + 1),
+        text_file_markers("weidu.conf", &["marker"], &["marker"], 4096),
+        text_file_markers("weidu.conf", &["fives"], &[], 4),
+    ] {
+        let mut manifest = good();
+        manifest.collection.runs[0]
+            .postconditions
+            .push(postcondition);
+
+        assert_has_error(&validate(&manifest), "run-postconditions");
+    }
 }
 
 #[test]

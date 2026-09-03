@@ -23,6 +23,7 @@ fn plan() -> InstallPlan {
             phase: bg_engine::manifest::Phase::EetInitialization,
             components: vec![0],
             args: Vec::new(),
+            postconditions: Vec::new(),
             artifact_id: "eet".to_owned(),
             weidu_artifact_id: "weidu".to_owned(),
             prompt_scripts: Vec::new(),

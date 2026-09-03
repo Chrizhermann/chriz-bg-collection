@@ -6,7 +6,7 @@ use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink};
 use bg_engine::games::GameRole;
 use bg_engine::lock::{LockError, TargetLock};
-use bg_engine::manifest::{GameRoot, Phase, RunArg};
+use bg_engine::manifest::{GameRoot, Phase, Postcondition, RunArg};
 use bg_engine::orchestrator::{
     run_campaign, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
     CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRequest, InstallLogVerifier,
@@ -146,6 +146,7 @@ fn executable_run(
         phase,
         components: components.to_vec(),
         args,
+        postconditions: vec![],
         artifact_id: artifact_id.to_owned(),
         weidu_artifact_id: "weidu".to_owned(),
         prompt_scripts: vec![],
@@ -165,6 +166,7 @@ struct FakeDeps {
     lock_was_held_at_receipt: bool,
     receipts: Vec<ReceiptDraft>,
     now: u64,
+    staged_files: Vec<(GameRole, PathBuf, Vec<u8>)>,
 }
 
 impl FakeDeps {
@@ -209,13 +211,25 @@ impl ArtifactAcquirer for FakeDeps {
 
 impl StagingService for FakeDeps {
     fn stage(&mut self, role: GameRole) -> Result<(), StepFailure> {
-        let role = match role {
+        let role_name = match role {
             GameRole::BgeeSod => "bg1",
             GameRole::Bg2ee => "bg2",
         };
-        let operation = format!("stage:{role}");
+        let operation = format!("stage:{role_name}");
         self.trace.push(operation.clone());
-        self.maybe_fail(&operation)
+        self.maybe_fail(&operation)?;
+        for (_, path, contents) in self
+            .staged_files
+            .iter()
+            .filter(|(file_role, _, _)| *file_role == role)
+        {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|error| StepFailure::new(error.to_string()))?;
+            }
+            std::fs::write(path, contents).map_err(|error| StepFailure::new(error.to_string()))?;
+        }
+        Ok(())
     }
 
     fn finalize_identity(&mut self) -> Result<(), StepFailure> {
@@ -493,6 +507,203 @@ fn complete_build_uses_stable_order_one_acquisition_per_identity_and_holds_targe
 }
 
 #[test]
+fn normal_proven_install_checks_postconditions_before_completion() {
+    let mut fixture = Fixture::new();
+    add_first_run_marker(&mut fixture, "merged and ready");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        staged_files: vec![(
+            GameRole::BgeeSod,
+            first_marker_path(&fixture),
+            b"merged and ready\n".to_vec(),
+        )],
+        ..FakeDeps::default()
+    };
+
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(completed_step_ids(&fixture.request.created.managed_root)
+        .contains(&"install:eefix-bg1".to_owned()));
+}
+
+#[test]
+fn failed_normal_postcondition_requires_fresh_copy_and_stops_next_run() {
+    let mut fixture = Fixture::new();
+    add_first_run_marker(&mut fixture, "merged and ready");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        staged_files: vec![(
+            GameRole::BgeeSod,
+            first_marker_path(&fixture),
+            b"not ready\n".to_vec(),
+        )],
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+    let first_receipt = deps.receipts.last().unwrap().clone();
+
+    assert!(matches!(
+        outcome,
+        CampaignOutcome::FreshCopyRequired { ref step_id, ref reason }
+            if step_id == "install:eefix-bg1" && reason.contains("postcondition")
+    ));
+    assert!(!completed_step_ids(&fixture.request.created.managed_root)
+        .contains(&"install:eefix-bg1".to_owned()));
+    assert!(!deps
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("build:eefix-bg2:")));
+    let replay = SessionStore::open(&fixture.request.created.managed_root)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert_eq!(replay.unresolved_step(), None);
+    assert_eq!(
+        replay
+            .fresh_copy_required()
+            .map(|seal| seal.step_id.as_str()),
+        Some("install:eefix-bg1")
+    );
+
+    deps.recovery_results
+        .push_back(InstallReconciliation::retry(vec![0, 2]));
+    let split = deps.trace.len();
+    let resumed_outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+    assert_eq!(resumed_outcome, outcome);
+    assert_eq!(deps.receipts.last(), Some(&first_receipt));
+    assert_eq!(deps.recovery_results.len(), 1);
+    assert!(!deps.trace[split..].iter().any(|entry| entry == "preflight"));
+    assert!(!deps.trace[split..]
+        .iter()
+        .any(|entry| entry == "recover:eefix-bg1"));
+    assert!(!deps.trace[split..]
+        .iter()
+        .any(|entry| entry.starts_with("build:") || entry.starts_with("run:")));
+}
+
+#[test]
+fn unresolved_proven_install_checks_postconditions_before_completion() {
+    let mut fixture = Fixture::new();
+    add_first_run_marker(&mut fixture, "merged and ready");
+    seed_unresolved(
+        &fixture.request,
+        THROUGH_MATERIALIZATION,
+        "install:eefix-bg1",
+    );
+    write_marker_file(&fixture, b"merged and ready\n");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        recovery_results: VecDeque::from([InstallReconciliation::ProvenDone]),
+        ..FakeDeps::default()
+    };
+
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(!deps
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("build:eefix-bg1:")));
+}
+
+#[test]
+fn failed_unresolved_proven_postcondition_requires_fresh_copy_without_rerun() {
+    let mut fixture = Fixture::new();
+    add_first_run_marker(&mut fixture, "merged and ready");
+    seed_unresolved(
+        &fixture.request,
+        THROUGH_MATERIALIZATION,
+        "install:eefix-bg1",
+    );
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        recovery_results: VecDeque::from([InstallReconciliation::ProvenDone]),
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert!(matches!(
+        outcome,
+        CampaignOutcome::FreshCopyRequired { ref step_id, ref reason }
+            if step_id == "install:eefix-bg1" && reason.contains("postcondition")
+    ));
+    assert!(!deps.trace.iter().any(|entry| entry.starts_with("build:")));
+    assert!(!deps.trace.iter().any(|entry| entry.starts_with("run:")));
+    let replay = SessionStore::open(&fixture.request.created.managed_root)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert_eq!(replay.unresolved_step(), None);
+    assert_eq!(
+        replay
+            .fresh_copy_required()
+            .map(|seal| seal.step_id.as_str()),
+        Some("install:eefix-bg1")
+    );
+}
+
+#[test]
+fn last_failed_proven_install_checks_postconditions_before_completion() {
+    let mut fixture = Fixture::new();
+    add_first_run_marker(&mut fixture, "merged and ready");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        after_results: VecDeque::from([InstallReconciliation::retry(vec![0, 2])]),
+        ..FakeDeps::default()
+    };
+    assert!(matches!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { ref step_id, .. } if step_id == "install:eefix-bg1"
+    ));
+    write_marker_file(&fixture, b"merged and ready\n");
+    deps.recovery_results
+        .push_back(InstallReconciliation::ProvenDone);
+    let split = deps.trace.len();
+
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(!deps.trace[split..]
+        .iter()
+        .any(|entry| entry.starts_with("build:eefix-bg1:")));
+}
+
+#[test]
+fn failed_last_failed_proven_postcondition_requires_fresh_copy_without_rerun() {
+    let mut fixture = Fixture::new();
+    add_first_run_marker(&mut fixture, "merged and ready");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        after_results: VecDeque::from([InstallReconciliation::retry(vec![0, 2])]),
+        ..FakeDeps::default()
+    };
+    assert!(matches!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { ref step_id, .. } if step_id == "install:eefix-bg1"
+    ));
+    deps.recovery_results
+        .push_back(InstallReconciliation::ProvenDone);
+    let split = deps.trace.len();
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert!(matches!(
+        outcome,
+        CampaignOutcome::FreshCopyRequired { ref step_id, ref reason }
+            if step_id == "install:eefix-bg1" && reason.contains("postcondition")
+    ));
+    assert!(!deps.trace[split..]
+        .iter()
+        .any(|entry| entry.starts_with("build:") || entry.starts_with("run:")));
+}
+
+#[test]
 fn failure_stops_at_the_same_step_and_resume_does_not_repeat_completed_work() {
     let fixture = Fixture::new();
     let sink = RecordingSink::default();
@@ -538,6 +749,32 @@ fn failure_stops_at_the_same_step_and_resume_does_not_repeat_completed_work() {
         deps.receipts.last().unwrap().attempt_id,
         fixture.request.created.attempt_id
     );
+}
+
+fn add_first_run_marker(fixture: &mut Fixture, marker: &str) {
+    fixture.request.plan.runs[0]
+        .postconditions
+        .push(Postcondition::TextFileMarkers {
+            path: "override/dlc-merge.txt".to_owned(),
+            required: vec![marker.to_owned()],
+            forbidden: vec!["old state".to_owned()],
+            max_bytes: 4096,
+        });
+    fixture.request.created.plan_sha256 = plan_digest(&fixture.request.plan).unwrap();
+}
+
+fn first_marker_path(fixture: &Fixture) -> PathBuf {
+    fixture
+        .request
+        .created
+        .staged_bg1
+        .join("override/dlc-merge.txt")
+}
+
+fn write_marker_file(fixture: &Fixture, contents: &[u8]) {
+    let path = first_marker_path(fixture);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, contents).unwrap();
 }
 
 #[test]

@@ -50,6 +50,7 @@ fn add_run(manifest: &mut Manifest, run_id: &str, components: &[u32]) {
         phase: Phase::Bg2Preparation,
         components: components.to_vec(),
         args: Vec::new(),
+        postconditions: Vec::new(),
     });
 }
 
@@ -240,6 +241,35 @@ fn explicit_off_cannot_disable_root_mandatory() {
         .components_for("meaning")
         .unwrap()
         .contains(&6));
+}
+
+#[test]
+fn resolved_plan_carries_run_postconditions_unchanged() {
+    let mut manifest = semantic_manifest();
+    let expected = bg_engine::manifest::Postcondition::TextFileMarkers {
+        path: "weidu.conf".to_owned(),
+        required: vec!["lang_dir = en_US".to_owned()],
+        forbidden: Vec::new(),
+        max_bytes: 4096,
+    };
+    manifest
+        .collection
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == "meaning")
+        .unwrap()
+        .postconditions
+        .push(expected.clone());
+
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let run = evaluation
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.run_id == "meaning")
+        .unwrap();
+
+    assert_eq!(run.postconditions, vec![expected]);
 }
 
 #[test]

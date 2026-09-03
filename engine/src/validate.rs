@@ -7,7 +7,10 @@ use std::path::{Component as PathComponent, Path};
 use crate::error::EngineError;
 use crate::manifest::{
     AcquisitionPolicy, Artifact, ComponentRef, Decision, GameRoot, InputSpec, InvocationMode,
-    PeMachine, Phase, PromptAnswer, Readiness, Source, SourceKind,
+    PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source, SourceKind,
+};
+use crate::postcondition::{
+    is_safe_normalized_relative_path, marker_len_exceeds, MAX_TEXT_FILE_MARKER_BYTES,
 };
 use crate::weidu::invocation::setup_executable_name;
 use crate::Manifest;
@@ -59,6 +62,8 @@ pub const RULE_REFERENCES: &str = "references";
 pub const RULE_BLOCKED_ARTIFACTS: &str = "blocked-artifacts";
 /// Rule requiring authored archive and TP2 paths to remain within staged roots.
 pub const RULE_PATHS: &str = "paths";
+/// Rule requiring run postconditions to be safe, bounded, and meaningful.
+pub const RULE_RUN_POSTCONDITIONS: &str = "run-postconditions";
 /// Rule preventing setup-name aliases from selecting the same TP2 implicitly.
 pub const RULE_SETUP_NAME_AMBIGUITY: &str = "setup-name-ambiguity";
 /// Rule preventing one installer component from running twice against one game root.
@@ -111,6 +116,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_references(manifest, &mut findings);
     check_blocked_artifacts(manifest, &mut findings);
     check_paths(manifest, &mut findings);
+    check_run_postconditions(manifest, &mut findings);
     check_setup_name_ambiguity(manifest, &mut findings);
     check_component_ids(manifest, &mut findings);
     check_component_placement(manifest, &mut findings);
@@ -176,6 +182,85 @@ fn warning(findings: &mut Vec<Finding>, rule: &'static str, message: String) {
         rule,
         message,
     });
+}
+
+fn check_run_postconditions(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    for run in &manifest.collection.runs {
+        for postcondition in &run.postconditions {
+            match postcondition {
+                Postcondition::TextFileMarkers {
+                    path,
+                    required,
+                    forbidden,
+                    max_bytes,
+                } => {
+                    if !is_safe_normalized_relative_path(path) {
+                        error(
+                            findings,
+                            RULE_RUN_POSTCONDITIONS,
+                            format!(
+                                "run {:?} text-marker path {:?} must be a normalized portable target-relative path",
+                                run.run_id, path
+                            ),
+                        );
+                    }
+                    if required.is_empty() && forbidden.is_empty() {
+                        error(
+                            findings,
+                            RULE_RUN_POSTCONDITIONS,
+                            format!(
+                                "run {:?} text-marker postcondition for {:?} must declare at least one required or forbidden marker",
+                                run.run_id, path
+                            ),
+                        );
+                    }
+                    if required.iter().chain(forbidden).any(String::is_empty) {
+                        error(
+                            findings,
+                            RULE_RUN_POSTCONDITIONS,
+                            format!(
+                                "run {:?} text-marker postcondition for {:?} contains an empty marker",
+                                run.run_id, path
+                            ),
+                        );
+                    }
+                    if *max_bytes == 0 || *max_bytes > MAX_TEXT_FILE_MARKER_BYTES {
+                        error(
+                            findings,
+                            RULE_RUN_POSTCONDITIONS,
+                            format!(
+                                "run {:?} text-marker max_bytes for {:?} must be between 1 and {MAX_TEXT_FILE_MARKER_BYTES}",
+                                run.run_id, path
+                            ),
+                        );
+                    }
+                    if required
+                        .iter()
+                        .any(|marker| marker_len_exceeds(marker, *max_bytes))
+                    {
+                        error(
+                            findings,
+                            RULE_RUN_POSTCONDITIONS,
+                            format!(
+                                "run {:?} text-marker postcondition for {:?} has a required marker larger than max_bytes",
+                                run.run_id, path
+                            ),
+                        );
+                    }
+                    if required.iter().any(|marker| forbidden.contains(marker)) {
+                        error(
+                            findings,
+                            RULE_RUN_POSTCONDITIONS,
+                            format!(
+                                "run {:?} text-marker postcondition for {:?} requires and forbids the same marker",
+                                run.run_id, path
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn check_run_ids(manifest: &Manifest, findings: &mut Vec<Finding>) {

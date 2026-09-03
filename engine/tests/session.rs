@@ -431,10 +431,99 @@ fn pure_selection_and_plan_digests_are_canonical_and_sensitive() {
             phase: bg_engine::manifest::Phase::EetInitialization,
             components: vec![0],
             args: Vec::new(),
+            postconditions: Vec::new(),
             artifact_id: "eet".to_owned(),
             weidu_artifact_id: "weidu".to_owned(),
             prompt_scripts: Vec::new(),
         }],
     };
     assert_ne!(plan_digest(&empty).unwrap(), plan_digest(&changed).unwrap());
+
+    let mut postcondition_changed = changed.clone();
+    postcondition_changed.runs[0].postconditions.push(
+        bg_engine::manifest::Postcondition::TextFileMarkers {
+            path: "weidu.conf".to_owned(),
+            required: vec!["lang_dir = en_US".to_owned()],
+            forbidden: Vec::new(),
+            max_bytes: 4096,
+        },
+    );
+    assert_ne!(
+        plan_digest(&changed).unwrap(),
+        plan_digest(&postcondition_changed).unwrap()
+    );
+    let serialized = serde_json::to_vec(&postcondition_changed).unwrap();
+    assert_eq!(
+        serde_json::from_slice::<InstallPlan>(&serialized).unwrap(),
+        postcondition_changed
+    );
+}
+
+#[test]
+fn fresh_copy_seal_is_exposed_and_rejects_all_later_progress() {
+    let fixture = campaign_fixture();
+    let store = create_store(&fixture);
+    store
+        .append(SessionEvent::StepStarted {
+            step_id: "install:eet".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    store
+        .append(SessionEvent::FreshCopyRequired {
+            step_id: "install:eet".to_owned(),
+            attempt: 1,
+            detail: "postcondition failed".to_owned(),
+        })
+        .unwrap();
+
+    let replay = store.replay().unwrap();
+    let seal = replay.fresh_copy_required().unwrap();
+    assert_eq!(seal.step_id, "install:eet");
+    assert_eq!(seal.attempt, 1);
+    assert_eq!(seal.detail, "postcondition failed");
+    assert_eq!(replay.unresolved_step(), None);
+
+    let error = store
+        .append(SessionEvent::StepStarted {
+            step_id: "verify:final".to_owned(),
+            attempt: 1,
+        })
+        .unwrap_err();
+    assert!(error.to_string().contains("sealed"), "{error}");
+}
+
+#[test]
+fn mismatched_or_tampered_fresh_copy_seal_is_rejected() {
+    let fixture = campaign_fixture();
+    let store = create_store(&fixture);
+    store
+        .append(SessionEvent::StepStarted {
+            step_id: "install:eet".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    let error = store
+        .append(SessionEvent::FreshCopyRequired {
+            step_id: "install:other".to_owned(),
+            attempt: 1,
+            detail: "postcondition failed".to_owned(),
+        })
+        .unwrap_err();
+    assert!(error.to_string().contains("does not match"), "{error}");
+
+    store
+        .append(SessionEvent::FreshCopyRequired {
+            step_id: "install:eet".to_owned(),
+            attempt: 1,
+            detail: "postcondition failed".to_owned(),
+        })
+        .unwrap();
+    let path = ledger(&fixture.managed_root).join("0000000002.json");
+    let mut record: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    record["event"]["data"]["attempt"] = 2.into();
+    std::fs::write(&path, serde_json::to_vec_pretty(&record).unwrap()).unwrap();
+
+    assert!(store.replay().is_err());
 }

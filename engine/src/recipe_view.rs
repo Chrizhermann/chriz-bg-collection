@@ -640,6 +640,7 @@ fn build_plan(
             phase: run.phase,
             components,
             args: run.args.clone(),
+            postconditions: run.postconditions.clone(),
             artifact_id: mod_file.artifact_id.clone(),
             weidu_artifact_id: mod_file.weidu_artifact_id.clone(),
             prompt_scripts,

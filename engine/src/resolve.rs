@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
-use crate::manifest::{GameRoot, InputValue, Phase, RunArg};
+use crate::manifest::{GameRoot, InputValue, Phase, Postcondition, RunArg};
 use crate::recipe_view::PromptScript;
 use crate::Manifest;
 
@@ -69,6 +69,9 @@ pub struct PlannedRun {
     pub components: Vec<u32>,
     /// Typed extra invocation arguments.
     pub args: Vec<RunArg>,
+    /// Assertions checked after install-log reconciliation succeeds.
+    #[serde(default)]
+    pub postconditions: Vec<Postcondition>,
     /// Artifact containing the installer payload.
     pub artifact_id: String,
     /// Artifact containing the WeiDU executable.

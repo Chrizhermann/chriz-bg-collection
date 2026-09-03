@@ -115,6 +115,15 @@ pub enum SessionEvent {
         /// Durable diagnostic summary.
         detail: String,
     },
+    /// Evidence proves this managed copy must never be mutated again.
+    FreshCopyRequired {
+        /// Stable pipeline step id.
+        step_id: String,
+        /// Attempt whose installed state failed a postcondition.
+        attempt: u32,
+        /// Durable diagnostic summary.
+        detail: String,
+    },
 }
 
 /// One immutable JSON record in the campaign hash chain.
@@ -139,6 +148,18 @@ pub struct SessionReplay {
     record_sha256: Vec<String>,
     created: CampaignCreated,
     unresolved: Option<(String, u32)>,
+    fresh_copy_required: Option<FreshCopySeal>,
+}
+
+/// Durable terminal state preventing any further managed-copy mutation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FreshCopySeal {
+    /// Pipeline step whose installed state could not be accepted.
+    pub step_id: String,
+    /// Attempt that produced the unsafe installed state.
+    pub attempt: u32,
+    /// Stable reason presented on every later resume.
+    pub detail: String,
 }
 
 impl SessionReplay {
@@ -150,6 +171,11 @@ impl SessionReplay {
     /// Returns a step whose persisted start has no terminal evidence record.
     pub fn unresolved_step(&self) -> Option<&str> {
         self.unresolved.as_ref().map(|(step, _)| step.as_str())
+    }
+
+    /// Returns the permanent fresh-copy seal, when target mutation is no longer allowed.
+    pub fn fresh_copy_required(&self) -> Option<&FreshCopySeal> {
+        self.fresh_copy_required.as_ref()
     }
 
     /// Verify that every consequential current input still equals the frozen identity.
@@ -533,12 +559,13 @@ impl SessionStore {
         let attempt_root = self.attempts_root.join(&created.attempt_id);
         validate_directory(&attempt_root)?;
 
-        let unresolved = replay_progress(&records, &self.ledger_root)?;
+        let progress = replay_progress(&records, &self.ledger_root)?;
         Ok(SessionReplay {
             records,
             record_sha256: hashes,
             created,
-            unresolved,
+            unresolved: progress.unresolved,
+            fresh_copy_required: progress.fresh_copy_required,
         })
     }
 }
@@ -675,10 +702,15 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
             step_id,
             attempt,
             detail,
+        }
+        | SessionEvent::FreshCopyRequired {
+            step_id,
+            attempt,
+            detail,
         } => {
             validate_step(step_id, *attempt, path)?;
             if detail.trim().is_empty() {
-                return Err(ledger_error(path, "StepFailed detail may not be empty"));
+                return Err(ledger_error(path, "terminal step detail may not be empty"));
             }
             Ok(())
         }
@@ -701,6 +733,33 @@ fn validate_step(step_id: &str, attempt: u32, path: &Path) -> Result<()> {
 }
 
 fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path) -> Result<()> {
+    if replay.fresh_copy_required.is_some() {
+        return Err(ledger_error(
+            path,
+            "campaign is sealed as fresh-copy-required; no later progress is legal",
+        ));
+    }
+    if let (
+        None,
+        SessionEvent::FreshCopyRequired {
+            step_id, attempt, ..
+        },
+    ) = (&replay.unresolved, next)
+    {
+        let upgrades_last_failure = replay.records.last().is_some_and(|record| {
+            matches!(
+                &record.event,
+                SessionEvent::StepFailed {
+                    step_id: failed_step,
+                    attempt: failed_attempt,
+                    ..
+                } if failed_step == step_id && failed_attempt == attempt
+            )
+        });
+        if upgrades_last_failure {
+            return Ok(());
+        }
+    }
     match (&replay.unresolved, next) {
         (None, SessionEvent::StepStarted { .. }) => Ok(()),
         (
@@ -708,28 +767,53 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             SessionEvent::StepCompleted { step_id, attempt }
             | SessionEvent::StepFailed {
                 step_id, attempt, ..
+            }
+            | SessionEvent::FreshCopyRequired {
+                step_id, attempt, ..
             },
         ) if current_step == step_id && current_attempt == attempt => Ok(()),
         (Some(_), SessionEvent::StepStarted { .. }) => Err(ledger_error(
             path,
             "cannot start another step before reconciling the unresolved step",
         )),
-        (None, SessionEvent::StepCompleted { .. } | SessionEvent::StepFailed { .. }) => Err(
-            ledger_error(path, "terminal step event has no matching StepStarted"),
-        ),
-        (Some(_), SessionEvent::StepCompleted { .. } | SessionEvent::StepFailed { .. }) => {
-            Err(ledger_error(
-                path,
-                "terminal step event does not match the unresolved step",
-            ))
-        }
+        (
+            None,
+            SessionEvent::StepCompleted { .. }
+            | SessionEvent::StepFailed { .. }
+            | SessionEvent::FreshCopyRequired { .. },
+        ) => Err(ledger_error(
+            path,
+            "terminal step event has no matching StepStarted",
+        )),
+        (
+            Some(_),
+            SessionEvent::StepCompleted { .. }
+            | SessionEvent::StepFailed { .. }
+            | SessionEvent::FreshCopyRequired { .. },
+        ) => Err(ledger_error(
+            path,
+            "terminal step event does not match the unresolved step",
+        )),
         (_, SessionEvent::Created(_)) => Err(ledger_error(path, "Created cannot be appended")),
     }
 }
 
-fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<Option<(String, u32)>> {
+struct ReplayProgress {
+    unresolved: Option<(String, u32)>,
+    fresh_copy_required: Option<FreshCopySeal>,
+}
+
+fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<ReplayProgress> {
     let mut unresolved = None;
+    let mut fresh_copy_required = None;
+    let mut last_failed = None;
     for record in records.iter().skip(1) {
+        if fresh_copy_required.is_some() {
+            return Err(ledger_error(
+                path,
+                "progress appears after a fresh-copy-required seal",
+            ));
+        }
         validate_progress_event(&record.event, path)?;
         match &record.event {
             SessionEvent::StepStarted { step_id, attempt } => {
@@ -740,15 +824,14 @@ fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<Option<(Stri
                     ));
                 }
                 unresolved = Some((step_id.clone(), *attempt));
+                last_failed = None;
             }
-            SessionEvent::StepCompleted { step_id, attempt }
-            | SessionEvent::StepFailed {
-                step_id, attempt, ..
-            } => match unresolved.as_ref() {
+            SessionEvent::StepCompleted { step_id, attempt } => match unresolved.as_ref() {
                 Some((current_step, current_attempt))
                     if current_step == step_id && current_attempt == attempt =>
                 {
                     unresolved = None;
+                    last_failed = None;
                 }
                 _ => {
                     return Err(ledger_error(
@@ -757,12 +840,53 @@ fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<Option<(Stri
                     ));
                 }
             },
+            SessionEvent::StepFailed {
+                step_id, attempt, ..
+            } => match unresolved.as_ref() {
+                Some((current_step, current_attempt))
+                    if current_step == step_id && current_attempt == attempt =>
+                {
+                    unresolved = None;
+                    last_failed = Some((step_id.clone(), *attempt));
+                }
+                _ => {
+                    return Err(ledger_error(
+                        path,
+                        "terminal event does not match its StepStarted",
+                    ));
+                }
+            },
+            SessionEvent::FreshCopyRequired {
+                step_id,
+                attempt,
+                detail,
+            } => {
+                let matches_active = unresolved.as_ref() == Some(&(step_id.clone(), *attempt));
+                let upgrades_failure = last_failed.as_ref() == Some(&(step_id.clone(), *attempt));
+                if matches_active || upgrades_failure {
+                    unresolved = None;
+                    last_failed = None;
+                    fresh_copy_required = Some(FreshCopySeal {
+                        step_id: step_id.clone(),
+                        attempt: *attempt,
+                        detail: detail.clone(),
+                    });
+                } else {
+                    return Err(ledger_error(
+                        path,
+                        "fresh-copy-required seal does not match its StepStarted",
+                    ));
+                }
+            }
             SessionEvent::Created(_) => {
                 return Err(ledger_error(path, "Created appears after record zero"));
             }
         }
     }
-    Ok(unresolved)
+    Ok(ReplayProgress {
+        unresolved,
+        fresh_copy_required,
+    })
 }
 
 fn verify_frozen_recipe(recipe_root: &Path, created: &CampaignCreated) -> Result<()> {

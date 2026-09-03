@@ -273,6 +273,23 @@ pub struct ModFile {
     pub components: Vec<Component>,
 }
 
+/// A typed assertion that must hold after WeiDU proves a run installed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
+pub enum Postcondition {
+    /// Requires and/or forbids exact byte markers in one bounded text file.
+    TextFileMarkers {
+        /// Normalized path relative to the staged target root.
+        path: String,
+        /// Exact case-sensitive byte strings that must be present.
+        required: Vec<String>,
+        /// Exact case-sensitive byte strings that must be absent.
+        forbidden: Vec<String>,
+        /// Maximum accepted file size and read length.
+        max_bytes: u64,
+    },
+}
+
 /// One explicit invocation in the frozen collection order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -287,6 +304,9 @@ pub struct Run {
     pub components: Vec<u32>,
     /// Typed extra invocation arguments.
     pub args: Vec<RunArg>,
+    /// Assertions checked after install-log reconciliation succeeds.
+    #[serde(default)]
+    pub postconditions: Vec<Postcondition>,
 }
 
 /// Points at one component in one explicit run.

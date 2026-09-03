@@ -9,6 +9,7 @@ pub mod loader;
 pub mod lock;
 pub mod manifest;
 pub mod orchestrator;
+pub mod postcondition;
 pub mod preflight;
 pub mod receipt;
 pub mod recipe_view;
