@@ -7,6 +7,7 @@ use bg_engine::manifest::{
 };
 use bg_engine::recipe_view::{evaluate, evaluate_preset, render_prompt_script};
 use bg_engine::resolve::Selection;
+use bg_engine::validate::check;
 use bg_engine::Manifest;
 
 const SOD_COMPONENTS: &[u32] = &[
@@ -83,7 +84,7 @@ fn semantic_manifest() -> Manifest {
     let mut manifest = fixture();
     manifest.collection.runs.clear();
 
-    add_run(&mut manifest, "meaning", &[1, 2, 3, 4, 5]);
+    add_run(&mut manifest, "meaning", &[1, 2, 3, 4, 5, 6]);
     add_run(&mut manifest, "sod-remix", SOD_COMPONENTS);
     add_run(&mut manifest, "tempus-rework", TEMPUS_COMPONENTS);
     add_run(&mut manifest, "spell-revisions", &[0]);
@@ -169,6 +170,11 @@ fn semantic_manifest() -> Manifest {
             component_refs("meaning", &[3]),
         ),
         mandatory_child,
+        feature(
+            "root-mandatory",
+            Decision::Mandatory,
+            component_refs("meaning", &[6]),
+        ),
         blocked,
         feature(
             "sod-remix",
@@ -193,6 +199,47 @@ fn semantic_manifest() -> Manifest {
     ];
 
     manifest
+}
+
+#[test]
+fn root_mandatory_is_valid_selected_and_noninteractive() {
+    let manifest = semantic_manifest();
+    check(&manifest).unwrap();
+
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let control = evaluation.view.control("root-mandatory").unwrap();
+
+    assert!(control.selected);
+    assert!(!control.interactive);
+    assert!(evaluation
+        .plan
+        .components_for("meaning")
+        .unwrap()
+        .contains(&6));
+}
+
+#[test]
+fn explicit_off_cannot_disable_root_mandatory() {
+    let manifest = semantic_manifest();
+    check(&manifest).unwrap();
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("root-mandatory", false);
+
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+
+    assert!(evaluation.view.control("root-mandatory").unwrap().selected);
+    assert_eq!(
+        evaluation
+            .normalized_selection
+            .features
+            .get("root-mandatory"),
+        Some(&true)
+    );
+    assert!(evaluation
+        .plan
+        .components_for("meaning")
+        .unwrap()
+        .contains(&6));
 }
 
 #[test]

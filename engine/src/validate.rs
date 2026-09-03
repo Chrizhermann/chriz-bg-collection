@@ -1092,13 +1092,6 @@ fn check_feature_references(manifest: &Manifest, findings: &mut Vec<Finding>) {
         .map(|run| (run.run_id.as_str(), run))
         .collect::<BTreeMap<_, _>>();
     for feature in &manifest.collection.features {
-        if feature.decision == Decision::Mandatory && feature.parent.is_none() {
-            error(
-                findings,
-                RULE_FEATURE_REFERENCES,
-                format!("mandatory feature {:?} must declare a parent", feature.id),
-            );
-        }
         for (relation, target) in feature
             .parent
             .iter()

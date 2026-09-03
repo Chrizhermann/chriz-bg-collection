@@ -586,6 +586,19 @@ fn feature_parents_and_requirements_must_exist() {
 }
 
 #[test]
+fn root_mandatory_feature_is_valid() {
+    let mut manifest = good();
+    manifest
+        .collection
+        .features
+        .push(feature("required-collection-core", Decision::Mandatory));
+
+    let findings = validate(&manifest);
+
+    assert_eq!(error_rules(&findings), Vec::<&str>::new(), "{findings:#?}");
+}
+
+#[test]
 fn feature_parent_and_requirement_cycles_are_rejected() {
     let mut manifest = good();
     let mut first = feature("first", Decision::Default);
