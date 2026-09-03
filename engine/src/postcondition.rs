@@ -59,6 +59,11 @@ pub enum PostconditionError {
     /// Canonical resolution left the staged target.
     #[error("postcondition path {path:?} escapes staged target {root:?}")]
     EscapesTarget { path: PathBuf, root: PathBuf },
+    /// A relative directory ancestor could redirect traversal.
+    #[error(
+        "postcondition path {path:?} has unsafe intermediate ancestor {ancestor:?}: expected a direct non-symlink directory"
+    )]
+    UnsafeAncestor { path: PathBuf, ancestor: PathBuf },
     /// The file exceeded its frozen byte budget.
     #[error("postcondition file {path:?} exceeds max_bytes {max_bytes}")]
     TooLarge { path: PathBuf, max_bytes: u64 },
@@ -73,6 +78,10 @@ pub enum PostconditionError {
 /// Verifies every frozen postcondition against one staged game root.
 ///
 /// Marker matching is byte-exact and case-sensitive; file contents need not be UTF-8.
+/// Every observed ancestor is checked without following its final link, but `std` does not expose
+/// a portable handle-relative no-follow traversal. A hostile actor that can replace path components
+/// concurrently could therefore race the check and open; campaign locking prevents installer-owned
+/// concurrency, not arbitrary external filesystem mutation.
 pub fn verify(root: &Path, postconditions: &[Postcondition]) -> Result<(), PostconditionError> {
     if postconditions.is_empty() {
         return Ok(());
@@ -137,6 +146,7 @@ fn verify_text_file_markers(
             root: canonical_root.to_path_buf(),
         });
     }
+    verify_direct_ancestors(canonical_root, relative_path, &candidate)?;
 
     let file = File::open(&canonical_path).map_err(|source| PostconditionError::Io {
         path: canonical_path.clone(),
@@ -193,6 +203,29 @@ fn verify_text_file_markers(
             return Err(PostconditionError::ForbiddenPresent {
                 path: canonical_path,
                 marker: marker.clone(),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn verify_direct_ancestors(
+    canonical_root: &Path,
+    relative_path: &str,
+    candidate: &Path,
+) -> Result<(), PostconditionError> {
+    let mut ancestor = canonical_root.to_path_buf();
+    let mut components = relative_path.split('/').peekable();
+    while let Some(component) = components.next() {
+        if components.peek().is_none() {
+            break;
+        }
+        ancestor.push(component);
+        let metadata = metadata_without_link(&ancestor)?;
+        if !metadata.is_dir() || is_link_or_reparse(&metadata) {
+            return Err(PostconditionError::UnsafeAncestor {
+                path: candidate.to_path_buf(),
+                ancestor,
             });
         }
     }

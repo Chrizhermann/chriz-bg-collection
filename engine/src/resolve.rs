@@ -70,7 +70,7 @@ pub struct PlannedRun {
     /// Typed extra invocation arguments.
     pub args: Vec<RunArg>,
     /// Assertions checked after install-log reconciliation succeeds.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub postconditions: Vec<Postcondition>,
     /// Artifact containing the installer payload.
     pub artifact_id: String,

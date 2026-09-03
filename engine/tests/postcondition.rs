@@ -149,6 +149,25 @@ fn intermediate_directory_symlink_cannot_escape_the_staged_root() {
 }
 
 #[test]
+fn intermediate_directory_symlink_is_rejected_even_when_it_stays_inside_the_root() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("game");
+    let actual = root.join("actual");
+    std::fs::create_dir_all(&actual).unwrap();
+    std::fs::write(actual.join("marker.txt"), b"marker").unwrap();
+    let link = root.join("linked");
+    if !create_directory_symlink(&actual, &link) {
+        return;
+    }
+
+    assert_error_contains(
+        &root,
+        markers("linked/marker.txt", &["marker"], &[], 4096),
+        "intermediate ancestor",
+    );
+}
+
+#[test]
 fn staged_root_symlink_is_rejected() {
     let temp = tempfile::tempdir().unwrap();
     let actual = temp.path().join("actual-game");

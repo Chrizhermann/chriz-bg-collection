@@ -106,6 +106,17 @@ fn parses_typed_run_postconditions() {
 }
 
 #[test]
+fn empty_run_postconditions_keep_the_legacy_json_shape() {
+    let collection: Collection = toml::from_str(&collection_fixture()).unwrap();
+    let json = serde_json::to_string(&collection.runs[1]).unwrap();
+
+    assert_eq!(
+        json,
+        r#"{"run_id":"eefixpack-bg2","mod_id":"eefixpack","phase":"bg2-preparation","components":[0],"args":[]}"#
+    );
+}
+
+#[test]
 fn parses_installer_referencing_separate_mod_and_weidu_artifacts() {
     let installer: ModFile = toml::from_str(&mod_fixture("eefixpack.toml")).unwrap();
 

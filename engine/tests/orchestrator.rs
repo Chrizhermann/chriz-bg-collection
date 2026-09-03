@@ -23,6 +23,13 @@ use bg_engine::session::{
 
 const RECIPE_PAYLOAD: &[u8] = b"PK\x03\x04signed alpha recipe";
 const RECIPE_ENVELOPE: &[u8] = br#"{"recipe_id":"alpha","version":"0.1.0"}"#;
+const LEGACY_EMPTY_POSTCONDITION_PLAN_JSON: &str = concat!(
+    r#"{"runs":[{"run_id":"eefix-bg1","mod_id":"eefix","target":"bg1","phase":"bg1-preparation","components":[0,2],"args":[],"artifact_id":"eefix","weidu_artifact_id":"weidu","prompt_scripts":[]},"#,
+    r#"{"run_id":"eefix-bg2","mod_id":"eefix","target":"bg2","phase":"bg2-preparation","components":[0,2],"args":[],"artifact_id":"eefix","weidu_artifact_id":"weidu","prompt_scripts":[]},"#,
+    r#"{"run_id":"eet-core","mod_id":"eet","target":"bg2","phase":"eet-initialization","components":[0],"args":[{"kind":"staged-root","value":"bg1"}],"artifact_id":"eet","weidu_artifact_id":"weidu","prompt_scripts":[]}]}"#,
+);
+const LEGACY_EMPTY_POSTCONDITION_PLAN_SHA256: &str =
+    "83e0d4f0436f5e85d7f672c84aa89fa1f14f98675fb2324ff7b18fa8ed866b78";
 
 #[derive(Clone, Default)]
 struct RecordingSink(Arc<Mutex<Vec<EngineEvent>>>);
@@ -503,6 +510,38 @@ fn complete_build_uses_stable_order_one_acquisition_per_identity_and_holds_targe
             "Prepare Baldur's Gate II: Enhanced Edition",
             "Build the EET campaign",
         ]
+    );
+}
+
+#[test]
+fn legacy_empty_postcondition_plan_digest_still_resumes() {
+    let mut fixture = Fixture::new();
+    let legacy_plan: InstallPlan =
+        serde_json::from_str(LEGACY_EMPTY_POSTCONDITION_PLAN_JSON).unwrap();
+    assert_eq!(legacy_plan, fixture.request.plan);
+    fixture.request.plan = legacy_plan;
+    assert_eq!(
+        serde_json::to_string(&fixture.request.plan).unwrap(),
+        LEGACY_EMPTY_POSTCONDITION_PLAN_JSON
+    );
+    assert_eq!(
+        plan_digest(&fixture.request.plan).unwrap(),
+        LEGACY_EMPTY_POSTCONDITION_PLAN_SHA256
+    );
+    fixture.request.created.plan_sha256 = LEGACY_EMPTY_POSTCONDITION_PLAN_SHA256.to_owned();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        fail_once: Some("stage:bg2".to_owned()),
+        ..FakeDeps::default()
+    };
+
+    assert!(matches!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { ref step_id, .. } if step_id == "stage:bg2"
+    ));
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
     );
 }
 
