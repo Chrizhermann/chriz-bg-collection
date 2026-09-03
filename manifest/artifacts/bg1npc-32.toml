@@ -1,0 +1,32 @@
+id = "bg1npc-32"
+name = "The BG1 NPC Project"
+version = "32"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod"
+reference = "v32"
+expected_filename = "the-bg1npc-project-v32.iemod"
+expected_length = 27617013
+sha256 = "8e34f397e960b1b990350b5ef101562db066cbe91d8c35eda60baf24f452b1bc"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["bg1npc"]
+tp2_paths = ["bg1npc/bg1npc.tp2"]
+
+[archive.limits]
+max_depth = 32
+max_entries = 20000
+max_entry_uncompressed_bytes = 134217728
+max_total_uncompressed_bytes = 1073741824
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://www.gibberlings3.net/mods/npcs/bg1npc/"
+license = "Fetch-only; upstream forbids redistribution without team-leader consent"
+url = "https://github.com/Gibberlings3/BG1NPC/blob/v32/README.md#contact-and-copyright-information"
+reviewed_on = "2026-09-03"

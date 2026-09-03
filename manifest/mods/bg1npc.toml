@@ -1,0 +1,43 @@
+id = "bg1npc"
+artifact_id = "bg1npc-32"
+name = "The BG1 NPC Project"
+tp2 = "bg1npc/bg1npc.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Required Modifications"
+
+[[components]]
+id = 10
+name = "Banters, Quests, and Interjections"
+
+[[components]]
+id = 90
+name = "NPCs can be sent to wait in an inn"
+
+[[components]]
+id = 111
+name = "Fast BGEE Banter Timing"
+
+[[components]]
+id = 120
+name = "Bardic Reputation Adjustment"
+
+[[components]]
+id = 130
+name = "SixofSpades Extended Sarevok's Diary"
+
+[[components]]
+id = 240
+name = "Kivan uses spears"
+
+[[components]]
+id = 160
+name = "Add Non-Joinable NPC portraits to quests and dialogues"
+
+[[components]]
+id = 200
+name = "Player-Initiated Dialogues"

@@ -1,0 +1,32 @@
+id = "eefixpack-beta2"
+name = "Enhanced Edition Fixpack"
+version = "Beta 2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod"
+reference = "Beta_2"
+expected_filename = "enhanced-edition-fixpack-beta-2.iemod"
+expected_length = 130716647
+sha256 = "7a57e43bd6c30c7e36b7c2b7c5531c7a0834de164da186808da03d24474592bf"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["eefixpack"]
+tp2_paths = ["eefixpack/setup-eefixpack.tp2"]
+
+[archive.limits]
+max_depth = 32
+max_entries = 50000
+max_entry_uncompressed_bytes = 536870912
+max_total_uncompressed_bytes = 2147483648
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://www.gibberlings3.net/mods/fixes/eefp/"
+license = "Fetch-only official asset; upstream permission required for redistribution"
+url = "https://github.com/Gibberlings3/EE_Fixpack/releases/tag/Beta_2"
+reviewed_on = "2026-09-03"

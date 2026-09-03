@@ -1,0 +1,11 @@
+id = "dlcmerger"
+artifact_id = "dlcmerger-2.1"
+name = "DLC Merger"
+tp2 = "DlcMerger/DlcMerger.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 1
+name = "Merge Siege of Dragonspear DLC"

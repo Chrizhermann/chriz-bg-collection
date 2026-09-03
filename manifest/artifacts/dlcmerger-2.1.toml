@@ -1,0 +1,32 @@
+id = "dlcmerger-2.1"
+name = "DLC Merger"
+version = "2.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod"
+reference = "v2.1"
+expected_filename = "DlcMerger-v2.1.iemod"
+expected_length = 125691
+sha256 = "ea7584fd7285330cfaa52cfc217677ef4f8cf8151fdec666ea8af199e479db0e"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["DlcMerger"]
+tp2_paths = ["DlcMerger/DlcMerger.tp2"]
+
+[archive.limits]
+max_depth = 32
+max_entries = 2048
+max_entry_uncompressed_bytes = 134217728
+max_total_uncompressed_bytes = 268435456
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://github.com/Argent77/A7-DlcMerger"
+license = "CC-BY-SA-4.0"
+url = "https://github.com/Argent77/A7-DlcMerger/blob/v2.1/DlcMerger/readme/readme.txt"
+reviewed_on = "2026-09-03"

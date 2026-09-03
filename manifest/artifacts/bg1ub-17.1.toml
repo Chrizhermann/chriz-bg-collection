@@ -1,0 +1,32 @@
+id = "bg1ub-17.1"
+name = "BG1 Unfinished Business"
+version = "17.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod"
+reference = "v17.1"
+expected_filename = "bg1-unfinished-business-v17.1.iemod"
+expected_length = 14579031
+sha256 = "5a525eb37f68f63706a5120fc4900b68b00b46ff755583fa6ced1fc456cf8104"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["bg1ub"]
+tp2_paths = ["bg1ub/bg1ub.tp2"]
+
+[archive.limits]
+max_depth = 32
+max_entries = 10000
+max_entry_uncompressed_bytes = 134217728
+max_total_uncompressed_bytes = 536870912
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://www.pocketplane.net/bg1-unfinished-business/"
+license = "Fetch-only; upstream forbids redistribution without author consent"
+url = "https://github.com/Pocket-Plane-Group/bg1ub/blob/v17.1/README.md#legal-matters"
+reviewed_on = "2026-09-03"

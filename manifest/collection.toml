@@ -1,0 +1,420 @@
+schema = 2
+game_build = "2.7.3.0"
+
+[[runs]]
+run_id = "dlcmerger-bg1"
+mod_id = "dlcmerger"
+phase = "bg1-preparation"
+components = [1]
+args = []
+postconditions = [
+  { kind = "text-file-markers", path = "override/ui.menu", required = ["Infinity_GetFileExists("], forbidden = ["Infinity_GetFileExistsInZip("], max_bytes = 16777216 },
+]
+
+[[runs]]
+run_id = "eefixpack-bg1"
+mod_id = "eefixpack"
+phase = "bg1-preparation"
+components = [0, 2]
+args = []
+
+[[runs]]
+run_id = "bg1ub-bg1"
+mod_id = "bg1ub"
+phase = "bg1-preparation"
+components = [0, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 29, 30, 32, 33, 34]
+args = []
+
+[[runs]]
+run_id = "bg1npc-bg1"
+mod_id = "bg1npc"
+phase = "bg1-preparation"
+components = [0, 10, 90, 111, 120, 130, 240, 160, 200]
+args = []
+
+[[runs]]
+run_id = "eefixpack-bg2"
+mod_id = "eefixpack"
+phase = "bg2-preparation"
+components = [0, 2]
+args = []
+
+[[runs]]
+run_id = "eet-initialize-bg2"
+mod_id = "eet"
+phase = "eet-initialization"
+components = [0, 100]
+args = [
+  { kind = "literal", value = "--args-list" },
+  { kind = "literal", value = "p" },
+  { kind = "staged-root", value = "bg1" },
+]
+
+[[runs]]
+run_id = "eet-end-bg2"
+mod_id = "eet-end"
+phase = "eet-finalization"
+components = [0]
+args = []
+
+[[features]]
+id = "mod:dlcmerger"
+title = "DLC Merger"
+description = "Required preparation for the Siege of Dragonspear DLC before EET imports BG1."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+
+[[features]]
+id = "feature:dlcmerger:mandatory-components"
+title = "Merge Siege of Dragonspear DLC"
+description = "Uses the collection's fixed x64-compatible DLC merge route."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:dlcmerger"
+components = [{ run_id = "dlcmerger-bg1", component = 1 }]
+
+[[features]]
+id = "mod:eefixpack"
+title = "Enhanced Edition Fixpack"
+description = "Required core and text fixes applied to both staged games before EET."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+
+[[features]]
+id = "feature:eefixpack:mandatory-components"
+title = "Core fixes and Game Text Update"
+description = "Installs components 0 and 2 on BG1 and BG2 before the merge."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eefixpack"
+components = [
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+  { run_id = "eefixpack-bg2", component = 0 },
+  { run_id = "eefixpack-bg2", component = 2 },
+]
+
+[[features]]
+id = "mod:bg1ub"
+title = "BG1 Unfinished Business"
+description = "Restores the reviewed BG1 quests, encounters, and fixes before EET imports BG1."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:bg1ub:component-0"
+title = "Ice Island Level Two Restoration"
+description = "Restore the second level of Ice Island."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 0 }]
+
+[[features]]
+id = "feature:bg1ub:component-11"
+title = "Scar and the Sashenstar's Daughter"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 11 }]
+
+[[features]]
+id = "feature:bg1ub:component-12"
+title = "Quoningar, the Cleric"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 12 }]
+
+[[features]]
+id = "feature:bg1ub:component-13"
+title = "Shilo Chen and the Ogre-Magi"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 13 }]
+
+[[features]]
+id = "feature:bg1ub:component-14"
+title = "Edie, the Merchant League Applicant"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 14 }]
+
+[[features]]
+id = "feature:bg1ub:component-16"
+title = "Creature Corrections"
+description = "Apply the reviewed BG1 creature corrections."
+category = "bg1-fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 16 }]
+
+[[features]]
+id = "feature:bg1ub:component-17"
+title = "Creature Restorations"
+description = "Apply the reviewed BG1 creature restorations."
+category = "bg1-fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 17 }]
+
+[[features]]
+id = "feature:bg1ub:component-18"
+title = "Creature Name Restorations"
+description = "Restore reviewed BG1 creature names."
+category = "bg1-fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 18 }]
+
+[[features]]
+id = "feature:bg1ub:component-19"
+title = "Minor Dialogue Restorations"
+description = "Restore reviewed minor BG1 dialogue."
+category = "bg1-fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 19 }]
+
+[[features]]
+id = "feature:bg1ub:component-21"
+title = "Store, Tavern and Inn Fixes and Restorations"
+description = "Apply the reviewed store, tavern, and inn fixes."
+category = "bg1-fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 21 }]
+
+[[features]]
+id = "feature:bg1ub:component-22"
+title = "Item Corrections and Restorations"
+description = "Apply the reviewed BG1 item fixes and restorations."
+category = "bg1-fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 22 }]
+
+[[features]]
+id = "feature:bg1ub:component-29"
+title = "Duke Eltan in the Harbor Master's Building"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 29 }]
+
+[[features]]
+id = "feature:bg1ub:component-30"
+title = "Nim Furlwing Encounter"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 30 }]
+
+[[features]]
+id = "feature:bg1ub:component-32"
+title = "Svlast, the Fallen Paladin Encounter"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 32 }]
+
+[[features]]
+id = "feature:bg1ub:component-33"
+title = "Mal-Kalen, the Ulcaster Ghost"
+description = "Restore this reviewed BG1 encounter."
+category = "bg1-content"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 33 }]
+
+[[features]]
+id = "feature:bg1ub:component-34"
+title = "Chapter 6 Dialogue Restorations"
+description = "Restore the reviewed Chapter 6 dialogue."
+category = "bg1-fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1ub"
+components = [{ run_id = "bg1ub-bg1", component = 34 }]
+
+[[features]]
+id = "mod:bg1npc"
+title = "The BG1 NPC Project"
+description = "Adds the reviewed BG1 NPC banters, quests, dialogue, and convenience features before EET."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:bg1npc:component-0"
+title = "Required Modifications"
+description = "Install the BG1 NPC Project core required by its other components."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+components = [{ run_id = "bg1npc-bg1", component = 0 }]
+
+[[features]]
+id = "feature:bg1npc:component-10"
+title = "Banters, Quests, and Interjections"
+description = "Install the BG1 NPC Project's primary content component."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 10 }]
+
+[[features]]
+id = "feature:bg1npc:component-90"
+title = "NPCs can wait in an inn"
+description = "Allow dismissed NPCs to wait at a chosen inn."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 90 }]
+
+[[features]]
+id = "feature:bg1npc:component-111"
+title = "Fast BGEE banter timing"
+description = "Use the curated approximately twenty-minute banter interval."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 111 }]
+
+[[features]]
+id = "feature:bg1npc:component-120"
+title = "Bardic Reputation Adjustment"
+description = "Install the reviewed bardic reputation behavior."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 120 }]
+
+[[features]]
+id = "feature:bg1npc:component-130"
+title = "Extended Sarevok's Diary"
+description = "Install the curated SixofSpades diary adjustment."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 130 }]
+
+[[features]]
+id = "feature:bg1npc:component-240"
+title = "Kivan uses spears"
+description = "Use the curated Kivan proficiency option."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 240 }]
+
+[[features]]
+id = "feature:bg1npc:component-160"
+title = "Non-Joinable NPC portraits"
+description = "Add portraits to selected non-joinable NPC quests and dialogue."
+category = "bg1-npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Upstream v32 deprecates this component due to copyright issues; it is unavailable in the public alpha until a distributable replacement is reviewed."
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 160 }]
+
+[[features]]
+id = "feature:bg1npc:component-200"
+title = "Player-Initiated Dialogues"
+description = "Allow the player to initiate the BG1 NPC Project's party dialogue."
+category = "bg1-npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:bg1npc"
+requires = ["feature:bg1npc:component-0"]
+components = [{ run_id = "bg1npc-bg1", component = 200 }]
+
+[[features]]
+id = "mod:eet"
+title = "Enhanced Edition Trilogy"
+description = "Required EET import and initialization on the staged BG2 game."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+
+[[features]]
+id = "feature:eet:mandatory-components"
+title = "EET core import"
+description = "Import the prepared BG1 game into the staged BG2 game."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eet"
+components = [{ run_id = "eet-initialize-bg2", component = 0 }]
+
+[[features]]
+id = "feature:eet:component-100"
+title = "Create desktop shortcut"
+description = "Create EET's desktop shortcut."
+category = "core"
+decision = "default"
+readiness = "ready"
+parent = "mod:eet"
+components = [{ run_id = "eet-initialize-bg2", component = 100 }]
+
+[[features]]
+id = "mod:eet-end"
+title = "Finalize EET"
+description = "Required EET finalization after the current core recipe."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+
+[[features]]
+id = "feature:eet-end:mandatory-components"
+title = "Standard EET finalization"
+description = "Complete the EET installation with the standard fresh-install component."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eet-end"
+components = [{ run_id = "eet-end-bg2", component = 0 }]
