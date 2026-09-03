@@ -19,9 +19,9 @@ be considered final:
   BG2/EET Sirene route.
 - [ ] Choose exactly one restored-Bhaalspawn-powers provider: Ascension `40`
   (technical recommendation) or UB `19`.
-- [ ] Finish the NPC edge cases: Sarah remains an Archer; Shar-Teel remains unchanged or
-  becomes a Wizard Slayer; Dynaheir gets Haste known-only or known plus one memorized copy;
-  and Kivan's Archer change is kit-only with no loadout/proficiency rewrite.
+- [ ] Finish the remaining NPC edge cases: Sarah remains an Archer; Dynaheir gets Haste
+  known-only or known plus one memorized copy; and Kivan's Archer change is kit-only with
+  no loadout/proficiency rewrite. Shar-Teel is settled as a default Wizard Slayer.
 
 For update notices, the v0 design assumes save applicability is authored per recipe
 change. It does not inspect saves or guess whether an NPC has joined. Revisit this only if
@@ -61,7 +61,7 @@ Chris explicitly wants the much larger save-analysis project.
 
 | Repository/layer | Required work before the affected feature is release-ready |
 |---|---|
-| `chriz-bg-modpack` | Replace `500` with semantic Kagain, Skie, Faldorn, Dynaheir, Kivan, and Viconia components; add Sarah/Shar-Teel only after their decisions. Implement conditional Fade `110`, Kivan quest `130`, Mazzy `140`, Safana `150`, Skie `160`, Branwen `400`, and Yeslick/Keldorn `410`. Retire `120`/`500`; verify retirement of `200`/`210`/`300`. Keep Safana unavailable until every class/spell/snare/late-spell/SoD-inventory piece is semantic and tested. |
+| `chriz-bg-modpack` | Replace `500` with semantic Kagain, Skie, Faldorn, Dynaheir, Kivan, Viconia, and Shar-Teel components; merge Sarah's separately reviewed components when ready. Implement conditional Fade `110`, Kivan quest `130`, Mazzy `140`, Safana `150`, Skie `160`, Branwen `400`, and Yeslick/Keldorn `410`. Retire `120`/`500`; verify retirement of `200`/`210`/`300`. Keep Safana unavailable until every class/spell/snare/late-spell/SoD-inventory piece is semantic and tested. |
 | Artisan fork | Publish the Shapeshifter footprint fix; redesign priest delivery; keep `30001/300010` unavailable; correct EEex-v1.2 dependency detection and verify refreshed prerequisites. Move the Xan EET-variant repair into NPC component `20002`. |
 | Bardic Wonders fork | Integrate and release the finite Abettor-HLA work; add SR fixtures for `1008/1009/2008`; correct legacy EEex detection. |
 | Aura fork | Reconcile the seven missing upstream commits, compare the old spell-patch snapshot, verify all six legacy item changes, fix component `6` EEex detection, then release. |

@@ -185,7 +185,7 @@ catalogs were normalized:
   already curated BG2/EET Sirene route.
 - [ ] Choose one restored-Bhaalspawn-powers provider: Ascension `40` (technical
   recommendation) or UB `19`; never expose both together.
-- [ ] Confirm the remaining joint modpack details: retain Sarah as Archer; leave
-  Shar-Teel unchanged unless explicitly reselected; and give Dynaheir Haste as known-only
-  or known plus one memorized copy. Confirm Kivan is a kit-only Archer conversion with no
-  automatic proficiency or loadout rewrite.
+- [ ] Confirm the remaining joint modpack details: retain Sarah as Archer; give Dynaheir
+  Haste as known-only or known plus one memorized copy; and confirm Kivan is a kit-only
+  Archer conversion with no automatic proficiency or loadout rewrite. Shar-Teel is now
+  explicitly settled as a default Wizard Slayer.

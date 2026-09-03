@@ -55,7 +55,7 @@ new component number is assigned until Chris reviews the split.
 |---|---|
 | Khalid → Vanguard | Use Artisan NPC `1101` only; it is already `default`. Do not reproduce it in the modpack. |
 | Sirene → Martyr | Retire this legacy branch. Current Sirene curation defaults to the native True Paladin choice. |
-| Shar-Teel → Wizard Slayer | Legacy reference choice not yet re-curated. If retained, create a semantic Shar-Teel-only component and do not patch special `SHARTD`. |
+| Shar-Teel → Wizard Slayer | Explicit new `default`; create a semantic Shar-Teel-only component for the joinable `SHARTE`, `SHARTE4`, and `SHARTE6` variants. Do not patch the special/nonjoinable `SHARTD`. |
 | Kagain → Dwarven Defender | Explicit new `default`; create a semantic Kagain-only component after the selected Artisan Dwarven Defender definition. |
 | Sarah → Archer | Historical reference choice still awaiting final confirmation; if retained, create a Sarah-only child of the revised-audio Sarah route. |
 | Skie → Swashbuckler | Explicit new `default`; create a Skie-only assignment and make skill redistribution `160` automatic. Patch joinable `SKIE`, `SKIE6`, `BDSKIE`, and `BDSKIED`, but never fighter dream resource `BDSKIEDR`. |
@@ -72,6 +72,11 @@ new component number is assigned until Chris reviews the split.
 These NPC CRE changes normally affect only unjoined/uninstantiated versions. Without a
 deliberate save migrator, an update containing them is `new_game_only` or
 `before_npc_join`, not a repair for an already joined NPC.
+
+The 2026-09-03 private RC has neither the pending maintained replacements nor their
+unsafe legacy installers, so its Viconia variants remain single-class Clerics and its
+Shar-Teel variants remain unkitted Fighters. This is a known recipe gap, not an accepted
+default.
 
 ## Newly identified tail work
 
