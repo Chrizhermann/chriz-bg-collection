@@ -8,7 +8,8 @@ use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameFinding, GameRole, Storefront,
 };
 use bg_engine::preflight::{
-    initial_preflight_with, is_creator_protected_destination, recheck_target_before_mutation_with,
+    initial_preflight_with, is_creator_protected_destination,
+    recheck_staging_target_before_mutation_with, recheck_target_before_mutation_with,
     ExclusiveFileError, InitialPreflight, PreflightError, PreflightHost, RequiredInput,
     SpaceRequirement, SystemPreflight,
 };
@@ -382,6 +383,47 @@ fn process_matching_uses_canonical_paths_under_the_target_not_names() {
         error,
         PreflightError::TargetProcessRunning { executable } if executable == fs::canonicalize(inside).unwrap()
     ));
+}
+
+#[test]
+fn staging_recheck_allows_an_incomplete_target_but_blocks_its_running_process() {
+    let fixture = Fixture::new();
+    let target = fixture.destination.join("game");
+    fs::create_dir_all(&target).unwrap();
+    recheck_staging_target_before_mutation_with(&target, "en_US", &FakeHost::default()).unwrap();
+
+    let executable = target.join("Setup-test.exe");
+    fs::write(&executable, b"synthetic process image").unwrap();
+    let host = FakeHost {
+        running: vec![executable.clone()],
+        ..FakeHost::default()
+    };
+
+    let error = recheck_staging_target_before_mutation_with(&target, "en_US", &host).unwrap_err();
+
+    assert!(matches!(
+        error,
+        PreflightError::TargetProcessRunning { executable: actual }
+            if actual == fs::canonicalize(executable).unwrap()
+    ));
+}
+
+#[test]
+fn staging_recheck_probes_any_tlk_already_present_in_a_partial_target() {
+    let fixture = Fixture::new();
+    let target = fixture.destination.join("game");
+    fs::create_dir_all(&target).unwrap();
+    let tlk = target.join("dialog.tlk");
+    fs::write(&tlk, b"partial TLK").unwrap();
+    let tlk = fs::canonicalize(tlk).unwrap();
+    let host = FakeHost {
+        tlk_error: Some(tlk.clone()),
+        ..FakeHost::default()
+    };
+
+    let error = recheck_staging_target_before_mutation_with(&target, "en_US", &host).unwrap_err();
+
+    assert!(matches!(error, PreflightError::TlkUnavailable { path, .. } if path == tlk));
 }
 
 #[test]

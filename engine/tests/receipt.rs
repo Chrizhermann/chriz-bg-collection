@@ -6,8 +6,8 @@ use bg_engine::orchestrator::{ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter};
 use bg_engine::receipt::{
     ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
     LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter, PromptReceipt, ReceiptEvidence,
-    ReceiptOutcome, ReceiptStore, ReceiptVersions, RunReceipt, RunTiming, SourceGameReceipt,
-    WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
+    ReceiptOutcome, ReceiptStore, ReceiptVersions, RunAttemptReceipt, RunReceipt, RunTiming,
+    SourceGameReceipt, WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -110,27 +110,31 @@ fn success_receipt(root: &Path) -> InstallReceipt {
             run_id: "eet-core".to_owned(),
             target: GameRoot::Bg2,
             components: vec![0],
-            prompts: vec![PromptReceipt {
-                expected_output: "BG1 path?".to_owned(),
-                answer: "<staged-bg1>".to_owned(),
-                matched: true,
+            attempts: vec![RunAttemptReceipt {
+                attempt: 1,
+                components: vec![0],
+                prompts: vec![PromptReceipt {
+                    expected_output: "BG1 path?".to_owned(),
+                    answer: "<staged-bg1>".to_owned(),
+                    matched: true,
+                }],
+                timing: RunTiming {
+                    started_at_millis: 12,
+                    completed_at_millis: 18,
+                },
+                exit_code: 0,
+                warnings: vec!["upstream informational warning".to_owned()],
+                invocation_sha256: "99".repeat(32),
+                stdout_sha256: "aa".repeat(32),
+                stderr_sha256: "bb".repeat(32),
+                debug_sha256: "cc".repeat(32),
+                log_diff: LogDiffReceipt {
+                    before_sha256: "dd".repeat(32),
+                    after_sha256: "ee".repeat(32),
+                    added: vec![component.clone()],
+                    removed: Vec::new(),
+                },
             }],
-            timing: RunTiming {
-                started_at_millis: 12,
-                completed_at_millis: 18,
-            },
-            exit_code: 0,
-            warnings: vec!["upstream informational warning".to_owned()],
-            invocation_sha256: "99".repeat(32),
-            stdout_sha256: "aa".repeat(32),
-            stderr_sha256: "bb".repeat(32),
-            debug_sha256: "cc".repeat(32),
-            log_diff: LogDiffReceipt {
-                before_sha256: "dd".repeat(32),
-                after_sha256: "ee".repeat(32),
-                added: vec![component.clone()],
-                removed: Vec::new(),
-            },
         }],
         final_state: Some(FinalReceiptState {
             logs: vec![FinalLogReceipt {
@@ -219,6 +223,52 @@ fn a_retry_cannot_replace_an_existing_success_receipt() {
 }
 
 #[test]
+fn receipt_rejects_duplicate_or_nonmonotonic_nested_attempt_numbers() {
+    let (_temp, root, store) = setup();
+    let mut receipt = success_receipt(&root);
+    let duplicate = receipt.runs[0].attempts[0].clone();
+    receipt.runs[0].attempts.push(duplicate);
+
+    let error = store.publish(&receipt).unwrap_err();
+
+    assert!(error.to_string().contains("strictly increasing"), "{error}");
+}
+
+#[test]
+fn successful_attempt_cannot_claim_an_unanswered_authored_prompt() {
+    let (_temp, root, store) = setup();
+    let mut receipt = success_receipt(&root);
+    receipt.runs[0].attempts[0].prompts[0].matched = false;
+
+    let error = store.publish(&receipt).unwrap_err();
+
+    assert!(error.to_string().contains("authored prompt"), "{error}");
+}
+
+#[test]
+fn receipt_accepts_a_complete_component_sequence_across_nested_attempts() {
+    let (_temp, root, store) = setup();
+    let mut receipt = success_receipt(&root);
+    receipt.plan.runs[0].components = vec![0, 2];
+    receipt.runs[0].components = vec![0, 2];
+    let mut first = receipt.runs[0].attempts[0].clone();
+    first.components = vec![0, 2];
+    let mut second = first.clone();
+    first.log_diff.added[0].component = 0;
+    second.attempt = 2;
+    second.components = vec![2];
+    second.log_diff.added[0].component = 2;
+    receipt.runs[0].attempts = vec![first, second];
+
+    let published = store.publish(&receipt).unwrap();
+
+    let stored: InstallReceipt =
+        serde_json::from_slice(&std::fs::read(published.attempt_receipt).unwrap()).unwrap();
+    assert_eq!(stored.runs[0].attempts.len(), 2);
+    assert_eq!(stored.runs[0].attempts[1].components, vec![2]);
+}
+
+#[test]
 fn attempt_identifier_cannot_escape_its_attempts_directory() {
     let (_temp, root, store) = setup();
     let mut receipt = success_receipt(&root);
@@ -248,6 +298,27 @@ fn failure_receipts_are_immutable_and_never_claim_install_success() {
     let stored: InstallReceipt =
         serde_json::from_slice(&std::fs::read(published.attempt_receipt).unwrap()).unwrap();
     assert_eq!(stored.outcome, receipt.outcome);
+}
+
+#[test]
+fn failure_receipt_still_requires_one_logical_row_per_planned_run() {
+    let (_temp, root, store) = setup();
+    let mut receipt = success_receipt(&root);
+    receipt.outcome = ReceiptOutcome::Failed {
+        step_id: "install:eet-core".to_owned(),
+        detail: "unexpected prompt".to_owned(),
+    };
+    receipt.final_state = None;
+    receipt.runs.clear();
+
+    let error = store.publish(&receipt).unwrap_err();
+
+    assert!(
+        error
+            .to_string()
+            .contains("exactly one logical row per planned run"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -362,12 +433,20 @@ fn real_writer_publishes_failure_attempt_without_claiming_or_registering_success
     let registry = bg_engine::registry::ManagedInstallRegistry::open_or_create(&app_data).unwrap();
     let canonical_managed = std::fs::canonicalize(&managed).unwrap();
     let full = success_receipt(&canonical_managed);
+    let runs = full
+        .runs
+        .into_iter()
+        .map(|mut run| {
+            run.attempts.clear();
+            run
+        })
+        .collect();
     let evidence = ReceiptEvidence {
         versions: full.versions,
         source_games: full.source_games,
         artifacts: Vec::new(),
         weidu_tools: Vec::new(),
-        runs: Vec::new(),
+        runs,
         final_state: None,
     };
     let selected = full.normalized_selection;
@@ -420,6 +499,8 @@ fn real_writer_publishes_failure_attempt_without_claiming_or_registering_success
         receipt.outcome,
         ReceiptOutcome::Failed { ref step_id, .. } if step_id == "stage:bg2"
     ));
+    assert_eq!(receipt.runs.len(), receipt.plan.runs.len());
+    assert!(receipt.runs[0].attempts.is_empty());
     assert!(receipt.final_state.is_none());
     assert!(!managed.join(".chriz/install-receipt.json").exists());
     assert!(

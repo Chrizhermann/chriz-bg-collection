@@ -404,6 +404,39 @@ pub fn recheck_target_before_mutation_with(
     Ok(())
 }
 
+/// Repeats process and existing-TLK checks before copying into one possibly partial stage.
+///
+/// Unlike [`recheck_target_before_mutation`], a missing target or language TLK is valid here:
+/// staging may not have published it yet. Every target and TLK that does exist is still required
+/// to be direct, contained, and exclusively writable.
+pub fn recheck_staging_target_before_mutation(
+    target_root: &Path,
+    language: &str,
+) -> Result<(), PreflightError> {
+    recheck_staging_target_before_mutation_with(target_root, language, &SystemPreflight)
+}
+
+/// Injected form of [`recheck_staging_target_before_mutation`].
+pub fn recheck_staging_target_before_mutation_with(
+    target_root: &Path,
+    language: &str,
+    host: &dyn PreflightHost,
+) -> Result<(), PreflightError> {
+    validate_language_component(language)?;
+    let target = match fs::symlink_metadata(target_root) {
+        Ok(_) => validate_target_directory(target_root)?,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(PreflightError::TargetUnavailable {
+                path: target_root.to_path_buf(),
+                reason: error.to_string(),
+            })
+        }
+    };
+    check_processes_under(&target, host)?;
+    probe_existing_tlks(&target, language, host)
+}
+
 /// True only for either protected creator reference root or one of its descendants.
 ///
 /// This is a lexical, case-insensitive Windows comparison and performs no filesystem IO,
@@ -674,26 +707,29 @@ fn probe_existing_target_tlks(
         let Some(canonical_target) = canonical_target else {
             continue;
         };
-        let tlks = target_tlk_paths(&canonical_target, language);
-        let mut existing = Vec::new();
-        for tlk in tlks {
-            match fs::symlink_metadata(&tlk) {
-                Ok(_) => {
-                    existing.push(validate_tlk(&tlk, &canonical_target)?);
-                }
-                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-                Err(source) => {
-                    return Err(PreflightError::TlkUnavailable { path: tlk, source });
-                }
-            }
-        }
-        host.probe_exclusive_writable_files(&existing)
-            .map_err(|error| PreflightError::TlkUnavailable {
-                path: error.path,
-                source: error.source,
-            })?;
+        probe_existing_tlks(&canonical_target, language, host)?;
     }
     Ok(())
+}
+
+fn probe_existing_tlks(
+    canonical_target: &Path,
+    language: &str,
+    host: &dyn PreflightHost,
+) -> Result<(), PreflightError> {
+    let mut existing = Vec::new();
+    for tlk in target_tlk_paths(canonical_target, language) {
+        match fs::symlink_metadata(&tlk) {
+            Ok(_) => existing.push(validate_tlk(&tlk, canonical_target)?),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(source) => return Err(PreflightError::TlkUnavailable { path: tlk, source }),
+        }
+    }
+    host.probe_exclusive_writable_files(&existing)
+        .map_err(|error| PreflightError::TlkUnavailable {
+            path: error.path,
+            source: error.source,
+        })
 }
 
 fn check_processes_under(target: &Path, host: &dyn PreflightHost) -> Result<(), PreflightError> {
@@ -1029,14 +1065,15 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
     use std::os::windows::ffi::OsStringExt;
 
     use windows_sys::Win32::Foundation::{
-        CloseHandle, GetLastError, ERROR_NO_MORE_FILES, HANDLE, INVALID_HANDLE_VALUE,
+        CloseHandle, GetLastError, ERROR_INVALID_PARAMETER, ERROR_NO_MORE_FILES, HANDLE,
+        INVALID_HANDLE_VALUE, STILL_ACTIVE,
     };
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
         TH32CS_SNAPPROCESS,
     };
     use windows_sys::Win32::System::Threading::{
-        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
+        GetExitCodeProcess, OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
         PROCESS_QUERY_LIMITED_INFORMATION,
     };
 
@@ -1079,13 +1116,18 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
         if process.is_null() {
             if relevant {
                 let source = io::Error::last_os_error();
-                return Err(io::Error::new(
-                    source.kind(),
-                    format!(
-                        "could not inspect relevant process {process_name:?} (pid {}): {source}",
-                        entry.th32ProcessID
-                    ),
-                ));
+                // A process can disappear after the Toolhelp snapshot but before OpenProcess.
+                // ERROR_INVALID_PARAMETER is Windows' documented response for a nonexistent PID;
+                // access-denied and every other failure remain fail-closed.
+                if source.raw_os_error() != Some(ERROR_INVALID_PARAMETER as i32) {
+                    return Err(io::Error::new(
+                        source.kind(),
+                        format!(
+                            "could not inspect relevant process {process_name:?} (pid {}): {source}",
+                            entry.th32ProcessID
+                        ),
+                    ));
+                }
             }
         } else {
             let process = HandleGuard(process);
@@ -1105,13 +1147,21 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
                 )));
             } else if relevant {
                 let source = io::Error::last_os_error();
-                return Err(io::Error::new(
-                    source.kind(),
-                    format!(
-                        "could not resolve relevant process {process_name:?} (pid {}): {source}",
-                        entry.th32ProcessID
-                    ),
-                ));
+                let mut exit_code = 0_u32;
+                let exited = unsafe { GetExitCodeProcess(process.0, &mut exit_code) } != 0
+                    && exit_code != STILL_ACTIVE as u32;
+                // QueryFullProcessImageNameW can race a process exit even though our snapshot and
+                // handle were valid. Ignore only a process now proven exited; an uninspectable live
+                // process still blocks mutation.
+                if !exited {
+                    return Err(io::Error::new(
+                        source.kind(),
+                        format!(
+                            "could not resolve relevant process {process_name:?} (pid {}): {source}",
+                            entry.th32ProcessID
+                        ),
+                    ));
+                }
             }
         }
         has_entry = unsafe { Process32NextW(snapshot, &mut entry) } != 0;

@@ -1180,6 +1180,15 @@ Clap parses only; library APIs own behavior. `install` prints events and persist
 download/attention instructions. Ctrl+C sends explicit cancellation through the runner
 control channel, waits for process-tree termination, and preserves diagnostics.
 
+Production CLI recipes use `setup-name` invocation. `explicit-tp2` remains fail-closed until a
+separately reviewed signed recipe-schema field can carry the required compatibility evidence;
+the CLI must never infer or hard-code that evidence.
+
+Post-v0 supervisor follow-ups: retain cancelled/spawn-failed attempt evidence in the first
+terminal receipt, recognize demonstrably pre-spawn crash windows without requiring a fresh copy,
+and exercise a true cold-cache HTTPS download in live acceptance. These improve recovery and
+receipt completeness; ambiguous evidence remains fail-closed in v0.
+
 **Step 4: Verify and commit**
 
 ```powershell

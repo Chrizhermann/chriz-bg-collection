@@ -13,9 +13,13 @@ use zip::{CompressionMethod, ZipWriter};
 
 const STATE_DIRECTORY: &str = ".chriz";
 const TEMP_SUFFIX: &str = "diagnostics-tmp";
-const STEP_EVIDENCE_FILES: [&str; 5] = [
+const STEP_EVIDENCE_FILES: [&str; 9] = [
     "weidu.debug.log",
     "process-output.log",
+    "stdout.log",
+    "stderr.log",
+    "prompt-results.jsonl",
+    "process-result.json",
     "before.log",
     "after.log",
     "invocation.json",

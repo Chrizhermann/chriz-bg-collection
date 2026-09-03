@@ -946,14 +946,23 @@ fn unresolved_materialization_with_unknown_or_truncated_bytes_requires_a_fresh_c
             Some(ReceiptDraftOutcome::FreshCopyRequired { detail, .. }) if detail == reason
         ));
         assert!(!deps.trace.iter().any(|entry| entry.starts_with("run:")));
-        assert_eq!(
-            SessionStore::open(&fixture.request.created.managed_root)
-                .unwrap()
-                .replay()
-                .unwrap()
-                .unresolved_step(),
-            Some("materialize:eefix:bg1")
-        );
+        let replay = SessionStore::open(&fixture.request.created.managed_root)
+            .unwrap()
+            .replay()
+            .unwrap();
+        assert_eq!(replay.unresolved_step(), None);
+        let seal = replay
+            .fresh_copy_required()
+            .expect("fresh-copy verdict must be durable");
+        assert_eq!(seal.step_id, "materialize:eefix:bg1");
+        assert_eq!(seal.detail, reason);
+
+        deps.trace.clear();
+        let receipt = deps.receipts.last().cloned().unwrap();
+        let resumed = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+        assert_eq!(resumed, outcome);
+        assert_eq!(deps.trace, vec!["receipt"]);
+        assert_eq!(deps.receipts.last(), Some(&receipt));
     }
 }
 

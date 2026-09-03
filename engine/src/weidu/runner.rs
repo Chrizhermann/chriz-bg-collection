@@ -8,7 +8,9 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use crossbeam_channel::{Receiver, RecvTimeoutError, Sender};
+use serde::{Deserialize, Serialize};
 
+use crate::digest::sha256_bytes;
 use crate::events::{EngineEvent, EventSink, Stream};
 
 use super::invocation::{Invocation, ResolvedPrompt};
@@ -18,6 +20,32 @@ const DISPLAY_CHUNK_BYTES: usize = 4 * 1024;
 const DISPLAY_CHANNEL_CAPACITY: usize = 64;
 const LAST_OUTPUT_BYTES: usize = 4 * 1024;
 const PROCESS_POLL_INTERVAL: Duration = Duration::from_millis(20);
+/// Runner-owned create-once evidence proving which authored prompt answers reached child stdin.
+pub const PROMPT_RESULTS_FILE_NAME: &str = "prompt-results.jsonl";
+
+/// One prompt answer successfully written and flushed to the child process.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PromptAnswerEvidence {
+    /// Zero-based position in the exact authored prompt sequence.
+    pub index: usize,
+    /// SHA-256 of the expected output bytes that unlocked this answer.
+    pub expected_output_sha256: String,
+    /// SHA-256 of the exact answer bytes written to child stdin.
+    pub answer_sha256: String,
+}
+
+/// Parse the runner-authored prompt evidence stream.
+pub fn parse_prompt_results(bytes: &[u8]) -> io::Result<Vec<PromptAnswerEvidence>> {
+    bytes
+        .split(|byte| *byte == b'\n')
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            serde_json::from_slice(line)
+                .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+        })
+        .collect()
+}
 
 /// A user decision delivered after the runner requests attention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -196,6 +224,51 @@ pub fn run<S: EventSink>(
             return RunOutcome::SpawnFailed;
         }
     };
+    let stdout_path = request.output_log.with_file_name("stdout.log");
+    let stdout_log = match create_output_log(&stdout_path) {
+        Ok(file) => file,
+        Err(error) => {
+            emit_error(
+                &sink,
+                &request.step_id,
+                format!(
+                    "could not create stdout log {}: {error}",
+                    stdout_path.display()
+                ),
+            );
+            return RunOutcome::SpawnFailed;
+        }
+    };
+    let stderr_path = request.output_log.with_file_name("stderr.log");
+    let stderr_log = match create_output_log(&stderr_path) {
+        Ok(file) => file,
+        Err(error) => {
+            emit_error(
+                &sink,
+                &request.step_id,
+                format!(
+                    "could not create stderr log {}: {error}",
+                    stderr_path.display()
+                ),
+            );
+            return RunOutcome::SpawnFailed;
+        }
+    };
+    let prompt_results_path = request.output_log.with_file_name(PROMPT_RESULTS_FILE_NAME);
+    let mut prompt_results_log = match create_output_log(&prompt_results_path) {
+        Ok(file) => file,
+        Err(error) => {
+            emit_error(
+                &sink,
+                &request.step_id,
+                format!(
+                    "could not create prompt evidence log {}: {error}",
+                    prompt_results_path.display()
+                ),
+            );
+            return RunOutcome::SpawnFailed;
+        }
+    };
 
     let process_group = match ProcessGroup::new() {
         Ok(group) => group,
@@ -265,8 +338,15 @@ pub fn run<S: EventSink>(
             Stream::Stdout,
             output_tx.clone(),
             Arc::clone(&raw_log),
+            stdout_log,
         ),
-        spawn_reader(stderr, Stream::Stderr, output_tx, Arc::clone(&raw_log)),
+        spawn_reader(
+            stderr,
+            Stream::Stderr,
+            output_tx,
+            Arc::clone(&raw_log),
+            stderr_log,
+        ),
     ];
 
     let mut matcher = PromptMatcher::new(&request.invocation.prompts);
@@ -277,6 +357,7 @@ pub fn run<S: EventSink>(
     let mut attention_active = false;
     let mut silence_deadline = Instant::now() + request.silence_threshold;
     let mut cancelled = false;
+    let mut supervision_failed = false;
 
     loop {
         while let Ok(control) = controls.try_recv() {
@@ -307,6 +388,7 @@ pub fn run<S: EventSink>(
                         format!("could not query WeiDU process state: {error}"),
                     );
                     cancelled = true;
+                    supervision_failed = true;
                     break;
                 }
             }
@@ -343,13 +425,31 @@ pub fn run<S: EventSink>(
                     stream,
                     line: String::from_utf8_lossy(&bytes).into_owned(),
                 });
-                if let Err(error) = matcher.observe(stream, &bytes, &mut stdin) {
-                    emit_error(
-                        &sink,
-                        &request.step_id,
-                        format!("could not answer an authored WeiDU prompt: {error}"),
-                    );
-                    stdin = None;
+                match matcher.observe(stream, &bytes, &mut stdin) {
+                    Ok(Some(answered)) => {
+                        if let Err(error) = append_prompt_result(&mut prompt_results_log, &answered)
+                        {
+                            emit_error(
+                                &sink,
+                                &request.step_id,
+                                format!("could not persist authored prompt evidence: {error}"),
+                            );
+                            supervision_failed = true;
+                            cancelled = true;
+                            break;
+                        }
+                    }
+                    Ok(None) => {}
+                    Err(error) => {
+                        emit_error(
+                            &sink,
+                            &request.step_id,
+                            format!("could not answer an authored WeiDU prompt: {error}"),
+                        );
+                        supervision_failed = true;
+                        cancelled = true;
+                        break;
+                    }
                 }
             }
             Ok(OutputMessage::Closed(stream)) => match stream {
@@ -362,15 +462,22 @@ pub fn run<S: EventSink>(
                     &request.step_id,
                     format!("could not read WeiDU {stream:?}: {error}"),
                 );
-                match stream {
-                    Stream::Stdout => stdout_closed = true,
-                    Stream::Stderr => stderr_closed = true,
-                }
+                supervision_failed = true;
+                cancelled = true;
+                break;
             }
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
-                stdout_closed = true;
-                stderr_closed = true;
+                if !stdout_closed || !stderr_closed {
+                    emit_error(
+                        &sink,
+                        &request.step_id,
+                        "WeiDU output readers disconnected before both streams closed".to_owned(),
+                    );
+                    supervision_failed = true;
+                    cancelled = true;
+                    break;
+                }
             }
         }
     }
@@ -392,12 +499,38 @@ pub fn run<S: EventSink>(
     }
 
     drop(stdin);
-    join_readers(readers, &sink, &request.step_id);
+    if !join_readers(readers, &sink, &request.step_id) {
+        supervision_failed = true;
+    }
     if let Ok(mut log) = raw_log.lock() {
-        let _ = log.flush();
+        if log.flush().and_then(|()| log.sync_all()).is_err() {
+            supervision_failed = true;
+        }
+    } else {
+        supervision_failed = true;
+    }
+    if prompt_results_log
+        .flush()
+        .and_then(|()| prompt_results_log.sync_all())
+        .is_err()
+    {
+        supervision_failed = true;
+    }
+    if !cancelled && !matcher.complete() {
+        emit_error(
+            &sink,
+            &request.step_id,
+            format!(
+                "WeiDU exited before {} authored prompt answer(s) were observed and written",
+                matcher.remaining()
+            ),
+        );
+        supervision_failed = true;
     }
 
-    if cancelled {
+    if supervision_failed {
+        RunOutcome::SpawnFailed
+    } else if cancelled {
         RunOutcome::Cancelled
     } else {
         let status = exit_status.or_else(|| child.wait().ok());
@@ -424,12 +557,18 @@ enum OutputMessage {
     ReadFailed { stream: Stream, error: io::Error },
 }
 
-fn spawn_reader<R: Read + Send + 'static>(
+fn spawn_reader<R, W, V>(
     mut reader: R,
     stream: Stream,
     output: Sender<OutputMessage>,
-    raw_log: Arc<Mutex<File>>,
-) -> JoinHandle<()> {
+    raw_log: Arc<Mutex<W>>,
+    mut stream_log: V,
+) -> JoinHandle<()>
+where
+    R: Read + Send + 'static,
+    W: Write + Send + 'static,
+    V: Write + Send + 'static,
+{
     thread::spawn(move || {
         let mut buffer = [0; DISPLAY_CHUNK_BYTES];
         loop {
@@ -443,7 +582,8 @@ fn spawn_reader<R: Read + Send + 'static>(
                     let write_result = raw_log
                         .lock()
                         .map_err(|_| io::Error::other("raw output log lock was poisoned"))
-                        .and_then(|mut log| log.write_all(&bytes));
+                        .and_then(|mut log| log.write_all(&bytes))
+                        .and_then(|()| stream_log.write_all(&bytes));
                     if let Err(error) = write_result {
                         let _ = output.send(OutputMessage::ReadFailed { stream, error });
                         break;
@@ -462,9 +602,11 @@ fn spawn_reader<R: Read + Send + 'static>(
     })
 }
 
-fn join_readers(readers: Vec<JoinHandle<()>>, sink: &impl EventSink, step_id: &str) {
+fn join_readers(readers: Vec<JoinHandle<()>>, sink: &impl EventSink, step_id: &str) -> bool {
+    let mut joined = true;
     for reader in readers {
         if reader.join().is_err() {
+            joined = false;
             emit_error(
                 sink,
                 step_id,
@@ -472,6 +614,14 @@ fn join_readers(readers: Vec<JoinHandle<()>>, sink: &impl EventSink, step_id: &s
             );
         }
     }
+    joined
+}
+
+fn append_prompt_result(file: &mut File, result: &PromptAnswerEvidence) -> io::Result<()> {
+    serde_json::to_writer(&mut *file, result).map_err(io::Error::other)?;
+    file.write_all(b"\n")?;
+    file.flush()?;
+    file.sync_data()
 }
 
 fn remember_output(tail: &mut Vec<u8>, bytes: &[u8]) {
@@ -503,9 +653,9 @@ impl<'a> PromptMatcher<'a> {
         stream: Stream,
         bytes: &[u8],
         stdin: &mut Option<ChildStdin>,
-    ) -> io::Result<()> {
+    ) -> io::Result<Option<PromptAnswerEvidence>> {
         let Some(prompt) = self.prompts.get(self.next) else {
-            return Ok(());
+            return Ok(None);
         };
         let buffer = match stream {
             Stream::Stdout => &mut self.stdout,
@@ -519,19 +669,33 @@ impl<'a> PromptMatcher<'a> {
                 .ok_or_else(|| io::Error::new(io::ErrorKind::BrokenPipe, "child stdin closed"))?;
             writer.write_all(&prompt.answer)?;
             writer.flush()?;
+            let answered = PromptAnswerEvidence {
+                index: self.next,
+                expected_output_sha256: sha256_bytes(&prompt.expected_output),
+                answer_sha256: sha256_bytes(&prompt.answer),
+            };
             self.next += 1;
             self.stdout.clear();
             self.stderr.clear();
             if self.next == self.prompts.len() {
                 *stdin = None;
             }
+            return Ok(Some(answered));
         } else {
             let keep = prompt.expected_output.len().saturating_sub(1);
             if buffer.len() > keep {
                 buffer.drain(..buffer.len() - keep);
             }
         }
-        Ok(())
+        Ok(None)
+    }
+
+    fn complete(&self) -> bool {
+        self.next == self.prompts.len()
+    }
+
+    fn remaining(&self) -> usize {
+        self.prompts.len() - self.next
     }
 }
 
@@ -540,4 +704,59 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
         && haystack
             .windows(needle.len())
             .any(|window| window == needle)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{self, Cursor, Write};
+    use std::sync::{Arc, Mutex};
+    use std::thread;
+
+    use crossbeam_channel::bounded;
+
+    use crate::events::{ChannelSink, Stream};
+
+    use super::{join_readers, spawn_reader, OutputMessage};
+
+    #[derive(Default)]
+    struct FailingWriter;
+
+    impl Write for FailingWriter {
+        fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
+            Err(io::Error::other("synthetic evidence write failure"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn evidence_write_failure_is_reported_by_the_reader() {
+        let (sender, receiver) = bounded(1);
+        let reader = spawn_reader(
+            Cursor::new(b"child output".to_vec()),
+            Stream::Stdout,
+            sender,
+            Arc::new(Mutex::new(Vec::<u8>::new())),
+            FailingWriter,
+        );
+
+        assert!(matches!(
+            receiver.recv().unwrap(),
+            OutputMessage::ReadFailed {
+                stream: Stream::Stdout,
+                ..
+            }
+        ));
+        reader.join().unwrap();
+    }
+
+    #[test]
+    fn reader_thread_panic_is_a_failed_join() {
+        let (sink, _events) = ChannelSink::unbounded();
+        let reader = thread::spawn(|| panic!("synthetic reader panic"));
+
+        assert!(!join_readers(vec![reader], &sink, "install:test"));
+    }
 }

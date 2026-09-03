@@ -379,6 +379,19 @@ pub fn stage_initial_games(
     layout: &ManagedLayout,
     identity: &ReservedSaveIdentity,
 ) -> Result<InitialStageReports> {
+    let bg1 = stage_bgee_sod(layout, identity)?;
+    let bg2 = stage_game_copy(layout, GameRole::Bg2ee)?;
+    Ok(InitialStageReports { bg1, bg2 })
+}
+
+/// Stages only the pristine BGEE+SoD role and immediately isolates its save identity.
+///
+/// This single-role boundary lets an orchestrator record and recheck BG1 and BG2 staging as
+/// independent durable steps. A failed identity patch discards the unisolated BG1 copy.
+pub fn stage_bgee_sod(
+    layout: &ManagedLayout,
+    identity: &ReservedSaveIdentity,
+) -> Result<StageReport> {
     verify_reserved_save_identity(layout, identity)?;
     let bg1 = stage_game_copy(layout, GameRole::BgeeSod)?;
     let isolate_bg1 = verify_reserved_save_identity(layout, identity)
@@ -388,8 +401,7 @@ pub fn stage_initial_games(
         discard_role_stage(layout, target, &scratch)?;
         return Err(error);
     }
-    let bg2 = stage_game_copy(layout, GameRole::Bg2ee)?;
-    Ok(InitialStageReports { bg1, bg2 })
+    Ok(bg1)
 }
 
 /// Reapplies and verifies the isolated identity after EET has finalized BG2EE.

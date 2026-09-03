@@ -122,6 +122,18 @@ impl Harness {
             .collect::<Vec<_>>()
             .join("")
     }
+
+    fn stdout_log(&self) -> PathBuf {
+        self.raw_log.with_file_name("stdout.log")
+    }
+
+    fn stderr_log(&self) -> PathBuf {
+        self.raw_log.with_file_name("stderr.log")
+    }
+
+    fn prompt_results_log(&self) -> PathBuf {
+        self.raw_log.with_file_name("prompt-results.jsonl")
+    }
 }
 
 impl Drop for Harness {
@@ -154,6 +166,49 @@ fn answer_waits_for_the_authored_prompt_even_when_fragmented_without_a_newline()
         .unwrap()
         .windows(b"Choose option: ".len())
         .any(|window| window == b"Choose option: "));
+    let results = fs::read_to_string(harness.prompt_results_log()).unwrap();
+    let result: serde_json::Value = serde_json::from_str(results.trim()).unwrap();
+    assert_eq!(result["index"], 0);
+    assert_eq!(result["expected_output_sha256"].as_str().unwrap().len(), 64);
+    assert_eq!(result["answer_sha256"].as_str().unwrap().len(), 64);
+}
+
+#[test]
+fn child_exit_before_an_authored_prompt_is_not_accepted() {
+    let mut harness = Harness::start(
+        "quiet",
+        [OsString::from("0")],
+        vec![ResolvedPrompt {
+            expected_output: b"Never emitted: ".to_vec(),
+            answer: b"yes\n".to_vec(),
+        }],
+        Duration::from_secs(2),
+    );
+
+    assert_eq!(
+        harness.wait_outcome(Duration::from_secs(5)),
+        RunOutcome::SpawnFailed
+    );
+}
+
+#[test]
+fn failed_prompt_answer_write_is_not_accepted() {
+    let oversized_answer = vec![b'x'; 8 * 1024 * 1024];
+    let mut harness = Harness::start(
+        "emit-prompt-exit",
+        [],
+        vec![ResolvedPrompt {
+            expected_output: b"Choose option: ".to_vec(),
+            answer: oversized_answer,
+        }],
+        Duration::from_secs(2),
+    );
+
+    assert_eq!(
+        harness.wait_outcome(Duration::from_secs(5)),
+        RunOutcome::SpawnFailed
+    );
+    assert_eq!(fs::metadata(harness.prompt_results_log()).unwrap().len(), 0);
 }
 
 #[test]
@@ -244,6 +299,7 @@ fn no_prompt_invocation_receives_closed_stdin() {
 #[test]
 fn invalid_utf8_is_lossy_for_display_but_exact_in_the_attempt_log() {
     const RAW: &[u8] = b"raw-\x80-bytes";
+    const ERROR: &[u8] = b"err-\xff-bytes";
     let mut harness = Harness::start("invalid-utf8", [], vec![], Duration::from_secs(2));
 
     assert_eq!(
@@ -255,6 +311,8 @@ fn invalid_utf8_is_lossy_for_display_but_exact_in_the_attempt_log() {
         .unwrap()
         .windows(RAW.len())
         .any(|window| window == RAW));
+    assert_eq!(fs::read(harness.stdout_log()).unwrap(), RAW);
+    assert_eq!(fs::read(harness.stderr_log()).unwrap(), ERROR);
 }
 
 #[test]

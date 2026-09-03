@@ -22,7 +22,7 @@ use crate::resolve::InstallPlan;
 use crate::session::FrozenIdentity;
 
 /// Receipt schema emitted by this engine version.
-pub const RECEIPT_SCHEMA_VERSION: u32 = 1;
+pub const RECEIPT_SCHEMA_VERSION: u32 = 2;
 
 const STATE_DIRECTORY: &str = ".chriz";
 const ATTEMPTS_DIRECTORY: &str = "attempts";
@@ -180,15 +180,13 @@ pub struct LogDiffReceipt {
     pub removed: Vec<LogComponentReceipt>,
 }
 
-/// Complete durable evidence for one serialized WeiDU invocation.
+/// Complete durable evidence for one serialized WeiDU invocation attempt.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct RunReceipt {
-    /// Stable recipe run id.
-    pub run_id: String,
-    /// Staged game root mutated by the run.
-    pub target: GameRoot,
-    /// Exact ordered selected component suffix.
+pub struct RunAttemptReceipt {
+    /// One-based, monotonically increasing attempt number from the campaign ledger.
+    pub attempt: u32,
+    /// Exact ordered component suffix requested in this process.
     pub components: Vec<u32>,
     /// Output-gated prompt observations.
     pub prompts: Vec<PromptReceipt>,
@@ -208,6 +206,20 @@ pub struct RunReceipt {
     pub debug_sha256: String,
     /// Strict active-log change proved for this run.
     pub log_diff: LogDiffReceipt,
+}
+
+/// Complete durable evidence for one logical planned WeiDU run.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunReceipt {
+    /// Stable recipe run id.
+    pub run_id: String,
+    /// Staged game root mutated by the run.
+    pub target: GameRoot,
+    /// Full exact ordered component sequence from the frozen plan.
+    pub components: Vec<u32>,
+    /// Every process attempt retained in monotonic order, including rolled-back retries.
+    pub attempts: Vec<RunAttemptReceipt>,
 }
 
 /// Exact final WeiDU.log identity for one staged root.
@@ -573,7 +585,7 @@ impl ManagedReceiptWriter {
             |tool| (&tool.id, &tool.version, tool.length, &tool.sha256),
             require_complete,
         )?;
-        if require_complete && self.evidence.runs.len() != draft.plan.runs.len() {
+        if self.evidence.runs.len() != draft.plan.runs.len() {
             return Err(ManagedReceiptError::Evidence(format!(
                 "run evidence count {} differs from plan count {}",
                 self.evidence.runs.len(),
@@ -597,9 +609,78 @@ impl ManagedReceiptWriter {
                     evidence.run_id
                 )));
             }
+            validate_run_attempt_sequence(
+                evidence,
+                planned.expect("matching planned run was established above"),
+                require_complete,
+            )
+            .map_err(ManagedReceiptError::Evidence)?;
         }
         Ok(())
     }
+}
+
+pub(crate) fn validate_run_attempt_sequence(
+    evidence: &RunReceipt,
+    planned: &crate::resolve::PlannedRun,
+    require_complete: bool,
+) -> Result<(), String> {
+    let mut completed = 0_usize;
+    let mut previous_attempt = 0_u32;
+    for attempt in &evidence.attempts {
+        if attempt.attempt == 0 || attempt.attempt <= previous_attempt {
+            return Err(format!(
+                "run {:?} attempt numbers are not unique and strictly increasing",
+                evidence.run_id
+            ));
+        }
+        previous_attempt = attempt.attempt;
+        let expected_suffix = &planned.components[completed..];
+        if attempt.components != expected_suffix {
+            return Err(format!(
+                "run {:?} attempt {} does not target the exact remaining suffix",
+                evidence.run_id, attempt.attempt
+            ));
+        }
+        if attempt.timing.completed_at_millis < attempt.timing.started_at_millis {
+            return Err(format!(
+                "run {:?} attempt {} completion precedes its start",
+                evidence.run_id, attempt.attempt
+            ));
+        }
+        if !attempt.log_diff.removed.is_empty()
+            || attempt.log_diff.added.len() > expected_suffix.len()
+        {
+            return Err(format!(
+                "run {:?} attempt {} has unsafe WeiDU.log changes",
+                evidence.run_id, attempt.attempt
+            ));
+        }
+        for (offset, added) in attempt.log_diff.added.iter().enumerate() {
+            if added.component != expected_suffix[offset] {
+                return Err(format!(
+                    "run {:?} attempt {} additions are not the next exact planned prefix",
+                    evidence.run_id, attempt.attempt
+                ));
+            }
+        }
+        if attempt.log_diff.added.len() == expected_suffix.len()
+            && attempt.prompts.iter().any(|prompt| !prompt.matched)
+        {
+            return Err(format!(
+                "run {:?} attempt {} completed its components without every authored prompt answer",
+                evidence.run_id, attempt.attempt
+            ));
+        }
+        completed += attempt.log_diff.added.len();
+    }
+    if require_complete && completed != planned.components.len() {
+        return Err(format!(
+            "run {:?} accumulated additions do not complete the frozen component sequence",
+            evidence.run_id
+        ));
+    }
+    Ok(())
 }
 
 impl ReceiptWriter for ManagedReceiptWriter {
@@ -765,6 +846,36 @@ impl ReceiptStore {
             return Err(ReceiptError::InvalidReceipt(
                 "successful receipts require final state and failed receipts must omit it"
                     .to_owned(),
+            ));
+        }
+        let require_complete = receipt.outcome.is_success();
+        let mut seen_runs = BTreeSet::new();
+        for evidence in &receipt.runs {
+            let planned = receipt
+                .plan
+                .runs
+                .iter()
+                .find(|planned| planned.run_id == evidence.run_id);
+            if !seen_runs.insert(&evidence.run_id)
+                || !planned.is_some_and(|planned| {
+                    evidence.target == planned.target && evidence.components == planned.components
+                })
+            {
+                return Err(ReceiptError::InvalidReceipt(format!(
+                    "run evidence for {:?} differs from the exact plan or is duplicated",
+                    evidence.run_id
+                )));
+            }
+            validate_run_attempt_sequence(
+                evidence,
+                planned.expect("matching planned run was established above"),
+                require_complete,
+            )
+            .map_err(ReceiptError::InvalidReceipt)?;
+        }
+        if receipt.runs.len() != receipt.plan.runs.len() {
+            return Err(ReceiptError::InvalidReceipt(
+                "receipt does not have exactly one logical row per planned run".to_owned(),
             ));
         }
         Ok(())

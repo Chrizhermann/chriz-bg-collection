@@ -6,7 +6,8 @@
 
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -14,6 +15,11 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::acquire::{
+    extract_archive, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
+    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, DownloadRequest,
+    ExtractedArtifact, MaterializationRequest,
+};
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
 use crate::events::{EngineEvent, EventSink};
@@ -22,7 +28,10 @@ use crate::games::{
     GameRole, Storefront, SystemFileSystem,
 };
 use crate::lock::LockError;
-use crate::manifest::{AcquisitionPolicy, Artifact, Collection, ModFile, PresetFile};
+use crate::manifest::{
+    AcquisitionPolicy, ArchiveKind as ManifestArchiveKind, ArchiveRootRule, Artifact, Collection,
+    GameRoot, InvocationMode, ModFile, PresetFile,
+};
 use crate::orchestrator::{
     run_campaign, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
     CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRequest, InstallLogVerifier,
@@ -30,10 +39,15 @@ use crate::orchestrator::{
     MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter, StagingService,
     StepAttempt, StepFailure,
 };
-use crate::preflight::{initial_preflight, InitialPreflight, RequiredInput, SpaceRequirement};
+use crate::preflight::{
+    initial_preflight, recheck_staging_target_before_mutation, recheck_target_before_mutation,
+    InitialPreflight, RequiredInput, SpaceRequirement,
+};
 use crate::receipt::{
-    InstallReceipt, ManagedReceiptWriter, ReceiptEvidence, ReceiptOutcome, ReceiptStore,
-    ReceiptVersions, SourceGameReceipt, RECEIPT_SCHEMA_VERSION,
+    ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
+    LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter, PromptReceipt, ReceiptEvidence,
+    ReceiptOutcome, ReceiptStore, ReceiptVersions, RunAttemptReceipt, RunReceipt, RunTiming,
+    SourceGameReceipt, WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
 };
 use crate::recipe_view::{evaluate, SelectionEvaluation};
 use crate::registry::ManagedInstallRegistry;
@@ -41,9 +55,21 @@ use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::session::{
     CampaignCreated, FrozenIdentity, SessionReplay, SessionStore, SourceGameFingerprints,
 };
+use crate::stage::{
+    finalize_game_identity, read_engine_name, reserve_save_identity, stage_bgee_sod,
+    stage_game_copy, DocumentsLocator, ManagedLayout, ReservedSaveIdentity, SystemDocuments,
+};
 use crate::validate::{self, Severity};
-use crate::weidu::invocation::Invocation;
-use crate::weidu::runner::{run_controlled, RunOutcome, RunnerControlHandle, RunnerRequest};
+use crate::weidu::invocation::{
+    build as build_invocation, verify_tool_contract, Invocation, InvocationInput, ResolvedPrompt,
+    StagedRoots, VerifiedWeidu,
+};
+use crate::weidu::log::{parse_active_entries, parse_terminal_statuses, DebugStatus, LogEntry};
+use crate::weidu::runner::{
+    parse_prompt_results, run_controlled, PromptAnswerEvidence, RunOutcome, RunnerControlHandle,
+    RunnerRequest, PROMPT_RESULTS_FILE_NAME,
+};
+use crate::weidu::verify::{reconcile as reconcile_weidu, ExpectedRun, Reconciliation};
 use crate::Manifest;
 
 const GAME_PROFILE_DIRECTORY: &str = "game-builds";
@@ -53,6 +79,15 @@ const ATTEMPT_RECEIPT_FILE: &str = "receipt.json";
 const CLI_FROZEN_RECIPE_SCHEMA: u32 = 1;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
+const EVIDENCE_DIRECTORY: &str = "evidence";
+const BEFORE_LOG_FILE: &str = "before.log";
+const AFTER_LOG_FILE: &str = "after.log";
+const INVOCATION_FILE: &str = "invocation.json";
+const PROCESS_RESULT_FILE: &str = "process-result.json";
+const PROCESS_OUTPUT_FILE: &str = "process-output.log";
+const STDOUT_FILE: &str = "stdout.log";
+const STDERR_FILE: &str = "stderr.log";
+const DEBUG_LOG_FILE: &str = "weidu.debug.log";
 static CAMPAIGN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 type InterruptHandler = Box<dyn FnMut() + Send + 'static>;
@@ -464,8 +499,8 @@ pub fn inspect_game(
 
 /// Freeze and start one new managed campaign through the Task-13 state machine.
 ///
-/// The immutable identities are frozen from authored artifact metadata. Execution remains
-/// fail-closed at required-input preflight until the production materialization slice lands.
+/// The immutable identities are frozen from authored artifact metadata. The production adapter
+/// then acquires, stages, materializes, invokes, reconciles, and records only that frozen plan.
 pub fn install_campaign<S: EventSink + Sync>(
     request: &InstallCommandRequest,
     sink: &S,
@@ -909,9 +944,14 @@ fn validate_report_receipt(
                 run.run_id
             ));
         }
+        crate::receipt::validate_run_attempt_sequence(
+            run,
+            planned.expect("matching planned run was established above"),
+            succeeded,
+        )?;
     }
-    if succeeded && receipt.runs.len() != receipt.plan.runs.len() {
-        return Err("successful receipt has incomplete run evidence".to_owned());
+    if receipt.runs.len() != receipt.plan.runs.len() {
+        return Err("receipt does not have exactly one logical row per planned run".to_owned());
     }
     Ok(())
 }
@@ -1511,6 +1551,63 @@ struct GuardedCliDependencies<'a, S> {
     controls: RunnerControlHandle,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PreparedInvocationEvidence {
+    run_id: String,
+    attempt: u32,
+    components: Vec<u32>,
+    prompts: Vec<PromptReceipt>,
+    prompt_identities: Vec<PromptAnswerEvidence>,
+    invocation_sha256: String,
+    prepared_at_millis: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ProcessTerminal {
+    Exited,
+    Cancelled,
+    SpawnFailed,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProcessEvidence {
+    started_at_millis: u64,
+    completed_at_millis: u64,
+    exit_code: i32,
+    terminal: ProcessTerminal,
+}
+
+struct ReconciledAttemptEvidence<'a> {
+    process: &'a ProcessEvidence,
+    before: &'a [u8],
+    after: &'a [u8],
+    debug: &'a [u8],
+    prompts: Vec<PromptReceipt>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct CliDocumentsLocator;
+
+impl DocumentsLocator for CliDocumentsLocator {
+    fn documents_dir(&self) -> std::io::Result<PathBuf> {
+        #[cfg(debug_assertions)]
+        if let Some(path) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS") {
+            let path = PathBuf::from(path);
+            if !path.is_absolute() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "CHRIZ_BG_COLLECTION_TEST_DOCUMENTS is not absolute",
+                ));
+            }
+            return Ok(path);
+        }
+        SystemDocuments.documents_dir()
+    }
+}
+
 impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     fn new(
         created: &'a CampaignCreated,
@@ -1532,7 +1629,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         }
     }
 
-    fn required_inputs(identities: &[FrozenIdentity]) -> Vec<RequiredInput> {
+    fn required_inputs(&self, identities: &[FrozenIdentity], tools: bool) -> Vec<RequiredInput> {
         identities
             .iter()
             .map(|identity| RequiredInput {
@@ -1540,7 +1637,26 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 version: identity.version.clone(),
                 sha256: identity.sha256.clone(),
                 length: identity.length,
-                obtainable: false,
+                obtainable: self
+                    .frozen
+                    .artifacts
+                    .get(&identity.id)
+                    .is_some_and(|artifact| {
+                        artifact.acquisition != AcquisitionPolicy::Blocked
+                            && if tools {
+                                artifact.tool.as_ref().is_some_and(|tool| {
+                                    tool.weidu_version == identity.version
+                                        && tool.expected_length == identity.length
+                                        && tool.sha256.eq_ignore_ascii_case(&identity.sha256)
+                                })
+                            } else {
+                                artifact.source.expected_length == Some(identity.length)
+                                    && artifact
+                                        .source
+                                        .sha256
+                                        .eq_ignore_ascii_case(&identity.sha256)
+                            }
+                    }),
             })
             .collect()
     }
@@ -1566,6 +1682,314 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         }
         Ok(())
     }
+
+    fn layout(&self) -> Result<ManagedLayout, StepFailure> {
+        ManagedLayout::prepare(
+            &self.created.managed_root,
+            &self.frozen.bg1.root,
+            &self.frozen.bg2.root,
+        )
+        .map_err(step_error)
+    }
+
+    fn save_identity(&self, layout: &ManagedLayout) -> Result<ReservedSaveIdentity, StepFailure> {
+        reserve_save_identity(
+            &CliDocumentsLocator,
+            layout,
+            "Chriz BG Collection",
+            &self.created.install_id,
+        )
+        .map_err(step_error)
+    }
+
+    fn artifact(&self, id: &str) -> Result<&Artifact, StepFailure> {
+        self.frozen
+            .artifacts
+            .get(id)
+            .ok_or_else(|| StepFailure::new(format!("frozen artifact {id:?} is missing")))
+    }
+
+    fn acquire_archive(
+        &self,
+        artifact: &Artifact,
+    ) -> Result<(PathBuf, ArtifactReceipt), StepFailure> {
+        let expected_length = artifact.source.expected_length.ok_or_else(|| {
+            StepFailure::new(format!(
+                "frozen artifact {:?} has no expected archive length",
+                artifact.id
+            ))
+        })?;
+        let (archive_path, original_url, final_url, length, sha256, cache_outcome) = match artifact
+            .acquisition
+        {
+            AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
+                let acquired = ArtifactCache::open(&self.created.cache_root)
+                    .and_then(|cache| {
+                        cache.acquire(
+                            &DownloadRequest {
+                                request_id: artifact.id.clone(),
+                                url: artifact.source.url.clone(),
+                                expected_length,
+                                expected_sha256: artifact.source.sha256.clone(),
+                                redirect_hosts: artifact.source.redirect_hosts.clone(),
+                                max_attempts: 3,
+                            },
+                            self.sink,
+                        )
+                    })
+                    .map_err(step_error)?;
+                let outcome = match acquired.disposition {
+                    CacheDisposition::Hit => ArtifactCacheOutcome::Hit,
+                    CacheDisposition::Downloaded => ArtifactCacheOutcome::Downloaded,
+                };
+                (
+                    acquired.archive_path,
+                    acquired.metadata.original_url,
+                    acquired.metadata.final_url,
+                    acquired.metadata.length,
+                    acquired.metadata.sha256,
+                    outcome,
+                )
+            }
+            AcquisitionPolicy::ManualUserSupplied => {
+                let filename = artifact
+                    .source
+                    .expected_filename
+                    .as_deref()
+                    .ok_or_else(|| {
+                        StepFailure::new(format!(
+                            "manual artifact {:?} has no exact expected filename",
+                            artifact.id
+                        ))
+                    })?;
+                if Path::new(filename).components().count() != 1 {
+                    return Err(StepFailure::new(format!(
+                        "manual artifact {:?} has an unsafe expected filename",
+                        artifact.id
+                    )));
+                }
+                let drop_dir = self.created.cache_root.join("manual");
+                ensure_directories(&drop_dir)?;
+                let path = drop_dir.join(filename);
+                if !path.is_file() {
+                    self.sink.emit(EngineEvent::ManualDownloadNeeded {
+                        mod_id: artifact.id.clone(),
+                        page: artifact.source.url.clone(),
+                        expected_sha256: artifact.source.sha256.clone(),
+                        drop_dir: drop_dir.display().to_string(),
+                    });
+                }
+                let verified =
+                    provide_manual_archive(&path, &artifact.source.sha256).map_err(step_error)?;
+                if verified.length != expected_length {
+                    return Err(StepFailure::new(format!(
+                        "manual artifact {:?} length mismatch: expected {expected_length}, got {}",
+                        artifact.id, verified.length
+                    )));
+                }
+                (
+                    verified.path,
+                    artifact.source.url.clone(),
+                    artifact.source.url.clone(),
+                    verified.length,
+                    verified.sha256,
+                    ArtifactCacheOutcome::Manual,
+                )
+            }
+            AcquisitionPolicy::Blocked => {
+                return Err(StepFailure::new(format!(
+                    "frozen artifact {:?} is blocked and cannot be acquired",
+                    artifact.id
+                )))
+            }
+        };
+        let observed_receipt = ArtifactReceipt {
+            id: artifact.id.clone(),
+            version: artifact.version.clone(),
+            original_url,
+            final_url,
+            length,
+            sha256,
+            cache_outcome,
+        };
+        let receipt = match self.load_named_evidence("artifacts", &artifact.id)? {
+            Some(first) => retain_first_acquisition_receipt(&first, &observed_receipt)?,
+            None => {
+                self.persist_named_evidence("artifacts", &artifact.id, &observed_receipt)?;
+                observed_receipt
+            }
+        };
+        Ok((archive_path, receipt))
+    }
+
+    fn extract(&self, artifact: &Artifact) -> Result<ExtractedArtifact, StepFailure> {
+        let (archive, _) = self.acquire_archive(artifact)?;
+        let extracted = extract_archive(
+            &archive,
+            &self.created.cache_root.join("extracted"),
+            &ArchiveRequirements {
+                artifact_sha256: artifact.source.sha256.clone(),
+                format: match artifact.archive.kind {
+                    ManifestArchiveKind::Zip => ArchiveFormat::Zip,
+                    ManifestArchiveKind::Iemod => ArchiveFormat::Iemod,
+                },
+                expected_roots: artifact.archive.publish_roots.clone(),
+                expected_tp2_paths: artifact.archive.tp2_paths.clone(),
+                limits: ArchiveLimits {
+                    max_depth: artifact.archive.limits.max_depth,
+                    max_entries: artifact.archive.limits.max_entries,
+                    max_entry_uncompressed_bytes: artifact
+                        .archive
+                        .limits
+                        .max_entry_uncompressed_bytes,
+                    max_total_uncompressed_bytes: artifact
+                        .archive
+                        .limits
+                        .max_total_uncompressed_bytes,
+                    max_compression_ratio: artifact.archive.limits.max_compression_ratio,
+                },
+                mode: ArchiveMode::Public,
+            },
+        )
+        .map_err(step_error)?;
+        let wrapper_ok = match artifact.archive.root_rule {
+            ArchiveRootRule::Direct => extracted.wrapper_directory.is_none(),
+            ArchiveRootRule::SingleWrapper => extracted.wrapper_directory.is_some(),
+            ArchiveRootRule::DirectOrSingleWrapper => true,
+        };
+        if !wrapper_ok {
+            return Err(StepFailure::new(format!(
+                "artifact {:?} archive root differs from its frozen root rule",
+                artifact.id
+            )));
+        }
+        Ok(extracted)
+    }
+
+    fn verified_tool(&self, id: &str) -> Result<VerifiedWeidu, StepFailure> {
+        let artifact = self.artifact(id)?;
+        let contract = artifact.tool.as_ref().ok_or_else(|| {
+            StepFailure::new(format!("artifact {id:?} has no WeiDU executable contract"))
+        })?;
+        let extracted = self.extract(artifact)?;
+        let executable = extracted.root.join(&contract.executable);
+        let (verified, observed) =
+            verify_tool_contract(&executable, contract).map_err(step_error)?;
+        let receipt = WeiDuToolReceipt {
+            id: artifact.id.clone(),
+            version: observed.weidu_version,
+            length: observed.length,
+            sha256: observed.sha256,
+        };
+        self.persist_named_evidence("tools", &artifact.id, &receipt)?;
+        Ok(verified)
+    }
+
+    fn target_root(&self, target: GameRoot) -> &Path {
+        match target {
+            GameRoot::Bg1 => &self.created.staged_bg1,
+            GameRoot::Bg2 => &self.created.staged_bg2,
+        }
+    }
+
+    fn evidence_root(&self) -> PathBuf {
+        self.created
+            .managed_root
+            .join(STATE_DIRECTORY)
+            .join(EVIDENCE_DIRECTORY)
+    }
+
+    fn named_evidence_path(&self, category: &str, id: &str) -> Result<PathBuf, StepFailure> {
+        validate_cli_identifier(id, "evidence id").map_err(StepFailure::new)?;
+        let directory = self.evidence_root().join(category);
+        ensure_directories(&directory)?;
+        Ok(directory.join(format!("{id}.json")))
+    }
+
+    fn persist_named_evidence<T: Serialize>(
+        &self,
+        category: &str,
+        id: &str,
+        value: &T,
+    ) -> Result<(), StepFailure> {
+        write_json_once(&self.named_evidence_path(category, id)?, value)
+    }
+
+    fn load_named_evidence<T: for<'de> Deserialize<'de>>(
+        &self,
+        category: &str,
+        id: &str,
+    ) -> Result<Option<T>, StepFailure> {
+        read_optional_json(&self.named_evidence_path(category, id)?)
+    }
+
+    fn run_attempt_path(&self, run_id: &str, attempt: u32) -> Result<PathBuf, StepFailure> {
+        validate_cli_identifier(run_id, "run id").map_err(StepFailure::new)?;
+        if attempt == 0 {
+            return Err(StepFailure::new("run attempt number must be positive"));
+        }
+        let directory = self.evidence_root().join("runs").join(run_id);
+        ensure_directories(&directory)?;
+        Ok(directory.join(format!("attempt-{attempt:04}.json")))
+    }
+
+    fn persist_run_attempt(
+        &self,
+        run_id: &str,
+        receipt: &RunAttemptReceipt,
+    ) -> Result<(), StepFailure> {
+        write_json_once(&self.run_attempt_path(run_id, receipt.attempt)?, receipt)
+    }
+
+    fn load_run_receipt(&self, run: &PlannedRun) -> Result<RunReceipt, StepFailure> {
+        validate_cli_identifier(&run.run_id, "run id").map_err(StepFailure::new)?;
+        let directory = self.evidence_root().join("runs").join(&run.run_id);
+        let metadata = match fs::symlink_metadata(&directory) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(RunReceipt {
+                    run_id: run.run_id.clone(),
+                    target: run.target,
+                    components: run.components.clone(),
+                    attempts: Vec::new(),
+                })
+            }
+            Err(error) => return Err(step_error(error)),
+        };
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            return Err(StepFailure::new(format!(
+                "run evidence path is not a direct directory: {}",
+                directory.display()
+            )));
+        }
+        let mut paths = fs::read_dir(&directory)
+            .map_err(step_error)?
+            .map(|entry| entry.map(|entry| entry.path()).map_err(step_error))
+            .collect::<Result<Vec<_>, _>>()?;
+        paths.sort();
+        let mut attempts = Vec::new();
+        for path in paths {
+            let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+                return Err(StepFailure::new(format!(
+                    "run evidence filename is not Unicode: {}",
+                    path.display()
+                )));
+            };
+            if !name.starts_with("attempt-") || !name.ends_with(".json") {
+                return Err(StepFailure::new(format!(
+                    "unexpected run evidence file: {}",
+                    path.display()
+                )));
+            }
+            attempts.push(read_required_json(&path)?);
+        }
+        Ok(RunReceipt {
+            run_id: run.run_id.clone(),
+            target: run.target,
+            components: run.components.clone(),
+            attempts,
+        })
+    }
 }
 
 impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
@@ -1576,13 +2000,44 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
     ) -> Result<(), StepFailure> {
         Self::ensure_source_fresh(&self.current_bg1, &self.frozen.bg1, "BGEE+SoD")?;
         Self::ensure_source_fresh(&self.current_bg2, &self.frozen.bg2, "BG2EE")?;
-        let required_artifacts = Self::required_inputs(&request.created.artifact_identities);
-        let required_tools = Self::required_inputs(&request.created.tool_identities);
+        let required_artifacts = self.required_inputs(&request.created.artifact_identities, false);
+        let required_tools = self.required_inputs(&request.created.tool_identities, true);
+        let staged_copies = directory_bytes(&self.frozen.bg1.root)?
+            .checked_add(directory_bytes(&self.frozen.bg2.root)?)
+            .ok_or_else(|| StepFailure::new("source game byte count overflowed u64"))?;
+        let downloads = request
+            .created
+            .artifact_identities
+            .iter()
+            .try_fold(0_u64, |sum, identity| sum.checked_add(identity.length))
+            .ok_or_else(|| StepFailure::new("artifact byte count overflowed u64"))?;
+        let extraction = request
+            .created
+            .artifact_identities
+            .iter()
+            .try_fold(0_u64, |sum, identity| {
+                self.frozen
+                    .artifacts
+                    .get(&identity.id)
+                    .and_then(|artifact| {
+                        sum.checked_add(artifact.archive.limits.max_total_uncompressed_bytes)
+                    })
+            })
+            .ok_or_else(|| StepFailure::new("archive extraction byte count overflowed u64"))?;
+        let subtotal = staged_copies
+            .checked_add(downloads)
+            .and_then(|sum| sum.checked_add(extraction))
+            .ok_or_else(|| StepFailure::new("preflight byte count overflowed u64"))?;
         initial_preflight(&InitialPreflight {
             bg1_source: &self.current_bg1,
             bg2_source: &self.current_bg2,
             destination: &request.created.managed_root,
-            space: SpaceRequirement::default(),
+            space: SpaceRequirement {
+                staged_copies,
+                downloads,
+                extraction,
+                safety_margin: subtotal / 10,
+            },
             frozen_campaign: replay,
             current_plan: &request.plan,
             expected_review_token: "cli-frozen-review",
@@ -1595,11 +2050,18 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
     }
 
     fn recheck_before_mutation(&mut self, check: &MutationCheck) -> Result<(), StepFailure> {
-        Err(StepFailure::new(format!(
-            "the frozen recipe has no executable mutation metadata for {} ({})",
-            check.step_id,
-            check.kind.as_str()
-        )))
+        if matches!(check.kind, crate::orchestrator::MutationKind::Stage) {
+            let bg1 = inspect_frozen_source(&self.frozen.profiles, &self.frozen.bg1)
+                .map_err(step_error)?;
+            let bg2 = inspect_frozen_source(&self.frozen.profiles, &self.frozen.bg2)
+                .map_err(step_error)?;
+            Self::ensure_source_fresh(&bg1, &self.frozen.bg1, "BGEE+SoD")?;
+            Self::ensure_source_fresh(&bg2, &self.frozen.bg2, "BG2EE")?;
+            recheck_staging_target_before_mutation(self.target_root(check.target), "en_US")
+                .map_err(step_error)?;
+            return Ok(());
+        }
+        recheck_target_before_mutation(self.target_root(check.target), "en_US").map_err(step_error)
     }
 }
 
@@ -1607,37 +2069,50 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
     fn acquire(
         &mut self,
         identity: &FrozenIdentity,
-        _kind: ArtifactKind,
+        kind: ArtifactKind,
     ) -> Result<(), StepFailure> {
-        if let Some(artifact) = self.frozen.artifacts.get(&identity.id) {
-            if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
-                let drop_dir = self.created.cache_root.join("manual");
-                self.sink.emit(EngineEvent::ManualDownloadNeeded {
-                    mod_id: artifact.id.clone(),
-                    page: artifact.source.url.clone(),
-                    expected_sha256: artifact.source.sha256.clone(),
-                    drop_dir: drop_dir.display().to_string(),
-                });
-            }
+        let artifact = self.artifact(&identity.id)?;
+        if artifact.source.expected_length != Some(identity.length)
+            || !artifact
+                .source
+                .sha256
+                .eq_ignore_ascii_case(&identity.sha256)
+        {
+            return Err(StepFailure::new(format!(
+                "frozen archive identity for {:?} differs from its executable recipe",
+                identity.id
+            )));
         }
-        Err(StepFailure::new(format!(
-            "required artifact {:?} has no signed expected length/publication contract",
-            identity.id
-        )))
+        if matches!(kind, ArtifactKind::Tool) && artifact.tool.is_none() {
+            return Err(StepFailure::new(format!(
+                "frozen tool archive {:?} has no executable contract",
+                identity.id
+            )));
+        }
+        self.acquire_archive(artifact).map(|_| ())
     }
 }
 
 impl<S: EventSink> StagingService for GuardedCliDependencies<'_, S> {
     fn stage(&mut self, role: GameRole) -> Result<(), StepFailure> {
-        Err(StepFailure::new(format!(
-            "staging {role:?} is unavailable before executable artifact metadata is frozen"
-        )))
+        let layout = self.layout()?;
+        match role {
+            GameRole::BgeeSod => {
+                let identity = self.save_identity(&layout)?;
+                stage_bgee_sod(&layout, &identity)
+                    .map(|_| ())
+                    .map_err(step_error)
+            }
+            GameRole::Bg2ee => stage_game_copy(&layout, GameRole::Bg2ee)
+                .map(|_| ())
+                .map_err(step_error),
+        }
     }
 
     fn finalize_identity(&mut self) -> Result<(), StepFailure> {
-        Err(StepFailure::new(
-            "final identity is unavailable before a complete staged build",
-        ))
+        let layout = self.layout()?;
+        let identity = self.save_identity(&layout)?;
+        finalize_game_identity(&layout, &identity).map_err(step_error)
     }
 }
 
@@ -1646,10 +2121,33 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
         &mut self,
         task: &MaterializationTask,
     ) -> Result<MaterializationOutcome, StepFailure> {
-        Err(StepFailure::new(format!(
-            "materialization metadata is unavailable for {:?}",
-            task.artifact_id
-        )))
+        let artifact = self.artifact(&task.artifact_id)?;
+        let extracted = self.extract(artifact)?;
+        let result = materialize(
+            &extracted,
+            self.target_root(task.target),
+            &MaterializationRequest {
+                materialization_id: format!(
+                    "materialize-{}",
+                    &sha256_bytes(task.step_id().as_bytes())[..16]
+                ),
+                owner: artifact.id.clone(),
+                roots: artifact.archive.publish_roots.clone(),
+                tp2_paths: artifact.archive.tp2_paths.clone(),
+                collision_rules: Vec::new(),
+            },
+        );
+        match result {
+            Ok(_) => Ok(MaterializationOutcome::Complete),
+            Err(
+                error @ (crate::acquire::AcquireError::UndeclaredOverwrite { .. }
+                | crate::acquire::AcquireError::CollisionRuleRejected { .. }
+                | crate::acquire::AcquireError::PublicationMismatch { .. }),
+            ) => Ok(MaterializationOutcome::FreshCopyRequired {
+                reason: error.to_string(),
+            }),
+            Err(error) => Err(step_error(error)),
+        }
     }
 }
 
@@ -1659,13 +2157,99 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
     fn build(
         &mut self,
         run: &PlannedRun,
-        _components: &[u32],
-        _attempt: &StepAttempt,
+        components: &[u32],
+        attempt: &StepAttempt,
     ) -> Result<BuiltInvocation<Self::Invocation>, StepFailure> {
-        Err(StepFailure::new(format!(
-            "WeiDU invocation metadata is unavailable for {:?}",
-            run.run_id
-        )))
+        ensure_directories(&attempt.evidence_root)?;
+        let mod_file = self.frozen.mods.get(&run.mod_id).ok_or_else(|| {
+            StepFailure::new(format!("frozen installer {:?} is missing", run.mod_id))
+        })?;
+        if mod_file.artifact_id != run.artifact_id
+            || mod_file.weidu_artifact_id != run.weidu_artifact_id
+        {
+            return Err(StepFailure::new(format!(
+                "frozen installer metadata for {:?} differs from its plan",
+                run.run_id
+            )));
+        }
+        // The frozen recipe currently carries the invocation mode but no signed evidence that a
+        // particular explicit relative TP2 path was compatibility-tested. Keep production
+        // execution limited to setup-name mode until that schema contract is separately reviewed.
+        if mod_file.invocation_mode == InvocationMode::ExplicitTp2 {
+            return Err(StepFailure::new(
+                "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence; use setup-name mode",
+            ));
+        }
+        let authored_prompts = run
+            .prompt_scripts
+            .iter()
+            .filter(|script| components.contains(&script.component.component))
+            .flat_map(|script| script.steps.iter())
+            .collect::<Vec<_>>();
+        let prompts = authored_prompts
+            .iter()
+            .map(|prompt| ResolvedPrompt {
+                expected_output: prompt.expected_output.as_bytes().to_vec(),
+                answer: prompt.answer.as_bytes().to_vec(),
+            })
+            .collect();
+        let prompt_receipts = authored_prompts
+            .iter()
+            .map(|prompt| PromptReceipt {
+                expected_output: prompt.expected_output.clone(),
+                answer: sanitize_prompt_answer(
+                    &prompt.answer,
+                    &self.created.staged_bg1,
+                    &self.created.staged_bg2,
+                ),
+                matched: false,
+            })
+            .collect();
+        let prompt_identities = authored_prompts
+            .iter()
+            .enumerate()
+            .map(|(index, prompt)| PromptAnswerEvidence {
+                index,
+                expected_output_sha256: sha256_bytes(prompt.expected_output.as_bytes()),
+                answer_sha256: sha256_bytes(prompt.answer.as_bytes()),
+            })
+            .collect();
+        let tool = self.verified_tool(&run.weidu_artifact_id)?;
+        let invocation = build_invocation(
+            &InvocationInput {
+                target: run.target,
+                tp2: mod_file.tp2.clone(),
+                mode: mod_file.invocation_mode,
+                explicit_tp2_tested: false,
+                language: mod_file.language,
+                remaining_components: components.to_vec(),
+                run_args: run.args.clone(),
+                prompts,
+            },
+            &StagedRoots {
+                bg1: self.created.staged_bg1.clone(),
+                bg2: self.created.staged_bg2.clone(),
+            },
+            &tool,
+            &attempt.evidence_root,
+        )
+        .map_err(step_error)?;
+        write_json_once(
+            &attempt.evidence_root.join(INVOCATION_FILE),
+            &PreparedInvocationEvidence {
+                run_id: run.run_id.clone(),
+                attempt: attempt.attempt,
+                components: components.to_vec(),
+                prompts: prompt_receipts,
+                prompt_identities,
+                invocation_sha256: invocation.identity_digest.clone(),
+                prepared_at_millis: unix_millis()?,
+            },
+        )?;
+        Ok(BuiltInvocation {
+            identity_digest: invocation.identity_digest.clone(),
+            invocation,
+        })
     }
 }
 
@@ -1675,32 +2259,307 @@ impl<S: EventSink + Sync> ProcessRunner<Invocation> for GuardedCliDependencies<'
         invocation: Invocation,
         attempt: &StepAttempt,
     ) -> Result<ProcessResult, StepFailure> {
-        fs::create_dir_all(&attempt.evidence_root).map_err(|error| {
-            StepFailure::new(format!(
-                "could not create process evidence directory {}: {error}",
-                attempt.evidence_root.display()
-            ))
-        })?;
-        let output_log = attempt.evidence_root.join("process-output.log");
+        ensure_directories(&attempt.evidence_root)?;
+        let debug_log = invocation.debug_path.clone();
+        let expected_debug_log = attempt.evidence_root.join(DEBUG_LOG_FILE);
+        if debug_log != expected_debug_log {
+            return Err(StepFailure::new(format!(
+                "invocation debug path {} differs from its attempt evidence path {}",
+                debug_log.display(),
+                expected_debug_log.display()
+            )));
+        }
+        let output_log = attempt.evidence_root.join(PROCESS_OUTPUT_FILE);
+        let started_at_millis = unix_millis()?;
         let result = run_controlled(
             RunnerRequest {
                 invocation,
                 step_id: attempt.step_id.clone(),
-                output_log,
+                output_log: output_log.clone(),
                 silence_threshold: Duration::from_secs(30),
             },
             &self.controls,
             BorrowedSink(self.sink),
         );
-        match result {
-            RunOutcome::Exited { code } => Ok(ProcessResult { exit_code: code }),
-            RunOutcome::Cancelled => Err(StepFailure::new(
+        let completed_at_millis = unix_millis()?;
+        for path in [
+            output_log,
+            attempt.evidence_root.join(STDOUT_FILE),
+            attempt.evidence_root.join(STDERR_FILE),
+            attempt.evidence_root.join(PROMPT_RESULTS_FILE_NAME),
+            debug_log,
+        ] {
+            ensure_empty_file(&path)?;
+            sync_direct_file(&path)?;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU").is_some() {
+            return Err(StepFailure::new(
+                "simulated interruption after WeiDU exit and durable log synchronization",
+            ));
+        }
+        let (exit_code, terminal) = match result {
+            RunOutcome::Exited { code } => (code, ProcessTerminal::Exited),
+            RunOutcome::Cancelled => (-1, ProcessTerminal::Cancelled),
+            RunOutcome::SpawnFailed => (-1, ProcessTerminal::SpawnFailed),
+        };
+        write_json_once(
+            &attempt.evidence_root.join(PROCESS_RESULT_FILE),
+            &ProcessEvidence {
+                started_at_millis,
+                completed_at_millis,
+                exit_code,
+                terminal,
+            },
+        )?;
+        match terminal {
+            ProcessTerminal::Exited => Ok(ProcessResult { exit_code }),
+            ProcessTerminal::Cancelled => Err(StepFailure::new(
                 "installation cancelled by user after the WeiDU process tree terminated",
             )),
-            RunOutcome::SpawnFailed => Err(StepFailure::new(
+            ProcessTerminal::SpawnFailed => Err(StepFailure::new(
                 "WeiDU could not be supervised; inspect the durable attempt diagnostics",
             )),
         }
+    }
+}
+
+impl<S: EventSink> GuardedCliDependencies<'_, S> {
+    fn reconcile_install_attempt(
+        &self,
+        run: &PlannedRun,
+        attempt: &StepAttempt,
+        observed_result: Option<ProcessResult>,
+    ) -> Result<InstallReconciliation, StepFailure> {
+        let prepared: PreparedInvocationEvidence =
+            read_required_json(&attempt.evidence_root.join(INVOCATION_FILE))?;
+        if prepared.run_id != run.run_id
+            || prepared.attempt != attempt.attempt
+            || prepared.components.is_empty()
+            || !run.components.ends_with(&prepared.components)
+        {
+            return Err(StepFailure::new(format!(
+                "invocation evidence for {:?} differs from the frozen run",
+                run.run_id
+            )));
+        }
+        let before = read_direct_file(&attempt.evidence_root.join(BEFORE_LOG_FILE))?;
+        let after = read_optional_weidu_log(self.target_root(run.target))?;
+        write_bytes_once(&attempt.evidence_root.join(AFTER_LOG_FILE), &after)?;
+        let debug = read_direct_file(&attempt.evidence_root.join(DEBUG_LOG_FILE))?;
+        let prompts = self.verified_prompt_receipts(attempt, &prepared)?;
+        let process: Option<ProcessEvidence> =
+            read_optional_json(&attempt.evidence_root.join(PROCESS_RESULT_FILE))?;
+        if let (Some(observed), Some(process)) = (observed_result, process.as_ref()) {
+            if process.terminal != ProcessTerminal::Exited
+                || process.exit_code != observed.exit_code
+            {
+                return Err(StepFailure::new(
+                    "runner result differs from its synchronized process evidence",
+                ));
+            }
+        }
+
+        let statuses = parse_terminal_statuses(&String::from_utf8_lossy(&debug));
+        let proven_no_process_change = before == after
+            && statuses.is_empty()
+            && process
+                .as_ref()
+                .is_some_and(|process| process.terminal != ProcessTerminal::Exited);
+        let reconciliation =
+            if prompts.iter().any(|prompt| !prompt.matched) && !proven_no_process_change {
+                InstallReconciliation::FreshCopyRequired {
+                    reason: "WeiDU did not durably receive every authored prompt answer".to_owned(),
+                }
+            } else if proven_no_process_change {
+                InstallReconciliation::Retry {
+                    remaining: prepared.components.clone(),
+                }
+            } else {
+                let exit_code = process
+                    .as_ref()
+                    .map(|evidence| evidence.exit_code)
+                    .or_else(|| observed_result.map(|result| result.exit_code))
+                    .or_else(|| inferred_success_exit_code(&statuses))
+                    .unwrap_or(-1);
+                match reconcile_weidu(
+                    &String::from_utf8_lossy(&before),
+                    &String::from_utf8_lossy(&after),
+                    &String::from_utf8_lossy(&debug),
+                    &ExpectedRun {
+                        tp2: self
+                            .frozen
+                            .mods
+                            .get(&run.mod_id)
+                            .ok_or_else(|| {
+                                StepFailure::new(format!(
+                                    "frozen installer {:?} is missing",
+                                    run.mod_id
+                                ))
+                            })?
+                            .tp2
+                            .clone(),
+                        language: self.frozen.mods[&run.mod_id].language,
+                        components: prepared.components.clone(),
+                        exit_code,
+                    },
+                ) {
+                    Reconciliation::ProvenDone => InstallReconciliation::ProvenDone,
+                    Reconciliation::PartialPrefix { remaining } => {
+                        InstallReconciliation::PartialPrefix { remaining }
+                    }
+                    Reconciliation::UnchangedRetryable => InstallReconciliation::Retry {
+                        remaining: prepared.components.clone(),
+                    },
+                    Reconciliation::StackDisturbed => InstallReconciliation::FreshCopyRequired {
+                        reason: "WeiDU.log changed outside the exact frozen component suffix"
+                            .to_owned(),
+                    },
+                    Reconciliation::Ambiguous => InstallReconciliation::FreshCopyRequired {
+                        reason: "WeiDU debug/log/exit evidence is incomplete or contradictory"
+                            .to_owned(),
+                    },
+                }
+            };
+
+        if !matches!(
+            reconciliation,
+            InstallReconciliation::FreshCopyRequired { .. }
+        ) {
+            let recovered_process = if process.is_none() && !statuses.is_empty() {
+                Some(ProcessEvidence {
+                    started_at_millis: prepared.prepared_at_millis,
+                    completed_at_millis: unix_millis()?,
+                    exit_code: observed_result.map_or(-1, |result| result.exit_code),
+                    // This in-memory value supplies conservative timing/unknown-exit receipt
+                    // evidence only; it is never persisted as process-result.json.
+                    terminal: ProcessTerminal::SpawnFailed,
+                })
+            } else {
+                None
+            };
+            if let Some(process) = process.as_ref().or(recovered_process.as_ref()) {
+                let receipt = self.build_attempt_receipt(
+                    attempt,
+                    &prepared,
+                    ReconciledAttemptEvidence {
+                        process,
+                        before: &before,
+                        after: &after,
+                        debug: &debug,
+                        prompts,
+                    },
+                )?;
+                self.persist_run_attempt(&run.run_id, &receipt)?;
+            }
+        }
+        Ok(reconciliation)
+    }
+
+    fn build_attempt_receipt(
+        &self,
+        attempt: &StepAttempt,
+        prepared: &PreparedInvocationEvidence,
+        evidence: ReconciledAttemptEvidence<'_>,
+    ) -> Result<RunAttemptReceipt, StepFailure> {
+        let ReconciledAttemptEvidence {
+            process,
+            before,
+            after,
+            debug,
+            prompts,
+        } = evidence;
+        let before_entries =
+            parse_active_entries(&String::from_utf8_lossy(before)).map_err(step_error)?;
+        let after_entries =
+            parse_active_entries(&String::from_utf8_lossy(after)).map_err(step_error)?;
+        if after_entries.len() < before_entries.len()
+            || !before_entries
+                .iter()
+                .zip(&after_entries)
+                .all(|(left, right)| same_log_entry(left, right))
+        {
+            return Err(StepFailure::new(
+                "cannot create run evidence for a disturbed WeiDU.log",
+            ));
+        }
+        let stdout = read_direct_file(&attempt.evidence_root.join(STDOUT_FILE))?;
+        let stderr = read_direct_file(&attempt.evidence_root.join(STDERR_FILE))?;
+        let statuses = parse_terminal_statuses(&String::from_utf8_lossy(debug));
+        let warnings = statuses
+            .iter()
+            .enumerate()
+            .filter(|(_, status)| **status == DebugStatus::InstalledWithWarnings)
+            .map(|(index, _)| {
+                format!(
+                    "component {} installed with warnings",
+                    prepared.components[index]
+                )
+            })
+            .collect();
+        Ok(RunAttemptReceipt {
+            attempt: prepared.attempt,
+            components: prepared.components.clone(),
+            prompts,
+            timing: RunTiming {
+                started_at_millis: process.started_at_millis,
+                completed_at_millis: process.completed_at_millis,
+            },
+            exit_code: process.exit_code,
+            warnings,
+            invocation_sha256: prepared.invocation_sha256.clone(),
+            stdout_sha256: sha256_bytes(&stdout),
+            stderr_sha256: sha256_bytes(&stderr),
+            debug_sha256: sha256_bytes(debug),
+            log_diff: LogDiffReceipt {
+                before_sha256: sha256_bytes(before),
+                after_sha256: sha256_bytes(after),
+                added: after_entries[before_entries.len()..]
+                    .iter()
+                    .map(log_component_receipt)
+                    .collect(),
+                removed: Vec::new(),
+            },
+        })
+    }
+
+    fn verified_prompt_receipts(
+        &self,
+        attempt: &StepAttempt,
+        prepared: &PreparedInvocationEvidence,
+    ) -> Result<Vec<PromptReceipt>, StepFailure> {
+        if prepared.prompts.len() != prepared.prompt_identities.len()
+            || prepared
+                .prompt_identities
+                .iter()
+                .enumerate()
+                .any(|(index, identity)| identity.index != index)
+        {
+            return Err(StepFailure::new(
+                "prepared prompt identities differ from the authored prompt sequence",
+            ));
+        }
+        let bytes = read_direct_file(&attempt.evidence_root.join(PROMPT_RESULTS_FILE_NAME))?;
+        let answered = parse_prompt_results(&bytes).map_err(step_error)?;
+        if answered.len() > prepared.prompt_identities.len()
+            || answered.iter().enumerate().any(|(index, found)| {
+                found.index != index || found != &prepared.prompt_identities[index]
+            })
+        {
+            return Err(StepFailure::new(
+                "runner prompt evidence differs from the prepared authored sequence",
+            ));
+        }
+        Ok(prepared
+            .prompts
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(index, mut prompt)| {
+                prompt.matched = index < answered.len();
+                prompt
+            })
+            .collect())
     }
 }
 
@@ -1715,50 +2574,106 @@ impl<S: EventSink + Sync> EventSink for BorrowedSink<'_, S> {
 impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
     fn recover(
         &mut self,
-        _run: &PlannedRun,
-        _attempt: &StepAttempt,
+        run: &PlannedRun,
+        attempt: &StepAttempt,
     ) -> Result<InstallReconciliation, StepFailure> {
-        Err(StepFailure::new(
-            "no WeiDU evidence exists before executable recipe metadata",
-        ))
+        self.reconcile_install_attempt(run, attempt, None)
     }
 
     fn snapshot_before(
         &mut self,
-        _run: &PlannedRun,
-        _attempt: &StepAttempt,
+        run: &PlannedRun,
+        attempt: &StepAttempt,
     ) -> Result<(), StepFailure> {
-        Err(StepFailure::new(
-            "cannot snapshot an unstaged WeiDU installation",
-        ))
+        ensure_directories(&attempt.evidence_root)?;
+        let before = read_optional_weidu_log(self.target_root(run.target))?;
+        write_bytes_once(&attempt.evidence_root.join(BEFORE_LOG_FILE), &before)
     }
 
     fn record_invocation(
         &mut self,
-        _run: &PlannedRun,
-        _attempt: &StepAttempt,
-        _identity_digest: &str,
+        run: &PlannedRun,
+        attempt: &StepAttempt,
+        identity_digest: &str,
     ) -> Result<(), StepFailure> {
-        Err(StepFailure::new(
-            "cannot record an unavailable WeiDU invocation",
-        ))
+        let evidence: PreparedInvocationEvidence =
+            read_required_json(&attempt.evidence_root.join(INVOCATION_FILE))?;
+        if evidence.run_id != run.run_id
+            || evidence.attempt != attempt.attempt
+            || evidence.invocation_sha256 != identity_digest
+        {
+            return Err(StepFailure::new(
+                "prepared invocation differs from its durable intent evidence",
+            ));
+        }
+        sync_direct_file(&attempt.evidence_root.join(INVOCATION_FILE))
     }
 
     fn sync_and_reconcile(
         &mut self,
-        _run: &PlannedRun,
-        _attempt: &StepAttempt,
-        _result: ProcessResult,
+        run: &PlannedRun,
+        attempt: &StepAttempt,
+        result: ProcessResult,
     ) -> Result<InstallReconciliation, StepFailure> {
-        Err(StepFailure::new(
-            "cannot reconcile an unavailable WeiDU invocation",
-        ))
+        for name in [
+            PROCESS_OUTPUT_FILE,
+            STDOUT_FILE,
+            STDERR_FILE,
+            PROMPT_RESULTS_FILE_NAME,
+            DEBUG_LOG_FILE,
+        ] {
+            sync_direct_file(&attempt.evidence_root.join(name))?;
+        }
+        self.reconcile_install_attempt(run, attempt, Some(result))
     }
 
-    fn verify_final(&mut self, _plan: &InstallPlan) -> Result<(), StepFailure> {
-        Err(StepFailure::new(
-            "final verification requires a complete executable recipe",
-        ))
+    fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure> {
+        let layout = self.layout()?;
+        let identity = self.save_identity(&layout)?;
+        let bg1_engine_name = read_engine_name(layout.bg1_root()).map_err(step_error)?;
+        let bg2_engine_name = read_engine_name(layout.game_root()).map_err(step_error)?;
+        if bg1_engine_name != identity.engine_name || bg2_engine_name != identity.engine_name {
+            return Err(StepFailure::new(
+                "staged game identities differ from the reserved managed save identity",
+            ));
+        }
+        let mut logs = Vec::new();
+        for target in [GameRoot::Bg1, GameRoot::Bg2] {
+            let bytes = read_optional_weidu_log(self.target_root(target))?;
+            let entries =
+                parse_active_entries(&String::from_utf8_lossy(&bytes)).map_err(step_error)?;
+            let expected = expected_log_components(plan, &self.frozen.mods, target)?;
+            if entries.len() != expected.len()
+                || !entries.iter().zip(&expected).all(|(actual, expected)| {
+                    actual.tp2_key == expected.tp2.replace('\\', "/").to_ascii_lowercase()
+                        && actual.language == expected.language
+                        && actual.component == expected.component
+                })
+            {
+                return Err(StepFailure::new(format!(
+                    "final {:?} WeiDU.log does not exactly match the frozen plan",
+                    target
+                )));
+            }
+            logs.push(FinalLogReceipt {
+                target,
+                sha256: sha256_bytes(&bytes),
+                components: entries.iter().map(log_component_receipt).collect(),
+            });
+        }
+        let launch_path = verified_launch_path(plan, layout.game_root())?;
+        let final_state = FinalReceiptState {
+            logs,
+            bg1_engine_name,
+            bg2_engine_name,
+            managed_save_root: identity.save_root,
+            launch_path,
+            verification_summary: format!(
+                "exact frozen stack matched across {} planned WeiDU runs",
+                plan.runs.len()
+            ),
+        };
+        self.persist_named_evidence("final", "state", &final_state)
     }
 }
 
@@ -1768,6 +2683,31 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
             .map_err(|error| StepFailure::new(error.to_string()))?;
         let registry = ManagedInstallRegistry::open_or_create(&self.app_data)
             .map_err(|error| StepFailure::new(error.to_string()))?;
+        let artifacts = self
+            .created
+            .artifact_identities
+            .iter()
+            .map(|identity| self.load_named_evidence("artifacts", &identity.id))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .collect();
+        let weidu_tools = self
+            .created
+            .tool_identities
+            .iter()
+            .map(|identity| self.load_named_evidence("tools", &identity.id))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .collect();
+        let runs = draft
+            .plan
+            .runs
+            .iter()
+            .map(|run| self.load_run_receipt(run))
+            .collect::<Result<Vec<_>, _>>()?;
+        let final_state = self.load_named_evidence("final", "state")?;
         let evidence = ReceiptEvidence {
             versions: ReceiptVersions {
                 application: env!("CARGO_PKG_VERSION").to_owned(),
@@ -1776,10 +2716,10 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
                 recipe: format!("local-{}", &self.created.recipe_payload_sha256[..12]),
             },
             source_games: vec![self.frozen.bg1.receipt(), self.frozen.bg2.receipt()],
-            artifacts: Vec::new(),
-            weidu_tools: Vec::new(),
-            runs: Vec::new(),
-            final_state: None,
+            artifacts,
+            weidu_tools,
+            runs,
+            final_state,
         };
         ManagedReceiptWriter::new(store, registry, "Chriz BG Collection".to_owned(), evidence)
             .write(draft)
@@ -1788,12 +2728,335 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
 
 impl<S: EventSink> CampaignClock for GuardedCliDependencies<'_, S> {
     fn now_millis(&mut self) -> Result<u64, StepFailure> {
-        let millis = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|_| StepFailure::new("system clock is earlier than the Unix epoch"))?
-            .as_millis();
-        u64::try_from(millis).map_err(|_| StepFailure::new("system timestamp does not fit u64"))
+        unix_millis()
     }
+}
+
+fn step_error(error: impl std::fmt::Display) -> StepFailure {
+    StepFailure::new(error.to_string())
+}
+
+fn unix_millis() -> Result<u64, StepFailure> {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| StepFailure::new("system clock is earlier than the Unix epoch"))?
+        .as_millis();
+    u64::try_from(millis).map_err(|_| StepFailure::new("system timestamp does not fit u64"))
+}
+
+fn ensure_directories(path: &Path) -> Result<(), StepFailure> {
+    let absolute = std::path::absolute(path).map_err(step_error)?;
+    let mut missing = Vec::new();
+    let mut cursor = absolute.as_path();
+    loop {
+        match fs::symlink_metadata(cursor) {
+            Ok(metadata) => {
+                if metadata.file_type().is_symlink()
+                    || metadata_is_reparse(&metadata)
+                    || !metadata.is_dir()
+                {
+                    return Err(StepFailure::new(format!(
+                        "path ancestor is not a direct directory: {}",
+                        cursor.display()
+                    )));
+                }
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                missing.push(cursor.to_path_buf());
+                cursor = cursor.parent().ok_or_else(|| {
+                    StepFailure::new(format!(
+                        "path has no existing ancestor: {}",
+                        absolute.display()
+                    ))
+                })?;
+            }
+            Err(error) => return Err(step_error(error)),
+        }
+    }
+    for directory in missing.into_iter().rev() {
+        match fs::create_dir(&directory) {
+            Ok(()) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(error) => return Err(step_error(error)),
+        }
+        let metadata = fs::symlink_metadata(&directory).map_err(step_error)?;
+        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir()
+        {
+            return Err(StepFailure::new(format!(
+                "created path is not a direct directory: {}",
+                directory.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn write_json_once<T: Serialize>(path: &Path, value: &T) -> Result<(), StepFailure> {
+    let mut bytes = serde_json::to_vec_pretty(value).map_err(step_error)?;
+    bytes.push(b'\n');
+    write_bytes_once(path, &bytes)
+}
+
+fn write_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| StepFailure::new(format!("path has no parent: {}", path.display())))?;
+    ensure_directories(parent)?;
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => {
+            if metadata.file_type().is_symlink()
+                || metadata_is_reparse(&metadata)
+                || !metadata.is_file()
+            {
+                return Err(StepFailure::new(format!(
+                    "evidence path is not a direct file: {}",
+                    path.display()
+                )));
+            }
+            let existing = fs::read(path).map_err(step_error)?;
+            if existing != bytes {
+                return Err(StepFailure::new(format!(
+                    "create-once evidence differs at {}",
+                    path.display()
+                )));
+            }
+            return Ok(());
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(step_error(error)),
+    }
+    let mut file = OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(path)
+        .map_err(step_error)?;
+    file.write_all(bytes).map_err(step_error)?;
+    file.sync_all().map_err(step_error)
+}
+
+fn ensure_empty_file(path: &Path) -> Result<(), StepFailure> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata)
+            if !metadata.file_type().is_symlink()
+                && !metadata_is_reparse(&metadata)
+                && metadata.is_file() =>
+        {
+            Ok(())
+        }
+        Ok(_) => Err(StepFailure::new(format!(
+            "process evidence is not a direct file: {}",
+            path.display()
+        ))),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => write_bytes_once(path, b""),
+        Err(error) => Err(step_error(error)),
+    }
+}
+
+fn read_required_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, StepFailure> {
+    serde_json::from_slice(&read_direct_file(path)?).map_err(step_error)
+}
+
+fn read_optional_json<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<Option<T>, StepFailure> {
+    match fs::symlink_metadata(path) {
+        Ok(_) => read_required_json(path).map(Some),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(step_error(error)),
+    }
+}
+
+fn read_direct_file(path: &Path) -> Result<Vec<u8>, StepFailure> {
+    let metadata = fs::symlink_metadata(path).map_err(step_error)?;
+    if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_file() {
+        return Err(StepFailure::new(format!(
+            "evidence is not a direct regular file: {}",
+            path.display()
+        )));
+    }
+    fs::read(path).map_err(step_error)
+}
+
+fn sync_direct_file(path: &Path) -> Result<(), StepFailure> {
+    let metadata = fs::symlink_metadata(path).map_err(step_error)?;
+    if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_file() {
+        return Err(StepFailure::new(format!(
+            "cannot sync non-direct evidence file: {}",
+            path.display()
+        )));
+    }
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(path)
+        .and_then(|file| file.sync_all())
+        .map_err(step_error)
+}
+
+fn read_optional_weidu_log(root: &Path) -> Result<Vec<u8>, StepFailure> {
+    let path = root.join("WeiDU.log");
+    match fs::symlink_metadata(&path) {
+        Ok(_) => read_direct_file(&path),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+        Err(error) => Err(step_error(error)),
+    }
+}
+
+fn directory_bytes(root: &Path) -> Result<u64, StepFailure> {
+    let metadata = fs::symlink_metadata(root).map_err(step_error)?;
+    if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir() {
+        return Err(StepFailure::new(format!(
+            "source tree root is not a direct directory: {}",
+            root.display()
+        )));
+    }
+    let mut total = 0_u64;
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(directory) = pending.pop() {
+        for entry in fs::read_dir(&directory).map_err(step_error)? {
+            let entry = entry.map_err(step_error)?;
+            let path = entry.path();
+            let metadata = fs::symlink_metadata(&path).map_err(step_error)?;
+            if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) {
+                return Err(StepFailure::new(format!(
+                    "source tree contains a link or reparse point: {}",
+                    path.display()
+                )));
+            }
+            if metadata.is_dir() {
+                pending.push(path);
+            } else if metadata.is_file() {
+                total = total
+                    .checked_add(metadata.len())
+                    .ok_or_else(|| StepFailure::new("source tree byte count overflowed u64"))?;
+            } else {
+                return Err(StepFailure::new(format!(
+                    "source tree contains an unsupported filesystem entry: {}",
+                    path.display()
+                )));
+            }
+        }
+    }
+    Ok(total)
+}
+
+fn expected_log_components(
+    plan: &InstallPlan,
+    mods: &BTreeMap<String, ModFile>,
+    target: GameRoot,
+) -> Result<Vec<LogComponentReceipt>, StepFailure> {
+    let mut expected = Vec::new();
+    for run in plan.runs.iter().filter(|run| run.target == target) {
+        let mod_file = mods.get(&run.mod_id).ok_or_else(|| {
+            StepFailure::new(format!("frozen installer {:?} is missing", run.mod_id))
+        })?;
+        expected.extend(run.components.iter().map(|component| LogComponentReceipt {
+            tp2: mod_file.tp2.replace('\\', "/").to_ascii_lowercase(),
+            language: mod_file.language,
+            component: *component,
+        }));
+    }
+    Ok(expected)
+}
+
+fn same_log_entry(left: &LogEntry, right: &LogEntry) -> bool {
+    left.tp2_key == right.tp2_key
+        && left.language == right.language
+        && left.component == right.component
+}
+
+fn log_component_receipt(entry: &LogEntry) -> LogComponentReceipt {
+    LogComponentReceipt {
+        tp2: entry.tp2_key.clone(),
+        language: entry.language,
+        component: entry.component,
+    }
+}
+
+fn inferred_success_exit_code(statuses: &[DebugStatus]) -> Option<i32> {
+    if statuses.is_empty()
+        || statuses.iter().any(|status| {
+            matches!(
+                status,
+                DebugStatus::NotInstalledDueToErrors | DebugStatus::Skipped
+            )
+        })
+    {
+        return None;
+    }
+    if statuses.contains(&DebugStatus::InstalledWithWarnings) {
+        Some(3)
+    } else {
+        Some(0)
+    }
+}
+
+fn retain_first_acquisition_receipt(
+    first: &ArtifactReceipt,
+    observed: &ArtifactReceipt,
+) -> Result<ArtifactReceipt, StepFailure> {
+    if first == observed {
+        return Ok(first.clone());
+    }
+    let mut later_hit = observed.clone();
+    let downloaded_then_hit = first.cache_outcome == ArtifactCacheOutcome::Downloaded
+        && later_hit.cache_outcome == ArtifactCacheOutcome::Hit;
+    later_hit.cache_outcome = first.cache_outcome;
+    if downloaded_then_hit && &later_hit == first {
+        return Ok(first.clone());
+    }
+    Err(StepFailure::new(format!(
+        "artifact {:?} differs from its first acquisition evidence",
+        first.id
+    )))
+}
+
+fn sanitize_prompt_answer(answer: &str, bg1: &Path, bg2: &Path) -> String {
+    answer
+        .replace(&bg1.display().to_string(), "<staged-bg1>")
+        .replace(&bg2.display().to_string(), "<staged-bg2>")
+}
+
+fn verified_launch_path(plan: &InstallPlan, game_root: &Path) -> Result<PathBuf, StepFailure> {
+    let infinity_loader = game_root.join("InfinityLoader.exe");
+    if plan
+        .runs
+        .iter()
+        .any(|run| run.mod_id.eq_ignore_ascii_case("eeex"))
+    {
+        return direct_regular_file(&infinity_loader)
+            .then_some(infinity_loader)
+            .ok_or_else(|| {
+                StepFailure::new(
+                    "EEex is selected but InfinityLoader.exe is unavailable in the staged BG2 root",
+                )
+            });
+    }
+    if direct_regular_file(&infinity_loader) {
+        return Ok(infinity_loader);
+    }
+    let vanilla = game_root.join("Baldur.exe");
+    direct_regular_file(&vanilla)
+        .then_some(vanilla)
+        .ok_or_else(|| StepFailure::new("staged BG2 root has no verified launch executable"))
+}
+
+fn direct_regular_file(path: &Path) -> bool {
+    fs::symlink_metadata(path).is_ok_and(|metadata| {
+        !metadata.file_type().is_symlink() && !metadata_is_reparse(&metadata) && metadata.is_file()
+    })
+}
+
+#[cfg(windows)]
+fn metadata_is_reparse(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    metadata.file_attributes()
+        & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+        != 0
+}
+
+#[cfg(not(windows))]
+fn metadata_is_reparse(_metadata: &fs::Metadata) -> bool {
+    false
 }
 
 fn load_recipe(recipe: &Path) -> Result<Manifest, CliError> {
@@ -1956,9 +3219,48 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
+    use crate::receipt::{ArtifactCacheOutcome, ArtifactReceipt};
     use crate::weidu::runner::{RunnerControl, RunnerControlHandle};
 
-    use super::install_interrupt_handler_with;
+    use super::{install_interrupt_handler_with, retain_first_acquisition_receipt};
+
+    fn downloaded_artifact_receipt() -> ArtifactReceipt {
+        ArtifactReceipt {
+            id: "test-mod".to_owned(),
+            version: "1.0".to_owned(),
+            original_url: "https://example.invalid/test-mod.zip".to_owned(),
+            final_url: "https://cdn.example.invalid/test-mod.zip".to_owned(),
+            length: 42,
+            sha256: "ab".repeat(32),
+            cache_outcome: ArtifactCacheOutcome::Downloaded,
+        }
+    }
+
+    #[test]
+    fn later_cache_hit_retains_the_first_download_acquisition_receipt() {
+        let first = downloaded_artifact_receipt();
+        let mut revalidated = first.clone();
+        revalidated.cache_outcome = ArtifactCacheOutcome::Hit;
+
+        let retained = retain_first_acquisition_receipt(&first, &revalidated)
+            .expect("same immutable archive may become a cache hit later in the campaign");
+
+        assert_eq!(retained, first);
+    }
+
+    #[test]
+    fn later_cache_observation_cannot_change_acquisition_provenance() {
+        let first = downloaded_artifact_receipt();
+        let mut changed = first.clone();
+        changed.cache_outcome = ArtifactCacheOutcome::Hit;
+        changed.final_url = "https://other.invalid/test-mod.zip".to_owned();
+
+        let error = retain_first_acquisition_receipt(&first, &changed).unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("differs from its first acquisition evidence"));
+    }
 
     #[test]
     fn interrupt_handler_forwards_cancel_to_the_active_runner_channel() {

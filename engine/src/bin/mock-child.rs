@@ -24,7 +24,9 @@ fn dispatch(args: Vec<OsString>) -> io::Result<()> {
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "missing mode"))?;
     match mode {
         "--version" => weidu_version(),
+        "--language" => weidu_install(&args),
         "fragmented-prompt" => fragmented_prompt(),
+        "emit-prompt-exit" => emit_prompt_exit(),
         "unmatched-prompt" => unmatched_prompt(),
         "quiet" => quiet(parse_millis(args.get(1))?),
         "expect-eof" => expect_eof(),
@@ -37,6 +39,91 @@ fn dispatch(args: Vec<OsString>) -> io::Result<()> {
             format!("unknown mode {mode:?}"),
         )),
     }
+}
+
+fn weidu_install(args: &[OsString]) -> io::Result<()> {
+    let language = argument_after(args, "--language")?;
+    let debug_path = PathBuf::from(argument_after_os(args, "--log")?);
+    let component_start = args
+        .iter()
+        .position(|arg| arg == "--force-install-list")
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "missing component list"))?
+        + 1;
+    let component_end = args[component_start..]
+        .iter()
+        .position(|arg| arg == "--no-exit-pause")
+        .map(|offset| component_start + offset)
+        .ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "unterminated component list")
+        })?;
+    let components = args[component_start..component_end]
+        .iter()
+        .map(|value| {
+            value
+                .to_str()
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid component"))?
+                .parse::<u32>()
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid component"))
+        })
+        .collect::<io::Result<Vec<_>>>()?;
+    if components.is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "empty component list",
+        ));
+    }
+    let tp2 = env::var("CHRIZ_TEST_MOCK_WEIDU_TP2")
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "missing synthetic TP2"))?;
+
+    if let Some(marker) = env::var_os("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE") {
+        let marker = PathBuf::from(marker);
+        if !marker.exists() {
+            fs::write(&marker, b"failed once")?;
+            let mut debug = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&debug_path)?;
+            for component in &components {
+                writeln!(debug, "NOT INSTALLED DUE TO ERRORS component {component}")?;
+            }
+            debug.sync_all()?;
+            eprintln!("synthetic WeiDU failure before mutation");
+            return Err(io::Error::other("synthetic first-attempt failure"));
+        }
+    }
+
+    let mut log = fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(env::current_dir()?.join("WeiDU.log"))?;
+    let mut debug = fs::OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(&debug_path)?;
+    for component in &components {
+        writeln!(
+            log,
+            "~{tp2}~ #{language} #{component} // Synthetic component {component}"
+        )?;
+        writeln!(debug, "SUCCESSFULLY INSTALLED component {component}")?;
+        println!("installed synthetic component {component}");
+    }
+    log.sync_all()?;
+    debug.sync_all()
+}
+
+fn argument_after<'a>(args: &'a [OsString], flag: &str) -> io::Result<&'a str> {
+    argument_after_os(args, flag)?
+        .to_str()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid argument encoding"))
+}
+
+fn argument_after_os<'a>(args: &'a [OsString], flag: &str) -> io::Result<&'a std::ffi::OsStr> {
+    args.iter()
+        .position(|arg| arg == flag)
+        .and_then(|index| args.get(index + 1))
+        .map(OsString::as_os_str)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, format!("missing {flag}")))
 }
 
 fn weidu_version() -> io::Result<()> {
@@ -105,6 +192,11 @@ fn fragmented_prompt() -> io::Result<()> {
         .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "answer did not arrive"))??;
     println!("answer:{}", answer.trim_end());
     Ok(())
+}
+
+fn emit_prompt_exit() -> io::Result<()> {
+    print!("Choose option: ");
+    io::stdout().flush()
 }
 
 fn unmatched_prompt() -> io::Result<()> {

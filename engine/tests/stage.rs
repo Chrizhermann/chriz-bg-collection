@@ -6,8 +6,8 @@ use std::time::{Duration, SystemTime};
 use bg_engine::games::GameRole;
 use bg_engine::stage::{
     finalize_game_identity, propose_save_identity, read_engine_name, reserve_save_identity,
-    stage_game_copy, stage_game_copy_with_observer, stage_initial_games, DocumentsLocator,
-    ManagedLayout, StageObserver, SystemDocuments,
+    stage_bgee_sod, stage_game_copy, stage_game_copy_with_observer, stage_initial_games,
+    DocumentsLocator, ManagedLayout, StageObserver, SystemDocuments,
 };
 
 fn source_tree(root: &Path, name: &str) -> PathBuf {
@@ -521,6 +521,30 @@ fn initial_staging_patches_only_bg1_and_finalization_repatches_bg2() {
         read_engine_name(layout.game_root()).unwrap(),
         identity.engine_name
     );
+}
+
+#[test]
+fn single_role_bg1_staging_patches_identity_without_touching_bg2() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents),
+        &layout,
+        "Chriz EET 2.7 RC",
+        "install-one",
+    )
+    .unwrap();
+
+    let report = stage_bgee_sod(&layout, &identity).unwrap();
+
+    assert_eq!(report.copied_files, 2);
+    assert_eq!(
+        read_engine_name(layout.bg1_root()).unwrap(),
+        identity.engine_name
+    );
+    assert_eq!(fs::read_dir(layout.game_root()).unwrap().count(), 0);
 }
 
 #[test]

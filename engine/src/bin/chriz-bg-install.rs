@@ -284,8 +284,10 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
             };
             if cli.json {
                 let sink = BufferedSink::default();
-                let report = install_campaign_controlled(&request, &sink, &controls)?;
-                finish_json_campaign("install", report, sink.into_events())?;
+                match install_campaign_controlled(&request, &sink, &controls) {
+                    Ok(report) => finish_json_campaign("install", report, sink.into_events())?,
+                    Err(error) => return Err(error.with_events(sink.into_events())),
+                }
             } else {
                 finish_human_campaign(install_campaign_controlled(
                     &request,
@@ -299,8 +301,10 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
             install_interrupt_handler(&controls)?;
             if cli.json {
                 let sink = BufferedSink::default();
-                let report = resume_campaign_controlled(managed_root, &sink, &controls)?;
-                finish_json_campaign("resume", report, sink.into_events())?;
+                match resume_campaign_controlled(managed_root, &sink, &controls) {
+                    Ok(report) => finish_json_campaign("resume", report, sink.into_events())?,
+                    Err(error) => return Err(error.with_events(sink.into_events())),
+                }
             } else {
                 finish_human_campaign(resume_campaign_controlled(
                     managed_root,

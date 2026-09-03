@@ -85,6 +85,11 @@ fn fixture(include_success: bool) -> Fixture {
         ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/invocation.json",
         br#"{"identity_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
     );
+    write(
+        &managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/prompt-results.jsonl",
+        b"{\"index\":0,\"expected_output_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"answer_sha256\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}\n",
+    );
     if include_success {
         write(
             &managed,
@@ -147,6 +152,7 @@ fn success_bundle_uses_an_explicit_allowlist_and_redacts_personal_or_secret_text
     assert!(names.contains(&format!("{evidence_root}/before.log").as_str()));
     assert!(names.contains(&format!("{evidence_root}/after.log").as_str()));
     assert!(names.contains(&format!("{evidence_root}/invocation.json").as_str()));
+    assert!(names.contains(&format!("{evidence_root}/prompt-results.jsonl").as_str()));
     assert!(!names.iter().any(|name| name.contains("archive")));
     assert!(!names.iter().any(|name| name.contains("private-key")));
     assert!(!names.iter().any(|name| name.contains("credentials")));

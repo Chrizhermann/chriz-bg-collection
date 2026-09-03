@@ -979,11 +979,7 @@ where
                 Ok(None)
             }
             Ok(SimpleExecution::FreshCopyRequired(reason)) => {
-                self.emit_fresh_copy(step, &reason);
-                Ok(Some(CampaignOutcome::FreshCopyRequired {
-                    step_id: step.id.clone(),
-                    reason,
-                }))
+                self.seal_fresh_copy(step, &attempt, reason).map(Some)
             }
             Err(failure) => {
                 let reason = failure.into_message();
@@ -1038,19 +1034,11 @@ where
                     self.begin_new(step)?
                 }
                 Ok(InstallReconciliation::FreshCopyRequired { reason }) => {
-                    self.emit_fresh_copy(step, &reason);
-                    return Ok(Some(CampaignOutcome::FreshCopyRequired {
-                        step_id: step.id.clone(),
-                        reason,
-                    }));
+                    return self.seal_fresh_copy(step, &attempt, reason).map(Some);
                 }
                 Err(failure) => {
                     let reason = format!("could not reconcile interrupted evidence: {failure}");
-                    self.emit_fresh_copy(step, &reason);
-                    return Ok(Some(CampaignOutcome::FreshCopyRequired {
-                        step_id: step.id.clone(),
-                        reason,
-                    }));
+                    return self.seal_fresh_copy(step, &attempt, reason).map(Some);
                 }
             }
         } else if let Some(attempt) = self.progress.last_failed.get(&step.id).copied() {
@@ -1072,19 +1060,15 @@ where
                     self.begin_new(step)?
                 }
                 Ok(InstallReconciliation::FreshCopyRequired { reason }) => {
-                    self.emit_fresh_copy(step, &reason);
-                    return Ok(Some(CampaignOutcome::FreshCopyRequired {
-                        step_id: step.id.clone(),
-                        reason,
-                    }));
+                    return self
+                        .seal_fresh_copy(step, &evidence_attempt, reason)
+                        .map(Some);
                 }
                 Err(failure) => {
                     let reason = format!("could not reconcile failed attempt evidence: {failure}");
-                    self.emit_fresh_copy(step, &reason);
-                    return Ok(Some(CampaignOutcome::FreshCopyRequired {
-                        step_id: step.id.clone(),
-                        reason,
-                    }));
+                    return self
+                        .seal_fresh_copy(step, &evidence_attempt, reason)
+                        .map(Some);
                 }
             }
         } else {
@@ -1131,11 +1115,9 @@ where
                     let remaining = validate_remaining(&run, &remaining, Some(&components))?;
                     if remaining.len() >= components.len() {
                         let reason = "partial-prefix evidence did not reduce the remaining suffix";
-                        self.emit_fresh_copy(step, reason);
-                        return Ok(Some(CampaignOutcome::FreshCopyRequired {
-                            step_id: step.id.clone(),
-                            reason: reason.to_owned(),
-                        }));
+                        return self
+                            .seal_fresh_copy(step, &current, reason.to_owned())
+                            .map(Some);
                     }
                     self.fail_step(
                         step,
@@ -1146,11 +1128,7 @@ where
                     current = self.begin_new(step)?;
                 }
                 InstallReconciliation::FreshCopyRequired { reason } => {
-                    self.emit_fresh_copy(step, &reason);
-                    return Ok(Some(CampaignOutcome::FreshCopyRequired {
-                        step_id: step.id.clone(),
-                        reason,
-                    }));
+                    return self.seal_fresh_copy(step, &current, reason).map(Some);
                 }
             }
         }
@@ -1193,19 +1171,7 @@ where
             "run {:?} postcondition verification failed after installed state was proven: {error}",
             run.run_id
         );
-        self.store.append(SessionEvent::FreshCopyRequired {
-            step_id: step.id.clone(),
-            attempt: attempt.attempt,
-            detail: reason.clone(),
-        })?;
-        self.progress.unresolved = None;
-        self.progress.last_failed.remove(&step.id);
-        self.progress.fresh_copy_required = Some((step.id.clone(), reason.clone()));
-        self.emit_fresh_copy(step, &reason);
-        Ok(Some(CampaignOutcome::FreshCopyRequired {
-            step_id: step.id.clone(),
-            reason,
-        }))
+        self.seal_fresh_copy(step, attempt, reason).map(Some)
     }
 
     fn begin_or_resume(&mut self, step: &PipelineStep) -> Result<StepAttempt, OrchestratorError> {
@@ -1271,6 +1237,27 @@ where
         });
         emit_finished(self.sink, &step.id, StepOutcome::Failed);
         Ok(())
+    }
+
+    fn seal_fresh_copy(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        reason: String,
+    ) -> Result<CampaignOutcome, OrchestratorError> {
+        self.store.append(SessionEvent::FreshCopyRequired {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            detail: nonempty_detail(&reason),
+        })?;
+        self.progress.unresolved = None;
+        self.progress.last_failed.remove(&step.id);
+        self.progress.fresh_copy_required = Some((step.id.clone(), reason.clone()));
+        self.emit_fresh_copy(step, &reason);
+        Ok(CampaignOutcome::FreshCopyRequired {
+            step_id: step.id.clone(),
+            reason,
+        })
     }
 
     fn emit_fresh_copy(&self, step: &PipelineStep, reason: &str) {
