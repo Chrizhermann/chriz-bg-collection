@@ -68,6 +68,20 @@ fn sha256(path: &Path) -> String {
     hex::encode(hash.finalize())
 }
 
+fn sha256_bytes(bytes: &[u8]) -> String {
+    hex::encode(Sha256::digest(bytes))
+}
+
+fn edit_extraction_marker(root: &Path, edit: impl FnOnce(&mut serde_json::Value)) {
+    let path = root.join(".chriz-bg-extraction.json");
+    let mut marker: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    edit(&mut marker);
+    let mut bytes = serde_json::to_vec_pretty(&marker).unwrap();
+    bytes.push(b'\n');
+    std::fs::write(path, bytes).unwrap();
+}
+
 fn requirements(path: &Path) -> ArchiveRequirements {
     ArchiveRequirements {
         artifact_sha256: sha256(path),
@@ -459,6 +473,134 @@ fn ignores_the_unreleased_v1_extraction_namespace() {
         published_path(&temp.path().join("extract"), &digest)
     );
     assert!(legacy.join("untrusted-v1-file").is_file());
+}
+
+#[test]
+fn cache_hit_rejects_a_matching_tree_and_marker_record_outside_publish_roots() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("valid.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/data.txt", DATA, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    let injected = b"matching outside bytes";
+    std::fs::create_dir(extracted.root.join("MOD-LIVE")).unwrap();
+    std::fs::write(extracted.root.join("MOD-LIVE/injected.txt"), injected).unwrap();
+    edit_extraction_marker(&extracted.root, |marker| {
+        marker["files"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({
+                "relative_path": "MOD-LIVE/injected.txt",
+                "length": injected.len(),
+                "sha256": sha256_bytes(injected),
+            }));
+    });
+
+    let error = extract_archive(&archive, &cache, &request).unwrap_err();
+
+    assert!(matches!(
+        error,
+        AcquireError::CorruptCache { message, .. }
+            if message.contains("outside declared publish roots")
+    ));
+}
+
+#[test]
+fn cache_hit_requires_every_declared_tp2_to_be_a_recorded_regular_file() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("valid.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/data.txt", DATA, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    std::fs::remove_file(extracted.root.join("mod/setup-mod.tp2")).unwrap();
+    edit_extraction_marker(&extracted.root, |marker| {
+        marker["files"].as_array_mut().unwrap().retain(|record| {
+            !record["relative_path"]
+                .as_str()
+                .unwrap()
+                .eq_ignore_ascii_case("mod/setup-mod.tp2")
+        });
+    });
+
+    let error = extract_archive(&archive, &cache, &request).unwrap_err();
+
+    assert!(matches!(
+        error,
+        AcquireError::CorruptCache { message, .. }
+            if message.contains("expected TP2") && message.contains("setup-mod.tp2")
+    ));
+}
+
+#[test]
+fn cache_hit_requires_every_publish_root_to_own_a_recorded_regular_file() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("multiple-roots.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("extra/readme.txt", DATA, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let mut request = requirements(&archive);
+    request.expected_roots.push("extra".to_owned());
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    std::fs::remove_file(extracted.root.join("extra/readme.txt")).unwrap();
+    std::fs::remove_dir(extracted.root.join("extra")).unwrap();
+    edit_extraction_marker(&extracted.root, |marker| {
+        marker["files"].as_array_mut().unwrap().retain(|record| {
+            !record["relative_path"]
+                .as_str()
+                .unwrap()
+                .eq_ignore_ascii_case("extra/readme.txt")
+        });
+    });
+
+    let error = extract_archive(&archive, &cache, &request).unwrap_err();
+
+    assert!(matches!(
+        error,
+        AcquireError::CorruptCache { message, .. }
+            if message.contains("publish root") && message.contains("extra")
+    ));
+}
+
+#[test]
+fn cache_hit_root_and_tp2_ownership_is_case_insensitive_but_component_bounded() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("case.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("MOD/SETUP-MOD.TP2", TP2, CompressionMethod::Stored),
+            Entry::File("MOD/data.txt", DATA, CompressionMethod::Stored),
+            Entry::File("mod-live/setup-live.tp2", TP2, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+
+    let first = extract_archive(&archive, &cache, &request).unwrap();
+    let second = extract_archive(&archive, &cache, &request).unwrap();
+
+    assert_eq!(first, second);
+    assert!(second.root.join("MOD/SETUP-MOD.TP2").is_file());
+    assert!(!second.root.join("mod-live").exists());
 }
 
 #[test]

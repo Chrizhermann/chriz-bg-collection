@@ -764,6 +764,11 @@ fn validate_published_extraction(
         });
     }
     let mut expected_files = BTreeMap::new();
+    let mut missing_tp2s = expected_tp2_paths
+        .iter()
+        .map(|path| (casefold(path), path))
+        .collect::<BTreeMap<_, _>>();
+    let mut root_has_file = vec![false; expected_roots.len()];
     for record in &marker.files {
         let relative_path =
             normalize_relative_path(&record.relative_path, false).map_err(|error| {
@@ -772,6 +777,22 @@ fn validate_published_extraction(
                     message: format!("invalid marker path `{}`: {error}", record.relative_path),
                 }
             })?;
+        let mut owned = false;
+        for (index, root) in expected_roots.iter().enumerate() {
+            if path_is_within_root(root, &relative_path) {
+                root_has_file[index] = true;
+                owned = true;
+            }
+        }
+        if !owned {
+            return Err(AcquireError::CorruptCache {
+                digest: digest.to_owned(),
+                message: format!(
+                    "extraction marker path `{relative_path}` is outside declared publish roots"
+                ),
+            });
+        }
+        missing_tp2s.remove(&casefold(&relative_path));
         if record.sha256.len() != 64 || !record.sha256.bytes().all(|byte| byte.is_ascii_hexdigit())
         {
             return Err(AcquireError::CorruptCache {
@@ -788,6 +809,25 @@ fn validate_published_extraction(
                 message: "duplicate case-insensitive extraction marker path".to_owned(),
             });
         }
+    }
+    if let Some((_key, path)) = missing_tp2s.into_iter().next() {
+        return Err(AcquireError::CorruptCache {
+            digest: digest.to_owned(),
+            message: format!("expected TP2 `{path}` is missing from the extraction marker"),
+        });
+    }
+    if let Some((index, _)) = root_has_file
+        .iter()
+        .enumerate()
+        .find(|(_index, has_file)| !**has_file)
+    {
+        return Err(AcquireError::CorruptCache {
+            digest: digest.to_owned(),
+            message: format!(
+                "publish root `{}` has no recorded regular file",
+                expected_roots[index]
+            ),
+        });
     }
     for entry in WalkDir::new(&root).min_depth(1).follow_links(false) {
         let entry = entry.map_err(|error| AcquireError::CorruptCache {
