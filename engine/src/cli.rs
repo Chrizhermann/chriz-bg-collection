@@ -221,6 +221,24 @@ pub struct InstallCommandRequest {
     pub cache: PathBuf,
 }
 
+/// Exact engine-owned identity shown at Review and required again at Start.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstallReviewIdentity {
+    /// Digest of the complete serialized recipe, profiles, sources, selection, and plan.
+    pub recipe_payload_sha256: String,
+    /// Canonical normalized semantic selection digest.
+    pub selection_sha256: String,
+    /// Canonical resolved component-plan digest.
+    pub plan_sha256: String,
+    /// Exact clean source-game fingerprints.
+    pub source_games: SourceGameFingerprints,
+    /// Canonical prospective managed-copy root.
+    pub managed_root: PathBuf,
+    /// Canonical content-addressed cache root.
+    pub cache_root: PathBuf,
+}
+
 /// Machine-readable result retained even when a campaign stops on a safe guard.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -281,6 +299,11 @@ struct FrozenSource {
     root: PathBuf,
     build: Option<String>,
     fingerprint: String,
+}
+
+struct PreparedInstall {
+    created: CampaignCreated,
+    frozen: FrozenCliRecipe,
 }
 
 #[derive(Debug, Serialize)]
@@ -514,6 +537,35 @@ pub fn install_campaign_controlled<S: EventSink + Sync>(
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
+    let prepared = prepare_install(request)?;
+    execute_frozen_campaign(prepared.created, prepared.frozen, sink, controls)
+}
+
+/// Resolve the complete engine-owned identity that a UI must show and bind at Review.
+pub fn review_install(request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
+    let prepared = prepare_install(request)?;
+    Ok(install_review_identity(&prepared.created))
+}
+
+/// Start only when the current inputs still match the identity accepted at Review.
+pub fn install_campaign_reviewed<S: EventSink + Sync>(
+    request: &InstallCommandRequest,
+    expected: &InstallReviewIdentity,
+    sink: &S,
+    controls: &RunnerControlHandle,
+) -> Result<CampaignReport, CliError> {
+    let prepared = prepare_install(request)?;
+    let current = install_review_identity(&prepared.created);
+    if current != *expected {
+        return Err(CliError::new(
+            "review_changed",
+            "the recipe, selection, sources, destination, or cache changed after Review; review the build again",
+        ));
+    }
+    execute_frozen_campaign(prepared.created, prepared.frozen, sink, controls)
+}
+
+fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
     let manifest = load_recipe(&request.recipe)?;
     validate::check(&manifest).map_err(|error| {
         CliError::new(
@@ -586,7 +638,18 @@ pub fn install_campaign_controlled<S: EventSink + Sync>(
         staged_bg1: managed_root.join("bg1"),
         staged_bg2: managed_root.join("game"),
     };
-    execute_frozen_campaign(created, frozen, sink, controls)
+    Ok(PreparedInstall { created, frozen })
+}
+
+fn install_review_identity(created: &CampaignCreated) -> InstallReviewIdentity {
+    InstallReviewIdentity {
+        recipe_payload_sha256: created.recipe_payload_sha256.clone(),
+        selection_sha256: created.selection_sha256.clone(),
+        plan_sha256: created.plan_sha256.clone(),
+        source_games: created.source_games.clone(),
+        managed_root: created.managed_root.clone(),
+        cache_root: created.cache_root.clone(),
+    }
 }
 
 /// Resume only the campaign identity and recipe payload frozen below `managed_root`.
@@ -600,6 +663,25 @@ pub fn resume_campaign<S: EventSink + Sync>(
 /// Resume a frozen campaign controlled by the caller's interrupt handle.
 pub fn resume_campaign_controlled<S: EventSink + Sync>(
     managed_root: &Path,
+    sink: &S,
+    controls: &RunnerControlHandle,
+) -> Result<CampaignReport, CliError> {
+    resume_campaign_internal(managed_root, None, sink, controls)
+}
+
+/// Resume only when the requested install id owns the frozen campaign ledger at this path.
+pub fn resume_campaign_controlled_expected<S: EventSink + Sync>(
+    managed_root: &Path,
+    expected_install_id: &str,
+    sink: &S,
+    controls: &RunnerControlHandle,
+) -> Result<CampaignReport, CliError> {
+    resume_campaign_internal(managed_root, Some(expected_install_id), sink, controls)
+}
+
+fn resume_campaign_internal<S: EventSink + Sync>(
+    managed_root: &Path,
+    expected_install_id: Option<&str>,
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
@@ -623,6 +705,15 @@ pub fn resume_campaign_controlled<S: EventSink + Sync>(
         )
     })?;
     let created = replay.created().clone();
+    if expected_install_id.is_some_and(|expected| expected != created.install_id) {
+        return Err(CliError::new(
+            "resume_identity_mismatch",
+            format!(
+                "requested install id does not own the frozen campaign at {}",
+                managed_root.display()
+            ),
+        ));
+    }
     let frozen: FrozenCliRecipe =
         serde_json::from_slice(&created.recipe_payload).map_err(|error| {
             CliError::new(

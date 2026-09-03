@@ -1,29 +1,282 @@
 //! Read-only native adapter over the engine's presentation-neutral CLI operations.
 
-use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::collections::{BTreeSet, HashMap};
+use std::ffi::OsString;
+use std::fs;
+use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bg_engine::cli::{
-    discover_games as engine_discover_games, inspect_game, plan_recipe, validate_recipe, CliError,
-    SelectionOverrides, ValidationProfile,
+    discover_games as engine_discover_games, inspect_game, install_campaign_reviewed, plan_recipe,
+    resume_campaign_controlled_expected, review_install, validate_recipe, CampaignReport, CliError,
+    InstallCommandRequest, InstallReviewIdentity, SelectionOverrides, ValidationProfile,
 };
-use bg_engine::digest::sha256_bytes;
-use bg_engine::games::{Eligibility, FindingKind, GameCandidate, GameRole, Storefront};
+use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
+use bg_engine::events::{EngineEvent, EventSink};
+use bg_engine::games::{
+    Eligibility, FindingKind, GameCandidate, GameProfiles, GameRole, Storefront,
+};
 use bg_engine::manifest::{InputValue, Phase};
+use bg_engine::preflight::is_creator_protected_destination;
 use bg_engine::recipe_view::{FeatureControl, NormalizedSelection, RecipeView, SelectionFinding};
+use bg_engine::weidu::runner::RunnerControlHandle;
 use serde::Serialize;
 
 use crate::error::CommandError;
 
 type Discoverer = dyn Fn(&Path) -> Result<Vec<GameCandidate>, CliError> + Send + Sync;
 
-/// Immutable native adapter configuration shared by Tauri commands.
+const REVIEW_LIFETIME: Duration = Duration::from_secs(10 * 60);
+const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
+
+/// Engine services used by the native bridge. The test-only seam exercises the same stateful
+/// review and worker boundary without launching WeiDU.
+#[doc(hidden)]
+pub trait BridgeEngine: Send + Sync {
+    fn discover(&self, recipe: &Path) -> Result<Vec<GameCandidate>, CliError>;
+    fn inspect_explicit(
+        &self,
+        recipe: &Path,
+        role: GameRole,
+        path: &Path,
+    ) -> Result<GameCandidate, CliError>;
+    fn reinspect(
+        &self,
+        recipe: &Path,
+        candidate: &GameCandidate,
+    ) -> Result<GameCandidate, CliError>;
+    fn review(&self, request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError>;
+    fn install(
+        &self,
+        request: &InstallCommandRequest,
+        expected: &InstallReviewIdentity,
+        sink: &SequencedEventSink,
+        controls: &RunnerControlHandle,
+    ) -> Result<CampaignReport, CliError>;
+    fn resume(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        sink: &SequencedEventSink,
+        controls: &RunnerControlHandle,
+    ) -> Result<CampaignReport, CliError>;
+}
+
+#[derive(Default)]
+struct SystemBridgeEngine;
+
+impl BridgeEngine for SystemBridgeEngine {
+    fn discover(&self, recipe: &Path) -> Result<Vec<GameCandidate>, CliError> {
+        engine_discover_games(recipe)
+    }
+
+    fn inspect_explicit(
+        &self,
+        recipe: &Path,
+        role: GameRole,
+        path: &Path,
+    ) -> Result<GameCandidate, CliError> {
+        inspect_game(recipe, role, path).map(|report| report.candidate)
+    }
+
+    fn reinspect(
+        &self,
+        recipe: &Path,
+        candidate: &GameCandidate,
+    ) -> Result<GameCandidate, CliError> {
+        inspect_game(recipe, candidate.role, &candidate.root).map(|report| report.candidate)
+    }
+
+    fn review(&self, request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
+        review_install(request)
+    }
+
+    fn install(
+        &self,
+        request: &InstallCommandRequest,
+        expected: &InstallReviewIdentity,
+        sink: &SequencedEventSink,
+        controls: &RunnerControlHandle,
+    ) -> Result<CampaignReport, CliError> {
+        install_campaign_reviewed(request, expected, sink, controls)
+    }
+
+    fn resume(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        sink: &SequencedEventSink,
+        controls: &RunnerControlHandle,
+    ) -> Result<CampaignReport, CliError> {
+        resume_campaign_controlled_expected(managed_root, expected_install_id, sink, controls)
+    }
+}
+
+struct DiscovererBridgeEngine {
+    discoverer: Arc<Discoverer>,
+    system: SystemBridgeEngine,
+}
+
+impl BridgeEngine for DiscovererBridgeEngine {
+    fn discover(&self, recipe: &Path) -> Result<Vec<GameCandidate>, CliError> {
+        (self.discoverer)(recipe)
+    }
+
+    fn inspect_explicit(
+        &self,
+        recipe: &Path,
+        role: GameRole,
+        path: &Path,
+    ) -> Result<GameCandidate, CliError> {
+        self.system.inspect_explicit(recipe, role, path)
+    }
+
+    fn reinspect(
+        &self,
+        recipe: &Path,
+        candidate: &GameCandidate,
+    ) -> Result<GameCandidate, CliError> {
+        self.system.reinspect(recipe, candidate)
+    }
+
+    fn review(&self, request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
+        self.system.review(request)
+    }
+
+    fn install(
+        &self,
+        request: &InstallCommandRequest,
+        expected: &InstallReviewIdentity,
+        sink: &SequencedEventSink,
+        controls: &RunnerControlHandle,
+    ) -> Result<CampaignReport, CliError> {
+        self.system.install(request, expected, sink, controls)
+    }
+
+    fn resume(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        sink: &SequencedEventSink,
+        controls: &RunnerControlHandle,
+    ) -> Result<CampaignReport, CliError> {
+        self.system
+            .resume(managed_root, expected_install_id, sink, controls)
+    }
+}
+
+#[derive(Default)]
+struct BridgeRuntime {
+    candidates: HashMap<String, GameCandidate>,
+    reviews: HashMap<String, ReviewSnapshot>,
+    active_runs: HashMap<String, RunnerControlHandle>,
+    run_snapshots: HashMap<String, RunSnapshotResponse>,
+    known_installs: HashMap<String, PathBuf>,
+}
+
+#[derive(Clone)]
+struct ReviewSnapshot {
+    expires_at: Instant,
+    digest: String,
+    recipe_digest: String,
+    selection_digest: String,
+    plan_digest: String,
+    bg1: GameCandidate,
+    bg2: GameCandidate,
+    request: InstallCommandRequest,
+    engine_identity: InstallReviewIdentity,
+}
+
+/// Native adapter configuration and process-local review/run registries shared by commands.
 #[derive(Clone)]
 pub struct NativeBridge {
     recipe: PathBuf,
     preset: String,
-    discoverer: Arc<Discoverer>,
+    cache: PathBuf,
+    engine: Arc<dyn BridgeEngine>,
+    runtime: Arc<Mutex<BridgeRuntime>>,
+    sequence: Arc<AtomicU64>,
+}
+
+/// One engine event with a JS-lossless sequence and opaque process-local run identity.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunEventEnvelope {
+    pub run_id: String,
+    pub sequence_as_string: String,
+    pub event: EngineEvent,
+}
+
+/// An event sink that sequences delivery and deliberately ignores a dropped listener.
+pub struct SequencedEventSink {
+    run_id: String,
+    sequence: AtomicU64,
+    listener: Arc<dyn Fn(RunEventEnvelope) + Send + Sync>,
+}
+
+impl SequencedEventSink {
+    pub fn new(
+        run_id: impl Into<String>,
+        listener: impl Fn(RunEventEnvelope) + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            run_id: run_id.into(),
+            sequence: AtomicU64::new(0),
+            listener: Arc::new(listener),
+        }
+    }
+}
+
+impl EventSink for SequencedEventSink {
+    fn emit(&self, event: EngineEvent) {
+        let sequence = self.sequence.fetch_add(1, Ordering::Relaxed) + 1;
+        (self.listener)(RunEventEnvelope {
+            run_id: self.run_id.clone(),
+            sequence_as_string: sequence.to_string(),
+            event,
+        });
+    }
+}
+
+/// Read-only destination safety result shown before Review.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DestinationEvaluationResponse {
+    pub path: String,
+    pub safe: bool,
+    pub title: String,
+    pub detail: String,
+}
+
+/// Frozen, server-owned review identity. The opaque token is short-lived and single-use.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct FrozenReviewResponse {
+    pub review_token: String,
+    pub digest: String,
+    pub destination: String,
+    pub game_labels: Vec<String>,
+    pub evaluation: EvaluateBuildResponse,
+}
+
+/// Immediate response from a detached install or resume worker.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct StartBuildResponse {
+    pub run_id: String,
+}
+
+/// Process-local run snapshot. Durable restart recovery remains an explicit post-v0 slice.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RunSnapshotResponse {
+    pub run_id: String,
+    pub status: String,
+    pub events: Vec<RunEventEnvelope>,
+    pub report: Option<CampaignReport>,
+    pub error: Option<CommandError>,
 }
 
 /// Native backend identity returned during application startup.
@@ -133,12 +386,27 @@ pub struct EvaluateBuildResponse {
 impl NativeBridge {
     /// Creates the production adapter over system game discovery.
     pub fn new(recipe: impl Into<PathBuf>, preset: impl Into<String>) -> Self {
-        Self::with_discoverer(recipe, preset, engine_discover_games)
+        let recipe = recipe.into();
+        let cache = recipe
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(".chriz-cache");
+        Self::with_engine(recipe, preset, cache, Arc::new(SystemBridgeEngine))
     }
 
     /// Creates the production adapter from Tauri's trusted packaged-resource directory.
     pub fn from_resource_dir(resource_dir: &Path) -> Self {
         Self::new(resource_dir.join("manifest"), "chris-recommended")
+    }
+
+    /// Creates the production adapter with a native-owned writable cache directory.
+    pub fn from_resource_dir_with_cache(resource_dir: &Path, cache: &Path) -> Self {
+        Self::with_engine(
+            resource_dir.join("manifest"),
+            "chris-recommended",
+            cache,
+            Arc::new(SystemBridgeEngine),
+        )
     }
 
     /// Replaces only host discovery, allowing deterministic command-contract tests.
@@ -151,10 +419,37 @@ impl NativeBridge {
     where
         F: Fn(&Path) -> Result<Vec<GameCandidate>, CliError> + Send + Sync + 'static,
     {
+        let recipe = recipe.into();
+        let cache = recipe
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(".chriz-cache");
+        Self::with_engine(
+            recipe,
+            preset,
+            cache,
+            Arc::new(DiscovererBridgeEngine {
+                discoverer: Arc::new(discoverer),
+                system: SystemBridgeEngine,
+            }),
+        )
+    }
+
+    /// Injects all engine effects while retaining the production bridge state machine.
+    #[doc(hidden)]
+    pub fn with_engine(
+        recipe: impl Into<PathBuf>,
+        preset: impl Into<String>,
+        cache: impl Into<PathBuf>,
+        engine: Arc<dyn BridgeEngine>,
+    ) -> Self {
         Self {
             recipe: recipe.into(),
             preset: preset.into(),
-            discoverer: Arc::new(discoverer),
+            cache: cache.into(),
+            engine,
+            runtime: Arc::new(Mutex::new(BridgeRuntime::default())),
+            sequence: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -162,6 +457,14 @@ impl NativeBridge {
     pub fn bootstrap(&self) -> Result<BootstrapResponse, CommandError> {
         validate_recipe(&self.recipe, ValidationProfile::PublicAlpha)
             .map_err(CommandError::from_cli)?;
+        GameProfiles::load(self.recipe.join("game-builds")).map_err(|error| {
+            CommandError::new(
+                "game_profiles_failed",
+                "Verified game detection data is unavailable.",
+                "Install a release that includes verified game profiles.",
+                error.to_string(),
+            )
+        })?;
         plan_recipe(
             &self.recipe,
             &self.preset,
@@ -178,12 +481,18 @@ impl NativeBridge {
 
     /// Discovers and independently groups installed BG1 and BG2 sources.
     pub fn discover_games(&self) -> Result<GameDiscoveryResponse, CommandError> {
-        let candidates = (self.discoverer)(&self.recipe).map_err(CommandError::from_cli)?;
+        let candidates = self
+            .engine
+            .discover(&self.recipe)
+            .map_err(CommandError::from_cli)?;
         let mut bg1_candidates = Vec::new();
         let mut bg2_candidates = Vec::new();
         for candidate in candidates {
             let role = candidate.role;
-            let response = project_candidate(candidate)?;
+            let response = project_candidate(candidate.clone())?;
+            self.runtime_lock()
+                .candidates
+                .insert(response.id.clone(), candidate);
             match role {
                 GameRole::BgeeSod => bg1_candidates.push(response),
                 GameRole::Bg2ee => bg2_candidates.push(response),
@@ -213,8 +522,15 @@ impl NativeBridge {
         role: GameRole,
         path: &Path,
     ) -> Result<GameCandidateResponse, CommandError> {
-        let report = inspect_game(&self.recipe, role, path).map_err(CommandError::from_cli)?;
-        project_candidate(report.candidate)
+        let candidate = self
+            .engine
+            .inspect_explicit(&self.recipe, role, path)
+            .map_err(CommandError::from_cli)?;
+        let response = project_candidate(candidate.clone())?;
+        self.runtime_lock()
+            .candidates
+            .insert(response.id.clone(), candidate);
+        Ok(response)
     }
 
     /// Evaluates the configured preset plus a normalized semantic frontend selection.
@@ -222,39 +538,980 @@ impl NativeBridge {
         &self,
         selection: &NormalizedSelection,
     ) -> Result<EvaluateBuildResponse, CommandError> {
-        let mut overrides = SelectionOverrides::default();
-        overrides
-            .features
-            .extend(selection.features.iter().map(|(feature, selected)| {
-                format!("{feature}={}", if *selected { "on" } else { "off" })
-            }));
-        for (feature, inputs) in &selection.inputs {
-            overrides.inputs.extend(
-                inputs.iter().map(|(input, value)| {
-                    format!("{feature}/{input}={}", encode_input_value(value))
-                }),
-            );
-        }
-        let evaluation = plan_recipe(&self.recipe, &self.preset, &selection.platform, &overrides)
-            .map_err(CommandError::from_cli)?
-            .evaluation;
-        let selected_choice_count = evaluation
-            .view
-            .controls
-            .iter()
-            .filter(|control: &&FeatureControl| control.selected)
-            .count();
-        let plan = PlanSummaryResponse {
-            phases: phase_summaries(&evaluation.plan.runs),
+        let report = plan_recipe(
+            &self.recipe,
+            &self.preset,
+            &selection.platform,
+            &selection_overrides(selection),
+        )
+        .map_err(CommandError::from_cli)?;
+        Ok(project_evaluation(report.evaluation))
+    }
+
+    /// Validates a prospective managed-copy destination without creating or claiming it.
+    pub fn inspect_destination(
+        &self,
+        destination: &Path,
+        bg1_candidate_id: &str,
+        bg2_candidate_id: &str,
+    ) -> Result<DestinationEvaluationResponse, CommandError> {
+        let (bg1, bg2) = self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
+        inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)
+    }
+
+    /// Re-inspects exact server-side candidates and freezes a short-lived, single-use review.
+    pub fn freeze_review(
+        &self,
+        selection: &NormalizedSelection,
+        destination: &Path,
+        bg1_candidate_id: &str,
+        bg2_candidate_id: &str,
+    ) -> Result<FrozenReviewResponse, CommandError> {
+        let (registered_bg1, registered_bg2) =
+            self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
+        let bg1 = self.reinspect_source(&registered_bg1, GameRole::BgeeSod)?;
+        let bg2 = self.reinspect_source(&registered_bg2, GameRole::Bg2ee)?;
+        let destination = inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        let destination_path = PathBuf::from(&destination.path);
+        bg_engine::acquire::ArtifactCache::open(&self.cache).map_err(|error| {
+            CommandError::new(
+                "cache_unavailable",
+                "The installer cache is not writable.",
+                "Choose a writable local app-data location and try again.",
+                error.to_string(),
+            )
+        })?;
+        let cache = self.cache.canonicalize().map_err(|error| {
+            path_error(
+                "cache_unavailable",
+                "The installer cache could not be resolved safely.",
+                &self.cache,
+                error,
+            )
+        })?;
+        let overrides = selection_overrides(selection);
+        let plan_report = plan_recipe(&self.recipe, &self.preset, &selection.platform, &overrides)
+            .map_err(CommandError::from_cli)?;
+        let normalized_selection = &plan_report.evaluation.normalized_selection;
+        let recipe_digest = recipe_directory_digest(&plan_report.recipe)?;
+        let selection_digest = selection_digest(normalized_selection).map_err(digest_error)?;
+        let plan_digest = plan_digest(&plan_report.evaluation.plan).map_err(digest_error)?;
+        let request = InstallCommandRequest {
+            recipe: plan_report.recipe.clone(),
+            preset: self.preset.clone(),
+            platform: normalized_selection.platform.clone(),
+            overrides: selection_overrides(normalized_selection),
+            bg1: bg1.root.clone(),
+            bg2: bg2.root.clone(),
+            managed_root: destination_path,
+            cache,
         };
-        Ok(EvaluateBuildResponse {
-            view: evaluation.view,
-            normalized_selection: evaluation.normalized_selection,
-            findings: evaluation.findings,
-            plan,
-            selected_choice_count,
+        let engine_identity = self
+            .engine
+            .review(&request)
+            .map_err(CommandError::from_cli)?;
+        let digest = review_digest(
+            &recipe_digest,
+            &selection_digest,
+            &plan_digest,
+            &bg1,
+            &bg2,
+            &destination.path,
+            &engine_identity,
+        )?;
+        let token_seed = format!(
+            "{digest}\0{}\0{}",
+            unix_nanos()?,
+            self.sequence.fetch_add(1, Ordering::Relaxed)
+        );
+        let review_token = sha256_bytes(token_seed.as_bytes());
+        self.runtime_lock().reviews.insert(
+            review_token.clone(),
+            ReviewSnapshot {
+                expires_at: Instant::now() + REVIEW_LIFETIME,
+                digest: digest.clone(),
+                recipe_digest,
+                selection_digest,
+                plan_digest,
+                bg1: bg1.clone(),
+                bg2: bg2.clone(),
+                request,
+                engine_identity,
+            },
+        );
+        let game_labels = vec![project_candidate(bg1)?.label, project_candidate(bg2)?.label];
+        Ok(FrozenReviewResponse {
+            review_token,
+            digest,
+            destination: destination.path,
+            game_labels,
+            evaluation: project_evaluation(plan_report.evaluation),
         })
     }
+
+    /// Starts a reviewed install on a retained worker and returns immediately.
+    pub fn start_build<F>(
+        &self,
+        review_token: &str,
+        listener: F,
+    ) -> Result<StartBuildResponse, CommandError>
+    where
+        F: Fn(RunEventEnvelope) + Send + Sync + 'static,
+    {
+        let review = self
+            .runtime_lock()
+            .reviews
+            .remove(review_token)
+            .ok_or_else(invalid_review_token)?;
+        self.validate_review_snapshot(&review)?;
+        self.spawn_install_worker(review.request, review.engine_identity, listener)
+    }
+
+    /// Resumes only a managed install learned from this process's own install result.
+    pub fn resume_build<F>(
+        &self,
+        install_id: &str,
+        listener: F,
+    ) -> Result<StartBuildResponse, CommandError>
+    where
+        F: Fn(RunEventEnvelope) + Send + Sync + 'static,
+    {
+        let managed_root = self
+            .runtime_lock()
+            .known_installs
+            .get(install_id)
+            .cloned()
+            .ok_or_else(|| {
+                CommandError::new(
+                    "managed_install_unknown",
+                    "That managed installation is not available in this installer session.",
+                    "Return to Home and select an installation discovered by the installer.",
+                    format!("unknown process-local install id {install_id:?}"),
+                )
+            })?;
+        self.spawn_resume_worker(install_id.to_owned(), managed_root, listener)
+    }
+
+    /// Returns the latest process-local event/result snapshot for one opaque run id.
+    pub fn get_run_snapshot(&self, run_id: &str) -> Result<RunSnapshotResponse, CommandError> {
+        self.runtime_lock()
+            .run_snapshots
+            .get(run_id)
+            .cloned()
+            .ok_or_else(|| unknown_run(run_id))
+    }
+
+    /// Rearms the silence watchdog for exactly one active worker.
+    pub fn continue_waiting(&self, run_id: &str) -> Result<(), CommandError> {
+        self.active_controls(run_id)?.continue_waiting();
+        Ok(())
+    }
+
+    /// Requests cancellation for exactly one active worker.
+    pub fn cancel_run(&self, run_id: &str) -> Result<(), CommandError> {
+        self.active_controls(run_id)?.cancel();
+        Ok(())
+    }
+
+    #[doc(hidden)]
+    pub fn active_run_count(&self) -> usize {
+        self.runtime_lock().active_runs.len()
+    }
+}
+
+impl NativeBridge {
+    fn runtime_lock(&self) -> std::sync::MutexGuard<'_, BridgeRuntime> {
+        self.runtime
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    fn registered_sources(
+        &self,
+        bg1_candidate_id: &str,
+        bg2_candidate_id: &str,
+    ) -> Result<(GameCandidate, GameCandidate), CommandError> {
+        let runtime = self.runtime_lock();
+        let bg1 = runtime
+            .candidates
+            .get(bg1_candidate_id)
+            .cloned()
+            .ok_or_else(|| unregistered_candidate(bg1_candidate_id))?;
+        let bg2 = runtime
+            .candidates
+            .get(bg2_candidate_id)
+            .cloned()
+            .ok_or_else(|| unregistered_candidate(bg2_candidate_id))?;
+        if bg1.role != GameRole::BgeeSod || bg2.role != GameRole::Bg2ee {
+            return Err(CommandError::new(
+                "game_candidate_role_mismatch",
+                "The selected game folders do not fill the required BG1 and BG2 roles.",
+                "Select one clean BG:EE + SoD folder and one clean BGII:EE folder.",
+                format!("BG1 id role {:?}; BG2 id role {:?}", bg1.role, bg2.role),
+            ));
+        }
+        Ok((bg1, bg2))
+    }
+
+    fn reinspect_source(
+        &self,
+        registered: &GameCandidate,
+        expected_role: GameRole,
+    ) -> Result<GameCandidate, CommandError> {
+        let registered = canonical_candidate(registered.clone())?;
+        let inspected = self
+            .engine
+            .reinspect(&self.recipe, &registered)
+            .map_err(CommandError::from_cli)?;
+        let inspected = canonical_candidate(inspected)?;
+        if inspected.role != expected_role
+            || inspected.storefront != registered.storefront
+            || inspected.root != registered.root
+            || inspected.build != registered.build
+            || inspected.fingerprint != registered.fingerprint
+            || inspected.eligibility != registered.eligibility
+        {
+            return Err(CommandError::new(
+                "game_candidate_changed",
+                "A selected game folder changed after it was inspected.",
+                "Inspect the game folders again before reviewing the build.",
+                format!("registered {registered:?}; re-inspected {inspected:?}"),
+            ));
+        }
+        if inspected.eligibility != Eligibility::Eligible || inspected.fingerprint.is_none() {
+            return Err(CommandError::new(
+                "source_not_fresh",
+                "A selected source is not a verified clean supported game.",
+                "Repair or reinstall that game, then run detection again.",
+                format!("candidate at {} is {inspected:?}", inspected.root.display()),
+            ));
+        }
+        Ok(inspected)
+    }
+
+    fn validate_review_snapshot(&self, review: &ReviewSnapshot) -> Result<(), CommandError> {
+        if Instant::now() > review.expires_at {
+            return Err(invalid_review_token());
+        }
+        let recipe_digest = recipe_directory_digest(&review.request.recipe)?;
+        if recipe_digest != review.recipe_digest {
+            return Err(changed_review("recipe digest changed"));
+        }
+        let plan = plan_recipe(
+            &review.request.recipe,
+            &review.request.preset,
+            &review.request.platform,
+            &review.request.overrides,
+        )
+        .map_err(CommandError::from_cli)?;
+        let current_selection_digest =
+            selection_digest(&plan.evaluation.normalized_selection).map_err(digest_error)?;
+        let current_plan_digest = plan_digest(&plan.evaluation.plan).map_err(digest_error)?;
+        if current_selection_digest != review.selection_digest
+            || current_plan_digest != review.plan_digest
+        {
+            return Err(changed_review("selection or resolved plan changed"));
+        }
+        let bg1 = self.reinspect_source(&review.bg1, GameRole::BgeeSod)?;
+        let bg2 = self.reinspect_source(&review.bg2, GameRole::Bg2ee)?;
+        let destination = inspect_destination_path(
+            &review.request.managed_root,
+            &bg1.root,
+            &bg2.root,
+            &review.request.cache,
+        )?;
+        let current_engine_identity = self
+            .engine
+            .review(&review.request)
+            .map_err(CommandError::from_cli)?;
+        if current_engine_identity != review.engine_identity {
+            return Err(changed_review("engine-owned install identity changed"));
+        }
+        let current_digest = review_digest(
+            &recipe_digest,
+            &current_selection_digest,
+            &current_plan_digest,
+            &bg1,
+            &bg2,
+            &destination.path,
+            &current_engine_identity,
+        )?;
+        if current_digest != review.digest {
+            return Err(changed_review("frozen review identity changed"));
+        }
+        Ok(())
+    }
+
+    fn spawn_install_worker<F>(
+        &self,
+        request: InstallCommandRequest,
+        expected: InstallReviewIdentity,
+        listener: F,
+    ) -> Result<StartBuildResponse, CommandError>
+    where
+        F: Fn(RunEventEnvelope) + Send + Sync + 'static,
+    {
+        let run_id = self.begin_run()?;
+        let run_id_for_worker = run_id.clone();
+        let engine = Arc::clone(&self.engine);
+        let runtime = Arc::clone(&self.runtime);
+        let controls = self.active_controls(&run_id)?;
+        let worker = std::thread::Builder::new()
+            .name(format!("installer-{run_id}"))
+            .spawn(move || {
+                let sink = run_sink(&run_id_for_worker, Arc::clone(&runtime), listener);
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    engine.install(&request, &expected, &sink, &controls)
+                }));
+                finish_worker(&runtime, &run_id_for_worker, &sink, result);
+            });
+        if let Err(error) = worker {
+            self.runtime_lock().active_runs.remove(&run_id);
+            return Err(CommandError::new(
+                "build_worker_failed",
+                "The installer could not start its background worker.",
+                "Close other installer windows and try again.",
+                error.to_string(),
+            ));
+        }
+        Ok(StartBuildResponse { run_id })
+    }
+
+    fn spawn_resume_worker<F>(
+        &self,
+        expected_install_id: String,
+        managed_root: PathBuf,
+        listener: F,
+    ) -> Result<StartBuildResponse, CommandError>
+    where
+        F: Fn(RunEventEnvelope) + Send + Sync + 'static,
+    {
+        let run_id = self.begin_run()?;
+        let run_id_for_worker = run_id.clone();
+        let engine = Arc::clone(&self.engine);
+        let runtime = Arc::clone(&self.runtime);
+        let controls = self.active_controls(&run_id)?;
+        let worker = std::thread::Builder::new()
+            .name(format!("installer-{run_id}"))
+            .spawn(move || {
+                let sink = run_sink(&run_id_for_worker, Arc::clone(&runtime), listener);
+                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    engine.resume(&managed_root, &expected_install_id, &sink, &controls)
+                }));
+                finish_worker(&runtime, &run_id_for_worker, &sink, result);
+            });
+        if let Err(error) = worker {
+            self.runtime_lock().active_runs.remove(&run_id);
+            return Err(CommandError::new(
+                "build_worker_failed",
+                "The installer could not start its background worker.",
+                "Close other installer windows and try again.",
+                error.to_string(),
+            ));
+        }
+        Ok(StartBuildResponse { run_id })
+    }
+
+    fn begin_run(&self) -> Result<String, CommandError> {
+        let run_id = format!(
+            "run-{:016x}",
+            self.sequence.fetch_add(1, Ordering::Relaxed) + 1
+        );
+        let controls = RunnerControlHandle::new();
+        let mut runtime = self.runtime_lock();
+        if !runtime.active_runs.is_empty() {
+            return Err(CommandError::new(
+                "build_already_running",
+                "Another installer build is already running.",
+                "Wait for the current build to finish or cancel it first.",
+                "the private alpha permits one active WeiDU campaign per process",
+            ));
+        }
+        runtime.active_runs.insert(run_id.clone(), controls);
+        runtime.run_snapshots.insert(
+            run_id.clone(),
+            RunSnapshotResponse {
+                run_id: run_id.clone(),
+                status: "running".to_owned(),
+                events: Vec::new(),
+                report: None,
+                error: None,
+            },
+        );
+        Ok(run_id)
+    }
+
+    fn active_controls(&self, run_id: &str) -> Result<RunnerControlHandle, CommandError> {
+        self.runtime_lock()
+            .active_runs
+            .get(run_id)
+            .cloned()
+            .ok_or_else(|| unknown_run(run_id))
+    }
+}
+
+fn run_sink<F>(run_id: &str, runtime: Arc<Mutex<BridgeRuntime>>, listener: F) -> SequencedEventSink
+where
+    F: Fn(RunEventEnvelope) + Send + Sync + 'static,
+{
+    SequencedEventSink::new(run_id, move |envelope| {
+        {
+            let mut state = runtime
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if let Some(snapshot) = state.run_snapshots.get_mut(&envelope.run_id) {
+                snapshot.events.push(envelope.clone());
+                if snapshot.events.len() > SNAPSHOT_EVENT_LIMIT {
+                    let overflow = snapshot.events.len() - SNAPSHOT_EVENT_LIMIT;
+                    snapshot.events.drain(..overflow);
+                }
+            }
+        }
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| listener(envelope)));
+    })
+}
+
+fn finish_worker(
+    runtime: &Arc<Mutex<BridgeRuntime>>,
+    run_id: &str,
+    sink: &SequencedEventSink,
+    result: std::thread::Result<Result<CampaignReport, CliError>>,
+) {
+    let (report, error) = match result {
+        Ok(Ok(report)) if matches!(report.status, bg_engine::cli::CampaignStatus::Complete) => {
+            (Some(report), None)
+        }
+        Ok(Ok(report)) => {
+            let error = CommandError::from_cli(CliError::from_campaign(report.clone()));
+            (Some(report), Some(error))
+        }
+        Ok(Err(error)) => {
+            let report = error.campaign_report().cloned();
+            (report, Some(CommandError::from_cli(error)))
+        }
+        Err(payload) => {
+            let detail = payload
+                .downcast_ref::<&str>()
+                .map(|value| (*value).to_owned())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "background worker panicked without text".to_owned());
+            (
+                None,
+                Some(CommandError::new(
+                    "build_worker_panicked",
+                    "The installer worker stopped unexpectedly.",
+                    "Keep the managed copy untouched and retry from the installer.",
+                    detail,
+                )),
+            )
+        }
+    };
+    let terminal_message = error.as_ref().map(|error| error.message.clone());
+    {
+        let mut state = runtime
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        state.active_runs.remove(run_id);
+        if let Some(report) = &report {
+            state
+                .known_installs
+                .insert(report.install_id.clone(), report.managed_root.clone());
+        }
+        if let Some(snapshot) = state.run_snapshots.get_mut(run_id) {
+            snapshot.status = if error.is_some() {
+                "failed".to_owned()
+            } else {
+                "complete".to_owned()
+            };
+            snapshot.report = report;
+            snapshot.error = error;
+        }
+    }
+    if let Some(message) = terminal_message {
+        sink.emit(EngineEvent::Error {
+            step_id: None,
+            message,
+        });
+    }
+}
+
+fn selection_overrides(selection: &NormalizedSelection) -> SelectionOverrides {
+    let mut overrides = SelectionOverrides::default();
+    overrides.features.extend(
+        selection.features.iter().map(|(feature, selected)| {
+            format!("{feature}={}", if *selected { "on" } else { "off" })
+        }),
+    );
+    for (feature, inputs) in &selection.inputs {
+        overrides.inputs.extend(
+            inputs
+                .iter()
+                .map(|(input, value)| format!("{feature}/{input}={}", encode_input_value(value))),
+        );
+    }
+    overrides
+}
+
+fn project_evaluation(
+    evaluation: bg_engine::recipe_view::SelectionEvaluation,
+) -> EvaluateBuildResponse {
+    let selected_choice_count = evaluation
+        .view
+        .controls
+        .iter()
+        .filter(|control: &&FeatureControl| control.selected)
+        .count();
+    let plan = PlanSummaryResponse {
+        phases: phase_summaries(&evaluation.plan.runs),
+    };
+    EvaluateBuildResponse {
+        view: evaluation.view,
+        normalized_selection: evaluation.normalized_selection,
+        findings: evaluation.findings,
+        plan,
+        selected_choice_count,
+    }
+}
+
+fn canonical_candidate(mut candidate: GameCandidate) -> Result<GameCandidate, CommandError> {
+    candidate.root = candidate.root.canonicalize().map_err(|error| {
+        path_error(
+            "game_path_unavailable",
+            "A selected game folder is no longer available.",
+            &candidate.root,
+            error,
+        )
+    })?;
+    Ok(candidate)
+}
+
+fn inspect_destination_path(
+    destination: &Path,
+    bg1: &Path,
+    bg2: &Path,
+    cache: &Path,
+) -> Result<DestinationEvaluationResponse, CommandError> {
+    if !destination.is_absolute()
+        || destination
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
+    {
+        return Err(unsafe_destination(
+            destination,
+            "the destination must be one absolute normalized folder path",
+        ));
+    }
+    if is_creator_protected_destination(destination) {
+        return Err(unsafe_destination(
+            destination,
+            "the creator's reference installation is permanently read-only",
+        ));
+    }
+    let normalized = normalize_prospective_path(destination)?;
+    let bg1 = bg1.canonicalize().map_err(|error| {
+        path_error(
+            "game_path_unavailable",
+            "The selected BG1 source is no longer available.",
+            bg1,
+            error,
+        )
+    })?;
+    let bg2 = bg2.canonicalize().map_err(|error| {
+        path_error(
+            "game_path_unavailable",
+            "The selected BG2 source is no longer available.",
+            bg2,
+            error,
+        )
+    })?;
+    let cache = normalize_prospective_path(cache)?;
+    for (label, protected) in [
+        ("BG1 source", &bg1),
+        ("BG2 source", &bg2),
+        ("cache", &cache),
+    ] {
+        if paths_overlap(&normalized, protected) {
+            return Err(unsafe_destination(
+                destination,
+                &format!("the destination overlaps the {label}"),
+            ));
+        }
+    }
+    if normalized.try_exists().map_err(|error| {
+        path_error(
+            "destination_unavailable",
+            "The destination could not be inspected safely.",
+            &normalized,
+            error,
+        )
+    })? {
+        let metadata = fs::symlink_metadata(&normalized).map_err(|error| {
+            path_error(
+                "destination_unavailable",
+                "The destination could not be inspected safely.",
+                &normalized,
+                error,
+            )
+        })?;
+        if !metadata.is_dir() || metadata_is_reparse(&metadata) {
+            return Err(unsafe_destination(
+                destination,
+                "the destination must be a direct ordinary directory",
+            ));
+        }
+        let mut entries = fs::read_dir(&normalized).map_err(|error| {
+            path_error(
+                "destination_unavailable",
+                "The destination could not be inspected safely.",
+                &normalized,
+                error,
+            )
+        })?;
+        if entries
+            .next()
+            .transpose()
+            .map_err(|error| {
+                path_error(
+                    "destination_unavailable",
+                    "The destination could not be inspected safely.",
+                    &normalized,
+                    error,
+                )
+            })?
+            .is_some()
+        {
+            return Err(unsafe_destination(
+                destination,
+                "the destination already contains files and is not an empty new managed copy",
+            ));
+        }
+    }
+    Ok(DestinationEvaluationResponse {
+        path: path_to_string(&normalized)?,
+        safe: true,
+        title: "Ready for an isolated managed copy".to_owned(),
+        detail: "The engine will repeat authoritative path, lock, source, and disk checks when the build starts.".to_owned(),
+    })
+}
+
+fn normalize_prospective_path(path: &Path) -> Result<PathBuf, CommandError> {
+    let mut cursor = path.to_path_buf();
+    let mut missing = Vec::<OsString>::new();
+    loop {
+        match cursor.try_exists() {
+            Ok(true) => break,
+            Ok(false) => {
+                let name = cursor.file_name().ok_or_else(|| {
+                    unsafe_destination(path, "the destination has no existing directory ancestor")
+                })?;
+                missing.push(name.to_os_string());
+                cursor = cursor
+                    .parent()
+                    .ok_or_else(|| {
+                        unsafe_destination(
+                            path,
+                            "the destination has no existing directory ancestor",
+                        )
+                    })?
+                    .to_path_buf();
+            }
+            Err(error) => {
+                return Err(path_error(
+                    "destination_unavailable",
+                    "The destination could not be inspected safely.",
+                    &cursor,
+                    error,
+                ));
+            }
+        }
+    }
+    for ancestor in cursor.ancestors() {
+        let metadata = fs::symlink_metadata(ancestor).map_err(|error| {
+            path_error(
+                "destination_unavailable",
+                "A destination ancestor could not be inspected safely.",
+                ancestor,
+                error,
+            )
+        })?;
+        if metadata_is_reparse(&metadata) {
+            return Err(unsafe_destination(
+                path,
+                &format!(
+                    "destination ancestor {} is a reparse point",
+                    ancestor.display()
+                ),
+            ));
+        }
+    }
+    let mut normalized = cursor.canonicalize().map_err(|error| {
+        path_error(
+            "destination_unavailable",
+            "The destination could not be resolved safely.",
+            &cursor,
+            error,
+        )
+    })?;
+    for component in missing.into_iter().rev() {
+        normalized.push(component);
+    }
+    Ok(normalized)
+}
+
+fn paths_overlap(left: &Path, right: &Path) -> bool {
+    path_is_within(left, right) || path_is_within(right, left)
+}
+
+fn path_is_within(path: &Path, base: &Path) -> bool {
+    let path = path.components().collect::<Vec<_>>();
+    let base = base.components().collect::<Vec<_>>();
+    path.len() >= base.len()
+        && path
+            .iter()
+            .zip(base.iter())
+            .all(|(left, right)| component_eq(left.as_os_str(), right.as_os_str()))
+}
+
+fn component_eq(left: &std::ffi::OsStr, right: &std::ffi::OsStr) -> bool {
+    #[cfg(windows)]
+    {
+        left.to_string_lossy()
+            .eq_ignore_ascii_case(&right.to_string_lossy())
+    }
+    #[cfg(not(windows))]
+    {
+        left == right
+    }
+}
+
+#[cfg(windows)]
+fn metadata_is_reparse(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+
+    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+    metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+}
+
+#[cfg(not(windows))]
+fn metadata_is_reparse(metadata: &fs::Metadata) -> bool {
+    metadata.file_type().is_symlink()
+}
+
+fn recipe_directory_digest(root: &Path) -> Result<String, CommandError> {
+    let root = root.canonicalize().map_err(|error| {
+        path_error(
+            "recipe_load_failed",
+            "The installer recipe could not be resolved safely.",
+            root,
+            error,
+        )
+    })?;
+    let mut files = Vec::new();
+    collect_recipe_files(&root, &root, &mut files)?;
+    files.sort_by(|left, right| left.0.cmp(&right.0));
+    let mut bytes = Vec::new();
+    for (relative, path) in files {
+        bytes.extend_from_slice(relative.as_bytes());
+        bytes.push(0);
+        let content = fs::read(&path).map_err(|error| {
+            path_error(
+                "recipe_load_failed",
+                "The installer recipe changed while it was being frozen.",
+                &path,
+                error,
+            )
+        })?;
+        bytes.extend_from_slice(content.len().to_string().as_bytes());
+        bytes.push(0);
+        bytes.extend_from_slice(&content);
+        bytes.push(0xff);
+    }
+    Ok(sha256_bytes(&bytes))
+}
+
+fn collect_recipe_files(
+    root: &Path,
+    directory: &Path,
+    files: &mut Vec<(String, PathBuf)>,
+) -> Result<(), CommandError> {
+    let mut entries = fs::read_dir(directory)
+        .map_err(|error| {
+            path_error(
+                "recipe_load_failed",
+                "The installer recipe could not be read safely.",
+                directory,
+                error,
+            )
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| {
+            path_error(
+                "recipe_load_failed",
+                "The installer recipe could not be read safely.",
+                directory,
+                error,
+            )
+        })?;
+    entries.sort_by_key(|entry| entry.file_name().to_string_lossy().to_ascii_lowercase());
+    for entry in entries {
+        let path = entry.path();
+        let metadata = fs::symlink_metadata(&path).map_err(|error| {
+            path_error(
+                "recipe_load_failed",
+                "The installer recipe contains unreadable filesystem evidence.",
+                &path,
+                error,
+            )
+        })?;
+        if metadata_is_reparse(&metadata) {
+            return Err(CommandError::new(
+                "recipe_load_failed",
+                "The installer recipe contains an unsafe redirected path.",
+                "Repair or replace the installer recipe, then try again.",
+                path.display().to_string(),
+            ));
+        }
+        if metadata.is_dir() {
+            collect_recipe_files(root, &path, files)?;
+        } else if metadata.is_file() {
+            let relative = path.strip_prefix(root).expect("walk remains below root");
+            let relative = relative.to_str().ok_or_else(|| {
+                CommandError::new(
+                    "path_encoding_unsupported",
+                    "The installer recipe contains a path that cannot be shown safely.",
+                    "Move the installer to a folder whose path uses valid Unicode text.",
+                    format!("non-Unicode recipe path: {relative:?}"),
+                )
+            })?;
+            files.push((relative.replace('\\', "/"), path));
+        }
+    }
+    Ok(())
+}
+
+fn review_digest(
+    recipe_digest: &str,
+    selection_digest: &str,
+    plan_digest: &str,
+    bg1: &GameCandidate,
+    bg2: &GameCandidate,
+    destination: &str,
+    engine_identity: &InstallReviewIdentity,
+) -> Result<String, CommandError> {
+    let bg1_path = path_to_string(&bg1.root)?;
+    let bg2_path = path_to_string(&bg2.root)?;
+    let engine_managed_root = path_to_string(&engine_identity.managed_root)?;
+    let engine_cache_root = path_to_string(&engine_identity.cache_root)?;
+    let identity = format!(
+        "review-v2\0{recipe_digest}\0{selection_digest}\0{plan_digest}\0{:?}\0{:?}\0{}\0{}\0{:?}\0{:?}\0{}\0{}\0{destination}\0{}\0{}\0{}\0{}\0{}\0{engine_managed_root}\0{engine_cache_root}",
+        bg1.role,
+        bg1.storefront,
+        bg1_path,
+        bg1.fingerprint.as_deref().unwrap_or_default(),
+        bg2.role,
+        bg2.storefront,
+        bg2_path,
+        bg2.fingerprint.as_deref().unwrap_or_default(),
+        engine_identity.recipe_payload_sha256,
+        engine_identity.selection_sha256,
+        engine_identity.plan_sha256,
+        engine_identity.source_games.bg1,
+        engine_identity.source_games.bg2,
+    );
+    Ok(sha256_bytes(identity.as_bytes()))
+}
+
+fn path_to_string(path: &Path) -> Result<String, CommandError> {
+    path.to_str().map(str::to_owned).ok_or_else(|| {
+        CommandError::new(
+            "path_encoding_unsupported",
+            "A native path cannot be represented safely in the interface.",
+            "Choose a folder whose path uses valid Unicode text.",
+            format!("non-Unicode native path: {path:?}"),
+        )
+    })
+}
+
+fn unix_nanos() -> Result<u128, CommandError> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .map_err(|error| {
+            CommandError::new(
+                "system_clock_invalid",
+                "The system clock cannot create a review token.",
+                "Correct the system clock and review the build again.",
+                error.to_string(),
+            )
+        })
+}
+
+fn digest_error(error: impl std::fmt::Display) -> CommandError {
+    CommandError::new(
+        "review_digest_failed",
+        "The installer could not freeze the exact reviewed build.",
+        "Review the selected options and try again.",
+        error.to_string(),
+    )
+}
+
+fn path_error(
+    code: &str,
+    message: &str,
+    path: &Path,
+    error: impl std::fmt::Display,
+) -> CommandError {
+    CommandError::new(
+        code,
+        message,
+        "Choose an accessible local folder and try again.",
+        format!("{}: {error}", path.display()),
+    )
+}
+
+fn unsafe_destination(path: &Path, reason: &str) -> CommandError {
+    CommandError::new(
+        "destination_unsafe",
+        "That folder cannot be used for a new isolated installation.",
+        "Choose a new empty local folder outside both source games and the installer cache.",
+        format!("{}: {reason}", path.display()),
+    )
+}
+
+fn unregistered_candidate(candidate_id: &str) -> CommandError {
+    CommandError::new(
+        "game_candidate_unknown",
+        "That game selection is no longer available.",
+        "Run game detection or inspect the folder again.",
+        format!("unregistered candidate id {candidate_id:?}"),
+    )
+}
+
+fn invalid_review_token() -> CommandError {
+    CommandError::new(
+        "review_token_invalid",
+        "That reviewed build is no longer available to start.",
+        "Return to Review and freeze the current build again.",
+        "review token is unknown, expired, or was already used",
+    )
+}
+
+fn changed_review(reason: &str) -> CommandError {
+    CommandError::new(
+        "review_changed",
+        "The build changed after Review and was not started.",
+        "Inspect the sources and destination, then review the build again.",
+        reason,
+    )
+}
+
+fn unknown_run(run_id: &str) -> CommandError {
+    CommandError::new(
+        "run_unknown",
+        "That installer run is not active in this session.",
+        "Return to the current Build screen and try again.",
+        format!("unknown process-local run id {run_id:?}"),
+    )
 }
 
 fn encode_input_value(value: &InputValue) -> String {

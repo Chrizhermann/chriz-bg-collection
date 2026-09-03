@@ -8,7 +8,7 @@ export function welcomeScreen(begin: () => void | Promise<void>): HTMLElement {
     element("h2", undefined, "Your originals stay untouched"),
     element("p", undefined, "The campaign is built in a separate copy, with its own progress, saves, and immutable receipt."),
   );
-  page.append(promise, element("p", "requirement", "You need BG:EE with Siege of Dragonspear and BGII:EE. The fixture does not inspect either game."));
+  page.append(promise, element("p", "requirement", "You need clean supported copies of BG:EE with Siege of Dragonspear and BGII:EE. Detection is read-only."));
   page.append(screenActions(null, actionButton("Begin setup", begin)));
   return page;
 }

@@ -4,11 +4,13 @@ use std::path::PathBuf;
 
 use bg_engine::games::GameRole;
 use bg_engine::recipe_view::NormalizedSelection;
+use tauri::ipc::Channel;
 use tauri::State;
 
 use crate::bridge::{
-    BootstrapResponse, EvaluateBuildResponse, GameCandidateResponse, GameDiscoveryResponse,
-    NativeBridge,
+    BootstrapResponse, DestinationEvaluationResponse, EvaluateBuildResponse, FrozenReviewResponse,
+    GameCandidateResponse, GameDiscoveryResponse, NativeBridge, RunEventEnvelope,
+    RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 
@@ -66,4 +68,92 @@ pub async fn evaluate_build(
 ) -> Result<EvaluateBuildResponse, CommandError> {
     let bridge = state.bridge.clone();
     background(move || bridge.evaluate_build(&selection)).await
+}
+
+#[tauri::command]
+pub async fn inspect_destination(
+    state: State<'_, BridgeState>,
+    path: String,
+    bg1_candidate_id: String,
+    bg2_candidate_id: String,
+) -> Result<DestinationEvaluationResponse, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        bridge.inspect_destination(&PathBuf::from(path), &bg1_candidate_id, &bg2_candidate_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn freeze_review(
+    state: State<'_, BridgeState>,
+    selection: NormalizedSelection,
+    destination: String,
+    bg1_candidate_id: String,
+    bg2_candidate_id: String,
+) -> Result<FrozenReviewResponse, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        bridge.freeze_review(
+            &selection,
+            &PathBuf::from(destination),
+            &bg1_candidate_id,
+            &bg2_candidate_id,
+        )
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn start_build(
+    state: State<'_, BridgeState>,
+    review_token: String,
+    on_event: Channel<RunEventEnvelope>,
+) -> Result<StartBuildResponse, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        bridge.start_build(&review_token, move |event| {
+            let _ = on_event.send(event);
+        })
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn resume_build(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    on_event: Channel<RunEventEnvelope>,
+) -> Result<StartBuildResponse, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        bridge.resume_build(&install_id, move |event| {
+            let _ = on_event.send(event);
+        })
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_run_snapshot(
+    state: State<'_, BridgeState>,
+    run_id: String,
+) -> Result<RunSnapshotResponse, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.get_run_snapshot(&run_id)).await
+}
+
+#[tauri::command]
+pub async fn continue_waiting(
+    state: State<'_, BridgeState>,
+    run_id: String,
+) -> Result<(), CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.continue_waiting(&run_id)).await
+}
+
+#[tauri::command]
+pub async fn cancel_run(state: State<'_, BridgeState>, run_id: String) -> Result<(), CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.cancel_run(&run_id)).await
 }

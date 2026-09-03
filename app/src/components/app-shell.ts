@@ -30,14 +30,19 @@ export function screenActions(back: (() => void) | null, next?: HTMLButtonElemen
   return actions;
 }
 
-export function createAppShell(route: Route, content: HTMLElement, navigate: (route: Route) => void | Promise<void>): HTMLElement {
+export function createAppShell(
+  route: Route,
+  content: HTMLElement,
+  navigate: (route: Route) => void | Promise<void>,
+  mode: "fixture" | "native" = "fixture",
+): HTMLElement {
   const shell = element("div", "app-shell");
   const sidebar = element("aside", "sidebar");
   const brand = element("div", "brand");
   const mark = element("span", "brand-mark", "C");
   mark.setAttribute("aria-hidden", "true");
   const copy = element("div", "brand-copy");
-  copy.append(element("strong", undefined, "Campaign Builder"), element("small", undefined, "Fixture alpha"));
+  copy.append(element("strong", undefined, "Campaign Builder"), element("small", undefined, mode === "fixture" ? "Fixture alpha" : "Private alpha"));
   brand.append(mark, copy);
   const nav = element("nav", "nav-list");
   nav.setAttribute("aria-label", "Primary");
@@ -53,7 +58,10 @@ export function createAppShell(route: Route, content: HTMLElement, navigate: (ro
   sidebar.append(brand, nav);
   const workspace = element("div", "workspace");
   const topbar = element("header", "topbar");
-  topbar.append(element("p", "topbar-kicker", "Local fixture mode"), element("p", undefined, "No game files are read or written"));
+  topbar.append(
+    element("p", "topbar-kicker", mode === "fixture" ? "Local fixture mode" : "Local native mode"),
+    element("p", undefined, mode === "fixture" ? "No game files are read or written" : "Sources stay read-only; builds use a separate managed copy"),
+  );
   const main = element("main", "screen");
   main.append(content);
   workspace.append(topbar, main);

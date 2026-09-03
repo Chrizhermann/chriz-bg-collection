@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 import type {
   BackendStatus,
@@ -15,7 +15,10 @@ import type {
   ManagedInstallation,
   NormalizedSelection,
   PhaseSummary,
+  RunEventEnvelope,
+  RunSnapshot,
   SelectionEvaluation,
+  StartBuildResponse,
   Storefront,
   UpdateSummary,
 } from "./contracts";
@@ -26,13 +29,19 @@ export interface Backend {
   getStatus(): Promise<BackendStatus>;
   discoverGames(): Promise<GameDiscovery>;
   inspectGamePath(role: GameRole, path: string): Promise<GameCandidate>;
-  inspectDestination(path: string): Promise<DestinationEvaluation>;
+  inspectDestination(path: string, bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation>;
   evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation>;
   freezeReview(
     selection: NormalizedSelection,
     destination: string,
-    gameLabels: readonly string[],
+    bg1CandidateId: string,
+    bg2CandidateId: string,
   ): Promise<FrozenReview>;
+  startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
+  resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
+  getRunSnapshot(runId: string): Promise<RunSnapshot>;
+  continueWaiting(runId: string): Promise<void>;
+  cancelRun(runId: string): Promise<void>;
   getBuildSnapshot(): Promise<BuildSnapshot>;
   advanceBuild(): Promise<BuildSnapshot>;
   retryBuild(): Promise<BuildSnapshot>;
@@ -45,6 +54,8 @@ export type InvokeCommand = (
   command: string,
   args?: Record<string, unknown>,
 ) => Promise<unknown>;
+
+export type EventChannelFactory = (onMessage: (event: unknown) => void) => unknown;
 
 type BootstrapWire = {
   readonly mode: "native";
@@ -91,10 +102,37 @@ type SelectionEvaluationWire = {
   readonly selected_choice_count: number;
 };
 
+type FrozenReviewWire = {
+  readonly review_token: string;
+  readonly digest: string;
+  readonly destination: string;
+  readonly game_labels: readonly string[];
+  readonly evaluation: SelectionEvaluationWire;
+};
+
+type RunEventEnvelopeWire = {
+  readonly run_id: string;
+  readonly sequence_as_string: string;
+  readonly event: RunEventEnvelope["event"];
+};
+
+type StartBuildWire = { readonly run_id: string };
+
+type RunSnapshotWire = {
+  readonly run_id: string;
+  readonly status: string;
+  readonly events: readonly RunEventEnvelopeWire[];
+  readonly report: RunSnapshot["report"];
+  readonly error: CommandErrorPayload | null;
+};
+
 const invokeNative: InvokeCommand = (
   command: string,
   args?: Record<string, unknown>,
 ): Promise<unknown> => invoke<unknown>(command, args);
+
+const createNativeEventChannel: EventChannelFactory = (onMessage) =>
+  new Channel<unknown>(onMessage);
 
 function isCommandErrorPayload(value: unknown): value is CommandErrorPayload {
   if (typeof value !== "object" || value === null) return false;
@@ -135,11 +173,44 @@ function projectCandidate(candidate: GameCandidateWire): GameCandidate {
   return candidate;
 }
 
+function projectEvaluation(evaluation: SelectionEvaluationWire): SelectionEvaluation {
+  return {
+    view: {
+      categories: evaluation.view.categories,
+      controls: evaluation.view.controls.map((control) => {
+        const { unavailable_reason: unavailableReason, ...rest } = control;
+        return { ...rest, unavailableReason };
+      }),
+    },
+    normalizedSelection: evaluation.normalized_selection,
+    findings: evaluation.findings.map((finding) => ({
+      rule: finding.rule,
+      featureId: finding.feature_id,
+      message: finding.message,
+    })),
+    plan: evaluation.plan,
+    selectedChoiceCount: evaluation.selected_choice_count,
+  };
+}
+
+function projectRunEvent(event: RunEventEnvelopeWire): RunEventEnvelope {
+  return {
+    runId: event.run_id,
+    sequenceAsString: event.sequence_as_string,
+    event: event.event,
+  };
+}
+
 export class NativeBackend implements Backend {
   readonly #invoke: InvokeCommand;
+  readonly #eventChannel: EventChannelFactory;
 
-  constructor(invokeCommand: InvokeCommand = invokeNative) {
+  constructor(
+    invokeCommand: InvokeCommand = invokeNative,
+    eventChannel: EventChannelFactory = createNativeEventChannel,
+  ) {
     this.#invoke = invokeCommand;
+    this.#eventChannel = eventChannel;
   }
 
   async getStatus(): Promise<BackendStatus> {
@@ -165,37 +236,65 @@ export class NativeBackend implements Backend {
     return projectCandidate(await this.#command<GameCandidateWire>("inspect_game_path", { role, path }));
   }
 
-  inspectDestination(_path: string): Promise<DestinationEvaluation> {
-    return this.#unavailable("Destination validation");
+  inspectDestination(path: string, bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation> {
+    return this.#command("inspect_destination", { path, bg1CandidateId, bg2CandidateId });
   }
 
   async evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation> {
     const evaluation = await this.#command<SelectionEvaluationWire>("evaluate_build", { selection });
+    return projectEvaluation(evaluation);
+  }
+
+  async freezeReview(
+    selection: NormalizedSelection,
+    destination: string,
+    bg1CandidateId: string,
+    bg2CandidateId: string,
+  ): Promise<FrozenReview> {
+    const review = await this.#command<FrozenReviewWire>("freeze_review", {
+      selection,
+      destination,
+      bg1CandidateId,
+      bg2CandidateId,
+    });
     return {
-      view: {
-        categories: evaluation.view.categories,
-        controls: evaluation.view.controls.map((control) => {
-          const { unavailable_reason: unavailableReason, ...rest } = control;
-          return { ...rest, unavailableReason };
-        }),
-      },
-      normalizedSelection: evaluation.normalized_selection,
-      findings: evaluation.findings.map((finding) => ({
-        rule: finding.rule,
-        featureId: finding.feature_id,
-        message: finding.message,
-      })),
-      plan: evaluation.plan,
-      selectedChoiceCount: evaluation.selected_choice_count,
+      reviewToken: review.review_token,
+      digest: review.digest,
+      destination: review.destination,
+      gameLabels: review.game_labels,
+      evaluation: projectEvaluation(review.evaluation),
     };
   }
 
-  freezeReview(
-    _selection: NormalizedSelection,
-    _destination: string,
-    _gameLabels: readonly string[],
-  ): Promise<FrozenReview> {
-    return this.#unavailable("Frozen review");
+  async startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
+    const onEventChannel = this.#eventChannel((event) => onEvent(projectRunEvent(event as RunEventEnvelopeWire)));
+    const started = await this.#command<StartBuildWire>("start_build", { reviewToken, onEvent: onEventChannel });
+    return { runId: started.run_id };
+  }
+
+  async resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
+    const onEventChannel = this.#eventChannel((event) => onEvent(projectRunEvent(event as RunEventEnvelopeWire)));
+    const started = await this.#command<StartBuildWire>("resume_build", { installId, onEvent: onEventChannel });
+    return { runId: started.run_id };
+  }
+
+  async getRunSnapshot(runId: string): Promise<RunSnapshot> {
+    const snapshot = await this.#command<RunSnapshotWire>("get_run_snapshot", { runId });
+    return {
+      runId: snapshot.run_id,
+      status: snapshot.status,
+      events: snapshot.events.map(projectRunEvent),
+      report: snapshot.report,
+      error: snapshot.error,
+    };
+  }
+
+  async continueWaiting(runId: string): Promise<void> {
+    await this.#command("continue_waiting", { runId });
+  }
+
+  async cancelRun(runId: string): Promise<void> {
+    await this.#command("cancel_run", { runId });
   }
 
   getBuildSnapshot(): Promise<BuildSnapshot> {
@@ -304,7 +403,7 @@ export class FixtureBackend implements Backend {
     };
   }
 
-  inspectDestination(path: string): Promise<DestinationEvaluation> {
+  inspectDestination(path: string, _bg1CandidateId: string, _bg2CandidateId: string): Promise<DestinationEvaluation> {
     const normalized = path.trim();
     const safe = normalized.length > 3 && !normalized.toLowerCase().includes("steamapps");
     return Promise.resolve({
@@ -336,9 +435,40 @@ export class FixtureBackend implements Backend {
     };
   }
 
-  async freezeReview(selection: NormalizedSelection, destination: string, gameLabels: readonly string[]): Promise<FrozenReview> {
+  async freezeReview(
+    selection: NormalizedSelection,
+    destination: string,
+    bg1CandidateId: string,
+    bg2CandidateId: string,
+  ): Promise<FrozenReview> {
     const evaluation = await this.evaluateBuild(selection);
-    return { digest: "fixture-review-8d6d75", destination, gameLabels, evaluation };
+    const discovery = await this.discoverGames();
+    const gameLabels = [
+      discovery.bg1Candidates.find((candidate) => candidate.id === bg1CandidateId)?.label ?? "Not selected",
+      discovery.bg2Candidates.find((candidate) => candidate.id === bg2CandidateId)?.label ?? "Not selected",
+    ];
+    return { reviewToken: "fixture-review-token", digest: "fixture-review-8d6d75", destination, gameLabels, evaluation };
+  }
+
+  startBuild(_reviewToken: string, _onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
+    return Promise.resolve({ runId: "fixture-run" });
+  }
+
+  resumeBuild(_installId: string, _onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
+    this.#buildIndex = 3;
+    return Promise.resolve({ runId: "fixture-run-resumed" });
+  }
+
+  getRunSnapshot(runId: string): Promise<RunSnapshot> {
+    return Promise.resolve({ runId, status: "running", events: [], report: null, error: null });
+  }
+
+  continueWaiting(_runId: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  cancelRun(_runId: string): Promise<void> {
+    return Promise.resolve();
   }
 
   getBuildSnapshot(): Promise<BuildSnapshot> {

@@ -437,6 +437,22 @@ fn cancellation_requested_before_runner_registration_is_not_lost() {
 }
 
 #[test]
+fn shared_control_handle_forwards_continue_waiting_to_the_active_runner() {
+    let controls = RunnerControlHandle::new();
+    let registration = controls.register().expect("register active runner");
+
+    controls.continue_waiting();
+
+    assert_eq!(
+        registration
+            .receiver()
+            .recv_timeout(Duration::from_secs(1))
+            .expect("continue-waiting decision was not delivered"),
+        RunnerControl::ContinueWaiting
+    );
+}
+
+#[test]
 fn process_spawn_failure_is_reported_without_panicking() {
     let mut harness = Harness::start_program(
         Path::new("definitely-missing-runner-test.exe").to_path_buf(),

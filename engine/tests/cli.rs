@@ -10,12 +10,17 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use bg_engine::acquire::{ArtifactCache, DownloadRequest};
+use bg_engine::cli::{
+    install_campaign_reviewed, resume_campaign_controlled_expected, review_install,
+    InstallCommandRequest, SelectionOverrides,
+};
 use bg_engine::digest::sha256_bytes;
 use bg_engine::events::ChannelSink;
 use bg_engine::games::{FileSystemProvider, SystemFileSystem};
 use bg_engine::lock::TargetLock;
 use bg_engine::receipt::{InstallReceipt, ReceiptOutcome, RECEIPT_SCHEMA_VERSION};
 use bg_engine::session::SessionStore;
+use bg_engine::weidu::runner::RunnerControlHandle;
 use serde_json::Value;
 use tempfile::TempDir;
 use zip::write::SimpleFileOptions;
@@ -251,6 +256,19 @@ fn install_args<'a>(
         "--cache",
         cache.to_str().unwrap(),
     ]
+}
+
+fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
+    InstallCommandRequest {
+        recipe: fixture.recipe.clone(),
+        preset: "recommended".to_owned(),
+        platform: "windows".to_owned(),
+        overrides: SelectionOverrides::default(),
+        bg1: fixture.bg1.clone(),
+        bg2: fixture.bg2.clone(),
+        managed_root: fixture.managed.clone(),
+        cache: fixture.cache.clone(),
+    }
 }
 
 fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, PathBuf) {
@@ -894,6 +912,55 @@ fn clap_rejects_unsafe_or_unknown_bypass_flags_with_usage_exit_code() {
         assert_eq!(output.status.code(), Some(2), "{}", stderr(&output));
         assert!(stderr(&output).contains(flag), "{}", stderr(&output));
     }
+}
+
+#[cfg(windows)]
+#[test]
+fn reviewed_install_rejects_a_recipe_changed_after_review_before_creating_state() {
+    let fixture = executable_fixture();
+    let request = install_request(&fixture);
+    let review = review_install(&request).expect("freeze install review identity");
+    let artifact = fixture.recipe.join("artifacts/eefixpack.toml");
+    let text = fs::read_to_string(&artifact).expect("read reviewed artifact");
+    fs::write(
+        &artifact,
+        text.replace("name = \"EE Fixpack\"", "name = \"Changed after Review\""),
+    )
+    .expect("change valid recipe metadata after Review");
+    let (sink, _events) = ChannelSink::unbounded();
+
+    let error = install_campaign_reviewed(&request, &review, &sink, &RunnerControlHandle::new())
+        .expect_err("changed reviewed recipe must not execute");
+
+    assert_eq!(error.code(), "review_changed");
+    assert!(!fixture.managed.exists());
+}
+
+#[cfg(windows)]
+#[test]
+fn resume_rejects_a_requested_install_id_that_does_not_match_the_ledger() {
+    let fixture = executable_fixture();
+    let mut command = executable_command(&fixture);
+    command.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+    let installed = command.output().expect("execute synthetic install");
+    assert!(installed.status.success(), "{}", stderr(&installed));
+    let (sink, _events) = ChannelSink::unbounded();
+
+    let error = resume_campaign_controlled_expected(
+        &fixture.managed,
+        "install-not-the-ledger-owner",
+        &sink,
+        &RunnerControlHandle::new(),
+    )
+    .expect_err("wrong install id must not resume this managed path");
+
+    assert_eq!(error.code(), "resume_identity_mismatch");
 }
 
 #[cfg(windows)]

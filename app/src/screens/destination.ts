@@ -18,7 +18,9 @@ export function destinationScreen(
   input.type = "text";
   input.value = evaluation.path;
   input.addEventListener("change", () => void onInspect(input.value));
-  const space = element("p", "path", `Requires ${evaluation.requiredSpace}; ${evaluation.availableSpace} available in this fixture.`);
+  const space = evaluation.requiredSpace !== undefined && evaluation.availableSpace !== undefined
+    ? element("p", "path", `Requires ${evaluation.requiredSpace}; ${evaluation.availableSpace} available in this fixture.`)
+    : element("p", "path", "Exact disk-space and write checks are repeated immediately before the build starts.");
   field.append(label, input, space);
   const continueButton = actionButton("Continue", next);
   continueButton.disabled = !evaluation.safe;

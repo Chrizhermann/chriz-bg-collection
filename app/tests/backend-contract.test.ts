@@ -4,8 +4,10 @@ import {
   BackendCommandError,
   FixtureBackend,
   NativeBackend,
+  type EventChannelFactory,
   type InvokeCommand,
 } from "../src/backend";
+import type { RunEventEnvelope } from "../src/contracts";
 
 describe("engine-shaped fixture backend", () => {
   it("returns semantic recipe controls without exposing WeiDU component numbers", async () => {
@@ -134,15 +136,68 @@ describe("native command adapter", () => {
     });
   });
 
-  it("fails closed instead of delegating unfinished native operations to fixtures", async () => {
+  it("maps destination, frozen review, detached events, snapshots, and scoped controls", async () => {
+    const selection = { platform: "windows", features: {}, inputs: {} } as const;
+    const events: RunEventEnvelope[] = [];
+    type TestChannel = { emit: (event: unknown) => void };
+    const channelFactory: EventChannelFactory = (onMessage) => ({ emit: onMessage });
+    const invoke = vi.fn<InvokeCommand>(async (command, args) => {
+      switch (command) {
+        case "inspect_destination":
+          expect(args).toEqual({ path: "D:\\Campaign", bg1CandidateId: "bg1", bg2CandidateId: "bg2" });
+          return { path: "D:\\Campaign", safe: true, title: "Ready", detail: "Isolated." };
+        case "freeze_review":
+          expect(args).toEqual({ selection, destination: "D:\\Campaign", bg1CandidateId: "bg1", bg2CandidateId: "bg2" });
+          return {
+            review_token: "review-opaque",
+            digest: "11".repeat(32),
+            destination: "D:\\Campaign",
+            game_labels: ["BG1", "BG2"],
+            evaluation: {
+              view: { categories: [], controls: [] },
+              normalized_selection: selection,
+              findings: [],
+              plan: { phases: [] },
+              selected_choice_count: 0,
+            },
+          };
+        case "start_build":
+          expect(args?.reviewToken).toBe("review-opaque");
+          (args?.onEvent as TestChannel).emit({
+            run_id: "run-1",
+            sequence_as_string: "1",
+            event: { type: "campaign_started", install_id: "install-1", resumed: false },
+          });
+          return { run_id: "run-1" };
+        case "get_run_snapshot":
+          expect(args).toEqual({ runId: "run-1" });
+          return { run_id: "run-1", status: "running", events: [], report: null, error: null };
+        case "continue_waiting":
+        case "cancel_run":
+          expect(args).toEqual({ runId: "run-1" });
+          return null;
+        default:
+          throw new Error(`Unexpected command ${command}`);
+      }
+    });
+    const backend = new NativeBackend(invoke, channelFactory);
+
+    await expect(backend.inspectDestination("D:\\Campaign", "bg1", "bg2")).resolves.toMatchObject({ safe: true });
+    const review = await backend.freezeReview(selection, "D:\\Campaign", "bg1", "bg2");
+    expect(review.reviewToken).toBe("review-opaque");
+    await expect(backend.startBuild(review.reviewToken, (event) => events.push(event))).resolves.toEqual({ runId: "run-1" });
+    expect(events[0]).toMatchObject({ runId: "run-1", sequenceAsString: "1", event: { type: "campaign_started" } });
+    await expect(backend.getRunSnapshot("run-1")).resolves.toMatchObject({ runId: "run-1", status: "running" });
+    await expect(backend.continueWaiting("run-1")).resolves.toBeUndefined();
+    await expect(backend.cancelRun("run-1")).resolves.toBeUndefined();
+  });
+
+  it("still fails closed for deferred native launch and diagnostics operations", async () => {
     const backend = new NativeBackend(async () => {
-      throw new Error("No native command should be invoked");
+      throw new Error("No connected command should be invoked");
     });
 
-    await expect(backend.inspectDestination("D:\\Campaign")).rejects.toMatchObject({
-      code: "command_not_available",
-    });
-    await expect(backend.getBuildSnapshot()).rejects.toMatchObject({
+    await expect(backend.exportDiagnostics()).rejects.toMatchObject({
       code: "command_not_available",
     });
   });

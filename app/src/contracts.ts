@@ -57,8 +57,8 @@ export interface DestinationEvaluation {
   readonly safe: boolean;
   readonly title: string;
   readonly detail: string;
-  readonly requiredSpace: string;
-  readonly availableSpace: string;
+  readonly requiredSpace?: string;
+  readonly availableSpace?: string;
 }
 
 export type FeatureDecision = "excluded" | "optional" | "default" | "mandatory";
@@ -133,10 +133,48 @@ export interface SelectionEvaluation {
 }
 
 export interface FrozenReview {
+  readonly reviewToken: string;
   readonly digest: string;
   readonly destination: string;
   readonly gameLabels: readonly string[];
   readonly evaluation: SelectionEvaluation;
+}
+
+export type EngineEvent =
+  | { readonly type: "campaign_started"; readonly install_id: string; readonly resumed: boolean }
+  | { readonly type: "phase_started"; readonly name: string }
+  | { readonly type: "step_started"; readonly id: string; readonly label: string }
+  | { readonly type: "step_progress"; readonly id: string; readonly done: number; readonly total: number }
+  | { readonly type: "console_line"; readonly step_id: string; readonly stream: "stdout" | "stderr"; readonly line: string }
+  | { readonly type: "attention_required"; readonly step_id: string; readonly reason: string; readonly last_output: string }
+  | { readonly type: "step_finished"; readonly id: string; readonly outcome: "succeeded" | "failed" | "skipped" }
+  | { readonly type: "campaign_finished"; readonly install_id: string }
+  | { readonly type: "manual_download_needed"; readonly mod_id: string; readonly page: string; readonly expected_sha256: string; readonly drop_dir: string }
+  | { readonly type: "error"; readonly step_id: string | null; readonly message: string };
+
+export interface RunEventEnvelope {
+  readonly runId: string;
+  readonly sequenceAsString: string;
+  readonly event: EngineEvent;
+}
+
+export interface StartBuildResponse {
+  readonly runId: string;
+}
+
+export interface CampaignReport {
+  readonly install_id: string;
+  readonly managed_root: string;
+  readonly plan_sha256: string;
+  readonly status: { readonly status: string; readonly step_id?: string; readonly reason?: string };
+}
+
+export interface RunSnapshot {
+  readonly runId: string;
+  readonly status: string;
+  readonly events: readonly RunEventEnvelope[];
+  readonly report: CampaignReport | null;
+  readonly error: CommandErrorPayload | null;
 }
 
 export type BuildState =

@@ -105,6 +105,20 @@ impl RunnerControlHandle {
         })
     }
 
+    /// Rearm the silence watchdog for the active runner, if any.
+    pub fn continue_waiting(&self) {
+        let sender = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .active
+            .as_ref()
+            .map(|(_, sender)| sender.clone());
+        if let Some(sender) = sender {
+            let _ = sender.send(RunnerControl::ContinueWaiting);
+        }
+    }
+
     /// Persist a cancellation request and forward it to the active runner, if any.
     pub fn cancel(&self) {
         let sender = {

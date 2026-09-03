@@ -1,7 +1,7 @@
-import type { Backend } from "./backend";
+import { BackendCommandError, type Backend } from "./backend";
 import { createAppShell } from "./components/app-shell";
 import type { TechnicalLogState } from "./components/technical-log";
-import type { DestinationEvaluation, GameCandidate, GameDiscovery, ManagedInstallation, Route, UpdateSummary } from "./contracts";
+import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, ManagedInstallation, Route, RunEventEnvelope, UpdateSummary } from "./contracts";
 import { buildScreen } from "./screens/build";
 import { completeScreen } from "./screens/complete";
 import { destinationScreen } from "./screens/destination";
@@ -12,6 +12,7 @@ import { setupScreen } from "./screens/setup";
 import { updatesScreen } from "./screens/updates";
 import { welcomeScreen } from "./screens/welcome";
 import { initialState, reduce, type AppAction, type AppState } from "./state";
+import { statusCard } from "./components/status-card";
 
 export interface AppHandle {
   navigate(route: Route): Promise<void>;
@@ -19,31 +20,64 @@ export interface AppHandle {
 
 class AppController implements AppHandle {
   #state: AppState = initialState();
+  #status!: BackendStatus;
   #discovery!: GameDiscovery;
-  #destination!: DestinationEvaluation;
+  #destination: DestinationEvaluation = {
+    path: "",
+    safe: false,
+    title: "Choose a new campaign folder",
+    detail: "The installer will verify that it is separate from both clean source games.",
+  };
   #installations: readonly ManagedInstallation[] = [];
-  #updates!: UpdateSummary;
+  #updates: UpdateSummary = {
+    app: "Not checked",
+    recipe: "Not checked",
+    message: "Signed update checks are not connected in this private alpha.",
+  };
   #revision = 0;
+  #runId: string | null = null;
+  #installId: string | null = null;
+  #retryAvailable = false;
+  #commandError: BackendCommandError | null = null;
   #logState: TechnicalLogState = { paused: false, open: false };
 
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
   async initialize(): Promise<void> {
-    [this.#discovery, this.#destination, this.#installations, this.#updates] = await Promise.all([
-      this.backend.discoverGames(),
-      this.backend.inspectDestination(this.#state.destinationPath),
-      this.backend.listManagedInstallations(),
-      this.backend.getUpdates(),
-    ]);
+    this.#status = await this.backend.getStatus();
+    this.#discovery = await this.backend.discoverGames();
     this.#dispatch({ type: "select-game", game: "bg1", id: this.#discovery.selectedBg1Id });
     this.#dispatch({ type: "select-game", game: "bg2", id: this.#discovery.selectedBg2Id });
+    if (this.#status.mode === "fixture") {
+      [this.#destination, this.#installations, this.#updates] = await Promise.all([
+        this.backend.inspectDestination(
+          this.#state.destinationPath,
+          this.#state.selectedBg1Id,
+          this.#state.selectedBg2Id,
+        ),
+        this.backend.listManagedInstallations(),
+        this.backend.getUpdates(),
+      ]);
+    } else {
+      this.#dispatch({ type: "set-destination", path: "" });
+    }
     await this.#evaluate(false);
     this.#render();
   }
 
   async navigate(route: Route): Promise<void> {
+    const buildNeedsControls = this.#state.build !== null
+      && (["running", "attention", "waiting-manual"].includes(this.#state.build.state)
+        || (this.#state.build.state === "failed" && this.#retryAvailable));
+    if (this.#status.mode === "native"
+      && route !== "build"
+      && buildNeedsControls) {
+      route = "build";
+    }
     if (route === "build" && this.#state.frozenReview === null) await this.#freezeReview(false);
-    if (route === "build") this.#dispatch({ type: "build-updated", build: await this.backend.getBuildSnapshot() });
+    if (route === "build" && this.#status.mode === "fixture") {
+      this.#dispatch({ type: "build-updated", build: await this.backend.getBuildSnapshot() });
+    }
     this.#dispatch({ type: "navigate", route });
     this.#render();
   }
@@ -71,7 +105,19 @@ class AppController implements AppHandle {
   }
 
   async #inspectDestination(path: string): Promise<void> {
-    this.#destination = await this.backend.inspectDestination(path);
+    this.#destination = {
+      path,
+      safe: false,
+      title: "Checking this destination",
+      detail: "The folder has not completed native safety inspection yet.",
+    };
+    this.#dispatch({ type: "set-destination", path });
+    this.#render();
+    this.#destination = await this.backend.inspectDestination(
+      path,
+      this.#state.selectedBg1Id,
+      this.#state.selectedBg2Id,
+    );
     this.#dispatch({ type: "set-destination", path: this.#destination.path });
     this.#render();
   }
@@ -83,13 +129,53 @@ class AppController implements AppHandle {
   }
 
   async #freezeReview(render = true): Promise<void> {
-    const gameLabels = this.#selectedGames().map((candidate) => candidate.label);
-    const review = await this.backend.freezeReview(this.#state.selection, this.#destination.path, gameLabels);
-    this.#dispatch({ type: "review-frozen", review });
-    if (render) await this.navigate("build");
+    try {
+      const displayedEvaluation = this.#state.evaluation;
+      const review = await this.backend.freezeReview(
+        this.#state.selection,
+        this.#destination.path,
+        this.#state.selectedBg1Id,
+        this.#state.selectedBg2Id,
+      );
+      if (this.#status.mode === "native"
+        && JSON.stringify(review.evaluation) !== JSON.stringify(displayedEvaluation)) {
+        const revision = ++this.#revision;
+        this.#dispatch({ type: "evaluation-requested", revision });
+        this.#dispatch({ type: "evaluation-resolved", revision, evaluation: review.evaluation });
+        this.#dispatch({ type: "review-cleared" });
+        throw new BackendCommandError({
+          code: "review_display_changed",
+          message: "The selected options changed while Review was open.",
+          recovery_action: "Read the refreshed Review, then freeze it again.",
+          technical_detail: "The server-frozen evaluation did not equal the evaluation displayed before Start.",
+        });
+      }
+      this.#dispatch({ type: "review-frozen", review });
+      if (this.#status.mode === "native") {
+        this.#retryAvailable = false;
+        this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
+        const started = await this.backend.startBuild(review.reviewToken, (event) => this.#handleRunEvent(event));
+        this.#runId = started.runId;
+      }
+      if (render && this.#state.build?.state !== "complete") await this.navigate("build");
+    } catch (error: unknown) {
+      this.#dispatch({ type: "review-cleared" });
+      this.#dispatch({ type: "build-cleared" });
+      throw error;
+    }
   }
 
   async #advanceBuild(): Promise<void> {
+    if (this.#status.mode === "native") {
+      if (this.#runId === null) return;
+      await this.backend.continueWaiting(this.#runId);
+      const build = this.#state.build;
+      if (build !== null) {
+        this.#dispatch({ type: "build-updated", build: { ...build, state: "running", headline: "Build in progress", detail: "WeiDU is continuing under installer supervision." } });
+      }
+      this.#render();
+      return;
+    }
     const build = await this.backend.advanceBuild();
     this.#dispatch({ type: "build-updated", build });
     if (build.state === "complete") {
@@ -99,8 +185,126 @@ class AppController implements AppHandle {
   }
 
   async #retryBuild(): Promise<void> {
+    if (this.#status.mode === "native") {
+      if (this.#installId === null) return;
+      const started = await this.backend.resumeBuild(this.#installId, (event) => this.#handleRunEvent(event));
+      this.#runId = started.runId;
+      this.#retryAvailable = false;
+      if (this.#state.build?.state === "failed") {
+        this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
+      }
+      this.#render();
+      return;
+    }
     this.#dispatch({ type: "build-updated", build: await this.backend.retryBuild() });
     this.#render();
+  }
+
+  async #cancelBuild(): Promise<void> {
+    if (this.#runId !== null) await this.backend.cancelRun(this.#runId);
+  }
+
+  #safely(operation: () => Promise<void>): void {
+    this.#commandError = null;
+    void operation().catch((error: unknown) => {
+      this.#commandError = error instanceof BackendCommandError
+        ? error
+        : new BackendCommandError({
+          code: "ui_operation_failed",
+          message: error instanceof Error ? error.message : "The installer could not complete that action.",
+          recovery_action: "Review the current screen and try again.",
+          technical_detail: String(error),
+        });
+      this.#render();
+    });
+  }
+
+  #initialNativeBuild(): BuildSnapshot {
+    const phases = this.#state.evaluation?.plan.phases ?? [];
+    return {
+      state: "running",
+      headline: "Build in progress",
+      detail: "The reviewed installation is starting in a separate managed copy.",
+      phases: phases.map((phase, index) => ({ ...phase, state: index === 0 ? "current" : "pending" })),
+      logTail: [],
+      manualArchiveName: null,
+    };
+  }
+
+  #handleRunEvent(envelope: RunEventEnvelope): void {
+    this.#runId = envelope.runId;
+    const current = this.#state.build ?? this.#initialNativeBuild();
+    let next: BuildSnapshot = current;
+    const event = envelope.event;
+    const log = (line: string): readonly string[] => [...current.logTail, line].slice(-200);
+    switch (event.type) {
+      case "campaign_started":
+        this.#installId = event.install_id;
+        next = { ...current, state: "running", headline: event.resumed ? "Resuming build" : "Build in progress", detail: "The engine is executing the exact frozen recipe.", logTail: log(`${envelope.sequenceAsString}: campaign ${event.install_id} started`) };
+        break;
+      case "phase_started": {
+        const phaseIds: Readonly<Record<string, string>> = {
+          "Prepare Baldur's Gate: Enhanced Edition": "bg1-preparation",
+          "Prepare Baldur's Gate II: Enhanced Edition": "bg2-preparation",
+          "Build the EET campaign": "eet-initialization",
+          "Install the curated collection": "main",
+          "Finalize EET": "eet-finalization",
+          "Apply reviewed final compatibility fixes": "post-eet-end",
+        };
+        const matchedIndex = current.phases.findIndex((phase) => phase.id === phaseIds[event.name]);
+        const currentIndex = matchedIndex >= 0
+          ? matchedIndex
+          : Math.max(0, current.phases.findIndex((phase) => phase.state === "pending"));
+        next = { ...current, phases: current.phases.map((phase, index) => ({ ...phase, state: index < currentIndex ? "done" : index === currentIndex ? "current" : "pending" })), logTail: log(`${envelope.sequenceAsString}: ${event.name}`) };
+        break;
+      }
+      case "step_started":
+        next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
+        break;
+      case "step_progress":
+        next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.id} ${event.done}/${event.total}`) };
+        break;
+      case "console_line":
+        next = { ...current, logTail: log(event.line) };
+        break;
+      case "attention_required":
+        next = { ...current, state: "attention", headline: "Your attention is needed", detail: event.reason, logTail: log(event.last_output) };
+        break;
+      case "step_finished":
+        next = event.outcome === "failed"
+          ? { ...current, state: "running", headline: "Finalizing failure evidence", detail: `The engine is closing ${event.id} safely before Retry becomes available.`, logTail: log(`${event.id}: failed`) }
+          : { ...current, logTail: log(`${event.id}: ${event.outcome}`) };
+        break;
+      case "manual_download_needed":
+        next = { ...current, state: "waiting-manual", headline: "Manual archive needed", detail: `Download ${event.mod_id} from its verified source and place it in ${event.drop_dir}.`, manualArchiveName: event.mod_id, logTail: log(`Expected SHA-256: ${event.expected_sha256}`) };
+        break;
+      case "error":
+        if (event.step_id === null) {
+          next = { ...current, state: "failed", headline: "The build stopped safely", detail: event.message, logTail: log(event.message) };
+          if (this.#status.mode === "native") void this.#refreshRetryAvailability(envelope.runId);
+        } else {
+          next = { ...current, state: "running", headline: "Finalizing failure evidence", detail: event.message, logTail: log(event.message) };
+        }
+        break;
+      case "campaign_finished":
+        this.#installId = event.install_id;
+        next = { ...current, state: "complete", headline: "Build verified", detail: "The campaign copy and its durable receipt are complete.", phases: current.phases.map((phase) => ({ ...phase, state: "done" })), logTail: log(`${envelope.sequenceAsString}: campaign complete`) };
+        break;
+    }
+    this.#dispatch({ type: "build-updated", build: next });
+    if (event.type === "campaign_finished") this.#dispatch({ type: "navigate", route: "complete" });
+    this.#render();
+  }
+
+  async #refreshRetryAvailability(runId: string): Promise<void> {
+    try {
+      const snapshot = await this.backend.getRunSnapshot(runId);
+      this.#retryAvailable = snapshot.status === "failed" && snapshot.report !== null;
+      this.#render();
+    } catch (error: unknown) {
+      this.#commandError = error instanceof BackendCommandError ? error : null;
+      this.#render();
+    }
   }
 
   async #exportDiagnostics(): Promise<void> {
@@ -117,16 +321,17 @@ class AppController implements AppHandle {
     const evaluation = this.#state.evaluation;
     if (evaluation === null) return;
     const navigate = (route: Route): Promise<void> => this.navigate(route);
+    const safely = (operation: () => Promise<void>): void => this.#safely(operation);
     let content: HTMLElement;
     switch (this.#state.route) {
       case "home":
-        content = homeScreen(this.#installations, () => void navigate("welcome"));
+        content = homeScreen(this.#installations, () => safely(() => navigate("welcome")));
         break;
       case "updates":
         content = updatesScreen(this.#updates);
         break;
       case "welcome":
-        content = welcomeScreen(() => navigate("games"));
+        content = welcomeScreen(() => safely(() => navigate("games")));
         break;
       case "games":
         content = gamesScreen(
@@ -135,32 +340,45 @@ class AppController implements AppHandle {
           this.#state.selectedBg2Id,
           (game, id) => this.#dispatch({ type: "select-game", game, id }),
           () => this.#back(),
-          () => navigate("destination"),
+          () => safely(() => navigate("destination")),
         );
         break;
       case "destination":
-        content = destinationScreen(this.#destination, (path) => this.#inspectDestination(path), () => this.#back(), () => void navigate("setup"));
+        content = destinationScreen(this.#destination, (path) => safely(() => this.#inspectDestination(path)), () => this.#back(), () => safely(() => navigate("setup")));
         break;
       case "setup":
-        content = setupScreen(evaluation, (id, selected) => this.#toggleFeature(id, selected), () => this.#back(), () => void navigate("review"));
+        content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => this.#back(), () => safely(() => navigate("review")));
         break;
       case "review":
-        content = reviewScreen(evaluation, this.#destination, this.#selectedGames(), () => this.#back(), () => this.#freezeReview());
+        content = reviewScreen(evaluation, this.#destination, this.#selectedGames(), () => this.#back(), () => safely(() => this.#freezeReview()));
         break;
       case "build":
         content = buildScreen(this.#state.build ?? { state: "running", headline: "Build in progress", detail: "Loading fixture snapshot.", phases: evaluation.plan.phases.map((phase, index) => ({ ...phase, state: index === 0 ? "current" : "pending" })), logTail: [], manualArchiveName: null }, {
-          advance: () => this.#advanceBuild(),
-          retry: () => this.#retryBuild(),
-          diagnostics: () => this.#exportDiagnostics(),
+          advance: () => safely(() => this.#advanceBuild()),
+          retry: () => safely(() => this.#retryBuild()),
+          cancel: () => safely(() => this.#cancelBuild()),
+          diagnostics: () => safely(() => this.#exportDiagnostics()),
+          fixture: this.#status.mode === "fixture",
+          retryAvailable: this.#status.mode === "fixture" || this.#retryAvailable,
           logState: this.#logState,
           updateLogState: (state) => { this.#logState = state; },
         });
         break;
       case "complete":
-        content = completeScreen(this.#state.frozenReview, () => void navigate("home"));
+        content = completeScreen(this.#state.frozenReview, () => safely(() => navigate("home")));
         break;
     }
-    this.root.replaceChildren(createAppShell(this.#state.route, content, navigate));
+    if (this.#commandError !== null) {
+      const alert = statusCard(this.#commandError.message, this.#commandError.recoveryAction, "danger");
+      alert.setAttribute("role", "alert");
+      content.append(alert);
+    }
+    this.root.replaceChildren(createAppShell(
+      this.#state.route,
+      content,
+      (route) => safely(() => navigate(route)),
+      this.#status.mode,
+    ));
     (focusTargetId ? this.root.querySelector<HTMLElement>(`#${focusTargetId}`) : this.root.querySelector<HTMLElement>("h1"))?.focus();
   }
 }

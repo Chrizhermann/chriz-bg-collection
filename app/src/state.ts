@@ -22,7 +22,9 @@ export type AppAction =
   | { readonly type: "evaluation-requested"; readonly revision: number }
   | { readonly type: "evaluation-resolved"; readonly revision: number; readonly evaluation: SelectionEvaluation }
   | { readonly type: "review-frozen"; readonly review: FrozenReview }
-  | { readonly type: "build-updated"; readonly build: BuildSnapshot };
+  | { readonly type: "review-cleared" }
+  | { readonly type: "build-updated"; readonly build: BuildSnapshot }
+  | { readonly type: "build-cleared" };
 
 export function initialState(): AppState {
   return {
@@ -62,7 +64,11 @@ export function reduce(state: AppState, action: AppAction): AppState {
         : state;
     case "review-frozen":
       return { ...state, frozenReview: action.review };
+    case "review-cleared":
+      return { ...state, frozenReview: null };
     case "build-updated":
       return { ...state, build: action.build };
+    case "build-cleared":
+      return { ...state, build: null };
   }
 }
