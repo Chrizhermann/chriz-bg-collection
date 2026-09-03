@@ -1,14 +1,22 @@
+import { invoke } from "@tauri-apps/api/core";
+
 import type {
   BackendStatus,
   BuildSnapshot,
+  CommandErrorPayload,
   DestinationEvaluation,
+  FeatureControl,
   FixtureOptions,
   FrozenReview,
+  Freshness,
+  GameCandidate,
   GameDiscovery,
+  GameRole,
   ManagedInstallation,
   NormalizedSelection,
   PhaseSummary,
   SelectionEvaluation,
+  Storefront,
   UpdateSummary,
 } from "./contracts";
 
@@ -17,6 +25,7 @@ export interface Backend {
   // may map snake_case command payloads without leaking transport casing here.
   getStatus(): Promise<BackendStatus>;
   discoverGames(): Promise<GameDiscovery>;
+  inspectGamePath(role: GameRole, path: string): Promise<GameCandidate>;
   inspectDestination(path: string): Promise<DestinationEvaluation>;
   evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation>;
   freezeReview(
@@ -30,6 +39,205 @@ export interface Backend {
   exportDiagnostics(): Promise<{ readonly path: string }>;
   listManagedInstallations(): Promise<readonly ManagedInstallation[]>;
   getUpdates(): Promise<UpdateSummary>;
+}
+
+export type InvokeCommand = (
+  command: string,
+  args?: Record<string, unknown>,
+) => Promise<unknown>;
+
+type BootstrapWire = {
+  readonly mode: "native";
+  readonly engine_version: string;
+  readonly recipe_version: string | null;
+};
+
+type GameCandidateWire = {
+  readonly id: string;
+  readonly label: string;
+  readonly path: string;
+  readonly storefront: Storefront;
+  readonly build: string | null;
+  readonly freshness: Freshness;
+  readonly eligible: boolean;
+  readonly findings: readonly string[];
+};
+
+type GameDiscoveryWire = {
+  readonly bg1_candidates: readonly GameCandidateWire[];
+  readonly bg2_candidates: readonly GameCandidateWire[];
+  readonly selected_bg1_id: string;
+  readonly selected_bg2_id: string;
+};
+
+type FeatureControlWire = Omit<FeatureControl, "unavailableReason"> & {
+  readonly unavailable_reason: string | null;
+};
+
+type SelectionEvaluationWire = {
+  readonly view: {
+    readonly categories: readonly string[];
+    readonly controls: readonly FeatureControlWire[];
+  };
+  readonly normalized_selection: NormalizedSelection;
+  readonly findings: readonly {
+    readonly rule: string;
+    readonly feature_id: string;
+    readonly message: string;
+  }[];
+  readonly plan: {
+    readonly phases: readonly PhaseSummary[];
+  };
+  readonly selected_choice_count: number;
+};
+
+const invokeNative: InvokeCommand = (
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<unknown> => invoke<unknown>(command, args);
+
+function isCommandErrorPayload(value: unknown): value is CommandErrorPayload {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<CommandErrorPayload>;
+  return typeof candidate.code === "string"
+    && typeof candidate.message === "string"
+    && typeof candidate.recovery_action === "string"
+    && typeof candidate.technical_detail === "string";
+}
+
+export class BackendCommandError extends Error {
+  readonly code: string;
+  readonly recoveryAction: string;
+  readonly technicalDetail: string;
+
+  constructor(payload: CommandErrorPayload) {
+    super(payload.message);
+    this.name = "BackendCommandError";
+    this.code = payload.code;
+    this.recoveryAction = payload.recovery_action;
+    this.technicalDetail = payload.technical_detail;
+  }
+}
+
+function normalizeCommandError(error: unknown): BackendCommandError {
+  if (error instanceof BackendCommandError) return error;
+  if (isCommandErrorPayload(error)) return new BackendCommandError(error);
+  const detail = error instanceof Error ? error.message : String(error);
+  return new BackendCommandError({
+    code: "native_command_failed",
+    message: "The installer could not complete that native check.",
+    recovery_action: "Retry the check. If it still fails, keep the technical detail for diagnosis.",
+    technical_detail: detail,
+  });
+}
+
+function projectCandidate(candidate: GameCandidateWire): GameCandidate {
+  return candidate;
+}
+
+export class NativeBackend implements Backend {
+  readonly #invoke: InvokeCommand;
+
+  constructor(invokeCommand: InvokeCommand = invokeNative) {
+    this.#invoke = invokeCommand;
+  }
+
+  async getStatus(): Promise<BackendStatus> {
+    const status = await this.#command<BootstrapWire>("bootstrap");
+    return {
+      mode: status.mode,
+      engineVersion: status.engine_version,
+      recipeVersion: status.recipe_version,
+    };
+  }
+
+  async discoverGames(): Promise<GameDiscovery> {
+    const discovery = await this.#command<GameDiscoveryWire>("discover_games");
+    return {
+      bg1Candidates: discovery.bg1_candidates.map(projectCandidate),
+      bg2Candidates: discovery.bg2_candidates.map(projectCandidate),
+      selectedBg1Id: discovery.selected_bg1_id,
+      selectedBg2Id: discovery.selected_bg2_id,
+    };
+  }
+
+  async inspectGamePath(role: GameRole, path: string): Promise<GameCandidate> {
+    return projectCandidate(await this.#command<GameCandidateWire>("inspect_game_path", { role, path }));
+  }
+
+  inspectDestination(_path: string): Promise<DestinationEvaluation> {
+    return this.#unavailable("Destination validation");
+  }
+
+  async evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation> {
+    const evaluation = await this.#command<SelectionEvaluationWire>("evaluate_build", { selection });
+    return {
+      view: {
+        categories: evaluation.view.categories,
+        controls: evaluation.view.controls.map((control) => {
+          const { unavailable_reason: unavailableReason, ...rest } = control;
+          return { ...rest, unavailableReason };
+        }),
+      },
+      normalizedSelection: evaluation.normalized_selection,
+      findings: evaluation.findings.map((finding) => ({
+        rule: finding.rule,
+        featureId: finding.feature_id,
+        message: finding.message,
+      })),
+      plan: evaluation.plan,
+      selectedChoiceCount: evaluation.selected_choice_count,
+    };
+  }
+
+  freezeReview(
+    _selection: NormalizedSelection,
+    _destination: string,
+    _gameLabels: readonly string[],
+  ): Promise<FrozenReview> {
+    return this.#unavailable("Frozen review");
+  }
+
+  getBuildSnapshot(): Promise<BuildSnapshot> {
+    return this.#unavailable("Build status");
+  }
+
+  advanceBuild(): Promise<BuildSnapshot> {
+    return this.#unavailable("Build execution");
+  }
+
+  retryBuild(): Promise<BuildSnapshot> {
+    return this.#unavailable("Build retry");
+  }
+
+  exportDiagnostics(): Promise<{ readonly path: string }> {
+    return this.#unavailable("Diagnostics export");
+  }
+
+  listManagedInstallations(): Promise<readonly ManagedInstallation[]> {
+    return this.#unavailable("Managed installations");
+  }
+
+  getUpdates(): Promise<UpdateSummary> {
+    return this.#unavailable("Update checks");
+  }
+
+  async #command<T>(command: string, args?: Record<string, unknown>): Promise<T> {
+    try {
+      return await this.#invoke(command, args) as T;
+    } catch (error: unknown) {
+      throw normalizeCommandError(error);
+    }
+  }
+
+  #unavailable<T>(operation: string): Promise<T> {
+    return Promise.reject(new BackendCommandError({
+      code: "command_not_available",
+      message: `${operation} is not connected to the native engine yet.`,
+      recovery_action: "Use only the connected read-only setup checks in this build.",
+      technical_detail: "Deferred Task 23 command surface.",
+    }));
+  }
 }
 
 const phases: readonly PhaseSummary[] = [
@@ -69,16 +277,31 @@ export class FixtureBackend implements Backend {
       selectedBg1Id: "bg1-fresh",
       selectedBg2Id: "bg2-fresh",
       bg1Candidates: [
-        { id: "bg1-fresh", label: "BG:EE + SoD — clean", path: this.#options.textOverrides?.gamePath ?? "C:\\Fixture\\BGEE", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
-        { id: "bg1-modified", label: "BG:EE — modified", path: "C:\\Fixture\\BGEE Modified", freshness: "modified", eligible: false, findings: ["Files differ from a clean store installation."] },
-        { id: "bg1-old", label: "BG:EE — old version", path: "C:\\Fixture\\BGEE Old", freshness: "unsupported-version", eligible: false, findings: ["The installed game version is not supported."] },
-        { id: "bg1-nosod", label: "BG:EE — SoD missing", path: "C:\\Fixture\\BGEE No SoD", freshness: "missing-sod", eligible: false, findings: ["Siege of Dragonspear is required for this EET recipe."] },
+        { id: "bg1-fresh", label: "BG:EE + SoD — clean", path: this.#options.textOverrides?.gamePath ?? "C:\\Fixture\\BGEE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
+        { id: "bg1-modified", label: "BG:EE — modified", path: "C:\\Fixture\\BGEE Modified", storefront: "steam", build: "2.7.3.0", freshness: "modified", eligible: false, findings: ["Files differ from a clean store installation."] },
+        { id: "bg1-old", label: "BG:EE — old version", path: "C:\\Fixture\\BGEE Old", storefront: "steam", build: "2.6.6.0", freshness: "unsupported-version", eligible: false, findings: ["The installed game version is not supported."] },
+        { id: "bg1-nosod", label: "BG:EE — SoD missing", path: "C:\\Fixture\\BGEE No SoD", storefront: "steam", build: "2.7.3.0", freshness: "missing-sod", eligible: false, findings: ["Siege of Dragonspear is required for this EET recipe."] },
       ],
       bg2Candidates: [
-        { id: "bg2-fresh", label: "BGII:EE — clean", path: "C:\\Fixture\\BG2EE", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
-        { id: "bg2-store", label: "BGII:EE — verify storefront", path: "C:\\Fixture\\BG2EE Other", freshness: "unverified-storefront", eligible: false, findings: ["This storefront layout has not been verified yet."] },
+        { id: "bg2-fresh", label: "BGII:EE — clean", path: "C:\\Fixture\\BG2EE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
+        { id: "bg2-store", label: "BGII:EE — verify storefront", path: "C:\\Fixture\\BG2EE Other", storefront: "gog", build: "2.7.3.0", freshness: "unverified-storefront", eligible: false, findings: ["This storefront layout has not been verified yet."] },
       ],
     });
+  }
+
+  async inspectGamePath(role: GameRole, path: string): Promise<GameCandidate> {
+    const discovery = await this.discoverGames();
+    const candidates = role === "bgee_sod" ? discovery.bg1Candidates : discovery.bg2Candidates;
+    return candidates.find((candidate) => candidate.path === path) ?? {
+      id: `fixture-browsed-${role}`,
+      label: role === "bgee_sod" ? "BG:EE + SoD — browsed fixture" : "BGII:EE — browsed fixture",
+      path,
+      storefront: "steam",
+      build: null,
+      freshness: "modified",
+      eligible: false,
+      findings: ["Fixture browsing never accepts an unmodeled source as clean."],
+    };
   }
 
   inspectDestination(path: string): Promise<DestinationEvaluation> {

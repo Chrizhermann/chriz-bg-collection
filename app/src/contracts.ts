@@ -15,17 +15,31 @@ export interface BackendStatus {
   readonly recipeVersion: string | null;
 }
 
+export interface CommandErrorPayload {
+  readonly code: string;
+  readonly message: string;
+  readonly recovery_action: string;
+  readonly technical_detail: string;
+}
+
+export type GameRole = "bgee_sod" | "bg2ee";
+export type Storefront = "steam" | "gog";
+
 export type Freshness =
   | "fresh"
   | "modified"
   | "unsupported-version"
   | "missing-sod"
-  | "unverified-storefront";
+  | "unverified-storefront"
+  | "unknown-fingerprint"
+  | "unsupported-locale";
 
 export interface GameCandidate {
   readonly id: string;
   readonly label: string;
   readonly path: string;
+  readonly storefront: Storefront;
+  readonly build: string | null;
   readonly freshness: Freshness;
   readonly eligible: boolean;
   readonly findings: readonly string[];

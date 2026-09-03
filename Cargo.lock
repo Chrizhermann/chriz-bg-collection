@@ -382,8 +382,11 @@ name = "chriz-bg-app"
 version = "0.1.0-alpha.1"
 dependencies = [
  "chriz-bg-engine",
+ "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
+ "tempfile",
 ]
 
 [[package]]

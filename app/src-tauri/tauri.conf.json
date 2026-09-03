@@ -31,6 +31,9 @@
     "active": true,
     "targets": ["nsis"],
     "icon": ["icons/icon.ico"],
+    "resources": {
+      "../../manifest/": "manifest/"
+    },
     "windows": {
       "nsis": {
         "installMode": "currentUser"

@@ -21,3 +21,6 @@ pub mod validate;
 pub mod weidu;
 
 pub use loader::Manifest;
+
+/// Compiled engine package version exposed to native presentation adapters.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
