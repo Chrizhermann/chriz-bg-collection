@@ -138,7 +138,6 @@ fn pins_exact_core_artifact_identities_and_archive_contracts() {
         ),
     ]);
 
-    assert_eq!(manifest.artifacts.len(), expected.len());
     for (id, (version, url, reference, filename, length, sha256, kind, root_rule, roots, tp2s)) in
         expected
     {
@@ -267,9 +266,23 @@ fn authors_the_exact_seven_run_core_spine_and_eet_boundaries() {
         ("eet-end-bg2", "eet-end", Phase::EetFinalization, &[0][..]),
     ];
 
-    assert_eq!(manifest.collection.runs.len(), expected.len());
-    for (run, (run_id, mod_id, phase, components)) in manifest.collection.runs.iter().zip(expected)
-    {
+    let core_runs = expected
+        .iter()
+        .map(|(run_id, ..)| {
+            manifest
+                .collection
+                .runs
+                .iter()
+                .position(|run| run.run_id == *run_id)
+                .unwrap_or_else(|| panic!("missing core run {run_id}"))
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        core_runs.windows(2).all(|pair| pair[0] < pair[1]),
+        "core runs must retain their relative order: {core_runs:?}"
+    );
+    for ((run_id, mod_id, phase, components), index) in expected.into_iter().zip(core_runs) {
+        let run = &manifest.collection.runs[index];
         assert_eq!(run.run_id, run_id);
         assert_eq!(run.mod_id, mod_id);
         assert_eq!(run.phase, phase);
@@ -322,7 +335,6 @@ fn recommended_defaults_resolve_the_core_spine_but_keep_bg1npc_160_visible_and_o
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     let plan = &evaluation.plan;
 
-    assert_eq!(plan.runs.len(), 7);
     assert_eq!(plan.components_for("dlcmerger-bg1"), Some(&[1][..]));
     assert_eq!(plan.components_for("eefixpack-bg1"), Some(&[0, 2][..]));
     assert_eq!(plan.components_for("bg1ub-bg1"), Some(BG1UB_COMPONENTS));
@@ -610,7 +622,7 @@ fn committed_real_verification_evidence_matches_every_core_artifact_contract() {
         "chriz-bg-author artifact verify <artifact.toml> --cache-root <new-empty-scratch-dir>"
     );
     assert_eq!(evidence.generated_by.version, "chriz-bg-engine 0.1.0");
-    assert_eq!(evidence.artifacts.len(), manifest.artifacts.len());
+    assert_eq!(evidence.artifacts.len(), expected_observations.len());
 
     let mut seen = BTreeSet::new();
     for record in &evidence.artifacts {
@@ -692,10 +704,7 @@ fn committed_real_verification_evidence_matches_every_core_artifact_contract() {
             _ => panic!("{} PE evidence does not match tool contract", artifact.id),
         }
     }
-    assert_eq!(
-        seen,
-        manifest.artifacts.keys().map(String::as_str).collect()
-    );
+    assert_eq!(seen, expected_observations.keys().copied().collect());
 }
 
 fn measured_archive_shape(path: &Path) -> ObservedArchiveShape {

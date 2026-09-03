@@ -1,0 +1,32 @@
+id = "paina-1.9"
+name = "Pai'Na NPC"
+version = "1.9"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-tag-archive"
+url = "https://codeload.github.com/TheArtisanBG/Pai-Na-NPC-mod-for-BG2-EE/zip/refs/tags/v1.9"
+reference = "v1.9"
+expected_filename = "Pai-Na-NPC-mod-for-BG2-EE-1.9.zip"
+expected_length = 10772351
+sha256 = "8b448170062e4dba39bcd23909228cc80131a526fc56ee7215a0a0e96540371c"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["paina"]
+tp2_paths = ["paina/Paina.tp2"]
+
+[archive.limits]
+max_depth = 12
+max_entries = 512
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/TheArtisanBG/Pai-Na-NPC-mod-for-BG2-EE"
+license = "Fetch-only official upstream tag archive; the collection does not redistribute it"
+url = "https://github.com/TheArtisanBG/Pai-Na-NPC-mod-for-BG2-EE/releases/tag/v1.9"
+reviewed_on = "2026-09-04"

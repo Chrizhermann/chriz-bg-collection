@@ -1,0 +1,32 @@
+id = "rr-4.92"
+name = "Rogue Rebalancing"
+version = "4.92"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Spellhold-Studios/Rogue-Rebalancing/releases/download/v4.92/rr-v492.zip"
+reference = "v4.92"
+expected_filename = "rr-v492.zip"
+expected_length = 4823623
+sha256 = "692297f6da8fbfe40eeccfc3ac8fd449c66b2c8e91d3d59b70cd5866a69c503e"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["rr"]
+tp2_paths = ["rr/setup-rr.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Spellhold-Studios/Rogue-Rebalancing"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Spellhold-Studios/Rogue-Rebalancing/releases/tag/v4.92"
+reviewed_on = "2026-09-04"

@@ -1,0 +1,15 @@
+id = "yeslicknpc"
+artifact_id = "yeslicknpc-5.0"
+name = "Yeslick NPC for BGII"
+tp2 = "yeslicknpc/yeslicknpc.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Yeslick is a regular Fighter-Cleric"
+
+[[components]]
+id = 1
+name = "Yeslick is a Fighter-Alaghor of Clangeddin"

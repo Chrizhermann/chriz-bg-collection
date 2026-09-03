@@ -18,9 +18,9 @@ remains unavailable or excluded.
   stale v14.0 manifest source, and re-list both menus if the SHA changes.
 - [ ] [EE Fixpack](EEFIXPACK.md): recheck packaged releases at freeze and pin one explicit
   artifact. Never silently follow unreleased `master`.
-- [ ] [EEex](EEEX.md): update the manifest from v0.11 to v1.2.0 and encode its refreshed
+- [x] [EEex](EEEX.md): update the manifest from v0.11 to v1.2.0 and encode its refreshed
   nine-component all-on preset.
-- [ ] [Hidden Gameplay Options](HIDDENGAMEPLAYOPTIONS.md): update the manifest/pin list
+- [x] [Hidden Gameplay Options](HIDDENGAMEPLAYOPTIONS.md): update the manifest/pin list
   from the old v5.0/v5.1 state to the reviewed v5.2 target.
 - [x] [Randomiser](RANDOMISER.md): immutable maintained-fork release v8.1.1 is pinned at
   commit `f4a9dfb1281269629e4a6fcedb6a064147dfde32` with its release-asset SHA-256 and size.

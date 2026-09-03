@@ -1,0 +1,32 @@
+id = "sarahtob-8"
+name = "Sarah NPC Romance Mod for BG2:ToB"
+version = "8"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/Sarah/releases/download/v8/sarah-npc-romance-mod-for-bg2-tob-v8.iemod"
+reference = "v8"
+expected_filename = "sarah-npc-romance-mod-for-bg2-tob-v8.iemod"
+expected_length = 58496710
+sha256 = "061b1da90d8cd58caf7ef3c3f8f4ab225dce2c6b2e528eec656a9465b0d33811"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["sarahtob"]
+tp2_paths = ["sarahtob/setup-sarahtob.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/Sarah"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Gibberlings3/Sarah/releases/tag/v8"
+reviewed_on = "2026-09-04"

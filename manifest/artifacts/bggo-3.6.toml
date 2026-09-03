@@ -1,0 +1,32 @@
+id = "bggo-3.6"
+name = "Baldur's Gate Graphical Overhaul"
+version = "3.6"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip"
+reference = "v3.6"
+expected_filename = "baldurs-gate-graphical-overhaul-v3.6.zip"
+expected_length = 1459899654
+sha256 = "59e01a3dcf48b141fe2e24dc5df1906c5031cedf22662b697d13756609d3d635"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["bggo"]
+tp2_paths = ["bggo/bggo.tp2"]
+
+[archive.limits]
+max_depth = 10
+max_entries = 8192
+max_entry_uncompressed_bytes = 67108864
+max_total_uncompressed_bytes = 2147483648
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/tag/v3.6"
+reviewed_on = "2026-09-04"
