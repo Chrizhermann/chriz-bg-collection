@@ -4,11 +4,13 @@ use std::sync::Mutex;
 
 use bg_engine::cli::{
     diagnostics_for_managed_install, discover_games, human_plan_lines, inspect_game,
-    install_campaign, plan_recipe, report_managed_install, resume_campaign, validate_recipe,
-    CampaignStatus, CliError, InstallCommandRequest, SelectionOverrides, ValidationProfile,
+    install_campaign_controlled, install_interrupt_handler, plan_recipe, report_managed_install,
+    resume_campaign_controlled, validate_recipe, CampaignStatus, CliError, InstallCommandRequest,
+    SelectionOverrides, ValidationProfile,
 };
 use bg_engine::events::{ConsoleSink, EngineEvent, EventSink};
 use bg_engine::games::GameRole;
+use bg_engine::weidu::runner::RunnerControlHandle;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 use serde_json::json;
@@ -265,6 +267,8 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
             }
         },
         Command::Install(args) => {
+            let controls = RunnerControlHandle::new();
+            install_interrupt_handler(&controls)?;
             let request = InstallCommandRequest {
                 recipe: args.recipe.clone(),
                 preset: args.preset.clone(),
@@ -280,19 +284,29 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
             };
             if cli.json {
                 let sink = BufferedSink::default();
-                let report = install_campaign(&request, &sink)?;
+                let report = install_campaign_controlled(&request, &sink, &controls)?;
                 finish_json_campaign("install", report, sink.into_events())?;
             } else {
-                finish_human_campaign(install_campaign(&request, &ConsoleSink)?)?;
+                finish_human_campaign(install_campaign_controlled(
+                    &request,
+                    &ConsoleSink,
+                    &controls,
+                )?)?;
             }
         }
         Command::Resume { managed_root } => {
+            let controls = RunnerControlHandle::new();
+            install_interrupt_handler(&controls)?;
             if cli.json {
                 let sink = BufferedSink::default();
-                let report = resume_campaign(managed_root, &sink)?;
+                let report = resume_campaign_controlled(managed_root, &sink, &controls)?;
                 finish_json_campaign("resume", report, sink.into_events())?;
             } else {
-                finish_human_campaign(resume_campaign(managed_root, &ConsoleSink)?)?;
+                finish_human_campaign(resume_campaign_controlled(
+                    managed_root,
+                    &ConsoleSink,
+                    &controls,
+                )?)?;
             }
         }
         Command::Report { managed_root } => {

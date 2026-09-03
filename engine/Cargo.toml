@@ -31,6 +31,7 @@ walkdir = "2"
 crossbeam-channel = "0.5"
 same-file = "1"
 tempfile = "3"
+ctrlc = "3"
 
 [target.'cfg(windows)'.dependencies]
 pelite = "0.10"

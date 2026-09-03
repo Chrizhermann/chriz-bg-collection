@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -42,6 +42,8 @@ use crate::session::{
     CampaignCreated, FrozenIdentity, SessionReplay, SessionStore, SourceGameFingerprints,
 };
 use crate::validate::{self, Severity};
+use crate::weidu::invocation::Invocation;
+use crate::weidu::runner::{run_controlled, RunOutcome, RunnerControlHandle, RunnerRequest};
 use crate::Manifest;
 
 const GAME_PROFILE_DIRECTORY: &str = "game-builds";
@@ -52,6 +54,32 @@ const CLI_FROZEN_RECIPE_SCHEMA: u32 = 1;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
 static CAMPAIGN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+type InterruptHandler = Box<dyn FnMut() + Send + 'static>;
+
+/// Install the process-wide Ctrl+C handler used by one CLI install or resume command.
+///
+/// The handler requests explicit runner cancellation; the command itself remains blocked until
+/// the supervised process tree has terminated and durable attempt evidence has been flushed.
+pub fn install_interrupt_handler(controls: &RunnerControlHandle) -> Result<(), CliError> {
+    install_interrupt_handler_with(controls, ctrlc::set_handler)
+}
+
+fn install_interrupt_handler_with<E>(
+    controls: &RunnerControlHandle,
+    register: impl FnOnce(InterruptHandler) -> Result<(), E>,
+) -> Result<(), CliError>
+where
+    E: std::fmt::Display,
+{
+    let controls = controls.clone();
+    register(Box::new(move || controls.cancel())).map_err(|error| {
+        CliError::new(
+            "interrupt_handler_failed",
+            format!("could not install the Ctrl+C cancellation handler: {error}"),
+        )
+    })
+}
 
 /// Validation strength requested by the caller.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -438,9 +466,18 @@ pub fn inspect_game(
 ///
 /// The immutable identities are frozen from authored artifact metadata. Execution remains
 /// fail-closed at required-input preflight until the production materialization slice lands.
-pub fn install_campaign<S: EventSink>(
+pub fn install_campaign<S: EventSink + Sync>(
     request: &InstallCommandRequest,
     sink: &S,
+) -> Result<CampaignReport, CliError> {
+    install_campaign_controlled(request, sink, &RunnerControlHandle::new())
+}
+
+/// Freeze and start a managed campaign controlled by the caller's interrupt handle.
+pub fn install_campaign_controlled<S: EventSink + Sync>(
+    request: &InstallCommandRequest,
+    sink: &S,
+    controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
     let manifest = load_recipe(&request.recipe)?;
     validate::check(&manifest).map_err(|error| {
@@ -514,13 +551,22 @@ pub fn install_campaign<S: EventSink>(
         staged_bg1: managed_root.join("bg1"),
         staged_bg2: managed_root.join("game"),
     };
-    execute_frozen_campaign(created, frozen, sink)
+    execute_frozen_campaign(created, frozen, sink, controls)
 }
 
 /// Resume only the campaign identity and recipe payload frozen below `managed_root`.
-pub fn resume_campaign<S: EventSink>(
+pub fn resume_campaign<S: EventSink + Sync>(
     managed_root: &Path,
     sink: &S,
+) -> Result<CampaignReport, CliError> {
+    resume_campaign_controlled(managed_root, sink, &RunnerControlHandle::new())
+}
+
+/// Resume a frozen campaign controlled by the caller's interrupt handle.
+pub fn resume_campaign_controlled<S: EventSink + Sync>(
+    managed_root: &Path,
+    sink: &S,
+    controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
     let managed_root = canonical_existing_directory(managed_root, "managed root")?;
     let store = SessionStore::open(&managed_root).map_err(|error| {
@@ -550,13 +596,14 @@ pub fn resume_campaign<S: EventSink>(
             )
         })?;
     validate_frozen_cli_recipe(&created, &frozen)?;
-    execute_frozen_campaign(created, frozen, sink)
+    execute_frozen_campaign(created, frozen, sink, controls)
 }
 
-fn execute_frozen_campaign<S: EventSink>(
+fn execute_frozen_campaign<S: EventSink + Sync>(
     created: CampaignCreated,
     frozen: FrozenCliRecipe,
     sink: &S,
+    controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
     let app_data = application_data_root()?;
     let registry_root = app_data.join(LOCKS_DIRECTORY);
@@ -567,8 +614,15 @@ fn execute_frozen_campaign<S: EventSink>(
         created: created.clone(),
         plan: frozen.plan.clone(),
     };
-    let mut dependencies =
-        GuardedCliDependencies::new(&created, &frozen, current_bg1, current_bg2, app_data, sink);
+    let mut dependencies = GuardedCliDependencies::new(
+        &created,
+        &frozen,
+        current_bg1,
+        current_bg2,
+        app_data,
+        sink,
+        controls.clone(),
+    );
     let outcome = run_campaign(&request, &mut dependencies, sink)
         .map_err(|error| map_orchestrator_error(error, &created))?;
     Ok(CampaignReport {
@@ -1454,6 +1508,7 @@ struct GuardedCliDependencies<'a, S> {
     current_bg2: GameCandidate,
     app_data: PathBuf,
     sink: &'a S,
+    controls: RunnerControlHandle,
 }
 
 impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
@@ -1464,6 +1519,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         current_bg2: GameCandidate,
         app_data: PathBuf,
         sink: &'a S,
+        controls: RunnerControlHandle,
     ) -> Self {
         Self {
             created,
@@ -1472,6 +1528,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             current_bg2,
             app_data,
             sink,
+            controls,
         }
     }
 
@@ -1597,7 +1654,7 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
 }
 
 impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
-    type Invocation = ();
+    type Invocation = Invocation;
 
     fn build(
         &mut self,
@@ -1612,15 +1669,46 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
     }
 }
 
-impl<S: EventSink> ProcessRunner<()> for GuardedCliDependencies<'_, S> {
+impl<S: EventSink + Sync> ProcessRunner<Invocation> for GuardedCliDependencies<'_, S> {
     fn run(
         &mut self,
-        _invocation: (),
-        _attempt: &StepAttempt,
+        invocation: Invocation,
+        attempt: &StepAttempt,
     ) -> Result<ProcessResult, StepFailure> {
-        Err(StepFailure::new(
-            "no process may start without a verified invocation",
-        ))
+        fs::create_dir_all(&attempt.evidence_root).map_err(|error| {
+            StepFailure::new(format!(
+                "could not create process evidence directory {}: {error}",
+                attempt.evidence_root.display()
+            ))
+        })?;
+        let output_log = attempt.evidence_root.join("process-output.log");
+        let result = run_controlled(
+            RunnerRequest {
+                invocation,
+                step_id: attempt.step_id.clone(),
+                output_log,
+                silence_threshold: Duration::from_secs(30),
+            },
+            &self.controls,
+            BorrowedSink(self.sink),
+        );
+        match result {
+            RunOutcome::Exited { code } => Ok(ProcessResult { exit_code: code }),
+            RunOutcome::Cancelled => Err(StepFailure::new(
+                "installation cancelled by user after the WeiDU process tree terminated",
+            )),
+            RunOutcome::SpawnFailed => Err(StepFailure::new(
+                "WeiDU could not be supervised; inspect the durable attempt diagnostics",
+            )),
+        }
+    }
+}
+
+struct BorrowedSink<'a, S>(&'a S);
+
+impl<S: EventSink + Sync> EventSink for BorrowedSink<'_, S> {
+    fn emit(&self, event: EngineEvent) {
+        self.0.emit(event);
     }
 }
 
@@ -1861,4 +1949,46 @@ fn selection_choices(
         choices.insert(id.to_owned(), value.to_owned());
     }
     Ok(choices)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+
+    use crate::weidu::runner::{RunnerControl, RunnerControlHandle};
+
+    use super::install_interrupt_handler_with;
+
+    #[test]
+    fn interrupt_handler_forwards_cancel_to_the_active_runner_channel() {
+        type InterruptHandler = Box<dyn FnMut() + Send + 'static>;
+
+        let controls = RunnerControlHandle::new();
+        let captured = Arc::new(Mutex::new(None::<InterruptHandler>));
+        let captured_for_registration = Arc::clone(&captured);
+        install_interrupt_handler_with(&controls, move |handler| {
+            *captured_for_registration
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(handler);
+            Ok::<_, &'static str>(())
+        })
+        .expect("register interrupt handler");
+
+        let registration = controls.register().expect("register active runner");
+        let mut handler = captured
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+            .expect("interrupt handler was captured");
+        handler();
+
+        assert_eq!(
+            registration
+                .receiver()
+                .recv_timeout(Duration::from_secs(1))
+                .expect("cancel was not forwarded"),
+            RunnerControl::Cancel
+        );
+    }
 }

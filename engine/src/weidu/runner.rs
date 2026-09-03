@@ -28,6 +28,101 @@ pub enum RunnerControl {
     Cancel,
 }
 
+/// Process-wide cancellation handle that forwards Ctrl+C to the one active runner.
+///
+/// A cancellation requested just before runner registration is retained and delivered as
+/// soon as the runner attaches. Registrations are exclusive because campaign orchestration
+/// never overlaps WeiDU processes.
+#[derive(Clone, Default)]
+pub struct RunnerControlHandle {
+    state: Arc<Mutex<RunnerControlState>>,
+}
+
+#[derive(Default)]
+struct RunnerControlState {
+    generation: u64,
+    active: Option<(u64, Sender<RunnerControl>)>,
+    cancel_requested: bool,
+}
+
+impl RunnerControlHandle {
+    /// Create a handle with no active runner and no pending cancellation.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Attach the next runner, or return `None` if another runner is already active.
+    pub fn register(&self) -> Option<RunnerControlRegistration> {
+        let (sender, receiver) = crossbeam_channel::unbounded();
+        let (generation, cancel_requested) = {
+            let mut state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if state.active.is_some() {
+                return None;
+            }
+            state.generation = state.generation.wrapping_add(1);
+            let generation = state.generation;
+            state.active = Some((generation, sender.clone()));
+            (generation, state.cancel_requested)
+        };
+        if cancel_requested {
+            let _ = sender.send(RunnerControl::Cancel);
+        }
+        Some(RunnerControlRegistration {
+            receiver,
+            generation,
+            state: Arc::clone(&self.state),
+        })
+    }
+
+    /// Persist a cancellation request and forward it to the active runner, if any.
+    pub fn cancel(&self) {
+        let sender = {
+            let mut state = self
+                .state
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            state.cancel_requested = true;
+            state.active.as_ref().map(|(_, sender)| sender.clone())
+        };
+        if let Some(sender) = sender {
+            let _ = sender.send(RunnerControl::Cancel);
+        }
+    }
+}
+
+/// Exclusive attachment between one campaign control handle and one runner invocation.
+pub struct RunnerControlRegistration {
+    receiver: Receiver<RunnerControl>,
+    generation: u64,
+    state: Arc<Mutex<RunnerControlState>>,
+}
+
+impl RunnerControlRegistration {
+    /// Control receiver passed directly to [`run`].
+    pub fn receiver(&self) -> &Receiver<RunnerControl> {
+        &self.receiver
+    }
+}
+
+impl Drop for RunnerControlRegistration {
+    fn drop(&mut self) {
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if state
+            .active
+            .as_ref()
+            .is_some_and(|(generation, _)| *generation == self.generation)
+        {
+            state.active = None;
+        }
+    }
+}
+
 /// Observable end state of one child-process supervision attempt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunOutcome {
@@ -53,6 +148,28 @@ pub struct RunnerRequest {
     pub output_log: std::path::PathBuf,
     /// Quiet interval after which the UI must ask whether to keep waiting.
     pub silence_threshold: Duration,
+}
+
+/// Registers this invocation with a shared campaign control handle, then supervises it.
+///
+/// The registration remains active until [`run`] has terminated and joined the complete
+/// process tree. A second concurrent registration fails closed as [`RunOutcome::SpawnFailed`].
+pub fn run_controlled<S: EventSink>(
+    request: RunnerRequest,
+    controls: &RunnerControlHandle,
+    sink: S,
+) -> RunOutcome {
+    let Some(registration) = controls.register() else {
+        emit_error(
+            &sink,
+            &request.step_id,
+            "another WeiDU runner is already registered for this campaign".to_owned(),
+        );
+        return RunOutcome::SpawnFailed;
+    };
+    let outcome = run(request, registration.receiver().clone(), sink);
+    drop(registration);
+    outcome
 }
 
 /// Runs one WeiDU invocation while streaming output and accepting explicit controls.

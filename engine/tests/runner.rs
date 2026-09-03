@@ -6,7 +6,9 @@ use std::time::{Duration, Instant};
 
 use bg_engine::events::{ChannelSink, EngineEvent};
 use bg_engine::weidu::invocation::{Invocation, ResolvedPrompt};
-use bg_engine::weidu::runner::{run, RunOutcome, RunnerControl, RunnerRequest};
+use bg_engine::weidu::runner::{
+    run, run_controlled, RunOutcome, RunnerControl, RunnerControlHandle, RunnerRequest,
+};
 use crossbeam_channel::{Receiver, Sender};
 use tempfile::TempDir;
 
@@ -297,6 +299,83 @@ fn cancel_terminates_the_complete_process_tree() {
     );
     thread::sleep(Duration::from_millis(900));
     assert!(!marker.exists(), "cancelled descendant wrote its marker");
+}
+
+#[cfg(windows)]
+#[test]
+fn shared_control_handle_cancels_and_joins_the_complete_process_tree() {
+    let temp = TempDir::new().unwrap();
+    let marker = temp.path().join("shared-control-descendant-survived.txt");
+    let raw_log = temp.path().join("shared-control-output.log");
+    let request = RunnerRequest {
+        invocation: Invocation {
+            program: PathBuf::from(MOCK_CHILD),
+            cwd: temp.path().to_path_buf(),
+            args: vec![OsString::from("spawn-child"), marker.as_os_str().to_owned()],
+            prompts: vec![],
+            debug_path: temp.path().join("weidu.debug.log"),
+            identity_digest: "shared-control-test".to_owned(),
+        },
+        step_id: "install:shared-control".to_owned(),
+        output_log: raw_log.clone(),
+        silence_threshold: Duration::from_secs(3),
+    };
+    let controls = RunnerControlHandle::new();
+    let (sink, events) = ChannelSink::unbounded();
+    let (outcome_tx, outcomes) = crossbeam_channel::bounded(1);
+    let runner_controls = controls.clone();
+    let runner_thread = thread::spawn(move || {
+        let outcome = run_controlled(request, &runner_controls, sink);
+        let _ = outcome_tx.send(outcome);
+    });
+
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        let event = events
+            .recv_timeout(remaining)
+            .expect("child process did not start before timeout");
+        if matches!(event, EngineEvent::ConsoleLine { line, .. } if line.contains("child-spawned"))
+        {
+            break;
+        }
+    }
+
+    controls.cancel();
+    assert_eq!(
+        outcomes
+            .recv_timeout(Duration::from_secs(5))
+            .expect("runner did not finish after shared cancellation"),
+        RunOutcome::Cancelled
+    );
+    runner_thread.join().unwrap();
+    thread::sleep(Duration::from_millis(900));
+    assert!(!marker.exists(), "cancelled descendant wrote its marker");
+    assert!(
+        fs::read(&raw_log)
+            .unwrap()
+            .windows(b"child-spawned".len())
+            .any(|window| window == b"child-spawned"),
+        "cancellation discarded the durable raw process log"
+    );
+}
+
+#[test]
+fn cancellation_requested_before_runner_registration_is_not_lost() {
+    let controls = RunnerControlHandle::new();
+    controls.cancel();
+
+    let registration = controls
+        .register()
+        .expect("register runner after cancellation");
+
+    assert_eq!(
+        registration
+            .receiver()
+            .recv_timeout(Duration::from_secs(1))
+            .expect("pending cancellation was not delivered"),
+        RunnerControl::Cancel
+    );
 }
 
 #[test]
