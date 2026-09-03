@@ -274,6 +274,13 @@ fn authors_the_exact_seven_run_core_spine_and_eet_boundaries() {
         manifest.collection.runs.last().unwrap().run_id,
         "eet-end-bg2"
     );
+
+    let implementation_plan = std::fs::read_to_string(
+        recipe_root().join("../docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md"),
+    )
+    .unwrap();
+    assert!(implementation_plan.contains("--args-list p <canonical staged BG1 root>"));
+    assert!(!implementation_plan.contains("--args-list sp <canonical staged BG1 root>"));
 }
 
 #[test]

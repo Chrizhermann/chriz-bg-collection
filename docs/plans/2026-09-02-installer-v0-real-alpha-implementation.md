@@ -466,11 +466,12 @@ log destination changes the invocation digest.
 For its initialization run, assert the trailing group is exactly:
 
 ```text
---args-list sp <canonical staged BG1 root>
+--args-list p <canonical staged BG1 root>
 ```
 
-This is the documented EET auto-install path: `p` supplies the source and `s` suppresses
-the unwanted desktop shortcut.
+This is the documented EET auto-install path: `p` supplies the source. Do not include `s`:
+the recommended recipe selects component `100`, so suppressing its desktop shortcut would
+contradict the resolved plan.
 
 **Step 3: Prove RED**
 

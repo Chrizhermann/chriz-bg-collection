@@ -874,7 +874,7 @@ mod tests {
         eet.tp2 = "eet/eet.tp2".to_owned();
         eet.run_args = vec![
             RunArg::Literal("--args-list".to_owned()),
-            RunArg::Literal("sp".to_owned()),
+            RunArg::Literal("p".to_owned()),
             RunArg::StagedRoot(GameRoot::Bg1),
         ];
 
@@ -882,7 +882,8 @@ mod tests {
         let tail = &invocation.args[invocation.args.len() - 3..];
 
         assert_eq!(tail[0], OsStr::new("--args-list"));
-        assert_eq!(tail[1], OsStr::new("sp"));
+        assert_eq!(tail[1], OsStr::new("p"));
+        assert!(!tail.iter().any(|arg| arg == OsStr::new("s")));
         assert_eq!(tail[2], canonical(&fixture.roots.bg1).as_os_str());
     }
 
