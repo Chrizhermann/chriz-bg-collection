@@ -383,11 +383,19 @@ pub fn recheck_target_before_mutation_with(
     validate_language_component(language)?;
     let target = validate_target_directory(target_root)?;
     check_processes_under(&target, host)?;
-    let requested_tlks = target_tlk_paths(&target, language);
-    let mut tlks = Vec::with_capacity(requested_tlks.len());
-    for tlk in &requested_tlks {
-        tlks.push(validate_tlk(tlk, &target)?);
+    let [root_tlk, language_tlk] = target_tlk_paths(&target, language);
+    let mut tlks = Vec::with_capacity(2);
+    match fs::symlink_metadata(&root_tlk) {
+        Ok(_) => tlks.push(validate_tlk(&root_tlk, &target)?),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(source) => {
+            return Err(PreflightError::TlkUnavailable {
+                path: root_tlk,
+                source,
+            });
+        }
     }
+    tlks.push(validate_tlk(&language_tlk, &target)?);
     host.probe_exclusive_writable_files(&tlks)
         .map_err(|error| PreflightError::TlkUnavailable {
             path: error.path,

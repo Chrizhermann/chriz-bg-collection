@@ -256,6 +256,11 @@ fn create_target(root: &Path) {
     fs::write(root.join("lang/en_US/dialog.tlk"), b"language tlk").unwrap();
 }
 
+fn create_real_27_target(root: &Path) {
+    fs::create_dir_all(root.join("lang/en_US")).unwrap();
+    fs::write(root.join("lang/en_US/dialog.tlk"), b"language tlk").unwrap();
+}
+
 #[test]
 fn insufficient_total_space_is_rejected() {
     let fixture = Fixture::new();
@@ -409,6 +414,30 @@ fn locked_language_tlk_is_rejected_before_mutation() {
     };
 
     let error = recheck_target_before_mutation_with(&target, "en_US", &host).unwrap_err();
+    assert!(matches!(
+        error,
+        PreflightError::TlkUnavailable { path, .. } if path == language_tlk
+    ));
+}
+
+#[test]
+fn absent_root_tlk_is_allowed_before_mutation_for_real_27_layout() {
+    let fixture = Fixture::new();
+    let target = fixture.destination.join("game");
+    create_real_27_target(&target);
+
+    recheck_target_before_mutation_with(&target, "en_US", &FakeHost::default()).unwrap();
+}
+
+#[test]
+fn absent_language_tlk_is_rejected_before_mutation_for_real_27_layout() {
+    let fixture = Fixture::new();
+    let target = fixture.destination.join("game");
+    fs::create_dir_all(target.join("lang/en_US")).unwrap();
+    let language_tlk = target.join("lang/en_US/dialog.tlk");
+
+    let error =
+        recheck_target_before_mutation_with(&target, "en_US", &FakeHost::default()).unwrap_err();
     assert!(matches!(
         error,
         PreflightError::TlkUnavailable { path, .. } if path == language_tlk

@@ -499,27 +499,42 @@ fn observe_profile<F: FileSystemProvider>(
     for surface in &profile.inventory_surfaces {
         let surface_path = root.join(normalized_path(&surface.path));
         match surface.kind {
-            InventoryKind::File => match hash_profile_file(fs_provider, root, &surface.path) {
-                Ok(digest) => {
-                    observation.inventory.insert(
-                        folded_path(&surface.path),
-                        ObservedEntry {
-                            kind: InventoryEntryKind::File,
-                            sha256: Some(digest),
-                        },
-                    );
-                }
-                Err(()) => {
+            InventoryKind::File => match direct_relative_kind_or_missing(
+                fs_provider,
+                root,
+                &surface.path,
+                FileKind::File,
+            ) {
+                Ok(false) if surface.allow_missing => {}
+                Ok(true) => match fs_provider.read(&surface_path) {
+                    Ok(bytes) => {
+                        observation.inventory.insert(
+                            folded_path(&surface.path),
+                            ObservedEntry {
+                                kind: InventoryEntryKind::File,
+                                sha256: Some(hash_bytes(&bytes)),
+                            },
+                        );
+                    }
+                    Err(_) => {
+                        observation.complete_inventory = false;
+                        problem_paths.push(surface_path);
+                    }
+                },
+                Ok(false) | Err(()) => {
                     observation.complete_inventory = false;
                     problem_paths.push(surface_path);
                 }
             },
-            InventoryKind::Tree => {
-                let direct_directory =
-                    direct_relative_kind(fs_provider, root, &surface.path, FileKind::Directory)
-                        .is_ok();
-                if !direct_directory
-                    || collect_tree(
+            InventoryKind::Tree => match direct_relative_kind_or_missing(
+                fs_provider,
+                root,
+                &surface.path,
+                FileKind::Directory,
+            ) {
+                Ok(false) if surface.allow_missing => {}
+                Ok(true) => {
+                    if collect_tree(
                         fs_provider,
                         root,
                         &surface_path,
@@ -527,11 +542,16 @@ fn observe_profile<F: FileSystemProvider>(
                         &mut problem_paths,
                     )
                     .is_err()
-                {
+                    {
+                        observation.complete_inventory = false;
+                        problem_paths.push(surface_path);
+                    }
+                }
+                Ok(false) | Err(()) => {
                     observation.complete_inventory = false;
                     problem_paths.push(surface_path);
                 }
-            }
+            },
             InventoryKind::Matching => {
                 match direct_relative_kind(fs_provider, root, &surface.path, FileKind::Directory)
                     .and_then(|()| sorted_entries(fs_provider, &surface_path))
@@ -796,12 +816,24 @@ fn direct_relative_kind<F: FileSystemProvider>(
     relative: &str,
     terminal_kind: FileKind,
 ) -> std::result::Result<(), ()> {
+    if direct_relative_kind_or_missing(fs_provider, root, relative, terminal_kind)? {
+        Ok(())
+    } else {
+        Err(())
+    }
+}
+
+fn direct_relative_kind_or_missing<F: FileSystemProvider>(
+    fs_provider: &F,
+    root: &Path,
+    relative: &str,
+    terminal_kind: FileKind,
+) -> std::result::Result<bool, ()> {
     if relative == "." {
-        return if fs_provider.file_kind(root).map_err(|_| ())? == terminal_kind {
-            Ok(())
-        } else {
-            Err(())
-        };
+        return fs_provider
+            .file_kind(root)
+            .map(|kind| kind == terminal_kind)
+            .map_err(|_| ());
     }
 
     let components = relative.split('/').collect::<Vec<_>>();
@@ -813,11 +845,14 @@ fn direct_relative_kind<F: FileSystemProvider>(
         } else {
             FileKind::Directory
         };
-        if fs_provider.file_kind(&path).map_err(|_| ())? != expected {
-            return Err(());
+        match fs_provider.file_kind(&path) {
+            Ok(kind) if kind == expected => {}
+            Ok(_) => return Err(()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+            Err(_) => return Err(()),
         }
     }
-    Ok(())
+    Ok(true)
 }
 
 fn hash_bytes(bytes: &[u8]) -> String {

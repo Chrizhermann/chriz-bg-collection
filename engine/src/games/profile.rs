@@ -71,6 +71,9 @@ pub struct InventorySurface {
     pub path: String,
     /// How the surface is enumerated.
     pub kind: InventoryKind,
+    /// Whether an entirely absent file or tree is an allowed, completely observed state.
+    #[serde(default)]
+    pub allow_missing: bool,
     /// Case-insensitive wildcard patterns for a matching surface.
     #[serde(default)]
     pub patterns: Vec<String>,
@@ -317,7 +320,6 @@ fn validate_profile(profile: &mut GameProfile, path: &Path) -> Result<()> {
     let mandatory_required = [
         profile.executable.as_str(),
         "chitin.key",
-        "dialog.tlk",
         "lang/en_US/dialog.tlk",
         "engine.lua",
     ];
@@ -327,7 +329,7 @@ fn validate_profile(profile: &mut GameProfile, path: &Path) -> Result<()> {
     {
         return invalid(
             path,
-            "required_files do not satisfy the minimum safety contract (executable, chitin.key, root and en_US TLKs, engine.lua)",
+            "required_files do not satisfy the minimum safety contract (executable, chitin.key, en_US TLK, engine.lua)",
         );
     }
     if profile.fingerprint_files.is_empty() {
@@ -365,6 +367,9 @@ fn validate_profile(profile: &mut GameProfile, path: &Path) -> Result<()> {
         match surface.kind {
             InventoryKind::Matching if surface.patterns.is_empty() => {
                 return invalid(path, "matching inventory surface has no patterns")
+            }
+            InventoryKind::Matching if surface.allow_missing => {
+                return invalid(path, "matching inventory surface cannot allow missing")
             }
             InventoryKind::File | InventoryKind::Tree if !surface.patterns.is_empty() => {
                 return invalid(path, "non-matching inventory surface declares patterns")

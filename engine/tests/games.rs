@@ -153,6 +153,37 @@ fn profiles() -> GameProfiles {
     GameProfiles::load(Path::new(FIXTURES).join("profiles")).unwrap()
 }
 
+fn real_27_optional_surface_profiles(profile_dir: &Path) -> GameProfiles {
+    fs::create_dir_all(profile_dir).unwrap();
+    let profile = fs::read_to_string(Path::new(FIXTURES).join("profiles/steam-bg2ee.toml"))
+        .unwrap()
+        .replace("\r\n", "\n")
+        .replace("  \"dialog.tlk\",\n", "")
+        .replacen(
+            "path = \"dialog.tlk\"\nkind = \"file\"",
+            "path = \"dialog.tlk\"\nkind = \"file\"\nallow_missing = true",
+            1,
+        )
+        .replacen(
+            "path = \"override\"\nkind = \"tree\"",
+            "path = \"override\"\nkind = \"tree\"\nallow_missing = true",
+            1,
+        )
+        .replace(
+            r#"[[allowed_clean_variants.inventory]]
+path = "dialog.tlk"
+kind = "file"
+sha256 = "843d6c1d158b59096a2bec14275911d7e2eb4acc956406dd7dea1ddee0f63f9e"
+
+"#,
+            "",
+        );
+    assert!(profile.contains("allow_missing = true"));
+    assert!(!profile.contains("  \"dialog.tlk\","));
+    fs::write(profile_dir.join("steam-bg2ee.toml"), profile).unwrap();
+    GameProfiles::load(profile_dir).unwrap()
+}
+
 fn copy_tree(source: &Path, destination: &Path) {
     fs::create_dir_all(destination).unwrap();
     for entry in fs::read_dir(source).unwrap() {
@@ -297,6 +328,23 @@ fn profile_root_inventory_must_cover_setup_weidu_and_debug_residue() {
     assert!(error.to_string().contains("setup"), "{error}");
     assert!(error.to_string().contains("WeiDU"), "{error}");
     assert!(error.to_string().contains("debug"), "{error}");
+}
+
+#[test]
+fn matching_inventory_surface_cannot_be_marked_allow_missing() {
+    let temp = tempfile::tempdir().unwrap();
+    let profile = fs::read_to_string(Path::new(FIXTURES).join("profiles/steam-bg2ee.toml"))
+        .unwrap()
+        .replace("\r\n", "\n")
+        .replace(
+            "path = \".\"\nkind = \"matching\"",
+            "path = \".\"\nkind = \"matching\"\nallow_missing = true",
+        );
+    fs::write(temp.path().join("unsafe.toml"), profile).unwrap();
+
+    let error = GameProfiles::load(temp.path()).unwrap_err();
+    assert!(error.to_string().contains("matching"), "{error}");
+    assert!(error.to_string().contains("allow missing"), "{error}");
 }
 
 #[test]
@@ -739,6 +787,94 @@ fn unexpected_override_content_prevents_freshness() {
     .unwrap();
     assert_eq!(candidate.eligibility, Eligibility::Ineligible);
     assert!(has_finding(&candidate, FindingKind::Modified));
+}
+
+#[test]
+fn optional_missing_root_tlk_and_override_match_a_real_27_clean_variant() {
+    let temp = tempfile::tempdir().unwrap();
+    let profiles = real_27_optional_surface_profiles(&temp.path().join("profiles"));
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("real-27-layout"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    fs::remove_file(root.join("dialog.tlk")).unwrap();
+    fs::remove_dir(root.join("override")).unwrap();
+
+    let candidate = inspect_game_path(
+        &profiles,
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Steam,
+        &root,
+    )
+    .unwrap();
+
+    assert_eq!(
+        candidate.eligibility,
+        Eligibility::Eligible,
+        "{candidate:#?}"
+    );
+    assert!(has_finding(&candidate, FindingKind::Fresh));
+}
+
+#[test]
+fn missing_required_localized_tlk_remains_ineligible_for_real_27_layout() {
+    let temp = tempfile::tempdir().unwrap();
+    let profiles = real_27_optional_surface_profiles(&temp.path().join("profiles"));
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("missing-language-tlk"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    fs::remove_file(root.join("dialog.tlk")).unwrap();
+    fs::remove_file(root.join("lang/en_US/dialog.tlk")).unwrap();
+    fs::remove_dir(root.join("override")).unwrap();
+
+    let candidate = inspect_game_path(
+        &profiles,
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Steam,
+        &root,
+    )
+    .unwrap();
+
+    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+    assert!(has_finding(&candidate, FindingKind::Modified));
+    assert!(!has_finding(&candidate, FindingKind::Fresh));
+}
+
+#[test]
+fn linked_optional_override_is_not_treated_as_an_absent_clean_surface() {
+    let temp = tempfile::tempdir().unwrap();
+    let profiles = real_27_optional_surface_profiles(&temp.path().join("profiles"));
+    let mut fs_provider = FixtureFileSystem::default();
+    let root = fixture_game(
+        "steam-bg2ee",
+        &temp.path().join("linked-optional-override"),
+        &mut fs_provider,
+        "2.7.3.0",
+    );
+    fs::remove_file(root.join("dialog.tlk")).unwrap();
+    fs_provider.override_kind(root.join("override"), FileKind::Symlink);
+
+    let candidate = inspect_game_path(
+        &profiles,
+        &fs_provider,
+        GameRole::Bg2ee,
+        Storefront::Steam,
+        &root,
+    )
+    .unwrap();
+
+    assert_eq!(candidate.eligibility, Eligibility::Ineligible);
+    assert!(has_finding(&candidate, FindingKind::Modified));
+    assert!(!has_finding(&candidate, FindingKind::Fresh));
 }
 
 #[test]
