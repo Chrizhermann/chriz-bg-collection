@@ -6,11 +6,27 @@ acquisition = "fetch-only"
 [source]
 kind = "github-release"
 url = "https://example.invalid/ee-fixpack.zip"
+reference = "2026.08"
+expected_filename = "ee-fixpack.zip"
+expected_length = 1
 sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+redirect_hosts = ["downloads.example.invalid"]
 
 [archive]
-path = "EE_Fixpack"
+kind = "zip"
+root_rule = "direct-or-single-wrapper"
+publish_roots = ["EE_Fixpack"]
+tp2_paths = ["EE_Fixpack/EE_Fixpack.tp2"]
+
+[archive.limits]
+max_depth = 32
+max_entries = 100000
+max_entry_uncompressed_bytes = 2147483648
+max_total_uncompressed_bytes = 8589934592
+max_compression_ratio = 1000
 
 [provenance]
 homepage = "https://example.invalid/ee-fixpack"
 license = "MIT"
+url = "https://example.invalid/ee-fixpack/releases/2026.08"
+reviewed_on = "2026-09-03"

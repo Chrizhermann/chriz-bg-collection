@@ -8,14 +8,17 @@ use thiserror::Error;
 mod archive;
 mod cache;
 mod http;
+mod inspect;
 mod manual;
 mod materialize;
 
 pub use archive::{
-    extract_archive, ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact,
+    extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
+    ExtractedArtifact,
 };
 pub use cache::ArtifactCache;
 pub use http::validate_redirect_target;
+pub use inspect::{download_for_inspection, QuarantinedDownload};
 pub use manual::{provide_manual_archive, VerifiedManualArchive};
 pub use materialize::{
     materialize, MaterializationRequest, MaterializationResult, PublicationManifest, PublishedPath,
@@ -33,6 +36,8 @@ pub struct DownloadRequest {
     pub expected_length: u64,
     /// Exact SHA-256 digest recorded by the recipe.
     pub expected_sha256: String,
+    /// Cross-host redirect destinations reviewed in the signed artifact contract.
+    pub redirect_hosts: Vec<String>,
     /// Maximum number of transient transport attempts. Must be at least one.
     pub max_attempts: u32,
 }
@@ -129,6 +134,14 @@ pub enum AcquireError {
         /// URL that returned the redirect.
         from: String,
         /// Rejected redirect target.
+        to: String,
+    },
+    /// A transfer attempted to leave the original or explicitly reviewed hosts.
+    #[error("unreviewed redirect rejected: {from} -> {to}")]
+    UnreviewedRedirect {
+        /// URL that returned the redirect.
+        from: String,
+        /// Redirect target on an undeclared host.
         to: String,
     },
     /// A redirect omitted its target.

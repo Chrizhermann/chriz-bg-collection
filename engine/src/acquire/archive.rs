@@ -45,10 +45,19 @@ impl Default for ArchiveLimits {
 /// Extraction policy selected by the recipe source.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ArchiveMode {
-    /// A redistributable recipe with a mandatory immutable digest and plain ZIP framing.
+    /// A redistributable recipe with a mandatory immutable digest and ZIP-compatible framing.
     Public,
     /// A locally authored recipe. The archive is still subject to all structural limits.
     Authoring,
+}
+
+/// ZIP-compatible archive framing declared by the recipe.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArchiveFormat {
+    /// A standard `.zip` artifact.
+    Zip,
+    /// An `.iemod` artifact, which uses ZIP framing.
+    Iemod,
 }
 
 /// Exact archive shape and bounds authored by a recipe.
@@ -56,6 +65,8 @@ pub enum ArchiveMode {
 pub struct ArchiveRequirements {
     /// Expected archive SHA-256, or all zeroes only in authoring mode.
     pub artifact_sha256: String,
+    /// Declared archive framing, independent of the content-addressed cache filename.
+    pub format: ArchiveFormat,
     /// Payload directory roots that may later be materialized.
     pub expected_roots: Vec<String>,
     /// Exact WeiDU TP2 paths expected after optional wrapper removal.
@@ -118,9 +129,9 @@ pub fn extract_archive(
     let expected_roots = normalize_expected_paths(&requirements.expected_roots, "root")?;
     let expected_tp2_paths =
         normalize_expected_paths(&requirements.expected_tp2_paths, "TP2 path")?;
-    if expected_roots.is_empty() || expected_tp2_paths.is_empty() {
+    if expected_roots.is_empty() && expected_tp2_paths.is_empty() {
         return Err(AcquireError::InvalidRequest(
-            "archive requirements need at least one root and TP2 path".to_owned(),
+            "archive requirements need at least one publish root or TP2 path".to_owned(),
         ));
     }
     if expected_tp2_paths
@@ -132,15 +143,10 @@ pub fn extract_archive(
         ));
     }
 
-    let extension = archive_path
-        .extension()
-        .and_then(|value| value.to_str())
-        .map(str::to_ascii_lowercase);
-    if !matches!(extension.as_deref(), Some("zip" | "iemod")) {
-        return Err(AcquireError::ArchiveFormat {
-            path: archive_path.to_path_buf(),
-            message: "only .zip and .iemod archives are supported".to_owned(),
-        });
+    // Both supported kinds deliberately use the same framing. Keeping this match explicit makes
+    // a future format addition fail compilation until extraction support is consciously chosen.
+    match requirements.format {
+        ArchiveFormat::Zip | ArchiveFormat::Iemod => {}
     }
 
     let expected_digest = validate_digest(&requirements.artifact_sha256)?;
@@ -562,7 +568,9 @@ fn layout_matches(
         && expected_roots.iter().all(|root| {
             let root = casefold(root);
             let prefix = format!("{root}/");
-            stripped.iter().any(|path| path.starts_with(&prefix))
+            stripped
+                .iter()
+                .any(|path| path == &root || path.starts_with(&prefix))
         })
 }
 

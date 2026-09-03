@@ -37,6 +37,12 @@ fn add_run(manifest: &mut Manifest, run_id: &str, components: &[u32]) {
     installer.invocation_mode = InvocationMode::ExplicitTp2;
     installer.components = components.iter().copied().map(component).collect();
     manifest.mods.insert(run_id.to_owned(), installer);
+    let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+    artifact.archive.publish_roots.push(run_id.to_owned());
+    artifact
+        .archive
+        .tp2_paths
+        .push(format!("{run_id}/{run_id}.tp2"));
     manifest.collection.runs.push(Run {
         run_id: run_id.to_owned(),
         mod_id: run_id.to_owned(),

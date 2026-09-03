@@ -175,6 +175,7 @@ fn request(id: &str, url: String, bytes: &[u8], max_attempts: u32) -> DownloadRe
         url,
         expected_length: bytes.len() as u64,
         expected_sha256: sha256(bytes),
+        redirect_hosts: Vec::new(),
         max_attempts,
     }
 }

@@ -32,7 +32,26 @@ impl HttpClient {
         original_url: &str,
         range: Option<(u64, &str)>,
     ) -> Result<HttpResponse, AcquireError> {
+        self.get_with_redirect_hosts(original_url, range, None)
+    }
+
+    pub fn get_with_reviewed_redirects(
+        &self,
+        original_url: &str,
+        range: Option<(u64, &str)>,
+        redirect_hosts: &[String],
+    ) -> Result<HttpResponse, AcquireError> {
+        self.get_with_redirect_hosts(original_url, range, Some(redirect_hosts))
+    }
+
+    fn get_with_redirect_hosts(
+        &self,
+        original_url: &str,
+        range: Option<(u64, &str)>,
+        redirect_hosts: Option<&[String]>,
+    ) -> Result<HttpResponse, AcquireError> {
         let mut current = parse_download_url(original_url)?;
+        let original_host = current.host_str().map(str::to_owned);
         for redirect_count in 0..=MAX_REDIRECTS {
             let agent = if is_loopback_http(&current) {
                 &self.direct_agent
@@ -68,7 +87,25 @@ impl HttpClient {
                 .ok_or_else(|| AcquireError::MissingRedirectLocation {
                     url: current.to_string(),
                 })?;
-            current = resolve_redirect(&current, location)?;
+            let target = resolve_redirect(&current, location)?;
+            if let Some(redirect_hosts) = redirect_hosts {
+                let target_host = target.host_str();
+                let reviewed = target_host.is_some_and(|host| {
+                    original_host
+                        .as_deref()
+                        .is_some_and(|original| original.eq_ignore_ascii_case(host))
+                        || redirect_hosts
+                            .iter()
+                            .any(|reviewed| reviewed.eq_ignore_ascii_case(host))
+                });
+                if !reviewed {
+                    return Err(AcquireError::UnreviewedRedirect {
+                        from: current.to_string(),
+                        to: target.to_string(),
+                    });
+                }
+            }
+            current = target;
         }
         Err(AcquireError::TooManyRedirects {
             url: original_url.to_owned(),

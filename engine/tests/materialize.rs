@@ -3,8 +3,8 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use bg_engine::acquire::{
-    extract_archive, materialize, AcquireError, ArchiveLimits, ArchiveMode, ArchiveRequirements,
-    ExtractedArtifact, MaterializationRequest, SignedCollisionRule,
+    extract_archive, materialize, AcquireError, ArchiveFormat, ArchiveLimits, ArchiveMode,
+    ArchiveRequirements, ExtractedArtifact, MaterializationRequest, SignedCollisionRule,
 };
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
@@ -53,6 +53,7 @@ fn extracted(
     writer.finish().unwrap();
     let requirements = ArchiveRequirements {
         artifact_sha256: sha256_file(&archive),
+        format: ArchiveFormat::Zip,
         expected_roots: roots.iter().map(|value| (*value).to_owned()).collect(),
         expected_tp2_paths: tp2_paths.iter().map(|value| (*value).to_owned()).collect(),
         limits: ArchiveLimits::default(),

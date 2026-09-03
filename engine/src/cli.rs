@@ -436,9 +436,8 @@ pub fn inspect_game(
 
 /// Freeze and start one new managed campaign through the Task-13 state machine.
 ///
-/// Recipe schema v2 does not yet contain immutable artifact lengths and publication policy.
-/// Consequently, this adapter can durably reject unsafe sources and preserve a resumable
-/// campaign, but fails closed at required-input preflight instead of guessing those fields.
+/// The immutable identities are frozen from authored artifact metadata. Execution remains
+/// fail-closed at required-input preflight until the production materialization slice lands.
 pub fn install_campaign<S: EventSink>(
     request: &InstallCommandRequest,
     sink: &S,
@@ -1157,9 +1156,12 @@ fn frozen_identity(frozen: &FrozenCliRecipe, id: &str) -> Result<FrozenIdentity,
         id: artifact.id.clone(),
         version: artifact.version.clone(),
         sha256: artifact.source.sha256.to_ascii_lowercase(),
-        // Schema v2 intentionally has no signed expected length. Zero is a sentinel that
-        // cannot pass acquisition preflight; Task 18 replaces it with an immutable length.
-        length: 0,
+        length: artifact.source.expected_length.ok_or_else(|| {
+            CliError::new(
+                "validation_failed",
+                format!("selected artifact {id:?} has no expected length"),
+            )
+        })?,
     })
 }
 

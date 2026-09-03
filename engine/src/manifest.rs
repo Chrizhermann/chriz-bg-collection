@@ -93,16 +93,73 @@ pub struct Source {
     pub kind: SourceKind,
     /// Immutable download URL, or the official handoff page for manual sources.
     pub url: String,
+    /// Exact upstream tag, commit, release, or otherwise immutable revision label.
+    pub reference: String,
+    /// Stable upstream filename, when the publication route defines one.
+    #[serde(default)]
+    pub expected_filename: Option<String>,
+    /// Exact archive byte length, when the publication route exposes stable bytes.
+    #[serde(default)]
+    pub expected_length: Option<u64>,
     /// Expected lowercase or uppercase hexadecimal SHA-256 digest.
     pub sha256: String,
+    /// Redirect destination hosts reviewed for this exact source route.
+    #[serde(default)]
+    pub redirect_hosts: Vec<String>,
 }
 
-/// Expected path inside an extracted artifact archive.
+/// Supported immutable archive framing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ArchiveKind {
+    /// A standard ZIP archive.
+    Zip,
+    /// An Infinity Engine mod archive using ZIP framing.
+    Iemod,
+}
+
+/// How the payload is rooted inside the downloaded archive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ArchiveRootRule {
+    /// Declared publication paths are present at archive root.
+    Direct,
+    /// Every payload path is beneath one wrapper directory that is stripped.
+    SingleWrapper,
+    /// Either direct layout or one wrapper is accepted when exactly one layout matches.
+    DirectOrSingleWrapper,
+}
+
+/// Recipe-authored resource limits applied before archive extraction.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ArchiveLimitsSpec {
+    /// Maximum number of path components in one archive entry.
+    pub max_depth: usize,
+    /// Maximum central-directory entry count.
+    pub max_entries: usize,
+    /// Maximum uncompressed size of one regular file.
+    pub max_entry_uncompressed_bytes: u64,
+    /// Maximum aggregate uncompressed size of all regular files.
+    pub max_total_uncompressed_bytes: u64,
+    /// Maximum integer ratio of uncompressed to compressed bytes.
+    pub max_compression_ratio: u64,
+}
+
+/// Exact expected layout inside an artifact archive.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ArchiveSpec {
-    /// Relative path that identifies the payload root or required file.
-    pub path: String,
+    /// Archive framing used by the immutable source.
+    pub kind: ArchiveKind,
+    /// Whether the declared payload is direct or beneath one wrapper.
+    pub root_rule: ArchiveRootRule,
+    /// Exact files or directory roots permitted to be published.
+    pub publish_roots: Vec<String>,
+    /// Exact WeiDU TP2 paths expected after wrapper removal.
+    pub tp2_paths: Vec<String>,
+    /// Bounds applied before extraction writes any entry.
+    pub limits: ArchiveLimitsSpec,
 }
 
 /// Public acquisition policy for an artifact.
@@ -127,6 +184,32 @@ pub struct Provenance {
     pub homepage: String,
     /// License identifier or reviewed license description.
     pub license: String,
+    /// URL supporting the reviewed source and distribution decision.
+    pub url: String,
+    /// Calendar date on which the provenance evidence was reviewed.
+    pub reviewed_on: String,
+}
+
+/// Expected Windows PE machine architecture for an executable tool artifact.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PeMachine {
+    /// 32-bit Intel x86 (`IMAGE_FILE_MACHINE_I386`).
+    X86,
+    /// 64-bit AMD/Intel (`IMAGE_FILE_MACHINE_AMD64`).
+    X86_64,
+    /// 64-bit ARM (`IMAGE_FILE_MACHINE_ARM64`).
+    Arm64,
+}
+
+/// Executable-tool evidence attached only to tool artifacts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ToolSpec {
+    /// Exact executable path after archive wrapper removal.
+    pub executable: String,
+    /// Expected PE COFF machine field.
+    pub pe_machine: PeMachine,
 }
 
 /// One independently acquired archive used by one or more installers.
@@ -147,6 +230,9 @@ pub struct Artifact {
     pub acquisition: AcquisitionPolicy,
     /// Reviewed origin and license information.
     pub provenance: Provenance,
+    /// Executable identity when this artifact supplies a tool rather than a mod payload.
+    #[serde(default)]
+    pub tool: Option<ToolSpec>,
 }
 
 /// One installable WeiDU component (`DESIGNATED` number).

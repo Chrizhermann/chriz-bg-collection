@@ -2,7 +2,9 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-use bg_engine::acquire::{extract_archive, ArchiveLimits, ArchiveMode, ArchiveRequirements};
+use bg_engine::acquire::{
+    extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
+};
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
 use zip::unstable::write::FileOptionsExt;
@@ -69,6 +71,7 @@ fn sha256(path: &Path) -> String {
 fn requirements(path: &Path) -> ArchiveRequirements {
     ArchiveRequirements {
         artifact_sha256: sha256(path),
+        format: ArchiveFormat::Zip,
         expected_roots: vec!["mod".to_owned()],
         expected_tp2_paths: vec!["mod/setup-mod.tp2".to_owned()],
         limits: ArchiveLimits::default(),

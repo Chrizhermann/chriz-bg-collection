@@ -6,11 +6,31 @@ acquisition = "fetch-only"
 [source]
 kind = "github-release"
 url = "https://example.invalid/weidu.zip"
+reference = "249.00"
+expected_filename = "weidu.zip"
+expected_length = 1
 sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+redirect_hosts = ["downloads.example.invalid"]
 
 [archive]
-path = "weidu.exe"
+kind = "zip"
+root_rule = "direct-or-single-wrapper"
+publish_roots = ["weidu.exe"]
+tp2_paths = []
+
+[archive.limits]
+max_depth = 8
+max_entries = 32
+max_entry_uncompressed_bytes = 104857600
+max_total_uncompressed_bytes = 209715200
+max_compression_ratio = 100
+
+[tool]
+executable = "weidu.exe"
+pe_machine = "x86-64"
 
 [provenance]
 homepage = "https://weidu.org"
 license = "GPL-2.0-or-later"
+url = "https://weidu.org/main.html"
+reviewed_on = "2026-09-03"

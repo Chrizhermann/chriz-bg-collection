@@ -199,7 +199,7 @@ impl ArtifactCache {
             .map(|candidate| (candidate.start, candidate.etag.as_str()));
         let response = self
             .client
-            .get(&request.url, range)
+            .get_with_reviewed_redirects(&request.url, range, &request.redirect_hosts)
             .map_err(classify_transport_error)?;
 
         if let Some(candidate) = resume {
@@ -220,7 +220,7 @@ impl ArtifactCache {
                     remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?;
                     let fresh = self
                         .client
-                        .get(&request.url, None)
+                        .get_with_reviewed_redirects(&request.url, None, &request.redirect_hosts)
                         .map_err(classify_transport_error)?;
                     return handle_fresh_response(fresh, request, paths, sink);
                 }
@@ -260,6 +260,15 @@ fn validate_request(request: &DownloadRequest) -> Result<String, AcquireError> {
     {
         return Err(AcquireError::InvalidRequest(
             "expected_sha256 must be exactly 64 hexadecimal characters".to_owned(),
+        ));
+    }
+    if request
+        .redirect_hosts
+        .iter()
+        .any(|host| host.is_empty() || !host.is_ascii() || host.contains('/') || host.contains(':'))
+    {
+        return Err(AcquireError::InvalidRequest(
+            "redirect_hosts must contain bare ASCII host names".to_owned(),
         ));
     }
     Ok(request.expected_sha256.to_ascii_lowercase())

@@ -20,6 +20,7 @@ fn request(id: &str, url: String, bytes: &[u8]) -> DownloadRequest {
         url,
         expected_length: bytes.len() as u64,
         expected_sha256: sha256(bytes),
+        redirect_hosts: Vec::new(),
         max_attempts: 1,
     }
 }
@@ -84,6 +85,7 @@ fn hash_mismatch_never_publishes_a_cache_object() {
         url,
         expected_length: bytes.len() as u64,
         expected_sha256: "00".repeat(32),
+        redirect_hosts: Vec::new(),
         max_attempts: 1,
     };
 

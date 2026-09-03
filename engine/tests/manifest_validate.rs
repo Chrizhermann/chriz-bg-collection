@@ -224,7 +224,7 @@ fn archive_path_must_be_relative_and_traversal_free() {
             .get_mut("eefixpack")
             .unwrap()
             .archive
-            .path = path.to_owned();
+            .publish_roots = vec![path.to_owned()];
 
         let findings = validate(&manifest);
 
@@ -253,7 +253,7 @@ fn archive_path_rejects_nested_windows_ads_components() {
             .get_mut("eefixpack")
             .unwrap()
             .archive
-            .path = path.to_owned();
+            .publish_roots = vec![path.to_owned()];
 
         let findings = validate(&manifest);
 

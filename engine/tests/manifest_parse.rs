@@ -98,7 +98,7 @@ fn parses_artifact_acquisition_and_provenance_independently() {
 
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
-    assert_eq!(artifact.archive.path, "EE_Fixpack");
+    assert_eq!(artifact.archive.publish_roots, ["EE_Fixpack"]);
     assert_eq!(artifact.provenance.license, "MIT");
 }
 

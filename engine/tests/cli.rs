@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use bg_engine::lock::TargetLock;
+use bg_engine::session::SessionStore;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -351,6 +352,29 @@ fn source_target_overlap_is_rejected_before_campaign_state_is_created() {
     let response = json_stdout(&output);
     assert_eq!(response["error"]["code"], "source_target_overlap");
     assert!(!managed.exists(), "overlap guard wrote into source game");
+}
+
+#[test]
+fn campaign_identity_freezes_the_authored_nonzero_artifact_lengths() {
+    let (_temp, recipe, bg1, bg2, managed, cache) = failed_install_fixture();
+    let app_data = managed.parent().unwrap().join("app-data");
+    let mut command = cli();
+    command
+        .env("LOCALAPPDATA", &app_data)
+        .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
+    let output = command.output().expect("start guarded campaign");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+
+    let replay = SessionStore::open(&managed).unwrap().replay().unwrap();
+    let created = replay.created();
+    assert!(
+        created
+            .artifact_identities
+            .iter()
+            .chain(&created.tool_identities)
+            .all(|identity| identity.length == 1),
+        "frozen identities: {created:#?}"
+    );
 }
 
 #[test]
