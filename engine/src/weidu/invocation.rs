@@ -3,16 +3,25 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 use crate::manifest::{GameRoot, InvocationMode, PeMachine, RunArg, ToolSpec};
 
+use super::process_group::ProcessGroup;
+
 const DEBUG_LOG_NAME: &str = "weidu.debug.log";
+const TOOL_VERSION_PROBE_TIMEOUT: Duration = Duration::from_secs(2);
+const TOOL_VERSION_PROBE_OUTPUT_LIMIT: usize = 64 * 1024;
+const TOOL_VERSION_PROBE_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 /// One prompt matcher and the exact bytes sent after it matches.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -148,18 +157,7 @@ pub fn verify_tool_contract(
         });
     }
 
-    let output = Command::new(&verified.source_path)
-        .arg("--version")
-        .current_dir(verified.source_path.parent().ok_or_else(|| {
-            InvocationError::UnsafeToolPath {
-                path: verified.source_path.clone(),
-            }
-        })?)
-        .output()
-        .map_err(|source| InvocationError::ToolVersionProbe {
-            path: verified.source_path.clone(),
-            source,
-        })?;
+    let output = run_bounded_version_probe(&verified)?;
     if !output.status.success() {
         return Err(InvocationError::ToolVersionProbeFailed {
             path: verified.source_path.clone(),
@@ -182,6 +180,214 @@ pub fn verify_tool_contract(
         pe_machine,
     };
     Ok((verified, evidence))
+}
+
+struct ProbeOutput {
+    status: ExitStatus,
+    stdout: Vec<u8>,
+}
+
+fn run_bounded_version_probe(verified: &VerifiedWeidu) -> Result<ProbeOutput, InvocationError> {
+    let probe_dir = tempfile::Builder::new()
+        .prefix("chriz-bg-weidu-probe-")
+        .tempdir()
+        .map_err(|source| probe_error(verified, source))?;
+    let probe_path = probe_dir.path().join("weidu-version-probe.exe");
+    let mut created = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&probe_path)
+        .map_err(|source| probe_error(verified, source))?;
+    created
+        .write_all(&verified.bytes)
+        .and_then(|_| created.sync_all())
+        .map_err(|source| probe_error(verified, source))?;
+    drop(created);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::set_permissions(&probe_path, fs::Permissions::from_mode(0o700))
+            .map_err(|source| probe_error(verified, source))?;
+    }
+
+    // On Windows this handle permits readers (including the image loader) while denying
+    // writes, deletion, and rename. Re-reading after acquiring it closes the creation/open
+    // race; keeping it alive through process completion prevents path substitution.
+    let mut locked_probe =
+        open_locked_probe(&probe_path).map_err(|source| probe_error(verified, source))?;
+    let mut locked_bytes = Vec::new();
+    locked_probe
+        .read_to_end(&mut locked_bytes)
+        .map_err(|source| probe_error(verified, source))?;
+    if locked_bytes != verified.bytes {
+        return Err(InvocationError::ToolHashMismatch {
+            path: verified.source_path.clone(),
+            expected: verified.sha256.clone(),
+            actual: hex::encode(Sha256::digest(&locked_bytes)),
+        });
+    }
+
+    let process_group = ProcessGroup::new().map_err(|source| probe_error(verified, source))?;
+    let mut command = Command::new(&probe_path);
+    command
+        .arg("--version")
+        .current_dir(probe_dir.path())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = command
+        .spawn()
+        .map_err(|source| probe_error(verified, source))?;
+    if let Err(source) = process_group.attach(&child) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(probe_error(verified, source));
+    }
+
+    let stdout = child
+        .stdout
+        .take()
+        .expect("version probe stdout was configured as piped");
+    let stderr = child
+        .stderr
+        .take()
+        .expect("version probe stderr was configured as piped");
+    let total_output = Arc::new(AtomicUsize::new(0));
+    let output_exceeded = Arc::new(AtomicBool::new(false));
+    let stdout_reader = spawn_bounded_probe_reader(
+        stdout,
+        Arc::clone(&total_output),
+        Arc::clone(&output_exceeded),
+    );
+    let stderr_reader = spawn_bounded_probe_reader(
+        stderr,
+        Arc::clone(&total_output),
+        Arc::clone(&output_exceeded),
+    );
+    let started = Instant::now();
+
+    let status = loop {
+        if output_exceeded.load(Ordering::Acquire) {
+            terminate_probe(process_group, &mut child);
+            let _ = join_probe_readers(stdout_reader, stderr_reader, verified);
+            return Err(InvocationError::ToolVersionProbeOutputLimit {
+                path: verified.source_path.clone(),
+                limit: TOOL_VERSION_PROBE_OUTPUT_LIMIT,
+            });
+        }
+        if started.elapsed() >= TOOL_VERSION_PROBE_TIMEOUT {
+            terminate_probe(process_group, &mut child);
+            let _ = join_probe_readers(stdout_reader, stderr_reader, verified);
+            return Err(InvocationError::ToolVersionProbeTimedOut {
+                path: verified.source_path.clone(),
+                timeout: TOOL_VERSION_PROBE_TIMEOUT,
+            });
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) => thread::sleep(TOOL_VERSION_PROBE_POLL_INTERVAL),
+            Err(source) => {
+                terminate_probe(process_group, &mut child);
+                let _ = join_probe_readers(stdout_reader, stderr_reader, verified);
+                return Err(probe_error(verified, source));
+            }
+        }
+    };
+
+    // Closing a kill-on-close Job Object after the parent exits also closes any descendant-held
+    // pipe handles, so joining the bounded readers cannot hang on an orphaned process tree.
+    drop(process_group);
+    let (stdout, _stderr) = join_probe_readers(stdout_reader, stderr_reader, verified)?;
+    if output_exceeded.load(Ordering::Acquire) {
+        return Err(InvocationError::ToolVersionProbeOutputLimit {
+            path: verified.source_path.clone(),
+            limit: TOOL_VERSION_PROBE_OUTPUT_LIMIT,
+        });
+    }
+    drop(locked_probe);
+    Ok(ProbeOutput { status, stdout })
+}
+
+#[cfg(windows)]
+fn open_locked_probe(path: &Path) -> io::Result<fs::File> {
+    use std::os::windows::fs::OpenOptionsExt;
+    use windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ;
+
+    OpenOptions::new()
+        .read(true)
+        .share_mode(FILE_SHARE_READ)
+        .open(path)
+}
+
+#[cfg(not(windows))]
+fn open_locked_probe(path: &Path) -> io::Result<fs::File> {
+    OpenOptions::new().read(true).open(path)
+}
+
+fn spawn_bounded_probe_reader<R: Read + Send + 'static>(
+    mut reader: R,
+    total: Arc<AtomicUsize>,
+    exceeded: Arc<AtomicBool>,
+) -> JoinHandle<io::Result<Vec<u8>>> {
+    thread::spawn(move || {
+        let mut captured = Vec::new();
+        let mut buffer = [0_u8; 8 * 1024];
+        loop {
+            let count = match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(count) => count,
+                Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+                Err(error) => return Err(error),
+            };
+            let previous = total
+                .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+                    Some(value.saturating_add(count))
+                })
+                .expect("bounded output counter update cannot fail");
+            let retained = TOOL_VERSION_PROBE_OUTPUT_LIMIT
+                .saturating_sub(previous)
+                .min(count);
+            captured.extend_from_slice(&buffer[..retained]);
+            if previous.saturating_add(count) > TOOL_VERSION_PROBE_OUTPUT_LIMIT {
+                exceeded.store(true, Ordering::Release);
+                break;
+            }
+        }
+        Ok(captured)
+    })
+}
+
+fn join_probe_readers(
+    stdout: JoinHandle<io::Result<Vec<u8>>>,
+    stderr: JoinHandle<io::Result<Vec<u8>>>,
+    verified: &VerifiedWeidu,
+) -> Result<(Vec<u8>, Vec<u8>), InvocationError> {
+    let stdout = stdout.join();
+    let stderr = stderr.join();
+    let stdout = stdout
+        .map_err(|_| probe_error(verified, io::Error::other("stdout reader panicked")))?
+        .map_err(|source| probe_error(verified, source));
+    let stderr = stderr
+        .map_err(|_| probe_error(verified, io::Error::other("stderr reader panicked")))?
+        .map_err(|source| probe_error(verified, source));
+    Ok((stdout?, stderr?))
+}
+
+fn terminate_probe(process_group: ProcessGroup, child: &mut Child) {
+    if process_group.terminate(child).is_err() {
+        let _ = child.kill();
+    }
+    drop(process_group);
+    let _ = child.wait();
+}
+
+fn probe_error(verified: &VerifiedWeidu, source: io::Error) -> InvocationError {
+    InvocationError::ToolVersionProbe {
+        path: verified.source_path.clone(),
+        source,
+    }
 }
 
 /// Parses WeiDU's path-prefixed version line while excluding the unstable path itself.
@@ -356,12 +562,12 @@ pub enum InvocationError {
         /// Observed architecture.
         actual: PeMachine,
     },
-    /// Starting the immutable version probe failed.
+    /// Preparing, starting, or supervising the immutable version probe failed.
     #[error("could not run WeiDU --version for {path}: {source}")]
     ToolVersionProbe {
         /// Canonical checked tool path.
         path: PathBuf,
-        /// Process spawn or wait error.
+        /// Probe preparation, process spawn, output read, or wait error.
         #[source]
         source: std::io::Error,
     },
@@ -372,6 +578,22 @@ pub enum InvocationError {
         path: PathBuf,
         /// OS-independent exit-status rendering.
         status: String,
+    },
+    /// The immutable executable did not finish its version probe promptly.
+    #[error("WeiDU --version timed out after {timeout:?} for {path}")]
+    ToolVersionProbeTimedOut {
+        /// Canonical checked tool path.
+        path: PathBuf,
+        /// Hard probe deadline.
+        timeout: Duration,
+    },
+    /// The immutable executable emitted more output than the verifier retains.
+    #[error("WeiDU --version output limit of {limit} bytes exceeded for {path}")]
+    ToolVersionProbeOutputLimit {
+        /// Canonical checked tool path.
+        path: PathBuf,
+        /// Combined stdout and stderr byte limit.
+        limit: usize,
     },
     /// Version stdout was not the one unambiguous WeiDU version line.
     #[error("invalid WeiDU --version output: {detail}")]
@@ -1383,5 +1605,22 @@ mod tests {
         let error = VerifiedWeidu::verify(&path, &"0".repeat(64)).unwrap_err();
 
         assert!(matches!(error, InvocationError::ToolHashMismatch { .. }));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn private_probe_lock_denies_substitution_until_released() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("probe.exe");
+        let renamed = temp.path().join("renamed.exe");
+        fs::write(&path, b"verified bytes").unwrap();
+
+        let lock = super::open_locked_probe(&path).unwrap();
+
+        assert!(fs::write(&path, b"substituted bytes").is_err());
+        assert!(fs::rename(&path, &renamed).is_err());
+        drop(lock);
+        fs::write(&path, b"replacement after release").unwrap();
+        fs::rename(&path, &renamed).unwrap();
     }
 }

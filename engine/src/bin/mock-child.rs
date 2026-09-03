@@ -23,6 +23,7 @@ fn dispatch(args: Vec<OsString>) -> io::Result<()> {
         .and_then(|value| value.to_str())
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "missing mode"))?;
     match mode {
+        "--version" => weidu_version(),
         "fragmented-prompt" => fragmented_prompt(),
         "unmatched-prompt" => unmatched_prompt(),
         "quiet" => quiet(parse_millis(args.get(1))?),
@@ -36,6 +37,37 @@ fn dispatch(args: Vec<OsString>) -> io::Result<()> {
             format!("unknown mode {mode:?}"),
         )),
     }
+}
+
+fn weidu_version() -> io::Result<()> {
+    if let Some(marker) = env::var_os("CHRIZ_TEST_MOCK_WEIDU_MARKER") {
+        fs::write(marker, env::current_exe()?.to_string_lossy().as_bytes())?;
+    }
+    if let Some(bytes) = env::var_os("CHRIZ_TEST_MOCK_WEIDU_OUTPUT_BYTES") {
+        let bytes = bytes
+            .to_str()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid output size"))?
+            .parse()
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid output size"))?;
+        large_streams(bytes)?;
+    }
+    if let Some(marker) = env::var_os("CHRIZ_TEST_MOCK_WEIDU_DESCENDANT_MARKER") {
+        // Let the verifier attach this process to its Job Object before creating a descendant.
+        thread::sleep(Duration::from_millis(150));
+        Command::new(env::current_exe()?)
+            .arg("delayed-marker")
+            .arg(marker)
+            .arg("2500")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
+    }
+    if let Some(delay) = env::var_os("CHRIZ_TEST_MOCK_WEIDU_DELAY_MS") {
+        thread::sleep(parse_millis(Some(&delay))?);
+    }
+    println!("[{}] WeiDU version 24900", env::current_exe()?.display());
+    Ok(())
 }
 
 fn fragmented_prompt() -> io::Result<()> {
