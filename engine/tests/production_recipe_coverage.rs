@@ -65,6 +65,7 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "stratagems" => "STRATAGEMS",
         "randomiser" => "RANDOMISER",
         "buffbot" => "BUFFBOT",
+        "chriz-sod-remix" => "CHRIZ-SOD-REMIX",
         other => panic!("production run has unknown curation catalog: {other}"),
     }
 }
@@ -138,6 +139,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "bggo",
             "bubb-spell-menu",
             "buffbot",
+            "chriz-sod-remix",
             "dlcmerger",
             "eeex",
             "eefixpack",

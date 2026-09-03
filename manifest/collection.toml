@@ -156,6 +156,13 @@ components = [0]
 args = []
 
 [[runs]]
+run_id = "chriz-sod-remix-bg2"
+mod_id = "chriz-sod-remix"
+phase = "post-eet-end"
+components = [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 197, 187, 200, 210, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900]
+args = []
+
+[[runs]]
 run_id = "buffbot-bg2"
 mod_id = "buffbot"
 phase = "post-eet-end"
@@ -1651,6 +1658,57 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:randomiser"
 components = [{ run_id = "randomiser-bg2", component = 1100 }]
+
+[[features]]
+id = "mod:chriz-sod-remix"
+title = "Include CHRIZ-SOD-REMIX"
+description = "Christopher's complete curated Siege of Dragonspear remix is authored as one post-EET_END bundle, but this pinned source cannot install every selected component in one WeiDU run."
+category = "collection"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Pinned v0.6.3 declares component 197 before its required component 210, so WeiDU skips 197. A corrected successor source must be reviewed and pinned before this bundle can be installed."
+requires = ["mod:eet-end"]
+
+[[features]]
+id = "feature:chriz-sod-remix:mandatory-components"
+title = "Complete CHRIZ-SOD-REMIX setup"
+description = "Install all 30 reviewed v0.6.3 components as one indivisible bundle, including the camp-chest treasure route."
+category = "collection"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+components = [
+  { run_id = "chriz-sod-remix-bg2", component = 100 },
+  { run_id = "chriz-sod-remix-bg2", component = 110 },
+  { run_id = "chriz-sod-remix-bg2", component = 120 },
+  { run_id = "chriz-sod-remix-bg2", component = 130 },
+  { run_id = "chriz-sod-remix-bg2", component = 140 },
+  { run_id = "chriz-sod-remix-bg2", component = 150 },
+  { run_id = "chriz-sod-remix-bg2", component = 145 },
+  { run_id = "chriz-sod-remix-bg2", component = 160 },
+  { run_id = "chriz-sod-remix-bg2", component = 170 },
+  { run_id = "chriz-sod-remix-bg2", component = 180 },
+  { run_id = "chriz-sod-remix-bg2", component = 175 },
+  { run_id = "chriz-sod-remix-bg2", component = 185 },
+  { run_id = "chriz-sod-remix-bg2", component = 190 },
+  { run_id = "chriz-sod-remix-bg2", component = 195 },
+  { run_id = "chriz-sod-remix-bg2", component = 197 },
+  { run_id = "chriz-sod-remix-bg2", component = 187 },
+  { run_id = "chriz-sod-remix-bg2", component = 200 },
+  { run_id = "chriz-sod-remix-bg2", component = 210 },
+  { run_id = "chriz-sod-remix-bg2", component = 215 },
+  { run_id = "chriz-sod-remix-bg2", component = 220 },
+  { run_id = "chriz-sod-remix-bg2", component = 225 },
+  { run_id = "chriz-sod-remix-bg2", component = 245 },
+  { run_id = "chriz-sod-remix-bg2", component = 230 },
+  { run_id = "chriz-sod-remix-bg2", component = 240 },
+  { run_id = "chriz-sod-remix-bg2", component = 250 },
+  { run_id = "chriz-sod-remix-bg2", component = 255 },
+  { run_id = "chriz-sod-remix-bg2", component = 260 },
+  { run_id = "chriz-sod-remix-bg2", component = 270 },
+  { run_id = "chriz-sod-remix-bg2", component = 280 },
+  { run_id = "chriz-sod-remix-bg2", component = 900 },
+]
 
 [[features]]
 id = "mod:buffbot"

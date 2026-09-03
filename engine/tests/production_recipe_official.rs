@@ -378,6 +378,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "stratagems-bg2",
             "randomiser-bg2",
             "eet-end-bg2",
+            "chriz-sod-remix-bg2",
             "buffbot-bg2",
         ]
     );

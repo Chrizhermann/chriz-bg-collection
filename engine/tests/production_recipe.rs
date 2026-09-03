@@ -655,6 +655,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "chriz-sod-remix-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4",
+            (
+                "codeload.github.com",
+                Some("chriz-sod-rebalance-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"),
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 187,
+                    max_entry_uncompressed_bytes: 36_163,
+                    total_uncompressed_bytes: 1_157_816,
+                    max_compression_ratio: 7,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

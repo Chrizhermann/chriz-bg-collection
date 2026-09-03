@@ -1,0 +1,32 @@
+id = "chriz-sod-remix-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
+name = "CHRIZ-SOD-REMIX"
+version = "0.6.3"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Chrizhermann/chriz-sod-rebalance/zip/d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
+reference = "d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
+expected_filename = "chriz-sod-rebalance-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4.zip"
+expected_length = 534577
+sha256 = "40613ae53f966599be28713e2b4bb4b3ab17b91c5b5b37931bccc788c9e30534"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["chriz-sod-remix"]
+tp2_paths = ["chriz-sod-remix/setup-chriz-sod-remix.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-sod-rebalance"
+license = "Fetch-only Christopher Hermann source commit; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-sod-rebalance/commit/d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
+reviewed_on = "2026-09-04"
