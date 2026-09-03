@@ -8,6 +8,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -31,8 +32,8 @@ use crate::orchestrator::{
 };
 use crate::preflight::{initial_preflight, InitialPreflight, RequiredInput, SpaceRequirement};
 use crate::receipt::{
-    InstallReceipt, ManagedReceiptWriter, ReceiptEvidence, ReceiptStore, ReceiptVersions,
-    SourceGameReceipt,
+    InstallReceipt, ManagedReceiptWriter, ReceiptEvidence, ReceiptOutcome, ReceiptStore,
+    ReceiptVersions, SourceGameReceipt, RECEIPT_SCHEMA_VERSION,
 };
 use crate::recipe_view::{evaluate, SelectionEvaluation};
 use crate::registry::ManagedInstallRegistry;
@@ -50,6 +51,7 @@ const ATTEMPT_RECEIPT_FILE: &str = "receipt.json";
 const CLI_FROZEN_RECIPE_SCHEMA: u32 = 1;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
+static CAMPAIGN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Validation strength requested by the caller.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -467,6 +469,7 @@ pub fn install_campaign<S: EventSink>(
     let frozen_bg2 = FrozenSource::from_candidate(&bg2, "BG2EE")?;
     let managed_root = prospective_direct_path(&request.managed_root, "managed root")?;
     let cache_root = canonical_existing_directory(&request.cache, "cache root")?;
+    reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
     let frozen = FrozenCliRecipe {
         schema: CLI_FROZEN_RECIPE_SCHEMA,
         collection: manifest.collection.clone(),
@@ -488,15 +491,7 @@ pub fn install_campaign<S: EventSink>(
         payload_sha256: &recipe_payload_sha256,
     })
     .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?;
-    let seed = sha256_bytes(
-        format!(
-            "{}\0{}\0{}",
-            managed_root.display(),
-            recipe_payload_sha256,
-            evaluation.plan.runs.len()
-        )
-        .as_bytes(),
-    );
+    let seed = new_campaign_seed(&managed_root, &recipe_payload_sha256)?;
     let created = CampaignCreated {
         install_id: format!("install-{}", &seed[..20]),
         attempt_id: format!("attempt-{}", &seed[20..40]),
@@ -596,6 +591,38 @@ fn execute_frozen_campaign<S: EventSink>(
 /// Read the newest immutable attempt receipt without trusting mutable summary state.
 pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliError> {
     let managed_root = canonical_direct_directory(managed_root, "managed root")?;
+    let store = SessionStore::open(&managed_root).map_err(|error| {
+        CliError::new(
+            "report_unavailable",
+            format!(
+                "could not open frozen campaign {}: {error}",
+                managed_root.display()
+            ),
+        )
+    })?;
+    let replay = store.replay().map_err(|error| {
+        CliError::new(
+            "report_unavailable",
+            format!(
+                "could not replay frozen campaign {}: {error}",
+                managed_root.display()
+            ),
+        )
+    })?;
+    let created = replay.created();
+    let frozen: FrozenCliRecipe =
+        serde_json::from_slice(&created.recipe_payload).map_err(|error| {
+            CliError::new(
+                "report_unavailable",
+                format!("frozen recipe payload is not a supported CLI snapshot: {error}"),
+            )
+        })?;
+    validate_frozen_cli_recipe(created, &frozen).map_err(|error| {
+        CliError::new(
+            "report_unavailable",
+            format!("frozen campaign identity is invalid: {error}"),
+        )
+    })?;
     let attempts = managed_root.join(STATE_DIRECTORY).join(ATTEMPTS_DIRECTORY);
     validate_direct_directory(&attempts, "attempt receipt directory")?;
     let mut receipts = Vec::new();
@@ -618,11 +645,47 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
             )
         })?;
         if metadata.file_type().is_symlink() || !metadata.is_dir() {
-            continue;
+            return Err(CliError::new(
+                "report_unavailable",
+                format!(
+                    "attempt entry is not a direct directory: {}",
+                    entry.path().display()
+                ),
+            ));
         }
+        let directory_name = entry.file_name().into_string().map_err(|_| {
+            CliError::new(
+                "report_unavailable",
+                format!(
+                    "attempt directory name is not valid Unicode: {}",
+                    entry.path().display()
+                ),
+            )
+        })?;
         let path = entry.path().join(ATTEMPT_RECEIPT_FILE);
-        let Ok(metadata) = fs::symlink_metadata(&path) else {
-            continue;
+        let metadata = match fs::symlink_metadata(&path) {
+            Ok(metadata) => metadata,
+            Err(error)
+                if error.kind() == std::io::ErrorKind::NotFound
+                    && directory_name == created.attempt_id =>
+            {
+                continue;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Err(CliError::new(
+                    "report_unavailable",
+                    format!(
+                        "attempt directory has no receipt: {}",
+                        entry.path().display()
+                    ),
+                ));
+            }
+            Err(source) => {
+                return Err(CliError::new(
+                    "report_unavailable",
+                    format!("{}: {source}", path.display()),
+                ));
+            }
         };
         if metadata.file_type().is_symlink() || !metadata.is_file() {
             return Err(CliError::new(
@@ -645,16 +708,14 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
                 format!("invalid receipt JSON at {}: {source}", path.display()),
             )
         })?;
-        if receipt.managed_root != managed_root {
-            return Err(CliError::new(
-                "report_unavailable",
-                format!(
-                    "receipt {} belongs to a different managed root {}",
-                    path.display(),
-                    receipt.managed_root.display()
-                ),
-            ));
-        }
+        validate_report_receipt(&receipt, &directory_name, created, &frozen, &replay).map_err(
+            |message| {
+                CliError::new(
+                    "report_unavailable",
+                    format!("invalid receipt at {}: {message}", path.display()),
+                )
+            },
+        )?;
         receipts.push(receipt);
     }
     receipts.sort_by(|left, right| {
@@ -676,6 +737,257 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
         managed_root,
         receipt,
     })
+}
+
+fn validate_report_receipt(
+    receipt: &InstallReceipt,
+    directory_name: &str,
+    created: &CampaignCreated,
+    frozen: &FrozenCliRecipe,
+    replay: &SessionReplay,
+) -> Result<(), String> {
+    for (label, value) in [
+        ("install id", receipt.install_id.as_str()),
+        ("attempt id", receipt.attempt_id.as_str()),
+        ("evidence attempt id", receipt.evidence_attempt_id.as_str()),
+    ] {
+        validate_cli_identifier(value, label)?;
+    }
+    if receipt.schema_version != RECEIPT_SCHEMA_VERSION {
+        return Err(format!(
+            "unsupported schema {}; expected {RECEIPT_SCHEMA_VERSION}",
+            receipt.schema_version
+        ));
+    }
+    if receipt.attempt_id != directory_name {
+        return Err(format!(
+            "attempt id {:?} does not match directory {:?}",
+            receipt.attempt_id, directory_name
+        ));
+    }
+    if receipt.install_id != created.install_id {
+        return Err("install id differs from the frozen campaign".to_owned());
+    }
+    if receipt.evidence_attempt_id != created.attempt_id {
+        return Err("evidence attempt id differs from the frozen campaign".to_owned());
+    }
+    if receipt.managed_root != created.managed_root
+        || receipt.staged_bg1 != created.staged_bg1
+        || receipt.staged_bg2 != created.staged_bg2
+    {
+        return Err("managed or staged paths differ from the frozen campaign".to_owned());
+    }
+    let started_at = replay
+        .records
+        .first()
+        .ok_or_else(|| "campaign ledger has no creation record".to_owned())?
+        .recorded_at;
+    if receipt.started_at_millis != started_at
+        || receipt.completed_at_millis < receipt.started_at_millis
+    {
+        return Err("receipt timestamps contradict the campaign ledger".to_owned());
+    }
+    validate_receipt_outcome_link(receipt, created, replay)?;
+
+    if receipt.recipe_payload_sha256 != created.recipe_payload_sha256
+        || receipt.recipe_envelope_sha256 != created.recipe_envelope_sha256
+    {
+        return Err("recipe digests differ from the frozen campaign".to_owned());
+    }
+    if receipt.normalized_selection != created.normalized_selection
+        || receipt.selection_sha256 != created.selection_sha256
+        || selection_digest(&receipt.normalized_selection).map_err(|error| error.to_string())?
+            != created.selection_sha256
+    {
+        return Err("normalized selection differs from the frozen campaign".to_owned());
+    }
+    if receipt.plan != frozen.plan
+        || receipt.plan_sha256 != created.plan_sha256
+        || plan_digest(&receipt.plan).map_err(|error| error.to_string())? != created.plan_sha256
+    {
+        return Err("resolved plan differs from the frozen campaign".to_owned());
+    }
+
+    let expected_sources = vec![frozen.bg1.receipt(), frozen.bg2.receipt()];
+    if receipt.source_games != expected_sources {
+        return Err("source-game evidence differs from the frozen campaign".to_owned());
+    }
+    if receipt.versions.application.trim().is_empty()
+        || receipt.versions.engine.trim().is_empty()
+        || receipt.versions.manifest_schema != frozen.collection.schema
+        || receipt.versions.recipe != format!("local-{}", &created.recipe_payload_sha256[..12])
+    {
+        return Err("receipt versions contradict the frozen recipe".to_owned());
+    }
+
+    let succeeded = matches!(receipt.outcome, ReceiptOutcome::Succeeded);
+    validate_receipt_identities(
+        "artifact",
+        receipt
+            .artifacts
+            .iter()
+            .map(|item| (&item.id, &item.version, item.length, &item.sha256)),
+        &created.artifact_identities,
+        succeeded,
+    )?;
+    validate_receipt_identities(
+        "WeiDU tool",
+        receipt
+            .weidu_tools
+            .iter()
+            .map(|item| (&item.id, &item.version, item.length, &item.sha256)),
+        &created.tool_identities,
+        succeeded,
+    )?;
+    let mut seen_runs = BTreeSet::new();
+    for run in &receipt.runs {
+        let planned = receipt
+            .plan
+            .runs
+            .iter()
+            .find(|planned| planned.run_id == run.run_id);
+        if !seen_runs.insert(run.run_id.as_str())
+            || !planned.is_some_and(|planned| {
+                run.target == planned.target && run.components == planned.components
+            })
+        {
+            return Err(format!(
+                "run evidence for {:?} differs from the frozen plan or is duplicated",
+                run.run_id
+            ));
+        }
+    }
+    if succeeded && receipt.runs.len() != receipt.plan.runs.len() {
+        return Err("successful receipt has incomplete run evidence".to_owned());
+    }
+    Ok(())
+}
+
+fn validate_cli_identifier(value: &str, label: &str) -> Result<(), String> {
+    if value.is_empty()
+        || value.len() > 128
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+    {
+        return Err(format!(
+            "{label} must contain 1-128 ASCII letters, digits, '-' or '_'"
+        ));
+    }
+    Ok(())
+}
+
+fn validate_receipt_outcome_link(
+    receipt: &InstallReceipt,
+    created: &CampaignCreated,
+    replay: &SessionReplay,
+) -> Result<(), String> {
+    match &receipt.outcome {
+        ReceiptOutcome::Succeeded => {
+            if receipt.attempt_id != created.attempt_id || receipt.final_state.is_none() {
+                return Err(
+                    "successful receipt must use the campaign attempt and final state".to_owned(),
+                );
+            }
+            if !replay
+                .records
+                .iter()
+                .any(|record| record.recorded_at == receipt.completed_at_millis)
+            {
+                return Err("successful receipt timestamp is absent from the ledger".to_owned());
+            }
+        }
+        ReceiptOutcome::Failed { step_id, detail } => {
+            if receipt.final_state.is_some() {
+                return Err("failed receipt unexpectedly contains final state".to_owned());
+            }
+            validate_terminal_receipt_link(
+                receipt,
+                replay,
+                &format!("failed\0{step_id}\0{detail}"),
+            )?;
+        }
+        ReceiptOutcome::FreshCopyRequired { step_id, detail } => {
+            if receipt.final_state.is_some() {
+                return Err("fresh-copy receipt unexpectedly contains final state".to_owned());
+            }
+            validate_terminal_receipt_link(
+                receipt,
+                replay,
+                &format!("fresh-copy-required\0{step_id}\0{detail}"),
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_terminal_receipt_link(
+    receipt: &InstallReceipt,
+    replay: &SessionReplay,
+    outcome_identity: &str,
+) -> Result<(), String> {
+    let suffix = receipt
+        .attempt_id
+        .strip_prefix("terminal-")
+        .ok_or_else(|| "terminal receipt has no terminal attempt id".to_owned())?;
+    let (sequence_text, digest) = suffix
+        .split_once('-')
+        .ok_or_else(|| "terminal receipt attempt id has invalid shape".to_owned())?;
+    if sequence_text.len() != 10
+        || !sequence_text.bytes().all(|byte| byte.is_ascii_digit())
+        || digest.len() != 16
+        || !digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err("terminal receipt attempt id has invalid shape".to_owned());
+    }
+    let sequence = sequence_text
+        .parse::<usize>()
+        .map_err(|_| "terminal receipt sequence does not fit this platform".to_owned())?;
+    let expected = format!(
+        "terminal-{sequence_text}-{}",
+        &sha256_bytes(outcome_identity.as_bytes())[..16]
+    );
+    if receipt.attempt_id != expected {
+        return Err("terminal receipt outcome digest does not match its attempt id".to_owned());
+    }
+    let record = replay
+        .records
+        .get(sequence)
+        .filter(|record| record.sequence as usize == sequence)
+        .ok_or_else(|| "terminal receipt sequence is absent from the ledger".to_owned())?;
+    if record.recorded_at != receipt.completed_at_millis {
+        return Err("terminal receipt timestamp differs from its ledger record".to_owned());
+    }
+    Ok(())
+}
+
+fn validate_receipt_identities<'a>(
+    label: &str,
+    evidence: impl Iterator<Item = (&'a String, &'a String, u64, &'a String)>,
+    frozen: &[FrozenIdentity],
+    require_complete: bool,
+) -> Result<(), String> {
+    let evidence = evidence.collect::<Vec<_>>();
+    if require_complete && evidence.len() != frozen.len() {
+        return Err(format!(
+            "successful receipt has incomplete {label} evidence"
+        ));
+    }
+    let mut seen = BTreeSet::new();
+    for (id, version, length, sha256) in evidence {
+        let matches = frozen.iter().filter(|identity| {
+            id == &identity.id
+                && version == &identity.version
+                && length == identity.length
+                && sha256.eq_ignore_ascii_case(&identity.sha256)
+        });
+        if !seen.insert(id) || matches.count() != 1 {
+            return Err(format!(
+                "{label} evidence for {id:?} differs from the frozen identity or is duplicated"
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Export diagnostics for the newest immutable terminal attempt.
@@ -733,6 +1045,24 @@ impl FrozenSource {
 fn serialize_frozen_recipe(frozen: &FrozenCliRecipe) -> Result<Vec<u8>, CliError> {
     serde_json::to_vec(frozen)
         .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))
+}
+
+fn new_campaign_seed(managed_root: &Path, recipe_sha256: &str) -> Result<String, CliError> {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| CliError::new("campaign_identity_failed", "system clock is before epoch"))?;
+    let sequence = CAMPAIGN_SEQUENCE.fetch_add(1, AtomicOrdering::Relaxed);
+    Ok(sha256_bytes(
+        format!(
+            "{}\0{}\0{}\0{}\0{}",
+            managed_root.display(),
+            recipe_sha256,
+            now.as_nanos(),
+            std::process::id(),
+            sequence
+        )
+        .as_bytes(),
+    ))
 }
 
 fn validate_frozen_cli_recipe(
@@ -1001,6 +1331,83 @@ fn prospective_direct_path(path: &Path, label: &str) -> Result<PathBuf, CliError
     }
 }
 
+fn reject_campaign_path_overlaps(
+    managed_root: &Path,
+    cache_root: &Path,
+    bg1_root: &Path,
+    bg2_root: &Path,
+) -> Result<(), CliError> {
+    for (label, source_root) in [("BGEE+SoD", bg1_root), ("BG2EE", bg2_root)] {
+        if paths_overlap(managed_root, source_root) {
+            return Err(CliError::new(
+                "source_target_overlap",
+                format!(
+                    "managed root {} overlaps the read-only {label} source {}",
+                    managed_root.display(),
+                    source_root.display()
+                ),
+            ));
+        }
+        if paths_overlap(cache_root, source_root) {
+            return Err(CliError::new(
+                "cache_source_overlap",
+                format!(
+                    "cache root {} overlaps the read-only {label} source {}",
+                    cache_root.display(),
+                    source_root.display()
+                ),
+            ));
+        }
+    }
+    if paths_overlap(managed_root, cache_root) {
+        return Err(CliError::new(
+            "cache_target_overlap",
+            format!(
+                "cache root {} overlaps managed root {}",
+                cache_root.display(),
+                managed_root.display()
+            ),
+        ));
+    }
+    if paths_overlap(bg1_root, bg2_root) {
+        return Err(CliError::new(
+            "source_overlap",
+            format!(
+                "BGEE+SoD source {} overlaps BG2EE source {}",
+                bg1_root.display(),
+                bg2_root.display()
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn paths_overlap(left: &Path, right: &Path) -> bool {
+    path_is_within(left, right) || path_is_within(right, left)
+}
+
+fn path_is_within(path: &Path, base: &Path) -> bool {
+    let path = path.components().collect::<Vec<_>>();
+    let base = base.components().collect::<Vec<_>>();
+    path.len() >= base.len()
+        && path
+            .iter()
+            .zip(base.iter())
+            .all(|(left, right)| path_component_eq(left.as_os_str(), right.as_os_str()))
+}
+
+fn path_component_eq(left: &std::ffi::OsStr, right: &std::ffi::OsStr) -> bool {
+    #[cfg(windows)]
+    {
+        left.to_string_lossy()
+            .eq_ignore_ascii_case(&right.to_string_lossy())
+    }
+    #[cfg(not(windows))]
+    {
+        left == right
+    }
+}
+
 fn map_orchestrator_error(
     error: crate::orchestrator::OrchestratorError,
     created: &CampaignCreated,
@@ -1010,6 +1417,10 @@ fn map_orchestrator_error(
             "target_locked"
         }
         crate::orchestrator::OrchestratorError::UnsafeTarget { .. } => "unsafe_target",
+        crate::orchestrator::OrchestratorError::Engine(
+            crate::error::EngineError::SessionIdentityMismatch { .. }
+            | crate::error::EngineError::SessionAlreadyExists { .. },
+        ) => "unsafe_target",
         _ => "campaign_error",
     };
     CliError::new(

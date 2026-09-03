@@ -338,6 +338,49 @@ fn target_lock_contention_is_a_distinct_failure() {
 }
 
 #[test]
+fn source_target_overlap_is_rejected_before_campaign_state_is_created() {
+    let (_temp, recipe, bg1, bg2, _managed, cache) = failed_install_fixture();
+    let managed = bg1.join("must-not-be-created");
+    let app_data = bg1.parent().unwrap().join("app-data");
+    let mut command = cli();
+    command
+        .env("LOCALAPPDATA", &app_data)
+        .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
+    let output = command.output().expect("run overlapping install");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let response = json_stdout(&output);
+    assert_eq!(response["error"]["code"], "source_target_overlap");
+    assert!(!managed.exists(), "overlap guard wrote into source game");
+}
+
+#[test]
+fn install_against_an_existing_campaign_is_not_silently_treated_as_resume() {
+    let (_temp, recipe, bg1, bg2, managed, cache) = failed_install_fixture();
+    let app_data = managed.parent().unwrap().join("app-data");
+    let run_install = || {
+        let mut command = cli();
+        command
+            .env("LOCALAPPDATA", &app_data)
+            .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
+        command.output().expect("run guarded install")
+    };
+
+    let first = run_install();
+    assert_eq!(first.status.code(), Some(1), "{}", stderr(&first));
+    assert_eq!(json_stdout(&first)["error"]["code"], "source_not_fresh");
+    let ledger_before = fs::read_dir(managed.join(".chriz/ledger")).unwrap().count();
+
+    let second = run_install();
+    assert_eq!(second.status.code(), Some(1), "{}", stderr(&second));
+    assert_eq!(json_stdout(&second)["error"]["code"], "unsafe_target");
+    assert_eq!(
+        fs::read_dir(managed.join(".chriz/ledger")).unwrap().count(),
+        ledger_before,
+        "a second install command appended to the existing campaign"
+    );
+}
+
+#[test]
 fn resume_uses_the_frozen_recipe_and_report_and_diagnostics_remain_available() {
     let (_temp, recipe, bg1, bg2, managed, cache) = failed_install_fixture();
     let app_data = managed.parent().unwrap().join("app-data");
@@ -383,6 +426,47 @@ fn resume_uses_the_frozen_recipe_and_report_and_diagnostics_remain_available() {
     assert!(diagnostics.status.success(), "{}", stderr(&diagnostics));
     assert!(output.is_file());
     assert_eq!(json_stdout(&diagnostics)["command"], "diagnostics");
+}
+
+#[test]
+fn report_rejects_a_receipt_whose_attempt_directory_or_campaign_identity_is_forged() {
+    let (_temp, recipe, bg1, bg2, managed, cache) = failed_install_fixture();
+    let app_data = managed.parent().unwrap().join("app-data");
+    let mut install = cli();
+    install
+        .env("LOCALAPPDATA", &app_data)
+        .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
+    let installed = install.output().expect("start guarded campaign");
+    assert_eq!(installed.status.code(), Some(1), "{}", stderr(&installed));
+
+    let attempts = managed.join(".chriz/attempts");
+    let receipt_path = fs::read_dir(&attempts)
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("receipt.json"))
+        .find(|path| path.is_file())
+        .expect("terminal failure receipt");
+    let mut receipt: Value =
+        serde_json::from_slice(&fs::read(&receipt_path).unwrap()).expect("parse real receipt");
+    receipt["attempt_id"] = Value::String("different-attempt".to_owned());
+    receipt["install_id"] = Value::String("different-install".to_owned());
+    receipt["completed_at_millis"] = Value::from(
+        receipt["completed_at_millis"]
+            .as_u64()
+            .unwrap()
+            .saturating_add(1_000),
+    );
+    let forged = attempts.join("forged-attempt");
+    fs::create_dir(&forged).unwrap();
+    fs::write(
+        forged.join("receipt.json"),
+        serde_json::to_vec_pretty(&receipt).unwrap(),
+    )
+    .unwrap();
+
+    let report = run(&["--json", "report", managed.to_str().unwrap()]);
+    assert_eq!(report.status.code(), Some(1), "{}", stderr(&report));
+    assert_eq!(json_stdout(&report)["error"]["code"], "report_unavailable");
 }
 
 fn stdout_from_value(value: &Value) -> String {
