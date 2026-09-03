@@ -62,6 +62,9 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "yeslicknpc" => "YESLICKNPC",
         "sirene-bg2" => "SIRENE_BG2",
         "ascension" => "ASCENSION",
+        "stratagems" => "STRATAGEMS",
+        "randomiser" => "RANDOMISER",
+        "buffbot" => "BUFFBOT",
         other => panic!("production run has unknown curation catalog: {other}"),
     }
 }
@@ -134,6 +137,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "bg1ub",
             "bggo",
             "bubb-spell-menu",
+            "buffbot",
             "dlcmerger",
             "eeex",
             "eefixpack",
@@ -142,9 +146,11 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "fade",
             "hidden-gameplay-options",
             "paina",
+            "randomiser",
             "rr",
             "sarahtob",
             "sirene-bg2",
+            "stratagems",
             "ub",
             "xan",
             "yeslicknpc",
@@ -179,11 +185,19 @@ fn recommended_preset_explicitly_keeps_every_default_core_control_desired() {
 }
 
 #[test]
-fn eet_end_is_the_current_core_tail_anchor() {
+fn eet_end_is_the_core_tail_anchor_and_buffbot_is_absolute_last() {
     let manifest = recipe();
+    let last_before_post_eet = manifest
+        .collection
+        .runs
+        .iter()
+        .rfind(|run| run.phase != bg_engine::manifest::Phase::PostEetEnd)
+        .expect("one run before post-EET tail");
+    assert_eq!(last_before_post_eet.run_id, "eet-end-bg2");
+    assert_eq!(last_before_post_eet.mod_id, "eet-end");
     let last = manifest.collection.runs.last().expect("one run");
-    assert_eq!(last.run_id, "eet-end-bg2");
-    assert_eq!(last.mod_id, "eet-end");
+    assert_eq!(last.run_id, "buffbot-bg2");
+    assert_eq!(last.mod_id, "buffbot");
 }
 
 #[test]

@@ -316,10 +316,13 @@ fn authors_the_exact_seven_run_core_spine_and_eet_boundaries() {
             RunArg::StagedRoot(GameRoot::Bg1),
         ]
     );
-    assert_eq!(
-        manifest.collection.runs.last().unwrap().run_id,
-        "eet-end-bg2"
-    );
+    let last_before_post_eet = manifest
+        .collection
+        .runs
+        .iter()
+        .rfind(|run| run.phase != Phase::PostEetEnd)
+        .expect("one run before the post-EET tail");
+    assert_eq!(last_before_post_eet.run_id, "eet-end-bg2");
 
     let implementation_plan = std::fs::read_to_string(
         recipe_root().join("../docs/plans/2026-09-02-installer-v0-real-alpha-implementation.md"),
@@ -522,7 +525,7 @@ fn artifact_verification_evidence() -> ArtifactVerificationEvidence {
 }
 
 #[test]
-fn committed_real_verification_evidence_matches_every_core_artifact_contract() {
+fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() {
     let manifest = recipe();
     let evidence = artifact_verification_evidence();
     let expected_observations = BTreeMap::from([
@@ -610,11 +613,53 @@ fn committed_real_verification_evidence_matches_every_core_artifact_contract() {
                 },
             ),
         ),
+        (
+            "stratagems-35.21",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 6,
+                    entry_count: 5_248,
+                    max_entry_uncompressed_bytes: 5_570_584,
+                    total_uncompressed_bytes: 93_708_729,
+                    max_compression_ratio: 453,
+                },
+            ),
+        ),
+        (
+            "randomiser-8.1.1",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 693,
+                    max_entry_uncompressed_bytes: 1_472_788,
+                    total_uncompressed_bytes: 7_527_597,
+                    max_compression_ratio: 15,
+                },
+            ),
+        ),
+        (
+            "buffbot-1.8.3-alpha",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 4,
+                    entry_count: 45,
+                    max_entry_uncompressed_bytes: 1_364_992,
+                    total_uncompressed_bytes: 5_144_713,
+                    max_compression_ratio: 7,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);
     assert_eq!(evidence.evidence_kind, "production-artifact-verification");
-    assert_eq!(evidence.verified_on, "2026-09-03");
+    assert_eq!(evidence.verified_on, "2026-09-04");
     assert_eq!(evidence.cache_namespace, "sha256-v2");
     assert_eq!(evidence.extraction_marker_version, 2);
     assert_eq!(

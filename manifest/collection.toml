@@ -135,10 +135,31 @@ components = [0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2
 args = []
 
 [[runs]]
+run_id = "stratagems-bg2"
+mod_id = "stratagems"
+phase = "main"
+components = [2000, 2500, 2510, 3040, 3041, 3505, 3540, 3541, 4000, 4115, 4210, 4215, 4218, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
+args = []
+
+[[runs]]
+run_id = "randomiser-bg2"
+mod_id = "randomiser"
+phase = "main"
+components = [500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100]
+args = []
+
+[[runs]]
 run_id = "eet-end-bg2"
 mod_id = "eet-end"
 phase = "eet-finalization"
 components = [0]
+args = []
+
+[[runs]]
+run_id = "buffbot-bg2"
+mod_id = "buffbot"
+phase = "post-eet-end"
+components = [1, 0]
 args = []
 
 [[features]]
@@ -1277,3 +1298,378 @@ decision = "default"
 readiness = "ready"
 parent = "mod:ascension"
 components = [{ run_id = "ascension-bg2", component = 2400 }]
+
+[[features]]
+id = "mod:spell-rev"
+title = "Spell Revisions"
+description = "Spell Revisions remains visible but cannot enter this alpha until its reviewed source and component-60 fix are released and pinned."
+category = "spells"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Spell Revisions is not yet release-ready for the collection alpha."
+
+[[features]]
+id = "mod:stratagems"
+title = "Sword Coast Stratagems"
+description = "Install the curated SCS spell, AI, and encounter package with WeiDU 249."
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+requires = ["mod:ascension"]
+
+[[features]]
+id = "feature:stratagems:mandatory-components"
+title = "Curated SCS core"
+description = "Install the non-optional SCS spell, AI, and encounter components whenever SCS is selected."
+category = "difficulty"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [
+  { run_id = "stratagems-bg2", component = 2000 },
+  { run_id = "stratagems-bg2", component = 2500 },
+  { run_id = "stratagems-bg2", component = 2510 },
+  { run_id = "stratagems-bg2", component = 3505 },
+  { run_id = "stratagems-bg2", component = 4000 },
+  { run_id = "stratagems-bg2", component = 5900 },
+  { run_id = "stratagems-bg2", component = 6000 },
+  { run_id = "stratagems-bg2", component = 6010 },
+  { run_id = "stratagems-bg2", component = 6030 },
+  { run_id = "stratagems-bg2", component = 6040 },
+  { run_id = "stratagems-bg2", component = 6100 },
+  { run_id = "stratagems-bg2", component = 6200 },
+  { run_id = "stratagems-bg2", component = 6300 },
+  { run_id = "stratagems-bg2", component = 6310 },
+  { run_id = "stratagems-bg2", component = 6320 },
+  { run_id = "stratagems-bg2", component = 6500 },
+  { run_id = "stratagems-bg2", component = 6510 },
+  { run_id = "stratagems-bg2", component = 6520 },
+  { run_id = "stratagems-bg2", component = 6540 },
+  { run_id = "stratagems-bg2", component = 6550 },
+  { run_id = "stratagems-bg2", component = 6560 },
+  { run_id = "stratagems-bg2", component = 6570 },
+  { run_id = "stratagems-bg2", component = 6580 },
+  { run_id = "stratagems-bg2", component = 6590 },
+  { run_id = "stratagems-bg2", component = 6800 },
+  { run_id = "stratagems-bg2", component = 6810 },
+  { run_id = "stratagems-bg2", component = 6820 },
+  { run_id = "stratagems-bg2", component = 6830 },
+  { run_id = "stratagems-bg2", component = 6840 },
+  { run_id = "stratagems-bg2", component = 6850 },
+  { run_id = "stratagems-bg2", component = 7000 },
+  { run_id = "stratagems-bg2", component = 7010 },
+  { run_id = "stratagems-bg2", component = 7020 },
+  { run_id = "stratagems-bg2", component = 7030 },
+  { run_id = "stratagems-bg2", component = 7040 },
+  { run_id = "stratagems-bg2", component = 7050 },
+  { run_id = "stratagems-bg2", component = 7060 },
+  { run_id = "stratagems-bg2", component = 7070 },
+  { run_id = "stratagems-bg2", component = 7080 },
+  { run_id = "stratagems-bg2", component = 7090 },
+  { run_id = "stratagems-bg2", component = 7100 },
+  { run_id = "stratagems-bg2", component = 7110 },
+  { run_id = "stratagems-bg2", component = 7130 },
+  { run_id = "stratagems-bg2", component = 7140 },
+  { run_id = "stratagems-bg2", component = 7150 },
+  { run_id = "stratagems-bg2", component = 7200 },
+  { run_id = "stratagems-bg2", component = 7210 },
+  { run_id = "stratagems-bg2", component = 7220 },
+  { run_id = "stratagems-bg2", component = 7230 },
+  { run_id = "stratagems-bg2", component = 7250 },
+  { run_id = "stratagems-bg2", component = 7900 },
+  { run_id = "stratagems-bg2", component = 8010 },
+  { run_id = "stratagems-bg2", component = 8020 },
+  { run_id = "stratagems-bg2", component = 8040 },
+  { run_id = "stratagems-bg2", component = 8050 },
+  { run_id = "stratagems-bg2", component = 8060 },
+  { run_id = "stratagems-bg2", component = 8070 },
+  { run_id = "stratagems-bg2", component = 8080 },
+  { run_id = "stratagems-bg2", component = 8085 },
+  { run_id = "stratagems-bg2", component = 8100 },
+  { run_id = "stratagems-bg2", component = 8110 },
+  { run_id = "stratagems-bg2", component = 8120 },
+  { run_id = "stratagems-bg2", component = 8130 },
+  { run_id = "stratagems-bg2", component = 8140 },
+  { run_id = "stratagems-bg2", component = 8150 },
+  { run_id = "stratagems-bg2", component = 8160 },
+  { run_id = "stratagems-bg2", component = 8170 },
+  { run_id = "stratagems-bg2", component = 8180 },
+  { run_id = "stratagems-bg2", component = 8190 },
+]
+
+[[features]]
+id = "feature:stratagems:component-3040"
+title = "Remove Arrows of Dispelling from stores"
+description = "Optional stricter alternative to the curated five-arrow limit."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-3041", reason = "Choose one Arrows of Dispelling store limit." }]
+components = [{ run_id = "stratagems-bg2", component = 3040 }]
+
+[[features]]
+id = "feature:stratagems:component-3041"
+title = "Stores sell at most five Arrows of Dispelling"
+description = "Use the curated reduced store quantity."
+category = "gameplay"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-3040", reason = "Choose one Arrows of Dispelling store limit." }]
+components = [{ run_id = "stratagems-bg2", component = 3041 }]
+
+[[features]]
+id = "feature:stratagems:component-3540"
+title = "Inquisitor dispel at 1.5 x level"
+description = "Use the curated Inquisitor dispel scaling."
+category = "gameplay"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-3541", reason = "Choose one Inquisitor dispel scaling." }]
+components = [{ run_id = "stratagems-bg2", component = 3540 }]
+
+[[features]]
+id = "feature:stratagems:component-3541"
+title = "Inquisitor dispel at class level"
+description = "Optional stricter alternative to the curated 1.5 x scaling."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-3540", reason = "Choose one Inquisitor dispel scaling." }]
+components = [{ run_id = "stratagems-bg2", component = 3541 }]
+
+[[features]]
+id = "feature:stratagems:component-4115"
+title = "Thief skills in multiples of five"
+description = "Assign thief skill points in multiples of five."
+category = "gameplay"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4115 }]
+
+[[features]]
+id = "feature:stratagems:component-4210"
+title = "Randomize Watcher's Keep maze"
+description = "Optionally randomize the maze in Watcher's Keep."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4210 }]
+
+[[features]]
+id = "feature:stratagems:component-4215"
+title = "Remove unrealistically helpful placed items"
+description = "Remove selected overly convenient items from authored areas."
+category = "gameplay"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4215 }]
+
+[[features]]
+id = "feature:stratagems:component-4218"
+title = "Remove ammunition from random containers"
+description = "Remove all ammunition from random containers."
+category = "gameplay"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4218 }]
+
+[[features]]
+id = "feature:stratagems:component-4240"
+title = "High-Level Abilities as innate abilities"
+description = "Optionally make mage and priest HLAs innate; unavailable when Spell Revisions is selected."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "mod:spell-rev", reason = "Unavailable with Spell Revisions." }]
+components = [{ run_id = "stratagems-bg2", component = 4240 }]
+
+[[features]]
+id = "feature:stratagems:component-4250"
+title = "Sequencers and contingencies as innate abilities"
+description = "Make spell sequencers and contingencies innate abilities."
+category = "gameplay"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4250 }]
+
+[[features]]
+id = "feature:stratagems:component-5000"
+title = "Ease-of-use party AI"
+description = "Optionally install SCS party AI."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 5000 }]
+
+[[features]]
+id = "feature:stratagems:component-8000"
+title = "Harder starting dungeon"
+description = "Optionally make the starting dungeon slightly harder."
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 8000 }]
+
+[[features]]
+id = "feature:stratagems:component-8090"
+title = "Lose party items in Spellhold"
+description = "Optionally have the party's items taken in Spellhold."
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 8090 }]
+
+[[features]]
+id = "mod:randomiser"
+title = "Item Randomiser"
+description = "Randomise curated items in-game after all item and store patchers."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:randomiser:component-500"
+title = "Randomise the TotSC wisdom tome"
+description = "Replace the TotSC wisdom tome with a random ability tome."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 500 }]
+
+[[features]]
+id = "feature:randomiser:component-510"
+title = "Chance to leave an item in place"
+description = "Optionally set a percentage chance for an item not to be randomised."
+category = "randomisation"
+decision = "optional"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 510 }]
+inputs = [{ kind = "integer", id = "chance-percent", default = 10, min = 0, max = 100 }]
+
+[[features]]
+id = "feature:randomiser:component-530"
+title = "Randomise scrolls"
+description = "Include curated scrolls in randomisation."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 530 }]
+
+[[features]]
+id = "feature:randomiser:component-540"
+title = "Randomise Flail of Ages heads"
+description = "Include the heads of the Flail of Ages in randomisation."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 540 }]
+
+[[features]]
+id = "feature:randomiser:component-560"
+title = "More Spell Shield scrolls"
+description = "Increase Spell Shield scroll availability."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 560 }]
+
+[[features]]
+id = "feature:randomiser:component-570"
+title = "Randomise cursed-item appearance"
+description = "Randomise the appearance of cursed items."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 570 }]
+
+[[features]]
+id = "feature:randomiser:component-9000"
+title = "Cespenar forges SoA items"
+description = "Allow Cespenar to forge Shadows of Amn items."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 9000 }]
+
+[[features]]
+id = "feature:randomiser:component-10200"
+title = "Reduce Protection from Undead scrolls"
+description = "Remove Protection from Undead scrolls from nine out of ten stores."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 10200 }]
+
+[[features]]
+id = "feature:randomiser:component-10210"
+title = "Duergar merchants"
+description = "Apply the curated Duergar merchant changes."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 10210 }]
+
+[[features]]
+id = "feature:randomiser:component-10300"
+title = "Keep Watcher's Keep statues"
+description = "Prevent Watcher's Keep statues from disappearing when another provider is not selected."
+category = "randomisation"
+decision = "default"
+readiness = "ready"
+parent = "mod:randomiser"
+conflicts = [{ feature_id = "feature:stratagems:mandatory-components", reason = "Already provided by SCS component 8040 (Improved random spawns)." }]
+components = [{ run_id = "randomiser-bg2", component = 10300 }]
+
+[[features]]
+id = "feature:randomiser:mandatory-components"
+title = "Safe in-game randomisation"
+description = "Use Mode 1 in-game scripts so no items are lost."
+category = "randomisation"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:randomiser"
+components = [{ run_id = "randomiser-bg2", component = 1100 }]
+
+[[features]]
+id = "mod:buffbot"
+title = "BuffBot — in-game buff automation"
+description = "Install the EEex-powered buff automation UI and runtime."
+category = "convenience"
+decision = "default"
+readiness = "ready"
+requires = ["mod:eeex"]
+
+[[features]]
+id = "feature:buffbot:mandatory-components"
+title = "BuffBot runtime"
+description = "Install BuffBot's LuaJIT support followed by its in-game UI/runtime."
+category = "convenience"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:buffbot"
+components = [
+  { run_id = "buffbot-bg2", component = 1 },
+  { run_id = "buffbot-bg2", component = 0 },
+]

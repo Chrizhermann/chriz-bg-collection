@@ -375,10 +375,13 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "yeslicknpc-bg2",
             "sirene-bg2",
             "ascension-bg2",
+            "stratagems-bg2",
+            "randomiser-bg2",
             "eet-end-bg2",
+            "buffbot-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..18]
+    assert!(manifest.collection.runs[6..20]
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);

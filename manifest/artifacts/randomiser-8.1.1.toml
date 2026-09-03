@@ -1,0 +1,32 @@
+id = "randomiser-8.1.1"
+name = "Item Randomiser"
+version = "8.1.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-item-randomiser/releases/download/v8.1.1/randomiser-v8.1.1.zip"
+reference = "v8.1.1"
+expected_filename = "randomiser-v8.1.1.zip"
+expected_length = 3447259
+sha256 = "b5d95e801269ff6e675b6c2c829f897f0769986c8577384f095accc420e7c16b"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["randomiser"]
+tp2_paths = ["randomiser/randomiser.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-item-randomiser"
+license = "Fetch-only maintained fork release with upstream attribution; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-item-randomiser/releases/tag/v8.1.1"
+reviewed_on = "2026-09-04"

@@ -2,7 +2,7 @@
 # reproduce these byte, redirect-host, archive-layout, archive-shape, and PE observations.
 schema = 1
 evidence_kind = "production-artifact-verification"
-verified_on = "2026-09-03"
+verified_on = "2026-09-04"
 cache_namespace = "sha256-v2"
 extraction_marker_version = 2
 
@@ -186,3 +186,84 @@ entry_count = 793
 max_entry_uncompressed_bytes = 26266375
 total_uncompressed_bytes = 229893521
 max_compression_ratio = 25
+
+[[artifacts]]
+artifact_id = "stratagems-35.21"
+immutable_source_url = "https://github.com/Gibberlings3/SwordCoastStratagems/releases/download/v35.21/lin-stratagems-35.21.zip"
+source_reference = "v35.21"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 58517195
+actual_sha256 = "dd6b0dbe3b9f65cf70e5f57601ff667c791e968a62136254292e7521a6be99cb"
+wrapper_kind = "direct"
+materialized_publish_roots = ["stratagems"]
+declared_tp2_paths = ["stratagems/setup-stratagems.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 16
+max_entries = 8192
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 268435456
+max_compression_ratio = 1000
+
+[artifacts.observed_shape]
+max_depth = 6
+entry_count = 5248
+max_entry_uncompressed_bytes = 5570584
+total_uncompressed_bytes = 93708729
+max_compression_ratio = 453
+
+[[artifacts]]
+artifact_id = "randomiser-8.1.1"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-item-randomiser/releases/download/v8.1.1/randomiser-v8.1.1.zip"
+source_reference = "v8.1.1"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 3447259
+actual_sha256 = "b5d95e801269ff6e675b6c2c829f897f0769986c8577384f095accc420e7c16b"
+wrapper_kind = "direct"
+materialized_publish_roots = ["randomiser"]
+declared_tp2_paths = ["randomiser/randomiser.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 693
+max_entry_uncompressed_bytes = 1472788
+total_uncompressed_bytes = 7527597
+max_compression_ratio = 15
+
+[[artifacts]]
+artifact_id = "buffbot-1.8.3-alpha"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.8.3-alpha/buffbot-v1.8.3-alpha.zip"
+source_reference = "v1.8.3-alpha"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 4240743
+actual_sha256 = "fe6e0b4cd393a608d8c3df75f26993106f3550e954030a7b66dbfd28956820a7"
+wrapper_kind = "direct"
+materialized_publish_roots = ["buffbot"]
+declared_tp2_paths = ["buffbot/setup-buffbot.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 45
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 5144713
+max_compression_ratio = 7
