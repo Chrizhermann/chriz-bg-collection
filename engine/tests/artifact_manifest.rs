@@ -5,7 +5,7 @@ use std::process::Command;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use bg_engine::manifest::{Artifact, PeMachine};
+use bg_engine::manifest::{Artifact, PeMachine, SourceKind};
 use bg_engine::validate::{validate, Severity};
 use bg_engine::Manifest;
 use sha2::{Digest, Sha256};
@@ -131,6 +131,48 @@ fn public_contract_rejects_a_moving_reference_even_when_the_url_is_pinned() {
 }
 
 #[test]
+fn public_contract_requires_positive_immutable_references_by_source_kind() {
+    let mut manifest = recipe();
+    {
+        let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+        artifact.source.kind = SourceKind::GithubTagArchive;
+        artifact.source.url = "https://codeload.github.com/example/project/zip/develop".into();
+        artifact.source.reference = "develop".into();
+    }
+
+    assert_finding(&manifest, "mutable-source", Severity::Warning);
+
+    {
+        let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+        artifact.source.url =
+            "https://github.com/example/project/archive/refs/tags/v249.00.zip".into();
+        artifact.source.reference = "v249.00".into();
+    }
+    assert!(
+        validate(&manifest)
+            .iter()
+            .all(|finding| finding.rule != "mutable-source"),
+        "version tag should be immutable: {:#?}",
+        validate(&manifest)
+    );
+
+    let commit = "0123456789abcdef0123456789abcdef01234567";
+    {
+        let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+        artifact.source.kind = SourceKind::GithubCommitZip;
+        artifact.source.url = format!("https://codeload.github.com/example/project/zip/{commit}");
+        artifact.source.reference = commit.into();
+    }
+    assert!(
+        validate(&manifest)
+            .iter()
+            .all(|finding| finding.rule != "mutable-source"),
+        "full commit should be immutable: {:#?}",
+        validate(&manifest)
+    );
+}
+
+#[test]
 fn archive_kind_must_agree_with_a_stable_expected_filename() {
     let mut manifest = recipe();
     manifest
@@ -183,6 +225,66 @@ fn duplicate_declarations_of_one_source_must_agree_on_immutable_bytes() {
     manifest.artifacts.insert(duplicate.id.clone(), duplicate);
 
     assert_finding(&manifest, "shared-artifact", Severity::Error);
+}
+
+#[test]
+fn same_source_url_cannot_evade_disagreement_with_changed_trust_metadata() {
+    for mutation in [
+        "reference",
+        "version",
+        "source-kind",
+        "redirect-hosts",
+        "provenance",
+    ] {
+        let mut manifest = recipe();
+        let mut duplicate = manifest.artifacts["eefixpack"].clone();
+        duplicate.id = format!("eefixpack-{mutation}");
+        match mutation {
+            "reference" => duplicate.source.reference = "v999.0".into(),
+            "version" => duplicate.version = "999.0".into(),
+            "source-kind" => duplicate.source.kind = SourceKind::GithubTagArchive,
+            "redirect-hosts" => {
+                duplicate.source.redirect_hosts = vec!["other.example.invalid".into()]
+            }
+            "provenance" => duplicate.provenance.reviewed_on = "2026-09-04".into(),
+            _ => unreachable!(),
+        }
+        manifest.artifacts.insert(duplicate.id.clone(), duplicate);
+
+        assert!(
+            validate(&manifest)
+                .iter()
+                .any(|finding| finding.rule == "shared-artifact"),
+            "mutation {mutation:?} evaded shared-source disagreement: {:#?}",
+            validate(&manifest)
+        );
+    }
+}
+
+#[test]
+fn shared_source_redirect_hosts_and_hash_use_normalized_semantics() {
+    let mut manifest = recipe();
+    let original = manifest.artifacts.get_mut("eefixpack").unwrap();
+    original.source.redirect_hosts = vec![
+        "downloads.example.invalid".into(),
+        "objects.example.invalid".into(),
+    ];
+    let mut duplicate = original.clone();
+    duplicate.id = "eefixpack-equivalent".into();
+    duplicate.source.sha256.make_ascii_uppercase();
+    duplicate.source.redirect_hosts = vec![
+        "OBJECTS.EXAMPLE.INVALID".into(),
+        "DOWNLOADS.EXAMPLE.INVALID".into(),
+    ];
+    manifest.artifacts.insert(duplicate.id.clone(), duplicate);
+
+    assert!(
+        validate(&manifest)
+            .iter()
+            .all(|finding| finding.rule != "shared-artifact"),
+        "equivalent trust metadata disagreed: {:#?}",
+        validate(&manifest)
+    );
 }
 
 #[test]
@@ -428,6 +530,102 @@ reviewed_on = "2026-09-03"
 "#,
         bytes.len()
     )
+}
+
+fn assert_verify_rejects_contract_before_acquisition(artifact_text: &str, expected_rule: &str) {
+    let temp = tempfile::tempdir().unwrap();
+    let artifact_path = temp.path().join("sample.toml");
+    std::fs::write(&artifact_path, artifact_text).unwrap();
+    let cache_root = temp.path().join("cache");
+
+    let output = Command::new(env!("CARGO_BIN_EXE_chriz-bg-author"))
+        .args(["artifact", "verify"])
+        .arg(&artifact_path)
+        .arg("--cache-root")
+        .arg(&cache_root)
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains(expected_rule),
+        "expected {expected_rule:?}, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        !cache_root.exists(),
+        "invalid contract reached acquisition: {}",
+        cache_root.display()
+    );
+}
+
+#[test]
+fn verify_rejects_moving_url_and_reference_before_acquisition() {
+    let archive = sample_archive(None);
+    let artifact = payload_artifact_toml(
+        "http://127.0.0.1:1/zip/develop",
+        &archive,
+        &sha256(&archive),
+    )
+    .replace("reference = \"v1.2.3\"", "reference = \"develop\"");
+
+    assert_verify_rejects_contract_before_acquisition(&artifact, "mutable-source");
+}
+
+#[test]
+fn verify_rejects_malformed_provenance_and_review_date_before_acquisition() {
+    let archive = sample_archive(None);
+    let artifact = payload_artifact_toml(
+        "http://127.0.0.1:1/sample-v1.zip",
+        &archive,
+        &sha256(&archive),
+    )
+    .replace(
+        "url = \"https://example.invalid/sample/v1.2.3\"",
+        "url = \"https://\"",
+    )
+    .replace(
+        "reviewed_on = \"2026-09-03\"",
+        "reviewed_on = \"2026-13-40\"",
+    );
+
+    assert_verify_rejects_contract_before_acquisition(&artifact, "artifact-contract");
+}
+
+#[test]
+fn verify_rejects_overlapping_publish_roots_before_acquisition() {
+    let archive = sample_archive(None);
+    let artifact = payload_artifact_toml(
+        "http://127.0.0.1:1/sample-v1.zip",
+        &archive,
+        &sha256(&archive),
+    )
+    .replace(
+        "publish_roots = [\"sample\"]",
+        "publish_roots = [\"sample\", \"sample/lib\"]",
+    );
+
+    assert_verify_rejects_contract_before_acquisition(&artifact, "archive-contract");
+}
+
+#[test]
+fn verify_rejects_non_x64_tool_contract_before_acquisition() {
+    let archive = sample_archive(None);
+    let artifact = payload_artifact_toml(
+        "http://127.0.0.1:1/sample-v1.zip",
+        &archive,
+        &sha256(&archive),
+    )
+    .replace(
+        "publish_roots = [\"sample\"]",
+        "publish_roots = [\"sample\", \"WeiDU.exe\"]",
+    )
+    .replace(
+        "[provenance]",
+        "[tool]\nexecutable = \"WeiDU.exe\"\npe_machine = \"x86\"\n\n[provenance]",
+    );
+
+    assert_verify_rejects_contract_before_acquisition(&artifact, "tool-architecture");
 }
 
 #[test]

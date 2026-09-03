@@ -10,6 +10,7 @@ use bg_engine::acquire::{
 };
 use bg_engine::events::ChannelSink;
 use bg_engine::manifest::{AcquisitionPolicy, ArchiveKind, ArchiveRootRule, Artifact, PeMachine};
+use bg_engine::validate::validate_artifact_for_verification;
 use bg_engine::weidu::log::parse_active_entries;
 use clap::{Args, Parser, Subcommand};
 use serde::Serialize;
@@ -325,46 +326,19 @@ fn verify_standalone_contract(
     ) {
         return Err("artifact verify supports only fetchable artifact policies".into());
     }
-    if artifact.version.trim().is_empty() || artifact.source.reference.trim().is_empty() {
-        return Err("artifact version and exact source reference are required".into());
+    let findings = validate_artifact_for_verification(&artifact.id, artifact);
+    if !findings.is_empty() {
+        let details = findings
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Err(format!("artifact contract failed public validation:\n{details}").into());
     }
     let Some(filename) = artifact.source.expected_filename.as_deref() else {
         return Err("artifact expected filename is required for verification".into());
     };
-    let filename_matches_kind = match artifact.archive.kind {
-        ArchiveKind::Zip => filename.to_ascii_lowercase().ends_with(".zip"),
-        ArchiveKind::Iemod => filename.to_ascii_lowercase().ends_with(".iemod"),
-    };
-    if !filename_matches_kind {
-        return Err("artifact expected filename disagrees with its archive kind".into());
-    }
-    if artifact
-        .source
-        .expected_length
-        .is_none_or(|length| length == 0)
-    {
-        return Err("artifact expected length must be greater than zero".into());
-    }
-    if artifact.source.sha256.len() != 64
-        || !artifact
-            .source
-            .sha256
-            .bytes()
-            .all(|byte| byte.is_ascii_hexdigit())
-        || artifact.source.sha256.bytes().all(|byte| byte == b'0')
-    {
-        return Err("artifact SHA-256 must be exact and nonzero".into());
-    }
     let url = url::Url::parse(&artifact.source.url)?;
-    let loopback = match url.host() {
-        Some(url::Host::Domain(host)) => host.eq_ignore_ascii_case("localhost"),
-        Some(url::Host::Ipv4(address)) => address.is_loopback(),
-        Some(url::Host::Ipv6(address)) => address.is_loopback(),
-        None => false,
-    };
-    if url.scheme() != "https" && !(url.scheme() == "http" && loopback) {
-        return Err("artifact source URL is not HTTPS".into());
-    }
     let url_filename = url
         .path_segments()
         .and_then(|mut segments| segments.next_back())
@@ -377,11 +351,6 @@ fn verify_standalone_contract(
             "artifact expected filename {filename:?} disagrees with source URL filename {url_filename:?}"
         )
         .into());
-    }
-    if artifact.archive.publish_roots.is_empty()
-        || (artifact.tool.is_none() && artifact.archive.tp2_paths.is_empty())
-    {
-        return Err("artifact archive publication contract is incomplete".into());
     }
     Ok(())
 }

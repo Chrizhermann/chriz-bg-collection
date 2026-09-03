@@ -6,8 +6,8 @@ use std::path::{Component as PathComponent, Path};
 
 use crate::error::EngineError;
 use crate::manifest::{
-    AcquisitionPolicy, ComponentRef, Decision, GameRoot, InputSpec, InvocationMode, PeMachine,
-    Phase, PromptAnswer, Readiness, SourceKind,
+    AcquisitionPolicy, Artifact, ComponentRef, Decision, GameRoot, InputSpec, InvocationMode,
+    PeMachine, Phase, PromptAnswer, Readiness, Source, SourceKind,
 };
 use crate::weidu::invocation::setup_executable_name;
 use crate::Manifest;
@@ -130,6 +130,23 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_feature_inputs(manifest, &mut findings);
     check_prompt_input_references(manifest, &mut findings);
     check_feature_readiness(manifest, &mut findings);
+    findings
+}
+
+/// Validate one standalone artifact with the same contract rules that gate a public recipe.
+///
+/// Loopback HTTP remains available solely for hermetic verification tests; every other source
+/// route must be HTTPS. Callers must reject every returned finding, including authoring warnings.
+pub fn validate_artifact_for_verification(id: &str, artifact: &Artifact) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    check_artifact_paths(id, artifact, &mut findings);
+    check_artifact_acquisition_policy(id, artifact, &mut findings);
+    check_artifact_source(id, artifact, true, &mut findings);
+    check_one_artifact_contract(id, artifact, &mut findings);
+    check_one_archive_contract(id, artifact, &mut findings);
+    if artifact.tool.is_some() {
+        check_tool_artifact_architecture(id, artifact, &mut findings);
+    }
     findings
 }
 
@@ -294,23 +311,7 @@ fn check_blocked_artifacts(manifest: &Manifest, findings: &mut Vec<Finding>) {
 
 fn check_paths(manifest: &Manifest, findings: &mut Vec<Finding>) {
     for (id, artifact) in &manifest.artifacts {
-        for path in artifact
-            .archive
-            .publish_roots
-            .iter()
-            .chain(artifact.archive.tp2_paths.iter())
-            .chain(artifact.tool.iter().map(|tool| &tool.executable))
-        {
-            if !is_safe_relative_path(path) {
-                error(
-                    findings,
-                    RULE_PATHS,
-                    format!(
-                        "artifact {id:?} archive path {path:?} is not a traversal-free relative path"
-                    ),
-                );
-            }
-        }
+        check_artifact_paths(id, artifact, findings);
     }
 
     for (id, mod_file) in &manifest.mods {
@@ -321,6 +322,26 @@ fn check_paths(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 format!(
                     "installer {id:?} TP2 path {:?} is not a traversal-free relative path",
                     mod_file.tp2
+                ),
+            );
+        }
+    }
+}
+
+fn check_artifact_paths(id: &str, artifact: &Artifact, findings: &mut Vec<Finding>) {
+    for path in artifact
+        .archive
+        .publish_roots
+        .iter()
+        .chain(artifact.archive.tp2_paths.iter())
+        .chain(artifact.tool.iter().map(|tool| &tool.executable))
+    {
+        if !is_safe_relative_path(path) {
+            error(
+                findings,
+                RULE_PATHS,
+                format!(
+                    "artifact {id:?} archive path {path:?} is not a traversal-free relative path"
                 ),
             );
         }
@@ -405,233 +426,254 @@ fn check_component_placement(manifest: &Manifest, findings: &mut Vec<Finding>) {
 
 fn check_acquisition_policy(manifest: &Manifest, findings: &mut Vec<Finding>) {
     for (id, artifact) in &manifest.artifacts {
-        let inconsistent = match artifact.acquisition {
-            AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
-                artifact.source.kind == SourceKind::Manual
-            }
-            AcquisitionPolicy::ManualUserSupplied | AcquisitionPolicy::Blocked => false,
-        };
+        check_artifact_acquisition_policy(id, artifact, findings);
+    }
+}
 
-        if inconsistent {
-            error(
-                findings,
-                RULE_ACQUISITION_POLICY,
-                format!(
-                    "artifact {id:?} acquisition {:?} is inconsistent with source kind {:?}",
-                    artifact.acquisition, artifact.source.kind
-                ),
-            );
+fn check_artifact_acquisition_policy(id: &str, artifact: &Artifact, findings: &mut Vec<Finding>) {
+    let inconsistent = match artifact.acquisition {
+        AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
+            artifact.source.kind == SourceKind::Manual
         }
+        AcquisitionPolicy::ManualUserSupplied | AcquisitionPolicy::Blocked => false,
+    };
+
+    if inconsistent {
+        error(
+            findings,
+            RULE_ACQUISITION_POLICY,
+            format!(
+                "artifact {id:?} acquisition {:?} is inconsistent with source kind {:?}",
+                artifact.acquisition, artifact.source.kind
+            ),
+        );
     }
 }
 
 fn check_sources(manifest: &Manifest, findings: &mut Vec<Finding>) {
     for (id, artifact) in &manifest.artifacts {
-        if artifact.acquisition == AcquisitionPolicy::Blocked {
-            continue;
-        }
+        check_artifact_source(id, artifact, false, findings);
+    }
+}
 
-        if !is_https_url(&artifact.source.url) {
-            let message = format!(
-                "artifact {id:?} source url {:?} is not https",
-                artifact.source.url
-            );
-            if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
-                warning(findings, RULE_SOURCES, message);
-            } else {
-                error(findings, RULE_SOURCES, message);
-            }
-        }
+fn check_artifact_source(
+    id: &str,
+    artifact: &Artifact,
+    allow_loopback_http: bool,
+    findings: &mut Vec<Finding>,
+) {
+    if artifact.acquisition == AcquisitionPolicy::Blocked {
+        return;
+    }
 
-        let sha256 = artifact.source.sha256.as_str();
-        if sha256.len() != 64 || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            let message =
-                format!("artifact {id:?} source sha256 {sha256:?} is not 64 hex characters");
-            if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
-                warning(findings, RULE_SOURCES, message);
-            } else {
-                error(findings, RULE_SOURCES, message);
-            }
-        } else if sha256.eq_ignore_ascii_case(UNPINNED_SHA256) {
-            warning(
-                findings,
-                RULE_UNPINNED_SOURCE,
-                format!("artifact {id:?} has an all-zero sha256, so its source is not pinned"),
-            );
+    if !is_https_url(&artifact.source.url)
+        && !(allow_loopback_http && is_loopback_http_url(&artifact.source.url))
+    {
+        let message = format!(
+            "artifact {id:?} source url {:?} is not https",
+            artifact.source.url
+        );
+        if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
+            warning(findings, RULE_SOURCES, message);
+        } else {
+            error(findings, RULE_SOURCES, message);
         }
+    }
 
-        if is_moving_source_url(&artifact.source.url)
-            || is_moving_source_reference(&artifact.source.reference)
-        {
-            warning(
-                findings,
-                RULE_MUTABLE_SOURCE,
-                format!(
-                    "artifact {id:?} source url {:?} names a moving branch or latest release",
-                    artifact.source.url
-                ),
-            );
+    let sha256 = artifact.source.sha256.as_str();
+    if sha256.len() != 64 || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        let message = format!("artifact {id:?} source sha256 {sha256:?} is not 64 hex characters");
+        if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
+            warning(findings, RULE_SOURCES, message);
+        } else {
+            error(findings, RULE_SOURCES, message);
         }
+    } else if sha256.eq_ignore_ascii_case(UNPINNED_SHA256) {
+        warning(
+            findings,
+            RULE_UNPINNED_SOURCE,
+            format!("artifact {id:?} has an all-zero sha256, so its source is not pinned"),
+        );
+    }
 
-        if github_url_requires_redirect_review(&artifact.source.url)
-            && artifact.source.redirect_hosts.is_empty()
-        {
-            warning(
-                findings,
-                RULE_UNREVIEWED_REDIRECT,
-                format!(
-                    "artifact {id:?} uses a GitHub route that redirects but declares no reviewed redirect host"
-                ),
-            );
-        }
+    if is_moving_source_url(&artifact.source.url)
+        || !is_immutable_source_reference(&artifact.source)
+    {
+        warning(
+            findings,
+            RULE_MUTABLE_SOURCE,
+            format!(
+                "artifact {id:?} source url/reference {:?}/{:?} is not a positive immutable identity",
+                artifact.source.url, artifact.source.reference
+            ),
+        );
+    }
+
+    if github_url_requires_redirect_review(&artifact.source.url)
+        && artifact.source.redirect_hosts.is_empty()
+    {
+        warning(
+            findings,
+            RULE_UNREVIEWED_REDIRECT,
+            format!(
+                "artifact {id:?} uses a GitHub route that redirects but declares no reviewed redirect host"
+            ),
+        );
     }
 }
 
 fn check_artifact_contract(manifest: &Manifest, findings: &mut Vec<Finding>) {
     for (id, artifact) in &manifest.artifacts {
-        if artifact.acquisition == AcquisitionPolicy::Blocked {
-            continue;
-        }
-        let mut missing = Vec::new();
-        if artifact.version.trim().is_empty() {
-            missing.push("version");
-        }
-        if artifact.source.reference.trim().is_empty() {
-            missing.push("source reference");
-        }
-        if artifact
-            .source
-            .expected_filename
-            .as_deref()
-            .is_none_or(|value| value.trim().is_empty())
-        {
-            missing.push("expected filename");
-        } else if !artifact
-            .source
-            .expected_filename
-            .as_deref()
-            .is_some_and(|filename| {
-                let filename = filename.to_ascii_lowercase();
-                match artifact.archive.kind {
-                    crate::manifest::ArchiveKind::Zip => filename.ends_with(".zip"),
-                    crate::manifest::ArchiveKind::Iemod => filename.ends_with(".iemod"),
-                }
-            })
-        {
-            missing.push("filename/archive kind agreement");
-        }
-        if artifact
-            .source
-            .expected_length
-            .is_none_or(|length| length == 0)
-        {
-            missing.push("expected length");
-        }
-        if !is_review_date(&artifact.provenance.reviewed_on) {
-            missing.push("review date");
-        }
-        if !is_https_url(&artifact.provenance.url) {
-            missing.push("HTTPS provenance URL");
-        }
-        if !missing.is_empty() {
-            warning(
-                findings,
-                RULE_ARTIFACT_CONTRACT,
-                format!("artifact {id:?} lacks {}", missing.join(", ")),
-            );
-        }
+        check_one_artifact_contract(id, artifact, findings);
+    }
+}
 
-        let mut redirect_hosts = BTreeSet::new();
-        for host in &artifact.source.redirect_hosts {
-            let normalized = host.to_ascii_lowercase();
-            if host.is_empty()
-                || host.contains(['/', ':'])
-                || !host.is_ascii()
-                || !redirect_hosts.insert(normalized)
-            {
-                error(
-                    findings,
-                    RULE_UNREVIEWED_REDIRECT,
-                    format!("artifact {id:?} has invalid or duplicate redirect host {host:?}"),
-                );
+fn check_one_artifact_contract(id: &str, artifact: &Artifact, findings: &mut Vec<Finding>) {
+    if artifact.acquisition == AcquisitionPolicy::Blocked {
+        return;
+    }
+    let mut missing = Vec::new();
+    if artifact.version.trim().is_empty() {
+        missing.push("version");
+    }
+    if artifact.source.reference.trim().is_empty() {
+        missing.push("source reference");
+    }
+    if artifact
+        .source
+        .expected_filename
+        .as_deref()
+        .is_none_or(|value| value.trim().is_empty())
+    {
+        missing.push("expected filename");
+    } else if !artifact
+        .source
+        .expected_filename
+        .as_deref()
+        .is_some_and(|filename| {
+            let filename = filename.to_ascii_lowercase();
+            match artifact.archive.kind {
+                crate::manifest::ArchiveKind::Zip => filename.ends_with(".zip"),
+                crate::manifest::ArchiveKind::Iemod => filename.ends_with(".iemod"),
             }
+        })
+    {
+        missing.push("filename/archive kind agreement");
+    }
+    if artifact
+        .source
+        .expected_length
+        .is_none_or(|length| length == 0)
+    {
+        missing.push("expected length");
+    }
+    if !is_review_date(&artifact.provenance.reviewed_on) {
+        missing.push("review date");
+    }
+    if !is_https_url(&artifact.provenance.url) {
+        missing.push("HTTPS provenance URL");
+    }
+    if !missing.is_empty() {
+        warning(
+            findings,
+            RULE_ARTIFACT_CONTRACT,
+            format!("artifact {id:?} lacks {}", missing.join(", ")),
+        );
+    }
+
+    let mut redirect_hosts = BTreeSet::new();
+    for host in &artifact.source.redirect_hosts {
+        let normalized = host.to_ascii_lowercase();
+        if host.is_empty()
+            || host.contains(['/', ':'])
+            || !host.is_ascii()
+            || !redirect_hosts.insert(normalized)
+        {
+            error(
+                findings,
+                RULE_UNREVIEWED_REDIRECT,
+                format!("artifact {id:?} has invalid or duplicate redirect host {host:?}"),
+            );
         }
     }
 }
 
 fn check_archive_contract(manifest: &Manifest, findings: &mut Vec<Finding>) {
     for (id, artifact) in &manifest.artifacts {
-        let archive = &artifact.archive;
-        let mut roots = BTreeSet::new();
-        for root in &archive.publish_roots {
-            if !roots.insert(casefold_path(root)) {
-                error(
-                    findings,
-                    RULE_ARCHIVE_CONTRACT,
-                    format!("artifact {id:?} declares publish root {root:?} more than once"),
-                );
-            }
-        }
-        if archive.publish_roots.is_empty() {
+        check_one_archive_contract(id, artifact, findings);
+    }
+}
+
+fn check_one_archive_contract(id: &str, artifact: &Artifact, findings: &mut Vec<Finding>) {
+    let archive = &artifact.archive;
+    let mut roots = BTreeSet::new();
+    for root in &archive.publish_roots {
+        if !roots.insert(casefold_path(root)) {
             error(
                 findings,
                 RULE_ARCHIVE_CONTRACT,
-                format!("artifact {id:?} declares no publish roots"),
+                format!("artifact {id:?} declares publish root {root:?} more than once"),
             );
         }
-        for (index, left) in archive.publish_roots.iter().enumerate() {
-            for right in archive.publish_roots.iter().skip(index + 1) {
-                if path_contains(left, right) || path_contains(right, left) {
-                    error(
-                        findings,
-                        RULE_ARCHIVE_CONTRACT,
-                        format!(
-                            "artifact {id:?} has overlapping publish roots {left:?} and {right:?}"
-                        ),
-                    );
-                }
-            }
-        }
-
-        let mut tp2s = BTreeSet::new();
-        for tp2 in &archive.tp2_paths {
-            if !tp2.to_ascii_lowercase().ends_with(".tp2") || !tp2s.insert(casefold_path(tp2)) {
+    }
+    if archive.publish_roots.is_empty() {
+        error(
+            findings,
+            RULE_ARCHIVE_CONTRACT,
+            format!("artifact {id:?} declares no publish roots"),
+        );
+    }
+    for (index, left) in archive.publish_roots.iter().enumerate() {
+        for right in archive.publish_roots.iter().skip(index + 1) {
+            if path_contains(left, right) || path_contains(right, left) {
                 error(
                     findings,
                     RULE_ARCHIVE_CONTRACT,
-                    format!("artifact {id:?} has invalid or duplicate TP2 path {tp2:?}"),
+                    format!("artifact {id:?} has overlapping publish roots {left:?} and {right:?}"),
                 );
             }
-            let owners = archive
-                .publish_roots
-                .iter()
-                .filter(|root| path_contains(root, tp2))
-                .count();
-            if owners != 1 {
-                error(
+        }
+    }
+
+    let mut tp2s = BTreeSet::new();
+    for tp2 in &archive.tp2_paths {
+        if !tp2.to_ascii_lowercase().ends_with(".tp2") || !tp2s.insert(casefold_path(tp2)) {
+            error(
+                findings,
+                RULE_ARCHIVE_CONTRACT,
+                format!("artifact {id:?} has invalid or duplicate TP2 path {tp2:?}"),
+            );
+        }
+        let owners = archive
+            .publish_roots
+            .iter()
+            .filter(|root| path_contains(root, tp2))
+            .count();
+        if owners != 1 {
+            error(
                     findings,
                     RULE_ARCHIVE_CONTRACT,
                     format!(
                         "artifact {id:?} TP2 {tp2:?} belongs to {owners} declared publish roots, expected exactly one"
                     ),
                 );
-            }
         }
-        if artifact.tool.is_none() && archive.tp2_paths.is_empty() {
+    }
+    if artifact.tool.is_none() && archive.tp2_paths.is_empty() {
+        error(
+            findings,
+            RULE_ARCHIVE_CONTRACT,
+            format!("payload artifact {id:?} declares no expected TP2 paths"),
+        );
+    }
+    if let Some(tool) = &artifact.tool {
+        let owners = archive
+            .publish_roots
+            .iter()
+            .filter(|root| path_contains(root, &tool.executable))
+            .count();
+        if owners != 1 {
             error(
-                findings,
-                RULE_ARCHIVE_CONTRACT,
-                format!("payload artifact {id:?} declares no expected TP2 paths"),
-            );
-        }
-        if let Some(tool) = &artifact.tool {
-            let owners = archive
-                .publish_roots
-                .iter()
-                .filter(|root| path_contains(root, &tool.executable))
-                .count();
-            if owners != 1 {
-                error(
                     findings,
                     RULE_ARCHIVE_CONTRACT,
                     format!(
@@ -639,22 +681,21 @@ fn check_archive_contract(manifest: &Manifest, findings: &mut Vec<Finding>) {
                         tool.executable
                     ),
                 );
-            }
         }
-        let limits = &archive.limits;
-        if limits.max_depth == 0
-            || limits.max_entries == 0
-            || limits.max_entry_uncompressed_bytes == 0
-            || limits.max_total_uncompressed_bytes == 0
-            || limits.max_compression_ratio == 0
-            || limits.max_entry_uncompressed_bytes > limits.max_total_uncompressed_bytes
-        {
-            error(
-                findings,
-                RULE_ARCHIVE_CONTRACT,
-                format!("artifact {id:?} has invalid archive limits"),
-            );
-        }
+    }
+    let limits = &archive.limits;
+    if limits.max_depth == 0
+        || limits.max_entries == 0
+        || limits.max_entry_uncompressed_bytes == 0
+        || limits.max_total_uncompressed_bytes == 0
+        || limits.max_compression_ratio == 0
+        || limits.max_entry_uncompressed_bytes > limits.max_total_uncompressed_bytes
+    {
+        error(
+            findings,
+            RULE_ARCHIVE_CONTRACT,
+            format!("artifact {id:?} has invalid archive limits"),
+        );
     }
 }
 
@@ -683,34 +724,56 @@ fn check_shared_artifacts(manifest: &Manifest, findings: &mut Vec<Finding>) {
         }
     }
 
-    let mut sources: BTreeMap<(String, String), (&str, &crate::manifest::Artifact)> =
-        BTreeMap::new();
+    let mut sources: BTreeMap<String, (&str, &crate::manifest::Artifact)> = BTreeMap::new();
     for (id, artifact) in &manifest.artifacts {
         if artifact.acquisition == AcquisitionPolicy::Blocked {
             continue;
         }
-        let key = (
-            artifact.source.url.to_ascii_lowercase(),
-            artifact.source.reference.to_ascii_lowercase(),
-        );
+        let key = normalized_source_url(&artifact.source.url);
         if let Some((first_id, first)) = sources.insert(key, (id, artifact)) {
-            if first.source.sha256 != artifact.source.sha256
-                || first.source.expected_length != artifact.source.expected_length
-                || first.source.expected_filename != artifact.source.expected_filename
-                || first.archive != artifact.archive
-                || first.tool != artifact.tool
-                || first.acquisition != artifact.acquisition
-            {
+            if !shared_source_contracts_agree(first, artifact) {
                 error(
                     findings,
                     RULE_SHARED_ARTIFACT,
-                    format!(
-                        "artifacts {first_id:?} and {id:?} disagree about one source URL/reference"
-                    ),
+                    format!("artifacts {first_id:?} and {id:?} disagree about one byte-source URL"),
                 );
             }
         }
     }
+}
+
+fn normalized_source_url(value: &str) -> String {
+    let Ok(mut url) = url::Url::parse(value) else {
+        return value.trim().to_owned();
+    };
+    url.set_fragment(None);
+    url.to_string()
+}
+
+fn shared_source_contracts_agree(
+    left: &crate::manifest::Artifact,
+    right: &crate::manifest::Artifact,
+) -> bool {
+    left.version == right.version
+        && left.source.kind == right.source.kind
+        && normalized_source_url(&left.source.url) == normalized_source_url(&right.source.url)
+        && left.source.reference == right.source.reference
+        && left.source.expected_filename == right.source.expected_filename
+        && left.source.expected_length == right.source.expected_length
+        && left
+            .source
+            .sha256
+            .eq_ignore_ascii_case(&right.source.sha256)
+        && normalized_redirect_hosts(&left.source.redirect_hosts)
+            == normalized_redirect_hosts(&right.source.redirect_hosts)
+        && left.acquisition == right.acquisition
+        && left.archive == right.archive
+        && left.tool == right.tool
+        && left.provenance == right.provenance
+}
+
+fn normalized_redirect_hosts(hosts: &[String]) -> BTreeSet<String> {
+    hosts.iter().map(|host| host.to_ascii_lowercase()).collect()
 }
 
 fn check_tool_architecture(manifest: &Manifest, findings: &mut Vec<Finding>) {
@@ -723,13 +786,17 @@ fn check_tool_architecture(manifest: &Manifest, findings: &mut Vec<Finding>) {
         let Some(artifact) = manifest.artifacts.get(id) else {
             continue;
         };
-        if artifact.tool.as_ref().map(|tool| tool.pe_machine) != Some(PeMachine::X86_64) {
-            warning(
-                findings,
-                RULE_TOOL_ARCHITECTURE,
-                format!("WeiDU artifact {id:?} is not declared as Windows x86-64"),
-            );
-        }
+        check_tool_artifact_architecture(id, artifact, findings);
+    }
+}
+
+fn check_tool_artifact_architecture(id: &str, artifact: &Artifact, findings: &mut Vec<Finding>) {
+    if artifact.tool.as_ref().map(|tool| tool.pe_machine) != Some(PeMachine::X86_64) {
+        warning(
+            findings,
+            RULE_TOOL_ARCHITECTURE,
+            format!("WeiDU artifact {id:?} is not declared as Windows x86-64"),
+        );
     }
 }
 
@@ -774,6 +841,19 @@ fn is_https_url(value: &str) -> bool {
     url::Url::parse(value).is_ok_and(|url| url.scheme() == "https" && url.host_str().is_some())
 }
 
+fn is_loopback_http_url(value: &str) -> bool {
+    let Ok(url) = url::Url::parse(value) else {
+        return false;
+    };
+    url.scheme() == "http"
+        && match url.host() {
+            Some(url::Host::Domain(host)) => host.eq_ignore_ascii_case("localhost"),
+            Some(url::Host::Ipv4(address)) => address.is_loopback(),
+            Some(url::Host::Ipv6(address)) => address.is_loopback(),
+            None => false,
+        }
+}
+
 fn is_moving_source_url(value: &str) -> bool {
     let value = value.to_ascii_lowercase();
     [
@@ -791,11 +871,70 @@ fn is_moving_source_url(value: &str) -> bool {
     .any(|pattern| value.contains(pattern))
 }
 
-fn is_moving_source_reference(value: &str) -> bool {
-    matches!(
-        value.trim().to_ascii_lowercase().as_str(),
-        "head" | "main" | "master" | "latest"
-    ) || value.to_ascii_lowercase().starts_with("refs/heads/")
+fn is_immutable_source_reference(source: &Source) -> bool {
+    let reference = source.reference.trim();
+    match source.kind {
+        SourceKind::GithubCommitZip => {
+            reference.len() == 40
+                && reference.bytes().all(|byte| byte.is_ascii_hexdigit())
+                && github_route_matches_reference(&source.url, source.kind, reference)
+        }
+        SourceKind::GithubRelease | SourceKind::GithubTagArchive => {
+            looks_like_version_tag(reference)
+                && github_route_matches_reference(&source.url, source.kind, reference)
+        }
+        SourceKind::Manual => {
+            !reference.is_empty()
+                && !matches!(
+                    reference.to_ascii_lowercase().as_str(),
+                    "head" | "main" | "master" | "latest"
+                )
+                && !reference.to_ascii_lowercase().starts_with("refs/heads/")
+        }
+    }
+}
+
+fn looks_like_version_tag(reference: &str) -> bool {
+    !reference.is_empty()
+        && reference.len() <= 128
+        && reference.bytes().any(|byte| byte.is_ascii_digit())
+        && reference
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_' | b'+'))
+}
+
+fn github_route_matches_reference(url: &str, kind: SourceKind, reference: &str) -> bool {
+    let Ok(url) = url::Url::parse(url) else {
+        return false;
+    };
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    if !host.eq_ignore_ascii_case("github.com") && !host.eq_ignore_ascii_case("codeload.github.com")
+    {
+        return true;
+    }
+    let segments = url
+        .path_segments()
+        .map(|segments| segments.collect::<Vec<_>>())
+        .unwrap_or_default();
+    match kind {
+        SourceKind::GithubRelease => segments.windows(3).any(|window| {
+            window[0].eq_ignore_ascii_case("releases")
+                && window[1].eq_ignore_ascii_case("download")
+                && window[2] == reference
+        }),
+        SourceKind::GithubTagArchive => segments.windows(4).any(|window| {
+            (window[0].eq_ignore_ascii_case("archive") || window[0].eq_ignore_ascii_case("zip"))
+                && window[1].eq_ignore_ascii_case("refs")
+                && window[2].eq_ignore_ascii_case("tags")
+                && window[3].strip_suffix(".zip").unwrap_or(window[3]) == reference
+        }),
+        SourceKind::GithubCommitZip => segments
+            .iter()
+            .any(|segment| segment.strip_suffix(".zip").unwrap_or(segment) == reference),
+        SourceKind::Manual => true,
+    }
 }
 
 fn github_url_requires_redirect_review(value: &str) -> bool {
