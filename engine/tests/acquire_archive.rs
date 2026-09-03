@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use bg_engine::acquire::{
-    extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
+    extract_archive, AcquireError, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
 };
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
@@ -291,6 +291,124 @@ fn rejects_missing_or_ambiguous_expected_tp2_roots() {
         &temp.path().join("ambiguous-cache"),
         &requirements(&ambiguous),
     );
+}
+
+#[test]
+fn rejects_undeclared_tp2_inside_publish_root_before_writing() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("undeclared-inside.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/tools/live-patch.tp2", TP2, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+
+    let error = extract_archive(&archive, &cache, &request).unwrap_err();
+
+    assert!(matches!(
+        error,
+        AcquireError::ArchiveLayout(message)
+            if message.contains("undeclared TP2 `mod/tools/live-patch.tp2`")
+    ));
+    assert!(!published_path(&cache, &request.artifact_sha256).exists());
+    assert!(!cache.join("temporary").exists());
+}
+
+#[test]
+fn tp2_publish_root_matching_is_case_insensitive_and_component_bounded() {
+    let inside = TempDir::new().unwrap();
+    let inside_archive = inside.path().join("inside-case.zip");
+    write_zip(
+        &inside_archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("MOD/Tools/Live-Patch.TP2", TP2, CompressionMethod::Stored),
+        ],
+    );
+    let inside_cache = inside.path().join("extract");
+    let inside_request = requirements(&inside_archive);
+    let error = extract_archive(&inside_archive, &inside_cache, &inside_request).unwrap_err();
+    assert!(matches!(
+        error,
+        AcquireError::ArchiveLayout(message)
+            if message.contains("undeclared TP2 `MOD/Tools/Live-Patch.TP2`")
+    ));
+    assert!(!published_path(&inside_cache, &inside_request.artifact_sha256).exists());
+    assert!(!inside_cache.join("temporary").exists());
+
+    let sibling = TempDir::new().unwrap();
+    let sibling_archive = sibling.path().join("sibling-prefix.zip");
+    write_zip(
+        &sibling_archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod-live/setup-live.tp2", TP2, CompressionMethod::Stored),
+        ],
+    );
+
+    let extracted = extract_archive(
+        &sibling_archive,
+        &sibling.path().join("extract"),
+        &requirements(&sibling_archive),
+    )
+    .unwrap();
+
+    assert!(extracted.root.join("mod-live/setup-live.tp2").is_file());
+}
+
+#[test]
+fn declared_tp2_requires_exactly_one_publish_root() {
+    for (index, roots, tp2_path, entries) in [
+        (
+            0,
+            vec!["mod".to_owned()],
+            "live-patch/setup-live.tp2".to_owned(),
+            vec![
+                Entry::File("mod/data.txt", DATA, CompressionMethod::Stored),
+                Entry::File("live-patch/setup-live.tp2", TP2, CompressionMethod::Stored),
+            ],
+        ),
+        (
+            1,
+            vec!["mod".to_owned(), "mod/lib".to_owned()],
+            "mod/lib/setup-mod.tp2".to_owned(),
+            vec![Entry::File(
+                "mod/lib/setup-mod.tp2",
+                TP2,
+                CompressionMethod::Stored,
+            )],
+        ),
+    ] {
+        let temp = TempDir::new().unwrap();
+        let archive = temp.path().join(format!("tp2-owner-{index}.zip"));
+        write_zip(&archive, &entries);
+        let cache = temp.path().join("extract");
+        let request = ArchiveRequirements {
+            artifact_sha256: sha256(&archive),
+            format: ArchiveFormat::Zip,
+            expected_roots: roots,
+            expected_tp2_paths: vec![tp2_path],
+            limits: ArchiveLimits::default(),
+            mode: ArchiveMode::Public,
+        };
+
+        let error = extract_archive(&archive, &cache, &request).unwrap_err();
+
+        assert!(
+            matches!(
+                &error,
+                AcquireError::InvalidRequest(message)
+                    if message.contains("expected exactly one publish root owner")
+            ),
+            "unexpected error: {error:?}"
+        );
+        assert!(!published_path(&cache, &request.artifact_sha256).exists());
+        assert!(!cache.join("temporary").exists());
+    }
 }
 
 #[test]

@@ -142,6 +142,17 @@ pub fn extract_archive(
             "every expected TP2 path must end in .tp2".to_owned(),
         ));
     }
+    for path in &expected_tp2_paths {
+        let owners = expected_roots
+            .iter()
+            .filter(|root| path_is_within_root(root, path))
+            .count();
+        if owners != 1 {
+            return Err(AcquireError::InvalidRequest(format!(
+                "expected TP2 path `{path}` has {owners} publish root owners; expected exactly one publish root owner"
+            )));
+        }
+    }
 
     // Both supported kinds deliberately use the same framing. Keeping this match explicit makes
     // a future format addition fail compilation until extraction support is consciously chosen.
@@ -489,7 +500,10 @@ fn validate_central_directory<R: Read + std::io::Seek>(
         .collect();
     for entry in entries.iter().filter(|entry| !entry.is_directory) {
         let key = casefold(&entry.relative_path);
-        if key.ends_with(".tp2") && !expected_tp2_keys.contains(&key) {
+        let inside_publish_root = expected_roots
+            .iter()
+            .any(|root| path_is_within_root(root, &entry.relative_path));
+        if inside_publish_root && key.ends_with(".tp2") && !expected_tp2_keys.contains(&key) {
             return Err(AcquireError::ArchiveLayout(format!(
                 "undeclared TP2 `{}`",
                 entry.relative_path
@@ -572,6 +586,12 @@ fn layout_matches(
                 .iter()
                 .any(|path| path == &root || path.starts_with(&prefix))
         })
+}
+
+fn path_is_within_root(root: &str, path: &str) -> bool {
+    let root = casefold(root);
+    let path = casefold(path);
+    path == root || path.starts_with(&format!("{root}/"))
 }
 
 fn extract_validated_entries<R: Read + std::io::Seek>(

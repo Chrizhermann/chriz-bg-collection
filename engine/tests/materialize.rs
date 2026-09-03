@@ -142,6 +142,43 @@ fn publishes_only_declared_payload_and_skips_archive_setup_executables() {
 }
 
 #[test]
+fn accepts_but_does_not_materialize_auxiliary_tp2_outside_publish_roots() {
+    let temp = TempDir::new().unwrap();
+    let payload = extracted(
+        &temp,
+        "auxiliary-tp2",
+        &[
+            ("mod/setup-mod.tp2", TP2),
+            ("mod/data.txt", b"payload"),
+            ("live-patch/setup-live-patch.tp2", TP2),
+        ],
+        &["mod"],
+        &["mod/setup-mod.tp2"],
+    );
+    assert!(payload
+        .root
+        .join("live-patch/setup-live-patch.tp2")
+        .is_file());
+    let destination = temp.path().join("game");
+    std::fs::create_dir(&destination).unwrap();
+
+    let result = materialize(
+        &payload,
+        &destination,
+        &request("auxiliary-tp2-run", "mod", &["mod"], &["mod/setup-mod.tp2"]),
+    )
+    .unwrap();
+
+    assert!(destination.join("mod/setup-mod.tp2").is_file());
+    assert!(!destination.join("live-patch").exists());
+    assert!(result
+        .manifest
+        .entries
+        .iter()
+        .all(|entry| !entry.relative_path.starts_with("live-patch/")));
+}
+
+#[test]
 fn rejects_unknown_overwrites_but_accepts_identical_existing_bytes() {
     let temp = TempDir::new().unwrap();
     let payload = extracted(
