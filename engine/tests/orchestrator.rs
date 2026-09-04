@@ -9,10 +9,10 @@ use bg_engine::lock::{LockError, TargetLock};
 use bg_engine::manifest::{GameRoot, Phase, Postcondition, RunArg};
 use bg_engine::orchestrator::{
     run_campaign, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
-    CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRequest, InstallLogVerifier,
-    InstallReconciliation, InvocationBuilder, MaterializationOutcome, MaterializationTask,
-    MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter,
-    StagingService, StepAttempt, StepFailure,
+    CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest,
+    InstallLogVerifier, InstallReconciliation, InvocationBuilder, MaterializationOutcome,
+    MaterializationTask, MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft,
+    ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt, StepFailure,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -177,8 +177,23 @@ struct FakeDeps {
     lock_probe: Option<(PathBuf, PathBuf)>,
     lock_was_held_at_receipt: bool,
     receipts: Vec<ReceiptDraft>,
+    recorded_campaigns: Vec<CampaignCreated>,
+    record_saw_durable_ledger: bool,
+    record_was_first_dependency: bool,
     now: u64,
     staged_files: Vec<(GameRole, PathBuf, Vec<u8>)>,
+}
+
+impl CampaignRecorder for FakeDeps {
+    fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
+        self.record_was_first_dependency = self.trace.is_empty();
+        let replay = SessionStore::open(&created.managed_root)
+            .and_then(|store| store.replay())
+            .map_err(|error| StepFailure::new(error.to_string()))?;
+        self.record_saw_durable_ledger = replay.created() == created;
+        self.recorded_campaigns.push(created.clone());
+        Ok(())
+    }
 }
 
 impl FakeDeps {
@@ -391,6 +406,36 @@ fn completed_step_ids(root: &Path) -> Vec<String> {
             _ => None,
         })
         .collect()
+}
+
+#[test]
+fn campaign_index_is_published_after_record_zero_and_before_preflight() {
+    let fixture = Fixture::new();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        fail_once: Some("preflight".to_owned()),
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert!(matches!(
+        outcome,
+        CampaignOutcome::Failed { ref step_id, .. } if step_id == "preflight"
+    ));
+    let durable = SessionStore::open(&fixture.request.created.managed_root)
+        .unwrap()
+        .replay()
+        .unwrap()
+        .created()
+        .clone();
+    assert_eq!(deps.recorded_campaigns, vec![durable]);
+    assert!(deps.record_saw_durable_ledger);
+    assert!(deps.record_was_first_dependency);
+    assert_eq!(
+        deps.trace.iter().position(|entry| entry == "preflight"),
+        Some(0)
+    );
 }
 
 fn seed_unresolved(request: &CampaignRequest, completed: &[&str], unresolved: &str) {

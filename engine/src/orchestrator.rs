@@ -273,6 +273,15 @@ pub enum OrchestratorError {
     /// A terminal result could not be persisted as an immutable attempt receipt.
     #[error("could not publish terminal receipt: {0}")]
     TerminalReceipt(String),
+    /// The durable campaign ledger could not be linked from the application-data index.
+    #[error("could not publish campaign start index: {0}")]
+    CampaignIndex(String),
+}
+
+/// Publishes the minimal restart pointer after ledger record zero is durable and verified.
+pub trait CampaignRecorder {
+    /// Record this exact campaign identity without replacing an earlier pointer.
+    fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure>;
 }
 
 /// Performs full initial validation and the last-moment process/TLK rechecks.
@@ -383,7 +392,8 @@ pub trait CampaignClock {
 
 /// Complete injected side-effect boundary used by the synchronous state machine.
 pub trait CampaignDependencies:
-    CampaignPreflight
+    CampaignRecorder
+    + CampaignPreflight
     + ArtifactAcquirer
     + StagingService
     + ArtifactMaterializer
@@ -396,7 +406,8 @@ pub trait CampaignDependencies:
 }
 
 impl<T> CampaignDependencies for T where
-    T: CampaignPreflight
+    T: CampaignRecorder
+        + CampaignPreflight
         + ArtifactAcquirer
         + StagingService
         + ArtifactMaterializer
@@ -440,6 +451,9 @@ where
     });
 
     let progress = Progress::from_replay(&replay, &schedule)?;
+    dependencies
+        .record_campaign(replay.created())
+        .map_err(|failure| OrchestratorError::CampaignIndex(failure.into_message()))?;
     if let Some((step_id, reason)) = progress.fresh_copy_required.clone() {
         let outcome = CampaignOutcome::FreshCopyRequired {
             step_id: step_id.clone(),

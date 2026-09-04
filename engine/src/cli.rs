@@ -34,10 +34,10 @@ use crate::manifest::{
 };
 use crate::orchestrator::{
     run_campaign, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
-    CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRequest, InstallLogVerifier,
-    InstallReconciliation, InvocationBuilder, MaterializationOutcome, MaterializationTask,
-    MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter, StagingService,
-    StepAttempt, StepFailure,
+    CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest,
+    InstallLogVerifier, InstallReconciliation, InvocationBuilder, MaterializationOutcome,
+    MaterializationTask, MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter,
+    StagingService, StepAttempt, StepFailure,
 };
 use crate::preflight::{
     initial_preflight, recheck_staging_target_before_mutation, recheck_target_before_mutation,
@@ -2094,6 +2094,15 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             components: run.components.clone(),
             attempts,
         })
+    }
+}
+
+impl<S: EventSink> CampaignRecorder for GuardedCliDependencies<'_, S> {
+    fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
+        ManagedInstallRegistry::open_or_create(&self.app_data)
+            .and_then(|registry| registry.publish_campaign(created))
+            .map(|_| ())
+            .map_err(step_error)
     }
 }
 
