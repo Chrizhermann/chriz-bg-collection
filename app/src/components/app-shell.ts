@@ -37,34 +37,27 @@ export function createAppShell(
   mode: "fixture" | "native" = "fixture",
 ): HTMLElement {
   const shell = element("div", "app-shell");
-  const sidebar = element("aside", "sidebar");
+  shell.dataset.mode = mode;
+  const header = element("header", "app-header");
   const brand = element("div", "brand");
   const mark = element("span", "brand-mark", "C");
   mark.setAttribute("aria-hidden", "true");
   const copy = element("div", "brand-copy");
-  copy.append(element("strong", undefined, "Campaign Builder"), element("small", undefined, mode === "fixture" ? "Fixture alpha" : "Private alpha"));
+  copy.append(element("strong", undefined, "Chriz Easy BG"), element("small", undefined, "0.1 Alpha"));
   brand.append(mark, copy);
-  const nav = element("nav", "nav-list");
-  nav.setAttribute("aria-label", "Primary");
+  const nav = element("nav", "header-actions");
+  nav.setAttribute("aria-label", "CEBG");
   for (const item of [
-    { route: "home" as const, label: "Campaigns" },
-    { route: "welcome" as const, label: "New campaign" },
+    { route: "home" as const, label: "My installs" },
     { route: "updates" as const, label: "Updates" },
   ]) {
-    const button = actionButton(item.label, () => navigate(item.route), "nav-button");
-    if (route === item.route || (item.route === "welcome" && !["home", "updates"].includes(route))) button.setAttribute("aria-current", "page");
+    const button = actionButton(item.label, () => navigate(item.route), "header-button");
+    if (route === item.route) button.setAttribute("aria-current", "page");
     nav.append(button);
   }
-  sidebar.append(brand, nav);
-  const workspace = element("div", "workspace");
-  const topbar = element("header", "topbar");
-  topbar.append(
-    element("p", "topbar-kicker", mode === "fixture" ? "Local fixture mode" : "Local native mode"),
-    element("p", undefined, mode === "fixture" ? "No game files are read or written" : "Sources stay read-only; builds use a separate managed copy"),
-  );
+  header.append(brand, nav);
   const main = element("main", "screen");
   main.append(content);
-  workspace.append(topbar, main);
-  shell.append(sidebar, workspace);
+  shell.append(header, main);
   return shell;
 }

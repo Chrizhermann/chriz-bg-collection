@@ -20,7 +20,7 @@ export interface BuildActions {
 
 export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("Step 5 of 5", "Build your campaign", actions.fixture ? "A resumable fixture demonstrates pauses, attention, failure recovery, and completion." : "The engine is installing the exact reviewed recipe into your separate managed copy."));
+  page.append(screenIntro("CEBG is working", "Installation progress", actions.fixture ? "This local preview demonstrates pauses, attention, failure recovery, and completion." : "CEBG is downloading and installing the reviewed setup into your separate game folder."));
   const tone = snapshot.state === "failed" ? "danger" : snapshot.state === "running" || snapshot.state === "complete" ? "ok" : "warning";
   const stateCard = statusCard(snapshot.headline, snapshot.detail, tone);
   const controls = element("div", "inline-actions");

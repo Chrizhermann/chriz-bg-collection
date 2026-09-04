@@ -10,10 +10,10 @@ export interface HomeActions {
 
 export function homeScreen(installations: readonly ManagedInstallation[], actions: HomeActions): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("Your campaigns", "Your campaigns", "Managed copies remain separate from store games and from one another."));
-  const list = element("div", "campaign-list");
+  page.append(screenIntro("Ready when you are", "My installs", "Each Chriz Easy BG installation stays separate from your original games."));
+  const list = element("div", "installation-list");
   installations.forEach((installation) => {
-    const card = element("article", "card campaign-card");
+    const card = element("article", "card installation-card");
     card.append(element("p", "badge ok", installation.status), element("h2", undefined, installation.name), element("p", "path", installation.path));
     if (installation.receiptPath !== null) {
       card.append(element("p", undefined, `Receipt: ${installation.receiptPath}`));
@@ -26,10 +26,11 @@ export function homeScreen(installations: readonly ManagedInstallation[], action
       );
       card.append(controls);
     } else if (installation.resumable) {
-      card.append(actionButton("Resume build", () => actions.resume(installation.id)));
+      card.append(actionButton("Continue installation", () => actions.resume(installation.id)));
     }
     list.append(card);
   });
-  page.append(list, screenActions(null, actionButton("Build a new campaign", actions.begin)));
+  if (installations.length === 0) list.append(element("p", "card", "No Chriz Easy BG installation is registered yet."));
+  page.append(list, screenActions(null, actionButton("New installation", actions.begin)));
   return page;
 }

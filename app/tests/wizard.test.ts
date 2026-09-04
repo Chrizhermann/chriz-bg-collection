@@ -9,18 +9,16 @@ import type { GameCandidate, GameRole, RunEventEnvelope } from "../src/contracts
 import { mountApp } from "../src/app";
 import { technicalLog } from "../src/components/technical-log";
 
-describe("guided collection wizard", () => {
+describe("Chriz Easy BG application flow", () => {
   afterEach(() => document.body.replaceChildren());
 
-  it("walks all seven wizard screens, preserves Back, and freezes Review before Build", async () => {
+  it("customizes the recommended setup and completes the fixture installation", async () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
     await mountApp(root, new FixtureBackend());
 
-    expect(getByRole(root, "heading", { level: 1, name: "Welcome" })).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Begin setup" }));
-    expect(getByRole(root, "heading", { level: 1, name: "Find your games" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Install Chriz Easy BG" })).toBeTruthy();
 
     const bg1 = getByLabelText(root, "Baldur's Gate source") as HTMLSelectElement;
     const bg2 = getByLabelText(root, "Baldur's Gate II source") as HTMLSelectElement;
@@ -29,13 +27,8 @@ describe("guided collection wizard", () => {
     expect(bg2.value).toBe(originalBg2);
     expect(getByText(root, "Files differ from a clean store installation.")).toBeTruthy();
     await user.selectOptions(bg1, "bg1-fresh");
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-
-    expect(getByRole(root, "heading", { level: 1, name: "Choose a destination" })).toBeTruthy();
-    expect(getByText(root, "Safe separate destination")).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-
-    expect(getByRole(root, "heading", { level: 1, name: "Shape your campaign" })).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "Customize" }));
+    expect(getByRole(root, "heading", { level: 1, name: "Customize your installation" })).toBeTruthy();
     const mandatory = getByRole(root, "checkbox", { name: /Curated foundation/ }) as HTMLInputElement;
     const recommended = getByRole(root, "checkbox", { name: /Recommended rules balance/ }) as HTMLInputElement;
     const optional = getByRole(root, "checkbox", { name: /Companion conversations/ }) as HTMLInputElement;
@@ -49,17 +42,11 @@ describe("guided collection wizard", () => {
     expect(blocked.getAttribute("aria-disabled")).toBe("true");
     expect(getByText(root, "Deferred until its installer can be reproduced safely.")).toBeTruthy();
     expect(getByText(root, "Experimental quest restoration remains visible but is omitted.")).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Continue" }));
+    await user.click(getByRole(root, "button", { name: "Done" }));
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
 
-    expect(getByRole(root, "heading", { level: 1, name: "Review the campaign ledger" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
     expect(root.querySelectorAll("[data-ledger-phase]")).toHaveLength(5);
-    expect(getByText(root, "Experimental quest restoration remains visible but is omitted.")).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Back" }));
-    expect(getByRole(root, "heading", { level: 1, name: "Shape your campaign" })).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
-
-    expect(getByRole(root, "heading", { level: 1, name: "Build your campaign" })).toBeTruthy();
     expect(getByText(root, "Manual archive needed")).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "I added the archive" }));
     expect(getByText(root, "Your attention is needed")).toBeTruthy();
@@ -71,16 +58,15 @@ describe("guided collection wizard", () => {
     expect(getByText(root, "Build in progress")).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Finish fixture build" }));
 
-    expect(getByRole(root, "heading", { level: 1, name: "Campaign complete" })).toBeTruthy();
-    expect(getByText(root, "Immutable install receipt")).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Chriz Easy BG is ready" })).toBeTruthy();
+    expect(getByText(root, "Installation record saved")).toBeTruthy();
   });
 
   it("surfaces every non-fresh source reason", async () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    const handle = await mountApp(root, new FixtureBackend());
-    await handle.navigate("games");
+    await mountApp(root, new FixtureBackend());
 
     const cases = [
       ["bg1-modified", "Files differ from a clean store installation."],
@@ -122,12 +108,12 @@ describe("guided collection wizard", () => {
     const user = userEvent.setup();
     await mountApp(root, new FixtureBackend());
 
-    await user.click(getByRole(root, "button", { name: "Campaigns" }));
-    expect(getByRole(root, "heading", { level: 1, name: "Your campaigns" })).toBeTruthy();
-    expect(getByText(root, "Chriz EET — Stream test")).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "My installs" }));
+    expect(getByRole(root, "heading", { level: 1, name: "My installs" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 2, name: "Chriz Easy BG" })).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Updates" }));
     expect(getByRole(root, "heading", { level: 1, name: "Updates" })).toBeTruthy();
-    expect(getByText(root, "Existing campaigns are never patched in place.")).toBeTruthy();
+    expect(getByText(root, "Your current game stays safe.")).toBeTruthy();
     expect(queryByText(root, "Update now")).toBeNull();
   });
 
@@ -209,9 +195,9 @@ describe("guided collection wizard", () => {
 
     await user.click(getByRole(root, "button", { name: "Install application update" }));
     expect(backend.installedAppVersions).toEqual(["0.1.0-alpha.2"]);
-    await user.click(getByRole(root, "button", { name: "Build updated copy" }));
+    await user.click(getByRole(root, "button", { name: "Create updated installation" }));
     expect(backend.activatedRecipeVersions).toEqual(["0.1.0-alpha.2"]);
-    expect(getByRole(root, "heading", { level: 1, name: "Welcome" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Install Chriz Easy BG" })).toBeTruthy();
   });
 
   it("shows offline and rejected update checks without destructive actions", async () => {
@@ -247,10 +233,10 @@ describe("guided collection wizard", () => {
     expect(getByText(root, /Last checked 2026-09-03 08:30 UTC/)).toBeTruthy();
     expect(getByText(root, /signature was invalid.*trusted recipe was kept/i)).toBeTruthy();
     expect(queryByText(root, "Install application update")).toBeNull();
-    expect(queryByText(root, "Build updated copy")).toBeNull();
+    expect(queryByText(root, "Create updated installation")).toBeNull();
   });
 
-  it("loads native managed campaigns without checking updates and scopes card actions by availability", async () => {
+  it("loads native installations without checking updates and scopes card actions by availability", async () => {
     class ManagedCampaignBackend extends FixtureBackend {
       updateChecks = 0;
       launched: string[] = [];
@@ -302,17 +288,17 @@ describe("guided collection wizard", () => {
     expect(getByText(root, "Moved campaign")).toBeTruthy();
     expect(getAllByRole(root, "button", { name: "Play" })).toHaveLength(1);
     expect(getAllByRole(root, "button", { name: "Open folder" })).toHaveLength(1);
-    expect(getAllByRole(root, "button", { name: "Resume build" })).toHaveLength(1);
+    expect(getAllByRole(root, "button", { name: "Continue installation" })).toHaveLength(1);
     expect(backend.updateChecks).toBe(0);
 
     await user.click(getByRole(root, "button", { name: "Play" }));
     await user.click(getByRole(root, "button", { name: "Open folder" }));
-    await user.click(getByRole(root, "button", { name: "Resume build" }));
+    await user.click(getByRole(root, "button", { name: "Continue installation" }));
     expect(backend.launched).toEqual(["ready"]);
     expect(backend.opened).toEqual(["ready"]);
     expect(backend.resumed).toEqual(["interrupted"]);
-    expect(getByRole(root, "heading", { level: 1, name: "Build your campaign" })).toBeTruthy();
-    expect(getByRole(root, "heading", { level: 2, name: "Build in progress" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 2, name: "Installation in progress" })).toBeTruthy();
   });
 
   it("does not let a late evaluation overwrite a newer selection", async () => {
@@ -329,7 +315,7 @@ describe("guided collection wizard", () => {
     await new Promise((resolve) => window.setTimeout(resolve, 100));
 
     expect((optional as HTMLInputElement).checked).toBe(false);
-    expect(getByText(root, "2 campaign choices selected")).toBeTruthy();
+    expect(getByText(root, "2 choices included")).toBeTruthy();
   });
 
   it("uses native folder choices and immediately shows their validated results", async () => {
@@ -367,16 +353,13 @@ describe("guided collection wizard", () => {
     const user = userEvent.setup();
     await mountApp(root, new FolderChoiceBackend());
 
-    await user.click(getByRole(root, "button", { name: "Begin setup" }));
-    await user.click(getByRole(root, "button", { name: "Browse for Baldur's Gate source" }));
+    await user.click(getByRole(root, "button", { name: "Change Baldur's Gate source" }));
     expect(getByText(root, "C:\\Chosen BGEE")).toBeTruthy();
     expect((getByLabelText(root, "Baldur's Gate source") as HTMLSelectElement).value).toBe("chosen-bgee_sod");
 
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Browse for campaign destination" }));
-    expect((getByLabelText(root, "Campaign destination") as HTMLInputElement).value).toBe("D:\\Chosen Campaign");
-    expect(getByText(root, "Safe separate destination")).toBeTruthy();
-    expect((getByRole(root, "button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(false);
+    await user.click(getByRole(root, "button", { name: "Change install location" }));
+    expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("D:\\Chosen Campaign");
+    expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("uses the native discovery, destination, review, and event path without fixture controls", async () => {
@@ -398,6 +381,7 @@ describe("guided collection wizard", () => {
       calls.push(command);
       switch (command) {
         case "bootstrap": return { mode: "native", engine_version: "0.1.0", recipe_version: null };
+        case "installation_defaults": return { name: "Chriz Easy BG", path: "D:\\Native Campaign" };
         case "list_managed_installations": return [];
         case "discover_games": return {
           bg1_candidates: [{ id: "native-bg1", label: "BG1 clean", path: "C:\\BG1", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: [] }],
@@ -409,7 +393,7 @@ describe("guided collection wizard", () => {
         case "inspect_destination":
           expect(args).toEqual({ path: "D:\\Native Campaign", bg1CandidateId: "native-bg1", bg2CandidateId: "native-bg2" });
           return { path: "D:\\Native Campaign", safe: true, title: "Ready", detail: "Isolated." };
-        case "freeze_review": return { review_token: "native-review", digest: "11".repeat(32), destination: "D:\\Native Campaign", game_labels: ["BG1 clean", "BG2 clean"], evaluation };
+        case "freeze_review": return { review_token: "native-review", digest: "11".repeat(32), display_name: "Chriz Easy BG", destination: "D:\\Native Campaign", game_labels: ["BG1 clean", "BG2 clean"], evaluation };
         case "start_build": return { run_id: "native-run" };
         case "launch_install":
         case "open_install_folder":
@@ -424,23 +408,15 @@ describe("guided collection wizard", () => {
 
     await mountApp(root, new NativeBackend(invoke, channelFactory));
 
-    expect(calls.slice(0, 4)).toEqual(["bootstrap", "discover_games", "list_managed_installations", "evaluate_build"]);
-    await user.click(getByRole(root, "button", { name: "Begin setup" }));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
-    await user.clear(destination);
-    await user.type(destination, "D:\\Native Campaign");
-    destination.dispatchEvent(new Event("change", { bubbles: true }));
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
+    expect(calls.slice(0, 3)).toEqual(["bootstrap", "discover_games", "installation_defaults"]);
+    expect(calls).toEqual(expect.arrayContaining(["inspect_destination", "list_managed_installations", "evaluate_build"]));
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
 
-    expect(getByRole(root, "heading", { level: 1, name: "Build your campaign" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
     expect(queryByText(root, "Finish fixture build")).toBeNull();
     expect(getByRole(root, "button", { name: "Cancel build" })).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Campaigns" }));
-    expect(getByRole(root, "heading", { level: 1, name: "Build your campaign" })).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "My installs" }));
+    expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
     expect(getByRole(root, "button", { name: "Cancel build" })).toBeTruthy();
     (emitNative as (event: RunEventEnvelope | unknown) => void)({
       run_id: "native-run",
@@ -448,9 +424,9 @@ describe("guided collection wizard", () => {
       event: { type: "campaign_finished", install_id: "native-install" },
     });
     await new Promise((resolve) => window.setTimeout(resolve, 0));
-    expect(getByRole(root, "heading", { level: 1, name: "Campaign complete" })).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Launch game" }));
-    await user.click(getByRole(root, "button", { name: "Open folder" }));
+    expect(getByRole(root, "heading", { level: 1, name: "Chriz Easy BG is ready" })).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "Play Chriz Easy BG" }));
+    await user.click(getByRole(root, "button", { name: "Open game folder" }));
     expect(calls.slice(-2)).toEqual(["launch_install", "open_install_folder"]);
   });
 
@@ -512,16 +488,8 @@ describe("guided collection wizard", () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    const handle = await mountApp(root, backend);
-    await handle.navigate("destination");
-    const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
-    await user.clear(destination);
-    await user.type(destination, "D:\\Manual Campaign");
-    destination.dispatchEvent(new Event("change", { bubbles: true }));
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
 
@@ -533,7 +501,7 @@ describe("guided collection wizard", () => {
 
     expect(backend.suppliedArtifacts).toEqual(["manual-fixture"]);
     expect(backend.resumedInstalls).toEqual(["install-manual"]);
-    expect(getByText(root, "Resuming build")).toBeTruthy();
+    expect(getByText(root, "Resuming installation")).toBeTruthy();
   });
 
   it("surfaces a rejected destination and does not retain the previous safe state", async () => {
@@ -554,17 +522,16 @@ describe("guided collection wizard", () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    const handle = await mountApp(root, new RejectingDestinationBackend());
-    await handle.navigate("destination");
+    await mountApp(root, new RejectingDestinationBackend());
 
-    const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
+    const destination = getByLabelText(root, "Install location") as HTMLInputElement;
     await user.clear(destination);
     await user.type(destination, "D:\\Occupied");
     destination.dispatchEvent(new Event("change", { bubbles: true }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
 
     expect(getByRole(root, "alert").textContent).toContain("Choose a new empty folder.");
-    expect((getByRole(root, "button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("does not start when the server-frozen review differs from what was displayed", async () => {
@@ -589,20 +556,12 @@ describe("guided collection wizard", () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    const handle = await mountApp(root, backend);
-    await handle.navigate("destination");
-    const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
-    await user.clear(destination);
-    await user.type(destination, "D:\\Fresh Campaign");
-    destination.dispatchEvent(new Event("change", { bubbles: true }));
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
 
     expect(backend.started).toBe(false);
-    expect(getByRole(root, "heading", { level: 1, name: "Review the campaign ledger" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Install Chriz Easy BG" })).toBeTruthy();
     expect(getByRole(root, "alert").textContent).toContain("Read the refreshed Review");
   });
 
@@ -638,23 +597,15 @@ describe("guided collection wizard", () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    const handle = await mountApp(root, new UnrecoverableBuildBackend());
-    await handle.navigate("destination");
-    const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
-    await user.clear(destination);
-    await user.type(destination, "D:\\Broken Campaign");
-    destination.dispatchEvent(new Event("change", { bubbles: true }));
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
+    await mountApp(root, new UnrecoverableBuildBackend());
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
 
     expect(getByText(root, "The build stopped safely")).toBeTruthy();
     expect(queryByText(root, "Retry failed step")).toBeNull();
-    await user.click(getByRole(root, "button", { name: "Campaigns" }));
-    expect(getByRole(root, "heading", { level: 1, name: "Your campaigns" })).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "My installs" }));
+    expect(getByRole(root, "heading", { level: 1, name: "My installs" })).toBeTruthy();
   });
 
   it("preserves a failed native snapshot and Retry when resume is rejected", async () => {
@@ -706,16 +657,8 @@ describe("guided collection wizard", () => {
     document.body.append(root);
     const user = userEvent.setup();
     const backend = new RejectingResumeBackend();
-    const handle = await mountApp(root, backend);
-    await handle.navigate("destination");
-    const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
-    await user.clear(destination);
-    await user.type(destination, "D:\\Failed Campaign");
-    destination.dispatchEvent(new Event("change", { bubbles: true }));
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Continue" }));
-    await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     const retry = getByRole(root, "button", { name: "Retry failed step" });
 

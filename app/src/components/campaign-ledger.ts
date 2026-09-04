@@ -4,7 +4,7 @@ import { element } from "./app-shell";
 export function campaignLedger(phases: readonly (PhaseSummary | BuildPhase)[], announce = false): HTMLElement {
   const wrapper = element("section", "ledger-card card");
   wrapper.setAttribute("aria-labelledby", "ledger-heading");
-  const heading = element("h2", undefined, "Campaign ledger");
+  const heading = element("h2", undefined, "Installation steps");
   heading.id = "ledger-heading";
   const list = element("ol", "ledger");
   let currentTitle = "";

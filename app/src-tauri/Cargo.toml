@@ -1,7 +1,7 @@
 [package]
 name = "chriz-bg-app"
 version = "0.1.0-alpha.1"
-description = "Guided installer for Chriz's Baldur's Gate collection"
+description = "Installer and launcher for Chriz Easy BG"
 edition = "2021"
 
 [lib]

@@ -7,7 +7,10 @@ fn product_name_is_safe_for_the_nsis_template() {
         serde_json::from_str(&fs::read_to_string(config_path).expect("read Tauri configuration"))
             .expect("parse Tauri configuration");
 
-    assert_eq!(config["productName"], "Chriz BG Collection");
+    assert_eq!(config["productName"], "Chriz Easy BG");
+    assert_eq!(config["app"]["windows"][0]["title"], "Chriz Easy BG");
+    assert_eq!(config["app"]["windows"][0]["width"], 1160);
+    assert_eq!(config["app"]["windows"][0]["height"], 760);
 }
 
 #[test]

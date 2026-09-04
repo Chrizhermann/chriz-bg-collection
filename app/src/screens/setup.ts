@@ -8,8 +8,8 @@ export function setupScreen(
   next: () => void,
 ): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("Step 3 of 5", "Shape your campaign", "The recipe owns install order and compatibility. You choose only semantic, reviewed options."));
-  const summary = element("p", "choice-summary", `${evaluation.selectedChoiceCount} campaign choices selected`);
+  page.append(screenIntro("Optional choices", "Customize your installation", "The recommended setup is already selected. Change only what you want, then return to the installation screen."));
+  const summary = element("p", "choice-summary", `${evaluation.selectedChoiceCount} choices included`);
   page.append(summary);
   evaluation.view.categories.forEach((category) => {
     const fieldset = element("fieldset", "choice-group card");
@@ -61,6 +61,6 @@ export function setupScreen(
     notices.append(heading, list);
     page.append(notices);
   }
-  page.append(screenActions(back, actionButton("Continue", next)));
+  page.append(screenActions(back, actionButton("Done", next)));
   return page;
 }

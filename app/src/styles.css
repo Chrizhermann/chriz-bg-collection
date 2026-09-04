@@ -30,13 +30,14 @@ html,
 body,
 #app {
   min-width: 320px;
+  height: 100%;
   min-height: 100%;
   margin: 0;
 }
 
 body {
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow: hidden;
   background:
     linear-gradient(rgba(197, 154, 81, 0.035) 1px, transparent 1px),
     var(--iron);
@@ -67,16 +68,17 @@ summary:focus-visible,
 
 .app-shell {
   display: grid;
-  min-height: 100vh;
-  grid-template-columns: 15.5rem minmax(0, 1fr);
+  height: 100vh;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  padding: 1.5rem 1rem;
-  border-right: 1px solid var(--slate);
+.app-header {
+  display: flex;
+  min-height: 4.25rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem clamp(1rem, 3vw, 2.25rem);
+  border-bottom: 1px solid var(--slate);
   background: rgba(21, 24, 25, 0.96);
 }
 
@@ -84,7 +86,6 @@ summary:focus-visible,
   display: flex;
   gap: 0.85rem;
   align-items: center;
-  padding: 0 0.5rem 1.75rem;
 }
 
 .brand-mark {
@@ -113,15 +114,14 @@ summary:focus-visible,
 }
 
 .brand-copy small,
-.topbar,
 .lede,
 .card p,
 .fixture-note {
   color: var(--vellum-dim);
 }
 
-.nav-list {
-  display: grid;
+.header-actions {
+  display: flex;
   gap: 0.45rem;
 }
 
@@ -147,43 +147,24 @@ summary:focus-visible,
 }
 
 .button.quiet,
-.button.nav-button {
+.button.header-button {
   color: var(--vellum);
   background: var(--charcoal);
 }
 
-.button.nav-button {
-  width: 100%;
+.button.header-button {
+  min-block-size: 40px;
+  padding: 0.45rem 0.8rem;
   border-color: transparent;
-  text-align: left;
+  color: var(--vellum-dim);
+  font-size: 0.88rem;
 }
 
-.button.nav-button[aria-current="page"] {
-  border-color: var(--brass);
+.button.header-button[aria-current="page"] {
+  border-bottom-color: var(--brass);
   color: var(--focus);
-  background: #2c2b27;
 }
 
-.workspace {
-  min-width: 0;
-}
-
-.topbar {
-  display: flex;
-  min-height: 4.75rem;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem clamp(1rem, 4vw, 3rem);
-  border-bottom: 1px solid var(--slate);
-  font-size: 0.85rem;
-}
-
-.topbar p {
-  margin: 0;
-}
-
-.topbar-kicker,
 .eyebrow {
   color: var(--brass);
   font-size: 0.75rem;
@@ -193,22 +174,24 @@ summary:focus-visible,
 }
 
 .screen {
-  width: min(100%, 74rem);
+  width: min(100%, 72rem);
+  height: 100%;
   margin-inline: auto;
-  padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 5vw, 4rem);
+  padding: clamp(1rem, 2.4vh, 1.5rem) clamp(1rem, 3vw, 2.5rem);
+  overflow-y: auto;
 }
 
 .screen-stack {
   display: grid;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .screen-intro {
-  margin-bottom: 1.35rem;
+  margin-bottom: 0.5rem;
 }
 
 .screen-intro .eyebrow {
-  margin: 0 0 0.7rem;
+  margin: 0 0 0.35rem;
 }
 
 h1,
@@ -222,10 +205,10 @@ h3 {
 h1 {
   max-width: 52rem;
   margin: 0;
-  font-size: clamp(2.35rem, 6vw, 4.8rem);
+  font-size: clamp(2rem, 4vw, 3rem);
   font-weight: 550;
   letter-spacing: -0.035em;
-  line-height: 0.98;
+  line-height: 1.05;
 }
 
 h2 {
@@ -242,14 +225,14 @@ pre {
 
 .lede {
   max-width: 48rem;
-  margin: 1rem 0 0;
-  font-size: clamp(1rem, 2vw, 1.2rem);
-  line-height: 1.6;
+  margin: 0.45rem 0 0;
+  font-size: clamp(0.95rem, 1.5vw, 1.08rem);
+  line-height: 1.45;
 }
 
 .card,
 fieldset {
-  padding: clamp(1rem, 3vw, 1.4rem);
+  padding: clamp(0.85rem, 2vw, 1.15rem);
   border: 1px solid var(--slate-light);
   border-radius: var(--radius);
   background: var(--charcoal);
@@ -275,6 +258,203 @@ fieldset {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.install-screen {
+  gap: 0.75rem;
+}
+
+.install-screen .screen-intro {
+  margin-bottom: 0;
+}
+
+.install-sources {
+  gap: 0.75rem;
+}
+
+.source-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem 0.8rem;
+  align-items: center;
+}
+
+.source-card-heading h2,
+.source-card-heading p,
+.source-card > p,
+.install-settings h2,
+.recommended-setup h2,
+.install-ready h2,
+.install-ready p,
+.field-help,
+.field-error,
+.safety-note {
+  margin: 0;
+}
+
+.source-title {
+  color: var(--vellum-dim);
+  font-size: 0.78rem;
+}
+
+.source-card-heading h2 {
+  margin-top: 0.12rem;
+  font-size: 1.08rem;
+}
+
+.source-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--vellum);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.source-status::before {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--brass);
+  content: "";
+}
+
+.source-status.ok::before {
+  background: var(--teal);
+}
+
+.source-card select,
+.source-label,
+.source-card .path {
+  grid-column: 1 / -1;
+}
+
+.source-card select {
+  margin-top: 0.1rem;
+}
+
+.source-label {
+  color: var(--vellum);
+  font-size: 0.9rem;
+}
+
+.source-card .path {
+  min-height: 1.25rem;
+  margin: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.source-details {
+  color: var(--vellum-dim);
+  font-size: 0.82rem;
+}
+
+.source-details summary,
+.recipe-notices summary {
+  min-height: 32px;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.source-details .finding {
+  margin-top: 0.35rem;
+}
+
+.button.compact {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.install-settings {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.install-field-grid {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.75fr) minmax(18rem, 1.25fr);
+  gap: 0.85rem;
+}
+
+.install-field {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.install-field input {
+  margin-top: 0.3rem;
+}
+
+.field-help,
+.field-error,
+.safety-note {
+  margin-top: 0.28rem;
+  color: var(--vellum-dim);
+  font-size: 0.76rem;
+  font-weight: 400;
+}
+
+.field-error {
+  color: var(--ember);
+}
+
+.location-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: end;
+}
+
+.location-controls .button {
+  margin-bottom: 0.02rem;
+}
+
+.recommended-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem 1rem;
+  align-items: center;
+}
+
+.choice-summary {
+  margin: 0.2rem 0 0;
+  color: var(--vellum-dim);
+  font-size: 0.86rem;
+}
+
+.recipe-notices {
+  grid-column: 1 / -1;
+  color: var(--vellum-dim);
+  font-size: 0.8rem;
+}
+
+.recipe-notices ul {
+  margin: 0.3rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.install-ready {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  background: rgba(197, 154, 81, 0.08);
+}
+
+.install-ready.is-ready {
+  border-color: var(--teal-dark);
+  background: rgba(117, 186, 180, 0.08);
+}
+
+.install-ready p {
+  margin-top: 0.2rem;
+  color: var(--vellum-dim);
+  font-size: 0.82rem;
 }
 
 label,
@@ -540,12 +720,14 @@ input[type="text"] {
   user-select: text;
 }
 
-.campaign-list {
+.campaign-list,
+.installation-list {
   display: grid;
   gap: 1rem;
 }
 
-.campaign-card .badge {
+.campaign-card .badge,
+.installation-card .badge {
   margin: 0 0 0.8rem;
 }
 
@@ -561,40 +743,28 @@ input[type="text"] {
 }
 
 @media (max-width: 53rem) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    position: static;
-    height: auto;
-    padding: 0.85rem 1rem;
-    border-right: 0;
-    border-bottom: 1px solid var(--slate);
-  }
-
-  .brand {
-    padding-bottom: 0.85rem;
-  }
-
-  .nav-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .button.nav-button {
-    text-align: center;
+  .screen {
+    padding-inline: 1rem;
   }
 }
 
 @media (max-width: 38rem) {
   .source-grid,
-  .review-layout {
+  .review-layout,
+  .install-field-grid {
     grid-template-columns: 1fr;
   }
 
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+  .app-header {
+    min-height: 4rem;
+  }
+
+  .brand-mark {
+    display: none;
+  }
+
+  .brand {
+    gap: 0;
   }
 
   .review-list {
@@ -612,17 +782,18 @@ input[type="text"] {
   }
 
   .brand-copy small,
-  .topbar p:last-child {
+  .source-title {
     display: none;
   }
 
   .button,
-  .nav-list {
+  .install-ready .button {
     width: 100%;
   }
 
   .screen-actions,
-  .inline-actions {
+  .inline-actions,
+  .install-ready {
     align-items: stretch;
     flex-direction: column;
   }

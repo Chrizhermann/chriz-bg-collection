@@ -21,7 +21,7 @@ const routes = [
   "complete",
 ] as const;
 
-describe("wizard security and accessibility", () => {
+describe("CEBG security and accessibility", () => {
   afterEach(() => document.body.replaceChildren());
 
   it("has no axe violations on any screen", async () => {
@@ -75,7 +75,7 @@ describe("wizard security and accessibility", () => {
     const user = userEvent.setup();
     await mountApp(root, new FixtureBackend());
 
-    await user.click(getByRole(root, "button", { name: "Begin setup" }));
+    await user.click(getByRole(root, "button", { name: "Customize" }));
     expect(document.activeElement).toBe(getByRole(root, "heading", { level: 1 }));
     const handle = await mountApp(root, new FixtureBackend());
     await handle.navigate("setup");
@@ -91,7 +91,8 @@ describe("wizard security and accessibility", () => {
       expect(document.activeElement).toBe(current);
     });
 
-    await handle.navigate("build");
+    await user.click(getByRole(root, "button", { name: "Done" }));
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
     expect(root.querySelectorAll('[aria-live="polite"]')).toHaveLength(1);
     expect(root.querySelector("pre")?.hasAttribute("aria-live")).toBe(false);
   });
@@ -108,16 +109,12 @@ describe("wizard security and accessibility", () => {
       await user.keyboard("{Enter}");
     };
 
-    await activate("Begin setup");
-    await activate("Continue");
-    await activate("Continue");
-    await activate("Continue");
-    await activate("Freeze review and build");
+    await activate("Install Chriz Easy BG");
     await activate("I added the archive");
     await activate("Continue build");
     await activate("Retry failed step");
     await activate("Finish fixture build");
-    expect(getByRole(root, "heading", { level: 1, name: "Campaign complete" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Chriz Easy BG is ready" })).toBeTruthy();
   });
 
   it("keeps compact layouts and motion preferences in the shared design contract", () => {

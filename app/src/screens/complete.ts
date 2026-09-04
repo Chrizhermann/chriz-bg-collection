@@ -10,15 +10,15 @@ export interface CompleteActions {
 
 export function completeScreen(review: FrozenReview | null, actions: CompleteActions): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("Build verified", "Campaign complete", "The reviewed managed campaign and its durable evidence are ready."));
-  page.append(statusCard("Immutable install receipt", review ? `Review ${review.digest} is bound to ${review.destination}.` : "The campaign receipt is available from its managed copy." , "ok"));
-  const campaignActions = element("div", "inline-actions");
+  page.append(screenIntro("Installation verified", "Chriz Easy BG is ready", "Your game and its installation record are ready."));
+  page.append(statusCard("Installation record saved", review ? `Review ${review.digest} is bound to ${review.destination}.` : "The installation record is available in the game folder." , "ok"));
+  const installActions = element("div", "inline-actions");
   if (actions.launch !== null && actions.openFolder !== null) {
-    campaignActions.append(
-      actionButton("Launch game", actions.launch),
-      actionButton("Open folder", actions.openFolder, "quiet"),
+    installActions.append(
+      actionButton("Play Chriz Easy BG", actions.launch),
+      actionButton("Open game folder", actions.openFolder, "quiet"),
     );
   }
-  page.append(campaignActions, screenActions(null, actionButton("View campaigns", actions.home)));
+  page.append(installActions, screenActions(null, actionButton("My installs", actions.home)));
   return page;
 }

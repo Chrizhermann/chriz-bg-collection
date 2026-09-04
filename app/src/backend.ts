@@ -488,9 +488,9 @@ export class NativeBackend implements Backend {
 
 const phases: readonly PhaseSummary[] = [
   { id: "preparation", title: "Prepare clean game copies", detail: "Verify sources and create a separate workspace." },
-  { id: "bg1", title: "Build the BG1 campaign", detail: "Apply the pinned pre-merge recipe." },
-  { id: "merge", title: "Merge with EET", detail: "Create the continuous campaign world." },
-  { id: "main", title: "Build the main campaign", detail: "Install curated content and rules in order." },
+  { id: "bg1", title: "Prepare Baldur's Gate", detail: "Apply the pinned pre-merge setup." },
+  { id: "merge", title: "Merge with EET", detail: "Create the continuous game world." },
+  { id: "main", title: "Install the collection", detail: "Install curated content and rules in order." },
   { id: "final", title: "Finalization and reviewed tail", detail: "Finalize EET and apply the audited post-merge tail." },
 ];
 
@@ -572,7 +572,7 @@ export class FixtureBackend implements Backend {
     return Promise.resolve({
       path: normalized,
       safe,
-      title: safe ? "Safe separate destination" : "Choose a separate destination",
+      title: safe ? "Ready to install" : "Choose a separate install location",
       detail: safe ? "The source games and their saves will remain untouched." : "The collection cannot be built inside a store-managed game folder.",
       requiredSpace: "62 GB",
       availableSpace: "184 GB",
@@ -667,7 +667,7 @@ export class FixtureBackend implements Backend {
   }
 
   listManagedInstallations(): Promise<ManagedInstallation[]> {
-    return Promise.resolve([{ id: "fixture-install", name: this.#options.textOverrides?.campaignName ?? "Chriz EET — Stream test", path: "D:\\Fixture Campaigns\\Chriz EET Stream Test", status: "Ready to play", receiptPath: "D:\\Fixture Campaigns\\Chriz EET Stream Test\\install-receipt.json", available: true, resumable: false }]);
+    return Promise.resolve([{ id: "fixture-install", name: this.#options.textOverrides?.campaignName ?? "Chriz Easy BG", path: "D:\\Fixture Installations\\Chriz Easy BG", status: "Ready to play", receiptPath: "D:\\Fixture Installations\\Chriz Easy BG\\install-receipt.json", available: true, resumable: false }]);
   }
 
   launchInstall(_installId: string): Promise<void> {
@@ -684,7 +684,7 @@ export class FixtureBackend implements Backend {
       networkState: "online",
       application: { state: "up-to-date", currentVersion: "0.1.0-alpha.1", availableVersion: null, detail: "The fixture application is current." },
       recipe: { state: "up-to-date", currentVersion: "0.1.0-alpha.1", availableVersion: null, disposition: "up-to-date", detail: "The fixture recipe is current.", changes: [] },
-      managedCopies: [{ installId: "fixture-install", name: "Chriz EET — Stream test", path: "D:\\Fixture Campaigns\\Chriz EET Stream Test", installedRecipeVersion: "0.1.0-alpha.1", state: "up-to-date", detail: "This managed copy uses the current recipe." }],
+      managedCopies: [{ installId: "fixture-install", name: "Chriz Easy BG", path: "D:\\Fixture Installations\\Chriz Easy BG", installedRecipeVersion: "0.1.0-alpha.1", state: "up-to-date", detail: "This installation uses the current recipe." }],
     });
   }
 
@@ -704,7 +704,7 @@ export class FixtureBackend implements Backend {
       attention: "Review the fixture installer prompt before continuing.",
       failed: "Nothing was changed outside the fixture. Retry or export diagnostics.",
       running: "The fixture ledger is advancing through the reviewed plan.",
-      complete: "The campaign copy and immutable receipt are ready.",
+      complete: "The installation and its record are ready.",
     } as const;
     const state = states[this.#buildIndex] ?? "complete";
     const currentIndex = state === "complete" ? phases.length : Math.min(this.#buildIndex, phases.length - 1);

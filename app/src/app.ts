@@ -8,10 +8,18 @@ import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
 import { homeScreen } from "./screens/home";
 import { reviewScreen } from "./screens/review";
+import { installScreen } from "./screens/install";
 import { setupScreen } from "./screens/setup";
 import { updatesScreen } from "./screens/updates";
-import { welcomeScreen } from "./screens/welcome";
-import { initialState, reduce, type AppAction, type AppState } from "./state";
+import {
+  automaticInstallationPath,
+  initialState,
+  installationReadiness,
+  reduce,
+  validateInstallationName,
+  type AppAction,
+  type AppState,
+} from "./state";
 import { statusCard } from "./components/status-card";
 
 export interface AppHandle {
@@ -25,9 +33,10 @@ class AppController implements AppHandle {
   #destination: DestinationEvaluation = {
     path: "",
     safe: false,
-    title: "Choose a new campaign folder",
+    title: "Choose an install location",
     detail: "The installer will verify that it is separate from both clean source games.",
   };
+  #defaultInstallationPath = "";
   #installations: readonly ManagedInstallation[] = [];
   #updates: UpdateSummary = {
     checkedAt: null,
@@ -37,6 +46,8 @@ class AppController implements AppHandle {
     managedCopies: [],
   };
   #revision = 0;
+  #destinationRevision = 0;
+  #starting = false;
   #runId: string | null = null;
   #installId: string | null = null;
   #retryAvailable = false;
@@ -46,26 +57,25 @@ class AppController implements AppHandle {
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
   async initialize(): Promise<void> {
-    this.#status = await this.backend.getStatus();
-    this.#discovery = await this.backend.discoverGames();
+    const [status, discovery, defaults] = await Promise.all([
+      this.backend.getStatus(),
+      this.backend.discoverGames(),
+      this.backend.getInstallationDefaults(),
+    ]);
+    this.#status = status;
+    this.#discovery = discovery;
+    this.#defaultInstallationPath = defaults.path;
     this.#dispatch({ type: "select-game", game: "bg1", id: this.#discovery.selectedBg1Id });
     this.#dispatch({ type: "select-game", game: "bg2", id: this.#discovery.selectedBg2Id });
-    if (this.#status.mode === "fixture") {
-      [this.#destination, this.#installations, this.#updates] = await Promise.all([
-        this.backend.inspectDestination(
-          this.#state.destinationPath,
-          this.#state.selectedBg1Id,
-          this.#state.selectedBg2Id,
-        ),
-        this.backend.listManagedInstallations(),
-        this.backend.getUpdates(),
-      ]);
-      this.#installId = this.#installations[0]?.id ?? null;
-    } else {
-      this.#dispatch({ type: "set-destination", path: "" });
-      this.#installations = await this.backend.listManagedInstallations();
-    }
-    await this.#evaluate(false);
+    this.#dispatch({ type: "set-installation-defaults", name: defaults.name, path: defaults.path });
+    const startupWork: Promise<unknown>[] = [
+      this.#inspectDestination(defaults.path, true, false),
+      this.backend.listManagedInstallations().then((installations) => { this.#installations = installations; }),
+      this.#evaluate(false),
+    ];
+    if (this.#status.mode === "fixture") startupWork.push(this.backend.getUpdates().then((updates) => { this.#updates = updates; }));
+    await Promise.all(startupWork);
+    this.#installId = this.#installations[0]?.id ?? null;
     this.#render();
   }
 
@@ -78,7 +88,6 @@ class AppController implements AppHandle {
       && buildNeedsControls) {
       route = "build";
     }
-    if (route === "build" && this.#state.frozenReview === null) await this.#freezeReview(false);
     if (route === "updates") this.#updates = await this.backend.getUpdates();
     if (route === "build" && this.#status.mode === "fixture") {
       this.#dispatch({ type: "build-updated", build: await this.backend.getBuildSnapshot() });
@@ -109,22 +118,31 @@ class AppController implements AppHandle {
     await this.#evaluate(true, `feature-${id}`);
   }
 
-  async #inspectDestination(path: string): Promise<void> {
+  async #inspectDestination(path: string, automatic = this.#state.destinationAutomatic, render = true): Promise<void> {
+    const revision = ++this.#destinationRevision;
     this.#destination = {
       path,
       safe: false,
-      title: "Checking this destination",
+      title: "Checking this location",
       detail: "The folder has not completed native safety inspection yet.",
     };
-    this.#dispatch({ type: "set-destination", path });
-    this.#render();
-    this.#destination = await this.backend.inspectDestination(
-      path,
-      this.#state.selectedBg1Id,
-      this.#state.selectedBg2Id,
-    );
-    this.#dispatch({ type: "set-destination", path: this.#destination.path });
-    this.#render();
+    this.#dispatch({ type: "set-destination", path, automatic });
+    if (render) this.#render();
+    let inspected: DestinationEvaluation;
+    try {
+      inspected = await this.backend.inspectDestination(
+        path,
+        this.#state.selectedBg1Id,
+        this.#state.selectedBg2Id,
+      );
+    } catch (error: unknown) {
+      if (revision !== this.#destinationRevision) return;
+      throw error;
+    }
+    if (revision !== this.#destinationRevision) return;
+    this.#destination = inspected;
+    this.#dispatch({ type: "set-destination", path: inspected.path, automatic });
+    if (render) this.#render();
   }
 
   #selectedGames(): readonly GameCandidate[] {
@@ -137,7 +155,7 @@ class AppController implements AppHandle {
     try {
       const displayedEvaluation = this.#state.evaluation;
       const review = await this.backend.freezeReview(
-        "Chriz Easy BG",
+        this.#state.installationName,
         this.#state.selection,
         this.#destination.path,
         this.#state.selectedBg1Id,
@@ -157,12 +175,10 @@ class AppController implements AppHandle {
         });
       }
       this.#dispatch({ type: "review-frozen", review });
-      if (this.#status.mode === "native") {
-        this.#retryAvailable = false;
-        this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
-        const started = await this.backend.startBuild(review.reviewToken, (event) => this.#handleRunEvent(event));
-        this.#runId = started.runId;
-      }
+      this.#retryAvailable = false;
+      this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
+      const started = await this.backend.startBuild(review.reviewToken, (event) => this.#handleRunEvent(event));
+      this.#runId = started.runId;
       if (render && this.#state.build?.state !== "complete") await this.navigate("build");
     } catch (error: unknown) {
       this.#dispatch({ type: "review-cleared" });
@@ -228,7 +244,29 @@ class AppController implements AppHandle {
     const candidates = this.#discovery[key].filter((entry) => entry.id !== candidate.id);
     this.#discovery = { ...this.#discovery, [key]: [...candidates, candidate] };
     this.#dispatch({ type: "select-game", game, id: candidate.id });
+    this.#dispatch({ type: "review-cleared" });
+    await this.#inspectDestination(this.#state.destinationPath);
+  }
+
+  async #selectGame(game: "bg1" | "bg2", id: string): Promise<void> {
+    this.#dispatch({ type: "select-game", game, id });
+    this.#dispatch({ type: "review-cleared" });
+    await this.#inspectDestination(this.#state.destinationPath);
+  }
+
+  async #changeInstallationName(name: string): Promise<void> {
+    this.#dispatch({ type: "set-installation-name", name });
+    this.#dispatch({ type: "review-cleared" });
+    if (this.#state.destinationAutomatic && validateInstallationName(name) === null) {
+      await this.#inspectDestination(automaticInstallationPath(this.#defaultInstallationPath, name), true);
+      return;
+    }
     this.#render();
+  }
+
+  async #changeInstallLocation(path: string): Promise<void> {
+    this.#dispatch({ type: "review-cleared" });
+    await this.#inspectDestination(path, false);
   }
 
   async #chooseDestinationFolder(): Promise<void> {
@@ -237,9 +275,37 @@ class AppController implements AppHandle {
       this.#state.selectedBg2Id,
     );
     if (evaluation === null) return;
+    ++this.#destinationRevision;
     this.#destination = evaluation;
-    this.#dispatch({ type: "set-destination", path: evaluation.path });
+    this.#dispatch({ type: "set-destination", path: evaluation.path, automatic: false });
+    this.#dispatch({ type: "review-cleared" });
     this.#render();
+  }
+
+  #canInstall(): boolean {
+    const bg1 = this.#discovery.bg1Candidates.find((candidate) => candidate.id === this.#state.selectedBg1Id);
+    const bg2 = this.#discovery.bg2Candidates.find((candidate) => candidate.id === this.#state.selectedBg2Id);
+    return installationReadiness({
+      starting: this.#starting,
+      name: this.#state.installationName,
+      bg1,
+      bg2,
+      destination: this.#destination,
+      evaluation: this.#state.evaluation,
+      evaluationPending: this.#state.evaluationPending,
+    });
+  }
+
+  async #startInstallation(): Promise<void> {
+    if (!this.#canInstall()) return;
+    this.#starting = true;
+    this.#render();
+    try {
+      await this.#freezeReview();
+    } finally {
+      this.#starting = false;
+      if (this.#state.route === "welcome") this.#render();
+    }
   }
 
   async #cancelBuild(): Promise<void> {
@@ -265,8 +331,8 @@ class AppController implements AppHandle {
     const phases = this.#state.evaluation?.plan.phases ?? [];
     return {
       state: "running",
-      headline: "Build in progress",
-      detail: "The reviewed installation is starting in a separate managed copy.",
+      headline: "Installation in progress",
+      detail: "The reviewed installation is starting in its separate game folder.",
       phases: phases.map((phase, index) => ({ ...phase, state: index === 0 ? "current" : "pending" })),
       logTail: [],
       manualArchiveName: null,
@@ -282,7 +348,7 @@ class AppController implements AppHandle {
     switch (event.type) {
       case "campaign_started":
         this.#installId = event.install_id;
-        next = { ...current, state: "running", headline: event.resumed ? "Resuming build" : "Build in progress", detail: "The engine is executing the exact frozen recipe.", logTail: log(`${envelope.sequenceAsString}: campaign ${event.install_id} started`), manualArchiveName: null };
+        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "CEBG is applying the exact reviewed setup.", logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
         break;
       case "phase_started": {
         const phaseIds: Readonly<Record<string, string>> = {
@@ -334,7 +400,7 @@ class AppController implements AppHandle {
         break;
       case "campaign_finished":
         this.#installId = event.install_id;
-        next = { ...current, state: "complete", headline: "Build verified", detail: "The campaign copy and its durable receipt are complete.", phases: current.phases.map((phase) => ({ ...phase, state: "done" })), logTail: log(`${envelope.sequenceAsString}: campaign complete`) };
+        next = { ...current, state: "complete", headline: "Installation verified", detail: "The game folder and its installation record are complete.", phases: current.phases.map((phase) => ({ ...phase, state: "done" })), logTail: log(`${envelope.sequenceAsString}: installation complete`) };
         break;
     }
     this.#dispatch({ type: "build-updated", build: next });
@@ -420,7 +486,24 @@ class AppController implements AppHandle {
         });
         break;
       case "welcome":
-        content = welcomeScreen(() => safely(() => navigate("games")));
+        content = installScreen({
+          discovery: this.#discovery,
+          selectedBg1Id: this.#state.selectedBg1Id,
+          selectedBg2Id: this.#state.selectedBg2Id,
+          installationName: this.#state.installationName,
+          destination: this.#destination,
+          evaluation,
+          evaluationPending: this.#state.evaluationPending,
+          starting: this.#starting,
+        }, {
+          selectSource: (game, id) => safely(() => this.#selectGame(game, id)),
+          browseSource: (game) => safely(() => this.#chooseGameFolder(game)),
+          changeName: (name) => safely(() => this.#changeInstallationName(name)),
+          changeLocation: (path) => safely(() => this.#changeInstallLocation(path)),
+          browseLocation: () => safely(() => this.#chooseDestinationFolder()),
+          customize: () => safely(() => navigate("setup")),
+          install: () => safely(() => this.#startInstallation()),
+        });
         break;
       case "games":
         content = gamesScreen(
@@ -443,7 +526,7 @@ class AppController implements AppHandle {
         );
         break;
       case "setup":
-        content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => this.#back(), () => safely(() => navigate("review")));
+        content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => safely(() => navigate("welcome")), () => safely(() => navigate("welcome")));
         break;
       case "review":
         content = reviewScreen(evaluation, this.#destination, this.#selectedGames(), () => this.#back(), () => safely(() => this.#freezeReview()));
