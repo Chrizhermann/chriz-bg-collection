@@ -2310,7 +2310,7 @@ fn project_managed_campaign(
     };
     Ok(ManagedInstallationResponse {
         id: card.record.install_id,
-        name: "Chriz BG Collection — incomplete build".to_owned(),
+        name: "Chriz Easy BG — incomplete installation".to_owned(),
         path,
         status: status.to_owned(),
         receipt_path: None,
