@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { getByLabelText, getByRole, getByText, queryByText } from "@testing-library/dom";
+import { getAllByRole, getByLabelText, getByRole, getByText, queryByText } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -131,6 +131,58 @@ describe("guided collection wizard", () => {
     expect(queryByText(root, "Update now")).toBeNull();
   });
 
+  it("loads native managed campaigns without checking updates and scopes card actions by availability", async () => {
+    class ManagedCampaignBackend extends FixtureBackend {
+      updateChecks = 0;
+      launched: string[] = [];
+      opened: string[] = [];
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+      }
+
+      override listManagedInstallations() {
+        return Promise.resolve([
+          { id: "ready", name: "Ready campaign", path: "D:\\Campaigns\\Ready", status: "Ready to play", receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json", available: true },
+          { id: "missing", name: "Moved campaign", path: "D:\\Campaigns\\Missing", status: "Folder unavailable", receiptPath: "D:\\Campaigns\\Missing\\install-receipt.json", available: false },
+        ]);
+      }
+
+      override getUpdates() {
+        this.updateChecks += 1;
+        return super.getUpdates();
+      }
+
+      override launchInstall(installId: string) {
+        this.launched.push(installId);
+        return Promise.resolve();
+      }
+
+      override openInstallFolder(installId: string) {
+        this.opened.push(installId);
+        return Promise.resolve();
+      }
+    }
+
+    const backend = new ManagedCampaignBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    const handle = await mountApp(root, backend);
+    await handle.navigate("home");
+
+    expect(getByText(root, "Ready campaign")).toBeTruthy();
+    expect(getByText(root, "Moved campaign")).toBeTruthy();
+    expect(getAllByRole(root, "button", { name: "Play" })).toHaveLength(1);
+    expect(getAllByRole(root, "button", { name: "Open folder" })).toHaveLength(1);
+    expect(backend.updateChecks).toBe(0);
+
+    await user.click(getByRole(root, "button", { name: "Play" }));
+    await user.click(getByRole(root, "button", { name: "Open folder" }));
+    expect(backend.launched).toEqual(["ready"]);
+    expect(backend.opened).toEqual(["ready"]);
+  });
+
   it("does not let a late evaluation overwrite a newer selection", async () => {
     const backend = new FixtureBackend({ evaluationDelays: [0, 80, 0] });
     const root = document.createElement("div");
@@ -214,6 +266,7 @@ describe("guided collection wizard", () => {
       calls.push(command);
       switch (command) {
         case "bootstrap": return { mode: "native", engine_version: "0.1.0", recipe_version: null };
+        case "list_managed_installations": return [];
         case "discover_games": return {
           bg1_candidates: [{ id: "native-bg1", label: "BG1 clean", path: "C:\\BG1", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: [] }],
           bg2_candidates: [{ id: "native-bg2", label: "BG2 clean", path: "C:\\BG2", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: [] }],
@@ -226,6 +279,10 @@ describe("guided collection wizard", () => {
           return { path: "D:\\Native Campaign", safe: true, title: "Ready", detail: "Isolated." };
         case "freeze_review": return { review_token: "native-review", digest: "11".repeat(32), destination: "D:\\Native Campaign", game_labels: ["BG1 clean", "BG2 clean"], evaluation };
         case "start_build": return { run_id: "native-run" };
+        case "launch_install":
+        case "open_install_folder":
+          expect(args).toEqual({ installId: "native-install" });
+          return null;
         default: throw new Error(`Unexpected native command ${command}`);
       }
     };
@@ -235,7 +292,7 @@ describe("guided collection wizard", () => {
 
     await mountApp(root, new NativeBackend(invoke, channelFactory));
 
-    expect(calls.slice(0, 3)).toEqual(["bootstrap", "discover_games", "evaluate_build"]);
+    expect(calls.slice(0, 4)).toEqual(["bootstrap", "discover_games", "list_managed_installations", "evaluate_build"]);
     await user.click(getByRole(root, "button", { name: "Begin setup" }));
     await user.click(getByRole(root, "button", { name: "Continue" }));
     const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
@@ -260,15 +317,24 @@ describe("guided collection wizard", () => {
     });
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     expect(getByRole(root, "heading", { level: 1, name: "Campaign complete" })).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "Launch game" }));
+    await user.click(getByRole(root, "button", { name: "Open folder" }));
+    expect(calls.slice(-2)).toEqual(["launch_install", "open_install_folder"]);
   });
 
   it("selects a requested manual archive and resumes the failed native build", async () => {
     class ManualArchiveBackend extends FixtureBackend {
+      openedSources: string[] = [];
       suppliedArtifacts: string[] = [];
       resumedInstalls: string[] = [];
 
       override getStatus() {
         return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+      }
+
+      override openManualSource(artifactId: string) {
+        this.openedSources.push(artifactId);
+        return Promise.resolve();
       }
 
       override startBuild(_reviewToken: string, onEvent: Parameters<FixtureBackend["startBuild"]>[1]) {
@@ -329,6 +395,8 @@ describe("guided collection wizard", () => {
 
     expect(getByText(root, "Manual archive needed")).toBeTruthy();
     expect(getByText(root, /https:\/\/example\.invalid\/manual-fixture/)).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "Open download page" }));
+    expect(backend.openedSources).toEqual(["manual-fixture"]);
     await user.click(getByRole(root, "button", { name: "Choose downloaded archive" }));
 
     expect(backend.suppliedArtifacts).toEqual(["manual-fixture"]);
@@ -459,6 +527,8 @@ describe("guided collection wizard", () => {
 
   it("preserves a failed native snapshot and Retry when resume is rejected", async () => {
     class RejectingResumeBackend extends FixtureBackend {
+      diagnosticInstalls: string[] = [];
+
       override getStatus() {
         return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
       }
@@ -494,11 +564,17 @@ describe("guided collection wizard", () => {
           technical_detail: "fixture rejection",
         }));
       }
+
+      override exportDiagnostics(installId: string) {
+        this.diagnosticInstalls.push(installId);
+        return Promise.resolve({ path: "D:\\Diagnostics\\install-failed.zip" });
+      }
     }
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    const handle = await mountApp(root, new RejectingResumeBackend());
+    const backend = new RejectingResumeBackend();
+    const handle = await mountApp(root, backend);
     await handle.navigate("destination");
     const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
     await user.clear(destination);
@@ -510,6 +586,10 @@ describe("guided collection wizard", () => {
     await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     const retry = getByRole(root, "button", { name: "Retry failed step" });
+
+    await user.click(getByRole(root, "button", { name: "Export diagnostics" }));
+    expect(backend.diagnosticInstalls).toEqual(["install-failed"]);
+    expect(getByText(root, /Diagnostics exported to D:\\Diagnostics\\install-failed\.zip/)).toBeTruthy();
 
     await user.click(retry);
     await new Promise((resolve) => window.setTimeout(resolve, 0));

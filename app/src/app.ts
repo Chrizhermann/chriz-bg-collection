@@ -58,8 +58,10 @@ class AppController implements AppHandle {
         this.backend.listManagedInstallations(),
         this.backend.getUpdates(),
       ]);
+      this.#installId = this.#installations[0]?.id ?? null;
     } else {
       this.#dispatch({ type: "set-destination", path: "" });
+      this.#installations = await this.backend.listManagedInstallations();
     }
     await this.#evaluate(false);
     this.#render();
@@ -208,6 +210,12 @@ class AppController implements AppHandle {
     await this.#retryBuild();
   }
 
+  async #openManualSource(): Promise<void> {
+    const artifactId = this.#state.build?.manualArchiveName;
+    if (artifactId === null || artifactId === undefined) return;
+    await this.backend.openManualSource(artifactId);
+  }
+
   async #chooseGameFolder(game: "bg1" | "bg2"): Promise<void> {
     const role = game === "bg1" ? "bgee_sod" : "bg2ee";
     const candidate = await this.backend.chooseGameFolder(role);
@@ -342,13 +350,23 @@ class AppController implements AppHandle {
   }
 
   async #exportDiagnostics(): Promise<void> {
-    const result = await this.backend.exportDiagnostics();
+    if (this.#installId === null) return;
+    const result = await this.backend.exportDiagnostics(this.#installId);
+    if (result === null) return;
     const announcement = document.createElement("p");
     announcement.className = "diagnostics-result";
     announcement.textContent = `Diagnostics exported to ${result.path}`;
     announcement.tabIndex = -1;
     this.root.querySelector("main")?.append(announcement);
     announcement.focus();
+  }
+
+  async #launchInstall(installId: string): Promise<void> {
+    await this.backend.launchInstall(installId);
+  }
+
+  async #openInstallFolder(installId: string): Promise<void> {
+    await this.backend.openInstallFolder(installId);
   }
 
   #render(focusTargetId?: string): void {
@@ -359,7 +377,11 @@ class AppController implements AppHandle {
     let content: HTMLElement;
     switch (this.#state.route) {
       case "home":
-        content = homeScreen(this.#installations, () => safely(() => navigate("welcome")));
+        content = homeScreen(this.#installations, {
+          begin: () => safely(() => navigate("welcome")),
+          launch: (installId) => safely(() => this.#launchInstall(installId)),
+          openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
+        });
         break;
       case "updates":
         content = updatesScreen(this.#updates);
@@ -398,17 +420,25 @@ class AppController implements AppHandle {
           advance: () => safely(() => this.#advanceBuild()),
           retry: () => safely(() => this.#retryBuild()),
           supplyManual: () => safely(() => this.#supplyManualArchive()),
+          openManualSource: () => safely(() => this.#openManualSource()),
           cancel: () => safely(() => this.#cancelBuild()),
           diagnostics: () => safely(() => this.#exportDiagnostics()),
+          diagnosticsAvailable: this.#installId !== null,
           fixture: this.#status.mode === "fixture",
           retryAvailable: this.#status.mode === "fixture" || this.#retryAvailable,
           logState: this.#logState,
           updateLogState: (state) => { this.#logState = state; },
         });
         break;
-      case "complete":
-        content = completeScreen(this.#state.frozenReview, () => safely(() => navigate("home")));
+      case "complete": {
+        const installId = this.#installId;
+        content = completeScreen(this.#state.frozenReview, {
+          home: () => safely(() => navigate("home")),
+          launch: installId === null ? null : () => safely(() => this.#launchInstall(installId)),
+          openFolder: installId === null ? null : () => safely(() => this.#openInstallFolder(installId)),
+        });
         break;
+      }
     }
     if (this.#commandError !== null) {
       const alert = statusCard(this.#commandError.message, this.#commandError.recoveryAction, "danger");

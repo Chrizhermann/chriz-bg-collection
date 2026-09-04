@@ -8,8 +8,10 @@ export interface BuildActions {
   readonly advance: () => void | Promise<void>;
   readonly retry: () => void | Promise<void>;
   readonly supplyManual: () => void | Promise<void>;
+  readonly openManualSource: () => void | Promise<void>;
   readonly cancel: () => void | Promise<void>;
   readonly diagnostics: () => void | Promise<void>;
+  readonly diagnosticsAvailable: boolean;
   readonly fixture: boolean;
   readonly retryAvailable: boolean;
   readonly logState: TechnicalLogState;
@@ -24,13 +26,14 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
   const controls = element("div", "inline-actions");
   if (snapshot.state === "waiting-manual") {
     stateCard.append(element("p", "path", snapshot.manualArchiveName ?? ""));
+    controls.append(actionButton("Open download page", actions.openManualSource, "quiet"));
     if (actions.fixture) controls.append(actionButton("I added the archive", actions.advance));
     else if (actions.retryAvailable) controls.append(actionButton("Choose downloaded archive", actions.supplyManual));
   } else if (snapshot.state === "attention") {
     controls.append(actionButton("Continue build", actions.advance));
   } else if (snapshot.state === "failed") {
     if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));
-    if (actions.fixture) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));
+    if (actions.diagnosticsAvailable) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));
   } else if (snapshot.state === "running") {
     controls.append(actions.fixture
       ? actionButton("Finish fixture build", actions.advance)

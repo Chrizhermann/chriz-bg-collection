@@ -50,7 +50,7 @@ describe("engine-shaped fixture backend", () => {
     expect((await backend.advanceBuild()).state).toBe("failed");
     expect((await backend.retryBuild()).state).toBe("running");
     expect((await backend.advanceBuild()).state).toBe("complete");
-    expect((await backend.exportDiagnostics()).path).toMatch(/diagnostics/i);
+    expect((await backend.exportDiagnostics("fixture-install"))?.path).toMatch(/diagnostics/i);
   });
 });
 
@@ -259,13 +259,58 @@ describe("native command adapter", () => {
     await expect(backend.cancelRun("run-1")).resolves.toBeUndefined();
   });
 
-  it("still fails closed for deferred native launch and diagnostics operations", async () => {
-    const backend = new NativeBackend(async () => {
-      throw new Error("No connected command should be invoked");
+  it("maps managed installations and their scoped native actions", async () => {
+    const invoke = vi.fn<InvokeCommand>(async (command, args) => {
+      switch (command) {
+        case "list_managed_installations":
+          expect(args).toBeUndefined();
+          return [{
+            id: "install-ready",
+            name: "Ready campaign",
+            path: "D:\\Campaigns\\Ready",
+            status: "Ready to play",
+            receipt_path: "D:\\Campaigns\\Ready\\install-receipt.json",
+            available: true,
+          }];
+        case "open_manual_source":
+          expect(args).toEqual({ artifactId: "manual-fixture" });
+          return null;
+        case "export_diagnostics":
+          expect(args).toEqual({ installId: "install-ready" });
+          return { path: "D:\\Diagnostics\\install-ready.zip" };
+        case "launch_install":
+        case "open_install_folder":
+          expect(args).toEqual({ installId: "install-ready" });
+          return null;
+        default:
+          throw new Error(`Unexpected command ${command}`);
+      }
+    });
+    const backend = new NativeBackend(invoke);
+
+    await expect(backend.listManagedInstallations()).resolves.toEqual([{
+      id: "install-ready",
+      name: "Ready campaign",
+      path: "D:\\Campaigns\\Ready",
+      status: "Ready to play",
+      receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json",
+      available: true,
+    }]);
+    await expect(backend.openManualSource("manual-fixture")).resolves.toBeUndefined();
+    await expect(backend.exportDiagnostics("install-ready")).resolves.toEqual({
+      path: "D:\\Diagnostics\\install-ready.zip",
+    });
+    await expect(backend.launchInstall("install-ready")).resolves.toBeUndefined();
+    await expect(backend.openInstallFolder("install-ready")).resolves.toBeUndefined();
+  });
+
+  it("preserves a cancelled diagnostics export", async () => {
+    const backend = new NativeBackend(async (command, args) => {
+      expect(command).toBe("export_diagnostics");
+      expect(args).toEqual({ installId: "install-failed" });
+      return null;
     });
 
-    await expect(backend.exportDiagnostics()).rejects.toMatchObject({
-      code: "command_not_available",
-    });
+    await expect(backend.exportDiagnostics("install-failed")).resolves.toBeNull();
   });
 });

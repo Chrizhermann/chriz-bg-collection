@@ -43,14 +43,17 @@ export interface Backend {
   startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null>;
+  openManualSource(artifactId: string): Promise<void>;
   getRunSnapshot(runId: string): Promise<RunSnapshot>;
   continueWaiting(runId: string): Promise<void>;
   cancelRun(runId: string): Promise<void>;
   getBuildSnapshot(): Promise<BuildSnapshot>;
   advanceBuild(): Promise<BuildSnapshot>;
   retryBuild(): Promise<BuildSnapshot>;
-  exportDiagnostics(): Promise<{ readonly path: string }>;
-  listManagedInstallations(): Promise<readonly ManagedInstallation[]>;
+  exportDiagnostics(installId: string): Promise<{ readonly path: string } | null>;
+  listManagedInstallations(): Promise<ManagedInstallation[]>;
+  launchInstall(installId: string): Promise<void>;
+  openInstallFolder(installId: string): Promise<void>;
   getUpdates(): Promise<UpdateSummary>;
 }
 
@@ -127,6 +130,15 @@ type ManualArchiveSupplyWire = {
   readonly filename: string;
   readonly sha256: string;
   readonly length: number;
+};
+
+type ManagedInstallationWire = {
+  readonly id: string;
+  readonly name: string;
+  readonly path: string;
+  readonly status: string;
+  readonly receipt_path: string;
+  readonly available: boolean;
 };
 
 type RunSnapshotWire = {
@@ -308,6 +320,10 @@ export class NativeBackend implements Backend {
     };
   }
 
+  async openManualSource(artifactId: string): Promise<void> {
+    await this.#command("open_manual_source", { artifactId });
+  }
+
   async getRunSnapshot(runId: string): Promise<RunSnapshot> {
     const snapshot = await this.#command<RunSnapshotWire>("get_run_snapshot", { runId });
     return {
@@ -339,12 +355,24 @@ export class NativeBackend implements Backend {
     return this.#unavailable("Build retry");
   }
 
-  exportDiagnostics(): Promise<{ readonly path: string }> {
-    return this.#unavailable("Diagnostics export");
+  exportDiagnostics(installId: string): Promise<{ readonly path: string } | null> {
+    return this.#command("export_diagnostics", { installId });
   }
 
-  listManagedInstallations(): Promise<readonly ManagedInstallation[]> {
-    return this.#unavailable("Managed installations");
+  async listManagedInstallations(): Promise<ManagedInstallation[]> {
+    const installations = await this.#command<ManagedInstallationWire[]>("list_managed_installations");
+    return installations.map(({ receipt_path: receiptPath, ...installation }) => ({
+      ...installation,
+      receiptPath,
+    }));
+  }
+
+  async launchInstall(installId: string): Promise<void> {
+    await this.#command("launch_install", { installId });
+  }
+
+  async openInstallFolder(installId: string): Promise<void> {
+    await this.#command("open_install_folder", { installId });
   }
 
   getUpdates(): Promise<UpdateSummary> {
@@ -507,6 +535,10 @@ export class FixtureBackend implements Backend {
     });
   }
 
+  openManualSource(_artifactId: string): Promise<void> {
+    return Promise.resolve();
+  }
+
   getRunSnapshot(runId: string): Promise<RunSnapshot> {
     return Promise.resolve({ runId, status: "running", events: [], report: null, error: null });
   }
@@ -533,12 +565,20 @@ export class FixtureBackend implements Backend {
     return Promise.resolve(this.#snapshot());
   }
 
-  exportDiagnostics(): Promise<{ readonly path: string }> {
+  exportDiagnostics(_installId: string): Promise<{ readonly path: string } | null> {
     return Promise.resolve({ path: "C:\\Fixture\\diagnostics\\build-report.zip" });
   }
 
-  listManagedInstallations(): Promise<readonly ManagedInstallation[]> {
-    return Promise.resolve([{ id: "fixture-install", name: this.#options.textOverrides?.campaignName ?? "Chriz EET — Stream test", path: "D:\\Fixture Campaigns\\Chriz EET Stream Test", status: "Ready to play", receiptPath: "D:\\Fixture Campaigns\\Chriz EET Stream Test\\install-receipt.json" }]);
+  listManagedInstallations(): Promise<ManagedInstallation[]> {
+    return Promise.resolve([{ id: "fixture-install", name: this.#options.textOverrides?.campaignName ?? "Chriz EET — Stream test", path: "D:\\Fixture Campaigns\\Chriz EET Stream Test", status: "Ready to play", receiptPath: "D:\\Fixture Campaigns\\Chriz EET Stream Test\\install-receipt.json", available: true }]);
+  }
+
+  launchInstall(_installId: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  openInstallFolder(_installId: string): Promise<void> {
+    return Promise.resolve();
   }
 
   getUpdates(): Promise<UpdateSummary> {

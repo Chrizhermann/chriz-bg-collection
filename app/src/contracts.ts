@@ -212,6 +212,7 @@ export interface ManagedInstallation {
   readonly path: string;
   readonly status: string;
   readonly receiptPath: string;
+  readonly available: boolean;
 }
 
 export interface UpdateSummary {
