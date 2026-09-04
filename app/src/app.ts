@@ -5,7 +5,7 @@ import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate
 import { buildScreen } from "./screens/build";
 import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
-import { homeScreen } from "./screens/home";
+import { homeScreen, type ShortcutFeedback } from "./screens/home";
 import { reviewScreen } from "./screens/review";
 import { installScreen } from "./screens/install";
 import { setupScreen } from "./screens/setup";
@@ -45,11 +45,14 @@ function rememberInstallId(installId: string): void {
 
 function preferredInstallation(
   installations: readonly ManagedInstallation[],
+  startupInstallId: string | null,
   rememberedId: string | null,
 ): ManagedInstallation | null {
   const available = installations.filter((installation) => installation.available);
   const resumable = installations.filter((installation) => installation.resumable);
   const candidates = available.length > 0 ? available : resumable.length > 0 ? resumable : installations;
+  const startup = candidates.find((installation) => installation.id === startupInstallId);
+  if (startup !== undefined) return startup;
   const remembered = candidates.find((installation) => installation.id === rememberedId);
   if (remembered !== undefined) return remembered;
   return candidates.reduce<ManagedInstallation | null>((newest, installation) => {
@@ -90,6 +93,8 @@ class AppController implements AppHandle {
   #retryAvailable = false;
   #commandError: BackendCommandError | null = null;
   #logState: TechnicalLogState = { paused: false, open: false };
+  #createDesktopShortcutAfterInstall = true;
+  #shortcutFeedback: ShortcutFeedback | null = null;
 
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
@@ -100,7 +105,7 @@ class AppController implements AppHandle {
     ]);
     this.#status = status;
     this.#installations = installations;
-    const selected = preferredInstallation(installations, readRememberedInstallId());
+    const selected = preferredInstallation(installations, status.startupInstallId, readRememberedInstallId());
     this.#installId = selected?.id ?? null;
     if (installations.length > 0) {
       this.#dispatch({ type: "navigate", route: "home", remember: false });
@@ -528,10 +533,15 @@ class AppController implements AppHandle {
       const installations = await this.backend.listManagedInstallations();
       this.#installations = installations;
       const completed = installations.find((installation) => installation.id === installId);
-      const selected = completed ?? preferredInstallation(installations, readRememberedInstallId());
+      const selected = completed ?? preferredInstallation(installations, null, readRememberedInstallId());
       this.#installId = selected?.id ?? null;
       if (selected !== null) rememberInstallId(selected.id);
       this.#dispatch({ type: "navigate", route: "home", remember: false });
+      if (completed?.available === true && this.#createDesktopShortcutAfterInstall) {
+        this.#render();
+        await this.#createDesktopShortcut(completed.id);
+        return;
+      }
     } catch (error: unknown) {
       this.#commandError = error instanceof BackendCommandError
         ? error
@@ -576,6 +586,17 @@ class AppController implements AppHandle {
     await this.backend.openInstallFolder(installId);
   }
 
+  async #createDesktopShortcut(installId: string): Promise<void> {
+    if (!this.#installations.some((installation) => installation.id === installId && installation.available)) return;
+    try {
+      const result = await this.backend.createDesktopShortcut(installId);
+      this.#shortcutFeedback = { installId, state: "created", path: result.path };
+    } catch {
+      this.#shortcutFeedback = { installId, state: "failed" };
+    }
+    this.#render();
+  }
+
   async #installAppUpdate(version: string): Promise<void> {
     await this.backend.installAppUpdate(version);
   }
@@ -588,6 +609,8 @@ class AppController implements AppHandle {
   async #beginNewInstallation(): Promise<void> {
     this.#dispatch({ type: "review-cleared" });
     this.#dispatch({ type: "build-cleared" });
+    this.#createDesktopShortcutAfterInstall = true;
+    this.#shortcutFeedback = null;
     await this.#prepareInstallFlow();
     this.#dispatch({ type: "navigate", route: "welcome" });
     this.#render();
@@ -622,7 +645,9 @@ class AppController implements AppHandle {
         openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
         resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
         select: (installId) => this.#selectManagedInstallation(installId),
+        createShortcut: (installId) => this.#createDesktopShortcut(installId),
       },
+      this.#shortcutFeedback,
     );
     let content: HTMLElement;
     switch (this.#state.route) {
@@ -653,6 +678,7 @@ class AppController implements AppHandle {
           evaluation,
           evaluationPending: this.#state.evaluationPending,
           starting: this.#starting,
+          createDesktopShortcut: this.#createDesktopShortcutAfterInstall,
         }, {
           selectSource: (game, id) => safely(() => this.#selectGame(game, id)),
           browseSource: (game) => safely(() => this.#chooseGameFolder(game)),
@@ -661,6 +687,9 @@ class AppController implements AppHandle {
           browseLocation: () => safely(() => this.#chooseDestinationFolder()),
           customize: () => safely(() => this.#customizeInstallation()),
           install: () => safely(() => this.#startInstallation()),
+          changeDesktopShortcut: (selected) => {
+            if (!this.#starting) this.#createDesktopShortcutAfterInstall = selected;
+          },
         });
         break;
       case "games":

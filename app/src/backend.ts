@@ -57,6 +57,7 @@ export interface Backend {
   listManagedInstallations(): Promise<ManagedInstallation[]>;
   launchInstall(installId: string): Promise<void>;
   openInstallFolder(installId: string): Promise<void>;
+  createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
   getUpdates(): Promise<UpdateSummary>;
   installAppUpdate(version: string): Promise<void>;
   activateRecipeUpdate(version: string): Promise<void>;
@@ -73,6 +74,7 @@ type BootstrapWire = {
   readonly mode: "native";
   readonly engine_version: string;
   readonly recipe_version: string | null;
+  readonly startup_install_id: string | null;
 };
 
 type GameCandidateWire = {
@@ -285,6 +287,7 @@ export class NativeBackend implements Backend {
       mode: status.mode,
       engineVersion: status.engine_version,
       recipeVersion: status.recipe_version,
+      startupInstallId: status.startup_install_id,
     };
   }
 
@@ -434,6 +437,10 @@ export class NativeBackend implements Backend {
     await this.#command("open_install_folder", { installId });
   }
 
+  createDesktopShortcut(installId: string): Promise<{ readonly path: string }> {
+    return this.#command("create_desktop_shortcut", { installId });
+  }
+
   async getUpdates(): Promise<UpdateSummary> {
     const update = await this.#command<UpdateSummaryWire>("check_updates");
     return {
@@ -525,7 +532,7 @@ export class FixtureBackend implements Backend {
   }
 
   getStatus(): Promise<BackendStatus> {
-    return Promise.resolve({ mode: "fixture", engineVersion: "0.1.0", recipeVersion: "2026.09-fixture" });
+    return Promise.resolve({ mode: "fixture", engineVersion: "0.1.0", recipeVersion: "2026.09-fixture", startupInstallId: null });
   }
 
   discoverGames(): Promise<GameDiscovery> {
@@ -700,6 +707,10 @@ export class FixtureBackend implements Backend {
 
   openInstallFolder(_installId: string): Promise<void> {
     return Promise.resolve();
+  }
+
+  createDesktopShortcut(_installId: string): Promise<{ readonly path: string }> {
+    return Promise.resolve({ path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" });
   }
 
   getUpdates(): Promise<UpdateSummary> {

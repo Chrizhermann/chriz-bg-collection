@@ -13,6 +13,7 @@ export interface BackendStatus {
   readonly mode: "fixture" | "native";
   readonly engineVersion: string;
   readonly recipeVersion: string | null;
+  readonly startupInstallId: string | null;
 }
 
 export interface InstallationDefaults {

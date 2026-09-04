@@ -16,6 +16,7 @@ export interface InstallScreenModel {
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationPending: boolean;
   readonly starting: boolean;
+  readonly createDesktopShortcut: boolean;
 }
 
 export interface InstallScreenActions {
@@ -26,6 +27,7 @@ export interface InstallScreenActions {
   readonly browseLocation: () => void | Promise<void>;
   readonly customize: () => void | Promise<void>;
   readonly install: () => void | Promise<void>;
+  readonly changeDesktopShortcut: (selected: boolean) => void | Promise<void>;
 }
 
 function selectedCandidate(candidates: readonly GameCandidate[], selectedId: string): GameCandidate | undefined {
@@ -178,7 +180,16 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   );
   const install = actionButton(model.starting ? "Starting installation…" : "Install Chriz Easy BG", actions.install);
   install.disabled = !ready;
-  finish.append(readiness, install);
+  const finishActions = element("div", "install-finish-actions");
+  const shortcutChoice = element("label", "shortcut-choice");
+  const shortcut = element("input");
+  shortcut.type = "checkbox";
+  shortcut.checked = model.createDesktopShortcut;
+  shortcut.disabled = model.starting;
+  shortcut.addEventListener("change", () => void actions.changeDesktopShortcut(shortcut.checked));
+  shortcutChoice.append(shortcut, element("span", undefined, "Create desktop shortcut when finished"));
+  finishActions.append(shortcutChoice, install);
+  finish.append(readiness, finishActions);
 
   page.append(sources, settings, recipe, finish);
   return page;

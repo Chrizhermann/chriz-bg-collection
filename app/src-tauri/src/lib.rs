@@ -1,6 +1,7 @@
 pub mod bridge;
 mod commands;
 pub mod error;
+pub mod shortcut;
 pub mod updates;
 
 use bridge::NativeBridge;
@@ -9,13 +10,15 @@ use tauri::Manager;
 
 /// Runs the desktop shell with only the reviewed native command surface enabled.
 pub fn run() -> tauri::Result<()> {
+    let startup_install_id = bridge::parse_startup_install_id(std::env::args_os());
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .setup(|app| {
+        .setup(move |app| {
             let resource_dir = app.path().resource_dir()?;
             let cache_dir = app.path().app_cache_dir()?;
             app.manage(BridgeState::new(
-                NativeBridge::from_resource_dir_with_cache(&resource_dir, &cache_dir),
+                NativeBridge::from_resource_dir_with_cache(&resource_dir, &cache_dir)
+                    .with_startup_install_id(startup_install_id.clone()),
             ));
             Ok(())
         })
@@ -40,6 +43,7 @@ pub fn run() -> tauri::Result<()> {
             commands::export_diagnostics,
             commands::launch_install,
             commands::open_install_folder,
+            commands::create_desktop_shortcut,
             commands::check_updates,
             commands::install_app_update,
             commands::activate_recipe_update,

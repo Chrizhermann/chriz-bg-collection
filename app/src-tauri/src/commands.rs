@@ -9,10 +9,10 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::bridge::{
-    BootstrapResponse, DestinationEvaluationResponse, DiagnosticsExportResponse,
-    EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse, GameDiscoveryResponse,
-    InstallationDefaultsResponse, ManagedInstallationResponse, ManualArchiveResponse, NativeBridge,
-    RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
+    BootstrapResponse, DesktopShortcutResponse, DestinationEvaluationResponse,
+    DiagnosticsExportResponse, EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse,
+    GameDiscoveryResponse, InstallationDefaultsResponse, ManagedInstallationResponse,
+    ManualArchiveResponse, NativeBridge, RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 use crate::updates::UpdateCenterResponse;
@@ -145,7 +145,7 @@ pub async fn choose_destination_folder(
         let selected = local_path(
             app.dialog()
                 .file()
-                .set_title("Choose a new campaign destination")
+                .set_title("Choose an install location")
                 .blocking_pick_folder(),
         )?;
         bridge.choose_destination_folder(selected, &bg1_candidate_id, &bg2_candidate_id)
@@ -224,6 +224,15 @@ pub async fn open_install_folder(
 ) -> Result<(), CommandError> {
     let bridge = state.bridge.clone();
     background(move || bridge.open_install_folder(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn create_desktop_shortcut(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<DesktopShortcutResponse, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.create_desktop_shortcut(&install_id)).await
 }
 
 #[tauri::command]

@@ -305,8 +305,12 @@ git commit -m "app: reopen completed CEBG installs as a launcher"
 - Modify: `app/src-tauri/Cargo.toml`
 - Modify: `app/src/backend.ts`
 - Modify: `app/src/contracts.ts`
+- Modify: `app/src/app.ts`
 - Modify: `app/src/screens/home.ts`
+- Modify: `app/src/screens/install.ts`
+- Modify: `app/src/styles.css`
 - Extend: `app/src-tauri/tests/command_contract.rs`
+- Extend: `app/tests/backend-contract.test.ts`
 - Extend: `app/tests/wizard.test.ts`
 
 **Step 1: Write failing shortcut-boundary tests**

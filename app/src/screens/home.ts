@@ -7,6 +7,13 @@ export interface HomeActions {
   readonly openFolder: (installId: string) => void | Promise<void>;
   readonly resume: (installId: string) => void | Promise<void>;
   readonly select: (installId: string) => void | Promise<void>;
+  readonly createShortcut: (installId: string) => void | Promise<void>;
+}
+
+export interface ShortcutFeedback {
+  readonly installId: string;
+  readonly state: "created" | "failed";
+  readonly path?: string;
 }
 
 function installationPicker(
@@ -49,6 +56,7 @@ export function homeScreen(
   installations: readonly ManagedInstallation[],
   selected: ManagedInstallation | null,
   actions: HomeActions,
+  shortcutFeedback: ShortcutFeedback | null = null,
 ): HTMLElement {
   const page = element("div", "screen-stack launcher-screen");
   if (selected === null) {
@@ -73,15 +81,34 @@ export function homeScreen(
   const picker = installationPicker(installations, selected.id, actions.select);
   if (picker !== null) card.append(picker);
   const controls = element("div", "inline-actions launcher-actions");
+  let feedback: HTMLElement | null = null;
   if (selected.available) {
+    const currentFeedback = shortcutFeedback?.installId === selected.id ? shortcutFeedback : null;
     controls.append(
       actionButton("Play Chriz Easy BG", () => actions.launch(selected.id)),
       actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"),
+      actionButton(
+        currentFeedback?.state === "created"
+          ? "Recreate desktop shortcut"
+          : currentFeedback?.state === "failed"
+            ? "Retry desktop shortcut"
+            : "Create desktop shortcut",
+        () => actions.createShortcut(selected.id),
+        "quiet",
+      ),
     );
+    if (currentFeedback !== null) {
+      feedback = element("div", `shortcut-feedback ${currentFeedback.state === "created" ? "ok" : "danger"}`);
+      feedback.setAttribute("role", "status");
+      feedback.append(element("strong", undefined, currentFeedback.state === "created" ? "Shortcut created on your desktop." : "The desktop shortcut wasn't created."));
+      if (currentFeedback.path !== undefined) feedback.append(element("p", "path", currentFeedback.path));
+    }
   } else if (selected.resumable) {
     controls.append(actionButton("Continue installation", () => actions.resume(selected.id)));
   }
-  card.append(controls, installationDetails(selected));
+  card.append(controls);
+  if (feedback !== null) card.append(feedback);
+  card.append(installationDetails(selected));
   page.append(card, screenActions(null, actionButton("New installation", actions.begin, "quiet")));
   return page;
 }

@@ -1,7 +1,7 @@
 //! Read-only native adapter over the engine's presentation-neutral CLI operations.
 
 use std::collections::{BTreeSet, HashMap};
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
@@ -32,6 +32,7 @@ use bg_engine::weidu::runner::RunnerControlHandle;
 use serde::Serialize;
 
 use crate::error::CommandError;
+use crate::shortcut::{self, ShortcutRequest};
 use crate::updates::{
     ApplicationUpdateResponse, ManagedCopyUpdateResponse, RecipeUpdateResponse, RecipeUpdateState,
     UpdateCenterResponse,
@@ -83,6 +84,8 @@ pub trait BridgeSystem: Send + Sync {
     fn open_folder(&self, path: &Path) -> Result<(), String>;
     fn open_https(&self, url: &str) -> Result<(), String>;
     fn export_diagnostics(&self, managed_root: &Path, output: &Path) -> Result<PathBuf, String>;
+    fn current_exe(&self) -> Result<PathBuf, String>;
+    fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String>;
 }
 
 #[derive(Default)]
@@ -109,6 +112,14 @@ impl BridgeSystem for SystemBridgeSystem {
         diagnostics_for_managed_install(managed_root, output)
             .map(|bundle| bundle.path)
             .map_err(|error| error.to_string())
+    }
+
+    fn current_exe(&self) -> Result<PathBuf, String> {
+        std::env::current_exe().map_err(|error| error.to_string())
+    }
+
+    fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String> {
+        shortcut::create_desktop_shortcut(request)
     }
 }
 
@@ -265,6 +276,7 @@ pub struct NativeBridge {
     app_data: Option<PathBuf>,
     engine: Arc<dyn BridgeEngine>,
     system: Arc<dyn BridgeSystem>,
+    startup_install_id: Option<String>,
     runtime: Arc<Mutex<BridgeRuntime>>,
     sequence: Arc<AtomicU64>,
 }
@@ -367,6 +379,13 @@ pub struct DiagnosticsExportResponse {
     pub path: String,
 }
 
+/// Display-only path returned after writing a verified CEBG launcher shortcut.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DesktopShortcutResponse {
+    pub path: String,
+}
+
 /// One immutable registry record projected without exposing executable authority.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -407,6 +426,30 @@ pub struct BootstrapResponse {
     pub engine_version: String,
     /// Signed recipe release version; absent until Task 20 supplies it.
     pub recipe_version: Option<String>,
+    /// Optional semantic launcher hint; callers must still match it to a current registry record.
+    pub startup_install_id: Option<String>,
+}
+
+/// Parses one launcher-provided install identity without granting it filesystem authority.
+pub fn parse_startup_install_id<I, S>(arguments: I) -> Option<String>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let mut selected = None;
+    for argument in arguments {
+        let Some(argument) = argument.as_ref().to_str() else {
+            continue;
+        };
+        let Some(install_id) = argument.strip_prefix("--install-id=") else {
+            continue;
+        };
+        if install_id.is_empty() || selected.is_some() {
+            return None;
+        }
+        selected = Some(install_id.to_owned());
+    }
+    selected
 }
 
 /// Player-facing freshness category for one candidate.
@@ -536,6 +579,12 @@ impl NativeBridge {
         )
     }
 
+    /// Attaches a process-start selection hint that remains subject to registry validation.
+    pub fn with_startup_install_id(mut self, startup_install_id: Option<String>) -> Self {
+        self.startup_install_id = startup_install_id;
+        self
+    }
+
     /// Replaces only host discovery, allowing deterministic command-contract tests.
     #[doc(hidden)]
     pub fn with_discoverer<F>(
@@ -630,6 +679,7 @@ impl NativeBridge {
             mode: "native".to_owned(),
             engine_version: bg_engine::VERSION.to_owned(),
             recipe_version: None,
+            startup_install_id: self.startup_install_id.clone(),
         })
     }
 
@@ -953,6 +1003,67 @@ impl NativeBridge {
             })
     }
 
+    /// Creates a launcher shortcut only after reloading an available registry identity.
+    pub fn create_desktop_shortcut(
+        &self,
+        install_id: &str,
+    ) -> Result<DesktopShortcutResponse, CommandError> {
+        let record = self.available_managed_install(install_id)?.record;
+        let target = self.system.current_exe().map_err(|error| {
+            CommandError::new(
+                "application_executable_unavailable",
+                "The CEBG application path could not be found.",
+                "Open CEBG normally, then try creating the shortcut again.",
+                error,
+            )
+        })?;
+        if !target.is_absolute()
+            || target
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.eq_ignore_ascii_case("InfinityLoader.exe"))
+        {
+            return Err(CommandError::new(
+                "application_executable_invalid",
+                "The CEBG application path is not safe for a shortcut.",
+                "Open the installed CEBG application, then try again.",
+                format!("current executable resolved to {}", target.display()),
+            ));
+        }
+        let working_directory = target
+            .parent()
+            .ok_or_else(|| {
+                CommandError::new(
+                    "application_executable_invalid",
+                    "The CEBG application folder could not be found.",
+                    "Open the installed CEBG application, then try again.",
+                    format!("current executable has no parent: {}", target.display()),
+                )
+            })?
+            .to_path_buf();
+        let request = ShortcutRequest {
+            install_id: record.install_id.clone(),
+            display_name: record.display_name,
+            target,
+            arguments: format!("--install-id={}", record.install_id),
+            working_directory,
+        };
+        let path = self
+            .system
+            .create_desktop_shortcut(request)
+            .map_err(|error| {
+                CommandError::new(
+                    "desktop_shortcut_failed",
+                    "The desktop shortcut could not be created.",
+                    "Your installation is ready to play. Retry the shortcut from My installs.",
+                    error,
+                )
+            })?;
+        Ok(DesktopShortcutResponse {
+            path: display_windows_path(&path)?.to_owned(),
+        })
+    }
+
     /// Exports diagnostics for an engine-known install to one native-selected output path.
     pub fn export_diagnostics(
         &self,
@@ -1225,6 +1336,7 @@ impl NativeBridge {
             app_data,
             engine,
             system,
+            startup_install_id: None,
             runtime: Arc::new(Mutex::new(BridgeRuntime::default())),
             sequence: Arc::new(AtomicU64::new(0)),
         }

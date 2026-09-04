@@ -468,6 +468,27 @@ fieldset {
   font-size: 0.82rem;
 }
 
+.install-finish-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.shortcut-choice {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  color: var(--vellum-dim);
+  font-size: 0.82rem;
+}
+
+.shortcut-choice input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--teal);
+}
+
 label,
 legend {
   color: var(--vellum);
@@ -766,6 +787,21 @@ input[type="text"] {
   margin-block: 0.25rem;
 }
 
+.shortcut-feedback {
+  padding: 0.7rem 0.85rem;
+  border-left: 3px solid var(--teal-dark);
+  background: rgba(117, 186, 180, 0.08);
+}
+
+.shortcut-feedback.danger {
+  border-color: var(--ember);
+  background: rgba(228, 123, 103, 0.08);
+}
+
+.shortcut-feedback .path {
+  margin: 0.25rem 0 0;
+}
+
 .install-switcher {
   display: grid;
   max-width: 28rem;
@@ -837,6 +873,16 @@ input[type="text"] {
 
   .app-header {
     min-height: 4rem;
+  }
+
+  .install-ready,
+  .install-finish-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .install-finish-actions .button {
+    width: 100%;
   }
 
   .brand-mark {

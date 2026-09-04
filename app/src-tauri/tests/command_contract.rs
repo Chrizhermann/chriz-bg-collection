@@ -18,10 +18,11 @@ use bg_engine::resolve::InstallPlan;
 use bg_engine::session::{CampaignCreated, SessionEvent, SessionStore, SourceGameFingerprints};
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
 use chriz_bg_app_lib::bridge::{
-    display_windows_path, installation_defaults, BridgeEngine, BridgeSystem, NativeBridge,
-    RunEventEnvelope, SequencedEventSink,
+    display_windows_path, installation_defaults, parse_startup_install_id, BridgeEngine,
+    BridgeSystem, NativeBridge, RunEventEnvelope, SequencedEventSink,
 };
 use chriz_bg_app_lib::error::CommandError;
+use chriz_bg_app_lib::shortcut::{shortcut_file_name, ShortcutRequest};
 use serde_json::json;
 use tempfile::TempDir;
 
@@ -185,6 +186,7 @@ struct RecordingBridgeSystem {
     folders: Mutex<Vec<PathBuf>>,
     urls: Mutex<Vec<String>>,
     diagnostics: Mutex<Vec<(PathBuf, PathBuf)>>,
+    shortcuts: Mutex<Vec<ShortcutRequest>>,
 }
 
 impl BridgeSystem for RecordingBridgeSystem {
@@ -212,6 +214,17 @@ impl BridgeSystem for RecordingBridgeSystem {
             .unwrap()
             .push((managed_root.to_path_buf(), output.to_path_buf()));
         Ok(output.to_path_buf())
+    }
+
+    fn current_exe(&self) -> Result<PathBuf, String> {
+        Ok(PathBuf::from(
+            r"C:\Program Files\Chriz Easy BG\Chriz Easy BG.exe",
+        ))
+    }
+
+    fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String> {
+        self.shortcuts.lock().unwrap().push(request);
+        Ok(PathBuf::from(r"C:\Users\Chris\Desktop\Chriz Easy BG.lnk"))
     }
 }
 
@@ -593,6 +606,45 @@ fn bootstrap_validates_the_recipe_without_claiming_an_unsigned_version() {
     assert_eq!(status.mode, "native");
     assert_eq!(status.engine_version, "0.1.0");
     assert_eq!(status.recipe_version, None);
+    assert_eq!(status.startup_install_id, None);
+}
+
+#[test]
+fn desktop_shortcut_startup_hint_accepts_only_one_exact_nonempty_argument() {
+    assert_eq!(
+        parse_startup_install_id(["cebg.exe", "--install-id=install-ready"]),
+        Some("install-ready".to_owned())
+    );
+    assert_eq!(
+        parse_startup_install_id(["cebg.exe", "--other=value"]),
+        None
+    );
+    assert_eq!(parse_startup_install_id(["cebg.exe", "--install-id"]), None);
+    assert_eq!(
+        parse_startup_install_id(["cebg.exe", "--install-id="]),
+        None
+    );
+    assert_eq!(
+        parse_startup_install_id([
+            "cebg.exe",
+            "--install-id=install-one",
+            "--install-id=install-two",
+        ]),
+        None
+    );
+}
+
+#[test]
+fn desktop_shortcut_filename_is_unicode_safe_and_windows_compatible() {
+    assert_eq!(
+        shortcut_file_name(" Ordinary — 이름<>:\"/\\|?*... "),
+        "Ordinary — 이름.lnk"
+    );
+    assert_eq!(shortcut_file_name("CON"), "CEBG - CON.lnk");
+    assert_eq!(shortcut_file_name(" ... "), "Chriz Easy BG.lnk");
+    let long = shortcut_file_name(&"이".repeat(200));
+    assert!(long.ends_with(".lnk"));
+    assert!(long.encode_utf16().count() <= 124);
 }
 
 #[test]
@@ -1336,6 +1388,91 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
     );
     assert_eq!(
         bridge.launch_install("not-a-registry-id").unwrap_err().code,
+        "managed_install_unknown"
+    );
+}
+
+#[test]
+fn desktop_shortcut_uses_only_the_available_registry_identity_and_current_app() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("managed-campaign");
+    fs::create_dir(&cache).unwrap();
+    publish_managed_install(&app_data, &managed, "install-shortcut");
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let system = Arc::new(RecordingBridgeSystem::default());
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        engine,
+        system.clone(),
+    );
+
+    let response = bridge
+        .create_desktop_shortcut("install-shortcut")
+        .expect("create shortcut from available install");
+    assert_eq!(response.path, r"C:\Users\Chris\Desktop\Chriz Easy BG.lnk");
+    assert_eq!(
+        system.shortcuts.lock().unwrap().as_slice(),
+        &[ShortcutRequest {
+            install_id: "install-shortcut".to_owned(),
+            display_name: "Task 23 fixture".to_owned(),
+            target: PathBuf::from(r"C:\Program Files\Chriz Easy BG\Chriz Easy BG.exe"),
+            arguments: "--install-id=install-shortcut".to_owned(),
+            working_directory: PathBuf::from(r"C:\Program Files\Chriz Easy BG"),
+        }]
+    );
+    assert_eq!(
+        bridge
+            .create_desktop_shortcut("not-a-registry-id")
+            .unwrap_err()
+            .code,
+        "managed_install_unknown"
+    );
+}
+
+#[test]
+fn desktop_shortcut_rejects_stale_and_incomplete_installations() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let stale = root.join("stale-campaign");
+    let incomplete = root.join("incomplete-campaign");
+    fs::create_dir(&cache).unwrap();
+    publish_managed_install(&app_data, &stale, "install-stale-shortcut");
+    fs::write(stale.join(".chriz/install-receipt.json"), b"changed").unwrap();
+    publish_started_campaign(
+        &app_data,
+        &incomplete,
+        &cache,
+        "install-incomplete-shortcut",
+    );
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    assert_eq!(
+        bridge
+            .create_desktop_shortcut("install-stale-shortcut")
+            .unwrap_err()
+            .code,
+        "managed_install_stale"
+    );
+    assert_eq!(
+        bridge
+            .create_desktop_shortcut("install-incomplete-shortcut")
+            .unwrap_err()
+            .code,
         "managed_install_unknown"
     );
 }

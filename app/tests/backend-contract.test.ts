@@ -83,7 +83,7 @@ describe("native command adapter", () => {
     const invoke = vi.fn<InvokeCommand>(async (command, args) => {
       switch (command) {
         case "bootstrap":
-          return { mode: "native", engine_version: "0.1.0", recipe_version: null };
+          return { mode: "native", engine_version: "0.1.0", recipe_version: null, startup_install_id: "install-ready" };
         case "discover_games":
           return {
             bg1_candidates: [{ id: "bg1", label: "BG:EE + SoD — Steam — clean", path: "C:\\BGEE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean."] }],
@@ -124,7 +124,7 @@ describe("native command adapter", () => {
     });
     const backend = new NativeBackend(invoke);
 
-    await expect(backend.getStatus()).resolves.toEqual({ mode: "native", engineVersion: "0.1.0", recipeVersion: null });
+    await expect(backend.getStatus()).resolves.toEqual({ mode: "native", engineVersion: "0.1.0", recipeVersion: null, startupInstallId: "install-ready" });
     const discovery = await backend.discoverGames();
     expect(discovery).toMatchObject({ selectedBg1Id: "bg1", selectedBg2Id: "bg2" });
     expect(discovery.bg1Candidates[0]).toMatchObject({ storefront: "steam", build: "2.7.3.0" });
@@ -323,6 +323,9 @@ describe("native command adapter", () => {
         case "open_install_folder":
           expect(args).toEqual({ installId: "install-ready" });
           return null;
+        case "create_desktop_shortcut":
+          expect(args).toEqual({ installId: "install-ready" });
+          return { path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" };
         default:
           throw new Error(`Unexpected command ${command}`);
       }
@@ -359,6 +362,9 @@ describe("native command adapter", () => {
     });
     await expect(backend.launchInstall("install-ready")).resolves.toBeUndefined();
     await expect(backend.openInstallFolder("install-ready")).resolves.toBeUndefined();
+    await expect(backend.createDesktopShortcut("install-ready")).resolves.toEqual({
+      path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk",
+    });
   });
 
   it("preserves a cancelled diagnostics export", async () => {

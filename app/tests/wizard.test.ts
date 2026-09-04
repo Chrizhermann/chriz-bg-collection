@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { getByLabelText, getByRole, getByText, queryByText } from "@testing-library/dom";
+import { getByLabelText, getByRole, getByText, queryByText, waitFor } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +23,38 @@ function managedInstallation(overrides: Partial<ManagedInstallation> = {}): Mana
     recipeVersion: "0.1.0-alpha.1",
     ...overrides,
   };
+}
+
+class ShortcutCompletionBackend extends FixtureBackend {
+  registryReads = 0;
+  shortcutCalls: string[] = [];
+  failNextShortcut = false;
+
+  override getStatus() {
+    return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
+  }
+
+  override listManagedInstallations() {
+    this.registryReads += 1;
+    return Promise.resolve(this.registryReads === 1 ? [] : [managedInstallation({ id: "completed" })]);
+  }
+
+  override startBuild(_reviewToken: string, onEvent: (event: RunEventEnvelope) => void) {
+    queueMicrotask(() => {
+      onEvent({ runId: "shortcut-run", sequenceAsString: "1", event: { type: "campaign_started", install_id: "completed", resumed: false } });
+      onEvent({ runId: "shortcut-run", sequenceAsString: "2", event: { type: "campaign_finished", install_id: "completed" } });
+    });
+    return Promise.resolve({ runId: "shortcut-run" });
+  }
+
+  override createDesktopShortcut(installId: string) {
+    this.shortcutCalls.push(installId);
+    if (this.failNextShortcut) {
+      this.failNextShortcut = false;
+      return Promise.reject(new Error("Desktop access denied"));
+    }
+    return Promise.resolve({ path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" });
+  }
 }
 
 describe("Chriz Easy BG application flow", () => {
@@ -134,6 +166,81 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByRole(root, "heading", { level: 1, name: "Updates" })).toBeTruthy();
     expect(getByText(root, "Your current game stays safe.")).toBeTruthy();
     expect(queryByText(root, "Update now")).toBeNull();
+  });
+
+  it("creates or refreshes a desktop shortcut from an existing launcher", async () => {
+    class ExistingInstallBackend extends FixtureBackend {
+      shortcuts: string[] = [];
+
+      constructor() {
+        super({ managedInstallations: [managedInstallation()] });
+      }
+
+      override createDesktopShortcut(installId: string) {
+        this.shortcuts.push(installId);
+        return Promise.resolve({ path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" });
+      }
+    }
+    const backend = new ExistingInstallBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+
+    await user.click(getByRole(root, "button", { name: "Create desktop shortcut" }));
+    expect(backend.shortcuts).toEqual(["ready"]);
+    expect(getByText(root, "Shortcut created on your desktop.")).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Recreate desktop shortcut" })).toBeTruthy();
+  });
+
+  it("defaults the completion shortcut on and creates it only after the install is available", async () => {
+    const backend = new ShortcutCompletionBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+
+    const shortcut = getByRole(root, "checkbox", { name: "Create desktop shortcut when finished" }) as HTMLInputElement;
+    expect(shortcut.checked).toBe(true);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+
+    await waitFor(() => expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy());
+    expect(backend.registryReads).toBe(2);
+    expect(backend.shortcutCalls).toEqual(["completed"]);
+    expect(getByText(root, "Shortcut created on your desktop.")).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Play Chriz Easy BG" })).toBeTruthy();
+  });
+
+  it("does not create the completion shortcut when the default is unchecked", async () => {
+    const backend = new ShortcutCompletionBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+
+    await user.click(getByRole(root, "checkbox", { name: "Create desktop shortcut when finished" }));
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+
+    await waitFor(() => expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy());
+    expect(backend.shortcutCalls).toEqual([]);
+    expect(getByRole(root, "button", { name: "Create desktop shortcut" })).toBeTruthy();
+  });
+
+  it("keeps Play available when shortcut creation fails and lets the player retry", async () => {
+    const backend = new ShortcutCompletionBackend();
+    backend.failNextShortcut = true;
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+    await waitFor(() => expect(getByText(root, "The desktop shortcut wasn't created.")).toBeTruthy());
+
+    expect(getByRole(root, "button", { name: "Play Chriz Easy BG" })).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "Retry desktop shortcut" }));
+    await waitFor(() => expect(getByText(root, "Shortcut created on your desktop.")).toBeTruthy());
+    expect(backend.shortcutCalls).toEqual(["completed", "completed"]);
   });
 
   it("keeps app, recipe, and managed-copy updates separate and rebuild-only", async () => {
@@ -263,7 +370,7 @@ describe("Chriz Easy BG application flow", () => {
 
       override getStatus() {
         this.calls.push("status");
-        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
       }
 
       override listManagedInstallations() {
@@ -330,7 +437,7 @@ describe("Chriz Easy BG application flow", () => {
       }
 
       override getStatus() {
-        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
       }
 
       override resumeBuild(installId: string, _onEvent: (event: RunEventEnvelope) => void) {
@@ -394,6 +501,30 @@ describe("Chriz Easy BG application flow", () => {
     expect((getByLabelText(secondRoot, "Switch install") as HTMLSelectElement).value).toBe("newer");
   });
 
+  it("uses only a valid startup shortcut hint before the remembered install", async () => {
+    const older = managedInstallation({ id: "older", name: "Shortcut install", completedAtMillis: 100 });
+    const newer = managedInstallation({ id: "newer", name: "Remembered install", completedAtMillis: 200 });
+    window.localStorage.setItem("cebg.last-install-id", "newer");
+    class StartupBackend extends FixtureBackend {
+      constructor(private readonly startupInstallId: string) {
+        super({ managedInstallations: [newer, older] });
+      }
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: this.startupInstallId });
+      }
+    }
+    const firstRoot = document.createElement("div");
+    document.body.append(firstRoot);
+    await mountApp(firstRoot, new StartupBackend("older"));
+    expect(getByRole(firstRoot, "heading", { level: 2, name: "Shortcut install" })).toBeTruthy();
+
+    const secondRoot = document.createElement("div");
+    document.body.append(secondRoot);
+    await mountApp(secondRoot, new StartupBackend("not-in-the-registry"));
+    expect(getByRole(secondRoot, "heading", { level: 2, name: "Remembered install" })).toBeTruthy();
+  });
+
   it("still opens the launcher when local storage is unavailable", async () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("storage blocked"); });
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage blocked"); });
@@ -410,7 +541,7 @@ describe("Chriz Easy BG application flow", () => {
       #registryReads = 0;
 
       override getStatus() {
-        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
       }
 
       override listManagedInstallations() {
@@ -528,7 +659,7 @@ describe("Chriz Easy BG application flow", () => {
     const invoke: InvokeCommand = async (command, args) => {
       calls.push(command);
       switch (command) {
-        case "bootstrap": return { mode: "native", engine_version: "0.1.0", recipe_version: null };
+        case "bootstrap": return { mode: "native", engine_version: "0.1.0", recipe_version: null, startup_install_id: null };
         case "installation_defaults": return { name: "Chriz Easy BG", path: "D:\\Native Campaign" };
         case "list_managed_installations":
           registryReads += 1;
@@ -600,7 +731,7 @@ describe("Chriz Easy BG application flow", () => {
       resumedInstalls: string[] = [];
 
       override getStatus() {
-        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
       }
 
       override openManualSource(artifactId: string) {
@@ -702,7 +833,7 @@ describe("Chriz Easy BG application flow", () => {
       started = false;
 
       override getStatus() {
-        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
       }
 
       override async freezeReview(displayName: string, selection: Parameters<FixtureBackend["freezeReview"]>[1], destination: string, bg1CandidateId: string, bg2CandidateId: string) {
@@ -731,7 +862,7 @@ describe("Chriz Easy BG application flow", () => {
   it("lets the player leave an unrecoverable failed build after its terminal snapshot", async () => {
     class UnrecoverableBuildBackend extends FixtureBackend {
       override getStatus() {
-        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
       }
 
       override startBuild(_reviewToken: string, onEvent: Parameters<FixtureBackend["startBuild"]>[1]) {
@@ -776,7 +907,7 @@ describe("Chriz Easy BG application flow", () => {
       diagnosticInstalls: string[] = [];
 
       override getStatus() {
-        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
       }
 
       override startBuild(_reviewToken: string, onEvent: Parameters<FixtureBackend["startBuild"]>[1]) {
