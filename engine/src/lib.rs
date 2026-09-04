@@ -12,6 +12,7 @@ pub mod orchestrator;
 pub mod postcondition;
 pub mod preflight;
 pub mod receipt;
+pub mod recipe_envelope;
 pub mod recipe_view;
 pub mod registry;
 pub mod release_validate;

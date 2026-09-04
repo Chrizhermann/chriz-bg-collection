@@ -139,7 +139,7 @@ pub fn load_release(path: &Path) -> Result<RecipeRelease, UpdateError> {
     Ok(release)
 }
 
-fn validate_release(release: &RecipeRelease) -> Result<(), String> {
+pub(crate) fn validate_release(release: &RecipeRelease) -> Result<(), String> {
     if release.schema != LEDGER_SCHEMA {
         return Err(format!("unsupported ledger schema {}", release.schema));
     }
