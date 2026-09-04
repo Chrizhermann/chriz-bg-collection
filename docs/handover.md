@@ -9,7 +9,7 @@ The umbrella/orchestrator for the whole modded-BG stack: manifest + install orde
 mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalance
 `docs/plans/2026-07-03-umbrella-analysis.md` (user-approved 2026-07-03).
 
-## Real-alpha status (2026-09-04)
+## Chriz Easy BG 0.1 alpha status (2026-09-05)
 
 Branch `codex/installer-v0-real-alpha` is pushed. The installer engine and UI are
 functional, and the public-alpha recipe validates and resolves **35 runs**. All **30
@@ -23,9 +23,26 @@ Tasks 19, 20, and 23 are implemented: public-alpha omissions and evidence are
 release-enforced; immutable recipe envelopes, update classification, and packaging are in
 place; and the Tauri command surface includes restart-safe discovery and resume through the
 immutable campaign index. Task 24 has a tested three-track update-center foundation, but
-the production updater channel is deliberately still unconfigured. The latest local NSIS
-lifecycle smoke passed for the **4,384,999 byte** installer with SHA-256
-`434DCF39DCA4599E55979F32543DAE804D6F71B7BEB01763521D0785B98B0A01`.
+the production updater channel is deliberately still unconfigured.
+
+The player-facing app is now **Chriz Easy BG (CEBG)**. With no registered installation it
+opens directly on one compact install screen with detected sources, editable install name
+and location, recommended choices, a clear readiness state, and one primary Install action.
+With an existing installation it opens as a launcher with Play, Open game folder, install
+switching, collapsed technical paths, and recovery for resumable or moved installs. The
+optional CEBG desktop shortcut is checked by default and points back to the registry-verifying
+launcher rather than directly to the game. Startup remains registry-first, so a completed
+game can be launched even when its original source installs are unavailable.
+
+Fresh verification after this UX slice passes 54 frontend tests, 37 native app tests, full
+workspace tests and Clippy, and public-alpha validation with zero findings. Responsive checks
+pass at 1920x1080, 1366x768, 768x1024, and 375x812: desktop keeps the primary action visible
+without a scrollbar, and constrained screens use one column with normal internal scrolling.
+The final local NSIS lifecycle smoke passed for the **4,413,788 byte**
+`Chriz Easy BG_0.1.0-alpha.1_x64-setup.exe` with SHA-256
+`7BF879133A0E49E67A811F85BCAFF98FC61AFA34B32207314F51375D4F42F227`: its branding and
+version were correct, all 78 bundled manifest files hash-matched, the installed app stayed
+alive for five seconds, and silent uninstall removed the isolated smoke directory.
 
 There is **no full game-install acceptance and no public release yet**. The immediate E2E
 blocker is a genuinely clean Steam BG:EE+SoD 2.7.3 source; the detected Steam BG2 source is
@@ -38,8 +55,8 @@ Immediate next actions only:
 1. Obtain or restore a genuinely clean Steam BG:EE+SoD 2.7.3 source.
 2. Run the first full installer-driven clean EET build and focused smoke before the public
    installer release.
-3. Provision the production signing keys and complete the Task 24 updater UI before
-   publication.
+3. Provision the production signing keys/channel and publish the first explicitly alpha
+   build only after those gates pass.
 
 Other blocked items remain later work and are not expanded here. Older status sections
 below are retained as historical implementation context.

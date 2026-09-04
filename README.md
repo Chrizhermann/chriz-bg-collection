@@ -1,43 +1,63 @@
-# chriz-bg-collection
+# Chriz Easy BG (CEBG)
 
-**The umbrella.** A manifest-driven recipe to reproduce (and share) a heavily-modded
-BG:EE + SoD + BG2:EE **EET** install — 84 mods, 414 WeiDU components — with a recommended
-preset and room to configure everything to your liking.
+Chriz Easy BG is a one-click Windows installer and launcher for a curated, heavily modded
+**Baldur's Gate: Enhanced Edition + Siege of Dragonspear + Baldur's Gate II: Enhanced
+Edition** playthrough using EET.
 
-**Principle: bundle the recipe, not the mods.** No third-party mods are redistributed here;
-the collection pins versions, sources, install order, and component selections, and (later)
-drives the installation. Decision rationale: chriz-bg-rebalance
-`docs/plans/2026-07-03-umbrella-analysis.md`.
+The goal is a polished experience for players, not another expert-only mod manager. CEBG
+finds supported clean games, starts with the recommended collection choices, builds a
+separate installation, verifies the result, and reopens later as a simple launcher.
 
-**Status:** bootstrap. The manifest is captured from the reference install; everything else
-is pending (see `docs/handover.md`).
+## Current status
+
+The `0.1.0-alpha.1` release candidate is functional but not public yet. The current recipe
+resolves 35 ordered install runs and 30 pinned artifacts. Automated engine, UI, acquisition,
+packaging, and recovery checks pass; a complete installer-driven build from clean BG:EE and
+BGII:EE 2.7.3 sources still needs live acceptance before publication.
+
+CEBG currently provides:
+
+- automatic game discovery plus clear clean-source checks for the currently verified Steam
+  2.7.3 builds;
+- an install-first UI with recommended choices already selected;
+- verified downloads and guided handling of the few manually supplied archives;
+- a separate, resumable game installation with an immutable receipt and diagnostics;
+- a returning-player launcher with **Play**, **Open game folder**, and multiple-install
+  switching;
+- an optional verified desktop shortcut, enabled by default; and
+- separate application, recipe, and installation update guidance without unsafe in-place
+  WeiDU surgery.
+
+The production updater/signing channel and the final clean-game EET acceptance run remain
+release gates. See [docs/handover.md](docs/handover.md) for the live status and exact next
+steps.
+
+## Repository principle
+
+**Bundle the recipe, not the mods.** Third-party mods are not redistributed here. The
+collection pins their versions, sources, hashes, install order, and curated component
+choices; every mod retains its own license.
 
 ## Layout
 
+```text
+app/                    Tauri desktop installer and launcher
+engine/                 Rust discovery, planning, acquisition, install, and verification
+manifest/               Versioned recipe, sources, order, profiles, and release evidence
+docs/curation/components/
+                        Human curation decisions and follow-ups per mod
+docs/handover.md         Live agent/developer entry point
 ```
-manifest/
-  install-order.tsv   # 414 rows: position, mod folder, tp2, language, component #, name
-  mod-sources.tsv     # 84 rows: mod folder → version, download URL, archive path (TODO)
-presets/              # component-selection presets (chris-full = the reference install)
-tools/                # install driver (future)
-docs/handover.md      # agent entry point
-```
 
-## The composed stack ("chriz layer" at the tail)
+## Development guardrails
 
-The collection composes independent, individually-usable repos:
-
-| Repo | Role |
-|------|------|
-| [chriz-bg-modpack](https://github.com/Chrizhermann/chriz-bg-modpack) | Consolidated personal fixes (WeiDU mod) |
-| [chriz-bg-rebalance](https://github.com/Chrizhermann/chriz-bg-rebalance) | SCS/SR-adjacent balance adjustments (WeiDU mod) |
-| chriz-sod-rebalance | SoD encounter remix + companion rebalance (WeiDU mod, WIP) |
-| *-Chriz-Balance-Patch | Per-mod patches (Aura, Bardic Wonders, Artisan's Kitpack) |
-
-Everything else in the manifest is third-party — install it from its own source, and go
-thank its authors.
+- Read `AGENTS.md` and `docs/handover.md` before changing the project.
+- Work in an isolated Git worktree.
+- Treat the documented reference game and archive directories as read-only.
+- Run Cargo from PowerShell on Windows.
+- Never hand-edit `manifest/install-order.tsv`; it is captured ground truth.
 
 ## License
 
-MIT for the recipe/tooling. Third-party mods keep their own licenses and are **not**
-included.
+MIT for this repository's recipe and tooling. Third-party mods keep their own licenses and
+are not included.
