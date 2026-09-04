@@ -1,19 +1,122 @@
+import argparse
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from tools import creator_full_recipe
 from tools.creator_full_recipe import (
     CURRENT_ARTISAN_NPC_COMPONENTS,
     CURRENT_MODPACK_COMPONENTS,
     CURRENT_SIRENE_COMPONENTS,
     Entry,
+    LegacyWeiDUReplayAuthoringRefused,
     build_ordered_runs,
+    generate,
+    main,
     parse_weidu_log,
+    parser,
     private_publish_roots,
 )
 
 
 class CreatorFullRecipeTests(unittest.TestCase):
+    def test_generate_refuses_before_paths_sources_or_outputs_are_touched(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "generated-recipe"
+            cache_root = root / "cache"
+            args = argparse.Namespace(
+                base_recipe=root / "missing-base-recipe",
+                bg1_log=root / "missing-bg1-log",
+                bg2_log=root / "missing-bg2-log",
+                source_root=root / "missing-source-root",
+                output=output,
+                cache_root=cache_root,
+            )
+
+            with (
+                mock.patch.object(Path, "resolve") as resolve,
+                mock.patch.object(creator_full_recipe, "parse_weidu_log") as parse,
+                mock.patch.object(creator_full_recipe, "_load_base_mods") as load_base,
+                mock.patch.object(
+                    creator_full_recipe, "_write_private_bundle"
+                ) as write_bundle,
+            ):
+                with self.assertRaisesRegex(
+                    LegacyWeiDUReplayAuthoringRefused,
+                    "historical evidence only.*curation-derived replacement",
+                ):
+                    generate(args)
+
+            resolve.assert_not_called()
+            parse.assert_not_called()
+            load_base.assert_not_called()
+            write_bundle.assert_not_called()
+            self.assertFalse(output.exists())
+            self.assertFalse(cache_root.exists())
+
+    def test_generate_cli_refuses_arbitrary_paths_without_a_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for label in ("first", "alternate"):
+                with self.subTest(label=label):
+                    output = root / label / "recipe"
+                    cache_root = root / label / "cache"
+                    stderr = io.StringIO()
+                    argv = [
+                        "generate",
+                        "--base-recipe",
+                        str(root / label / "any-manifest-profile"),
+                        "--bg1-log",
+                        str(root / label / "any-bg1-evidence"),
+                        "--bg2-log",
+                        str(root / label / "any-bg2-evidence"),
+                        "--source-root",
+                        str(root / label / "any-sources"),
+                        "--output",
+                        str(output),
+                        "--cache-root",
+                        str(cache_root),
+                    ]
+
+                    with contextlib.redirect_stderr(stderr):
+                        result = main(argv)
+
+                    self.assertNotEqual(result, 0)
+                    self.assertIn("historical evidence only", stderr.getvalue())
+                    self.assertIn("curation-derived replacement", stderr.getvalue())
+                    self.assertNotIn("Traceback", stderr.getvalue())
+                    self.assertFalse(output.exists())
+                    self.assertFalse(cache_root.exists())
+
+    def test_generate_parser_has_no_force_escape_hatch(self) -> None:
+        stderr = io.StringIO()
+        argv = [
+            "generate",
+            "--base-recipe",
+            "base",
+            "--bg1-log",
+            "bg1",
+            "--bg2-log",
+            "bg2",
+            "--source-root",
+            "sources",
+            "--output",
+            "output",
+            "--cache-root",
+            "cache",
+            "--force",
+        ]
+
+        with contextlib.redirect_stderr(stderr), self.assertRaises(SystemExit) as error:
+            parser().parse_args(argv)
+
+        self.assertEqual(error.exception.code, 2)
+        self.assertIn("unrecognized arguments: --force", stderr.getvalue())
+
     def test_parse_weidu_log_preserves_path_component_and_name(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             log = Path(directory, "WeiDU.log")

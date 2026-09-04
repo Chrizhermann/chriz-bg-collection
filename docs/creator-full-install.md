@@ -1,5 +1,10 @@
 # Full creator installation
 
+**Historical replay only — not the approved curated collection.** This recipe bypassed
+curation and must not be offered or used for a new collection installation. The generator
+is quarantined; the commands below are historical evidence, not current instructions.
+See [the approved reconciliation path](plans/2026-09-05-curation-reconciliation.md).
+
 This is the private, fixed profile for reproducing Christopher's complete current EET
 stack. It is deliberately separate from `manifest/`, which remains the smaller public
 alpha recipe. The repository contains the recipe and integrity metadata, never the

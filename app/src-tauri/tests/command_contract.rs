@@ -666,11 +666,32 @@ fn production_bridge_loads_only_the_recipe_bundled_below_the_resource_directory(
 fn packaged_profiles_are_selected_by_known_identity_only() {
     let bridge = NativeBridge::from_resource_dir(&workspace_root());
     let status = bridge.bootstrap().unwrap();
-    assert_eq!(status.profiles.len(), 2);
-    let full = bridge.select_profile("creator-full-current").unwrap();
-    let status = full.bootstrap().unwrap();
-    assert_eq!(status.selected_profile, "creator-full-current");
-    assert!(full.select_profile("../manifest").is_err());
+    assert_eq!(status.profiles.len(), 1);
+    assert_eq!(status.profiles[0].id, "public-alpha");
+    let selected = bridge.select_profile("public-alpha").unwrap();
+    assert_eq!(
+        selected.bootstrap().unwrap().selected_profile,
+        "public-alpha"
+    );
+    assert!(bridge.select_profile("../manifest").is_err());
+}
+
+#[test]
+fn historical_full_recipe_is_not_offered_or_selectable_as_curated() {
+    // Keep the historical recipe as evidence, but its presence is not approval.
+    assert!(workspace_root()
+        .join("recipes/creator-full-current/collection.toml")
+        .is_file());
+    let bridge = NativeBridge::from_resource_dir(&workspace_root());
+    assert!(bridge
+        .profiles()
+        .iter()
+        .all(|profile| profile.id != "creator-full-current"));
+    let error = match bridge.select_profile("creator-full-current") {
+        Ok(_) => panic!("historical WeiDU replay must not bypass curation"),
+        Err(error) => error,
+    };
+    assert_eq!(error.code, "profile_requires_curation");
 }
 
 #[test]

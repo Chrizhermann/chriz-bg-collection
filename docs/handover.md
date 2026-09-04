@@ -9,7 +9,17 @@ The umbrella/orchestrator for the whole modded-BG stack: manifest + install orde
 mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalance
 `docs/plans/2026-07-03-umbrella-analysis.md` (user-approved 2026-07-03).
 
-## Overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)
+## Current priority — curation-derived recipe, not historical replay (2026-09-05)
+
+Start with [the approved reconciliation path](plans/2026-09-05-curation-reconciliation.md).
+The overnight `creator-full-current` recipe bypassed recorded curation; it is invalid as
+the curated collection. **Do not repair Bristlelick or resume that selection.** Curation
+files are intact. Restore them as the authority, preserve deferred mod work, check changed
+ordering against mod documentation/source, then run a new isolated install. The overnight
+heartbeat is paused. Existing alpha.3 packages still contain the old profile; source guards
+do not retroactively fix those binaries. Installer acceptance remains the main priority.
+
+## Historical overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)
 
 Start with [`overnight-2026-09-05.md`](overnight-2026-09-05.md): current code changes,
 real test paths, cleanup ownership, release boundary and remaining acceptance. The active
@@ -18,9 +28,9 @@ verified clean. The dotted-artifact freeze/evidence failures are fixed. A compac
 full-creator recipe profile, Radar add-on, human receipt versions, lazy mod-list consistency
 and signed-app updater are implemented; real full-install acceptance is still in progress.
 The first overnight follow-up fixed EET's Windows staged-path argument; EET completed.
-The second follow-up is paused on malformed Bristlelick source already present in the
-read-only reference archive source. See the overnight notes for exact evidence and the
-required source-repair/repin decision; no mod was skipped. Signed app alpha.3 is built locally.
+The second follow-up stopped on malformed Bristlelick source; the later curation audit
+supersedes the proposed repair because Bristlelick was excluded. See the current priority
+above. Signed app alpha.3 is built locally but its historical full profile must not be used.
 No public release/channel has been published. The old status below is historical.
 
 ## Earlier Chriz Easy BG 0.1 alpha status (2026-09-05)

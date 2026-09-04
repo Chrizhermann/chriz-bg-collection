@@ -619,22 +619,12 @@ impl NativeBridge {
     }
 
     pub fn profiles(&self) -> Vec<InstallProfileResponse> {
-        let mut profiles = vec![InstallProfileResponse {
+        // A bundled historical recipe is evidence, not an approved install selection.
+        vec![InstallProfileResponse {
             id: "public-alpha".to_owned(),
             label: "Recommended setup".to_owned(),
             description: "Downloadable CEBG alpha collection.".to_owned(),
-        }];
-        if self.resource_root.as_ref().is_some_and(|root| {
-            root.join("recipes/creator-full-current/collection.toml")
-                .is_file()
-        }) {
-            profiles.push(InstallProfileResponse {
-                id: "creator-full-current".to_owned(),
-                label: "Full creator setup".to_owned(),
-                description: "The full mod list; requires your private extras archive.".to_owned(),
-            });
-        }
-        profiles
+        }]
     }
 
     pub fn select_profile(&self, id: &str) -> Result<Self, CommandError> {
@@ -645,6 +635,14 @@ impl NativeBridge {
                 "Wait for the installation to finish.",
                 "Change setup after the current operation finishes.",
                 "profile selection during an active operation",
+            ));
+        }
+        if id == "creator-full-current" {
+            return Err(CommandError::new(
+                "profile_requires_curation",
+                "This historical setup does not match the curated collection.",
+                "Use the recommended setup until the full curated recipe is ready.",
+                "legacy WeiDU replay bypasses recorded curation and must not be installed",
             ));
         }
         if !self.profiles().iter().any(|profile| profile.id == id) {
@@ -665,23 +663,14 @@ impl NativeBridge {
         })?;
         let mut next = self.clone();
         next.profile_id = id.to_owned();
-        if id == "creator-full-current" {
-            next.recipe = root.join("recipes/creator-full-current");
-            next.preset = "creator-full".to_owned();
-        } else {
-            next.recipe = root.join("manifest");
-            next.preset = "chris-recommended".to_owned();
-        }
+        next.recipe = root.join("manifest");
+        next.preset = "chris-recommended".to_owned();
         runtime.reviews.clear();
         Ok(next)
     }
 
     fn validation_profile(&self) -> ValidationProfile {
-        if self.profile_id == "creator-full-current" {
-            ValidationProfile::Authoring
-        } else {
-            ValidationProfile::PublicAlpha
-        }
+        ValidationProfile::PublicAlpha
     }
 
     pub fn recipe_version(&self) -> Result<Option<String>, CommandError> {

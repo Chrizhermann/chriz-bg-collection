@@ -1,8 +1,7 @@
-"""Generate the private creator-full executable recipe from read-only WeiDU logs.
+"""Preserve historical creator-full WeiDU replay evidence and parity helpers.
 
-The generated recipe contains only source metadata.  Third-party and local payloads that
-are not already pinned by the public recipe are placed in one manual, user-supplied ZIP
-outside the repository.
+Executable recipe authoring from the legacy replay is temporarily quarantined until a
+curation-derived replacement generator exists.
 """
 
 from __future__ import annotations
@@ -25,6 +24,12 @@ LOG_LINE = re.compile(
 PSEUDO_INSTALLERS = {"__EXTRACT.TP2", "__IDS.TP2"}
 PRIVATE_ARTIFACT_ID = "creator-full-private-extras-20260902"
 PRIVATE_ARCHIVE_NAME = f"{PRIVATE_ARTIFACT_ID}.zip"
+LEGACY_REPLAY_REFUSAL_MESSAGE = (
+    "creator-full legacy WeiDU replay authoring is temporarily quarantined: "
+    "the WeiDU logs and replay-policy helpers are historical evidence only, not an "
+    "authoritative executable recipe; a curation-derived replacement generator is "
+    "required before generation can resume"
+)
 BUFFBOT_TP2 = "BUFFBOT/SETUP-BUFFBOT.TP2"
 MODPACK_TP2 = "SETUP-CHRIZ-BG-MODPACK.TP2"
 ARTISAN_NPC_TP2 = "ARTISANSKITPACK_NPC/ARTISANSKITPACK_NPC.TP2"
@@ -122,6 +127,10 @@ class OrderedRun:
     language: int
     phase: str
     components: list[int]
+
+
+class LegacyWeiDUReplayAuthoringRefused(RuntimeError):
+    """Raised when legacy WeiDU evidence is used to author an executable recipe."""
 
 
 def normalize_tp2(value: str) -> str:
@@ -548,6 +557,8 @@ def _write_reference(path: Path, entries: list[Entry]) -> None:
 
 
 def generate(args: argparse.Namespace) -> None:
+    raise LegacyWeiDUReplayAuthoringRefused(LEGACY_REPLAY_REFUSAL_MESSAGE)
+
     base_recipe = args.base_recipe.resolve()
     output = args.output.resolve()
     if output.exists():
@@ -736,7 +747,11 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
-    args.func(args)
+    try:
+        args.func(args)
+    except LegacyWeiDUReplayAuthoringRefused as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
     return 0
 
 

@@ -1,5 +1,10 @@
 # CEBG overnight implementation / acceptance
 
+**Superseded selection:** the user identified that `creator-full-current` ignored curation.
+Do not resume it, repair Bristlelick, or call it the approved full setup. Follow
+[the curation reconciliation plan](plans/2026-09-05-curation-reconciliation.md).
+The notes below preserve real evidence, not authority to reinstall excluded components.
+
 User priority: a simple attractive installer, a working full-mod installation, Radar,
 versions/updates, and cheap consistency checks. Prefer real installation evidence over
 another round of cosmetic refactoring. Preserve all older curation/owning-repository work.

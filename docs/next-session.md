@@ -1,5 +1,10 @@
 # Next session — 2026-09-02
 
+**2026-09-05 priority update:** follow the
+[curation-derived installer plan](plans/2026-09-05-curation-reconciliation.md) first.
+Christopher deferred the unresolved mod discussions below until the installer works.
+Their decisions/tasks are preserved; they are not permission to include unavailable mods.
+
 This is the short working list for tomorrow. The evidence-backed master queue remains
 [the curation follow-up list](curation/components/FOLLOW_UPS.md), and per-component choices
 remain authoritative in their individual catalogs. Checking an item here must not erase
