@@ -377,6 +377,10 @@ pub struct ManagedInstallationResponse {
     pub path: String,
     pub status: String,
     pub receipt_path: Option<String>,
+    /// Display-only verified launcher path; actions still accept only the registry id.
+    pub launch_path: Option<String>,
+    /// Successful receipt completion time used only for launcher display and ordering.
+    pub completed_at_millis: Option<u64>,
     pub available: bool,
     pub resumable: bool,
     pub recipe_version: Option<String>,
@@ -2276,6 +2280,7 @@ fn project_managed_install(
     let path = display_windows_path(&record.managed_root)?;
     let receipt = record.managed_root.join(".chriz/install-receipt.json");
     let receipt_path = display_windows_path(&receipt)?;
+    let launch_path = display_windows_path(&record.launch_path)?;
     Ok(ManagedInstallationResponse {
         id: record.install_id,
         name: record.display_name,
@@ -2286,6 +2291,8 @@ fn project_managed_install(
             "Unavailable — folder moved or changed".to_owned()
         },
         receipt_path: Some(receipt_path),
+        launch_path: Some(launch_path),
+        completed_at_millis: Some(record.completed_at_millis),
         available,
         resumable: false,
         recipe_version: Some(record.recipe_version),
@@ -2307,6 +2314,8 @@ fn project_managed_campaign(
         path,
         status: status.to_owned(),
         receipt_path: None,
+        launch_path: None,
+        completed_at_millis: None,
         available: false,
         resumable,
         recipe_version: None,

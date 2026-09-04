@@ -966,6 +966,8 @@ fn restart_lists_and_resumes_only_a_verified_indexed_campaign() {
     assert!(!cards[0].available);
     assert!(cards[0].resumable);
     assert_eq!(cards[0].receipt_path, None);
+    assert_eq!(cards[0].launch_path, None);
+    assert_eq!(cards[0].completed_at_millis, None);
 
     let (resume_tx, resume_rx) = mpsc::channel();
     let resumed = bridge
@@ -1305,6 +1307,18 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         cards[0].receipt_path.as_deref(),
         Some(expected_receipt.as_str())
     );
+    let expected_launch =
+        display_windows_path(&canonical_managed.join("game/InfinityLoader.exe")).unwrap();
+    assert_eq!(
+        cards[0].launch_path.as_deref(),
+        Some(expected_launch.as_str())
+    );
+    assert!(!cards[0]
+        .launch_path
+        .as_deref()
+        .unwrap()
+        .starts_with(r"\\?\"));
+    assert_eq!(cards[0].completed_at_millis, Some(1));
 
     bridge.launch_install("install-task23").unwrap();
     bridge.open_install_folder("install-task23").unwrap();
