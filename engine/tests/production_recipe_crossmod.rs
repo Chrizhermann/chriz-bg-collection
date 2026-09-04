@@ -48,7 +48,7 @@ fn installs_crossmod_defaults_after_current_npcs_and_before_rules_mods() {
             .unwrap_or_else(|| panic!("missing run {id}"))
     };
     assert!(position("sirene-bg2") < position("crossmodbg2-bg2"));
-    assert!(position("crossmodbg2-bg2") < position("ascension-bg2"));
+    assert!(position("ascension-bg2") < position("crossmodbg2-bg2"));
 
     let run = &runs[position("crossmodbg2-bg2")];
     assert_eq!(run.phase, Phase::Main);
