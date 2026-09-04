@@ -145,7 +145,7 @@ pub fn validate_public_alpha_at(
     match evaluate_preset(manifest, PUBLIC_ALPHA_PRESET, "windows") {
         Ok(evaluation) => {
             check_selected_artifacts(manifest, &evaluation, &mut findings);
-            check_static_evidence(manifest, &acceptance, &evaluation, &mut findings);
+            check_static_evidence(&acceptance, &evaluation, &mut findings);
             check_tail_approval(&limitations, &evaluation, &mut findings);
             check_omission_coverage(manifest, &limitations, &evaluation, &mut findings);
         }
@@ -440,17 +440,12 @@ fn check_acceptance_records(
                 );
                 continue;
             };
-            if !safe_relative_path(path)
-                || !manifest
-                    .root
-                    .parent()
-                    .is_some_and(|root| root.join(path).is_file())
-            {
+            if !repository_commit || !safe_relative_path(path) {
                 release_error(
                     findings,
                     RULE_RELEASE_RECORD,
                     format!(
-                        "accepted static evidence for {:?} points at missing or unsafe test artifact {path:?}",
+                        "accepted static evidence for {:?} must name an immutable repository commit and safe test artifact {path:?}",
                         record.subject_id
                     ),
                 );
@@ -460,7 +455,6 @@ fn check_acceptance_records(
 }
 
 fn check_static_evidence(
-    manifest: &Manifest,
     acceptance: &Acceptance,
     evaluation: &SelectionEvaluation,
     findings: &mut Vec<Finding>,
@@ -472,13 +466,17 @@ fn check_static_evidence(
             record.subject_kind == EvidenceSubjectKind::Run
                 && record.kind == EvidenceKind::StaticTest
                 && record.status == EvidenceStatus::Accepted
-                && record.test_artifact.as_deref().is_some_and(|path| {
-                    safe_relative_path(path)
-                        && manifest
-                            .root
-                            .parent()
-                            .is_some_and(|root| root.join(path).is_file())
-                })
+                && record
+                    .repository
+                    .as_deref()
+                    .zip(record.commit.as_deref())
+                    .is_some_and(|(repository, commit)| {
+                        !repository.trim().is_empty() && is_commit(commit)
+                    })
+                && record
+                    .test_artifact
+                    .as_deref()
+                    .is_some_and(safe_relative_path)
         })
         .map(|record| record.subject_id.as_str())
         .collect::<BTreeSet<_>>();

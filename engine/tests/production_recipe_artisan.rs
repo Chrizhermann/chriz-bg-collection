@@ -218,19 +218,18 @@ fn preserves_optional_controls_choices_and_external_dependency_gates() {
         assert_eq!(feature(id).decision, Decision::Optional, "{id}");
         assert_eq!(feature(id).readiness, Readiness::Ready, "{id}");
     }
-    for (left, right) in [(
+    let (left, right) = (
         "feature:artisanskitpack-npc:component-7101",
         "feature:artisanskitpack-npc:component-7102",
-    )] {
-        assert!(feature(left)
-            .conflicts
-            .iter()
-            .any(|rule| rule.feature_id == right));
-        assert!(feature(right)
-            .conflicts
-            .iter()
-            .any(|rule| rule.feature_id == left));
-    }
+    );
+    assert!(feature(left)
+        .conflicts
+        .iter()
+        .any(|rule| rule.feature_id == right));
+    assert!(feature(right)
+        .conflicts
+        .iter()
+        .any(|rule| rule.feature_id == left));
     for id in [
         "feature:artisanskitpack:component-8004",
         "feature:artisanskitpack:component-10003",
