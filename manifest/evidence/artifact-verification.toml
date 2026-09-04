@@ -457,3 +457,30 @@ entry_count = 24
 max_entry_uncompressed_bytes = 1364992
 total_uncompressed_bytes = 1514224
 max_compression_ratio = 6
+
+[[artifacts]]
+artifact_id = "spell-rev-4.21-chriz.3"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.3/spell_rev-v4-21-chriz-3.zip"
+source_reference = "v4.21-chriz.3"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 7581145
+actual_sha256 = "14e3801fc88e079a56fc7d37da5c86e29bedc32d192b69b50a2ceaac51756abe"
+wrapper_kind = "direct"
+materialized_publish_roots = ["spell_rev"]
+declared_tp2_paths = ["spell_rev/setup-spell_rev.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 1747
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 12846108
+max_compression_ratio = 23

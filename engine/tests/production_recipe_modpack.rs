@@ -68,9 +68,11 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     };
     let remote = position("eeexremote-bg2");
     let modpack = position("chriz-bg-modpack-bg2");
+    let spellbooks = position("spell-rev-npc-spellbooks-bg2");
     let buffbot = position("buffbot-bg2");
     assert_eq!(remote + 1, modpack);
-    assert_eq!(modpack + 1, buffbot);
+    assert_eq!(modpack + 1, spellbooks);
+    assert_eq!(spellbooks + 1, buffbot);
     assert_eq!(buffbot, runs.len() - 1);
 
     let run = &runs[modpack];

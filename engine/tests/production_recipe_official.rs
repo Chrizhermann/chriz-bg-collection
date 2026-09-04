@@ -395,6 +395,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "iepbanters-bg2",
             "crossmodbg2-bg2",
             "ascension-bg2",
+            "spell-rev-core-bg2",
             "hq-soundclips-bg2ee-bg2",
             "stratagems-bg2",
             "randomiser-bg2",
@@ -403,10 +404,11 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "hiddengameplayoptions-bg2",
             "eeexremote-bg2",
             "chriz-bg-modpack-bg2",
+            "spell-rev-npc-spellbooks-bg2",
             "buffbot-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..23]
+    assert!(manifest.collection.runs[6..24]
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);

@@ -65,7 +65,7 @@ Chris explicitly wants the much larger save-analysis project.
 | Artisan fork | Publish the Shapeshifter footprint fix; redesign priest delivery; keep `30001/300010` unavailable; correct EEex-v1.2 dependency detection and verify refreshed prerequisites. Move the Xan EET-variant repair into NPC component `20002`. |
 | Bardic Wonders fork | Integrate and release the finite Abettor-HLA work; add SR fixtures for `1008/1009/2008`; correct legacy EEex detection. |
 | Aura fork | Reconcile the seven missing upstream commits, compare the old spell-patch snapshot, verify all six legacy item changes, fix component `6` EEex detection, then release. |
-| Spell Revisions fork | Publish immutable `v4.21-chriz.1` and absorb `SR_SUBSPELL_FIX`; do not rebuild it as modpack `180`. |
+| Spell Revisions fork | `v4.21-chriz.3` is published and pinned with `SR_SUBSPELL_FIX` absorbed into component `60`; preserve the early core/late NPC-spellbook split. |
 | BG2EE/EET fix layer | Migrate Branwen `101` to a narrow maintained home; redesign stat transfer `200`; audit Edwin `400`; retire duplicate `300`. Do not expose the historical parent package. |
 | `chriz-bg-rebalance` | Publish the narrow component-`401` Artisan-CLAB compatibility fix discovered and test-proven by the isolated RC, then pin that successor to v0.3.0. Components `120/121` are accepted and selected. The Tempus APR gameplay check on EEex 1.2 remains. |
 | `chriz-sod-rebalance` | v0.6.4 is published and pinned; keep `290` deferred and complete the natural five-item/save-reload acceptance for `225`. |

@@ -39,8 +39,8 @@ remains unavailable or excluded.
 - [ ] [Warlock](C0WARLOCK.md): pin exact commit
   `a821992228c87a4bef75be4bc2fc833f8db46819`, update the renamed
   `Artisans_Warlock/Artisans_Warlock.TP2` path, and stop describing it as a v3.0 target.
-- [ ] [Spell Revisions](SPELL_REV.md): publish an immutable, fetchable
-  `v4.21-chriz.1` fork source before replacing upstream v4.21.
+- [x] [Spell Revisions](SPELL_REV.md): `v4.21-chriz.3` is published, pinned, and owns
+  the migrated `SR_SUBSPELL_FIX` implementation in component `60`.
 - [ ] [CHRIZ-SOD-REMIX](CHRIZ-SOD-REMIX.md): the public v0.6.4 release is pinned and its
   complete 30-component bundle is ready. Keep unimplemented component `290` out of this
   preset and complete the natural five-item/save-reload acceptance for component `225`.
@@ -72,9 +72,11 @@ remains unavailable or excluded.
 - [ ] Generate [Crossmod](CROSSMODBG2.md) after every supported NPC/quest mod and before
   CDTweaks; enforce `1 -> 0` and disable `2` under a multi-romance route. Check actual
   detection blocks rather than trusting its incomplete Project Infinity `After=` list.
-- [ ] Install [Spell Revisions](SPELL_REV.md) `60` after every NPC/class assignment.
-  Enforce the documented conflicts with SCS `4240`, Artisan `8101/8102`, Artisan NPC
-  `5102/10004`, and Bardic Wonders `1006`; migrate `SR_SUBSPELL_FIX` into maintained code.
+- [x] Install [Spell Revisions](SPELL_REV.md) `60` after every NPC/class assignment and
+  migrate `SR_SUBSPELL_FIX` into maintained code. SCS `4240` is enforced now.
+- [ ] When the parallel Artisan recipe slice is merged, add the three remaining conflict
+  edges for Artisan `8101` and Artisan NPC `5102`/`10004`. Keep SR/RR compatibility
+  deferred rather than blocking either mod.
 - [ ] Validate [Randomiser](RANDOMISER.md) v8.1.1 `1100` after `500`–`570` and after SCS
   on a clean rebuilt collection and new game. Include the Tarnesh loot smoke, EEex-v1.2
   legacy-BCS fallback, numeric input for `510`, the `570` conflict, and disabling `10300`

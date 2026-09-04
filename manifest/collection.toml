@@ -149,6 +149,13 @@ components = [0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2
 args = []
 
 [[runs]]
+run_id = "spell-rev-core-bg2"
+mod_id = "spell-rev"
+phase = "main"
+components = [0, 10, 20, 30, 55, 65]
+args = []
+
+[[runs]]
 run_id = "hq-soundclips-bg2ee-bg2"
 mod_id = "hq-soundclips-bg2ee"
 phase = "main"
@@ -202,6 +209,13 @@ run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
 components = [110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 400, 410, 430, 440, 450]
+args = []
+
+[[runs]]
+run_id = "spell-rev-npc-spellbooks-bg2"
+mod_id = "spell-rev"
+phase = "post-eet-end"
+components = [60]
 args = []
 
 [[runs]]
@@ -1894,11 +1908,80 @@ components = [{ run_id = "ascension-bg2", component = 2400 }]
 [[features]]
 id = "mod:spell-rev"
 title = "Spell Revisions"
-description = "Spell Revisions remains visible but cannot enter this alpha until its reviewed source and component-60 fix are released and pinned."
+description = "Install the reviewed Spell Revisions successor release, including its maintained protection-refresh and hidden-subspell repairs."
 category = "spells"
 decision = "default"
-readiness = "blocked"
-unavailable_reason = "Spell Revisions is not yet release-ready for the collection alpha."
+readiness = "ready"
+
+[[features]]
+id = "feature:spell-rev:mandatory-components"
+title = "Spell Revisions core"
+description = "Install the main Spell Revisions component whenever Spell Revisions is selected."
+category = "spells"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:spell-rev"
+components = [{ run_id = "spell-rev-core-bg2", component = 0 }]
+
+[[features]]
+id = "feature:spell-rev:component-10"
+title = "Deva and Planetar Animations"
+description = "Install Spell Revisions' reviewed celestial animations."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+components = [{ run_id = "spell-rev-core-bg2", component = 10 }]
+
+[[features]]
+id = "feature:spell-rev:component-20"
+title = "Mirror Image Fix"
+description = "Install Spell Revisions' reviewed Mirror Image fix."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+components = [{ run_id = "spell-rev-core-bg2", component = 20 }]
+
+[[features]]
+id = "feature:spell-rev:component-30"
+title = "Dispel Magic Fix"
+description = "Install Spell Revisions' reviewed Dispel Magic fix."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+components = [{ run_id = "spell-rev-core-bg2", component = 30 }]
+
+[[features]]
+id = "feature:spell-rev:component-55"
+title = "Spell Deflection blocks AoE spells"
+description = "Let spell deflection protect against area-of-effect spells."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+components = [{ run_id = "spell-rev-core-bg2", component = 55 }]
+
+[[features]]
+id = "feature:spell-rev:component-60"
+title = "Update Spellbooks of Joinable NPCs"
+description = "Update joinable NPC spellbooks after every selected NPC and class assignment; the successor includes the former hidden-subspell tail fix."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+components = [{ run_id = "spell-rev-npc-spellbooks-bg2", component = 60 }]
+
+[[features]]
+id = "feature:spell-rev:component-65"
+title = "Revised Warrior HLAs"
+description = "Install Spell Revisions' reviewed warrior high-level ability revisions."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+components = [{ run_id = "spell-rev-core-bg2", component = 65 }]
 
 [[features]]
 id = "mod:stratagems"
@@ -2301,7 +2384,7 @@ description = "Install Christopher's curated compatibility and Cleric of Tempus 
 category = "collection"
 decision = "default"
 readiness = "blocked"
-unavailable_reason = "Requires Spell Revisions and Artisan's Kitpack, which are not yet available in the public alpha."
+unavailable_reason = "Requires Artisan's Kitpack, which is not yet available in this recipe baseline."
 
 [[features]]
 id = "mod:chriz-bg-modpack"

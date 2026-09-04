@@ -2405,31 +2405,37 @@ rows = ["SIRENE_BG2:8"]
 id = "feature:spell-rev:component-10"
 kind = "feature"
 rows = ["SPELL_REV:10"]
+parent = "mod:spell-rev"
 
 [[targets]]
 id = "feature:spell-rev:component-20"
 kind = "feature"
 rows = ["SPELL_REV:20"]
+parent = "mod:spell-rev"
 
 [[targets]]
 id = "feature:spell-rev:component-30"
 kind = "feature"
 rows = ["SPELL_REV:30"]
+parent = "mod:spell-rev"
 
 [[targets]]
 id = "feature:spell-rev:component-55"
 kind = "feature"
 rows = ["SPELL_REV:55"]
+parent = "mod:spell-rev"
 
 [[targets]]
 id = "feature:spell-rev:component-60"
 kind = "feature"
 rows = ["SPELL_REV:60"]
+parent = "mod:spell-rev"
 
 [[targets]]
 id = "feature:spell-rev:component-65"
 kind = "feature"
 rows = ["SPELL_REV:65"]
+parent = "mod:spell-rev"
 
 [[targets]]
 id = "feature:stratagems:component-3040"

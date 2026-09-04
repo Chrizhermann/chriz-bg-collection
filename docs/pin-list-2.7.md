@@ -47,7 +47,7 @@ except AJANTISBG2 (language 1).
 | SAFANA | v0.5 | v05 | unchanged (tag is spelled v05); SoD-items carryover fix component still to be built |
 | SARAHTOB | v8 | v8 | Official v8 IEMOD frozen; custom portraits remain a separate blocked/manual asset decision. |
 | SIRENE_BG2 | — | commit `00beda90` | Exact official commit archive frozen; the separate BG1 package remains a curation decision. |
-| SPELL_REV | v4.19 | v4.21-chriz.1, pending release | Publish a fetchable immutable fork source containing the protection-refresh/subspell work. |
+| SPELL_REV | v4.19 | v4.21-chriz.3 | Immutable successor release pinned with the protection-refresh and hidden-subspell work; component `60` runs late. |
 | STRATAGEMS | 35.21 | v35.21 | unchanged; MUST run under WeiDU 249 (breaks on 251); unverified-by-author on 2.7, community installs work |
 | UB | v28 | v28 | Official v28 release ZIP frozen; component `19` remains omitted with Ascension `40` pending the canonical provider decision. |
 | XAN | v19 | v19 | unchanged (installed = latest) |

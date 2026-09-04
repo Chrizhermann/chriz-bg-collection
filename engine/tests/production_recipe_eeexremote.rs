@@ -59,6 +59,10 @@ fn offers_remote_console_as_an_experimental_advanced_tool_before_buffbot() {
     );
     assert_eq!(
         position("chriz-bg-modpack-bg2") + 1,
+        position("spell-rev-npc-spellbooks-bg2")
+    );
+    assert_eq!(
+        position("spell-rev-npc-spellbooks-bg2") + 1,
         position("buffbot-bg2")
     );
 

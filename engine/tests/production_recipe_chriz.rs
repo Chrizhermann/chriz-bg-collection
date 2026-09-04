@@ -135,9 +135,7 @@ fn keeps_bg_rebalance_visible_but_blocked_until_its_dependencies_are_available()
     assert!(!parent.interactive);
     assert_eq!(
         parent.unavailable_reason.as_deref(),
-        Some(
-            "Requires Spell Revisions and Artisan's Kitpack, which are not yet available in the public alpha."
-        )
+        Some("Requires Artisan's Kitpack, which is not yet available in this recipe baseline.")
     );
     assert!(evaluation
         .plan
