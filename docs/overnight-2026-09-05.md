@@ -81,6 +81,40 @@ No frozen recipe, ledger, game source, or mod source was edited for this repair.
 
 ## Real installation runs / cleanup
 
+### Second follow-up: paused on Bristlelick source error
+
+At 2026-09-04 21:52 UTC the r3 run had stopped on `install:bristlelick-bg2`.
+EET completed successfully, followed by EEex, Bubb's Spell Menu, BGGO, Hidden Gameplay
+Options, Rogue Rebalancing, Branwen, Evandra, Fade and Paina. No installer/WeiDU/game
+process remained at the bounded check. The current log remains
+`target/full-install-20260905-r3/resume.log` (failure near lines 296242-296243).
+
+`report --json` verifies the receipt (`ok: true`), recipe `0.1.0-alpha.2`, install id
+`install-8a3cab271f29d2c47f61`, with failed outcome and detail
+`WeiDU made no durable change; the exact run remains retryable`. This is a verified
+**failed** receipt, not installation success. This CLI-driven attempt records application
+and engine `0.1.0`; the independently built desktop package is alpha.3.
+
+Root cause: `Bristlelick/lib/fl#add_kit_ee.tpa:338` contains malformed nested quotes:
+
+```text
+REPLACE_TEXTUALLY "0x\([0-9a-f]+\)" "0x0000"0x0000\1""
+```
+
+WeiDU reports a lexer/parse error on the backslash. The failed copy and the read-only
+reference file at `C:\Games\Baldur's Gate II Enhanced Edition modded - CBR Ambient Readiness v1.2 Test\Bristlelick\lib\fl#add_kit_ee.tpa`
+have identical SHA-256
+`E1513CFCB8127657812F43630B93E5F41874E2FD1065AB43270602265AB48A1A`.
+The defect is already in the source used for the private extras artifact, not an extraction
+or invocation mutation. The pinned recipe selects Bristlelick v2.4 component 0.
+
+No source, archive, installed payload, frozen recipe or receipt was changed; Bristlelick
+was not skipped. An unchanged retry would deterministically fail again. Pause the overnight
+follow-up for a decision on repairing/replacing the Bristlelick source and repinning a new
+recipe. Do not silently patch materialized mod files to resume this frozen recipe. Retain
+this incomplete test copy as evidence for now; it is not ready for gameplay acceptance.
+Radar installation, full receipt/log acceptance, and game smoke checks remain pending.
+
 - Recommended alpha: `C:\Users\chris\Games\CEBG-alpha-test-20260905`,
   install id `install-3e091429c2b2d8889c15`.
   Logs: `target/real-install-20260905/resume-release.log` (current), earlier `resume.log`.
@@ -109,7 +143,8 @@ No frozen recipe, ledger, game source, or mod source was edited for this repair.
   `target/full-install-20260905-r3/chriz-bg-install.exe`.
   Started after the completion-evidence fix and final recipe normalization; freeze,
   preflight, all verified cache acquisition and both source copies succeeded. All
-  materialization and BG1 preparation completed; see the EET follow-up above. Final plan: 90 runs,
+  materialization, BG1 preparation and EET completed; now stopped at the Bristlelick source
+  error documented above. Final plan: 90 runs,
   488 components, 31 artifacts. The recipe preserves maintained replacements once;
   explicit outcome differences are old modpack 600 and the legacy Safana-to-Abettor /
   Aura-to-Bard assignments. Sirene deliberately uses the approved native True Paladin.

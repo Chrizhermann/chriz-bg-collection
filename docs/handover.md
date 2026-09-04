@@ -17,8 +17,10 @@ worktree is `installer-v0-real-alpha`, **not** `4d39`. Both Steam source games a
 verified clean. The dotted-artifact freeze/evidence failures are fixed. A compact UI,
 full-creator recipe profile, Radar add-on, human receipt versions, lazy mod-list consistency
 and signed-app updater are implemented; real full-install acceptance is still in progress.
-The first overnight follow-up fixed EET's Windows staged-path argument; the same verified
-retryable run resumed and now passes its BG1-path check. Signed app alpha.3 is built locally.
+The first overnight follow-up fixed EET's Windows staged-path argument; EET completed.
+The second follow-up is paused on malformed Bristlelick source already present in the
+read-only reference archive source. See the overnight notes for exact evidence and the
+required source-repair/repin decision; no mod was skipped. Signed app alpha.3 is built locally.
 No public release/channel has been published. The old status below is historical.
 
 ## Earlier Chriz Easy BG 0.1 alpha status (2026-09-05)
