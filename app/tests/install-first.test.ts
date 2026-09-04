@@ -112,6 +112,38 @@ describe("CEBG install-first experience", () => {
     expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("renders source recovery controls when no games are detected", async () => {
+    class NoSourcesBackend extends InstallBackend {
+      inspectCalls = 0;
+
+      override discoverGames(): Promise<GameDiscovery> {
+        return Promise.resolve({
+          selectedBg1Id: "",
+          selectedBg2Id: "",
+          bg1Candidates: [],
+          bg2Candidates: [],
+        });
+      }
+
+      override inspectDestination(): Promise<DestinationEvaluation> {
+        this.inspectCalls += 1;
+        return Promise.reject(new Error("Destination inspection requires both sources."));
+      }
+    }
+    const backend = new NoSourcesBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+
+    await mountApp(root, backend);
+
+    expect(getByRole(root, "heading", { level: 1, name: "Install Chriz Easy BG" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 2, name: "Needs attention" })).toBeTruthy();
+    expect(getAllByRole(root, "heading", { level: 2, name: "Source needed" })).toHaveLength(2);
+    expect(getByRole(root, "button", { name: "Change Baldur's Gate source" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Change Baldur's Gate II source" })).toBeTruthy();
+    expect(backend.inspectCalls).toBe(0);
+  });
+
   it("explains why an unsafe install location needs attention", async () => {
     const root = document.createElement("div");
     document.body.append(root);
@@ -220,6 +252,36 @@ describe("CEBG install-first experience", () => {
     expect(backend.freezeCalls).toHaveLength(1);
     expect(backend.freezeCalls[0]).toMatchObject({ name: "Chriz Easy BG", path: "C:\\Users\\Chris\\Games\\Chriz Easy BG", bg1: "bg1", bg2: "bg2" });
     expect(backend.startCalls).toBe(1);
+  });
+
+  it("locks identity controls and rejects a programmatic late edit while review freezes", async () => {
+    let releaseFreeze!: () => void;
+    const freezeGate = new Promise<void>((resolve) => { releaseFreeze = resolve; });
+    class SlowFreezeBackend extends InstallBackend {
+      override async freezeReview(...args: Parameters<InstallBackend["freezeReview"]>) {
+        await freezeGate;
+        return super.freezeReview(...args);
+      }
+    }
+    const backend = new SlowFreezeBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    await mountApp(root, backend);
+    const mountedNameInput = getByLabelText(root, "Install name") as HTMLInputElement;
+
+    fireEvent.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+
+    expect((getByLabelText(root, "Install name") as HTMLInputElement).disabled).toBe(true);
+    expect((getByLabelText(root, "Install location") as HTMLInputElement).disabled).toBe(true);
+    expect((getByRole(root, "button", { name: "Customize" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(getAllByRole(root, "button", { name: /Change Baldur's Gate.*source/ }).every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+
+    fireEvent.change(mountedNameInput, { target: { value: "Late identity change" } });
+    releaseFreeze();
+
+    await waitFor(() => expect(getByRole(root, "alert").textContent).toContain("Installation details changed while starting"));
+    expect((getByLabelText(root, "Install name") as HTMLInputElement).value).toBe("Chriz Easy BG");
+    expect(backend.startCalls).toBe(0);
   });
 
   it("keeps the newest source inspection when async checks resolve out of order", async () => {

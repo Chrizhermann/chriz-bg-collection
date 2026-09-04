@@ -47,6 +47,7 @@ class AppController implements AppHandle {
   };
   #revision = 0;
   #destinationRevision = 0;
+  #identityRevision = 0;
   #starting = false;
   #runId: string | null = null;
   #installId: string | null = null;
@@ -114,19 +115,30 @@ class AppController implements AppHandle {
   }
 
   async #toggleFeature(id: string, selected: boolean): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
     this.#dispatch({ type: "set-feature", id, selected });
     await this.#evaluate(true, `feature-${id}`);
   }
 
   async #inspectDestination(path: string, automatic = this.#state.destinationAutomatic, render = true): Promise<void> {
     const revision = ++this.#destinationRevision;
+    this.#dispatch({ type: "set-destination", path, automatic });
+    if (this.#selectedGames().length !== 2) {
+      this.#destination = {
+        path,
+        safe: false,
+        title: "Choose both game sources",
+        detail: "Use Change source for each missing game before CEBG checks this install location.",
+      };
+      if (render) this.#render();
+      return;
+    }
     this.#destination = {
       path,
       safe: false,
       title: "Checking this location",
       detail: "The folder has not completed native safety inspection yet.",
     };
-    this.#dispatch({ type: "set-destination", path, automatic });
     if (render) this.#render();
     let inspected: DestinationEvaluation;
     try {
@@ -137,7 +149,12 @@ class AppController implements AppHandle {
       );
     } catch (error: unknown) {
       if (revision !== this.#destinationRevision) return;
-      throw error;
+      this.#destination = error instanceof BackendCommandError
+        ? { path, safe: false, title: error.message, detail: error.recoveryAction }
+        : { path, safe: false, title: "This install location could not be checked", detail: "Choose another folder or try this location again." };
+      this.#dispatch({ type: "set-destination", path, automatic });
+      if (render) this.#render();
+      return;
     }
     if (revision !== this.#destinationRevision) return;
     this.#destination = inspected;
@@ -151,7 +168,7 @@ class AppController implements AppHandle {
     return [bg1, bg2].filter((candidate): candidate is GameCandidate => candidate !== undefined);
   }
 
-  async #freezeReview(render = true): Promise<void> {
+  async #freezeReview(render = true, identityRevision = this.#identityRevision): Promise<void> {
     try {
       const displayedEvaluation = this.#state.evaluation;
       const review = await this.backend.freezeReview(
@@ -161,6 +178,14 @@ class AppController implements AppHandle {
         this.#state.selectedBg1Id,
         this.#state.selectedBg2Id,
       );
+      if (identityRevision !== this.#identityRevision) {
+        throw new BackendCommandError({
+          code: "installation_identity_changed",
+          message: "Installation details changed while starting.",
+          recovery_action: "Review the current installation details, then choose Install Chriz Easy BG again.",
+          technical_detail: "An installation identity control changed after freezeReview began and before startBuild.",
+        });
+      }
       if (this.#status.mode === "native"
         && JSON.stringify(review.evaluation) !== JSON.stringify(displayedEvaluation)) {
         const revision = ++this.#revision;
@@ -237,9 +262,14 @@ class AppController implements AppHandle {
   }
 
   async #chooseGameFolder(game: "bg1" | "bg2"): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
     const role = game === "bg1" ? "bgee_sod" : "bg2ee";
     const candidate = await this.backend.chooseGameFolder(role);
     if (candidate === null) return;
+    if (this.#starting) {
+      ++this.#identityRevision;
+      return;
+    }
     const key = game === "bg1" ? "bg1Candidates" : "bg2Candidates";
     const candidates = this.#discovery[key].filter((entry) => entry.id !== candidate.id);
     this.#discovery = { ...this.#discovery, [key]: [...candidates, candidate] };
@@ -249,12 +279,14 @@ class AppController implements AppHandle {
   }
 
   async #selectGame(game: "bg1" | "bg2", id: string): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
     this.#dispatch({ type: "select-game", game, id });
     this.#dispatch({ type: "review-cleared" });
     await this.#inspectDestination(this.#state.destinationPath);
   }
 
   async #changeInstallationName(name: string): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
     this.#dispatch({ type: "set-installation-name", name });
     this.#dispatch({ type: "review-cleared" });
     if (this.#state.destinationAutomatic && validateInstallationName(name) === null) {
@@ -265,21 +297,37 @@ class AppController implements AppHandle {
   }
 
   async #changeInstallLocation(path: string): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
     this.#dispatch({ type: "review-cleared" });
     await this.#inspectDestination(path, false);
   }
 
   async #chooseDestinationFolder(): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
     const evaluation = await this.backend.chooseDestinationFolder(
       this.#state.selectedBg1Id,
       this.#state.selectedBg2Id,
     );
     if (evaluation === null) return;
+    if (this.#starting) {
+      ++this.#identityRevision;
+      return;
+    }
     ++this.#destinationRevision;
     this.#destination = evaluation;
     this.#dispatch({ type: "set-destination", path: evaluation.path, automatic: false });
     this.#dispatch({ type: "review-cleared" });
     this.#render();
+  }
+
+  async #customizeInstallation(): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
+    await this.navigate("setup");
+  }
+
+  #beginIdentityEdit(): boolean {
+    ++this.#identityRevision;
+    return !this.#starting;
   }
 
   #canInstall(): boolean {
@@ -298,10 +346,11 @@ class AppController implements AppHandle {
 
   async #startInstallation(): Promise<void> {
     if (!this.#canInstall()) return;
+    const identityRevision = this.#identityRevision;
     this.#starting = true;
     this.#render();
     try {
-      await this.#freezeReview();
+      await this.#freezeReview(true, identityRevision);
     } finally {
       this.#starting = false;
       if (this.#state.route === "welcome") this.#render();
@@ -501,7 +550,7 @@ class AppController implements AppHandle {
           changeName: (name) => safely(() => this.#changeInstallationName(name)),
           changeLocation: (path) => safely(() => this.#changeInstallLocation(path)),
           browseLocation: () => safely(() => this.#chooseDestinationFolder()),
-          customize: () => safely(() => navigate("setup")),
+          customize: () => safely(() => this.#customizeInstallation()),
           install: () => safely(() => this.#startInstallation()),
         });
         break;

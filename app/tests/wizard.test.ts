@@ -530,7 +530,7 @@ describe("Chriz Easy BG application flow", () => {
     destination.dispatchEvent(new Event("change", { bubbles: true }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
 
-    expect(getByRole(root, "alert").textContent).toContain("Choose a new empty folder.");
+    expect(getByRole(root, "status").textContent).toContain("Choose a new empty folder.");
     expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(true);
   });
 

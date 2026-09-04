@@ -37,6 +37,7 @@ function sourceCard(
   title: string,
   candidates: readonly GameCandidate[],
   selectedId: string,
+  starting: boolean,
   actions: InstallScreenActions,
 ): HTMLElement {
   const card = element("article", "source-card card");
@@ -44,7 +45,7 @@ function sourceCard(
   const candidate = selectedCandidate(candidates, selectedId);
   const copy = element("div", "source-card-heading");
   copy.append(element("p", "source-title", title));
-  copy.append(element("h2", undefined, candidates.length <= 1 ? "Found source" : "Choose source"));
+  copy.append(element("h2", undefined, candidate === undefined ? "Source needed" : candidates.length === 1 ? "Found source" : "Choose source"));
   const status = element("span", `source-status ${candidate?.eligible === true ? "ok" : "warning"}`, candidate?.eligible === true ? "Ready" : "Needs attention");
   card.append(copy, status);
 
@@ -59,6 +60,7 @@ function sourceCard(
       option.selected = optionCandidate.id === candidate?.id;
       select.append(option);
     }
+    select.disabled = starting;
     select.addEventListener("change", () => void actions.selectSource(game, select.value));
     card.append(label, select);
   } else {
@@ -77,6 +79,7 @@ function sourceCard(
   }
   const changeSource = actionButton("Change source", () => actions.browseSource(game), "quiet compact");
   changeSource.setAttribute("aria-label", game === "bg1" ? "Change Baldur's Gate source" : "Change Baldur's Gate II source");
+  changeSource.disabled = starting;
   card.append(details, changeSource);
   return card;
 }
@@ -100,8 +103,8 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const sources = element("section", "source-grid install-sources");
   sources.setAttribute("aria-label", "Found game sources");
   sources.append(
-    sourceCard("bg1", "Baldur's Gate + Siege of Dragonspear", model.discovery.bg1Candidates, model.selectedBg1Id, actions),
-    sourceCard("bg2", "Baldur's Gate II", model.discovery.bg2Candidates, model.selectedBg2Id, actions),
+    sourceCard("bg1", "Baldur's Gate + Siege of Dragonspear", model.discovery.bg1Candidates, model.selectedBg1Id, model.starting, actions),
+    sourceCard("bg2", "Baldur's Gate II", model.discovery.bg2Candidates, model.selectedBg2Id, model.starting, actions),
   );
 
   const settings = element("section", "install-settings card");
@@ -109,6 +112,8 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const fields = element("div", "install-field-grid");
   const name = field("Install name", "install-name", model.installationName);
   const location = field("Install location", "install-location", model.destination.path);
+  name.input.disabled = model.starting;
+  location.input.disabled = model.starting;
   const nameError = validateInstallationName(model.installationName);
   const nameHelp = element("p", nameError === null ? "field-help" : "field-error", nameError ?? "This name also labels your installation in CEBG.");
   nameHelp.id = "install-name-help";
@@ -119,6 +124,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const locationControls = element("div", "location-controls");
   const changeLocation = actionButton("Change", actions.browseLocation, "quiet");
   changeLocation.setAttribute("aria-label", "Change install location");
+  changeLocation.disabled = model.starting;
   if (!model.destination.safe) {
     const locationFinding = element("div", "location-finding");
     locationFinding.id = "install-location-finding";
@@ -141,7 +147,9 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     element("h2", undefined, "Recommended setup"),
     element("p", "choice-summary", model.evaluation === null ? "Checking the recommended choices…" : `${model.evaluation.selectedChoiceCount} choices included`),
   );
-  recipe.append(recipeCopy, actionButton("Customize", actions.customize, "quiet"));
+  const customize = actionButton("Customize", actions.customize, "quiet");
+  customize.disabled = model.starting;
+  recipe.append(recipeCopy, customize);
   if (model.evaluation !== null && model.evaluation.findings.length > 0) {
     const notices = element("details", "recipe-notices");
     notices.append(element("summary", undefined, `${model.evaluation.findings.length} setup ${model.evaluation.findings.length === 1 ? "note" : "notes"}`));
