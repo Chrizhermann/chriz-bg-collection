@@ -15,6 +15,11 @@ export interface BackendStatus {
   readonly recipeVersion: string | null;
 }
 
+export interface InstallationDefaults {
+  readonly name: string;
+  readonly path: string;
+}
+
 export interface CommandErrorPayload {
   readonly code: string;
   readonly message: string;

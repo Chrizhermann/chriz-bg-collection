@@ -10,6 +10,13 @@ import {
 import type { RunEventEnvelope } from "../src/contracts";
 
 describe("engine-shaped fixture backend", () => {
+  it("suggests the safe CEBG installation defaults", async () => {
+    await expect(new FixtureBackend().getInstallationDefaults()).resolves.toEqual({
+      name: "Chriz Easy BG",
+      path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+    });
+  });
+
   it("returns semantic recipe controls without exposing WeiDU component numbers", async () => {
     const backend = new FixtureBackend();
     const evaluation = await backend.evaluateBuild({
@@ -55,6 +62,22 @@ describe("engine-shaped fixture backend", () => {
 });
 
 describe("native command adapter", () => {
+  it("maps installation defaults from the narrow native command", async () => {
+    const invoke = vi.fn<InvokeCommand>(async (command, args) => {
+      expect(command).toBe("installation_defaults");
+      expect(args).toBeUndefined();
+      return {
+        name: "Chriz Easy BG",
+        path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+      };
+    });
+
+    await expect(new NativeBackend(invoke).getInstallationDefaults()).resolves.toEqual({
+      name: "Chriz Easy BG",
+      path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+    });
+  });
+
   it("maps the four read-only command contracts without exposing component numbers", async () => {
     const selection = { platform: "windows", features: {}, inputs: {} } as const;
     const invoke = vi.fn<InvokeCommand>(async (command, args) => {

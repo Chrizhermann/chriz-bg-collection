@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc, Condvar, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use bg_engine::cli::{
     CampaignReport, CampaignStatus, InstallCommandRequest, InstallReviewIdentity,
@@ -18,7 +18,8 @@ use bg_engine::resolve::InstallPlan;
 use bg_engine::session::{CampaignCreated, SessionEvent, SessionStore, SourceGameFingerprints};
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
 use chriz_bg_app_lib::bridge::{
-    BridgeEngine, BridgeSystem, NativeBridge, RunEventEnvelope, SequencedEventSink,
+    display_windows_path, installation_defaults, BridgeEngine, BridgeSystem, NativeBridge,
+    RunEventEnvelope, SequencedEventSink,
 };
 use chriz_bg_app_lib::error::CommandError;
 use serde_json::json;
@@ -410,6 +411,42 @@ impl BridgeEngine for FakeBridgeEngine {
 }
 
 #[test]
+fn installation_defaults_use_the_injected_home_without_creating_directories() {
+    let temp = tempfile::tempdir().expect("create defaults fixture root");
+    let home = temp.path().join("Chris");
+    let expected = home.join("Games").join("Chriz Easy BG");
+
+    let defaults = installation_defaults(&home).expect("project installation defaults");
+
+    assert_eq!(defaults.name, "Chriz Easy BG");
+    assert_eq!(defaults.path, display_windows_path(&expected).unwrap());
+    assert!(
+        !home.exists(),
+        "reading defaults must not create the home path"
+    );
+
+    let windows_defaults = installation_defaults(Path::new(r"C:\Users\Chris"))
+        .expect("project Windows installation defaults");
+    assert_eq!(windows_defaults.path, r"C:\Users\Chris\Games\Chriz Easy BG");
+}
+
+#[test]
+fn display_paths_hide_only_windows_verbatim_prefixes() {
+    assert_eq!(
+        display_windows_path(Path::new(r"\\?\C:\Games\Example")).unwrap(),
+        r"C:\Games\Example"
+    );
+    assert_eq!(
+        display_windows_path(Path::new(r"\\?\UNC\server\share\Example")).unwrap(),
+        r"\\server\share\Example"
+    );
+    assert_eq!(
+        display_windows_path(Path::new(r"D:\Games\Example")).unwrap(),
+        r"D:\Games\Example"
+    );
+}
+
+#[test]
 fn display_name_is_forwarded_and_changes_the_frozen_review_identity() {
     let (_temp, recipe) = recipe_with_profiles();
     let cache = recipe.parent().unwrap().join("cache");
@@ -591,7 +628,11 @@ fn explicit_game_paths_are_inspected_by_the_engine_before_projection() {
         .inspect_game_path(GameRole::BgeeSod, &game)
         .expect("inspect fixture path");
 
-    assert_eq!(Path::new(&inspected.path), game.canonicalize().unwrap());
+    assert_eq!(
+        Path::new(&inspected.path).canonicalize().unwrap(),
+        game.canonicalize().unwrap()
+    );
+    assert!(!inspected.path.starts_with(r"\\?\"));
     assert!(!inspected.eligible);
     assert!(!inspected.findings.is_empty());
 }
@@ -613,7 +654,11 @@ fn chosen_game_folders_are_validated_and_cancelled_choices_are_noops() {
         .expect("inspect chosen folder")
         .expect("chosen folder response");
 
-    assert_eq!(Path::new(&inspected.path), game.canonicalize().unwrap());
+    assert_eq!(
+        Path::new(&inspected.path).canonicalize().unwrap(),
+        game.canonicalize().unwrap()
+    );
+    assert!(!inspected.path.starts_with(r"\\?\"));
 }
 
 #[test]
@@ -672,7 +717,10 @@ fn destination_review_freezes_exact_server_side_inputs_and_is_single_use() {
         )
         .expect("inspect destination");
     assert!(checked.safe);
-    assert_eq!(Path::new(&checked.path), canonical_destination);
+    assert_eq!(
+        checked.path,
+        display_windows_path(&canonical_destination).unwrap()
+    );
 
     let review = bridge
         .freeze_review(
@@ -683,7 +731,10 @@ fn destination_review_freezes_exact_server_side_inputs_and_is_single_use() {
             &discovery.selected_bg2_id,
         )
         .expect("freeze review");
-    assert_eq!(Path::new(&review.destination), canonical_destination);
+    assert_eq!(
+        review.destination,
+        display_windows_path(&canonical_destination).unwrap()
+    );
     assert_eq!(review.game_labels.len(), 2);
     assert_eq!(review.review_token.len(), 64);
     assert_eq!(review.digest.len(), 64);
@@ -723,6 +774,24 @@ fn destination_review_freezes_exact_server_side_inputs_and_is_single_use() {
     assert_eq!(events[0].sequence_as_string, "1");
     assert_eq!(events[2].sequence_as_string, "3");
     assert!(events.iter().all(|event| event.run_id == started.run_id));
+    let deadline = Instant::now() + Duration::from_secs(2);
+    let snapshot = loop {
+        let snapshot = bridge
+            .get_run_snapshot(&started.run_id)
+            .expect("read completed run snapshot");
+        if snapshot.report.is_some() {
+            break snapshot;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "worker did not publish its report"
+        );
+        std::thread::sleep(Duration::from_millis(5));
+    };
+    assert_eq!(
+        snapshot.report.expect("completed report").managed_root,
+        PathBuf::from(display_windows_path(&canonical_destination).unwrap())
+    );
 
     let reused = bridge.start_build(&review.review_token, |_| {});
     assert_eq!(reused.unwrap_err().code, "review_token_invalid");
@@ -1022,7 +1091,10 @@ fn chosen_destinations_are_validated_and_cancelled_choices_are_noops() {
         .expect("chosen destination response");
 
     assert!(inspected.safe);
-    assert_eq!(Path::new(&inspected.path), canonical_destination);
+    assert_eq!(
+        inspected.path,
+        display_windows_path(&canonical_destination).unwrap()
+    );
 }
 
 #[test]
@@ -1148,9 +1220,20 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
     assert!(cards[0].receipt_path.is_some());
     assert_eq!(cards[0].status, "Ready to play");
 
+    let canonical_managed = managed.canonicalize().unwrap();
+    assert_eq!(
+        cards[0].path,
+        display_windows_path(&canonical_managed).unwrap()
+    );
+    let expected_receipt =
+        display_windows_path(&canonical_managed.join(".chriz/install-receipt.json")).unwrap();
+    assert_eq!(
+        cards[0].receipt_path.as_deref(),
+        Some(expected_receipt.as_str())
+    );
+
     bridge.launch_install("install-task23").unwrap();
     bridge.open_install_folder("install-task23").unwrap();
-    let canonical_managed = managed.canonicalize().unwrap();
     assert_eq!(
         system.launches.lock().unwrap().as_slice(),
         &[(

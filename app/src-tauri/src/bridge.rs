@@ -313,10 +313,21 @@ impl EventSink for SequencedEventSink {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct DestinationEvaluationResponse {
+    /// Display-only normalized path; freezing the review resolves and validates it again.
     pub path: String,
     pub safe: bool,
     pub title: String,
     pub detail: String,
+}
+
+/// Player-editable defaults for a new installation. Computing these never writes to disk.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstallationDefaultsResponse {
+    /// Initial editable installation name.
+    pub name: String,
+    /// Display-only suggested location; computing it does not create or authorize the folder.
+    pub path: String,
 }
 
 /// Frozen, server-owned review identity. The opaque token is short-lived and single-use.
@@ -326,6 +337,7 @@ pub struct FrozenReviewResponse {
     pub review_token: String,
     pub digest: String,
     pub display_name: String,
+    /// Display-only destination backed by the canonical path frozen in the server-side review.
     pub destination: String,
     pub game_labels: Vec<String>,
     pub evaluation: EvaluateBuildResponse,
@@ -361,6 +373,7 @@ pub struct DiagnosticsExportResponse {
 pub struct ManagedInstallationResponse {
     pub id: String,
     pub name: String,
+    /// Display-only installation directory; actions accept the registry id, not this path.
     pub path: String,
     pub status: String,
     pub receipt_path: Option<String>,
@@ -420,7 +433,7 @@ pub struct GameCandidateResponse {
     pub id: String,
     /// Human-readable game, storefront, and status.
     pub label: String,
-    /// Canonical source directory.
+    /// Human-readable source directory; later commands use its server-side semantic id.
     pub path: String,
     /// Storefront profile used by the engine.
     pub storefront: String,
@@ -704,7 +717,10 @@ impl NativeBridge {
         bg2_candidate_id: &str,
     ) -> Result<DestinationEvaluationResponse, CommandError> {
         let (bg1, bg2) = self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
-        inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)
+        let mut response =
+            inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        response.path = display_windows_path(Path::new(&response.path))?;
+        Ok(response)
     }
 
     /// Validates a native destination choice immediately; cancellation is a no-op.
@@ -954,17 +970,15 @@ impl NativeBridge {
                     error,
                 )
             })?;
-        let path = path.to_str().ok_or_else(|| {
+        let path = display_windows_path(&path).map_err(|error| {
             CommandError::new(
                 "diagnostics_path_invalid",
                 "The diagnostics path cannot be displayed safely.",
                 "Choose a local path with a Windows-compatible name and try again.",
-                path.display().to_string(),
+                error.technical_detail,
             )
         })?;
-        Ok(Some(DiagnosticsExportResponse {
-            path: path.to_owned(),
-        }))
+        Ok(Some(DiagnosticsExportResponse { path }))
     }
 
     /// Re-inspects exact server-side candidates and freezes a short-lived, single-use review.
@@ -1055,7 +1069,7 @@ impl NativeBridge {
             review_token,
             digest,
             display_name: frozen_display_name,
-            destination: destination.path,
+            destination: display_windows_path(Path::new(&destination.path))?,
             game_labels,
             evaluation: project_evaluation(plan_report.evaluation),
         })
@@ -1094,11 +1108,16 @@ impl NativeBridge {
 
     /// Returns the latest process-local event/result snapshot for one opaque run id.
     pub fn get_run_snapshot(&self, run_id: &str) -> Result<RunSnapshotResponse, CommandError> {
-        self.runtime_lock()
+        let mut snapshot = self
+            .runtime_lock()
             .run_snapshots
             .get(run_id)
             .cloned()
-            .ok_or_else(|| unknown_run(run_id))
+            .ok_or_else(|| unknown_run(run_id))?;
+        if let Some(report) = snapshot.report.as_mut() {
+            report.managed_root = PathBuf::from(display_windows_path(&report.managed_root)?);
+        }
+        Ok(snapshot)
     }
 
     /// Rearms the silence watchdog for exactly one active worker.
@@ -1630,6 +1649,16 @@ fn default_application_data_root() -> Option<PathBuf> {
         .then(|| root.join(APPLICATION_DATA_DIRECTORY))
 }
 
+/// Suggests the initial player-facing name and location beneath an injected home path.
+///
+/// This is intentionally a pure projection. The destination is not created or trusted;
+/// the existing destination inspection and frozen-review boundaries re-resolve it before use.
+pub fn installation_defaults(home: &Path) -> Result<InstallationDefaultsResponse, CommandError> {
+    let name = "Chriz Easy BG".to_owned();
+    let path = display_windows_path(&home.join("Games").join(&name))?;
+    Ok(InstallationDefaultsResponse { name, path })
+}
+
 fn project_evaluation(
     evaluation: bg_engine::recipe_view::SelectionEvaluation,
 ) -> EvaluateBuildResponse {
@@ -2011,6 +2040,17 @@ fn path_to_string(path: &Path) -> Result<String, CommandError> {
     })
 }
 
+/// Formats a native path for display without changing the canonical path used by the engine.
+pub fn display_windows_path(path: &Path) -> Result<String, CommandError> {
+    let path = path_to_string(path)?;
+    if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
+        return Ok(format!(r"\\{unc}"));
+    }
+    Ok(path
+        .strip_prefix(r"\\?\")
+        .map_or(path.clone(), str::to_owned))
+}
+
 fn unix_nanos() -> Result<u128, CommandError> {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -2177,14 +2217,8 @@ fn phase_summary(phase: Phase) -> PhaseSummaryResponse {
 }
 
 fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, CommandError> {
-    let path = candidate.root.to_str().ok_or_else(|| {
-        CommandError::new(
-            "path_encoding_unsupported",
-            "A detected game path cannot be represented safely in the interface.",
-            "Choose a game folder whose path uses valid Unicode text.",
-            format!("non-Unicode native path: {:?}", candidate.root),
-        )
-    })?;
+    let canonical_path = path_to_string(&candidate.root)?;
+    let display_path = display_windows_path(&candidate.root)?;
     let freshness = candidate_freshness(&candidate);
     let role = match candidate.role {
         GameRole::BgeeSod => "BG:EE + SoD",
@@ -2203,11 +2237,14 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
         CandidateFreshness::UnknownFingerprint => "unknown files",
         CandidateFreshness::UnsupportedLocale => "unsupported language",
     };
-    let identity = format!("{:?}\0{:?}\0{path}", candidate.role, candidate.storefront);
+    let identity = format!(
+        "{:?}\0{:?}\0{canonical_path}",
+        candidate.role, candidate.storefront
+    );
     Ok(GameCandidateResponse {
         id: format!("game-{}", &sha256_bytes(identity.as_bytes())[..20]),
         label: format!("{role} — {storefront} — {status}"),
-        path: path.to_owned(),
+        path: display_path,
         storefront: storefront_id.to_owned(),
         build: candidate.build,
         freshness,
@@ -2225,9 +2262,9 @@ fn project_managed_install(
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let available = card.availability == InstallAvailability::Available;
     let record = card.record;
-    let path = unicode_path(&record.managed_root, "managed campaign")?;
+    let path = display_windows_path(&record.managed_root)?;
     let receipt = record.managed_root.join(".chriz/install-receipt.json");
-    let receipt_path = unicode_path(&receipt, "managed campaign receipt")?;
+    let receipt_path = display_windows_path(&receipt)?;
     Ok(ManagedInstallationResponse {
         id: record.install_id,
         name: record.display_name,
@@ -2247,7 +2284,7 @@ fn project_managed_install(
 fn project_managed_campaign(
     card: ManagedCampaignCard,
 ) -> Result<ManagedInstallationResponse, CommandError> {
-    let path = unicode_path(&card.record.managed_root, "managed campaign")?;
+    let path = display_windows_path(&card.record.managed_root)?;
     let (status, resumable) = match card.availability {
         CampaignAvailability::Resumable => ("Build interrupted — ready to resume", true),
         CampaignAvailability::FreshCopyRequired => ("Fresh copy required", false),
@@ -2262,17 +2299,6 @@ fn project_managed_campaign(
         available: false,
         resumable,
         recipe_version: None,
-    })
-}
-
-fn unicode_path(path: &Path, label: &str) -> Result<String, CommandError> {
-    path.to_str().map(str::to_owned).ok_or_else(|| {
-        CommandError::new(
-            "path_encoding_unsupported",
-            format!("The {label} path cannot be displayed safely."),
-            "Use a managed campaign path containing valid Unicode text.",
-            format!("non-Unicode native path: {path:?}"),
-        )
     })
 }
 

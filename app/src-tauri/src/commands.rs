@@ -5,14 +5,14 @@ use std::path::PathBuf;
 use bg_engine::games::GameRole;
 use bg_engine::recipe_view::NormalizedSelection;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::bridge::{
     BootstrapResponse, DestinationEvaluationResponse, DiagnosticsExportResponse,
     EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse, GameDiscoveryResponse,
-    ManagedInstallationResponse, ManualArchiveResponse, NativeBridge, RunEventEnvelope,
-    RunSnapshotResponse, StartBuildResponse,
+    InstallationDefaultsResponse, ManagedInstallationResponse, ManualArchiveResponse, NativeBridge,
+    RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 use crate::updates::UpdateCenterResponse;
@@ -59,6 +59,19 @@ fn local_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandErro
 pub async fn bootstrap(state: State<'_, BridgeState>) -> Result<BootstrapResponse, CommandError> {
     let bridge = state.bridge.clone();
     background(move || bridge.bootstrap()).await
+}
+
+#[tauri::command]
+pub fn installation_defaults(app: AppHandle) -> Result<InstallationDefaultsResponse, CommandError> {
+    let home = app.path().home_dir().map_err(|error| {
+        CommandError::new(
+            "home_path_unavailable",
+            "The default installation location could not be found.",
+            "Choose an installation location manually.",
+            error.to_string(),
+        )
+    })?;
+    crate::bridge::installation_defaults(&home)
 }
 
 #[tauri::command]

@@ -21,6 +21,7 @@ pub fn run() -> tauri::Result<()> {
         })
         .invoke_handler(tauri::generate_handler![
             commands::bootstrap,
+            commands::installation_defaults,
             commands::discover_games,
             commands::choose_game_folder,
             commands::inspect_game_path,

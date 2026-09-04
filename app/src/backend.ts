@@ -12,6 +12,7 @@ import type {
   GameCandidate,
   GameDiscovery,
   GameRole,
+  InstallationDefaults,
   ManualArchiveSupply,
   ManagedInstallation,
   NormalizedSelection,
@@ -28,6 +29,7 @@ export interface Backend {
   // This is the UI adapter boundary, not the eventual Tauri wire shape. Task 23
   // may map snake_case command payloads without leaking transport casing here.
   getStatus(): Promise<BackendStatus>;
+  getInstallationDefaults(): Promise<InstallationDefaults>;
   discoverGames(): Promise<GameDiscovery>;
   chooseGameFolder(role: GameRole): Promise<GameCandidate | null>;
   inspectGamePath(role: GameRole, path: string): Promise<GameCandidate>;
@@ -284,6 +286,10 @@ export class NativeBackend implements Backend {
     };
   }
 
+  getInstallationDefaults(): Promise<InstallationDefaults> {
+    return this.#command("installation_defaults");
+  }
+
   async discoverGames(): Promise<GameDiscovery> {
     const discovery = await this.#command<GameDiscoveryWire>("discover_games");
     return {
@@ -526,6 +532,13 @@ export class FixtureBackend implements Backend {
         { id: "bg2-fresh", label: "BGII:EE — clean", path: "C:\\Fixture\\BG2EE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
         { id: "bg2-store", label: "BGII:EE — verify storefront", path: "C:\\Fixture\\BG2EE Other", storefront: "gog", build: "2.7.3.0", freshness: "unverified-storefront", eligible: false, findings: ["This storefront layout has not been verified yet."] },
       ],
+    });
+  }
+
+  getInstallationDefaults(): Promise<InstallationDefaults> {
+    return Promise.resolve({
+      name: "Chriz Easy BG",
+      path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
     });
   }
 
