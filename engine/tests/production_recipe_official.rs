@@ -407,6 +407,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "eet-end-bg2",
             "chriz-sod-remix-bg2",
             "hiddengameplayoptions-bg2",
+            "chriz-bg-rebalance-bg2",
             "eeexremote-bg2",
             "chriz-bg-modpack-bg2",
             "spell-rev-npc-spellbooks-bg2",
