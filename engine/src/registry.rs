@@ -9,12 +9,49 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::digest::sha256_bytes;
+use crate::session::{CampaignCreated, SessionStore};
 
 /// Managed-install registry schema emitted by this engine version.
 pub const REGISTRY_SCHEMA_VERSION: u32 = 1;
 
 const RECORDS_DIRECTORY: &str = "managed-installs";
+const CAMPAIGNS_DIRECTORY: &str = "managed-campaigns";
 static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+/// Minimal immutable pointer to a campaign whose ledger record zero is durable.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ManagedCampaignRecord {
+    /// Registry record schema version.
+    pub schema_version: u32,
+    /// Stable install identity and record filename stem.
+    pub install_id: String,
+    /// Canonical engine-owned campaign root.
+    pub managed_root: PathBuf,
+    /// Exact frozen recipe payload digest from ledger record zero.
+    pub recipe_sha256: String,
+}
+
+/// Whether an indexed incomplete campaign can safely enter engine resume.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CampaignAvailability {
+    /// The indexed ledger is intact and has no permanent fresh-copy seal.
+    Resumable,
+    /// The ledger permanently forbids further mutation of this managed copy.
+    FreshCopyRequired,
+    /// The root moved, disappeared, or no longer matches its indexed ledger identity.
+    Stale,
+}
+
+/// One start-index record projected through a fresh ledger replay.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ManagedCampaignCard {
+    /// Stored create-once identity.
+    pub record: ManagedCampaignRecord,
+    /// Current ledger-backed availability.
+    pub availability: CampaignAvailability,
+}
 
 /// Immutable discovery record for one successfully receipted installation.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,6 +153,7 @@ pub enum RegistryError {
 #[derive(Clone, Debug)]
 pub struct ManagedInstallRegistry {
     records_root: PathBuf,
+    campaigns_root: PathBuf,
 }
 
 impl ManagedInstallRegistry {
@@ -133,7 +171,47 @@ impl ManagedInstallRegistry {
         let records_root = app_data_root.join(RECORDS_DIRECTORY);
         create_directories(&records_root)?;
         validate_direct_directory(&records_root)?;
-        Ok(Self { records_root })
+        let campaigns_root = app_data_root.join(CAMPAIGNS_DIRECTORY);
+        create_directories(&campaigns_root)?;
+        validate_direct_directory(&campaigns_root)?;
+        Ok(Self {
+            records_root,
+            campaigns_root,
+        })
+    }
+
+    /// Publish a campaign pointer only after its record-zero ledger can be replayed exactly.
+    pub fn publish_campaign(&self, created: &CampaignCreated) -> Result<PathBuf, RegistryError> {
+        validate_campaign_created(created)?;
+        let record = ManagedCampaignRecord {
+            schema_version: REGISTRY_SCHEMA_VERSION,
+            install_id: created.install_id.clone(),
+            managed_root: created.managed_root.clone(),
+            recipe_sha256: created.recipe_payload_sha256.clone(),
+        };
+        let path = self
+            .campaigns_root
+            .join(format!("{}.json", record.install_id));
+        let bytes = campaign_record_bytes(&record, &path)?;
+        if let Some(existing) = read_existing(&path)? {
+            let parsed: ManagedCampaignRecord =
+                serde_json::from_slice(&existing).map_err(|source| RegistryError::Json {
+                    path: path.clone(),
+                    message: source.to_string(),
+                })?;
+            if parsed.managed_root != record.managed_root {
+                return Err(RegistryError::DuplicateRoot {
+                    install_id: record.install_id,
+                    existing: parsed.managed_root,
+                });
+            }
+            if existing == bytes {
+                return Ok(path);
+            }
+            return Err(RegistryError::CreateOnceConflict { path });
+        }
+        publish_create_once(&path, &bytes)?;
+        Ok(path)
     }
 
     /// Publish one record without replacing any existing record for its install id.
@@ -232,6 +310,76 @@ impl ManagedInstallRegistry {
         Ok(cards)
     }
 
+    /// Read every immutable campaign pointer and rederive resumability from its ledger.
+    pub fn list_campaigns(&self) -> Result<Vec<ManagedCampaignCard>, RegistryError> {
+        validate_direct_directory(&self.campaigns_root)?;
+        let mut paths = Vec::new();
+        for entry in fs::read_dir(&self.campaigns_root).map_err(|source| RegistryError::Io {
+            path: self.campaigns_root.clone(),
+            source,
+        })? {
+            let entry = entry.map_err(|source| RegistryError::Io {
+                path: self.campaigns_root.clone(),
+                source,
+            })?;
+            let path = entry.path();
+            let metadata = fs::symlink_metadata(&path).map_err(|source| RegistryError::Io {
+                path: path.clone(),
+                source,
+            })?;
+            if metadata.file_type().is_symlink() || !metadata.is_file() {
+                return Err(unsafe_path(
+                    &path,
+                    "campaign registry entries must be direct regular files",
+                ));
+            }
+            let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
+                return Err(unsafe_path(
+                    &path,
+                    "campaign registry filename is not valid Unicode",
+                ));
+            };
+            if name.contains(".tmp.") {
+                continue;
+            }
+            let Some(id) = name.strip_suffix(".json") else {
+                return Err(unsafe_path(
+                    &path,
+                    "unrecognized campaign registry filename",
+                ));
+            };
+            validate_identifier(id, "install id", &path)?;
+            paths.push((id.to_owned(), path));
+        }
+        paths.sort_by(|left, right| left.0.cmp(&right.0));
+
+        let mut cards = Vec::with_capacity(paths.len());
+        for (filename_id, path) in paths {
+            let bytes = fs::read(&path).map_err(|source| RegistryError::Io {
+                path: path.clone(),
+                source,
+            })?;
+            let record: ManagedCampaignRecord =
+                serde_json::from_slice(&bytes).map_err(|source| RegistryError::Json {
+                    path: path.clone(),
+                    message: source.to_string(),
+                })?;
+            if record.install_id != filename_id {
+                return Err(RegistryError::InvalidRecord(format!(
+                    "campaign install id {:?} does not match filename {filename_id:?}",
+                    record.install_id
+                )));
+            }
+            validate_campaign_record(&record)?;
+            let availability = campaign_availability(&record);
+            cards.push(ManagedCampaignCard {
+                record,
+                availability,
+            });
+        }
+        Ok(cards)
+    }
+
     fn validate_record(&self, record: &ManagedInstallRecord) -> Result<(), RegistryError> {
         validate_stored_record(record)?;
         validate_direct_directory(&record.managed_root)?;
@@ -253,6 +401,76 @@ impl ManagedInstallRegistry {
             )));
         }
         Ok(())
+    }
+}
+
+fn validate_campaign_created(created: &CampaignCreated) -> Result<(), RegistryError> {
+    let record = ManagedCampaignRecord {
+        schema_version: REGISTRY_SCHEMA_VERSION,
+        install_id: created.install_id.clone(),
+        managed_root: created.managed_root.clone(),
+        recipe_sha256: created.recipe_payload_sha256.clone(),
+    };
+    validate_campaign_record(&record)?;
+    validate_direct_directory(&created.managed_root)?;
+    let replay = SessionStore::open(&created.managed_root)
+        .and_then(|store| store.replay())
+        .map_err(|error| {
+            RegistryError::InvalidRecord(format!(
+                "campaign ledger at {} is unavailable: {error}",
+                created.managed_root.display()
+            ))
+        })?;
+    if replay.created() != created {
+        return Err(RegistryError::InvalidRecord(
+            "campaign start record differs from ledger record zero".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_campaign_record(record: &ManagedCampaignRecord) -> Result<(), RegistryError> {
+    if record.schema_version != REGISTRY_SCHEMA_VERSION {
+        return Err(RegistryError::InvalidRecord(format!(
+            "unsupported campaign schema {}; expected {REGISTRY_SCHEMA_VERSION}",
+            record.schema_version
+        )));
+    }
+    validate_identifier(&record.install_id, "install id", &record.managed_root)?;
+    validate_hash("recipe", &record.recipe_sha256)?;
+    if !record.managed_root.is_absolute()
+        || record
+            .managed_root
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
+    {
+        return Err(RegistryError::InvalidRecord(format!(
+            "managed campaign root must be absolute and normalized: {}",
+            record.managed_root.display()
+        )));
+    }
+    Ok(())
+}
+
+fn campaign_availability(record: &ManagedCampaignRecord) -> CampaignAvailability {
+    if !direct_directory_exists(&record.managed_root) {
+        return CampaignAvailability::Stale;
+    }
+    let Ok(replay) = SessionStore::open(&record.managed_root).and_then(|store| store.replay())
+    else {
+        return CampaignAvailability::Stale;
+    };
+    let created = replay.created();
+    if created.install_id != record.install_id
+        || created.managed_root != record.managed_root
+        || created.recipe_payload_sha256 != record.recipe_sha256
+    {
+        return CampaignAvailability::Stale;
+    }
+    if replay.fresh_copy_required().is_some() {
+        CampaignAvailability::FreshCopyRequired
+    } else {
+        CampaignAvailability::Resumable
     }
 }
 
@@ -340,6 +558,18 @@ fn hash_file(path: &Path) -> Result<String, RegistryError> {
 }
 
 fn record_bytes(record: &ManagedInstallRecord, path: &Path) -> Result<Vec<u8>, RegistryError> {
+    let mut bytes = serde_json::to_vec_pretty(record).map_err(|source| RegistryError::Json {
+        path: path.to_path_buf(),
+        message: source.to_string(),
+    })?;
+    bytes.push(b'\n');
+    Ok(bytes)
+}
+
+fn campaign_record_bytes(
+    record: &ManagedCampaignRecord,
+    path: &Path,
+) -> Result<Vec<u8>, RegistryError> {
     let mut bytes = serde_json::to_vec_pretty(record).map_err(|source| RegistryError::Json {
         path: path.to_path_buf(),
         message: source.to_string(),
