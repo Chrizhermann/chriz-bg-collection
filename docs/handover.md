@@ -22,9 +22,10 @@ fresh selection.
 Tasks 19, 20, and 23 are implemented: public-alpha omissions and evidence are
 release-enforced; immutable recipe envelopes, update classification, and packaging are in
 place; and the Tauri command surface includes restart-safe discovery and resume through the
-immutable campaign index. The final local NSIS lifecycle smoke passed for the **4,378,742
-byte** installer with SHA-256
-`4D10383926161B153005A046AB1B0A6C23BA4BD875992B1536FB872499F9D3BF`.
+immutable campaign index. Task 24 has a tested three-track update-center foundation, but
+the production updater channel is deliberately still unconfigured. The latest local NSIS
+lifecycle smoke passed for the **4,384,999 byte** installer with SHA-256
+`434DCF39DCA4599E55979F32543DAE804D6F71B7BEB01763521D0785B98B0A01`.
 
 There is **no full game-install acceptance and no public release yet**. The immediate E2E
 blocker is a genuinely clean Steam BG:EE+SoD 2.7.3 source; the detected Steam BG2 source is
