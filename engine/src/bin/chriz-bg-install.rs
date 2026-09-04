@@ -136,6 +136,8 @@ impl From<RoleArg> for GameRole {
 #[derive(Debug, Args)]
 struct InstallArgs {
     recipe: PathBuf,
+    #[arg(long, default_value = "Chriz Easy BG")]
+    name: String,
     #[arg(long)]
     preset: String,
     #[arg(long)]
@@ -270,6 +272,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
             let controls = RunnerControlHandle::new();
             install_interrupt_handler(&controls)?;
             let request = InstallCommandRequest {
+                display_name: args.name.clone(),
                 recipe: args.recipe.clone(),
                 preset: args.preset.clone(),
                 platform: args.platform.clone(),

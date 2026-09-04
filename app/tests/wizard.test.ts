@@ -575,8 +575,8 @@ describe("guided collection wizard", () => {
         return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
       }
 
-      override async freezeReview(selection: Parameters<FixtureBackend["freezeReview"]>[0], destination: string, bg1CandidateId: string, bg2CandidateId: string) {
-        const review = await super.freezeReview(selection, destination, bg1CandidateId, bg2CandidateId);
+      override async freezeReview(displayName: string, selection: Parameters<FixtureBackend["freezeReview"]>[1], destination: string, bg1CandidateId: string, bg2CandidateId: string) {
+        const review = await super.freezeReview(displayName, selection, destination, bg1CandidateId, bg2CandidateId);
         return { ...review, evaluation: { ...review.evaluation, selectedChoiceCount: review.evaluation.selectedChoiceCount + 1 } };
       }
 

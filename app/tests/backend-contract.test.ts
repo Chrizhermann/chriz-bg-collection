@@ -214,10 +214,11 @@ describe("native command adapter", () => {
           expect(args).toEqual({ path: "D:\\Campaign", bg1CandidateId: "bg1", bg2CandidateId: "bg2" });
           return { path: "D:\\Campaign", safe: true, title: "Ready", detail: "Isolated." };
         case "freeze_review":
-          expect(args).toEqual({ selection, destination: "D:\\Campaign", bg1CandidateId: "bg1", bg2CandidateId: "bg2" });
+          expect(args).toEqual({ displayName: "My Baldur's Gate", selection, destination: "D:\\Campaign", bg1CandidateId: "bg1", bg2CandidateId: "bg2" });
           return {
             review_token: "review-opaque",
             digest: "11".repeat(32),
+            display_name: "My Baldur's Gate",
             destination: "D:\\Campaign",
             game_labels: ["BG1", "BG2"],
             evaluation: {
@@ -250,8 +251,9 @@ describe("native command adapter", () => {
     const backend = new NativeBackend(invoke, channelFactory);
 
     await expect(backend.inspectDestination("D:\\Campaign", "bg1", "bg2")).resolves.toMatchObject({ safe: true });
-    const review = await backend.freezeReview(selection, "D:\\Campaign", "bg1", "bg2");
+    const review = await backend.freezeReview("My Baldur's Gate", selection, "D:\\Campaign", "bg1", "bg2");
     expect(review.reviewToken).toBe("review-opaque");
+    expect(review.displayName).toBe("My Baldur's Gate");
     await expect(backend.startBuild(review.reviewToken, (event) => events.push(event))).resolves.toEqual({ runId: "run-1" });
     expect(events[0]).toMatchObject({ runId: "run-1", sequenceAsString: "1", event: { type: "campaign_started" } });
     await expect(backend.getRunSnapshot("run-1")).resolves.toMatchObject({ runId: "run-1", status: "running" });

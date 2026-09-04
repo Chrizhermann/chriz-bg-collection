@@ -135,6 +135,7 @@ export interface SelectionEvaluation {
 export interface FrozenReview {
   readonly reviewToken: string;
   readonly digest: string;
+  readonly displayName: string;
   readonly destination: string;
   readonly gameLabels: readonly string[];
   readonly evaluation: SelectionEvaluation;

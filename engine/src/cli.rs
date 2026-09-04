@@ -76,7 +76,7 @@ const GAME_PROFILE_DIRECTORY: &str = "game-builds";
 const STATE_DIRECTORY: &str = ".chriz";
 const ATTEMPTS_DIRECTORY: &str = "attempts";
 const ATTEMPT_RECEIPT_FILE: &str = "receipt.json";
-const CLI_FROZEN_RECIPE_SCHEMA: u32 = 1;
+const CLI_FROZEN_RECIPE_SCHEMA: u32 = 2;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
 const EVIDENCE_DIRECTORY: &str = "evidence";
@@ -203,6 +203,8 @@ pub struct ManagedReport {
 /// Inputs for one new CLI-owned managed installation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstallCommandRequest {
+    /// Validated player-facing installation name frozen for review and resume.
+    pub display_name: String,
     /// Executable recipe directory to freeze.
     pub recipe: PathBuf,
     /// Semantic preset used as the selection base.
@@ -225,6 +227,8 @@ pub struct InstallCommandRequest {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct InstallReviewIdentity {
+    /// Exact player-facing installation name included in the frozen recipe identity.
+    pub display_name: String,
     /// Digest of the complete serialized recipe, profiles, sources, selection, and plan.
     pub recipe_payload_sha256: String,
     /// Canonical normalized semantic selection digest.
@@ -279,6 +283,7 @@ pub enum CampaignStatus {
 #[serde(deny_unknown_fields)]
 struct FrozenCliRecipe {
     schema: u32,
+    display_name: String,
     collection: Collection,
     artifacts: BTreeMap<String, Artifact>,
     mods: BTreeMap<String, ModFile>,
@@ -558,7 +563,10 @@ pub fn install_campaign_controlled<S: EventSink + Sync>(
 /// Resolve the complete engine-owned identity that a UI must show and bind at Review.
 pub fn review_install(request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
     let prepared = prepare_install(request)?;
-    Ok(install_review_identity(&prepared.created))
+    Ok(install_review_identity(
+        &prepared.created,
+        &prepared.frozen.display_name,
+    ))
 }
 
 /// Start only when the current inputs still match the identity accepted at Review.
@@ -569,17 +577,18 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
     let prepared = prepare_install(request)?;
-    let current = install_review_identity(&prepared.created);
+    let current = install_review_identity(&prepared.created, &prepared.frozen.display_name);
     if current != *expected {
         return Err(CliError::new(
             "review_changed",
-            "the recipe, selection, sources, destination, or cache changed after Review; review the build again",
+            "the installation name, recipe, selection, sources, destination, or cache changed after Review; review the build again",
         ));
     }
     execute_frozen_campaign(prepared.created, prepared.frozen, sink, controls)
 }
 
 fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
+    validate_display_name(&request.display_name)?;
     let manifest = load_recipe(&request.recipe)?;
     validate::check(&manifest).map_err(|error| {
         CliError::new(
@@ -609,6 +618,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
     let frozen = FrozenCliRecipe {
         schema: CLI_FROZEN_RECIPE_SCHEMA,
+        display_name: request.display_name.clone(),
         collection: manifest.collection.clone(),
         artifacts: manifest.artifacts.clone(),
         mods: manifest.mods.clone(),
@@ -655,8 +665,9 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     Ok(PreparedInstall { created, frozen })
 }
 
-fn install_review_identity(created: &CampaignCreated) -> InstallReviewIdentity {
+fn install_review_identity(created: &CampaignCreated, display_name: &str) -> InstallReviewIdentity {
     InstallReviewIdentity {
+        display_name: display_name.to_owned(),
         recipe_payload_sha256: created.recipe_payload_sha256.clone(),
         selection_sha256: created.selection_sha256.clone(),
         plan_sha256: created.plan_sha256.clone(),
@@ -664,6 +675,33 @@ fn install_review_identity(created: &CampaignCreated) -> InstallReviewIdentity {
         managed_root: created.managed_root.clone(),
         cache_root: created.cache_root.clone(),
     }
+}
+
+fn validate_display_name(display_name: &str) -> Result<(), CliError> {
+    if display_name.trim().is_empty() {
+        return Err(CliError::new(
+            "invalid_display_name",
+            "installation name must not be blank",
+        ));
+    }
+    if display_name.chars().any(char::is_control) {
+        return Err(CliError::new(
+            "invalid_display_name",
+            "installation name must not contain control characters",
+        ));
+    }
+    if display_name.chars().any(|character| {
+        matches!(
+            character,
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
+        )
+    }) {
+        return Err(CliError::new(
+            "invalid_display_name",
+            "installation name must not contain Windows filename characters < > : \" / \\ | ? *",
+        ));
+    }
+    Ok(())
 }
 
 /// Resume only the campaign identity and recipe payload frozen below `managed_root`.
@@ -1276,6 +1314,12 @@ fn validate_frozen_cli_recipe(
             ),
         ));
     }
+    validate_display_name(&frozen.display_name).map_err(|error| {
+        CliError::new(
+            "resume_unavailable",
+            format!("frozen installation name is invalid: {error}"),
+        )
+    })?;
     let actual_plan = plan_digest(&frozen.plan)
         .map_err(|error| CliError::new("resume_unavailable", error.to_string()))?;
     if actual_plan != created.plan_sha256 {
@@ -1801,7 +1845,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         reserve_save_identity(
             &CliDocumentsLocator,
             layout,
-            "Chriz BG Collection",
+            &self.frozen.display_name,
             &self.created.install_id,
         )
         .map_err(step_error)
@@ -2835,7 +2879,7 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
             runs,
             final_state,
         };
-        ManagedReceiptWriter::new(store, registry, "Chriz BG Collection".to_owned(), evidence)
+        ManagedReceiptWriter::new(store, registry, self.frozen.display_name.clone(), evidence)
             .write(draft)
     }
 }

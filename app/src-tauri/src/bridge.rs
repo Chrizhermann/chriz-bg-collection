@@ -325,6 +325,7 @@ pub struct DestinationEvaluationResponse {
 pub struct FrozenReviewResponse {
     pub review_token: String,
     pub digest: String,
+    pub display_name: String,
     pub destination: String,
     pub game_labels: Vec<String>,
     pub evaluation: EvaluateBuildResponse,
@@ -969,6 +970,7 @@ impl NativeBridge {
     /// Re-inspects exact server-side candidates and freezes a short-lived, single-use review.
     pub fn freeze_review(
         &self,
+        display_name: &str,
         selection: &NormalizedSelection,
         destination: &Path,
         bg1_candidate_id: &str,
@@ -1004,6 +1006,7 @@ impl NativeBridge {
         let selection_digest = selection_digest(normalized_selection).map_err(digest_error)?;
         let plan_digest = plan_digest(&plan_report.evaluation.plan).map_err(digest_error)?;
         let request = InstallCommandRequest {
+            display_name: display_name.to_owned(),
             recipe: plan_report.recipe.clone(),
             preset: self.preset.clone(),
             platform: normalized_selection.platform.clone(),
@@ -1017,6 +1020,7 @@ impl NativeBridge {
             .engine
             .review(&request)
             .map_err(CommandError::from_cli)?;
+        let frozen_display_name = engine_identity.display_name.clone();
         let digest = review_digest(
             &recipe_digest,
             &selection_digest,
@@ -1050,6 +1054,7 @@ impl NativeBridge {
         Ok(FrozenReviewResponse {
             review_token,
             digest,
+            display_name: frozen_display_name,
             destination: destination.path,
             game_labels,
             evaluation: project_evaluation(plan_report.evaluation),
@@ -1976,7 +1981,7 @@ fn review_digest(
     let engine_managed_root = path_to_string(&engine_identity.managed_root)?;
     let engine_cache_root = path_to_string(&engine_identity.cache_root)?;
     let identity = format!(
-        "review-v2\0{recipe_digest}\0{selection_digest}\0{plan_digest}\0{:?}\0{:?}\0{}\0{}\0{:?}\0{:?}\0{}\0{}\0{destination}\0{}\0{}\0{}\0{}\0{}\0{engine_managed_root}\0{engine_cache_root}",
+        "review-v3\0{recipe_digest}\0{selection_digest}\0{plan_digest}\0{:?}\0{:?}\0{}\0{}\0{:?}\0{:?}\0{}\0{}\0{destination}\0{}\0{}\0{}\0{}\0{}\0{}\0{engine_managed_root}\0{engine_cache_root}",
         bg1.role,
         bg1.storefront,
         bg1_path,
@@ -1990,6 +1995,7 @@ fn review_digest(
         engine_identity.plan_sha256,
         engine_identity.source_games.bg1,
         engine_identity.source_games.bg2,
+        engine_identity.display_name,
     );
     Ok(sha256_bytes(identity.as_bytes()))
 }

@@ -18,7 +18,7 @@ describe("installer state", () => {
 
     const frozen = reduce(state, {
       type: "review-frozen",
-      review: { reviewToken: "fixture-token", digest: "fixture", destination: "D:\\Fixture", gameLabels: [], evaluation: evaluation(2) },
+      review: { reviewToken: "fixture-token", digest: "fixture", displayName: "Chriz Easy BG", destination: "D:\\Fixture", gameLabels: [], evaluation: evaluation(2) },
     });
     expect(reduce(frozen, { type: "navigate", route: "build" }).route).toBe("build");
   });

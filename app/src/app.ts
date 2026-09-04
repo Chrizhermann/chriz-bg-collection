@@ -137,6 +137,7 @@ class AppController implements AppHandle {
     try {
       const displayedEvaluation = this.#state.evaluation;
       const review = await this.backend.freezeReview(
+        "Chriz Easy BG",
         this.#state.selection,
         this.#destination.path,
         this.#state.selectedBg1Id,

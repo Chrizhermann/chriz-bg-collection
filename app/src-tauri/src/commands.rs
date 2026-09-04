@@ -260,6 +260,7 @@ pub async fn activate_recipe_update(
 #[tauri::command]
 pub async fn freeze_review(
     state: State<'_, BridgeState>,
+    display_name: String,
     selection: NormalizedSelection,
     destination: String,
     bg1_candidate_id: String,
@@ -268,6 +269,7 @@ pub async fn freeze_review(
     let bridge = state.bridge.clone();
     background(move || {
         bridge.freeze_review(
+            &display_name,
             &selection,
             &PathBuf::from(destination),
             &bg1_candidate_id,

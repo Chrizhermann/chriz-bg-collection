@@ -332,6 +332,7 @@ impl BridgeEngine for FakeBridgeEngine {
         request: &InstallCommandRequest,
     ) -> Result<InstallReviewIdentity, bg_engine::cli::CliError> {
         Ok(InstallReviewIdentity {
+            display_name: request.display_name.clone(),
             recipe_payload_sha256: self.review_recipe_digest.lock().unwrap().clone(),
             selection_sha256: "bb".repeat(32),
             plan_sha256: "cc".repeat(32),
@@ -406,6 +407,49 @@ impl BridgeEngine for FakeBridgeEngine {
             status: CampaignStatus::Complete,
         })
     }
+}
+
+#[test]
+fn display_name_is_forwarded_and_changes_the_frozen_review_identity() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let cache = recipe.parent().unwrap().join("cache");
+    fs::create_dir(&cache).expect("create cache fixture");
+    let bg1 = recipe.parent().unwrap().join("clean-bg1");
+    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    fs::create_dir(&bg1).expect("create BG1 fixture");
+    fs::create_dir(&bg2).expect("create BG2 fixture");
+    let destination = recipe.parent().unwrap().join("installation");
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(recipe, "recommended", &cache, engine);
+    let discovery = bridge.discover_games().expect("register discovered games");
+    let selection = NormalizedSelection {
+        platform: "windows".to_owned(),
+        features: Default::default(),
+        inputs: Default::default(),
+    };
+
+    let first = bridge
+        .freeze_review(
+            "Chriz Easy BG",
+            &selection,
+            &destination,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("freeze default display name");
+    let renamed = bridge
+        .freeze_review(
+            "My Baldur's Gate",
+            &selection,
+            &destination,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("freeze renamed display name");
+
+    assert_eq!(first.display_name, "Chriz Easy BG");
+    assert_eq!(renamed.display_name, "My Baldur's Gate");
+    assert_ne!(first.digest, renamed.digest);
 }
 
 #[test]
@@ -632,6 +676,7 @@ fn destination_review_freezes_exact_server_side_inputs_and_is_single_use() {
 
     let review = bridge
         .freeze_review(
+            "Chriz Easy BG",
             &selection,
             &destination,
             &discovery.selected_bg1_id,
@@ -698,6 +743,7 @@ fn start_rejects_an_engine_identity_that_changed_after_review() {
     let discovery = bridge.discover_games().expect("register discovered games");
     let review = bridge
         .freeze_review(
+            "Chriz Easy BG",
             &NormalizedSelection {
                 platform: "windows".to_owned(),
                 features: Default::default(),
@@ -877,6 +923,7 @@ fn start_returns_before_the_worker_finishes() {
     let discovery = bridge.discover_games().expect("register discovered games");
     let review = bridge
         .freeze_review(
+            "Chriz Easy BG",
             &NormalizedSelection {
                 platform: "windows".to_owned(),
                 features: Default::default(),
@@ -1031,6 +1078,7 @@ fn build_controls_are_scoped_to_the_named_active_run() {
     let discovery = bridge.discover_games().expect("register discovered games");
     let review = bridge
         .freeze_review(
+            "Chriz Easy BG",
             &NormalizedSelection {
                 platform: "windows".to_owned(),
                 features: Default::default(),
@@ -1343,6 +1391,7 @@ fn update_replacement_is_deferred_while_a_build_is_active() {
     let discovery = bridge.discover_games().unwrap();
     let review = bridge
         .freeze_review(
+            "Chriz Easy BG",
             &NormalizedSelection {
                 platform: "windows".to_owned(),
                 features: Default::default(),

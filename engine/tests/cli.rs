@@ -19,6 +19,7 @@ use bg_engine::events::ChannelSink;
 use bg_engine::games::{FileSystemProvider, SystemFileSystem};
 use bg_engine::lock::TargetLock;
 use bg_engine::receipt::{InstallReceipt, ReceiptOutcome, RECEIPT_SCHEMA_VERSION};
+use bg_engine::registry::ManagedInstallRegistry;
 use bg_engine::session::SessionStore;
 use bg_engine::weidu::runner::RunnerControlHandle;
 use serde_json::Value;
@@ -260,6 +261,7 @@ fn install_args<'a>(
 
 fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
     InstallCommandRequest {
+        display_name: "Chriz Easy BG".to_owned(),
         recipe: fixture.recipe.clone(),
         preset: "recommended".to_owned(),
         platform: "windows".to_owned(),
@@ -269,6 +271,99 @@ fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
         managed_root: fixture.managed.clone(),
         cache: fixture.cache.clone(),
     }
+}
+
+#[cfg(windows)]
+#[test]
+fn display_name_is_validated_and_frozen_into_the_review_identity() {
+    let fixture = executable_fixture();
+    let first = install_request(&fixture);
+    let mut renamed = first.clone();
+    renamed.display_name = "My Baldur's Gate".to_owned();
+
+    let first_review = review_install(&first).expect("review the default display name");
+    let renamed_review = review_install(&renamed).expect("review the renamed installation");
+
+    assert_ne!(first_review, renamed_review);
+    assert_ne!(
+        first_review.recipe_payload_sha256,
+        renamed_review.recipe_payload_sha256
+    );
+    assert_eq!(renamed_review.display_name, "My Baldur's Gate");
+
+    for invalid in [
+        "",
+        "   ",
+        "Line\nBreak",
+        "Bad<Name",
+        "Bad>Name",
+        "Bad:Name",
+        "Bad\"Name",
+        "Bad/Name",
+        "Bad\\Name",
+        "Bad|Name",
+        "Bad?Name",
+        "Bad*Name",
+    ] {
+        let mut request = first.clone();
+        request.display_name = invalid.to_owned();
+        let error = review_install(&request).expect_err("invalid display name must fail closed");
+        assert_eq!(error.code(), "invalid_display_name", "accepted {invalid:?}");
+    }
+
+    let mut unicode = first;
+    unicode.display_name = "Éowyn’s gemütliches BG! (한글)".to_owned();
+    let review = review_install(&unicode).expect("ordinary Unicode and punctuation are valid");
+    assert_eq!(review.display_name, unicode.display_name);
+}
+
+#[cfg(windows)]
+#[test]
+fn display_name_cli_default_is_exact_and_custom_name_reaches_the_registry() {
+    let help = run(&["install", "--help"]);
+    assert!(help.status.success(), "{}", stderr(&help));
+    assert!(
+        stdout(&help).contains("Chriz Easy BG"),
+        "install help did not expose the exact default name:\n{}",
+        stdout(&help)
+    );
+
+    let fixture = executable_fixture();
+    let mut command = executable_command(&fixture);
+    command
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .args(["--name", "My Baldur's Gate"]);
+
+    let output = command.output().expect("execute renamed synthetic install");
+    assert!(output.status.success(), "{}", stderr(&output));
+    let replay = SessionStore::open(&fixture.managed)
+        .expect("open renamed installation ledger")
+        .replay()
+        .expect("replay renamed installation ledger");
+    let frozen: Value = serde_json::from_slice(&replay.created().recipe_payload)
+        .expect("parse frozen CLI identity");
+    assert_eq!(frozen["display_name"], "My Baldur's Gate");
+    let cards =
+        ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))
+            .expect("open completed-install registry")
+            .list()
+            .expect("list completed installations");
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].record.display_name, "My Baldur's Gate");
+    assert!(
+        cards[0]
+            .record
+            .engine_name
+            .starts_with("My Baldur s Gate - "),
+        "save identity did not derive from the frozen display name: {}",
+        cards[0].record.engine_name
+    );
 }
 
 fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, PathBuf) {
@@ -1042,7 +1137,7 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
 
 #[cfg(windows)]
 #[test]
-fn failed_mock_weidu_attempt_resumes_from_durable_evidence_and_the_frozen_recipe() {
+fn display_name_and_recipe_are_both_frozen_across_a_failed_install_resume() {
     let fixture = executable_fixture();
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
     let mut install = executable_command(&fixture);
@@ -1054,7 +1149,8 @@ fn failed_mock_weidu_attempt_resumes_from_durable_evidence_and_the_frozen_recipe
             &fixture.bg2,
             &fixture.managed,
             &fixture.cache,
-        ));
+        ))
+        .args(["--name", "Resumed BG"]);
 
     let failed = install.output().expect("execute first synthetic attempt");
 
@@ -1126,6 +1222,12 @@ fn failed_mock_weidu_attempt_resumes_from_durable_evidence_and_the_frozen_recipe
             .collect::<Vec<_>>(),
         vec![0, 2]
     );
+    let cards =
+        ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))
+            .expect("open resumed-install registry")
+            .list()
+            .expect("list resumed installation");
+    assert_eq!(cards[0].record.display_name, "Resumed BG");
 }
 
 #[cfg(windows)]

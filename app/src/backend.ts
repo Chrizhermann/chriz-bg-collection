@@ -35,6 +35,7 @@ export interface Backend {
   inspectDestination(path: string, bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation>;
   evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation>;
   freezeReview(
+    displayName: string,
     selection: NormalizedSelection,
     destination: string,
     bg1CandidateId: string,
@@ -114,6 +115,7 @@ type SelectionEvaluationWire = {
 type FrozenReviewWire = {
   readonly review_token: string;
   readonly digest: string;
+  readonly display_name: string;
   readonly destination: string;
   readonly game_labels: readonly string[];
   readonly evaluation: SelectionEvaluationWire;
@@ -315,12 +317,14 @@ export class NativeBackend implements Backend {
   }
 
   async freezeReview(
+    displayName: string,
     selection: NormalizedSelection,
     destination: string,
     bg1CandidateId: string,
     bg2CandidateId: string,
   ): Promise<FrozenReview> {
     const review = await this.#command<FrozenReviewWire>("freeze_review", {
+      displayName,
       selection,
       destination,
       bg1CandidateId,
@@ -329,6 +333,7 @@ export class NativeBackend implements Backend {
     return {
       reviewToken: review.review_token,
       digest: review.digest,
+      displayName: review.display_name,
       destination: review.destination,
       gameLabels: review.game_labels,
       evaluation: projectEvaluation(review.evaluation),
@@ -581,6 +586,7 @@ export class FixtureBackend implements Backend {
   }
 
   async freezeReview(
+    displayName: string,
     selection: NormalizedSelection,
     destination: string,
     bg1CandidateId: string,
@@ -592,7 +598,7 @@ export class FixtureBackend implements Backend {
       discovery.bg1Candidates.find((candidate) => candidate.id === bg1CandidateId)?.label ?? "Not selected",
       discovery.bg2Candidates.find((candidate) => candidate.id === bg2CandidateId)?.label ?? "Not selected",
     ];
-    return { reviewToken: "fixture-review-token", digest: "fixture-review-8d6d75", destination, gameLabels, evaluation };
+    return { reviewToken: "fixture-review-token", digest: "fixture-review-8d6d75", displayName, destination, gameLabels, evaluation };
   }
 
   startBuild(_reviewToken: string, _onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
