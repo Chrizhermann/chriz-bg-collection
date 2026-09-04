@@ -121,7 +121,7 @@ fn classifier_preserves_urgency_and_handles_deferred_current_unknown_and_app_pre
     ] {
         next.changes[0].save_applicability = applicability;
         next.changes[0].condition_note = applicability
-            .is_conditional_for_test()
+            .needs_guidance_for_test()
             .then(|| "Applies only before the named condition.".to_owned());
         assert_eq!(
             classify_updates("0.1.0-alpha.0", "0.1.0", &[next.clone()])
@@ -138,11 +138,11 @@ fn classifier_preserves_urgency_and_handles_deferred_current_unknown_and_app_pre
 }
 
 trait ApplicabilityTestExt {
-    fn is_conditional_for_test(self) -> bool;
+    fn needs_guidance_for_test(self) -> bool;
 }
 
 impl ApplicabilityTestExt for SaveApplicability {
-    fn is_conditional_for_test(self) -> bool {
+    fn needs_guidance_for_test(self) -> bool {
         matches!(
             self,
             Self::BeforeNpcJoin | Self::BeforeAreaVisit | Self::BeforeEvent

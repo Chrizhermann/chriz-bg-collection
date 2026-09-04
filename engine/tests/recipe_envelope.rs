@@ -1,4 +1,7 @@
+use std::fs;
 use std::io::{Cursor, Write};
+use std::path::Path;
+use std::process::Command;
 
 use bg_engine::digest::sha256_bytes;
 use bg_engine::recipe_envelope::{
@@ -263,4 +266,107 @@ fn key_rotation_requires_statement_signed_by_current_trusted_key() {
         Some("0.1.0-alpha.1"),
     )
     .unwrap();
+}
+
+fn write_recipe(root: &Path) {
+    fs::create_dir_all(root.join("releases/v0.1.0-alpha.1")).unwrap();
+    fs::write(root.join("collection.toml"), "schema=2\ngame_build='2.7'\n").unwrap();
+    fs::write(
+        root.join("releases/v0.1.0-alpha.1/ledger.toml"),
+        ledger("0.1.0-alpha.1", None, "0.1.0-alpha.1"),
+    )
+    .unwrap();
+}
+
+fn author() -> Command {
+    Command::new(env!("CARGO_BIN_EXE_chriz-bg-author"))
+}
+
+#[test]
+fn author_emits_deterministic_payload_and_envelope_bytes() {
+    let temp = tempfile::tempdir().unwrap();
+    let recipe = temp.path().join("recipe");
+    let first = temp.path().join("first");
+    let second = temp.path().join("second");
+    write_recipe(&recipe);
+
+    for output in [&first, &second] {
+        let result = author()
+            .args([
+                "package-recipe",
+                "--recipe-root",
+                recipe.to_str().unwrap(),
+                "--version",
+                "0.1.0-alpha.1",
+                "--output-directory",
+                output.to_str().unwrap(),
+                "--key-id",
+                "ephemeral-test",
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+    }
+    assert_eq!(
+        fs::read(first.join("payload.zip")).unwrap(),
+        fs::read(second.join("payload.zip")).unwrap()
+    );
+    assert_eq!(
+        fs::read(first.join("envelope.json")).unwrap(),
+        fs::read(second.join("envelope.json")).unwrap()
+    );
+}
+
+#[test]
+fn author_verifier_accepts_only_the_injected_ephemeral_public_key() {
+    let temp = tempfile::tempdir().unwrap();
+    let recipe = temp.path().join("recipe");
+    let output = temp.path().join("output");
+    write_recipe(&recipe);
+    let packaged = author()
+        .args([
+            "package-recipe",
+            "--recipe-root",
+            recipe.to_str().unwrap(),
+            "--version",
+            "0.1.0-alpha.1",
+            "--output-directory",
+            output.to_str().unwrap(),
+            "--key-id",
+            "ephemeral-test",
+        ])
+        .output()
+        .unwrap();
+    assert!(packaged.status.success());
+
+    let key = TestKey::generate();
+    fs::write(
+        output.join("envelope.json.minisig"),
+        key.sign(&fs::read(output.join("envelope.json")).unwrap()),
+    )
+    .unwrap();
+    let public = temp.path().join("ephemeral.pub");
+    fs::write(&public, &key.public).unwrap();
+    let verified = author()
+        .args([
+            "verify-recipe",
+            output.to_str().unwrap(),
+            "--key-id",
+            "ephemeral-test",
+            "--trusted-public-key-file",
+            public.to_str().unwrap(),
+            "--running-app-version",
+            "0.1.0-alpha.1",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        verified.status.success(),
+        "{}",
+        String::from_utf8_lossy(&verified.stderr)
+    );
 }

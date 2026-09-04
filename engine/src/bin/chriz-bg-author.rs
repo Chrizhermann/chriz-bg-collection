@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 use std::fs::{self, File};
-use std::io::Read;
+use std::io::{Read, Write as IoWrite};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -10,12 +10,17 @@ use bg_engine::acquire::{
 };
 use bg_engine::events::ChannelSink;
 use bg_engine::manifest::{AcquisitionPolicy, ArchiveKind, ArchiveRootRule, Artifact, PeMachine};
+use bg_engine::recipe_envelope::{
+    verify_recipe_package, RecipeEnvelope, RecipeTrustStore, TrustedPublicKey,
+};
+use bg_engine::updates::load_release;
 use bg_engine::validate::validate_artifact_for_verification;
 use bg_engine::weidu::invocation::verify_tool_contract;
 use bg_engine::weidu::log::parse_active_entries;
 use clap::{Args, Parser, Subcommand};
 use serde::Serialize;
-use zip::ZipArchive;
+use zip::write::SimpleFileOptions;
+use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
 #[derive(Debug, Parser)]
 #[command(name = "chriz-bg-author")]
@@ -38,6 +43,29 @@ enum Command {
     },
     /// Inspect or verify one immutable artifact without editing recipe files.
     Artifact(ArtifactArgs),
+    /// Emit deterministic recipe payload and envelope bytes without signing them.
+    PackageRecipe {
+        #[arg(long)]
+        recipe_root: PathBuf,
+        #[arg(long)]
+        version: String,
+        #[arg(long)]
+        output_directory: PathBuf,
+        #[arg(long)]
+        key_id: String,
+    },
+    /// Verify one packaged recipe with explicitly trusted authoring public material.
+    VerifyRecipe {
+        package_directory: PathBuf,
+        #[arg(long)]
+        key_id: String,
+        #[arg(long)]
+        trusted_public_key_file: PathBuf,
+        #[arg(long)]
+        running_app_version: String,
+        #[arg(long)]
+        highest_trusted_version: Option<String>,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -136,8 +164,127 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let report = verify_artifact(&artifact, &cache_root)?;
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
+        Command::PackageRecipe {
+            recipe_root,
+            version,
+            output_directory,
+            key_id,
+        } => {
+            let envelope = package_recipe(&recipe_root, &version, &output_directory, &key_id)?;
+            println!("{}", serde_json::to_string_pretty(&envelope)?);
+        }
+        Command::VerifyRecipe {
+            package_directory,
+            key_id,
+            trusted_public_key_file,
+            running_app_version,
+            highest_trusted_version,
+        } => {
+            let public_key = fs::read_to_string(&trusted_public_key_file)?;
+            let trust = RecipeTrustStore::new([TrustedPublicKey {
+                key_id,
+                minisign_public_key: public_key,
+            }])?;
+            let payload = fs::read(package_directory.join("payload.zip"))?;
+            let envelope = fs::read(package_directory.join("envelope.json"))?;
+            let signature = fs::read(package_directory.join("envelope.json.minisig"))?;
+            let verified = verify_recipe_package(
+                &payload,
+                &envelope,
+                &signature,
+                &trust,
+                &running_app_version,
+                highest_trusted_version.as_deref(),
+            )?;
+            println!("{}", serde_json::to_string_pretty(&verified.envelope)?);
+        }
     }
     Ok(())
+}
+
+fn package_recipe(
+    recipe_root: &Path,
+    version: &str,
+    output_directory: &Path,
+    key_id: &str,
+) -> Result<RecipeEnvelope, Box<dyn std::error::Error>> {
+    if key_id.trim().is_empty() || version.starts_with('v') {
+        return Err("key id must be nonempty and version must omit the v prefix".into());
+    }
+    let recipe_root = recipe_root.canonicalize()?;
+    fs::create_dir_all(output_directory)?;
+    let output_directory = output_directory.canonicalize()?;
+    if output_directory.starts_with(&recipe_root) {
+        return Err("recipe output directory must be outside the recipe root".into());
+    }
+    for name in ["payload.zip", "envelope.json", "envelope.json.minisig"] {
+        if output_directory.join(name).exists() {
+            return Err(format!("refusing to replace existing package file {name}").into());
+        }
+    }
+
+    let release_dir = recipe_root.join("releases").join(format!("v{version}"));
+    let ledger = load_release(&release_dir.join("ledger.toml"))?;
+    if ledger.version != version {
+        return Err(format!(
+            "release ledger version {:?} does not match package version {version:?}",
+            ledger.version
+        )
+        .into());
+    }
+
+    let mut files = walkdir::WalkDir::new(&recipe_root)
+        .follow_links(false)
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
+    files.retain(|entry| entry.file_type().is_file());
+    if walkdir::WalkDir::new(&recipe_root)
+        .follow_links(false)
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?
+        .iter()
+        .any(|entry| entry.file_type().is_symlink())
+    {
+        return Err("recipe root contains a symbolic link".into());
+    }
+    files.sort_by_key(|entry| {
+        entry
+            .path()
+            .strip_prefix(&recipe_root)
+            .expect("walk entry is below recipe root")
+            .to_string_lossy()
+            .replace('\\', "/")
+    });
+
+    let payload_path = output_directory.join("payload.zip");
+    let payload_file = File::create(&payload_path)?;
+    let mut archive = ZipWriter::new(payload_file);
+    let options = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .last_modified_time(zip::DateTime::default())
+        .unix_permissions(0o644);
+    for entry in files {
+        let relative = entry.path().strip_prefix(&recipe_root)?;
+        let name = relative.to_string_lossy().replace('\\', "/");
+        archive.start_file(name, options)?;
+        let bytes = fs::read(entry.path())?;
+        archive.write_all(&bytes)?;
+    }
+    archive.finish()?.sync_all()?;
+
+    let payload = fs::read(&payload_path)?;
+    let envelope = RecipeEnvelope {
+        recipe_id: ledger.recipe_id,
+        version: ledger.version,
+        payload_sha256: bg_engine::digest::sha256_bytes(&payload),
+        key_id: key_id.to_owned(),
+        minimum_app_version: ledger.minimum_app_version,
+        published_at: ledger.published_at,
+    };
+    let mut envelope_bytes = serde_json::to_vec_pretty(&envelope)?;
+    envelope_bytes.push(b'\n');
+    fs::write(output_directory.join("envelope.json"), envelope_bytes)?;
+    Ok(envelope)
 }
 
 fn default_authoring_cache_parent() -> PathBuf {
