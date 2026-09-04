@@ -1,6 +1,6 @@
 # CHRIZ-SOD-REMIX — components
 
-Target the newest implemented package version, **v0.6.3**, from
+Target the newest implemented package version, **v0.6.4**, from
 `Chrizhermann/chriz-sod-rebalance`. It has 31 component declarations; the established
 dev setup installs 30 of them. Component `901` is the unselected alternative to `900`.
 
@@ -19,12 +19,11 @@ dev setup installs 30 of them. Component `901` is the unselected alternative to 
 
 ## Source/version and follow-up checks
 
-- There is no GitHub release or tag yet. At the time of this review, fetchable
-  `origin/master` commit `d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4` contains the
-  unchanged v0.6.3 TP2. Pin that exact commit until a release is published.
-- Local work after that commit plans v0.6.4 component `290` (the post-victory ending), but
-  it is not implemented and is not part of this preset.
-- The v0.6.3 sandbox and installed-state checks are green, and all 30 selected components
+- Pin the public `v0.6.4` release. It orders component `210` before dependent component
+  `197`, so the complete 30-component bundle can install in one run.
+- Component `290` (the post-victory ending) remains unimplemented and is not part of this
+  preset.
+- The sandbox and installed-state checks are green, and all 30 selected components
   are installed on the dev EET copy. Runtime acceptance is not complete: component `225`
   still needs its natural five-item activation, one-item rejection, save/reload, and
   dormant re-click playthrough checks. Keep that work on the central curation follow-up
@@ -46,10 +45,10 @@ dev setup installs 30 of them. Component `901` is the unselected alternative to 
 | 185 | SoD remix: prologue - Entar Silvershield removed (stays dead) | Chapter pass - prologue |  | ✓ | mandatory |
 | 190 | SoD remix: prologue - Skie's second-night bedroom visit removed | Chapter pass - prologue |  | ✓ | mandatory |
 | 195 | SoD remix: prologue - assassination and poison references scrubbed | Chapter pass - prologue |  | ✓ | mandatory |
+| 210 | SoD remix: Coast Way Forest removed - Rasaad recruits at the camp | Chapter pass - Coast Way |  | ✓ | mandatory |
 | 197 | SoD remix: prologue - Skie: talk-to-join recruit at the palace, SoD plot removed | Chapter pass - prologue |  | ✓ | mandatory |
 | 187 | SoD remix: prologue - the assassination night-set never spawns | Chapter pass - prologue |  | ✓ | mandatory |
 | 200 | SoD remix: Coast Way Crossing - fewer spiders, fairer bridge fight | Chapter pass - Coast Way |  | ✓ | mandatory |
-| 210 | SoD remix: Coast Way Forest removed - Rasaad recruits at the camp | Chapter pass - Coast Way |  | ✓ | mandatory |
 | 215 | SoD remix: the XP ledger - Coast Way Forest removal compensated | Chapter pass - Coast Way |  | ✓ | mandatory |
 | 220 | SoD remix: the dwarven dig site re-garrisoned | Chapter pass - Coast Way |  | ✓ | mandatory |
 | 225 | SoD remix: one text-only Caelar omen at the scrying pool | Chapter pass - Coast Way |  | ✓ | mandatory |

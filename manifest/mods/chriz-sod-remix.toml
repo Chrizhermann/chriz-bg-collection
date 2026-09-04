@@ -1,7 +1,7 @@
 id = "chriz-sod-remix"
-artifact_id = "chriz-sod-remix-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
+artifact_id = "chriz-sod-remix-0.6.4"
 name = "CHRIZ-SOD-REMIX"
-tp2 = "chriz-sod-remix/setup-chriz-sod-remix.tp2"
+tp2 = "setup-chriz-sod-remix.tp2"
 language = 0
 weidu_artifact_id = "weidu-249-amd64"
 invocation_mode = "setup-name"
@@ -63,6 +63,10 @@ id = 195
 name = "SoD remix: prologue - assassination and poison references scrubbed"
 
 [[components]]
+id = 210
+name = "SoD remix: Coast Way Forest removed - Rasaad recruits at the camp"
+
+[[components]]
 id = 197
 name = "SoD remix: prologue - Skie: talk-to-join recruit at the palace, SoD plot removed"
 
@@ -73,10 +77,6 @@ name = "SoD remix: prologue - the assassination night-set never spawns"
 [[components]]
 id = 200
 name = "SoD remix: Coast Way Crossing - fewer spiders, fairer bridge fight"
-
-[[components]]
-id = 210
-name = "SoD remix: Coast Way Forest removed - Rasaad recruits at the camp"
 
 [[components]]
 id = 215

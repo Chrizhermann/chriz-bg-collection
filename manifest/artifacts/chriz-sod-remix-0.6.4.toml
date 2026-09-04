@@ -1,0 +1,32 @@
+id = "chriz-sod-remix-0.6.4"
+name = "CHRIZ-SOD-REMIX"
+version = "0.6.4"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.4/chriz-sod-remix-v0.6.4.zip"
+reference = "v0.6.4"
+expected_filename = "chriz-sod-remix-v0.6.4.zip"
+expected_length = 1459461
+sha256 = "560168af4de06aaa17419213801447863be58f3f74454470c314b03edad79db3"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["chriz-sod-remix", "setup-chriz-sod-remix.tp2"]
+tp2_paths = ["chriz-sod-remix/setup-chriz-sod-remix.tp2", "setup-chriz-sod-remix.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-sod-rebalance"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/tag/v0.6.4"
+reviewed_on = "2026-09-04"

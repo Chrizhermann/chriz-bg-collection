@@ -41,9 +41,9 @@ remains unavailable or excluded.
   `Artisans_Warlock/Artisans_Warlock.TP2` path, and stop describing it as a v3.0 target.
 - [ ] [Spell Revisions](SPELL_REV.md): publish an immutable, fetchable
   `v4.21-chriz.1` fork source before replacing upstream v4.21.
-- [ ] [CHRIZ-SOD-REMIX](CHRIZ-SOD-REMIX.md): pin fetchable v0.6.3 commit
-  `d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4`, or publish an equivalent release. Keep
-  planned, unimplemented component `290` out of this preset.
+- [ ] [CHRIZ-SOD-REMIX](CHRIZ-SOD-REMIX.md): the public v0.6.4 release is pinned and its
+  complete 30-component bundle is ready. Keep unimplemented component `290` out of this
+  preset and complete the natural five-item/save-reload acceptance for component `225`.
 - [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md): publish and pin the test-first
   component-`401` compatibility correction for Artisan-packed `AP_C0PR#CL` cells. Release
   v0.3.0 now contains the accepted 14-component menu, including `120`/`121`, but its

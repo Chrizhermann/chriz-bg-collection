@@ -8,7 +8,7 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const SOD_REMIX_COMPONENTS: &[u32] = &[
-    100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 197, 187, 200, 210, 215,
+    100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215,
     220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900,
 ];
 
@@ -21,35 +21,46 @@ fn recipe() -> Manifest {
 }
 
 #[test]
-fn freezes_the_reviewed_sod_remix_commit_archive() {
+fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["chriz-sod-remix-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"];
-    assert_eq!(artifact.version, "0.6.3");
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.4"];
+    assert_eq!(artifact.version, "0.6.4");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
-    assert_eq!(artifact.source.kind, SourceKind::GithubCommitZip);
+    assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://codeload.github.com/Chrizhermann/chriz-sod-rebalance/zip/d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.4/chriz-sod-remix-v0.6.4.zip"
     );
+    assert_eq!(artifact.source.reference, "v0.6.4");
     assert_eq!(
-        artifact.source.reference,
-        "d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
+        artifact.source.expected_filename.as_deref(),
+        Some("chriz-sod-remix-v0.6.4.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(534_577));
+    assert_eq!(artifact.source.expected_length, Some(1_459_461));
     assert_eq!(
         artifact.source.sha256,
-        "40613ae53f966599be28713e2b4bb4b3ab17b91c5b5b37931bccc788c9e30534"
+        "560168af4de06aaa17419213801447863be58f3f74454470c314b03edad79db3"
     );
-    assert_eq!(artifact.archive.root_rule, ArchiveRootRule::SingleWrapper);
-    assert_eq!(artifact.archive.publish_roots, ["chriz-sod-remix"]);
+    assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
+    assert_eq!(
+        artifact.archive.publish_roots,
+        ["chriz-sod-remix", "setup-chriz-sod-remix.tp2"]
+    );
     assert_eq!(
         artifact.archive.tp2_paths,
-        ["chriz-sod-remix/setup-chriz-sod-remix.tp2"]
+        [
+            "chriz-sod-remix/setup-chriz-sod-remix.tp2",
+            "setup-chriz-sod-remix.tp2"
+        ]
+    );
+    assert_eq!(
+        manifest.mods["chriz-sod-remix"].tp2,
+        "setup-chriz-sod-remix.tp2"
     );
 }
 
 #[test]
-fn authors_sod_remix_as_one_blocked_default_post_eet_bundle_before_buffbot() {
+fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
     let manifest = recipe();
     let run_ids = manifest
         .collection
@@ -71,20 +82,18 @@ fn authors_sod_remix_as_one_blocked_default_post_eet_bundle_before_buffbot() {
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     assert_eq!(
         evaluation.plan.components_for("chriz-sod-remix-bg2"),
-        None,
-        "the known forward REQUIRE_COMPONENT must block the bundle"
+        Some(SOD_REMIX_COMPONENTS),
+        "the corrected release must resolve the complete bundle"
     );
     let parent = evaluation
         .view
         .control("mod:chriz-sod-remix")
         .expect("SoD Remix parent");
     assert_eq!(parent.decision, Decision::Default);
-    assert_eq!(parent.readiness, Readiness::Blocked);
-    assert!(!parent.selected);
-    assert!(!parent.interactive);
-    let unavailable_reason = parent.unavailable_reason.as_deref().unwrap();
-    assert!(unavailable_reason.contains("197"));
-    assert!(unavailable_reason.contains("210"));
+    assert_eq!(parent.readiness, Readiness::Ready);
+    assert!(parent.selected);
+    assert!(parent.interactive);
+    assert_eq!(parent.unavailable_reason, None);
     assert_eq!(
         manifest
             .collection
@@ -96,14 +105,17 @@ fn authors_sod_remix_as_one_blocked_default_post_eet_bundle_before_buffbot() {
         ["feature:chriz-sod-remix:mandatory-components"]
     );
 
+    let bundle = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:chriz-sod-remix:mandatory-components")
+        .expect("SoD Remix bundle");
+    assert_eq!(bundle.decision, Decision::Mandatory);
+    assert_eq!(bundle.readiness, Readiness::Ready);
+
     let mut selection = Selection::defaults("windows");
-    selection.set_feature("mod:chriz-sod-remix", true);
-    let forced_bundle = evaluate(&manifest, &selection).unwrap();
-    assert_eq!(
-        forced_bundle.plan.components_for("chriz-sod-remix-bg2"),
-        None
-    );
-    assert!(forced_bundle.findings.iter().any(|finding| {
-        finding.rule == "blocked-default-omitted" && finding.feature_id == "mod:chriz-sod-remix"
-    }));
+    selection.set_feature("mod:chriz-sod-remix", false);
+    let disabled = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(disabled.plan.components_for("chriz-sod-remix-bg2"), None);
 }

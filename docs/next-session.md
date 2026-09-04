@@ -36,7 +36,7 @@ Chris explicitly wants the much larger save-analysis project.
 - Randomiser uses Mode 1, so Mode 2's install-order concern does not drive this recipe.
 - Hidden Gameplay Options remain optional; the options used in the reference setup are
   default-on, with mutual exclusions encoded rather than hidden.
-- CHRIZ-SOD-REMIX targets the newest maintained v0.6.3 source. Its implemented selection
+- CHRIZ-SOD-REMIX pins the public v0.6.4 release. Its implemented selection
   is one default-on parent checkbox; component `290` remains unimplemented and excluded.
 - The monolithic NPC component `chriz-bg-modpack 500` is retired. Native assignments stay
   in their native mods; new collection assignments become semantic per-NPC components.
@@ -68,7 +68,7 @@ Chris explicitly wants the much larger save-analysis project.
 | Spell Revisions fork | Publish immutable `v4.21-chriz.1` and absorb `SR_SUBSPELL_FIX`; do not rebuild it as modpack `180`. |
 | BG2EE/EET fix layer | Migrate Branwen `101` to a narrow maintained home; redesign stat transfer `200`; audit Edwin `400`; retire duplicate `300`. Do not expose the historical parent package. |
 | `chriz-bg-rebalance` | Publish the narrow component-`401` Artisan-CLAB compatibility fix discovered and test-proven by the isolated RC, then pin that successor to v0.3.0. Components `120/121` are accepted and selected. The Tempus APR gameplay check on EEex 1.2 remains. |
-| `chriz-sod-rebalance` | Publish or pin v0.6.3; keep `290` deferred; complete the natural five-item/save-reload acceptance for `225`. |
+| `chriz-sod-rebalance` | v0.6.4 is published and pinned; keep `290` deferred and complete the natural five-item/save-reload acceptance for `225`. |
 | EEex Remote Console | Refresh the repository's stale EEex-compatibility documentation and rerun the target-stack handshake/watchdog smoke. |
 | Collection tail | Build the curated EET Tweaks progressive-XP replacement and the IWDification Arcane Trickster Evasion patch. Identify the eight ownerless CIMC/CDMC animation INIs. |
 

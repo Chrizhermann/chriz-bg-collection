@@ -269,31 +269,30 @@ total_uncompressed_bytes = 5144713
 max_compression_ratio = 7
 
 [[artifacts]]
-artifact_id = "chriz-sod-remix-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
-immutable_source_url = "https://codeload.github.com/Chrizhermann/chriz-sod-rebalance/zip/d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
-source_reference = "d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
-observed_final_host = "codeload.github.com"
-actual_length = 534577
-actual_sha256 = "40613ae53f966599be28713e2b4bb4b3ab17b91c5b5b37931bccc788c9e30534"
-wrapper_kind = "single-wrapper"
-wrapper_directory = "chriz-sod-rebalance-d0ac9800bc544e0cb4723bf7e7c78cca02cbaae4"
-materialized_publish_roots = ["chriz-sod-remix"]
-declared_tp2_paths = ["chriz-sod-remix/setup-chriz-sod-remix.tp2"]
+artifact_id = "chriz-sod-remix-0.6.4"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.4/chriz-sod-remix-v0.6.4.zip"
+source_reference = "v0.6.4"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 1459461
+actual_sha256 = "560168af4de06aaa17419213801447863be58f3f74454470c314b03edad79db3"
+wrapper_kind = "direct"
+materialized_publish_roots = ["chriz-sod-remix", "setup-chriz-sod-remix.tp2"]
+declared_tp2_paths = ["chriz-sod-remix/setup-chriz-sod-remix.tp2", "setup-chriz-sod-remix.tp2"]
 fresh_download = true
 fresh_extraction = true
 
 [artifacts.verified_limits]
 max_depth = 8
 max_entries = 256
-max_entry_uncompressed_bytes = 1048576
+max_entry_uncompressed_bytes = 2097152
 max_total_uncompressed_bytes = 4194304
 max_compression_ratio = 100
 
 [artifacts.observed_shape]
-max_depth = 5
-entry_count = 187
-max_entry_uncompressed_bytes = 36163
-total_uncompressed_bytes = 1157816
+max_depth = 4
+entry_count = 107
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 1854278
 max_compression_ratio = 7
 
 [[artifacts]]
