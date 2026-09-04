@@ -1,0 +1,92 @@
+schema = 1
+id = "steam-bg2ee-2.7.3-en-us"
+role = "bg2ee"
+storefront = "steam"
+locale = "en_US"
+executable = "Baldur.exe"
+product_version = "2.7.3.0"
+steam_app_id = 257350
+gog_game_ids = []
+required_files = [
+  "Baldur.exe",
+  "chitin.key",
+  "lang/en_US/dialog.tlk",
+  "engine.lua",
+  "data/25DEFLT.BIF",
+]
+sod_files = []
+fingerprint_files = ["Baldur.exe", "data/25DEFLT.BIF"]
+
+[[inventory_surfaces]]
+path = "chitin.key"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "dialog.tlk"
+kind = "file"
+allow_missing = true
+
+[[inventory_surfaces]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "engine.lua"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "override"
+kind = "tree"
+allow_missing = true
+
+[[inventory_surfaces]]
+path = "."
+kind = "matching"
+patterns = [
+  "setup-*",
+  "weidu.log",
+  "weidu.exe",
+  "*.debug",
+  "*.debug.log",
+  "dlcmerger",
+  "eet",
+  "stratagems",
+]
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "setup-dlcmerger*"
+recursive = false
+message = "Stale DLC Merger setup files are present."
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "dlcmerger"
+recursive = false
+message = "Stale DLC Merger 1.7 files are present."
+
+[[allowed_clean_variants]]
+id = "steam-2026-07-07"
+
+[[allowed_clean_variants.fingerprints]]
+path = "Baldur.exe"
+sha256 = "b51093a49140b2b8a7c046b4652bb8e535be24ebbc12b1d735e0b94217a14d57"
+
+[[allowed_clean_variants.fingerprints]]
+path = "data/25DEFLT.BIF"
+sha256 = "802b59d350fd687ee3eb45528419936a8722df04224d445b4a6421b20775433e"
+
+[[allowed_clean_variants.inventory]]
+path = "chitin.key"
+kind = "file"
+sha256 = "1818ffebb2424992fb39fb13509e7f629ac819b08a553c2dd4ac25f2e40a979f"
+
+[[allowed_clean_variants.inventory]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+sha256 = "9e685225ff3c3436a8a35fa7022550620d24a92efe35436a062c02955d9f0952"
+
+[[allowed_clean_variants.inventory]]
+path = "engine.lua"
+kind = "file"
+sha256 = "581913a21114fc981c72456f131f33b1092a9505a5cd0637911b70f9544e4d8c"

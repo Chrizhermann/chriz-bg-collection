@@ -326,10 +326,6 @@ fn production_bridge_loads_only_the_recipe_bundled_below_the_resource_directory(
         &workspace_root().join("manifest"),
         &resources.path().join("manifest"),
     );
-    copy_tree(
-        &workspace_root().join("engine/tests/fixtures/games/profiles"),
-        &resources.path().join("manifest/game-builds"),
-    );
     let bridge = NativeBridge::from_resource_dir(resources.path());
 
     let status = bridge.bootstrap().expect("bootstrap packaged recipe");
@@ -339,12 +335,42 @@ fn production_bridge_loads_only_the_recipe_bundled_below_the_resource_directory(
 }
 
 #[test]
-fn bootstrap_fails_closed_when_packaged_game_profiles_are_missing() {
-    let bridge = NativeBridge::new(workspace_root().join("manifest"), "chris-recommended");
+fn production_recipe_bootstraps_and_reaches_game_discovery() {
+    let bridge = NativeBridge::with_discoverer(
+        workspace_root().join("manifest"),
+        "chris-recommended",
+        |_| {
+            Ok(vec![
+                candidate(
+                    GameRole::BgeeSod,
+                    Storefront::Steam,
+                    r"C:\Fixture\BGEE",
+                    Eligibility::Eligible,
+                    FindingKind::Fresh,
+                    "Clean supported installation.",
+                ),
+                candidate(
+                    GameRole::Bg2ee,
+                    Storefront::Steam,
+                    r"C:\Fixture\BG2EE",
+                    Eligibility::Eligible,
+                    FindingKind::Fresh,
+                    "Clean supported installation.",
+                ),
+            ])
+        },
+    );
 
-    let error = bridge.bootstrap().expect_err("missing profiles must fail");
+    let status = bridge.bootstrap().expect("bootstrap production recipe");
+    let discovery = bridge
+        .discover_games()
+        .expect("reach production game discovery");
 
-    assert_eq!(error.code, "game_profiles_failed");
+    assert_eq!(status.mode, "native");
+    assert_eq!(discovery.bg1_candidates.len(), 1);
+    assert_eq!(discovery.bg2_candidates.len(), 1);
+    assert!(!discovery.selected_bg1_id.is_empty());
+    assert!(!discovery.selected_bg2_id.is_empty());
 }
 
 #[test]
