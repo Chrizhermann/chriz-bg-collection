@@ -1,0 +1,75 @@
+id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.1"
+name = "chriz-bg-modpack"
+tp2 = "setup-chriz-bg-modpack.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 110
+name = "Fade: complete Fighter/Thief conversion, proficiencies, and amulet usability"
+
+[[components]]
+id = 130
+name = "BG1NPC Kivan sea-elf quest: SCS dialogue-phase guard"
+
+[[components]]
+id = 140
+name = "Mazzy: move the fifth Short Bow pip to Short Sword"
+
+[[components]]
+id = 170
+name = "Xan Eldritch Knight: reconcile the EET XAN4/XAN6/TTXAN variants"
+
+[[components]]
+id = 190
+name = "Sarah: Archer conversion and exact proficiencies"
+
+[[components]]
+id = 192
+name = "Viconia: permanent Cleric/Thief conversion"
+
+[[components]]
+id = 193
+name = "Shar-Teel: Wizard Slayer kit"
+
+[[components]]
+id = 194
+name = "Kagain: Dwarven Defender kit"
+
+[[components]]
+id = 195
+name = "Skie: Swashbuckler kit and compatible thief skills"
+
+[[components]]
+id = 196
+name = "Faldorn: Avenger kit"
+
+[[components]]
+id = 197
+name = "Dynaheir: learn the installed Haste spell"
+
+[[components]]
+id = 198
+name = "Kivan: Archer kit"
+
+[[components]]
+id = 400
+name = "Branwen Spiritual Hammer: repair magical-weapon charges"
+
+[[components]]
+id = 410
+name = "Yeslick and Keldorn Dispel Magic: hostile-only, correctly scaled dispels"
+
+[[components]]
+id = 430
+name = "Use Any Item: fair fixed caster level for non-caster scroll use"
+
+[[components]]
+id = 440
+name = "Ascension Improved Slayer Transformation: repair EE Fixpack subspell links"
+
+[[components]]
+id = 450
+name = "SCS shapechange spells: repair the EE Fixpack interaction"

@@ -739,6 +739,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "chriz-bg-modpack-0.2.0-alpha.1",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 4,
+                    entry_count: 24,
+                    max_entry_uncompressed_bytes: 1_364_992,
+                    total_uncompressed_bytes: 1_514_224,
+                    max_compression_ratio: 6,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

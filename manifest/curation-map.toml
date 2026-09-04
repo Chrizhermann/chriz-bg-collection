@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1173
+expected_rows = 1181
 expected_choice_groups = 60
 expected_optional_none_groups = 13
 expected_fixed_groups = 10
@@ -9,6 +9,7 @@ expected_fixed_groups = 10
 parents = [
   "mod:ascension",
   "mod:buffbot",
+  "mod:chriz-bg-modpack",
   "mod:chriz-bg-rebalance",
   "mod:chriz-sod-remix",
   "mod:dlcmerger",
@@ -110,7 +111,7 @@ excluded = [0, 70, 72, 80, 82, 90, 140, 150, 160, 171, 3150, 3151, 220, 230, 240
 
 [[catalogs]]
 id = "CHRIZ-BG-MODPACK"
-excluded = [100, 110, 120, 130, 140, 150, 160, 170, 180, 200, 210, 300, 310, 400, 410, 420, 430, 440, 450, 500, 510, 511, 512, 513, 514, 600]
+excluded = [100, 120, 150, 160, 180, 200, 210, 300, 310, 420, 500, 510, 511, 512, 513, 514, 600]
 
 [[catalogs]]
 id = "CHRIZ-BG-REBALANCE"
@@ -1867,6 +1868,108 @@ rows = ["CROSSMODBG2:2"]
 id = "feature:eeexremote:component-0"
 kind = "feature"
 rows = ["EEEXREMOTE:0"]
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-110"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:110"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-130"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:130"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-140"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:140"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-170"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:170"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-190"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:190"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-192"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:192"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-193"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:193"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-194"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:194"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-195"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:195"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-196"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:196"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-197"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:197"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-198"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:198"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-400"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:400"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-410"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:410"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-430"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:430"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-440"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:440"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-450"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:450"]
+parent = "mod:chriz-bg-modpack"
 
 [[targets]]
 id = "feature:eet:component-100"

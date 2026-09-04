@@ -198,6 +198,13 @@ components = [0]
 args = []
 
 [[runs]]
+run_id = "chriz-bg-modpack-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 400, 410, 430, 440, 450]
+args = []
+
+[[runs]]
 run_id = "buffbot-bg2"
 mod_id = "buffbot"
 phase = "post-eet-end"
@@ -2287,6 +2294,197 @@ components = [
   { run_id = "chriz-sod-remix-bg2", component = 280 },
   { run_id = "chriz-sod-remix-bg2", component = 900 },
 ]
+
+[[features]]
+id = "mod:chriz-bg-modpack"
+title = "Collection fixes and NPC defaults"
+description = "Install the maintained first-party fixes and curated NPC defaults that complete this collection."
+category = "collection"
+decision = "default"
+readiness = "ready"
+requires = ["mod:eet-end"]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-110"
+title = "Make Fade a Fighter/Thief"
+description = "Use the curated complete Fighter/Thief conversion, including Fade's proficiencies and amulet usability."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:fade"]
+conflicts = [{ feature_id = "feature:fade:component-2", reason = "Choose either Fade's Fighter/Thief conversion or her Shadowdancer kit." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 110 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-130"
+title = "Protect Kivan's sea-elf quest dialogue"
+description = "Keep SCS general AI from interrupting the BG1NPC Kivan sea-elf quest's dialogue phase."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:bg1npc", "feature:stratagems:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 130 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-140"
+title = "Correct Mazzy's Divine Champion proficiencies"
+description = "Move Mazzy's illegal fifth Short Bow pip to Short Sword after her curated Divine Champion conversion."
+category = "fixes"
+decision = "mandatory"
+readiness = "blocked"
+unavailable_reason = "Requires Artisan's Kitpack NPC component 3102, which is not yet available in the alpha recipe."
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 140 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-170"
+title = "Complete Xan's Eldritch Knight conversion"
+description = "Extend Artisan's Xan conversion to the remaining EET creature variants."
+category = "fixes"
+decision = "mandatory"
+readiness = "blocked"
+unavailable_reason = "Requires Artisan's Kitpack components 20000 and 20002, which are not yet available in the alpha recipe."
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 170 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-190"
+title = "Make Sarah an Archer"
+description = "Apply Sarah's curated Archer kit and proficiency build after her revised-audio installation."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:sarahtob"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 190 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-192"
+title = "Make Viconia a Cleric/Thief"
+description = "Convert every joinable EET Viconia profile to a true-class Cleric/Thief with table-derived progression."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 192 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-193"
+title = "Make Shar-Teel a Wizard Slayer"
+description = "Give all joinable Shar-Teel variants the Wizard Slayer kit without rewriting her build."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 193 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-194"
+title = "Make Kagain a Dwarven Defender"
+description = "Give all joinable Kagain variants the Dwarven Defender kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 194 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-195"
+title = "Make Skie a Swashbuckler"
+description = "Give Skie the Swashbuckler kit and atomically move unusable stealth points to Open Locks."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 195 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-196"
+title = "Make Faldorn an Avenger"
+description = "Give every joinable Faldorn variant the Avenger kit without rewriting her build."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 196 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-197"
+title = "Teach Dynaheir Haste"
+description = "Add the installed Haste spell to Dynaheir's level-three spellbook once."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 197 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-198"
+title = "Make Kivan an Archer"
+description = "Give every joinable Kivan variant the Archer kit without rewriting proficiencies or equipment."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 198 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-400"
+title = "Repair Branwen's Spiritual Hammer"
+description = "Restore the magical weapon's on-hit delivery in the Spell Revisions version of Branwen's innate."
+category = "fixes"
+decision = "mandatory"
+readiness = "blocked"
+unavailable_reason = "Requires the reviewed Spell Revisions fork, which is not yet released and pinned in the alpha recipe."
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 400 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-410"
+title = "Correct Yeslick and Keldorn's dispels"
+description = "Use hostile-only projectiles and the curated 1.5-times-level dispel scaling."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:yeslicknpc:component-1", "feature:stratagems:component-3540"]
+conflicts = [{ feature_id = "feature:stratagems:component-3541", reason = "This fix targets the curated SCS 1.5-times-level dispel route, not the class-level alternative." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 410 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-430"
+title = "Give Use Any Item scrolls a fair caster level"
+description = "Correct non-caster scroll scaling after Tweaks Anthology's character-level scroll component."
+category = "fixes"
+decision = "mandatory"
+readiness = "blocked"
+unavailable_reason = "Requires Tweaks Anthology component 2170, which is not yet available in the alpha recipe."
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 430 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-440"
+title = "Repair Ascension's upgraded Slayer forms"
+description = "Restore the EE Fixpack-compatible subspell links for Ascension's improved Slayer transformations."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:ascension"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 440 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-450"
+title = "Repair SCS shapechange forms"
+description = "Restore the five SCS shapechange forms broken by the EE Fixpack interaction."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:stratagems:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 450 }]
 
 [[features]]
 id = "mod:buffbot"

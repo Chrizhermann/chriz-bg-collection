@@ -53,7 +53,14 @@ fn offers_remote_console_as_an_experimental_advanced_tool_before_buffbot() {
     };
     assert!(position("eet-end-bg2") < position("eeexremote-bg2"));
     assert!(position("hiddengameplayoptions-bg2") < position("eeexremote-bg2"));
-    assert_eq!(position("eeexremote-bg2") + 1, position("buffbot-bg2"));
+    assert_eq!(
+        position("eeexremote-bg2") + 1,
+        position("chriz-bg-modpack-bg2")
+    );
+    assert_eq!(
+        position("chriz-bg-modpack-bg2") + 1,
+        position("buffbot-bg2")
+    );
 
     let run = &runs[position("eeexremote-bg2")];
     assert_eq!(run.phase, Phase::PostEetEnd);
