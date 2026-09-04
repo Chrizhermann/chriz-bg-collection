@@ -24,7 +24,10 @@ use bg_engine::loader::Manifest;
 use bg_engine::manifest::{AcquisitionPolicy, InputValue, Phase};
 use bg_engine::preflight::is_creator_protected_destination;
 use bg_engine::recipe_view::{FeatureControl, NormalizedSelection, RecipeView, SelectionFinding};
-use bg_engine::registry::{InstallAvailability, ManagedInstallCard, ManagedInstallRegistry};
+use bg_engine::registry::{
+    CampaignAvailability, InstallAvailability, ManagedCampaignCard, ManagedInstallCard,
+    ManagedInstallRegistry,
+};
 use bg_engine::weidu::runner::RunnerControlHandle;
 use serde::Serialize;
 
@@ -355,8 +358,9 @@ pub struct ManagedInstallationResponse {
     pub name: String,
     pub path: String,
     pub status: String,
-    pub receipt_path: String,
+    pub receipt_path: Option<String>,
     pub available: bool,
+    pub resumable: bool,
 }
 
 /// Process-local run snapshot. Durable restart recovery remains an explicit post-v0 slice.
@@ -841,10 +845,24 @@ impl NativeBridge {
     pub fn list_managed_installations(
         &self,
     ) -> Result<Vec<ManagedInstallationResponse>, CommandError> {
-        self.registry_cards()?
+        let completed = self.registry_cards()?;
+        let completed_ids = completed
+            .iter()
+            .map(|card| card.record.install_id.clone())
+            .collect::<BTreeSet<_>>();
+        let mut responses = completed
             .into_iter()
             .map(project_managed_install)
-            .collect()
+            .collect::<Result<Vec<_>, _>>()?;
+        responses.extend(
+            self.campaign_cards()?
+                .into_iter()
+                .filter(|card| !completed_ids.contains(&card.record.install_id))
+                .map(project_managed_campaign)
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+        responses.sort_by(|left, right| left.id.cmp(&right.id));
+        Ok(responses)
     }
 
     /// Launches the exact verified InfinityLoader path owned by one available registry id.
@@ -1051,7 +1069,7 @@ impl NativeBridge {
         self.spawn_install_worker(review.request, review.engine_identity, listener)
     }
 
-    /// Resumes only a managed install learned from this process's own install result.
+    /// Resumes only an exact application-data identity backed by a verified campaign ledger.
     pub fn resume_build<F>(
         &self,
         install_id: &str,
@@ -1060,19 +1078,7 @@ impl NativeBridge {
     where
         F: Fn(RunEventEnvelope) + Send + Sync + 'static,
     {
-        let managed_root = self
-            .runtime_lock()
-            .known_installs
-            .get(install_id)
-            .cloned()
-            .ok_or_else(|| {
-                CommandError::new(
-                    "managed_install_unknown",
-                    "That managed installation is not available in this installer session.",
-                    "Return to Home and select an installation discovered by the installer.",
-                    format!("unknown process-local install id {install_id:?}"),
-                )
-            })?;
+        let managed_root = self.resumable_campaign(install_id)?;
         self.spawn_resume_worker(install_id.to_owned(), managed_root, listener)
     }
 
@@ -1125,6 +1131,14 @@ impl NativeBridge {
     }
 
     fn registry_cards(&self) -> Result<Vec<ManagedInstallCard>, CommandError> {
+        self.registry()?.list().map_err(registry_error)
+    }
+
+    fn campaign_cards(&self) -> Result<Vec<ManagedCampaignCard>, CommandError> {
+        self.registry()?.list_campaigns().map_err(registry_error)
+    }
+
+    fn registry(&self) -> Result<ManagedInstallRegistry, CommandError> {
         let app_data = self.app_data.as_ref().ok_or_else(|| {
             CommandError::new(
                 "application_data_unavailable",
@@ -1133,16 +1147,42 @@ impl NativeBridge {
                 "LOCALAPPDATA is missing or is not an absolute path",
             )
         })?;
-        ManagedInstallRegistry::open_or_create(app_data)
-            .and_then(|registry| registry.list())
-            .map_err(|error| {
-                CommandError::new(
-                    "managed_install_registry_failed",
-                    "Managed campaign records could not be verified.",
-                    "Keep the campaign folders unchanged and retain this error for diagnosis.",
-                    error.to_string(),
-                )
-            })
+        ManagedInstallRegistry::open_or_create(app_data).map_err(registry_error)
+    }
+
+    fn resumable_campaign(&self, install_id: &str) -> Result<PathBuf, CommandError> {
+        if self
+            .registry_cards()?
+            .iter()
+            .any(|card| card.record.install_id == install_id)
+        {
+            return Err(CommandError::new(
+                "managed_campaign_complete",
+                "That managed campaign is already complete.",
+                "Launch it from Home instead of resuming the installer.",
+                format!("completed managed campaign {install_id:?} cannot resume"),
+            ));
+        }
+        let card = self
+            .campaign_cards()?
+            .into_iter()
+            .find(|card| card.record.install_id == install_id)
+            .ok_or_else(|| unknown_managed_install(install_id))?;
+        match card.availability {
+            CampaignAvailability::Resumable => Ok(card.record.managed_root),
+            CampaignAvailability::FreshCopyRequired => Err(CommandError::new(
+                "managed_campaign_fresh_copy_required",
+                "That interrupted campaign cannot be changed safely.",
+                "Build a fresh managed campaign copy and keep this folder for diagnostics.",
+                format!("managed campaign {install_id:?} has a fresh-copy seal"),
+            )),
+            CampaignAvailability::Stale => Err(CommandError::new(
+                "managed_campaign_stale",
+                "That interrupted campaign folder moved or its ledger changed.",
+                "Restore the exact folder or build a fresh managed campaign copy.",
+                format!("managed campaign {install_id:?} is stale"),
+            )),
+        }
     }
 
     fn available_managed_install(
@@ -1993,6 +2033,15 @@ fn unknown_managed_install(install_id: &str) -> CommandError {
     )
 }
 
+fn registry_error(error: bg_engine::registry::RegistryError) -> CommandError {
+    CommandError::new(
+        "managed_install_registry_failed",
+        "Managed campaign records could not be verified.",
+        "Keep the campaign folders unchanged and retain this error for diagnosis.",
+        error.to_string(),
+    )
+}
+
 fn encode_input_value(value: &InputValue) -> String {
     match value {
         InputValue::Boolean(value) => format!("boolean:{value}"),
@@ -2110,8 +2159,29 @@ fn project_managed_install(
         } else {
             "Unavailable — folder moved or changed".to_owned()
         },
-        receipt_path,
+        receipt_path: Some(receipt_path),
         available,
+        resumable: false,
+    })
+}
+
+fn project_managed_campaign(
+    card: ManagedCampaignCard,
+) -> Result<ManagedInstallationResponse, CommandError> {
+    let path = unicode_path(&card.record.managed_root, "managed campaign")?;
+    let (status, resumable) = match card.availability {
+        CampaignAvailability::Resumable => ("Build interrupted — ready to resume", true),
+        CampaignAvailability::FreshCopyRequired => ("Fresh copy required", false),
+        CampaignAvailability::Stale => ("Build unavailable — folder moved or changed", false),
+    };
+    Ok(ManagedInstallationResponse {
+        id: card.record.install_id,
+        name: "Chriz BG Collection — incomplete build".to_owned(),
+        path,
+        status: status.to_owned(),
+        receipt_path: None,
+        available: false,
+        resumable,
     })
 }
 

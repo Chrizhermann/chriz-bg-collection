@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc, Condvar, Mutex};
@@ -6,14 +7,15 @@ use std::time::Duration;
 use bg_engine::cli::{
     CampaignReport, CampaignStatus, InstallCommandRequest, InstallReviewIdentity,
 };
-use bg_engine::digest::sha256_bytes;
+use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink, StepOutcome};
 use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameFinding, GameRole, Storefront,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::registry::{ManagedInstallRecord, ManagedInstallRegistry, REGISTRY_SCHEMA_VERSION};
-use bg_engine::session::SourceGameFingerprints;
+use bg_engine::resolve::InstallPlan;
+use bg_engine::session::{CampaignCreated, SessionEvent, SessionStore, SourceGameFingerprints};
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
 use chriz_bg_app_lib::bridge::{
     BridgeEngine, BridgeSystem, NativeBridge, RunEventEnvelope, SequencedEventSink,
@@ -222,6 +224,54 @@ fn publish_managed_install(app_data: &Path, managed: &Path, install_id: &str) {
             completed_at_millis: 1,
         })
         .unwrap();
+}
+
+fn publish_started_campaign(
+    app_data: &Path,
+    managed: &Path,
+    cache: &Path,
+    install_id: &str,
+) -> SessionStore {
+    fs::create_dir_all(managed).unwrap();
+    fs::create_dir_all(cache).unwrap();
+    let managed = managed.canonicalize().unwrap();
+    let cache = cache.canonicalize().unwrap();
+    let selection = NormalizedSelection {
+        platform: "windows".to_owned(),
+        features: BTreeMap::new(),
+        inputs: BTreeMap::new(),
+    };
+    let plan = InstallPlan { runs: Vec::new() };
+    let payload = b"PK\x03\x04restart fixture".to_vec();
+    let envelope = br#"{"kind":"restart-fixture"}"#.to_vec();
+    let created = CampaignCreated {
+        install_id: install_id.to_owned(),
+        attempt_id: format!("attempt-{install_id}"),
+        managed_root: managed.clone(),
+        cache_root: cache,
+        recipe_payload_sha256: sha256_bytes(&payload),
+        recipe_payload: payload,
+        recipe_envelope_sha256: sha256_bytes(&envelope),
+        recipe_envelope: envelope,
+        selection_sha256: selection_digest(&selection).unwrap(),
+        normalized_selection: selection,
+        plan_sha256: plan_digest(&plan).unwrap(),
+        source_games: SourceGameFingerprints {
+            bg1: "11".repeat(32),
+            bg2: "22".repeat(32),
+        },
+        artifact_identities: Vec::new(),
+        tool_identities: Vec::new(),
+        staged_bg1: managed.join("bg1"),
+        staged_bg2: managed.join("game"),
+    };
+    let store =
+        SessionStore::create(&managed, SessionEvent::Created(Box::new(created.clone()))).unwrap();
+    ManagedInstallRegistry::open_or_create(app_data)
+        .unwrap()
+        .publish_campaign(&created)
+        .unwrap();
+    store
 }
 
 impl BridgeEngine for FakeBridgeEngine {
@@ -690,59 +740,40 @@ fn sequenced_event_sink_uses_string_sequences_and_ignores_a_dropped_listener() {
 }
 
 #[test]
-fn resume_accepts_only_the_install_id_remembered_by_a_started_build() {
+fn restart_lists_and_resumes_only_a_verified_indexed_campaign() {
     let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap();
     let cache = recipe.parent().unwrap().join("cache");
     fs::create_dir(&cache).expect("create cache fixture");
-    let bg1 = recipe.parent().unwrap().join("clean-bg1");
-    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    let app_data = root.join("app-data");
+    let destination = root.join("campaign");
+    publish_started_campaign(&app_data, &destination, &cache, "install-restart");
+    let bg1 = root.join("clean-bg1");
+    let bg2 = root.join("clean-bg2");
     fs::create_dir(&bg1).expect("create BG1 fixture");
     fs::create_dir(&bg2).expect("create BG2 fixture");
-    let destination = recipe.parent().unwrap().join("campaign");
-    let canonical_destination = recipe
-        .parent()
-        .unwrap()
-        .canonicalize()
-        .unwrap()
-        .join("campaign");
-    let engine = Arc::new(FakeBridgeEngine::new(bg1.clone(), bg2.clone()));
-    let bridge = NativeBridge::with_engine(recipe, "recommended", &cache, engine.clone());
-    let discovery = bridge.discover_games().expect("register discovered games");
-    let review = bridge
-        .freeze_review(
-            &NormalizedSelection {
-                platform: "windows".to_owned(),
-                features: Default::default(),
-                inputs: Default::default(),
-            },
-            &destination,
-            &discovery.selected_bg1_id,
-            &discovery.selected_bg2_id,
-        )
-        .expect("freeze review");
-    let (event_tx, event_rx) = mpsc::channel();
-    bridge
-        .start_build(&review.review_token, move |event| {
-            let _ = event_tx.send(event);
-        })
-        .expect("queue build");
-    event_rx
-        .recv_timeout(Duration::from_secs(2))
-        .expect("campaign started");
-    engine.release_install();
-    while !engine
-        .installs
-        .lock()
-        .expect("install fixture lock")
-        .is_empty()
-        && bridge.active_run_count() != 0
-    {
-        std::thread::sleep(Duration::from_millis(5));
-    }
+    let canonical_destination = destination.canonicalize().unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    // This bridge is constructed only after the campaign/index already exist.
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        &cache,
+        app_data,
+        engine.clone(),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let cards = bridge.list_managed_installations().unwrap();
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].id, "install-restart");
+    assert!(!cards[0].available);
+    assert!(cards[0].resumable);
+    assert_eq!(cards[0].receipt_path, None);
 
     let (resume_tx, resume_rx) = mpsc::channel();
     let resumed = bridge
-        .resume_build("install-fixture", move |event| {
+        .resume_build("install-restart", move |event| {
             let _ = resume_tx.send(event);
         })
         .expect("queue resume");
@@ -756,11 +787,72 @@ fn resume_accepts_only_the_install_id_remembered_by_a_started_build() {
     ));
     assert_eq!(
         engine.resumes.lock().unwrap().as_slice(),
-        &[("install-fixture".to_owned(), canonical_destination)]
+        &[("install-restart".to_owned(), canonical_destination)]
     );
 
     let unknown = bridge.resume_build("install-unknown", |_| {});
     assert_eq!(unknown.unwrap_err().code, "managed_install_unknown");
+}
+
+#[test]
+fn restart_keeps_stale_and_fresh_copy_campaigns_visible_but_not_resumable() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let stale_root = root.join("stale-campaign");
+    let sealed_root = root.join("sealed-campaign");
+    fs::create_dir(&cache).unwrap();
+    publish_started_campaign(&app_data, &stale_root, &cache, "install-stale-start");
+    let sealed = publish_started_campaign(&app_data, &sealed_root, &cache, "install-sealed");
+    sealed
+        .append(SessionEvent::StepStarted {
+            step_id: "stage:bg1".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    sealed
+        .append(SessionEvent::FreshCopyRequired {
+            step_id: "stage:bg1".to_owned(),
+            attempt: 1,
+            detail: "staged bytes changed".to_owned(),
+        })
+        .unwrap();
+    fs::rename(&stale_root, root.join("stale-moved-away")).unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        engine,
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let cards = bridge.list_managed_installations().unwrap();
+
+    assert_eq!(cards.len(), 2);
+    assert!(cards.iter().all(|card| !card.available && !card.resumable));
+    assert!(cards
+        .iter()
+        .any(|card| card.id == "install-stale-start" && card.status.contains("unavailable")));
+    assert!(cards
+        .iter()
+        .any(|card| card.id == "install-sealed" && card.status.contains("Fresh copy")));
+    assert_eq!(
+        bridge
+            .resume_build("install-stale-start", |_| {})
+            .unwrap_err()
+            .code,
+        "managed_campaign_stale"
+    );
+    assert_eq!(
+        bridge
+            .resume_build("install-sealed", |_| {})
+            .unwrap_err()
+            .code,
+        "managed_campaign_fresh_copy_required"
+    );
 }
 
 #[test]
@@ -979,6 +1071,7 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
     let app_data = root.join("app-data");
     let managed = root.join("managed-campaign");
     fs::create_dir(&cache).unwrap();
+    publish_started_campaign(&app_data, &managed, &cache, "install-task23");
     publish_managed_install(&app_data, &managed, "install-task23");
     let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
     let system = Arc::new(RecordingBridgeSystem::default());
@@ -996,6 +1089,8 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
     assert_eq!(cards.len(), 1);
     assert_eq!(cards[0].id, "install-task23");
     assert!(cards[0].available);
+    assert!(!cards[0].resumable);
+    assert!(cards[0].receipt_path.is_some());
     assert_eq!(cards[0].status, "Ready to play");
 
     bridge.launch_install("install-task23").unwrap();
