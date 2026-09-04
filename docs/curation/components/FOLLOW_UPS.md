@@ -24,10 +24,10 @@ remains unavailable or excluded.
   from the old v5.0/v5.1 state to the reviewed v5.2 target.
 - [x] [Randomiser](RANDOMISER.md): immutable maintained-fork release v8.1.1 is pinned at
   commit `f4a9dfb1281269629e4a6fcedb6a064147dfde32` with its release-asset SHA-256 and size.
-- [ ] [Artisan's Kitpack](ARTISANSKITPACK.md): replace all three stale upstream
-  manifest entries with the released `chriz-v1.2.0` fork artifact at commit
-  `f623045f58cb5c84ebb438f9ce32b1741405c637`. Publish a later fork release containing
-  the Shapeshifter pathfinding-footprint fix before allowing `5110/5111`.
+- [x] [Artisan's Kitpack](ARTISANSKITPACK.md): all three installer identities share the
+  immutable `chriz-v1.3.1` fork archive at commit
+  `ac718614991e34b4f720807bec5edc96266c6c5e`; its released Shapeshifter footprint fix
+  makes the curated `5110` route available.
 - [ ] [Bardic Wonders](BARDICWONDERS.md): replace the upstream snapshot with Chris's
   released `v2.9c-balance.2` artifact at commit
   `db0cf81504fd3f84e4e74eb8ab30e65499135512`. Integrate and release the later local

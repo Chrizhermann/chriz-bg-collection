@@ -12,7 +12,7 @@ const MODPACK_COMPONENTS: &[u32] = &[
 ];
 
 const RECOMMENDED_COMPONENTS: &[u32] = &[
-    110, 130, 190, 192, 193, 194, 195, 196, 197, 198, 410, 440, 450,
+    110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 410, 440, 450,
 ];
 
 fn recipe_root() -> PathBuf {
@@ -113,7 +113,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     assert_eq!(parent.readiness, Readiness::Ready);
     assert!(parent.selected);
 
-    for component in [140, 170, 400, 430] {
+    for component in [400, 430] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -136,7 +136,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.selected, "{id}");
     }
 
-    for component in [130, 410, 440, 450] {
+    for component in [130, 140, 170, 410, 440, 450] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view

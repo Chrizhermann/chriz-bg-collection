@@ -18,9 +18,9 @@ except AJANTISBG2 (language 1).
 | Mod | Installed | Proposed target | Notes |
 |---|---|---|---|
 | AJANTISBG2 | 21 | v21 | unchanged (installed = latest) |
-| ARTISANSKITPACK | 6.0 | chriz-v1.2.0 fork @ `f623045f` | Released selected fork; a later release is required before Shapeshifter `5110/5111` is available. |
-| ARTISANSKITPACK_NPC | — | same chriz-v1.2.0 artifact | One artifact supplies all three TP2s; use the exact same source hash. |
-| ARTISANSKITPACK_TWEAK | — | same chriz-v1.2.0 artifact | One artifact supplies all three TP2s; use the exact same source hash. |
+| ARTISANSKITPACK | 6.0 | chriz-v1.3.1 fork @ `ac718614` | Immutable maintained release; curated Shapeshifter `5110` includes the footprint fix. |
+| ARTISANSKITPACK_NPC | — | same chriz-v1.3.1 artifact | One immutable archive supplies all three TP2 identities. |
+| ARTISANSKITPACK_TWEAK | — | same chriz-v1.3.1 artifact | One immutable archive supplies all three TP2 identities. |
 | ASCENSION | 2.1.0 | 2.1.0 | Official release ZIP frozen; component `40` remains omitted until its duplicate-provider decision is resolved. |
 | AURA_BG1_2_EET | — | reconciled Chris fork, pending release | Reconcile local balance work with seven newer upstream commits beyond reviewed upstream `285dabbc`, then publish an immutable source. |
 | BARDICWONDERS | — | v2.9c-balance.2 @ `db0cf815` | Released selected fork; later finite-Abettor-HLA work still needs integration/release. |

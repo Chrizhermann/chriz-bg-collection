@@ -1,7 +1,7 @@
 # ARTISANSKITPACK — components
 
 Listed at reference version **6.0**; refreshed for the selected fork release
-**chriz-v1.2.0** (`f623045f58cb5c84ebb438f9ce32b1741405c637`).
+**chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`).
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
@@ -11,8 +11,8 @@ Listed at reference version **6.0**; refreshed for the selected fork release
 - `8101/8102` require `8001` and are unavailable with Spell Revisions.
 - `10003/10004` require `10001` and EEex; `8004` also requires EEex.
 - `1001` and `2003` require `1000`; `5110/5111` require `5100`.
-- `5110/5111` retain Chris's preference but must be unavailable until the local
-  Shapeshifter pathfinding-footprint fix is included in a fetchable fork release.
+- `5110` is ready in `chriz-v1.3.1`, which includes the maintained
+  Shapeshifter pathfinding-footprint fix. Uncurated alternative `5111` remains excluded.
 - `30001` is unavailable for every recommended collection route. Its global priest
   delivery is based on a stale snapshot and remains unsafe even without Spell Revisions.
 - `1` genuinely broadens ordinary class/race availability, but deliberately does not

@@ -128,6 +128,27 @@ components = [0, 2, 5, 6, 7, 8]
 args = []
 
 [[runs]]
+run_id = "ascension-bg2"
+mod_id = "ascension"
+phase = "main"
+components = [0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2100, 2300, 2400]
+args = []
+
+[[runs]]
+run_id = "artisanskitpack-main-bg2"
+mod_id = "artisanskitpack"
+phase = "main"
+components = [1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005, 1007, 1000, 1001, 1008, 1009, 1100, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001]
+args = []
+
+[[runs]]
+run_id = "artisanskitpack-npc-bg2"
+mod_id = "artisanskitpack-npc"
+phase = "main"
+components = [1101, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004, 20002, 99001]
+args = []
+
+[[runs]]
 run_id = "iepbanters-bg2"
 mod_id = "iepbanters"
 phase = "main"
@@ -142,10 +163,10 @@ components = [0, 1, 2]
 args = []
 
 [[runs]]
-run_id = "ascension-bg2"
-mod_id = "ascension"
+run_id = "artisanskitpack-tweak-early-bg2"
+mod_id = "artisanskitpack-tweak"
 phase = "main"
-components = [0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2100, 2300, 2400]
+components = [20101, 1209, 7203]
 args = []
 
 [[runs]]
@@ -156,6 +177,13 @@ components = [0]
 args = []
 
 [[runs]]
+run_id = "randomiser-bg2"
+mod_id = "randomiser"
+phase = "main"
+components = [500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100]
+args = []
+
+[[runs]]
 run_id = "stratagems-bg2"
 mod_id = "stratagems"
 phase = "main"
@@ -163,10 +191,17 @@ components = [2000, 2500, 2510, 3040, 3041, 3505, 3540, 3541, 4000, 4115, 4210, 
 args = []
 
 [[runs]]
-run_id = "randomiser-bg2"
-mod_id = "randomiser"
+run_id = "artisanskitpack-tweak-late-bg2"
+mod_id = "artisanskitpack-tweak"
 phase = "main"
-components = [500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100]
+components = [12012, 3202, 3302, 8204]
+args = []
+
+[[runs]]
+run_id = "artisanskitpack-npc-late-bg2"
+mod_id = "artisanskitpack-npc"
+phase = "main"
+components = [200010]
 args = []
 
 [[runs]]
@@ -1892,6 +1927,741 @@ parent = "mod:ascension"
 components = [{ run_id = "ascension-bg2", component = 2400 }]
 
 [[features]]
+id = "mod:artisanskitpack"
+title = "The Artisan's Kitpack"
+description = "Install the maintained curated kit package from the chriz-v1.3.1 fork release."
+category = "kits"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:artisanskitpack:component-1"
+title = "All classes for all races"
+description = "Broaden ordinary class and race availability."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-2"
+title = "Multi-classes for all races"
+description = "Enable the curated all-races multi-class route."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 2 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-20000"
+title = "Eldritch Knight"
+description = "Add the Fighter/Mage Eldritch Knight kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 20000 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-20001"
+title = "Arcane Trickster"
+description = "Add the Mage/Thief Arcane Trickster kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 20001 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-8001"
+title = "Pale Master"
+description = "Add the Pale Master sorcerer kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 8001 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-8101"
+title = "Pale Master: unholy necromancy spells"
+description = "Use the curated Pale Master divine-necromancy spell set."
+category = "kits"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Deferred from the current no-Spell-Revisions public-alpha route."
+parent = "mod:artisanskitpack"
+requires = ["feature:artisanskitpack:component-8001"]
+components = [{ run_id = "artisanskitpack-main-bg2", component = 8101 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-8002"
+title = "Dragon Disciple original stat bonuses"
+description = "Use the original-stat-bonus Dragon Disciple route."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 8002 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-8004"
+title = "Arcane Trickster Sorcerer"
+description = "Add the EEex-based Arcane Trickster sorcerer kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "artisanskitpack-main-bg2", component = 8004 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-10002"
+title = "Brawler"
+description = "Add the Brawler monk kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 10002 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-10001"
+title = "Monk revisions"
+description = "Install the curated monk revisions."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 10001 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-10003"
+title = "Sacred Fist and Enlightened Fist"
+description = "Add the EEex-based divine and arcane fist kits."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+requires = ["feature:artisanskitpack:component-10001", "feature:eeex:mandatory-components"]
+components = [{ run_id = "artisanskitpack-main-bg2", component = 10003 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-10004"
+title = "Ninja"
+description = "Add the EEex-based Ninja monk kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+requires = ["feature:artisanskitpack:component-10001", "feature:eeex:mandatory-components"]
+components = [{ run_id = "artisanskitpack-main-bg2", component = 10004 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1003"
+title = "Berserker overhaul"
+description = "Install the maintained Berserker overhaul already included in this fork."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1003 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1006"
+title = "Wizard Slayer overhaul"
+description = "Install the Wizard Slayer overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1006 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1004"
+title = "Kensai overhaul"
+description = "Install the Kensai overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1004 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1005"
+title = "Barbarian overhaul"
+description = "Install the Barbarian overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1005 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1007"
+title = "Dwarven Defender overhaul and Vanguard"
+description = "Install the Dwarven Defender overhaul and Vanguard kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1007 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1000"
+title = "Arcane Archer"
+description = "Add the Arcane Archer fighter kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1000 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1001"
+title = "Arcane Archer Fighter/Mage"
+description = "Add the Fighter/Mage Arcane Archer variant."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+requires = ["feature:artisanskitpack:component-1000"]
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1001 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1008"
+title = "Siegemaster"
+description = "Add the Siegemaster fighter kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1008 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1009"
+title = "Dreadnought"
+description = "Add the Dreadnought fighter kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1009 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-1100"
+title = "Fighter overhaul"
+description = "Install the Fighter overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 1100 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-2000"
+title = "Ranger overhaul"
+description = "Install the Ranger overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 2000 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-2010"
+title = "Archer overhaul"
+description = "Install the Archer overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 2010 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-2011"
+title = "Stalker overhaul"
+description = "Install the Stalker overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 2011 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-2012"
+title = "Beast Master overhaul"
+description = "Install the Beast Master overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 2012 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-2002"
+title = "Dark Hunter"
+description = "Add the Dark Hunter ranger kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 2002 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3000"
+title = "Paladin overhaul"
+description = "Install the Paladin overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3000 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3010"
+title = "Cavalier overhaul"
+description = "Install the Cavalier overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3010 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3003"
+title = "Inquisitor overhaul"
+description = "Install the Inquisitor overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3003 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3011"
+title = "Undead Hunter overhaul"
+description = "Install the Undead Hunter overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3011 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3004"
+title = "Blackguard overhaul"
+description = "Install the Blackguard overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3004 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3001"
+title = "Divine Champion"
+description = "Add the Divine Champion paladin kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3001 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3002"
+title = "Mystic Fire"
+description = "Add the Mystic Fire paladin kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3002 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-3005"
+title = "Martyr"
+description = "Add the Martyr paladin kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 3005 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-5100"
+title = "Shapeshifter overhaul"
+description = "Install the Shapeshifter overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 5100 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-5110"
+title = "Shapeshifter-form werewolf sprite"
+description = "Use the maintained pathfinding-safe werewolf sprite only for shapeshifted forms."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+requires = ["feature:artisanskitpack:component-5100"]
+components = [{ run_id = "artisanskitpack-main-bg2", component = 5110 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-5001"
+title = "Elementalist"
+description = "Add the Elementalist druid kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 5001 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-5002"
+title = "Hivemaster"
+description = "Add the Hivemaster druid kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 5002 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-7004"
+title = "Assassin overhaul"
+description = "Install the Assassin overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 7004 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-7006"
+title = "Swashbuckler overhaul"
+description = "Install the Swashbuckler overhaul."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 7006 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-7001"
+title = "Rogue Archer"
+description = "Add the Rogue Archer thief kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 7001 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-7002"
+title = "Magekiller"
+description = "Add the Magekiller thief kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 7002 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-7003"
+title = "Trickster"
+description = "Add the Trickster thief kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 7003 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-7005"
+title = "Invisible Blade"
+description = "Add the Invisible Blade thief kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 7005 }]
+
+[[features]]
+id = "feature:artisanskitpack:component-9001"
+title = "Warhorn Shaman"
+description = "Add the Warhorn Shaman kit."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack"
+components = [{ run_id = "artisanskitpack-main-bg2", component = 9001 }]
+
+[[features]]
+id = "mod:artisanskitpack-npc"
+title = "Artisan kit assignments for NPCs"
+description = "Apply the curated NPC kit assignments whose required kits are present."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+requires = ["mod:artisanskitpack"]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-1101"
+title = "Khalid: Vanguard"
+description = "Give Khalid the Vanguard kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-1007"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 1101 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-2001"
+title = "Minsc: Rashemi Berserker Ranger"
+description = "Give Minsc the packaged Rashemi Berserker Ranger kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 2001 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-3101"
+title = "Ajantis: Divine Champion"
+description = "Give Ajantis the Divine Champion kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-3001"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 3101 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-3102"
+title = "Mazzy: Divine Champion"
+description = "Give Mazzy the Divine Champion kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-3001"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 3102 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-5101"
+title = "Cernd: Elementalist"
+description = "Optionally give Cernd the Elementalist kit."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-5001"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 5101 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-5102"
+title = "Edwin: Red Wizard"
+description = "Give Edwin the Red Wizard kit."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Deferred from the current no-Spell-Revisions public-alpha route."
+parent = "mod:artisanskitpack-npc"
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 5102 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-7101"
+title = "Imoen: Rogue Archer"
+description = "Optionally give Imoen the Rogue Archer kit."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-7001"]
+conflicts = [{ feature_id = "feature:artisanskitpack-npc:component-7102", reason = "Choose one Imoen kit assignment." }]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 7101 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-7102"
+title = "Imoen: Trickster"
+description = "Give Imoen the curated Trickster kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-7003"]
+conflicts = [{ feature_id = "feature:artisanskitpack-npc:component-7101", reason = "Choose one Imoen kit assignment." }]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 7102 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-7104"
+title = "Hexxat: Invisible Blade"
+description = "Give Hexxat the Invisible Blade kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-7005"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 7104 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-21001"
+title = "Jan: Arcane Trickster"
+description = "Give Jan the Arcane Trickster kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-20001"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 21001 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-9101"
+title = "M'khiin: Warhorn Shaman"
+description = "Give M'khiin the Warhorn Shaman kit."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-9001", "mod:eet"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 9101 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-10004"
+title = "Rasaad: Sacred Fist"
+description = "Give Rasaad the Sacred Fist kit."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Deferred from the current no-Spell-Revisions public-alpha route."
+parent = "mod:artisanskitpack-npc"
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 10004 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-20002"
+title = "Xan: Eldritch Knight"
+description = "Apply the curated Eldritch Knight conversion to Xan."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-20000", "feature:xan:component-1"]
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 20002 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-99001"
+title = "Garrick: Troubadour"
+description = "Give Garrick Bardic Wonders' Troubadour kit exactly once."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Requires the reviewed Bardic Wonders Troubadour component, which is not yet pinned in the public alpha."
+parent = "mod:artisanskitpack-npc"
+components = [{ run_id = "artisanskitpack-npc-bg2", component = 99001 }]
+
+[[features]]
+id = "feature:artisanskitpack-npc:component-200010"
+title = "Nalia: Arcane Trickster Sorcerer"
+description = "Optionally give Nalia the Arcane Trickster sorcerer kit after its late equipment tweak."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:artisanskitpack-npc"
+requires = ["feature:artisanskitpack:component-8004", "feature:artisanskitpack-tweak:component-8204", "feature:eeex:mandatory-components"]
+components = [{ run_id = "artisanskitpack-npc-late-bg2", component = 200010 }]
+
+[[features]]
+id = "mod:artisanskitpack-tweak"
+title = "Artisan kit compatibility tweaks"
+description = "Apply the curated early and late compatibility passes for selected Artisan kits."
+category = "kits"
+decision = "default"
+readiness = "ready"
+requires = ["mod:artisanskitpack"]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-20101"
+title = "Manyshot for mod-added weapons"
+description = "Apply Archer Manyshot support to mod-added bows and crossbows."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:artisanskitpack:component-2010"]
+components = [{ run_id = "artisanskitpack-tweak-early-bg2", component = 20101 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-1209"
+title = "Dreadnought and Siegemaster APR"
+description = "Set the curated Dreadnought and Siegemaster attack-rate baseline."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+components = [{ run_id = "artisanskitpack-tweak-early-bg2", component = 1209 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-7203"
+title = "Trickster mod-kit mimicry"
+description = "Teach Trickster to mimic abilities from installed mod kits."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:artisanskitpack:component-7003"]
+components = [{ run_id = "artisanskitpack-tweak-early-bg2", component = 7203 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-12012"
+title = "Beast Master mod-item restrictions"
+description = "Apply Beast Master restrictions to later mod items."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:artisanskitpack:component-2012"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 12012 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-3202"
+title = "Mystic Fire wand and scroll use"
+description = "Allow Mystic Fire paladins to use wands and mage scrolls."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:artisanskitpack:component-3002", "feature:eeex:mandatory-components"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 3202 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-3302"
+title = "Mystic Fire HLA spellbook support"
+description = "Add eligible HLA spells directly to the Mystic Fire spellbook."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:artisanskitpack:component-3002", "feature:eeex:mandatory-components"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 3302 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-8204"
+title = "Arcane Trickster Sorcerer thief equipment"
+description = "Enable thief equipment for the Arcane Trickster sorcerer."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:artisanskitpack:component-8004", "feature:eeex:mandatory-components"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 8204 }]
+
+[[features]]
 id = "mod:spell-rev"
 title = "Spell Revisions"
 description = "Spell Revisions remains visible but cannot enter this alpha until its reviewed source and component-60 fix are released and pinned."
@@ -2301,7 +3071,7 @@ description = "Install Christopher's curated compatibility and Cleric of Tempus 
 category = "collection"
 decision = "default"
 readiness = "blocked"
-unavailable_reason = "Requires Spell Revisions and Artisan's Kitpack, which are not yet available in the public alpha."
+unavailable_reason = "Requires Spell Revisions, which is not yet available in the public alpha."
 
 [[features]]
 id = "mod:chriz-bg-modpack"
@@ -2341,9 +3111,9 @@ title = "Correct Mazzy's Divine Champion proficiencies"
 description = "Move Mazzy's illegal fifth Short Bow pip to Short Sword after her curated Divine Champion conversion."
 category = "fixes"
 decision = "mandatory"
-readiness = "blocked"
-unavailable_reason = "Requires Artisan's Kitpack NPC component 3102, which is not yet available in the alpha recipe."
+readiness = "ready"
 parent = "mod:chriz-bg-modpack"
+requires = ["feature:artisanskitpack-npc:component-3102"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 140 }]
 
 [[features]]
@@ -2352,9 +3122,9 @@ title = "Complete Xan's Eldritch Knight conversion"
 description = "Extend Artisan's Xan conversion to the remaining EET creature variants."
 category = "fixes"
 decision = "mandatory"
-readiness = "blocked"
-unavailable_reason = "Requires Artisan's Kitpack components 20000 and 20002, which are not yet available in the alpha recipe."
+readiness = "ready"
 parent = "mod:chriz-bg-modpack"
+requires = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-npc:component-20002"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 170 }]
 
 [[features]]

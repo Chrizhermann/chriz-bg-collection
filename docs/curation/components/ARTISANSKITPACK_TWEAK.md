@@ -1,7 +1,7 @@
 # ARTISANSKITPACK_TWEAK — components
 
-Refreshed for the selected Artisan fork release **chriz-v1.2.0**
-(`f623045f58cb5c84ebb438f9ce32b1741405c637`).
+Refreshed for the selected Artisan fork release **chriz-v1.3.1**
+(`ac718614991e34b4f720807bec5edc96266c6c5e`).
 17 entries, 7 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
