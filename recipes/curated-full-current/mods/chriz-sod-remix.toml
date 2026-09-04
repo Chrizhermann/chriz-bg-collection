@@ -1,0 +1,127 @@
+id = "chriz-sod-remix"
+artifact_id = "chriz-sod-remix-0.6.4"
+name = "CHRIZ-SOD-REMIX"
+tp2 = "setup-chriz-sod-remix.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 100
+name = "SoD remix: rest-ambush chance reduced 5x (felt rate)"
+
+[[components]]
+id = 110
+name = "SoD remix: keep all companions at SoD start"
+
+[[components]]
+id = 120
+name = "SoD remix: remove the hooded man from the mid-campaign"
+
+[[components]]
+id = 130
+name = "SoD remix: skip the four chapter rest-dreams"
+
+[[components]]
+id = 140
+name = "SoD remix: prologue - skip the Korlasz dungeon"
+
+[[components]]
+id = 150
+name = "SoD remix: prologue - no assassination night, crusade council"
+
+[[components]]
+id = 145
+name = "SoD remix: prologue - no auto-granted starting party (new/imported SoD)"
+
+[[components]]
+id = 160
+name = "SoD remix: prologue - Imoen stays and is recruitable"
+
+[[components]]
+id = 170
+name = "SoD remix: prologue - the Korlasz jailbreak"
+
+[[components]]
+id = 180
+name = "SoD remix: prologue - celebration and Caelar's proclamation"
+
+[[components]]
+id = 175
+name = "SoD remix: prologue - the XP ledger: Liia's reward after the jailbreak"
+
+[[components]]
+id = 185
+name = "SoD remix: prologue - Entar Silvershield removed (stays dead)"
+
+[[components]]
+id = 190
+name = "SoD remix: prologue - Skie's second-night bedroom visit removed"
+
+[[components]]
+id = 195
+name = "SoD remix: prologue - assassination and poison references scrubbed"
+
+[[components]]
+id = 210
+name = "SoD remix: Coast Way Forest removed - Rasaad recruits at the camp"
+
+[[components]]
+id = 197
+name = "SoD remix: prologue - Skie: talk-to-join recruit at the palace, SoD plot removed"
+
+[[components]]
+id = 187
+name = "SoD remix: prologue - the assassination night-set never spawns"
+
+[[components]]
+id = 200
+name = "SoD remix: Coast Way Crossing - fewer spiders, fairer bridge fight"
+
+[[components]]
+id = 215
+name = "SoD remix: the XP ledger - Coast Way Forest removal compensated"
+
+[[components]]
+id = 220
+name = "SoD remix: the dwarven dig site re-garrisoned"
+
+[[components]]
+id = 225
+name = "SoD remix: one text-only Caelar omen at the scrying pool"
+
+[[components]]
+id = 245
+name = "SoD remix: Coast Way bridge - the wall stays gone when the cutscene is skipped"
+
+[[components]]
+id = 230
+name = "SoD remix: the road north - fewer, cleaner enemy camps"
+
+[[components]]
+id = 240
+name = "SoD remix: Forest of Wyrms - bugbear cave removed, temple behind the dragon"
+
+[[components]]
+id = 250
+name = "SoD remix: Morentherene - a real dragon on Hard and Insane"
+
+[[components]]
+id = 255
+name = "SoD remix: Boareskyr battle - durable explosive barrels"
+
+[[components]]
+id = 260
+name = "SoD remix: coalition camp arc - fewer, cleaner enemies on the scouting maps"
+
+[[components]]
+id = 270
+name = "SoD remix: Kanaglym - fewer undead"
+
+[[components]]
+id = 280
+name = "SoD remix: no party dispel at the basement reveal"
+
+[[components]]
+id = 900
+name = "Collected in the camp chest at the Coast Way crossing"

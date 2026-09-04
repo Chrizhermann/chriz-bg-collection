@@ -664,7 +664,12 @@ fn production_bridge_loads_only_the_recipe_bundled_below_the_resource_directory(
 
 #[test]
 fn packaged_profiles_are_selected_by_known_identity_only() {
-    let bridge = NativeBridge::from_resource_dir(&workspace_root());
+    let resources = tempfile::tempdir().unwrap();
+    copy_tree(
+        &workspace_root().join("manifest"),
+        &resources.path().join("manifest"),
+    );
+    let bridge = NativeBridge::from_resource_dir(resources.path());
     let status = bridge.bootstrap().unwrap();
     assert_eq!(status.profiles.len(), 1);
     assert_eq!(status.profiles[0].id, "public-alpha");
@@ -674,6 +679,41 @@ fn packaged_profiles_are_selected_by_known_identity_only() {
         "public-alpha"
     );
     assert!(bridge.select_profile("../manifest").is_err());
+}
+
+#[test]
+fn curated_full_profile_is_default_when_packaged_and_keeps_release_validation() {
+    let resources = tempfile::tempdir().unwrap();
+    copy_tree(
+        &workspace_root().join("manifest"),
+        &resources.path().join("manifest"),
+    );
+    let full = resources.path().join("recipes/curated-full-current");
+    copy_tree(&workspace_root().join("manifest"), &full);
+    let bridge = NativeBridge::from_resource_dir(resources.path());
+    let status = bridge.bootstrap().unwrap();
+    assert_eq!(status.selected_profile, "curated-full-current");
+    assert_eq!(status.profiles[0].id, "curated-full-current");
+    assert_eq!(status.profiles.len(), 2);
+    assert_eq!(
+        bridge
+            .select_profile("public-alpha")
+            .unwrap()
+            .bootstrap()
+            .unwrap()
+            .selected_profile,
+        "public-alpha"
+    );
+    let cached = NativeBridge::from_resource_dir_with_cache(
+        resources.path(),
+        &resources.path().join("cache"),
+    );
+    assert_eq!(
+        cached.bootstrap().unwrap().selected_profile,
+        "curated-full-current"
+    );
+    fs::remove_file(full.join("releases/v0.1.0-alpha.1/acceptance.toml")).unwrap();
+    assert_eq!(bridge.bootstrap().unwrap_err().code, "validation_failed");
 }
 
 #[test]

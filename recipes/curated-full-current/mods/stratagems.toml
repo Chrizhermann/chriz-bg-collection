@@ -1,0 +1,335 @@
+id = "stratagems"
+artifact_id = "stratagems-35.21"
+name = "Sword Coast Stratagems"
+tp2 = "stratagems/setup-stratagems.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 2000
+name = "Install all spell tweaks"
+
+[[components]]
+id = 2500
+name = "Add 9 new arcane spells"
+
+[[components]]
+id = 2510
+name = "Add 6 new divine spells"
+
+[[components]]
+id = 3040
+name = "Remove Arrows of Dispelling from stores"
+
+[[components]]
+id = 3041
+name = "Stores sell a maximum of 5 Arrows of Dispelling"
+
+[[components]]
+id = 3505
+name = "Wider selection of random scrolls"
+
+[[components]]
+id = 3540
+name = "Inquisitors dispel at 1.5 x their level"
+
+[[components]]
+id = 3541
+name = "Inquisitors dispel at their level"
+
+[[components]]
+id = 4000
+name = "More Appropriate-Speed Bears"
+
+[[components]]
+id = 4115
+name = "Thieves assign skill points in multiples of five"
+
+[[components]]
+id = 4210
+name = "Randomize the maze in Watcher's Keep"
+
+[[components]]
+id = 4215
+name = "Remove unrealistically helpful items from certain areas"
+
+[[components]]
+id = 4218
+name = "Remove all ammo from random containers"
+
+[[components]]
+id = 4240
+name = "Treat mages' and priests' High-Level Abilities as innate abilities"
+
+[[components]]
+id = 4250
+name = "Make spell sequencers and contingencies into innate abilities"
+
+[[components]]
+id = 5000
+name = "Ease-of-use party AI"
+
+[[components]]
+id = 5900
+name = "Initialise AI components"
+
+[[components]]
+id = 6000
+name = "Smarter general AI"
+
+[[components]]
+id = 6010
+name = "Better calls for help"
+
+[[components]]
+id = 6030
+name = "Smarter Mages"
+
+[[components]]
+id = 6040
+name = "Smarter Priests"
+
+[[components]]
+id = 6100
+name = "Potions for NPCs"
+
+[[components]]
+id = 6200
+name = "Improved Spiders"
+
+[[components]]
+id = 6300
+name = "Smarter sirines and dryads"
+
+[[components]]
+id = 6310
+name = "Slightly smarter carrion crawlers"
+
+[[components]]
+id = 6320
+name = "Smarter basilisks"
+
+[[components]]
+id = 6500
+name = "Improved golems"
+
+[[components]]
+id = 6510
+name = "Improved fiends and celestials"
+
+[[components]]
+id = 6520
+name = "Smarter genies"
+
+[[components]]
+id = 6540
+name = "Smarter dragons"
+
+[[components]]
+id = 6550
+name = "Smarter beholders"
+
+[[components]]
+id = 6560
+name = "Smarter mind flayers"
+
+[[components]]
+id = 6570
+name = "Smarter githyanki"
+
+[[components]]
+id = 6580
+name = "Improved Vampires"
+
+[[components]]
+id = 6590
+name = "Smarter Throne of Bhaal final villain"
+
+[[components]]
+id = 6800
+name = "Smarter Illasera"
+
+[[components]]
+id = 6810
+name = "Smarter Gromnir"
+
+[[components]]
+id = 6820
+name = "Smarter Yaga-Shura"
+
+[[components]]
+id = 6830
+name = "Smarter Abazigal"
+
+[[components]]
+id = 6840
+name = "Ascension versions of Irenicus and Sendai use SCS abilities and AI"
+
+[[components]]
+id = 6850
+name = "Ascension demons use SCS abilities and AI"
+
+[[components]]
+id = 7000
+name = "Improved doppelgangers"
+
+[[components]]
+id = 7010
+name = "Tougher Black Talons and Iron Throne guards"
+
+[[components]]
+id = 7020
+name = "Improved deployment for parties of assassins"
+
+[[components]]
+id = 7030
+name = "Improved kobolds"
+
+[[components]]
+id = 7040
+name = "Relocated bounty hunters"
+
+[[components]]
+id = 7050
+name = "Improved Ulcaster"
+
+[[components]]
+id = 7060
+name = "Improved Balduran's Isle"
+
+[[components]]
+id = 7070
+name = "Improved Durlag's Tower"
+
+[[components]]
+id = 7080
+name = "Improved Demon Cultists"
+
+[[components]]
+id = 7090
+name = "Improved Cloakwood Druids"
+
+[[components]]
+id = 7100
+name = "Improved Bassilus"
+
+[[components]]
+id = 7110
+name = "Improved Drasus party"
+
+[[components]]
+id = 7130
+name = "Improved Red Wizards"
+
+[[components]]
+id = 7140
+name = "Improved Undercity assassins"
+
+[[components]]
+id = 7150
+name = "Improved Carsa/Kahrk interaction"
+
+[[components]]
+id = 7200
+name = "Tougher chapter-two end battle"
+
+[[components]]
+id = 7210
+name = "Tougher chapter-three end battle"
+
+[[components]]
+id = 7220
+name = "Tougher chapter-four end battle"
+
+[[components]]
+id = 7230
+name = "Tougher chapter-five end battle"
+
+[[components]]
+id = 7250
+name = "Improved final battle"
+
+[[components]]
+id = 7900
+name = "Improved minor encounters"
+
+[[components]]
+id = 8000
+name = "Make the starting dungeon slightly harder"
+
+[[components]]
+id = 8010
+name = "Improved Shade Lord"
+
+[[components]]
+id = 8020
+name = "Spellcasting Demiliches"
+
+[[components]]
+id = 8040
+name = "Tie difficulty of level-dependent monster groupings to the difficulty slider"
+
+[[components]]
+id = 8050
+name = "Improved Random Encounters"
+
+[[components]]
+id = 8060
+name = "Improved de'Arnise Keep (Tactics Remix)"
+
+[[components]]
+id = 8070
+name = "Improved Unseeing Eye"
+
+[[components]]
+id = 8080
+name = "Improved Bodhi"
+
+[[components]]
+id = 8085
+name = "Ascension version of Bodhi uses Improved-Bodhi abilities"
+
+[[components]]
+id = 8090
+name = "Party's items are taken from them in Spellhold"
+
+[[components]]
+id = 8100
+name = "Improved battle with Irenicus in Spellhold"
+
+[[components]]
+id = 8110
+name = "Improved Sahuagin"
+
+[[components]]
+id = 8120
+name = "Improved Beholder hive"
+
+[[components]]
+id = 8130
+name = "Rebalanced troll regeneration"
+
+[[components]]
+id = 8140
+name = "Improved Drow"
+
+[[components]]
+id = 8150
+name = "Improved Watcher's Keep"
+
+[[components]]
+id = 8160
+name = "Improved Fire Giant temple"
+
+[[components]]
+id = 8170
+name = "Improved Sendai's Enclave"
+
+[[components]]
+id = 8180
+name = "Improved Abazigal's Lair"
+
+[[components]]
+id = 8190
+name = "Improved Minor Encounters"

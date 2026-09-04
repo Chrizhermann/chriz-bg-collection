@@ -1,0 +1,13 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.1"
+published_at = "2026-09-04T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.1"
+
+[[changes]]
+id = "initial-public-alpha-recipe"
+title = "Initial public alpha recipe"
+summary = "Creates a new managed EET installation from the first signed public-alpha recipe."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = ["release:initial"]

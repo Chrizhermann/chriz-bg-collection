@@ -1,0 +1,527 @@
+id = "cdtweaks"
+artifact_id = "cdtweaks-18"
+name = "The Tweaks Anthology"
+tp2 = "cdtweaks/setup-cdtweaks.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 10
+name = "Remove Helmet Animations"
+
+[[components]]
+id = 20
+name = "Change Imoen's Avatar to Mage"
+
+[[components]]
+id = 30
+name = "Change Nalia's Avatar to Thief"
+
+[[components]]
+id = 40
+name = "Change Viconia's Skin Color to Dark Blue"
+
+[[components]]
+id = 50
+name = "Avatar Morphing Script"
+
+[[components]]
+id = 60
+name = "Weapon Animation Tweaks"
+
+[[components]]
+id = 100
+name = "Commoners Use Drab Colors"
+
+[[components]]
+id = 110
+name = "Icon Improvements"
+
+[[components]]
+id = 130
+name = "Force All Dialogue to Pause Game"
+
+[[components]]
+id = 170
+name = "Only replace icons that aren't already unique"
+
+[[components]]
+id = 180
+name = "Fixes only"
+
+[[components]]
+id = 181
+name = "Unique icons only"
+
+[[components]]
+id = 182
+name = "Unique icons and names"
+
+[[components]]
+id = 190
+name = "For all shields and helmets"
+
+[[components]]
+id = 191
+name = "For non-magical shields and helmets"
+
+[[components]]
+id = 192
+name = "For all helmets"
+
+[[components]]
+id = 193
+name = "For non-magical helmets"
+
+[[components]]
+id = 194
+name = "For all shields"
+
+[[components]]
+id = 195
+name = "For non-magical shields"
+
+[[components]]
+id = 200
+name = "Remove blur effect"
+
+[[components]]
+id = 2010
+name = "Separate Resist Fire/Cold Icon into Separate Icons [Angel]"
+
+[[components]]
+id = 1010
+name = "More Interjections"
+
+[[components]]
+id = 1020
+name = "Alter HP Triggers for NPC Wounded Dialogues"
+
+[[components]]
+id = 1040
+name = "Improved Athkatlan City Guard"
+
+[[components]]
+id = 1080
+name = "Add Bags of Holding"
+
+[[components]]
+id = 1120
+name = "Stores Sell Higher Stacks of Items"
+
+[[components]]
+id = 1142
+name = "Just potions"
+
+[[components]]
+id = 1160
+name = "No restrictions"
+
+[[components]]
+id = 1161
+name = "Keep class restrictions"
+
+[[components]]
+id = 1340
+name = "Make the Planar Sphere Stronghold Available to All Classes"
+
+[[components]]
+id = 1341
+name = "Make the de'Arnise Keep Stronghold Available to All Classes"
+
+[[components]]
+id = 1342
+name = "Make the Temple Strongholds Available to All Classes"
+
+[[components]]
+id = 1343
+name = "Make the Thieves Guild Stronghold Available to All Classes"
+
+[[components]]
+id = 1344
+name = "Make the Playhouse Stronghold Available to All Classes"
+
+[[components]]
+id = 1345
+name = "Make the Noble Order of the Radiant Heart Stronghold Available to All Classes"
+
+[[components]]
+id = 1346
+name = "Make the Druid Grove Stronghold Available to All Classes"
+
+[[components]]
+id = 1347
+name = "Make the Imnesvale Cabin Stronghold Available to All Classes"
+
+[[components]]
+id = 1180
+name = "Female Edwina [Davide Carte, Wendy Yung, Weimer]"
+
+[[components]]
+id = 1220
+name = "Allow Cromwell to Upgrade Watcher's Keep Items"
+
+[[components]]
+id = 1225
+name = "Instant forging (original BG2 default)"
+
+[[components]]
+id = 1226
+name = "Eight hours"
+
+[[components]]
+id = 1227
+name = "Full 24 hours (BG2EE default, includes sleep)"
+
+[[components]]
+id = 1230
+name = "Allow Cespenar to Use Cromwell Recipes"
+
+[[components]]
+id = 1257
+name = "Move NPCs to Convenient Locations: Alora, Eldoth, Quayle, Shar-Teel, Tiax, and Viconia"
+
+[[components]]
+id = 2020
+name = "Two-Handed Bastard Swords"
+
+[[components]]
+id = 2030
+name = "Two-Handed Katanas"
+
+[[components]]
+id = 2035
+name = "Two-Handed Axes"
+
+[[components]]
+id = 2090
+name = "Remove experience cap"
+
+[[components]]
+id = 2720
+name = "Yoshimo to Imoen Experience Transfer [dark0dave]"
+
+[[components]]
+id = 2152
+name = "Allow armor plus one protection item [Angel]"
+
+[[components]]
+id = 2170
+name = "Cast Spells from Scrolls (and Other Items) at Character Level"
+
+[[components]]
+id = 2192
+name = "Hybrid of both methods"
+
+[[components]]
+id = 2210
+name = "True grandmastery [Baldurdash]"
+
+[[components]]
+id = 2250
+name = "Un-Nerfed Sorcerer Spell Progression Table"
+
+[[components]]
+id = 2260
+name = "Un-nerfed table [Blucher]"
+
+[[components]]
+id = 2270
+name = "Un-nerfed table [Blucher]"
+
+[[components]]
+id = 2280
+name = "Un-nerfed table [Blucher]"
+
+[[components]]
+id = 2292
+name = "Use cleric level progression changes with normal druid spell table"
+
+[[components]]
+id = 2312
+name = "Arcane and divine magic"
+
+[[components]]
+id = 2391
+name = "BG2-Style Progression (Up To Level Six Spells) [TotoR]"
+
+[[components]]
+id = 2400
+name = "Rangers Use Icewind Dale-Heart of Winter Spell Tables [grogerson]"
+
+[[components]]
+id = 2410
+name = "Druids Use 3E Alignment Restrictions"
+
+[[components]]
+id = 2420
+name = "Loosen Equipment Restrictions for Cleric Multi- and Dual-Classes"
+
+[[components]]
+id = 2430
+name = "Loosen equipment restrictions"
+
+[[components]]
+id = 2500
+name = "Exceptional Strength Weight Limit Changes [sarevok57]"
+
+[[components]]
+id = 2520
+name = "Allow Mages to Use Bucklers and Thieves to Use Small Shields [Angel]"
+
+[[components]]
+id = 2540
+name = "Speed Up de'Arnise Keep Stronghold Quests"
+
+[[components]]
+id = 2590
+name = "Thieves Can Backstab With More Weapons With \"Use Any Item\" or as Dual- and Multi-Classes"
+
+[[components]]
+id = 2999
+name = "Max HP at Level One"
+
+[[components]]
+id = 3000
+name = "Maximum"
+
+[[components]]
+id = 3001
+name = "NWN-style"
+
+[[components]]
+id = 3002
+name = "Average rolls"
+
+[[components]]
+id = 3008
+name = "Allow HP Rolls Through Level 20 [Angel]"
+
+[[components]]
+id = 3010
+name = "For all creatures in game"
+
+[[components]]
+id = 3011
+name = "For non-party-joinable NPCs only"
+
+[[components]]
+id = 3012
+name = "For party-joinable NPCs only"
+
+[[components]]
+id = 3040
+name = "Make Bags of Holding Bottomless"
+
+[[components]]
+id = 3080
+name = "Unlimited ammo stacking"
+
+[[components]]
+id = 3081
+name = "Stacks of 40"
+
+[[components]]
+id = 3082
+name = "Stacks of 80"
+
+[[components]]
+id = 3083
+name = "Stacks of 120"
+
+[[components]]
+id = 3090
+name = "Unlimited jewelry, gem, and miscellaneous item stacking"
+
+[[components]]
+id = 3091
+name = "Stacks of 40"
+
+[[components]]
+id = 3092
+name = "Stacks of 80"
+
+[[components]]
+id = 3093
+name = "Stacks of 120"
+
+[[components]]
+id = 3100
+name = "Unlimited potion stacking"
+
+[[components]]
+id = 3101
+name = "Stacks of 40"
+
+[[components]]
+id = 3102
+name = "Stacks of 80"
+
+[[components]]
+id = 3103
+name = "Stacks of 120"
+
+[[components]]
+id = 3110
+name = "Unlimited scroll stacking"
+
+[[components]]
+id = 3111
+name = "Stacks of 40"
+
+[[components]]
+id = 3112
+name = "Stacks of 80"
+
+[[components]]
+id = 3113
+name = "Stacks of 120"
+
+[[components]]
+id = 3120
+name = "NPCs are never angry about reputation"
+
+[[components]]
+id = 3121
+name = "NPCs can be angry about reputation but never leave [Salk]"
+
+[[components]]
+id = 3122
+name = "NPCs are always neutral about reputation [Anomaly]"
+
+[[components]]
+id = 3123
+name = "NPCs Don't Fight"
+
+[[components]]
+id = 3124
+name = "Stop Haer'Dalis-Aerie Romance from Starting"
+
+[[components]]
+id = 3125
+name = "Neutral Characters Make Happy Comments at Mid-Range Reputation [Luiz]"
+
+[[components]]
+id = 3130
+name = "Remove traps completely"
+
+[[components]]
+id = 3290
+name = "Use scheme: 000000000-Protagonist-Save-Name"
+
+[[components]]
+id = 3291
+name = "Use scheme: 000000000-Protagonist Save-Name"
+
+[[components]]
+id = 3292
+name = "Use scheme: 000000000-(Protagonist)-Save-Name"
+
+[[components]]
+id = 3293
+name = "Use scheme: 000000000-(Protagonist) Save-Name"
+
+[[components]]
+id = 3294
+name = "Use scheme: 000000000-[Protagonist]-Save-Name"
+
+[[components]]
+id = 3295
+name = "Use scheme: 000000000-[Protagonist] Save-Name"
+
+[[components]]
+id = 3300
+name = "Death Cam"
+
+[[components]]
+id = 3310
+name = "Start New Games with Party AI Turned Off"
+
+[[components]]
+id = 3340
+name = "Movement speed by 50 percent"
+
+[[components]]
+id = 3341
+name = "Movement speed by 100 percent"
+
+[[components]]
+id = 3342
+name = "Movement speed by 150 percent"
+
+[[components]]
+id = 3343
+name = "Movement speed by 50 percent and casting speed"
+
+[[components]]
+id = 3344
+name = "Movement speed by 100 percent and casting speed"
+
+[[components]]
+id = 3345
+name = "Movement speed by 150 percent and casting speed"
+
+[[components]]
+id = 3346
+name = "Casting speed only"
+
+[[components]]
+id = 3347
+name = "Customize (via cdtweaks.txt)"
+
+[[components]]
+id = 3350
+name = "Every 15 minutes (one save only)"
+
+[[components]]
+id = 3351
+name = "Every 30 minutes (one save only)"
+
+[[components]]
+id = 3352
+name = "Every 60 minutes (one save only)"
+
+[[components]]
+id = 3353
+name = "Every 120 minutes (one save only)"
+
+[[components]]
+id = 3354
+name = "Every 15 minutes (cycle through four saves)"
+
+[[components]]
+id = 3355
+name = "Every 30 minutes (cycle through four saves)"
+
+[[components]]
+id = 3356
+name = "Every 60 minutes (cycle through four saves)"
+
+[[components]]
+id = 3357
+name = "Every 120 minutes (cycle through four saves)"
+
+[[components]]
+id = 3390
+name = "Automatic Use of Ranger Tracking Skill"
+
+[[components]]
+id = 4031
+name = "Use BG2 values"
+
+[[components]]
+id = 4041
+name = "Use BG2 values"
+
+[[components]]
+id = 4050
+name = "Change Jaheira to Neutral Good Alignment"
+
+[[components]]
+id = 4061
+name = "Use BG2 values"
+
+[[components]]
+id = 4071
+name = "Use BG2 values"

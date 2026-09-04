@@ -1,0 +1,88 @@
+id = "bardicwonders"
+artifact_id = "bardicwonders-v2.9c-balance.2"
+name = "Bardic Wonders"
+tp2 = "BardicWonders/Setup-BardicWonders.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 1001
+name = "Bardic Wonders: Blade Overhaul"
+
+[[components]]
+id = 1002
+name = "Bardic Wonders: Jester Overhaul"
+
+[[components]]
+id = 1003
+name = "Bardic Wonders: Skald Overhaul"
+
+[[components]]
+id = 1004
+name = "Bardic Wonders: Abettor of Mask Kit"
+
+[[components]]
+id = 1005
+name = "Bardic Wonders: Dancer Kit"
+
+[[components]]
+id = 1006
+name = "Bardic Wonders: Darkbloom Bard Kit"
+
+[[components]]
+id = 1007
+name = "Bardic Wonders: Storm Drummer Kit"
+
+[[components]]
+id = 1008
+name = "Bardic Wonders: Troubadour Kit"
+prompts = [{ expected_output = "Please select 1 or 2 and press Enter.", answer = { kind = "literal", value = { kind = "integer", value = 2 } } }]
+
+[[components]]
+id = 1009
+name = "Bardic Wonders: Deathsinger Kit"
+
+[[components]]
+id = 1010
+name = "Bardic Wonders: Strategist Kit"
+
+[[components]]
+id = 1011
+name = "Bardic Wonders: Kapellmeister Kit"
+
+[[components]]
+id = 1012
+name = "Bardic Wonders: Gallant Paladin Kit"
+
+[[components]]
+id = 2002
+name = "Bardic Wonders: Inspirations"
+
+[[components]]
+id = 2007
+name = "Bardic Wonders: High Level Abilities"
+
+[[components]]
+id = 2008
+name = "Bardic Wonders: New Bard Spells"
+
+[[components]]
+id = 2003
+name = "Bardic Wonders: Armored Casting for Bards"
+
+[[components]]
+id = 2004
+name = "Bardic Wonders: Bard Song Mechanics Tweak"
+
+[[components]]
+id = 2005
+name = "Bardic Wonders: Item Restriction Tweaks—Bards may use mage items and priest scrolls"
+
+[[components]]
+id = 2006
+name = "Bardic Wonders: Bard Song Overhead Visual Effect"
+
+[[components]]
+id = 3001
+name = "Bardic Wonders: Patch Dialogue Class Checks for: Gallant, Mage/Bard and Fighter/Mage/Bard (install late)"

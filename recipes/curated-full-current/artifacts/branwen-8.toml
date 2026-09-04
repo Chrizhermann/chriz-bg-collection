@@ -1,0 +1,32 @@
+id = "branwen-8"
+name = "Branwen for BGII"
+version = "8"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Pocket-Plane-Group/Branwen_for_BGII/releases/download/v8/branwen-v8pre.zip"
+reference = "v8"
+expected_filename = "branwen-v8pre.zip"
+expected_length = 13926210
+sha256 = "f82c93e67f1910f0754364c17d40e7f4ee2c9609a39cd081efbfc69c9faaea17"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Branwen"]
+tp2_paths = ["Branwen/branwen.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Pocket-Plane-Group/Branwen_for_BGII"
+license = "Fetch-only third-party release; the collection does not redistribute it"
+url = "https://github.com/Pocket-Plane-Group/Branwen_for_BGII/releases/tag/v8"
+reviewed_on = "2026-09-05"

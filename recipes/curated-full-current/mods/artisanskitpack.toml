@@ -1,0 +1,191 @@
+id = "artisanskitpack"
+artifact_id = "artisans-kitpack-chriz-v1.3.1"
+name = "The Artisan's Kitpack"
+tp2 = "ArtisansKitpack/ArtisansKitpack.TP2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 1
+name = "Enable All Classes for All Races"
+
+[[components]]
+id = 2
+name = "Enable Multi-Classes for All Races"
+
+[[components]]
+id = 20000
+name = "Eldritch Knight (Fighter / Mage Kit)"
+
+[[components]]
+id = 20001
+name = "Arcane Trickster (Mage / Thief Kit)"
+
+[[components]]
+id = 8001
+name = "Pale Master Sorcerer Kit"
+
+[[components]]
+id = 8101
+name = "Pale Master Spells: Unholy Necromancy Spells Only"
+
+[[components]]
+id = 8002
+name = "3e-accurate Dragon Disciple: Original Stat Bonuses"
+
+[[components]]
+id = 8004
+name = "Arcane Trickster Sorcerer Kit"
+
+[[components]]
+id = 10002
+name = "Brawler Kit"
+
+[[components]]
+id = 10001
+name = "Monk Revisions"
+
+[[components]]
+id = 10003
+name = "Sacred Fist and Enlightened Fist Kits"
+
+[[components]]
+id = 10004
+name = "Ninja Class"
+
+[[components]]
+id = 1003
+name = "Berserker Overhaul"
+
+[[components]]
+id = 1006
+name = "Wizard Slayer Overhaul"
+
+[[components]]
+id = 1004
+name = "Kensai Overhaul"
+
+[[components]]
+id = 1005
+name = "Barbarian Overhaul"
+
+[[components]]
+id = 1007
+name = "Dwarven Defender Overhaul and Vanguard Fighter Kit"
+
+[[components]]
+id = 1000
+name = "Arcane Archer Fighter Kit"
+
+[[components]]
+id = 1001
+name = "Arcane Archer Fighter/Mage"
+
+[[components]]
+id = 1008
+name = "Siegemaster Fighter Kit"
+
+[[components]]
+id = 1009
+name = "Dreadnought Fighter Kit"
+
+[[components]]
+id = 1100
+name = "Fighter Overhaul"
+
+[[components]]
+id = 2000
+name = "Ranger Overhaul"
+
+[[components]]
+id = 2010
+name = "Archer Overhaul"
+
+[[components]]
+id = 2011
+name = "Stalker Overhaul"
+
+[[components]]
+id = 2012
+name = "Beast Master Overhaul"
+
+[[components]]
+id = 2002
+name = "Dark Hunter Ranger Kit"
+
+[[components]]
+id = 3000
+name = "Paladin Overhaul"
+
+[[components]]
+id = 3010
+name = "Cavalier Overhaul"
+
+[[components]]
+id = 3003
+name = "Inquisitor Overhaul"
+
+[[components]]
+id = 3011
+name = "Undead Hunter Overhaul"
+
+[[components]]
+id = 3004
+name = "Blackguard Overhaul"
+
+[[components]]
+id = 3001
+name = "Divine Champion Paladin Kit"
+
+[[components]]
+id = 3002
+name = "Mystic Fire Paladin Kit"
+
+[[components]]
+id = 3005
+name = "Martyr Paladin Kit"
+
+[[components]]
+id = 5100
+name = "Shapeshifter Overhaul"
+
+[[components]]
+id = 5110
+name = "Custom Werewolf Sprite: Shapeshifter Form Only"
+
+[[components]]
+id = 5001
+name = "Elementalist Druid Kit"
+
+[[components]]
+id = 5002
+name = "Hivemaster Druid Kit"
+
+[[components]]
+id = 7004
+name = "Assassin Overhaul"
+
+[[components]]
+id = 7006
+name = "Swashbuckler Overhaul"
+
+[[components]]
+id = 7001
+name = "Rogue Archer Thief Kit"
+
+[[components]]
+id = 7002
+name = "Magekiller Thief Kit"
+
+[[components]]
+id = 7003
+name = "Trickster Thief Kit"
+
+[[components]]
+id = 7005
+name = "Invisible Blade Thief Kit"
+
+[[components]]
+id = 9001
+name = "Warhorn Shaman Kit"

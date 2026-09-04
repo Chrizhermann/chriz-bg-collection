@@ -1,0 +1,71 @@
+id = "bg1ub"
+artifact_id = "bg1ub-17.1"
+name = "BG1 Unfinished Business"
+tp2 = "bg1ub/bg1ub.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Ice Island Level Two Restoration"
+
+[[components]]
+id = 11
+name = "Scar and the Sashenstar's Daughter"
+
+[[components]]
+id = 12
+name = "Quoningar, the Cleric"
+
+[[components]]
+id = 13
+name = "Shilo Chen and the Ogre-Magi"
+
+[[components]]
+id = 14
+name = "Edie, the Merchant League Applicant"
+
+[[components]]
+id = 16
+name = "Creature Corrections"
+
+[[components]]
+id = 17
+name = "Creature Restorations"
+
+[[components]]
+id = 18
+name = "Creature Name Restorations"
+
+[[components]]
+id = 19
+name = "Minor Dialogue Restorations"
+
+[[components]]
+id = 21
+name = "Store, Tavern and Inn Fixes and Restorations"
+
+[[components]]
+id = 22
+name = "Item Corrections and Restorations"
+
+[[components]]
+id = 29
+name = "Duke Eltan in the Harbor Master's Building"
+
+[[components]]
+id = 30
+name = "Nim Furlwing Encounter"
+
+[[components]]
+id = 32
+name = "Svlast, the Fallen Paladin Encounter"
+
+[[components]]
+id = 33
+name = "Mal-Kalen, the Ulcaster Ghost"
+
+[[components]]
+id = 34
+name = "Chapter 6 Dialogue Restorations"

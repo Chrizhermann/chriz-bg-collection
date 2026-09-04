@@ -1,0 +1,187 @@
+id = "bg1npc"
+artifact_id = "bg1npc-32"
+name = "The BG1 NPC Project"
+tp2 = "bg1npc/bg1npc.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Required Modifications"
+
+[[components]]
+id = 10
+name = "Banters, Quests, and Interjections"
+
+[[components]]
+id = 90
+name = "NPCs can be sent to wait in an inn"
+
+[[components]]
+id = 111
+name = "Fast BGEE Banter Timing"
+
+[[components]]
+id = 120
+name = "Bardic Reputation Adjustment"
+
+[[components]]
+id = 130
+name = "SixofSpades Extended Sarevok's Diary"
+
+[[components]]
+id = 240
+name = "Kivan uses spears"
+
+[[components]]
+id = 160
+name = "Add Non-Joinable NPC portraits to quests and dialogues"
+
+[[components]]
+id = 200
+name = "Player-Initiated Dialogues"
+
+[[components]]
+id = 20
+name = "The BG1 NPC Project: Ajantis Romance Core (teen content) -> Speed: 1 hour real time (standard) minimum between LoveTalks"
+
+[[components]]
+id = 21
+name = "The BG1 NPC Project: Ajantis Romance Core (teen content) -> Speed: 45 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 22
+name = "The BG1 NPC Project: Ajantis Romance Core (teen content) -> Speed: 30 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 23
+name = "The BG1 NPC Project: Ajantis Romance Core (teen content) -> Speed: 15 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 24
+name = "The BG1 NPC Project: Ajantis Romance Core (teen content) -> Speed: 1 hour 30 minutes (extended) real time minimum between LoveTalks"
+
+[[components]]
+id = 30
+name = "The BG1 NPC Project: Branwen's Romance Core (teen content) -> Speed: 1 hour real time (standard) minimum between LoveTalks"
+
+[[components]]
+id = 31
+name = "The BG1 NPC Project: Branwen's Romance Core (teen content) -> Speed: 45 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 32
+name = "The BG1 NPC Project: Branwen's Romance Core (teen content) -> Speed: 30 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 33
+name = "The BG1 NPC Project: Branwen's Romance Core (teen content) -> Speed: 15 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 34
+name = "The BG1 NPC Project: Branwen's Romance Core (teen content) -> Speed: 1 hour 30 minutes (extended) real time minimum between LoveTalks"
+
+[[components]]
+id = 40
+name = "The BG1 NPC Project: Coran's Romance Core (adult content) -> Speed: 1 hour real time (standard) minimum between LoveTalks"
+
+[[components]]
+id = 41
+name = "The BG1 NPC Project: Coran's Romance Core (adult content) -> Speed: 45 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 42
+name = "The BG1 NPC Project: Coran's Romance Core (adult content) -> Speed: 30 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 43
+name = "The BG1 NPC Project: Coran's Romance Core (adult content) -> Speed: 15 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 44
+name = "The BG1 NPC Project: Coran's Romance Core (adult content) -> Speed: 1 hour 30 minutes (extended) real time minimum between LoveTalks"
+
+[[components]]
+id = 50
+name = "The BG1 NPC Project: Dynaheir's Romance Core (teen content) -> Speed: 1 hour real time (standard) minimum between LoveTalks"
+
+[[components]]
+id = 51
+name = "The BG1 NPC Project: Dynaheir's Romance Core (teen content) -> Speed: 45 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 52
+name = "The BG1 NPC Project: Dynaheir's Romance Core (teen content) -> Speed: 30 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 53
+name = "The BG1 NPC Project: Dynaheir's Romance Core (teen content) -> Speed: 15 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 54
+name = "The BG1 NPC Project: Dynaheir's Romance Core (teen content) -> Speed: 1 hour 30 minutes (extended) real time minimum between LoveTalks"
+
+[[components]]
+id = 60
+name = "The BG1 NPC Project: Shar-Teel Relationship Core (adult content) -> Speed: 1 hour real time (standard) minimum between LoveTalks"
+
+[[components]]
+id = 61
+name = "The BG1 NPC Project: Shar-Teel Relationship Core (adult content) -> Speed: 45 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 62
+name = "The BG1 NPC Project: Shar-Teel Relationship Core (adult content) -> Speed: 30 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 63
+name = "The BG1 NPC Project: Shar-Teel Relationship Core (adult content) -> Speed: 15 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 64
+name = "The BG1 NPC Project: Shar-Teel Relationship Core (adult content) -> Speed: 1 hour 30 minutes (extended) real time minimum between LoveTalks"
+
+[[components]]
+id = 70
+name = "The BG1 NPC Project: Xan's Romance Core (teen content) -> Speed: 1 hour real time (standard) minimum between LoveTalks"
+
+[[components]]
+id = 71
+name = "The BG1 NPC Project: Xan's Romance Core (teen content) -> Speed: 45 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 72
+name = "The BG1 NPC Project: Xan's Romance Core (teen content) -> Speed: 30 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 73
+name = "The BG1 NPC Project: Xan's Romance Core (teen content) -> Speed: 15 minutes real time minimum between LoveTalks"
+
+[[components]]
+id = 74
+name = "The BG1 NPC Project: Xan's Romance Core (teen content) -> Speed: 1 hour 30 minutes (extended) real time minimum between LoveTalks"
+
+[[components]]
+id = 110
+name = "BGEE Banter Timing Tweak -> Banter Timing: Normal (about 27 minutes between banter dialogs)"
+
+[[components]]
+id = 112
+name = "BGEE Banter Timing Tweak -> Banter Timing: Very fast (about 13 minutes between banter dialogs)"
+
+[[components]]
+id = 113
+name = "BGEE Banter Timing Tweak -> Banter Timing: Slow (about 40 minutes between banter dialogs)"
+
+[[components]]
+id = 114
+name = "BGEE Banter Timing Tweak -> Banter Timing: Very slow (about 55 minutes between banter dialogs)"
+
+[[components]]
+id = 131
+name = "The BG1 NPC Project: Sarevok's Diary Adjustments -> Sarevok's Diary Date Changes only"
+
+[[components]]
+id = 241
+name = "The BG1 NPC Project: Kivan's Proficiency -> Kivan uses halberds"

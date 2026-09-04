@@ -1,0 +1,32 @@
+id = "creator-full-private-extras-20260902"
+name = "Creator full private/manual extras"
+version = "2026-09-02-reference"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://github.com/Chrizhermann/chriz-bg-collection/blob/main/docs/creator-full-install.md"
+reference = "local-reference-2026-09-02"
+expected_filename = "creator-full-private-extras-20260902.zip"
+expected_length = 1263540769
+sha256 = "3b7dbc1994d57842bbddcb93726319fc5599bc5e84758c0cb33bd46ef9ed7c38"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["evandra"]
+tp2_paths = ["evandra/setup-evandra.tp2"]
+
+[archive.limits]
+max_depth = 24
+max_entries = 100000
+max_entry_uncompressed_bytes = 1073741824
+max_total_uncompressed_bytes = 21474836480
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-collection"
+license = "Manual local archive used only to acquire the independently curated Evandra v2.2 installer; never distribute or bundle"
+url = "https://github.com/Chrizhermann/chriz-bg-collection/blob/main/docs/creator-full-install.md"
+reviewed_on = "2026-09-05"

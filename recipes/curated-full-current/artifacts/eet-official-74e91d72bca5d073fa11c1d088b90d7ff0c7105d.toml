@@ -1,0 +1,37 @@
+id = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+name = "Enhanced Edition Trilogy"
+version = "74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+reference = "74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+expected_filename = "EET-74e91d72bca5d073fa11c1d088b90d7ff0c7105d.zip"
+expected_length = 211137765
+sha256 = "9834a53322b7fe9d8923bfde36c0e6bc8bef54d730d32ac29286b80d6f08287e"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["EET", "EET_end"]
+tp2_paths = [
+  "EET/EET.tp2",
+  "EET/other/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker.tp2",
+  "EET/other/EET_modConverter/EET_modConverter/EET_modConverter.tp2",
+  "EET_end/EET_end.tp2",
+]
+
+[archive.limits]
+max_depth = 16
+max_entries = 2048
+max_entry_uncompressed_bytes = 67108864
+max_total_uncompressed_bytes = 536870912
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/EET"
+license = "GPL-3.0 for original EET code; bundled third-party parts retain their own licenses"
+url = "https://github.com/Gibberlings3/EET/commit/74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+reviewed_on = "2026-09-03"

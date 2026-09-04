@@ -1,0 +1,15 @@
+id = "eet"
+artifact_id = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+name = "Enhanced Edition Trilogy"
+tp2 = "EET/EET.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "EET core (resource importation)"
+
+[[components]]
+id = 100
+name = "Create desktop shortcut"

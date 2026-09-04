@@ -28,7 +28,7 @@ describe("player feedback regressions", () => {
       override async getStatus() {
         return { ...await super.getStatus(), selectedProfile: this.profile, profiles: [
           { id: "public-alpha", label: "Public alpha", description: "Released collection" },
-          { id: "creator-full-current", label: "Chriz's full setup", description: "Full stream setup" },
+          { id: "curated-full-current", label: "Full curated setup", description: "Curated collection" },
         ] };
       }
       override selectProfile(profileId: string) { this.profile = profileId; return this.getStatus(); }
@@ -45,8 +45,8 @@ describe("player feedback regressions", () => {
     await user.click(getByRole(root, "button", { name: "Customize" }));
     await user.click(getByRole(root, "checkbox", { name: "Companion conversations" }));
     await user.click(getByRole(root, "button", { name: "Done" }));
-    await user.selectOptions(getByRole(root, "combobox", { name: "Mod setup" }), "creator-full-current");
-    await waitFor(() => expect(backend.profile).toBe("creator-full-current"));
+    await user.selectOptions(getByRole(root, "combobox", { name: "Mod setup" }), "curated-full-current");
+    await waitFor(() => expect(backend.profile).toBe("curated-full-current"));
     expect(backend.selections.at(-1)?.features).toEqual({});
     expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
   });

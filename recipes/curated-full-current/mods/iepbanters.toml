@@ -1,0 +1,55 @@
+id = "iepbanters"
+artifact_id = "iepbanters-5.9"
+name = "IEP Extended Banters"
+tp2 = "iepbanters/iepbanters.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Extended NPC-NPC Interaction SoA"
+
+[[components]]
+id = 1
+name = "Extended Minsc/Aerie Interaction ToB"
+
+[[components]]
+id = 2
+name = "Imoen Retrospection dialogue for BGII: ToB"
+
+[[components]]
+id = 3
+name = "Wake-Up dialogue for Anomen Romance"
+
+[[components]]
+id = 4
+name = "NPC Conflict Revisions"
+
+[[components]]
+id = 5
+name = "Restored Aerie/Jaheira/Anomen interjection in Underdark"
+
+[[components]]
+id = 6
+name = "Banter Accelerator: 10 Minutes"
+
+[[components]]
+id = 7
+name = "Banter Accelerator: 15 Minutes"
+
+[[components]]
+id = 8
+name = "Banter Accelerator: 20 Minutes"
+
+[[components]]
+id = 9
+name = "Banter Accelerator: 30 Minutes"
+
+[[components]]
+id = 10
+name = "Banter Accelerator: 45 Minutes"
+
+[[components]]
+id = 11
+name = "Banter Accelerator: 60 Minutes"

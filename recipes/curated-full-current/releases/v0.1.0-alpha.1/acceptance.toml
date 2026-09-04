@@ -1,0 +1,498 @@
+schema = 1
+release = "v0.1.0-alpha.1"
+preset = "chris-recommended"
+
+# Accepted here means the named repository test statically covers this recipe run. It does
+# not claim that the installer or game has been exercised live.
+[[evidence]]
+subject_kind = "run"
+subject_id = "dlcmerger-bg1"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "eefixpack-bg1"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bg1ub-bg1"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bg1npc-bg1"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "eefixpack-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "eet-initialize-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "eeex-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bubb-spell-menu-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bggo-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "rr-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "fade-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "paina-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "sarahtob-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "ub-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "xan-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "yeslicknpc-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "sirene-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "ascension-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_official.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "spell-rev-core-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_spell_rev.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "artisanskitpack-main-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_artisan.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "artisanskitpack-npc-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_artisan.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "iepbanters-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_iepbanters.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "crossmodbg2-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_crossmod.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "artisanskitpack-tweak-early-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_artisan.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "hq-soundclips-bg2ee-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_hq_soundclips.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "randomiser-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_tail.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "stratagems-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_tail.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "artisanskitpack-tweak-late-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_artisan.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "eet-end-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-sod-remix-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_chriz.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "hiddengameplayoptions-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_hgo.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-rebalance-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_chriz.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_modpack.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "spell-rev-npc-spellbooks-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_spell_rev.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "buffbot-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "engine/tests/production_recipe_chriz.rs"
+date = "2026-09-04"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+# This remains intentionally pending. Static checks do not turn it into live acceptance.
+[[evidence]]
+subject_kind = "release"
+subject_id = "v0.1.0-alpha.1"
+kind = "runtime-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "55f2a756cd3e85105750c6ca1775c52796b1b22a"
+test_artifact = "docs/handover.md"
+date = "2026-09-04"
+status = "pending"
+scope = "A full installer-driven clean EET build, InfinityLoader boot, BG1 start, save/reload, and targeted checks remain pending because no clean BG1 source is currently available."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "evandra-core-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "evandra-crossmod-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bardicwonders-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bardicwonders-garrick-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "iwdification-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "cdtweaks-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "cdtweaks-spell-save-penalties-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bardicwonders-dialogue-patch-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "23fc059188185287d89971428761f22c0cc3e65c"
+test_artifact = "tools/tests/test_curated_full_recipe.py"
+date = "2026-09-05"
+status = "accepted"
+scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
+

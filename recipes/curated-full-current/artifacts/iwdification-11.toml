@@ -1,0 +1,32 @@
+id = "iwdification-11"
+name = "IWDification"
+version = "11"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/iwdification/releases/download/v11/iwdification-v11.iemod"
+reference = "v11"
+expected_filename = "iwdification-v11.iemod"
+expected_length = 44166170
+sha256 = "4af9d463d3b4afe1e296fe056b6c93e9b6b95e5bcb5541eca81dcbb8ba15db3f"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["iwdification"]
+tp2_paths = ["iwdification/setup-iwdification.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/iwdification"
+license = "Fetch-only third-party release; the collection does not redistribute it"
+url = "https://github.com/Gibberlings3/iwdification/releases/tag/v11"
+reviewed_on = "2026-09-05"

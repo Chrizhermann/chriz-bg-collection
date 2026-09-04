@@ -601,6 +601,7 @@ impl NativeBridge {
     pub fn from_resource_dir(resource_dir: &Path) -> Self {
         let mut bridge = Self::new(resource_dir.join("manifest"), "chris-recommended");
         bridge.resource_root = Some(resource_dir.to_path_buf());
+        bridge.use_packaged_default();
         bridge
     }
 
@@ -615,16 +616,41 @@ impl NativeBridge {
             Arc::new(SystemBridgeSystem),
         );
         bridge.resource_root = Some(resource_dir.to_path_buf());
+        bridge.use_packaged_default();
         bridge
+    }
+
+    fn use_packaged_default(&mut self) {
+        if let Some(root) = &self.resource_root {
+            let curated = root.join("recipes/curated-full-current");
+            if curated.join("collection.toml").is_file() {
+                self.recipe = curated;
+                self.profile_id = "curated-full-current".to_owned();
+            }
+        }
     }
 
     pub fn profiles(&self) -> Vec<InstallProfileResponse> {
         // A bundled historical recipe is evidence, not an approved install selection.
-        vec![InstallProfileResponse {
+        let mut profiles = Vec::new();
+        if self.resource_root.as_ref().is_some_and(|root| {
+            root.join("recipes/curated-full-current/collection.toml")
+                .is_file()
+        }) {
+            profiles.push(InstallProfileResponse {
+                id: "curated-full-current".to_owned(),
+                label: "Full curated setup".to_owned(),
+                description:
+                    "Your curated collection. Some mods need a manually supplied download."
+                        .to_owned(),
+            });
+        }
+        profiles.push(InstallProfileResponse {
             id: "public-alpha".to_owned(),
-            label: "Recommended setup".to_owned(),
-            description: "Downloadable CEBG alpha collection.".to_owned(),
-        }]
+            label: "Smaller downloadable alpha".to_owned(),
+            description: "Limited setup using automatically downloadable mods only.".to_owned(),
+        });
+        profiles
     }
 
     pub fn select_profile(&self, id: &str) -> Result<Self, CommandError> {
@@ -641,7 +667,7 @@ impl NativeBridge {
             return Err(CommandError::new(
                 "profile_requires_curation",
                 "This historical setup does not match the curated collection.",
-                "Use the recommended setup until the full curated recipe is ready.",
+                "Choose one of the curated setups included in this release.",
                 "legacy WeiDU replay bypasses recorded curation and must not be installed",
             ));
         }
@@ -663,7 +689,11 @@ impl NativeBridge {
         })?;
         let mut next = self.clone();
         next.profile_id = id.to_owned();
-        next.recipe = root.join("manifest");
+        next.recipe = root.join(if id == "curated-full-current" {
+            "recipes/curated-full-current"
+        } else {
+            "manifest"
+        });
         next.preset = "chris-recommended".to_owned();
         runtime.reviews.clear();
         Ok(next)

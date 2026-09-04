@@ -26,6 +26,13 @@ fn bundle_resources_include_production_game_profiles() {
         config["bundle"]["resources"]["../../manifest/"],
         "manifest/"
     );
+    assert_eq!(
+        config["bundle"]["resources"]["../../recipes/curated-full-current/"],
+        "recipes/curated-full-current/"
+    );
+    assert!(config["bundle"]["resources"]
+        .get("../../recipes/creator-full-current/")
+        .is_none());
     assert!(profile_root
         .join("steam-bgee-sod-2.7.3-en-us.toml")
         .is_file());

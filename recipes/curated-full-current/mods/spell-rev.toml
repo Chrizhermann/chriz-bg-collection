@@ -1,0 +1,39 @@
+id = "spell-rev"
+artifact_id = "spell-rev-4.21-chriz.3"
+name = "Spell Revisions"
+tp2 = "spell_rev/setup-spell_rev.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Spell Revisions"
+
+[[components]]
+id = 10
+name = "Deva and Planetar Animations"
+
+[[components]]
+id = 20
+name = "Mirror Image Fix"
+
+[[components]]
+id = 30
+name = "Dispel Magic Fix"
+
+[[components]]
+id = 55
+name = "Spell Deflection blocks AoE spells"
+
+[[components]]
+id = 60
+name = "Update Spellbooks of Joinable NPCs"
+
+[[components]]
+id = 65
+name = "Revised Warrior HLAs"
+
+[[components]]
+id = 70
+name = "Revised Saving Throws"
