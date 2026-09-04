@@ -6,6 +6,7 @@ use std::time::Duration;
 use bg_engine::cli::{
     CampaignReport, CampaignStatus, InstallCommandRequest, InstallReviewIdentity,
 };
+use bg_engine::digest::sha256_bytes;
 use bg_engine::events::{EngineEvent, EventSink, StepOutcome};
 use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameFinding, GameRole, Storefront,
@@ -54,6 +55,51 @@ fn recipe_with_profiles() -> (TempDir, PathBuf) {
         &recipe.join("game-builds"),
     );
     (temp, recipe)
+}
+
+fn add_manual_artifact(recipe: &Path, id: &str, filename: &str, bytes: &[u8]) {
+    let sha256 = sha256_bytes(bytes);
+    let manifest = format!(
+        r#"id = "{id}"
+name = "Manual fixture"
+version = "1.0"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://example.invalid/manual-fixture"
+reference = "1.0"
+expected_filename = "{filename}"
+expected_length = {length}
+sha256 = "{sha256}"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["manual-fixture"]
+tp2_paths = ["manual-fixture/setup-manual-fixture.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://example.invalid/manual-fixture"
+license = "User-supplied test fixture"
+url = "https://example.invalid/manual-fixture"
+reviewed_on = "2026-09-04"
+"#,
+        length = bytes.len(),
+    );
+    fs::write(
+        recipe.join("artifacts").join(format!("{id}.toml")),
+        manifest,
+    )
+    .expect("write manual artifact fixture");
 }
 
 fn candidate(
@@ -741,6 +787,44 @@ fn chosen_destinations_are_validated_and_cancelled_choices_are_noops() {
 
     assert!(inspected.safe);
     assert_eq!(Path::new(&inspected.path), canonical_destination);
+}
+
+#[test]
+fn manual_archive_selection_uses_only_the_trusted_recipe_identity_and_owned_cache_path() {
+    let (temp, recipe) = recipe_with_profiles();
+    let bytes = b"manual fixture archive";
+    add_manual_artifact(&recipe, "manual-fixture", "manual-fixture.zip", bytes);
+    let selected = temp.path().join("downloaded-under-an-arbitrary-name.zip");
+    fs::write(&selected, bytes).expect("write selected archive");
+    let bridge = NativeBridge::new(&recipe, "recommended");
+
+    assert_eq!(
+        bridge
+            .supply_manual_archive("not-consulted-after-cancel", None)
+            .expect("cancel manual archive choice"),
+        None
+    );
+    let supplied = bridge
+        .supply_manual_archive("manual-fixture", Some(selected.clone()))
+        .expect("supply valid manual archive")
+        .expect("manual archive response");
+
+    assert_eq!(supplied.artifact_id, "manual-fixture");
+    assert_eq!(supplied.filename, "manual-fixture.zip");
+    assert_eq!(supplied.length, bytes.len() as u64);
+    assert_eq!(
+        fs::read(temp.path().join(".chriz-cache/manual/manual-fixture.zip"))
+            .expect("read published manual archive"),
+        bytes
+    );
+    assert_eq!(fs::read(selected).expect("read original selection"), bytes);
+    assert_eq!(
+        bridge
+            .supply_manual_archive("not-a-recipe-artifact", Some(temp.path().join("missing")))
+            .expect_err("unknown artifact must fail")
+            .code,
+        "manual_archive_unknown"
+    );
 }
 
 #[test]

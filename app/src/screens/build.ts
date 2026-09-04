@@ -7,6 +7,7 @@ import { technicalLog, type TechnicalLogState } from "../components/technical-lo
 export interface BuildActions {
   readonly advance: () => void | Promise<void>;
   readonly retry: () => void | Promise<void>;
+  readonly supplyManual: () => void | Promise<void>;
   readonly cancel: () => void | Promise<void>;
   readonly diagnostics: () => void | Promise<void>;
   readonly fixture: boolean;
@@ -24,6 +25,7 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
   if (snapshot.state === "waiting-manual") {
     stateCard.append(element("p", "path", snapshot.manualArchiveName ?? ""));
     if (actions.fixture) controls.append(actionButton("I added the archive", actions.advance));
+    else if (actions.retryAvailable) controls.append(actionButton("Choose downloaded archive", actions.supplyManual));
   } else if (snapshot.state === "attention") {
     controls.append(actionButton("Continue build", actions.advance));
   } else if (snapshot.state === "failed") {

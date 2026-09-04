@@ -159,6 +159,30 @@ describe("native command adapter", () => {
     await expect(cancelled.chooseDestinationFolder("bg1", "bg2")).resolves.toBeNull();
   });
 
+  it("maps a native manual archive selection without accepting a caller-owned path", async () => {
+    const invoke = vi.fn<InvokeCommand>(async (command, args) => {
+      expect(command).toBe("supply_manual_archive");
+      expect(args).toEqual({ artifactId: "manual-fixture" });
+      return {
+        artifact_id: "manual-fixture",
+        filename: "manual-fixture.zip",
+        sha256: "11".repeat(32),
+        length: 1234,
+      };
+    });
+    const backend = new NativeBackend(invoke);
+
+    await expect(backend.supplyManualArchive("manual-fixture")).resolves.toEqual({
+      artifactId: "manual-fixture",
+      filename: "manual-fixture.zip",
+      sha256: "11".repeat(32),
+      length: 1234,
+    });
+
+    const cancelled = new NativeBackend(async () => null);
+    await expect(cancelled.supplyManualArchive("manual-fixture")).resolves.toBeNull();
+  });
+
   it("preserves the serialized recovery contract from rejected native commands", async () => {
     const backend = new NativeBackend(async () => {
       throw {

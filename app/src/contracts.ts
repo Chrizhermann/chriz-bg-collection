@@ -162,6 +162,13 @@ export interface StartBuildResponse {
   readonly runId: string;
 }
 
+export interface ManualArchiveSupply {
+  readonly artifactId: string;
+  readonly filename: string;
+  readonly sha256: string;
+  readonly length: number;
+}
+
 export interface CampaignReport {
   readonly install_id: string;
   readonly managed_root: string;

@@ -19,7 +19,7 @@ pub use archive::{
 pub use cache::ArtifactCache;
 pub use http::validate_redirect_target;
 pub use inspect::{download_for_inspection, QuarantinedDownload};
-pub use manual::{provide_manual_archive, VerifiedManualArchive};
+pub use manual::{provide_manual_archive, publish_manual_archive, VerifiedManualArchive};
 pub use materialize::{
     materialize, MaterializationRequest, MaterializationResult, PublicationManifest, PublishedPath,
     SignedCollisionRule,

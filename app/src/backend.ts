@@ -12,6 +12,7 @@ import type {
   GameCandidate,
   GameDiscovery,
   GameRole,
+  ManualArchiveSupply,
   ManagedInstallation,
   NormalizedSelection,
   PhaseSummary,
@@ -41,6 +42,7 @@ export interface Backend {
   ): Promise<FrozenReview>;
   startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
+  supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null>;
   getRunSnapshot(runId: string): Promise<RunSnapshot>;
   continueWaiting(runId: string): Promise<void>;
   cancelRun(runId: string): Promise<void>;
@@ -119,6 +121,13 @@ type RunEventEnvelopeWire = {
 };
 
 type StartBuildWire = { readonly run_id: string };
+
+type ManualArchiveSupplyWire = {
+  readonly artifact_id: string;
+  readonly filename: string;
+  readonly sha256: string;
+  readonly length: number;
+};
 
 type RunSnapshotWire = {
   readonly run_id: string;
@@ -287,6 +296,16 @@ export class NativeBackend implements Backend {
     const onEventChannel = this.#eventChannel((event) => onEvent(projectRunEvent(event as RunEventEnvelopeWire)));
     const started = await this.#command<StartBuildWire>("resume_build", { installId, onEvent: onEventChannel });
     return { runId: started.run_id };
+  }
+
+  async supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null> {
+    const supplied = await this.#command<ManualArchiveSupplyWire | null>("supply_manual_archive", { artifactId });
+    return supplied === null ? null : {
+      artifactId: supplied.artifact_id,
+      filename: supplied.filename,
+      sha256: supplied.sha256,
+      length: supplied.length,
+    };
   }
 
   async getRunSnapshot(runId: string): Promise<RunSnapshot> {
@@ -477,6 +496,15 @@ export class FixtureBackend implements Backend {
   resumeBuild(_installId: string, _onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
     this.#buildIndex = 3;
     return Promise.resolve({ runId: "fixture-run-resumed" });
+  }
+
+  supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null> {
+    return Promise.resolve({
+      artifactId,
+      filename: `${artifactId}.zip`,
+      sha256: "11".repeat(32),
+      length: 1_234,
+    });
   }
 
   getRunSnapshot(runId: string): Promise<RunSnapshot> {

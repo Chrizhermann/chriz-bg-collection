@@ -262,6 +262,80 @@ describe("guided collection wizard", () => {
     expect(getByRole(root, "heading", { level: 1, name: "Campaign complete" })).toBeTruthy();
   });
 
+  it("selects a requested manual archive and resumes the failed native build", async () => {
+    class ManualArchiveBackend extends FixtureBackend {
+      suppliedArtifacts: string[] = [];
+      resumedInstalls: string[] = [];
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+      }
+
+      override startBuild(_reviewToken: string, onEvent: Parameters<FixtureBackend["startBuild"]>[1]) {
+        queueMicrotask(() => {
+          onEvent({ runId: "run-manual", sequenceAsString: "1", event: { type: "campaign_started", install_id: "install-manual", resumed: false } });
+          onEvent({ runId: "run-manual", sequenceAsString: "2", event: { type: "manual_download_needed", mod_id: "manual-fixture", page: "https://example.invalid/manual-fixture", expected_sha256: "22".repeat(32), drop_dir: "installer-owned cache" } });
+          onEvent({ runId: "run-manual", sequenceAsString: "3", event: { type: "step_finished", id: "acquire:manual-fixture", outcome: "failed" } });
+          onEvent({ runId: "run-manual", sequenceAsString: "4", event: { type: "error", step_id: null, message: "The required manual archive is not available yet." } });
+        });
+        return Promise.resolve({ runId: "run-manual" });
+      }
+
+      override getRunSnapshot(runId: string) {
+        return Promise.resolve({
+          runId,
+          status: "failed",
+          events: [],
+          report: {
+            install_id: "install-manual",
+            managed_root: "D:\\Manual Campaign",
+            plan_sha256: "11".repeat(32),
+            status: { status: "failed", step_id: "acquire:manual-fixture", reason: "manual archive missing" },
+          },
+          error: null,
+        });
+      }
+
+      override supplyManualArchive(artifactId: string) {
+        this.suppliedArtifacts.push(artifactId);
+        return Promise.resolve({ artifactId, filename: "manual-fixture.zip", sha256: "22".repeat(32), length: 4_096 });
+      }
+
+      override resumeBuild(installId: string, onEvent: Parameters<FixtureBackend["resumeBuild"]>[1]) {
+        this.resumedInstalls.push(installId);
+        queueMicrotask(() => {
+          onEvent({ runId: "run-manual-resumed", sequenceAsString: "1", event: { type: "campaign_started", install_id: installId, resumed: true } });
+        });
+        return Promise.resolve({ runId: "run-manual-resumed" });
+      }
+    }
+
+    const backend = new ManualArchiveBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    const handle = await mountApp(root, backend);
+    await handle.navigate("destination");
+    const destination = getByLabelText(root, "Campaign destination") as HTMLInputElement;
+    await user.clear(destination);
+    await user.type(destination, "D:\\Manual Campaign");
+    destination.dispatchEvent(new Event("change", { bubbles: true }));
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    await user.click(getByRole(root, "button", { name: "Continue" }));
+    await user.click(getByRole(root, "button", { name: "Continue" }));
+    await user.click(getByRole(root, "button", { name: "Freeze review and build" }));
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(getByText(root, "Manual archive needed")).toBeTruthy();
+    expect(getByText(root, /https:\/\/example\.invalid\/manual-fixture/)).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "Choose downloaded archive" }));
+
+    expect(backend.suppliedArtifacts).toEqual(["manual-fixture"]);
+    expect(backend.resumedInstalls).toEqual(["install-manual"]);
+    expect(getByText(root, "Resuming build")).toBeTruthy();
+  });
+
   it("surfaces a rejected destination and does not retain the previous safe state", async () => {
     class RejectingDestinationBackend extends FixtureBackend {
       #calls = 0;

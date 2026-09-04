@@ -18,7 +18,8 @@ use bg_engine::events::{EngineEvent, EventSink};
 use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameProfiles, GameRole, Storefront,
 };
-use bg_engine::manifest::{InputValue, Phase};
+use bg_engine::loader::Manifest;
+use bg_engine::manifest::{AcquisitionPolicy, InputValue, Phase};
 use bg_engine::preflight::is_creator_protected_destination;
 use bg_engine::recipe_view::{FeatureControl, NormalizedSelection, RecipeView, SelectionFinding};
 use bg_engine::weidu::runner::RunnerControlHandle;
@@ -266,6 +267,16 @@ pub struct FrozenReviewResponse {
 #[serde(deny_unknown_fields)]
 pub struct StartBuildResponse {
     pub run_id: String,
+}
+
+/// Verified manual archive copied into the installer-owned cache.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ManualArchiveResponse {
+    pub artifact_id: String,
+    pub filename: String,
+    pub sha256: String,
+    pub length: u64,
 }
 
 /// Process-local run snapshot. Durable restart recovery remains an explicit post-v0 slice.
@@ -580,6 +591,86 @@ impl NativeBridge {
         selected
             .map(|path| self.inspect_destination(&path, bg1_candidate_id, bg2_candidate_id))
             .transpose()
+    }
+
+    /// Verifies and publishes one user-selected archive using only trusted recipe metadata.
+    pub fn supply_manual_archive(
+        &self,
+        artifact_id: &str,
+        selected: Option<PathBuf>,
+    ) -> Result<Option<ManualArchiveResponse>, CommandError> {
+        let Some(selected) = selected else {
+            return Ok(None);
+        };
+        validate_recipe(&self.recipe, ValidationProfile::PublicAlpha)
+            .map_err(CommandError::from_cli)?;
+        let manifest = Manifest::load(&self.recipe).map_err(|error| {
+            CommandError::new(
+                "recipe_load_failed",
+                "The installer recipe could not be verified.",
+                "Repair or replace the installer recipe, then try again.",
+                error.to_string(),
+            )
+        })?;
+        let artifact = manifest.artifacts.get(artifact_id).ok_or_else(|| {
+            CommandError::new(
+                "manual_archive_unknown",
+                "That archive is not part of this installer recipe.",
+                "Return to the build screen and choose the archive requested there.",
+                format!("unknown manual artifact id {artifact_id:?}"),
+            )
+        })?;
+        if artifact.acquisition != AcquisitionPolicy::ManualUserSupplied {
+            return Err(CommandError::new(
+                "manual_archive_not_allowed",
+                "That recipe artifact is not supplied manually.",
+                "Return to the build screen and choose the archive requested there.",
+                format!("artifact {artifact_id:?} is {:?}", artifact.acquisition),
+            ));
+        }
+        let filename = artifact
+            .source
+            .expected_filename
+            .as_deref()
+            .filter(|filename| {
+                let mut components = Path::new(filename).components();
+                matches!(components.next(), Some(Component::Normal(_)))
+                    && components.next().is_none()
+            })
+            .ok_or_else(|| invalid_manual_contract(artifact_id, "safe expected filename"))?;
+        let expected_length = artifact
+            .source
+            .expected_length
+            .ok_or_else(|| invalid_manual_contract(artifact_id, "expected archive length"))?;
+        bg_engine::acquire::ArtifactCache::open(&self.cache).map_err(|error| {
+            CommandError::new(
+                "cache_unavailable",
+                "The installer cache is not writable.",
+                "Choose a writable local app-data location and try again.",
+                error.to_string(),
+            )
+        })?;
+        let destination = self.cache.join("manual").join(filename);
+        let published = bg_engine::acquire::publish_manual_archive(
+            &selected,
+            &destination,
+            &artifact.source.sha256,
+            expected_length,
+        )
+        .map_err(|error| {
+            CommandError::new(
+                "manual_archive_invalid",
+                "That file does not match the archive required by this recipe.",
+                "Choose the exact published archive named on the build screen.",
+                error.to_string(),
+            )
+        })?;
+        Ok(Some(ManualArchiveResponse {
+            artifact_id: artifact.id.clone(),
+            filename: filename.to_owned(),
+            sha256: published.sha256,
+            length: published.length,
+        }))
     }
 
     /// Re-inspects exact server-side candidates and freezes a short-lived, single-use review.
@@ -1516,6 +1607,15 @@ fn invalid_review_token() -> CommandError {
         "That reviewed build is no longer available to start.",
         "Return to Review and freeze the current build again.",
         "review token is unknown, expired, or was already used",
+    )
+}
+
+fn invalid_manual_contract(artifact_id: &str, missing: &str) -> CommandError {
+    CommandError::new(
+        "manual_archive_contract_invalid",
+        "The requested manual archive is not frozen completely in this recipe.",
+        "Install a corrected recipe release before continuing.",
+        format!("manual artifact {artifact_id:?} has no valid {missing}"),
     )
 }
 

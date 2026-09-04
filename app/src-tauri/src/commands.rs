@@ -10,8 +10,8 @@ use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::bridge::{
     BootstrapResponse, DestinationEvaluationResponse, EvaluateBuildResponse, FrozenReviewResponse,
-    GameCandidateResponse, GameDiscoveryResponse, NativeBridge, RunEventEnvelope,
-    RunSnapshotResponse, StartBuildResponse,
+    GameCandidateResponse, GameDiscoveryResponse, ManualArchiveResponse, NativeBridge,
+    RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 
@@ -38,14 +38,14 @@ where
         .map_err(CommandError::background_task)?
 }
 
-fn folder_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
+fn local_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
     selected
         .map(|path| {
             path.simplified().into_path().map_err(|error| {
                 CommandError::new(
-                    "folder_choice_invalid",
-                    "The selected folder could not be read as a local Windows path.",
-                    "Choose a local folder and try again.",
+                    "local_choice_invalid",
+                    "The selected item could not be read as a local Windows path.",
+                    "Choose a local file or folder and try again.",
                     error.to_string(),
                 )
             })
@@ -79,7 +79,7 @@ pub async fn choose_game_folder(
             GameRole::BgeeSod => "Choose Baldur's Gate: Enhanced Edition with SoD",
             GameRole::Bg2ee => "Choose Baldur's Gate II: Enhanced Edition",
         };
-        let selected = folder_path(app.dialog().file().set_title(title).blocking_pick_folder())?;
+        let selected = local_path(app.dialog().file().set_title(title).blocking_pick_folder())?;
         bridge.choose_game_folder(role, selected)
     })
     .await
@@ -127,13 +127,32 @@ pub async fn choose_destination_folder(
 ) -> Result<Option<DestinationEvaluationResponse>, CommandError> {
     let bridge = state.bridge.clone();
     background(move || {
-        let selected = folder_path(
+        let selected = local_path(
             app.dialog()
                 .file()
                 .set_title("Choose a new campaign destination")
                 .blocking_pick_folder(),
         )?;
         bridge.choose_destination_folder(selected, &bg1_candidate_id, &bg2_candidate_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn supply_manual_archive(
+    app: AppHandle,
+    state: State<'_, BridgeState>,
+    artifact_id: String,
+) -> Result<Option<ManualArchiveResponse>, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        let selected = local_path(
+            app.dialog()
+                .file()
+                .set_title(format!("Choose downloaded archive for {artifact_id}"))
+                .blocking_pick_file(),
+        )?;
+        bridge.supply_manual_archive(&artifact_id, selected)
     })
     .await
 }

@@ -190,7 +190,7 @@ class AppController implements AppHandle {
       const started = await this.backend.resumeBuild(this.#installId, (event) => this.#handleRunEvent(event));
       this.#runId = started.runId;
       this.#retryAvailable = false;
-      if (this.#state.build?.state === "failed") {
+      if (this.#state.build?.state === "failed" || this.#state.build?.state === "waiting-manual") {
         this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
       }
       this.#render();
@@ -198,6 +198,14 @@ class AppController implements AppHandle {
     }
     this.#dispatch({ type: "build-updated", build: await this.backend.retryBuild() });
     this.#render();
+  }
+
+  async #supplyManualArchive(): Promise<void> {
+    const artifactId = this.#state.build?.manualArchiveName;
+    if (artifactId === null || artifactId === undefined) return;
+    const supplied = await this.backend.supplyManualArchive(artifactId);
+    if (supplied === null) return;
+    await this.#retryBuild();
   }
 
   async #chooseGameFolder(game: "bg1" | "bg2"): Promise<void> {
@@ -262,7 +270,7 @@ class AppController implements AppHandle {
     switch (event.type) {
       case "campaign_started":
         this.#installId = event.install_id;
-        next = { ...current, state: "running", headline: event.resumed ? "Resuming build" : "Build in progress", detail: "The engine is executing the exact frozen recipe.", logTail: log(`${envelope.sequenceAsString}: campaign ${event.install_id} started`) };
+        next = { ...current, state: "running", headline: event.resumed ? "Resuming build" : "Build in progress", detail: "The engine is executing the exact frozen recipe.", logTail: log(`${envelope.sequenceAsString}: campaign ${event.install_id} started`), manualArchiveName: null };
         break;
       case "phase_started": {
         const phaseIds: Readonly<Record<string, string>> = {
@@ -293,16 +301,20 @@ class AppController implements AppHandle {
         next = { ...current, state: "attention", headline: "Your attention is needed", detail: event.reason, logTail: log(event.last_output) };
         break;
       case "step_finished":
-        next = event.outcome === "failed"
+        next = event.outcome === "failed" && current.manualArchiveName !== null
+          ? { ...current, state: "waiting-manual", headline: "Manual archive needed", logTail: log(`${event.id}: failed`) }
+          : event.outcome === "failed"
           ? { ...current, state: "running", headline: "Finalizing failure evidence", detail: `The engine is closing ${event.id} safely before Retry becomes available.`, logTail: log(`${event.id}: failed`) }
           : { ...current, logTail: log(`${event.id}: ${event.outcome}`) };
         break;
       case "manual_download_needed":
-        next = { ...current, state: "waiting-manual", headline: "Manual archive needed", detail: `Download ${event.mod_id} from its verified source and place it in ${event.drop_dir}.`, manualArchiveName: event.mod_id, logTail: log(`Expected SHA-256: ${event.expected_sha256}`) };
+        next = { ...current, state: "waiting-manual", headline: "Manual archive needed", detail: `Download ${event.mod_id} from ${event.page}. Then choose the downloaded archive; the installer will verify it before resuming.`, manualArchiveName: event.mod_id, logTail: log(`Expected SHA-256: ${event.expected_sha256}`) };
         break;
       case "error":
         if (event.step_id === null) {
-          next = { ...current, state: "failed", headline: "The build stopped safely", detail: event.message, logTail: log(event.message) };
+          next = current.manualArchiveName !== null
+            ? { ...current, state: "waiting-manual", headline: "Manual archive needed", logTail: log(event.message) }
+            : { ...current, state: "failed", headline: "The build stopped safely", detail: event.message, logTail: log(event.message) };
           if (this.#status.mode === "native") void this.#refreshRetryAvailability(envelope.runId);
         } else {
           next = { ...current, state: "running", headline: "Finalizing failure evidence", detail: event.message, logTail: log(event.message) };
@@ -385,6 +397,7 @@ class AppController implements AppHandle {
         content = buildScreen(this.#state.build ?? { state: "running", headline: "Build in progress", detail: "Loading fixture snapshot.", phases: evaluation.plan.phases.map((phase, index) => ({ ...phase, state: index === 0 ? "current" : "pending" })), logTail: [], manualArchiveName: null }, {
           advance: () => safely(() => this.#advanceBuild()),
           retry: () => safely(() => this.#retryBuild()),
+          supplyManual: () => safely(() => this.#supplyManualArchive()),
           cancel: () => safely(() => this.#cancelBuild()),
           diagnostics: () => safely(() => this.#exportDiagnostics()),
           fixture: this.#status.mode === "fixture",

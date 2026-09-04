@@ -29,6 +29,7 @@ pub fn run() -> tauri::Result<()> {
             commands::freeze_review,
             commands::start_build,
             commands::resume_build,
+            commands::supply_manual_archive,
             commands::get_run_snapshot,
             commands::continue_waiting,
             commands::cancel_run,
