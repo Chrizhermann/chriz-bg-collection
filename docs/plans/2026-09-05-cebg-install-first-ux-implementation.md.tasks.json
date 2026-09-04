@@ -1,17 +1,17 @@
 {
   "planPath": "docs/plans/2026-09-05-cebg-install-first-ux-implementation.md",
-  "lastUpdated": "2026-09-05T00:00:00+09:00",
+  "lastUpdated": "2026-09-05T00:41:56+09:00",
   "tasks": [
     {
       "id": 1,
       "subject": "Task 1: Freeze the player-facing installation name",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": []
     },
     {
       "id": 2,
       "subject": "Task 2: Provide safe defaults and human Windows paths",
-      "status": "pending",
+      "status": "in_progress",
       "blockedBy": [1]
     },
     {

@@ -63,7 +63,8 @@ operate a redundant select box; multiple candidates remain selectable.
 The global state is unmistakable:
 
 - **Ready to install** when both source games are eligible, the install location is safe,
-  the recommended selection resolves, and space checks pass.
+  and the recommended selection resolves. Disk space is checked again when installation starts;
+  the UI does not claim an earlier space check until the native contract provides one.
 - **Needs attention** with one actionable reason otherwise.
 
 The install button is disabled until the same conditions are true. Native review/start still
@@ -136,4 +137,3 @@ keeps the fantasy character without resembling a marketing landing page.
 - Verify 1366x768 and 1920x1080 without a primary-screen scrollbar; verify scrolling and
   one-column layout at constrained sizes.
 - Run frontend, native-command, engine, packaging, install/launch/uninstall smoke tests.
-

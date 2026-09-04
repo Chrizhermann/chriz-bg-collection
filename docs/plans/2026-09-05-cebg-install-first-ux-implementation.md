@@ -140,8 +140,15 @@ git commit -m "app: suggest safe CEBG installation defaults"
 - Modify: `app/src/screens/destination.ts` or retire it from the normal path
 - Modify: `app/src/screens/setup.ts`
 - Modify: `app/src/screens/review.ts`
+- Modify: `app/src/screens/build.ts`
+- Modify: `app/src/components/campaign-ledger.ts`
+- Modify: `app/src/screens/updates.ts`
 - Modify: `app/src/styles.css`
+- Modify: `app/src-tauri/tauri.conf.json`
+- Modify: `app/index.html`
 - Extend: `app/tests/wizard.test.ts`
+- Extend: `app/tests/state.test.ts`
+- Extend: `app/tests/accessibility.test.ts`
 
 **Step 1: Write failing simple-path tests**
 
@@ -163,8 +170,10 @@ expect(getByRole(root, "button", { name: "Install Chriz Easy BG" })).toBeDisable
 With two eligible sources and a safe location, assert **Ready to install** and an enabled
 Install button. Assert that one candidate renders as a labelled **Found source** rather than
 a redundant select, and multiple candidates remain selectable. Assert **Details** contains
-the full freshness findings only when expanded. Assert **Customize** preserves choices and
-returns to the primary screen.
+the full freshness findings only when expanded. Selection-evaluation findings are nonfatal
+omission notices and must not disable Install. Assert **Customize** preserves choices and
+returns to the primary screen. Assert a double-click cannot start two builds, and a late
+destination-inspection result cannot replace the result for a newer source selection.
 
 **Step 2: Run RED**
 
@@ -183,11 +192,19 @@ The primary screen receives the selected sources, destination evaluation, instal
 defaults, evaluation, and actions. Its readiness predicate is:
 
 ```typescript
-const ready = bg1?.eligible === true
+const ready = !starting
+  && validName
+  && bg1?.eligible === true
   && bg2?.eligible === true
   && destination.safe
-  && evaluation.findings.length === 0;
+  && evaluation !== null
+  && !evaluationPending;
 ```
+
+Do not gate readiness on `evaluation.findings.length`: the engine contract defines these as
+nonfatal omissions and warnings, including a normal default that becomes unavailable. Reinspect
+the location whenever either source changes, protect all asynchronous inspections with revisions,
+and guard the freeze/start operation against duplicate activation.
 
 The primary Install action performs the existing native freeze/start sequence directly.
 It does not make the user visit a review ledger first. **Customize** is secondary and returns
@@ -223,13 +240,18 @@ git commit -m "app: make CEBG installation the primary experience"
 - Modify: `app/src/screens/complete.ts`
 - Modify: `app/src/screens/updates.ts`
 - Modify: `app/src/contracts.ts`
+- Modify: `app/src/backend.ts`
+- Modify: `app/src-tauri/src/bridge.rs`
 - Modify: `app/src/styles.css`
 - Extend: `app/tests/wizard.test.ts`
+- Extend: `app/src-tauri/tests/command_contract.rs`
 
 **Step 1: Write failing startup-state tests**
 
 Test the five approved states: no install, resumable install, one ready install, multiple
-installs with a remembered ID, and stale-only records. A ready install must open on:
+installs with a remembered ID, and stale-only records. Load the registry before game discovery or
+evaluation, so a returning player can still Play when the original source games are unavailable.
+A ready install must open on:
 
 ```typescript
 expect(getByText(root, "Ready to play")).toBeTruthy();
@@ -240,7 +262,8 @@ expect(getByRole(root, "button", { name: "Open game folder" })).toBeTruthy();
 Test that interrupted work gets **Continue installation**, missing records get
 **Installation not found**, and update messaging never blocks Play unless launch validation
 itself fails. Multiple installs default to the locally remembered managed-install ID only
-when that ID still exists; otherwise select the newest available record.
+when that ID still exists; otherwise select the newest available record using native completion
+ordering rather than frontend string or ID guesses.
 
 **Step 2: Run RED**
 
@@ -256,6 +279,9 @@ Use the registry list returned by Rust. Store only the last selected install ID 
 preferences; it grants no filesystem authority. `launch_install` and `open_install_folder`
 continue resolving and verifying the registry record in Rust. Reuse the launcher view after
 the `campaign_finished` engine event instead of maintaining a separate completion vocabulary.
+Refresh the native registry after that event before routing, so the just-completed installation
+is the launcher's verified source of truth. Extend the narrow managed-install projection with the
+display-only launch path and completion ordering value needed for details and fallback selection.
 
 Show exact launcher and receipt paths only under **Installation details**.
 
