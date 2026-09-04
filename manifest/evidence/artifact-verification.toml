@@ -459,6 +459,33 @@ total_uncompressed_bytes = 1514224
 max_compression_ratio = 6
 
 [[artifacts]]
+artifact_id = "chriz-bg-rebalance-0.3.1"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.1/chriz-bg-rebalance-v0.3.1.zip"
+source_reference = "v0.3.1"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 1364012
+actual_sha256 = "729be99e91f9fa2c9044783bf300998b987011a390f407e8cd0b6d4e9dc507bb"
+wrapper_kind = "direct"
+materialized_publish_roots = ["chriz-bg-rebalance", "setup-chriz-bg-rebalance.tp2"]
+declared_tp2_paths = ["setup-chriz-bg-rebalance.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 17
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 1840953
+max_compression_ratio = 7
+
+[[artifacts]]
 artifact_id = "spell-rev-4.21-chriz.3"
 immutable_source_url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.3/spell_rev-v4-21-chriz-3.zip"
 source_reference = "v4.21-chriz.3"

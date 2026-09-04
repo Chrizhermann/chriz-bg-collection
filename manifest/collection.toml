@@ -233,6 +233,13 @@ components = [10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29
 args = []
 
 [[runs]]
+run_id = "chriz-bg-rebalance-bg2"
+mod_id = "chriz-bg-rebalance"
+phase = "post-eet-end"
+components = [100, 101, 120, 121, 400, 401, 404, 405, 407, 408]
+args = []
+
+[[runs]]
 run_id = "eeexremote-bg2"
 mod_id = "eeexremote"
 phase = "post-eet-end"
@@ -3153,8 +3160,62 @@ title = "BG Rebalance"
 description = "Install Christopher's curated compatibility and Cleric of Tempus balance adjustments."
 category = "collection"
 decision = "default"
-readiness = "blocked"
-unavailable_reason = "A reviewed BG Rebalance release is not yet pinned for the public alpha."
+readiness = "ready"
+requires = ["mod:eet-end"]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:mandatory-components"
+title = "Required BG Rebalance compatibility repairs"
+description = "Apply the curated Telekinetic Storm and weapon-protection correctness repairs."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:stratagems:mandatory-components", "feature:spell-rev:mandatory-components"]
+components = [
+  { run_id = "chriz-bg-rebalance-bg2", component = 100 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 120 },
+]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-101"
+title = "Restore Freedom scrolls to the Adventurer's Mart"
+description = "Restore SCS's intended five Freedom scrolls to Ribald's store."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:stratagems:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 101 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-121"
+title = "Ambient caster readiness"
+description = "Let SCS ambient casters prepare one honest first-contact defense through EEex."
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:stratagems:mandatory-components", "feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 121 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:tempus-bundle"
+title = "Cleric of Tempus rework"
+description = "Install the curated six-component Tempus rework as one atomic option."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["mod:artisanskitpack", "feature:eeex:mandatory-components"]
+components = [
+  { run_id = "chriz-bg-rebalance-bg2", component = 400 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 401 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 404 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 405 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 407 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 408 },
+]
 
 [[features]]
 id = "mod:chriz-bg-modpack"

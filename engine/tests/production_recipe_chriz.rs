@@ -11,6 +11,8 @@ const SOD_REMIX_COMPONENTS: &[u32] = &[
     100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215,
     220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900,
 ];
+const BG_REBALANCE_COMPONENTS: &[u32] = &[100, 101, 120, 121, 400, 401, 404, 405, 407, 408];
+const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -121,31 +123,143 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
 }
 
 #[test]
-fn keeps_bg_rebalance_visible_but_blocked_until_its_dependencies_are_available() {
+fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
+    let artifact = &manifest.artifacts["chriz-bg-rebalance-0.3.1"];
+    assert_eq!(artifact.version, "0.3.1");
+    assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
+    assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
+    assert_eq!(
+        artifact.source.url,
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.1/chriz-bg-rebalance-v0.3.1.zip"
+    );
+    assert_eq!(artifact.source.reference, "v0.3.1");
+    assert_eq!(
+        artifact.source.expected_filename.as_deref(),
+        Some("chriz-bg-rebalance-v0.3.1.zip")
+    );
+    assert_eq!(artifact.source.expected_length, Some(1_364_012));
+    assert_eq!(
+        artifact.source.sha256,
+        "729be99e91f9fa2c9044783bf300998b987011a390f407e8cd0b6d4e9dc507bb"
+    );
+    assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
+    assert_eq!(
+        artifact.archive.publish_roots,
+        ["chriz-bg-rebalance", "setup-chriz-bg-rebalance.tp2"]
+    );
+    assert_eq!(artifact.archive.tp2_paths, ["setup-chriz-bg-rebalance.tp2"]);
+    assert_eq!(
+        manifest.mods["chriz-bg-rebalance"].tp2,
+        "setup-chriz-bg-rebalance.tp2"
+    );
+}
+
+#[test]
+fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle() {
+    let manifest = recipe();
+    let run_ids = manifest
+        .collection
+        .runs
+        .iter()
+        .map(|run| run.run_id.as_str())
+        .collect::<Vec<_>>();
+    let hgo = run_ids
+        .iter()
+        .position(|id| *id == "hiddengameplayoptions-bg2")
+        .unwrap();
+    let rebalance = run_ids
+        .iter()
+        .position(|id| *id == "chriz-bg-rebalance-bg2")
+        .unwrap();
+    let remote = run_ids
+        .iter()
+        .position(|id| *id == "eeexremote-bg2")
+        .unwrap();
+    assert!(hgo < rebalance && rebalance < remote);
+    let run = &manifest.collection.runs[rebalance];
+    assert_eq!(run.phase, Phase::PostEetEnd);
+    assert_eq!(run.components, BG_REBALANCE_COMPONENTS);
+
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    assert_eq!(
+        evaluation.plan.components_for("chriz-bg-rebalance-bg2"),
+        Some(BG_REBALANCE_COMPONENTS)
+    );
     let parent = evaluation
         .view
         .control("mod:chriz-bg-rebalance")
         .expect("BG Rebalance parent");
-
     assert_eq!(parent.decision, Decision::Default);
-    assert_eq!(parent.readiness, Readiness::Blocked);
-    assert!(!parent.selected);
-    assert!(!parent.interactive);
-    assert_eq!(
-        parent.unavailable_reason.as_deref(),
-        Some("A reviewed BG Rebalance release is not yet pinned for the public alpha.")
-    );
-    assert!(evaluation
-        .plan
-        .runs
-        .iter()
-        .all(|run| run.mod_id != "chriz-bg-rebalance"));
-    assert!(!manifest.mods.contains_key("chriz-bg-rebalance"));
-    assert!(!manifest
+    assert_eq!(parent.readiness, Readiness::Ready);
+    assert!(parent.selected);
+    assert!(parent.interactive);
+    assert_eq!(parent.unavailable_reason, None);
+
+    let features = manifest
         .collection
         .features
         .iter()
-        .any(|feature| feature.id.starts_with("feature:chriz-bg-rebalance:")));
+        .filter(|feature| feature.id.starts_with("feature:chriz-bg-rebalance:"))
+        .map(|feature| {
+            (
+                feature.id.as_str(),
+                feature.decision,
+                feature.components.len(),
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        features,
+        [
+            (
+                "feature:chriz-bg-rebalance:mandatory-components",
+                Decision::Mandatory,
+                2
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-101",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-121",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:tempus-bundle",
+                Decision::Default,
+                6
+            ),
+        ]
+    );
+
+    let mut no_tempus = Selection::defaults("windows");
+    no_tempus.set_feature("feature:chriz-bg-rebalance:tempus-bundle", false);
+    let no_tempus = evaluate(&manifest, &no_tempus).unwrap();
+    assert_eq!(
+        no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
+        Some(&[100, 101, 120, 121][..])
+    );
+
+    let mut disabled = Selection::defaults("windows");
+    disabled.set_feature("mod:chriz-bg-rebalance", false);
+    let disabled = evaluate(&manifest, &disabled).unwrap();
+    assert_eq!(disabled.plan.components_for("chriz-bg-rebalance-bg2"), None);
+
+    let tempus = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:chriz-bg-rebalance:tempus-bundle")
+        .expect("atomic Tempus bundle");
+    assert_eq!(
+        tempus
+            .components
+            .iter()
+            .map(|component| component.component)
+            .collect::<Vec<_>>(),
+        TEMPUS_COMPONENTS
+    );
 }

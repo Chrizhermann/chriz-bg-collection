@@ -1,13 +1,9 @@
 # CHRIZ-BG-REBALANCE — components
 
-The 14-component target menu below is release **v0.3.0**, tag commit
-`94ecd323b9177f469d2c187322e4ef5c9a57bd69`. It includes the accepted component `120`
-weapon-protection repair and component `121` EEex/SCS ambient-readiness bridge. The first
-clean curated-stack installation also exposed a narrow component `401` compatibility gap:
-v0.3.0 rejects Artisan's legitimate `AP_C0PR#CL` cells when they are packed into
-`ABILITY1`. The private release candidate uses the test-first staged correction, but the
-public collection must pin a follow-up release containing it rather than silently patching
-v0.3.0.
+The 14-component target menu below is public release **v0.3.1**, tag commit
+`d31fda2c6723610c8ac1c6b712306446a9dbfd5b`. It includes the accepted component `120`
+weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
+component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
 14 entries, 10 current-alpha selections. ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
@@ -53,12 +49,7 @@ v0.3.0.
   `401` family. The atomic bundle guarantees that chain. Component `401` supports either
   SR or non-SR spell mappings, but must inspect the final installed resources.
 
-## Release blockers and follow-up
-
-- Publish and pin the narrow component `401` Artisan-CLAB compatibility correction proven
-  by the isolated release candidate; do not use unmodified v0.3.0 for the curated Tempus
-  bundle.
-- Update `manifest/mod-sources.tsv` to the resulting immutable release and its hash.
+## Remaining follow-up
 - Stage the fixed APR implementation against EEex v1.2 and verify 1.5 APR with a two-pip
   weapon, 2.5 under Holy Power, no cycling, and prompt return to normal with a zero-pip
   weapon. The earlier installed test used EEex v0.11, so it is not target acceptance.

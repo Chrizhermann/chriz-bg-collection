@@ -13,20 +13,18 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 
 Branch `codex/installer-v0-real-alpha` is pushed. The installer engine and UI are
 functional, the final NSIS lifecycle smoke passed, and the public-alpha recipe validates
-and resolves **34 runs**. Notable ready pins include public CHRIZ-BG-MODPACK
+and resolves **35 runs**. Notable ready pins include public CHRIZ-BG-MODPACK
 `0.2.0-alpha.1`, CHRIZ-SOD-REMIX `0.6.4`, Artisan's Kitpack `chriz-v1.3.1`, and Spell
 Revisions `v4.21-chriz.3`.
 
-CHRIZ-BG-REBALANCE `v0.3.1` is fully released and tested, but its repository remains
-**private**: unauthenticated release access returns 404, so the installer UI correctly
-keeps it blocked. The detected Steam BG2 source is clean; the BG1 source is rejected for
-mod residue. These checks were read-only and no game directory was modified.
+CHRIZ-BG-REBALANCE `v0.3.1` is public and pinned with its ten-component curated fresh
+selection. The detected Steam BG2 source is clean; the BG1 source is rejected for mod
+residue. These checks were read-only and no game directory was modified.
 
 Immediate next actions only:
 
-1. Christopher decides whether to make CHRIZ-BG-REBALANCE public; if public, pin it.
-2. Obtain or restore a clean BG1 source.
-3. Run the first full installer-driven clean EET build and focused smoke before the public
+1. Obtain or restore a clean BG1 source.
+2. Run the first full installer-driven clean EET build and focused smoke before the public
    installer release.
 
 Other blocked items remain later work and are not expanded here. Older status sections
