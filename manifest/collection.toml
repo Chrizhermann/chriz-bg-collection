@@ -2295,6 +2295,15 @@ components = [
 ]
 
 [[features]]
+id = "mod:chriz-bg-rebalance"
+title = "BG Rebalance"
+description = "Install Christopher's curated compatibility and Cleric of Tempus balance adjustments."
+category = "collection"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Requires Spell Revisions and Artisan's Kitpack, which are not yet available in the public alpha."
+
+[[features]]
 id = "mod:chriz-bg-modpack"
 title = "Collection fixes and NPC defaults"
 description = "Install the maintained first-party fixes and curated NPC defaults that complete this collection."

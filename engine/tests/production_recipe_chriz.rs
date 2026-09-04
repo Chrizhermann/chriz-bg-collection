@@ -119,3 +119,35 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
     let disabled = evaluate(&manifest, &selection).unwrap();
     assert_eq!(disabled.plan.components_for("chriz-sod-remix-bg2"), None);
 }
+
+#[test]
+fn keeps_bg_rebalance_visible_but_blocked_until_its_dependencies_are_available() {
+    let manifest = recipe();
+    let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let parent = evaluation
+        .view
+        .control("mod:chriz-bg-rebalance")
+        .expect("BG Rebalance parent");
+
+    assert_eq!(parent.decision, Decision::Default);
+    assert_eq!(parent.readiness, Readiness::Blocked);
+    assert!(!parent.selected);
+    assert!(!parent.interactive);
+    assert_eq!(
+        parent.unavailable_reason.as_deref(),
+        Some(
+            "Requires Spell Revisions and Artisan's Kitpack, which are not yet available in the public alpha."
+        )
+    );
+    assert!(evaluation
+        .plan
+        .runs
+        .iter()
+        .all(|run| run.mod_id != "chriz-bg-rebalance"));
+    assert!(!manifest.mods.contains_key("chriz-bg-rebalance"));
+    assert!(!manifest
+        .collection
+        .features
+        .iter()
+        .any(|feature| feature.id.starts_with("feature:chriz-bg-rebalance:")));
+}
