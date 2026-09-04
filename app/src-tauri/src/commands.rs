@@ -9,9 +9,10 @@ use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::bridge::{
-    BootstrapResponse, DestinationEvaluationResponse, EvaluateBuildResponse, FrozenReviewResponse,
-    GameCandidateResponse, GameDiscoveryResponse, ManualArchiveResponse, NativeBridge,
-    RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
+    BootstrapResponse, DestinationEvaluationResponse, DiagnosticsExportResponse,
+    EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse, GameDiscoveryResponse,
+    ManagedInstallationResponse, ManualArchiveResponse, NativeBridge, RunEventEnvelope,
+    RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 
@@ -155,6 +156,60 @@ pub async fn supply_manual_archive(
         bridge.supply_manual_archive(&artifact_id, selected)
     })
     .await
+}
+
+#[tauri::command]
+pub async fn open_manual_source(
+    state: State<'_, BridgeState>,
+    artifact_id: String,
+) -> Result<(), CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.open_manual_source(&artifact_id)).await
+}
+
+#[tauri::command]
+pub async fn list_managed_installations(
+    state: State<'_, BridgeState>,
+) -> Result<Vec<ManagedInstallationResponse>, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.list_managed_installations()).await
+}
+
+#[tauri::command]
+pub async fn export_diagnostics(
+    app: AppHandle,
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<Option<DiagnosticsExportResponse>, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        let selected = local_path(
+            app.dialog()
+                .file()
+                .set_title("Save installer diagnostics")
+                .blocking_save_file(),
+        )?;
+        bridge.export_diagnostics(&install_id, selected)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn launch_install(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<(), CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.launch_install(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn open_install_folder(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<(), CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.open_install_folder(&install_id)).await
 }
 
 #[tauri::command]

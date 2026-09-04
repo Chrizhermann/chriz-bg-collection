@@ -4,14 +4,16 @@ use std::collections::{BTreeSet, HashMap};
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bg_engine::cli::{
-    discover_games as engine_discover_games, inspect_game, install_campaign_reviewed, plan_recipe,
-    resume_campaign_controlled_expected, review_install, validate_recipe, CampaignReport, CliError,
-    InstallCommandRequest, InstallReviewIdentity, SelectionOverrides, ValidationProfile,
+    diagnostics_for_managed_install, discover_games as engine_discover_games, inspect_game,
+    install_campaign_reviewed, plan_recipe, resume_campaign_controlled_expected, review_install,
+    validate_recipe, CampaignReport, CliError, InstallCommandRequest, InstallReviewIdentity,
+    SelectionOverrides, ValidationProfile,
 };
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink};
@@ -22,6 +24,7 @@ use bg_engine::loader::Manifest;
 use bg_engine::manifest::{AcquisitionPolicy, InputValue, Phase};
 use bg_engine::preflight::is_creator_protected_destination;
 use bg_engine::recipe_view::{FeatureControl, NormalizedSelection, RecipeView, SelectionFinding};
+use bg_engine::registry::{InstallAvailability, ManagedInstallCard, ManagedInstallRegistry};
 use bg_engine::weidu::runner::RunnerControlHandle;
 use serde::Serialize;
 
@@ -31,6 +34,7 @@ type Discoverer = dyn Fn(&Path) -> Result<Vec<GameCandidate>, CliError> + Send +
 
 const REVIEW_LIFETIME: Duration = Duration::from_secs(10 * 60);
 const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
+const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 
 /// Engine services used by the native bridge. The test-only seam exercises the same stateful
 /// review and worker boundary without launching WeiDU.
@@ -63,6 +67,61 @@ pub trait BridgeEngine: Send + Sync {
         sink: &SequencedEventSink,
         controls: &RunnerControlHandle,
     ) -> Result<CampaignReport, CliError>;
+}
+
+/// Operating-system actions kept behind the native bridge's validated identity boundary.
+#[doc(hidden)]
+pub trait BridgeSystem: Send + Sync {
+    fn launch(&self, executable: &Path, working_directory: &Path) -> Result<(), String>;
+    fn open_folder(&self, path: &Path) -> Result<(), String>;
+    fn open_https(&self, url: &str) -> Result<(), String>;
+    fn export_diagnostics(&self, managed_root: &Path, output: &Path) -> Result<PathBuf, String>;
+}
+
+#[derive(Default)]
+struct SystemBridgeSystem;
+
+impl BridgeSystem for SystemBridgeSystem {
+    fn launch(&self, executable: &Path, working_directory: &Path) -> Result<(), String> {
+        Command::new(executable)
+            .current_dir(working_directory)
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    }
+
+    fn open_folder(&self, path: &Path) -> Result<(), String> {
+        open_with_shell(path.as_os_str())
+    }
+
+    fn open_https(&self, url: &str) -> Result<(), String> {
+        open_with_shell(std::ffi::OsStr::new(url))
+    }
+
+    fn export_diagnostics(&self, managed_root: &Path, output: &Path) -> Result<PathBuf, String> {
+        diagnostics_for_managed_install(managed_root, output)
+            .map(|bundle| bundle.path)
+            .map_err(|error| error.to_string())
+    }
+}
+
+#[cfg(windows)]
+fn open_with_shell(target: &std::ffi::OsStr) -> Result<(), String> {
+    Command::new("rundll32.exe")
+        .arg("url.dll,FileProtocolHandler")
+        .arg(target)
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+}
+
+#[cfg(not(windows))]
+fn open_with_shell(target: &std::ffi::OsStr) -> Result<(), String> {
+    Command::new("xdg-open")
+        .arg(target)
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| error.to_string())
 }
 
 #[derive(Default)]
@@ -196,7 +255,9 @@ pub struct NativeBridge {
     recipe: PathBuf,
     preset: String,
     cache: PathBuf,
+    app_data: Option<PathBuf>,
     engine: Arc<dyn BridgeEngine>,
+    system: Arc<dyn BridgeSystem>,
     runtime: Arc<Mutex<BridgeRuntime>>,
     sequence: Arc<AtomicU64>,
 }
@@ -277,6 +338,25 @@ pub struct ManualArchiveResponse {
     pub filename: String,
     pub sha256: String,
     pub length: u64,
+}
+
+/// One sanitized diagnostics archive created through a native file choice.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DiagnosticsExportResponse {
+    pub path: String,
+}
+
+/// One immutable registry record projected without exposing executable authority.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ManagedInstallationResponse {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub status: String,
+    pub receipt_path: String,
+    pub available: bool,
 }
 
 /// Process-local run snapshot. Durable restart recovery remains an explicit post-v0 slice.
@@ -402,7 +482,14 @@ impl NativeBridge {
             .parent()
             .unwrap_or_else(|| Path::new("."))
             .join(".chriz-cache");
-        Self::with_engine(recipe, preset, cache, Arc::new(SystemBridgeEngine))
+        Self::with_configuration(
+            recipe,
+            preset.into(),
+            cache,
+            default_application_data_root(),
+            Arc::new(SystemBridgeEngine),
+            Arc::new(SystemBridgeSystem),
+        )
     }
 
     /// Creates the production adapter from Tauri's trusted packaged-resource directory.
@@ -412,11 +499,13 @@ impl NativeBridge {
 
     /// Creates the production adapter with a native-owned writable cache directory.
     pub fn from_resource_dir_with_cache(resource_dir: &Path, cache: &Path) -> Self {
-        Self::with_engine(
+        Self::with_configuration(
             resource_dir.join("manifest"),
-            "chris-recommended",
-            cache,
+            "chris-recommended".to_owned(),
+            cache.to_path_buf(),
+            default_application_data_root(),
             Arc::new(SystemBridgeEngine),
+            Arc::new(SystemBridgeSystem),
         )
     }
 
@@ -435,14 +524,16 @@ impl NativeBridge {
             .parent()
             .unwrap_or_else(|| Path::new("."))
             .join(".chriz-cache");
-        Self::with_engine(
+        Self::with_configuration(
             recipe,
-            preset,
+            preset.into(),
             cache,
+            default_application_data_root(),
             Arc::new(DiscovererBridgeEngine {
                 discoverer: Arc::new(discoverer),
                 system: SystemBridgeEngine,
             }),
+            Arc::new(SystemBridgeSystem),
         )
     }
 
@@ -454,14 +545,39 @@ impl NativeBridge {
         cache: impl Into<PathBuf>,
         engine: Arc<dyn BridgeEngine>,
     ) -> Self {
-        Self {
-            recipe: recipe.into(),
-            preset: preset.into(),
-            cache: cache.into(),
+        let cache = cache.into();
+        let app_data = cache
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join("app-data");
+        Self::with_configuration(
+            recipe.into(),
+            preset.into(),
+            cache,
+            Some(app_data),
             engine,
-            runtime: Arc::new(Mutex::new(BridgeRuntime::default())),
-            sequence: Arc::new(AtomicU64::new(0)),
-        }
+            Arc::new(SystemBridgeSystem),
+        )
+    }
+
+    /// Injects engine and host services plus the exact managed-install registry root.
+    #[doc(hidden)]
+    pub fn with_engine_and_system(
+        recipe: impl Into<PathBuf>,
+        preset: impl Into<String>,
+        cache: impl Into<PathBuf>,
+        app_data: impl Into<PathBuf>,
+        engine: Arc<dyn BridgeEngine>,
+        system: Arc<dyn BridgeSystem>,
+    ) -> Self {
+        Self::with_configuration(
+            recipe.into(),
+            preset.into(),
+            cache.into(),
+            Some(app_data.into()),
+            engine,
+            system,
+        )
     }
 
     /// Validates the complete public-alpha recipe and its configured preset.
@@ -673,6 +789,160 @@ impl NativeBridge {
         }))
     }
 
+    /// Opens only the HTTPS manual-download page declared by a verified recipe artifact.
+    pub fn open_manual_source(&self, artifact_id: &str) -> Result<(), CommandError> {
+        validate_recipe(&self.recipe, ValidationProfile::PublicAlpha)
+            .map_err(CommandError::from_cli)?;
+        let manifest = Manifest::load(&self.recipe).map_err(|error| {
+            CommandError::new(
+                "recipe_load_failed",
+                "The installer recipe could not be verified.",
+                "Repair or replace the installer recipe, then try again.",
+                error.to_string(),
+            )
+        })?;
+        let artifact = manifest.artifacts.get(artifact_id).ok_or_else(|| {
+            CommandError::new(
+                "manual_source_unknown",
+                "That download page is not part of this installer recipe.",
+                "Return to the build screen and use the requested manual download.",
+                format!("unknown manual artifact id {artifact_id:?}"),
+            )
+        })?;
+        if artifact.acquisition != AcquisitionPolicy::ManualUserSupplied {
+            return Err(CommandError::new(
+                "manual_source_not_allowed",
+                "That recipe artifact does not use a manual download page.",
+                "Return to the build screen and follow the acquisition action shown there.",
+                format!("artifact {artifact_id:?} is {:?}", artifact.acquisition),
+            ));
+        }
+        let url = artifact.source.url.trim();
+        if !url.starts_with("https://")
+            || url.len() == "https://".len()
+            || url.chars().any(char::is_whitespace)
+        {
+            return Err(invalid_manual_contract(
+                artifact_id,
+                "safe HTTPS source URL",
+            ));
+        }
+        self.system.open_https(url).map_err(|error| {
+            CommandError::new(
+                "manual_source_open_failed",
+                "The manual download page could not be opened.",
+                "Open the trusted source shown in the build details and try again.",
+                error,
+            )
+        })
+    }
+
+    /// Lists completed managed installs from the immutable app-data registry.
+    pub fn list_managed_installations(
+        &self,
+    ) -> Result<Vec<ManagedInstallationResponse>, CommandError> {
+        self.registry_cards()?
+            .into_iter()
+            .map(project_managed_install)
+            .collect()
+    }
+
+    /// Launches the exact verified InfinityLoader path owned by one available registry id.
+    pub fn launch_install(&self, install_id: &str) -> Result<(), CommandError> {
+        if !self.runtime_lock().active_runs.is_empty() {
+            return Err(CommandError::new(
+                "build_active",
+                "The game cannot be launched while an installer build is running.",
+                "Wait for the build to finish before launching the campaign.",
+                "one or more installer workers are active",
+            ));
+        }
+        let record = self.available_managed_install(install_id)?.record;
+        let launch_name = record
+            .launch_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default();
+        if !launch_name.eq_ignore_ascii_case("InfinityLoader.exe") {
+            return Err(CommandError::new(
+                "managed_launch_invalid",
+                "The managed campaign has no verified InfinityLoader executable.",
+                "Run diagnostics and rebuild the campaign before launching it.",
+                format!("registered launch path is {}", record.launch_path.display()),
+            ));
+        }
+        let working_directory = record.launch_path.parent().ok_or_else(|| {
+            CommandError::new(
+                "managed_launch_invalid",
+                "The managed campaign launch path is incomplete.",
+                "Run diagnostics and rebuild the campaign before launching it.",
+                format!(
+                    "launch path has no parent: {}",
+                    record.launch_path.display()
+                ),
+            )
+        })?;
+        self.system
+            .launch(&record.launch_path, working_directory)
+            .map_err(|error| {
+                CommandError::new(
+                    "managed_launch_failed",
+                    "The managed campaign could not be launched.",
+                    "Close any running game instance, then try again.",
+                    error,
+                )
+            })
+    }
+
+    /// Opens only the managed root attached to one available immutable registry id.
+    pub fn open_install_folder(&self, install_id: &str) -> Result<(), CommandError> {
+        let record = self.available_managed_install(install_id)?.record;
+        self.system
+            .open_folder(&record.managed_root)
+            .map_err(|error| {
+                CommandError::new(
+                    "managed_folder_open_failed",
+                    "The managed campaign folder could not be opened.",
+                    "Check that the campaign folder is still available, then try again.",
+                    error,
+                )
+            })
+    }
+
+    /// Exports diagnostics for an engine-known install to one native-selected output path.
+    pub fn export_diagnostics(
+        &self,
+        install_id: &str,
+        selected_output: Option<PathBuf>,
+    ) -> Result<Option<DiagnosticsExportResponse>, CommandError> {
+        let Some(output) = selected_output else {
+            return Ok(None);
+        };
+        let managed_root = self.diagnostics_managed_root(install_id)?;
+        let path = self
+            .system
+            .export_diagnostics(&managed_root, &output)
+            .map_err(|error| {
+                CommandError::new(
+                    "diagnostics_failed",
+                    "The installer diagnostics could not be exported.",
+                    "Choose a new ZIP path outside the managed campaign and try again.",
+                    error,
+                )
+            })?;
+        let path = path.to_str().ok_or_else(|| {
+            CommandError::new(
+                "diagnostics_path_invalid",
+                "The diagnostics path cannot be displayed safely.",
+                "Choose a local path with a Windows-compatible name and try again.",
+                path.display().to_string(),
+            )
+        })?;
+        Ok(Some(DiagnosticsExportResponse {
+            path: path.to_owned(),
+        }))
+    }
+
     /// Re-inspects exact server-side candidates and freezes a short-lived, single-use review.
     pub fn freeze_review(
         &self,
@@ -834,6 +1104,77 @@ impl NativeBridge {
 }
 
 impl NativeBridge {
+    fn with_configuration(
+        recipe: PathBuf,
+        preset: String,
+        cache: PathBuf,
+        app_data: Option<PathBuf>,
+        engine: Arc<dyn BridgeEngine>,
+        system: Arc<dyn BridgeSystem>,
+    ) -> Self {
+        Self {
+            recipe,
+            preset,
+            cache,
+            app_data,
+            engine,
+            system,
+            runtime: Arc::new(Mutex::new(BridgeRuntime::default())),
+            sequence: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    fn registry_cards(&self) -> Result<Vec<ManagedInstallCard>, CommandError> {
+        let app_data = self.app_data.as_ref().ok_or_else(|| {
+            CommandError::new(
+                "application_data_unavailable",
+                "Managed campaign records are unavailable.",
+                "Restart Windows normally, then open the installer again.",
+                "LOCALAPPDATA is missing or is not an absolute path",
+            )
+        })?;
+        ManagedInstallRegistry::open_or_create(app_data)
+            .and_then(|registry| registry.list())
+            .map_err(|error| {
+                CommandError::new(
+                    "managed_install_registry_failed",
+                    "Managed campaign records could not be verified.",
+                    "Keep the campaign folders unchanged and retain this error for diagnosis.",
+                    error.to_string(),
+                )
+            })
+    }
+
+    fn available_managed_install(
+        &self,
+        install_id: &str,
+    ) -> Result<ManagedInstallCard, CommandError> {
+        let card = self
+            .registry_cards()?
+            .into_iter()
+            .find(|card| card.record.install_id == install_id)
+            .ok_or_else(|| unknown_managed_install(install_id))?;
+        if card.availability != InstallAvailability::Available {
+            return Err(CommandError::new(
+                "managed_install_stale",
+                "That managed campaign folder moved or changed after it was registered.",
+                "Restore the exact folder or build a new managed campaign copy.",
+                format!("managed install {install_id:?} is stale"),
+            ));
+        }
+        Ok(card)
+    }
+
+    fn diagnostics_managed_root(&self, install_id: &str) -> Result<PathBuf, CommandError> {
+        if let Some(root) = self.runtime_lock().known_installs.get(install_id).cloned() {
+            return Ok(root);
+        }
+        Ok(self
+            .available_managed_install(install_id)?
+            .record
+            .managed_root)
+    }
+
     fn runtime_lock(&self) -> std::sync::MutexGuard<'_, BridgeRuntime> {
         self.runtime
             .lock()
@@ -1164,6 +1505,12 @@ fn selection_overrides(selection: &NormalizedSelection) -> SelectionOverrides {
         );
     }
     overrides
+}
+
+fn default_application_data_root() -> Option<PathBuf> {
+    let root = PathBuf::from(std::env::var_os("LOCALAPPDATA")?);
+    root.is_absolute()
+        .then(|| root.join(APPLICATION_DATA_DIRECTORY))
 }
 
 fn project_evaluation(
@@ -1637,6 +1984,15 @@ fn unknown_run(run_id: &str) -> CommandError {
     )
 }
 
+fn unknown_managed_install(install_id: &str) -> CommandError {
+    CommandError::new(
+        "managed_install_unknown",
+        "That managed campaign is not registered on this computer.",
+        "Return to Home and select a campaign discovered by the installer.",
+        format!("unknown managed install id {install_id:?}"),
+    )
+}
+
 fn encode_input_value(value: &InputValue) -> String {
     match value {
         InputValue::Boolean(value) => format!("boolean:{value}"),
@@ -1734,6 +2090,39 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
             .into_iter()
             .map(|finding| finding.message)
             .collect(),
+    })
+}
+
+fn project_managed_install(
+    card: ManagedInstallCard,
+) -> Result<ManagedInstallationResponse, CommandError> {
+    let available = card.availability == InstallAvailability::Available;
+    let record = card.record;
+    let path = unicode_path(&record.managed_root, "managed campaign")?;
+    let receipt = record.managed_root.join(".chriz/install-receipt.json");
+    let receipt_path = unicode_path(&receipt, "managed campaign receipt")?;
+    Ok(ManagedInstallationResponse {
+        id: record.install_id,
+        name: record.display_name,
+        path,
+        status: if available {
+            "Ready to play".to_owned()
+        } else {
+            "Unavailable — folder moved or changed".to_owned()
+        },
+        receipt_path,
+        available,
+    })
+}
+
+fn unicode_path(path: &Path, label: &str) -> Result<String, CommandError> {
+    path.to_str().map(str::to_owned).ok_or_else(|| {
+        CommandError::new(
+            "path_encoding_unsupported",
+            format!("The {label} path cannot be displayed safely."),
+            "Use a managed campaign path containing valid Unicode text.",
+            format!("non-Unicode native path: {path:?}"),
+        )
     })
 }
 

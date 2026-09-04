@@ -30,9 +30,14 @@ pub fn run() -> tauri::Result<()> {
             commands::start_build,
             commands::resume_build,
             commands::supply_manual_archive,
+            commands::open_manual_source,
             commands::get_run_snapshot,
             commands::continue_waiting,
             commands::cancel_run,
+            commands::list_managed_installations,
+            commands::export_diagnostics,
+            commands::launch_install,
+            commands::open_install_folder,
         ])
         .run(tauri::generate_context!())
 }

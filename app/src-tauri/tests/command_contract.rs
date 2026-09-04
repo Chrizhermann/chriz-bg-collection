@@ -12,9 +12,12 @@ use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameFinding, GameRole, Storefront,
 };
 use bg_engine::recipe_view::NormalizedSelection;
+use bg_engine::registry::{ManagedInstallRecord, ManagedInstallRegistry, REGISTRY_SCHEMA_VERSION};
 use bg_engine::session::SourceGameFingerprints;
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
-use chriz_bg_app_lib::bridge::{BridgeEngine, NativeBridge, RunEventEnvelope, SequencedEventSink};
+use chriz_bg_app_lib::bridge::{
+    BridgeEngine, BridgeSystem, NativeBridge, RunEventEnvelope, SequencedEventSink,
+};
 use chriz_bg_app_lib::error::CommandError;
 use serde_json::json;
 use tempfile::TempDir;
@@ -158,6 +161,67 @@ impl FakeBridgeEngine {
     fn change_review_identity(&self) {
         *self.review_recipe_digest.lock().unwrap() = "dd".repeat(32);
     }
+}
+
+#[derive(Default)]
+struct RecordingBridgeSystem {
+    launches: Mutex<Vec<(PathBuf, PathBuf)>>,
+    folders: Mutex<Vec<PathBuf>>,
+    urls: Mutex<Vec<String>>,
+    diagnostics: Mutex<Vec<(PathBuf, PathBuf)>>,
+}
+
+impl BridgeSystem for RecordingBridgeSystem {
+    fn launch(&self, executable: &Path, working_directory: &Path) -> Result<(), String> {
+        self.launches
+            .lock()
+            .unwrap()
+            .push((executable.to_path_buf(), working_directory.to_path_buf()));
+        Ok(())
+    }
+
+    fn open_folder(&self, path: &Path) -> Result<(), String> {
+        self.folders.lock().unwrap().push(path.to_path_buf());
+        Ok(())
+    }
+
+    fn open_https(&self, url: &str) -> Result<(), String> {
+        self.urls.lock().unwrap().push(url.to_owned());
+        Ok(())
+    }
+
+    fn export_diagnostics(&self, managed_root: &Path, output: &Path) -> Result<PathBuf, String> {
+        self.diagnostics
+            .lock()
+            .unwrap()
+            .push((managed_root.to_path_buf(), output.to_path_buf()));
+        Ok(output.to_path_buf())
+    }
+}
+
+fn publish_managed_install(app_data: &Path, managed: &Path, install_id: &str) {
+    fs::create_dir_all(managed.join(".chriz")).unwrap();
+    fs::create_dir_all(managed.join("game")).unwrap();
+    let receipt = managed.join(".chriz/install-receipt.json");
+    fs::write(&receipt, b"immutable receipt").unwrap();
+    let launch = managed.join("game/InfinityLoader.exe");
+    fs::write(&launch, b"verified launcher").unwrap();
+    ManagedInstallRegistry::open_or_create(app_data)
+        .unwrap()
+        .publish(&ManagedInstallRecord {
+            schema_version: REGISTRY_SCHEMA_VERSION,
+            install_id: install_id.to_owned(),
+            display_name: "Task 23 fixture".to_owned(),
+            managed_root: managed.canonicalize().unwrap(),
+            recipe_version: "0.1.0-alpha.1".to_owned(),
+            recipe_sha256: "11".repeat(32),
+            engine_name: "task23-fixture".to_owned(),
+            managed_save_root: managed.parent().unwrap().join("saves"),
+            launch_path: launch.canonicalize().unwrap(),
+            receipt_sha256: sha256_bytes(b"immutable receipt"),
+            completed_at_millis: 1,
+        })
+        .unwrap();
 }
 
 impl BridgeEngine for FakeBridgeEngine {
@@ -904,5 +968,146 @@ fn build_controls_are_scoped_to_the_named_active_run() {
     assert_eq!(
         engine.controls.lock().unwrap().as_slice(),
         &[RunnerControl::ContinueWaiting, RunnerControl::Cancel]
+    );
+}
+
+#[test]
+fn managed_actions_reload_only_the_exact_available_registry_identity() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("managed-campaign");
+    fs::create_dir(&cache).unwrap();
+    publish_managed_install(&app_data, &managed, "install-task23");
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let system = Arc::new(RecordingBridgeSystem::default());
+
+    // A fresh bridge instance simulates reopening the application after installation.
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        engine,
+        system.clone(),
+    );
+    let cards = bridge.list_managed_installations().unwrap();
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].id, "install-task23");
+    assert!(cards[0].available);
+    assert_eq!(cards[0].status, "Ready to play");
+
+    bridge.launch_install("install-task23").unwrap();
+    bridge.open_install_folder("install-task23").unwrap();
+    let canonical_managed = managed.canonicalize().unwrap();
+    assert_eq!(
+        system.launches.lock().unwrap().as_slice(),
+        &[(
+            canonical_managed.join("game/InfinityLoader.exe"),
+            canonical_managed.join("game"),
+        )]
+    );
+    assert_eq!(
+        system.folders.lock().unwrap().as_slice(),
+        &[canonical_managed]
+    );
+    assert_eq!(
+        bridge.launch_install("not-a-registry-id").unwrap_err().code,
+        "managed_install_unknown"
+    );
+}
+
+#[test]
+fn stale_managed_install_is_listed_but_cannot_be_launched_or_opened() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("managed-campaign");
+    fs::create_dir(&cache).unwrap();
+    publish_managed_install(&app_data, &managed, "install-stale");
+    fs::write(
+        managed.join(".chriz/install-receipt.json"),
+        b"changed receipt",
+    )
+    .unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let system = Arc::new(RecordingBridgeSystem::default());
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        engine,
+        system,
+    );
+
+    let cards = bridge.list_managed_installations().unwrap();
+    assert!(!cards[0].available);
+    assert_eq!(cards[0].status, "Unavailable — folder moved or changed");
+    assert_eq!(
+        bridge.launch_install("install-stale").unwrap_err().code,
+        "managed_install_stale"
+    );
+    assert_eq!(
+        bridge
+            .open_install_folder("install-stale")
+            .unwrap_err()
+            .code,
+        "managed_install_stale"
+    );
+}
+
+#[test]
+fn diagnostics_and_manual_page_use_native_choices_plus_trusted_recipe_identity() {
+    let (_temp, recipe) = recipe_with_profiles();
+    add_manual_artifact(&recipe, "manual-fixture", "manual-fixture.zip", b"fixture");
+    let root = recipe.parent().unwrap();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("managed-campaign");
+    let output = root.join("exports/task23-diagnostics.zip");
+    fs::create_dir(&cache).unwrap();
+    fs::create_dir_all(output.parent().unwrap()).unwrap();
+    publish_managed_install(&app_data, &managed, "install-task23");
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let system = Arc::new(RecordingBridgeSystem::default());
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        engine,
+        system.clone(),
+    );
+
+    assert_eq!(
+        bridge
+            .export_diagnostics("not-consulted-after-cancel", None)
+            .unwrap(),
+        None
+    );
+    let exported = bridge
+        .export_diagnostics("install-task23", Some(output.clone()))
+        .unwrap()
+        .unwrap();
+    assert_eq!(PathBuf::from(exported.path), output);
+    assert_eq!(
+        system.diagnostics.lock().unwrap().as_slice(),
+        &[(managed.canonicalize().unwrap(), output)]
+    );
+
+    bridge.open_manual_source("manual-fixture").unwrap();
+    assert_eq!(
+        system.urls.lock().unwrap().as_slice(),
+        &["https://example.invalid/manual-fixture"]
+    );
+    assert_eq!(
+        bridge
+            .open_manual_source("not-a-recipe-artifact")
+            .unwrap_err()
+            .code,
+        "manual_source_unknown"
     );
 }
