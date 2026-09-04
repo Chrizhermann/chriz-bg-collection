@@ -32,6 +32,10 @@ use bg_engine::weidu::runner::RunnerControlHandle;
 use serde::Serialize;
 
 use crate::error::CommandError;
+use crate::updates::{
+    ApplicationUpdateResponse, ManagedCopyUpdateResponse, RecipeUpdateResponse, RecipeUpdateState,
+    UpdateCenterResponse,
+};
 
 type Discoverer = dyn Fn(&Path) -> Result<Vec<GameCandidate>, CliError> + Send + Sync;
 
@@ -361,6 +365,7 @@ pub struct ManagedInstallationResponse {
     pub receipt_path: Option<String>,
     pub available: bool,
     pub resumable: bool,
+    pub recipe_version: Option<String>,
 }
 
 /// Process-local run snapshot. Durable restart recovery remains an explicit post-v0 slice.
@@ -1106,6 +1111,73 @@ impl NativeBridge {
     #[doc(hidden)]
     pub fn active_run_count(&self) -> usize {
         self.runtime_lock().active_runs.len()
+    }
+
+    /// Refuses application or trusted-recipe replacement while this process owns a build.
+    /// Download-only checks remain allowed because each campaign already freezes exact bytes.
+    #[doc(hidden)]
+    pub fn ensure_update_idle(&self) -> Result<(), CommandError> {
+        if self.active_run_count() == 0 {
+            Ok(())
+        } else {
+            Err(CommandError::new(
+                "update_deferred_build_active",
+                "The update is ready, but cannot be installed while a campaign build is running.",
+                "Let the current build finish, then install the update.",
+                "one or more native build workers retain an immutable recipe snapshot",
+            ))
+        }
+    }
+
+    /// Returns an honest offline-safe projection until release-time trust material is supplied.
+    #[doc(hidden)]
+    pub fn unconfigured_update_center(
+        &self,
+        running_app_version: &str,
+    ) -> Result<UpdateCenterResponse, CommandError> {
+        let managed_copies = self
+            .list_managed_installations()?
+            .into_iter()
+            .map(|copy| {
+                let stale = !copy.available && !copy.resumable;
+                ManagedCopyUpdateResponse {
+                    install_id: copy.id,
+                    name: copy.name,
+                    path: copy.path,
+                    installed_recipe_version: copy.recipe_version,
+                    state: if stale { "stale" } else { "unknown" }.to_owned(),
+                    detail: if stale {
+                        "The registered folder moved or changed; no update action is available."
+                            .to_owned()
+                    } else {
+                        "No signed recipe channel is configured, so update applicability is unknown."
+                            .to_owned()
+                    },
+                }
+            })
+            .collect();
+        Ok(UpdateCenterResponse {
+            checked_at: None,
+            network_state: "unconfigured".to_owned(),
+            application: ApplicationUpdateResponse {
+                state: "unavailable".to_owned(),
+                current_version: running_app_version.to_owned(),
+                available_version: None,
+                detail: "The application update key and endpoint must be supplied at release-time."
+                    .to_owned(),
+            },
+            recipe: RecipeUpdateResponse {
+                state: RecipeUpdateState::Unavailable,
+                current_version: "bundled".to_owned(),
+                available_version: None,
+                minimum_app_version: None,
+                disposition: "unknown-applicability".to_owned(),
+                detail: "No signed channel is configured; the bundled trusted recipe was kept."
+                    .to_owned(),
+                changes: Vec::new(),
+            },
+            managed_copies,
+        })
     }
 }
 
@@ -2162,6 +2234,7 @@ fn project_managed_install(
         receipt_path: Some(receipt_path),
         available,
         resumable: false,
+        recipe_version: Some(record.recipe_version),
     })
 }
 
@@ -2182,6 +2255,7 @@ fn project_managed_campaign(
         receipt_path: None,
         available: false,
         resumable,
+        recipe_version: None,
     })
 }
 

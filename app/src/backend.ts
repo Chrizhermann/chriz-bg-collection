@@ -55,6 +55,8 @@ export interface Backend {
   launchInstall(installId: string): Promise<void>;
   openInstallFolder(installId: string): Promise<void>;
   getUpdates(): Promise<UpdateSummary>;
+  installAppUpdate(version: string): Promise<void>;
+  activateRecipeUpdate(version: string): Promise<void>;
 }
 
 export type InvokeCommand = (
@@ -140,6 +142,40 @@ type ManagedInstallationWire = {
   readonly receipt_path: string | null;
   readonly available: boolean;
   readonly resumable: boolean;
+  readonly recipe_version?: string | null;
+};
+
+type UpdateSummaryWire = {
+  readonly checked_at: string | null;
+  readonly network_state: UpdateSummary["networkState"];
+  readonly application: {
+    readonly state: UpdateSummary["application"]["state"];
+    readonly current_version: string;
+    readonly available_version: string | null;
+    readonly detail: string;
+  };
+  readonly recipe: {
+    readonly state: UpdateSummary["recipe"]["state"];
+    readonly current_version: string;
+    readonly available_version: string | null;
+    readonly disposition: UpdateSummary["recipe"]["disposition"];
+    readonly detail: string;
+    readonly changes: readonly {
+      readonly title: string;
+      readonly summary: string;
+      readonly save_applicability: UpdateSummary["recipe"]["changes"][number]["saveApplicability"];
+      readonly urgency: UpdateSummary["recipe"]["changes"][number]["urgency"];
+      readonly condition_note: string | null;
+    }[];
+  };
+  readonly managed_copies: readonly {
+    readonly install_id: string;
+    readonly name: string;
+    readonly path: string;
+    readonly installed_recipe_version: string | null;
+    readonly state: UpdateSummary["managedCopies"][number]["state"];
+    readonly detail: string;
+  }[];
 };
 
 type RunSnapshotWire = {
@@ -362,9 +398,10 @@ export class NativeBackend implements Backend {
 
   async listManagedInstallations(): Promise<ManagedInstallation[]> {
     const installations = await this.#command<ManagedInstallationWire[]>("list_managed_installations");
-    return installations.map(({ receipt_path: receiptPath, ...installation }) => ({
+    return installations.map(({ receipt_path: receiptPath, recipe_version: recipeVersion, ...installation }) => ({
       ...installation,
       receiptPath,
+      recipeVersion,
     }));
   }
 
@@ -376,8 +413,48 @@ export class NativeBackend implements Backend {
     await this.#command("open_install_folder", { installId });
   }
 
-  getUpdates(): Promise<UpdateSummary> {
-    return this.#unavailable("Update checks");
+  async getUpdates(): Promise<UpdateSummary> {
+    const update = await this.#command<UpdateSummaryWire>("check_updates");
+    return {
+      checkedAt: update.checked_at,
+      networkState: update.network_state,
+      application: {
+        state: update.application.state,
+        currentVersion: update.application.current_version,
+        availableVersion: update.application.available_version,
+        detail: update.application.detail,
+      },
+      recipe: {
+        state: update.recipe.state,
+        currentVersion: update.recipe.current_version,
+        availableVersion: update.recipe.available_version,
+        disposition: update.recipe.disposition,
+        detail: update.recipe.detail,
+        changes: update.recipe.changes.map((change) => ({
+          title: change.title,
+          summary: change.summary,
+          saveApplicability: change.save_applicability,
+          urgency: change.urgency,
+          conditionNote: change.condition_note,
+        })),
+      },
+      managedCopies: update.managed_copies.map((copy) => ({
+        installId: copy.install_id,
+        name: copy.name,
+        path: copy.path,
+        installedRecipeVersion: copy.installed_recipe_version,
+        state: copy.state,
+        detail: copy.detail,
+      })),
+    };
+  }
+
+  async installAppUpdate(version: string): Promise<void> {
+    await this.#command("install_app_update", { version });
+  }
+
+  async activateRecipeUpdate(version: string): Promise<void> {
+    await this.#command("activate_recipe_update", { version });
   }
 
   async #command<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -583,7 +660,21 @@ export class FixtureBackend implements Backend {
   }
 
   getUpdates(): Promise<UpdateSummary> {
-    return Promise.resolve({ app: "0.1.0-alpha.1 fixture", recipe: "2026.09 fixture", message: "Fixture data only. Signed update checks are implemented in a later task." });
+    return Promise.resolve({
+      checkedAt: "2026-09-04T12:00:00Z",
+      networkState: "online",
+      application: { state: "up-to-date", currentVersion: "0.1.0-alpha.1", availableVersion: null, detail: "The fixture application is current." },
+      recipe: { state: "up-to-date", currentVersion: "0.1.0-alpha.1", availableVersion: null, disposition: "up-to-date", detail: "The fixture recipe is current.", changes: [] },
+      managedCopies: [{ installId: "fixture-install", name: "Chriz EET — Stream test", path: "D:\\Fixture Campaigns\\Chriz EET Stream Test", installedRecipeVersion: "0.1.0-alpha.1", state: "up-to-date", detail: "This managed copy uses the current recipe." }],
+    });
+  }
+
+  installAppUpdate(_version: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  activateRecipeUpdate(_version: string): Promise<void> {
+    return Promise.resolve();
   }
 
   #snapshot(): BuildSnapshot {

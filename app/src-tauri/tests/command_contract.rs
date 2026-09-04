@@ -24,6 +24,13 @@ use chriz_bg_app_lib::error::CommandError;
 use serde_json::json;
 use tempfile::TempDir;
 
+use bg_engine::recipe_envelope::{RecipeEnvelope, RecipeTrustStore, TrustedPublicKey};
+use chriz_bg_app_lib::updates::{RecipeUpdateManager, RecipeUpdateState};
+use minisign::{sign, KeyPair};
+use std::io::{Cursor, Write};
+use zip::write::SimpleFileOptions;
+use zip::{CompressionMethod, ZipWriter};
+
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")
@@ -742,7 +749,7 @@ fn sequenced_event_sink_uses_string_sequences_and_ignores_a_dropped_listener() {
 #[test]
 fn restart_lists_and_resumes_only_a_verified_indexed_campaign() {
     let (_temp, recipe) = recipe_with_profiles();
-    let root = recipe.parent().unwrap();
+    let root = recipe.parent().unwrap().to_path_buf();
     let cache = recipe.parent().unwrap().join("cache");
     fs::create_dir(&cache).expect("create cache fixture");
     let app_data = root.join("app-data");
@@ -1205,4 +1212,184 @@ fn diagnostics_and_manual_page_use_native_choices_plus_trusted_recipe_identity()
             .code,
         "manual_source_unknown"
     );
+}
+
+fn signed_recipe_candidate(
+    version: &str,
+    supersedes: &str,
+    minimum_app_version: &str,
+) -> (Vec<u8>, Vec<u8>, Vec<u8>, TrustedPublicKey) {
+    let keys = KeyPair::generate_unencrypted_keypair().unwrap();
+    let ledger = format!(
+        "schema = 1\nrecipe_id = \"chriz-bg-collection\"\nversion = \"{version}\"\npublished_at = \"2026-09-04T00:00:00Z\"\nminimum_app_version = \"{minimum_app_version}\"\nsupersedes = \"{supersedes}\"\n\n[[changes]]\nid = \"npc-kit\"\ntitle = \"NPC kit correction\"\nsummary = \"Uses the corrected kit in a newly built campaign.\"\nsave_applicability = \"before-npc-join\"\nurgency = \"recommended\"\ncondition_note = \"This is authored guidance; the installer did not inspect the save.\"\ncovers = [\"feature:npc-kit\"]\n"
+    );
+    let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
+    let options = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Stored)
+        .last_modified_time(zip::DateTime::default());
+    writer.start_file("collection.toml", options).unwrap();
+    writer
+        .write_all(b"schema=2\ngame_build='2.7.3.0'\n")
+        .unwrap();
+    writer
+        .start_file(format!("releases/v{version}/ledger.toml"), options)
+        .unwrap();
+    writer.write_all(ledger.as_bytes()).unwrap();
+    let payload = writer.finish().unwrap().into_inner();
+    let envelope = serde_json::to_vec(&RecipeEnvelope {
+        recipe_id: "chriz-bg-collection".to_owned(),
+        version: version.to_owned(),
+        payload_sha256: sha256_bytes(&payload),
+        key_id: "test-update-key".to_owned(),
+        minimum_app_version: minimum_app_version.to_owned(),
+        published_at: "2026-09-04T00:00:00Z".to_owned(),
+    })
+    .unwrap();
+    let signature = sign(
+        None,
+        &keys.sk,
+        Cursor::new(&envelope),
+        Some("task 24 update fixture"),
+        None,
+    )
+    .unwrap()
+    .into_string()
+    .into_bytes();
+    let public = TrustedPublicKey {
+        key_id: "test-update-key".to_owned(),
+        minisign_public_key: keys.pk.to_box().unwrap().to_string(),
+    };
+    (payload, envelope, signature, public)
+}
+
+#[test]
+fn signed_recipe_update_projection_preserves_authored_guidance_and_app_prerequisite() {
+    let (payload, envelope, signature, public) =
+        signed_recipe_candidate("0.1.0-alpha.2", "0.1.0-alpha.1", "0.1.0-alpha.1");
+    let manager = RecipeUpdateManager::new(
+        RecipeTrustStore::new([public]).unwrap(),
+        "0.1.0-alpha.1",
+        "0.1.0-alpha.1",
+    )
+    .unwrap();
+    let response = manager.check_candidate(&payload, &envelope, &signature);
+    assert_eq!(response.state, RecipeUpdateState::Available);
+    assert_eq!(response.available_version.as_deref(), Some("0.1.0-alpha.2"));
+    assert_eq!(response.changes.len(), 1);
+    assert!(response.changes[0]
+        .condition_note
+        .as_deref()
+        .unwrap()
+        .contains("did not inspect the save"));
+
+    let (payload, envelope, signature, public) =
+        signed_recipe_candidate("0.1.0-alpha.2", "0.1.0-alpha.1", "0.2.0");
+    let manager = RecipeUpdateManager::new(
+        RecipeTrustStore::new([public]).unwrap(),
+        "0.1.0-alpha.1",
+        "0.1.0-alpha.1",
+    )
+    .unwrap();
+    let response = manager.check_candidate(&payload, &envelope, &signature);
+    assert_eq!(response.state, RecipeUpdateState::RequiresApp);
+    assert_eq!(response.minimum_app_version.as_deref(), Some("0.2.0"));
+}
+
+#[test]
+fn invalid_and_replayed_recipe_updates_keep_the_trusted_recipe() {
+    let (payload, envelope, mut signature, public) =
+        signed_recipe_candidate("0.1.0-alpha.2", "0.1.0-alpha.1", "0.1.0-alpha.1");
+    let manager = RecipeUpdateManager::new(
+        RecipeTrustStore::new([public]).unwrap(),
+        "0.1.0-alpha.1",
+        "0.1.0-alpha.1",
+    )
+    .unwrap();
+    let signed_line = signature.iter().position(|byte| *byte == b'\n').unwrap() + 5;
+    signature[signed_line] = if signature[signed_line] == b'A' {
+        b'B'
+    } else {
+        b'A'
+    };
+    let invalid = manager.check_candidate(&payload, &envelope, &signature);
+    assert_eq!(invalid.state, RecipeUpdateState::Invalid);
+    assert_eq!(manager.staged_version(), None);
+
+    let (payload, envelope, signature, public) =
+        signed_recipe_candidate("0.1.0-alpha.1", "0.1.0-alpha.0", "0.1.0-alpha.1");
+    let manager = RecipeUpdateManager::new(
+        RecipeTrustStore::new([public]).unwrap(),
+        "0.1.0-alpha.1",
+        "0.1.0-alpha.1",
+    )
+    .unwrap();
+    let replayed = manager.check_candidate(&payload, &envelope, &signature);
+    assert_eq!(replayed.state, RecipeUpdateState::Replayed);
+    assert_eq!(manager.staged_version(), None);
+}
+
+#[test]
+fn update_replacement_is_deferred_while_a_build_is_active() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let cache = recipe.parent().unwrap().join("cache");
+    fs::create_dir(&cache).unwrap();
+    let bg1 = recipe.parent().unwrap().join("clean-bg1");
+    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    fs::create_dir(&bg1).unwrap();
+    fs::create_dir(&bg2).unwrap();
+    let destination = recipe.parent().unwrap().join("campaign");
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(recipe, "recommended", &cache, engine.clone());
+    let discovery = bridge.discover_games().unwrap();
+    let review = bridge
+        .freeze_review(
+            &NormalizedSelection {
+                platform: "windows".to_owned(),
+                features: Default::default(),
+                inputs: Default::default(),
+            },
+            &destination,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .unwrap();
+    let (_tx, rx) = mpsc::channel::<RunEventEnvelope>();
+    bridge.start_build(&review.review_token, |_| {}).unwrap();
+    while bridge.active_run_count() == 0 {
+        std::thread::yield_now();
+    }
+
+    let error = bridge.ensure_update_idle().unwrap_err();
+    assert_eq!(error.code, "update_deferred_build_active");
+    engine.release_install();
+    drop(rx);
+}
+
+#[test]
+fn missing_release_keys_and_endpoints_are_clear_non_destructive_update_state() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("managed-campaign");
+    fs::create_dir(&cache).unwrap();
+    publish_managed_install(&app_data, &managed, "install-update-state");
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let update = bridge.unconfigured_update_center("0.1.0-alpha.1").unwrap();
+    assert_eq!(update.network_state, "unconfigured");
+    assert_eq!(update.application.state, "unavailable");
+    assert_eq!(update.recipe.state, RecipeUpdateState::Unavailable);
+    assert!(update.application.detail.contains("release-time"));
+    assert!(update.recipe.detail.contains("trusted recipe"));
+    assert_eq!(update.managed_copies.len(), 1);
+    assert_eq!(update.managed_copies[0].install_id, "install-update-state");
+    assert_eq!(update.managed_copies[0].state, "unknown");
 }

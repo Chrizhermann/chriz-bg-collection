@@ -214,12 +214,52 @@ export interface ManagedInstallation {
   readonly receiptPath: string | null;
   readonly available: boolean;
   readonly resumable: boolean;
+  readonly recipeVersion?: string | null;
+}
+
+export type AppUpdateState = "up-to-date" | "available" | "offline" | "invalid" | "unavailable";
+export type RecipeUpdateState = "up-to-date" | "available" | "requires-app" | "offline" | "invalid" | "replayed" | "unavailable";
+export type ManagedCopyUpdateState = "up-to-date" | "update-available" | "unknown" | "stale";
+
+export interface ApplicationUpdate {
+  readonly state: AppUpdateState;
+  readonly currentVersion: string;
+  readonly availableVersion: string | null;
+  readonly detail: string;
+}
+
+export interface RecipeUpdateChange {
+  readonly title: string;
+  readonly summary: string;
+  readonly saveApplicability: "current-save" | "before-npc-join" | "before-area-visit" | "before-event" | "next-playthrough" | "new-game-only" | "unknown";
+  readonly urgency: "critical" | "recommended" | "optional" | "informational";
+  readonly conditionNote: string | null;
+}
+
+export interface RecipeUpdate {
+  readonly state: RecipeUpdateState;
+  readonly currentVersion: string;
+  readonly availableVersion: string | null;
+  readonly disposition: "up-to-date" | "deferred-for-next-playthrough" | "may-affect-current-playthrough" | "unknown-applicability" | "app-update-required";
+  readonly detail: string;
+  readonly changes: readonly RecipeUpdateChange[];
+}
+
+export interface ManagedCopyUpdate {
+  readonly installId: string;
+  readonly name: string;
+  readonly path: string;
+  readonly installedRecipeVersion: string | null;
+  readonly state: ManagedCopyUpdateState;
+  readonly detail: string;
 }
 
 export interface UpdateSummary {
-  readonly app: string;
-  readonly recipe: string;
-  readonly message: string;
+  readonly checkedAt: string | null;
+  readonly networkState: "online" | "offline" | "unconfigured";
+  readonly application: ApplicationUpdate;
+  readonly recipe: RecipeUpdate;
+  readonly managedCopies: readonly ManagedCopyUpdate[];
 }
 
 export interface FixtureOptions {

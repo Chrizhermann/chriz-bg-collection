@@ -15,6 +15,7 @@ use crate::bridge::{
     RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
+use crate::updates::UpdateCenterResponse;
 
 /// Managed bridge state shared by native commands.
 #[derive(Clone)]
@@ -210,6 +211,50 @@ pub async fn open_install_folder(
 ) -> Result<(), CommandError> {
     let bridge = state.bridge.clone();
     background(move || bridge.open_install_folder(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn check_updates(
+    state: State<'_, BridgeState>,
+) -> Result<UpdateCenterResponse, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || bridge.unconfigured_update_center(env!("CARGO_PKG_VERSION"))).await
+}
+
+#[tauri::command]
+pub async fn install_app_update(
+    state: State<'_, BridgeState>,
+    version: String,
+) -> Result<(), CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        bridge.ensure_update_idle()?;
+        Err(CommandError::new(
+            "app_update_unconfigured",
+            "Application updates are not configured in this build.",
+            "Keep using the current application until a signed release channel is published.",
+            format!("requested application version {version}; release endpoint and public key are absent"),
+        ))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn activate_recipe_update(
+    state: State<'_, BridgeState>,
+    version: String,
+) -> Result<(), CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        bridge.ensure_update_idle()?;
+        Err(CommandError::new(
+            "recipe_update_unconfigured",
+            "Recipe updates are not configured in this build.",
+            "Keep using the bundled recipe until a signed release channel is published.",
+            format!("requested recipe version {version}; no verified candidate is staged"),
+        ))
+    })
+    .await
 }
 
 #[tauri::command]

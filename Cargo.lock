@@ -382,12 +382,16 @@ name = "chriz-bg-app"
 version = "0.1.0-alpha.1"
 dependencies = [
  "chriz-bg-engine",
+ "minisign",
+ "semver",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tempfile",
+ "toml 1.1.4+spec-1.1.0",
+ "zip",
 ]
 
 [[package]]

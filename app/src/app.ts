@@ -30,9 +30,11 @@ class AppController implements AppHandle {
   };
   #installations: readonly ManagedInstallation[] = [];
   #updates: UpdateSummary = {
-    app: "Not checked",
-    recipe: "Not checked",
-    message: "Signed update checks are not connected in this private alpha.",
+    checkedAt: null,
+    networkState: "unconfigured",
+    application: { state: "unavailable", currentVersion: "0.1.0-alpha.1", availableVersion: null, detail: "Application updates have not been checked." },
+    recipe: { state: "unavailable", currentVersion: "0.1.0-alpha.1", availableVersion: null, disposition: "unknown-applicability", detail: "Recipe updates have not been checked.", changes: [] },
+    managedCopies: [],
   };
   #revision = 0;
   #runId: string | null = null;
@@ -77,6 +79,7 @@ class AppController implements AppHandle {
       route = "build";
     }
     if (route === "build" && this.#state.frozenReview === null) await this.#freezeReview(false);
+    if (route === "updates") this.#updates = await this.backend.getUpdates();
     if (route === "build" && this.#status.mode === "fixture") {
       this.#dispatch({ type: "build-updated", build: await this.backend.getBuildSnapshot() });
     }
@@ -369,6 +372,18 @@ class AppController implements AppHandle {
     await this.backend.openInstallFolder(installId);
   }
 
+  async #installAppUpdate(version: string): Promise<void> {
+    await this.backend.installAppUpdate(version);
+  }
+
+  async #buildUpdatedCopy(version: string): Promise<void> {
+    await this.backend.activateRecipeUpdate(version);
+    this.#dispatch({ type: "review-cleared" });
+    this.#dispatch({ type: "build-cleared" });
+    this.#dispatch({ type: "navigate", route: "welcome" });
+    this.#render();
+  }
+
   async #resumeManagedInstall(installId: string): Promise<void> {
     this.#installId = installId;
     this.#retryAvailable = false;
@@ -394,7 +409,14 @@ class AppController implements AppHandle {
         });
         break;
       case "updates":
-        content = updatesScreen(this.#updates);
+        content = updatesScreen(this.#updates, {
+          checkAgain: () => safely(async () => {
+            this.#updates = await this.backend.getUpdates();
+            this.#render();
+          }),
+          installApplication: (version) => safely(() => this.#installAppUpdate(version)),
+          buildUpdatedCopy: (version) => safely(() => this.#buildUpdatedCopy(version)),
+        });
         break;
       case "welcome":
         content = welcomeScreen(() => safely(() => navigate("games")));

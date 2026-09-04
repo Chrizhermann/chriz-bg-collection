@@ -131,6 +131,125 @@ describe("guided collection wizard", () => {
     expect(queryByText(root, "Update now")).toBeNull();
   });
 
+  it("keeps app, recipe, and managed-copy updates separate and rebuild-only", async () => {
+    class UpdateCenterBackend extends FixtureBackend {
+      installedAppVersions: string[] = [];
+      activatedRecipeVersions: string[] = [];
+
+      override getUpdates() {
+        return Promise.resolve({
+          checkedAt: "2026-09-04T12:00:00Z",
+          networkState: "online" as const,
+          application: {
+            state: "available" as const,
+            currentVersion: "0.1.0-alpha.1",
+            availableVersion: "0.1.0-alpha.2",
+            detail: "A signed application update is ready.",
+          },
+          recipe: {
+            state: "available" as const,
+            currentVersion: "0.1.0-alpha.1",
+            availableVersion: "0.1.0-alpha.2",
+            disposition: "deferred-for-next-playthrough" as const,
+            detail: "Useful for your next playthrough; your current campaign stays unchanged.",
+            changes: [{
+              title: "Viconia class correction",
+              summary: "Uses the corrected class when she joins a newly built campaign.",
+              saveApplicability: "before-npc-join" as const,
+              urgency: "recommended" as const,
+              conditionNote: "This guidance is authored for games where Viconia has not joined; the installer did not inspect your save.",
+            }],
+          },
+          managedCopies: [
+            {
+              installId: "fixture-install",
+              name: "Chriz EET — Stream test",
+              path: "D:\\Fixture Campaigns\\Chriz EET Stream Test",
+              installedRecipeVersion: "0.1.0-alpha.1",
+              state: "update-available" as const,
+              detail: "Build an updated copy to use recipe 0.1.0-alpha.2.",
+            },
+            {
+              installId: "moved-install",
+              name: "Moved campaign",
+              path: "D:\\Fixture Campaigns\\Moved",
+              installedRecipeVersion: "0.1.0-alpha.1",
+              state: "stale" as const,
+              detail: "The registered folder moved or changed; no update action is available.",
+            },
+          ],
+        });
+      }
+
+      override installAppUpdate(version: string) {
+        this.installedAppVersions.push(version);
+        return Promise.resolve();
+      }
+
+      override activateRecipeUpdate(version: string) {
+        this.activatedRecipeVersions.push(version);
+        return Promise.resolve();
+      }
+    }
+
+    const backend = new UpdateCenterBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Updates" }));
+
+    expect(getByText(root, "Application 0.1.0-alpha.2")).toBeTruthy();
+    expect(getByText(root, "Recipe 0.1.0-alpha.2")).toBeTruthy();
+    expect(getByText(root, /installer did not inspect your save/)).toBeTruthy();
+    expect(getByText(root, "Moved campaign")).toBeTruthy();
+    expect(queryByText(root, "Patch campaign")).toBeNull();
+    expect(queryByText(root, "Update installation")).toBeNull();
+    expect(queryByText(root, "Uninstall mod")).toBeNull();
+
+    await user.click(getByRole(root, "button", { name: "Install application update" }));
+    expect(backend.installedAppVersions).toEqual(["0.1.0-alpha.2"]);
+    await user.click(getByRole(root, "button", { name: "Build updated copy" }));
+    expect(backend.activatedRecipeVersions).toEqual(["0.1.0-alpha.2"]);
+    expect(getByRole(root, "heading", { level: 1, name: "Welcome" })).toBeTruthy();
+  });
+
+  it("shows offline and rejected update checks without destructive actions", async () => {
+    class OfflineUpdateBackend extends FixtureBackend {
+      override getUpdates() {
+        return Promise.resolve({
+          checkedAt: "2026-09-03T08:30:00Z",
+          networkState: "offline" as const,
+          application: {
+            state: "offline" as const,
+            currentVersion: "0.1.0-alpha.1",
+            availableVersion: null,
+            detail: "Could not reach the application channel. Last checked 2026-09-03 08:30 UTC.",
+          },
+          recipe: {
+            state: "invalid" as const,
+            currentVersion: "0.1.0-alpha.1",
+            availableVersion: null,
+            disposition: "unknown-applicability" as const,
+            detail: "The downloaded recipe signature was invalid. The trusted recipe was kept.",
+            changes: [],
+          },
+          managedCopies: [],
+        });
+      }
+    }
+
+    const root = document.createElement("div");
+    document.body.append(root);
+    const handle = await mountApp(root, new OfflineUpdateBackend());
+    await handle.navigate("updates");
+
+    expect(getByText(root, /Last checked 2026-09-03 08:30 UTC/)).toBeTruthy();
+    expect(getByText(root, /signature was invalid.*trusted recipe was kept/i)).toBeTruthy();
+    expect(queryByText(root, "Install application update")).toBeNull();
+    expect(queryByText(root, "Build updated copy")).toBeNull();
+  });
+
   it("loads native managed campaigns without checking updates and scopes card actions by availability", async () => {
     class ManagedCampaignBackend extends FixtureBackend {
       updateChecks = 0;

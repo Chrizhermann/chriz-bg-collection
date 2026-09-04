@@ -1,6 +1,7 @@
 pub mod bridge;
 mod commands;
 pub mod error;
+pub mod updates;
 
 use bridge::NativeBridge;
 use commands::BridgeState;
@@ -38,6 +39,9 @@ pub fn run() -> tauri::Result<()> {
             commands::export_diagnostics,
             commands::launch_install,
             commands::open_install_folder,
+            commands::check_updates,
+            commands::install_app_update,
+            commands::activate_recipe_update,
         ])
         .run(tauri::generate_context!())
 }
