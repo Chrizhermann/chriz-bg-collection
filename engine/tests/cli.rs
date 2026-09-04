@@ -348,6 +348,7 @@ fn display_name_cli_default_is_exact_and_custom_name_reaches_the_registry() {
         .expect("replay renamed installation ledger");
     let frozen: Value = serde_json::from_slice(&replay.created().recipe_payload)
         .expect("parse frozen CLI identity");
+    assert_eq!(frozen["schema"], 2);
     assert_eq!(frozen["display_name"], "My Baldur's Gate");
     let cards =
         ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))

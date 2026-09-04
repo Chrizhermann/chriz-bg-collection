@@ -76,7 +76,9 @@ const GAME_PROFILE_DIRECTORY: &str = "game-builds";
 const STATE_DIRECTORY: &str = ".chriz";
 const ATTEMPTS_DIRECTORY: &str = "attempts";
 const ATTEMPT_RECEIPT_FILE: &str = "receipt.json";
+const LEGACY_CLI_FROZEN_RECIPE_SCHEMA: u32 = 1;
 const CLI_FROZEN_RECIPE_SCHEMA: u32 = 2;
+const LEGACY_DISPLAY_NAME: &str = "Chriz BG Collection";
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
 const EVIDENCE_DIRECTORY: &str = "evidence";
@@ -283,6 +285,7 @@ pub enum CampaignStatus {
 #[serde(deny_unknown_fields)]
 struct FrozenCliRecipe {
     schema: u32,
+    #[serde(default = "legacy_display_name")]
     display_name: String,
     collection: Collection,
     artifacts: BTreeMap<String, Artifact>,
@@ -294,6 +297,10 @@ struct FrozenCliRecipe {
     preset: String,
     bg1: FrozenSource,
     bg2: FrozenSource,
+}
+
+fn legacy_display_name() -> String {
+    LEGACY_DISPLAY_NAME.to_owned()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -1305,11 +1312,14 @@ fn validate_frozen_cli_recipe(
     created: &CampaignCreated,
     frozen: &FrozenCliRecipe,
 ) -> Result<(), CliError> {
-    if frozen.schema != CLI_FROZEN_RECIPE_SCHEMA {
+    if !matches!(
+        frozen.schema,
+        LEGACY_CLI_FROZEN_RECIPE_SCHEMA | CLI_FROZEN_RECIPE_SCHEMA
+    ) {
         return Err(CliError::new(
             "resume_unavailable",
             format!(
-                "unsupported frozen CLI recipe schema {}; expected {CLI_FROZEN_RECIPE_SCHEMA}",
+                "unsupported frozen CLI recipe schema {}; expected {LEGACY_CLI_FROZEN_RECIPE_SCHEMA} or {CLI_FROZEN_RECIPE_SCHEMA}",
                 frozen.schema
             ),
         ));
@@ -3374,13 +3384,24 @@ fn selection_choices(
 
 #[cfg(test)]
 mod tests {
+    use std::path::{Path, PathBuf};
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
+    use crate::digest::{plan_digest, selection_digest, sha256_bytes};
+    use crate::games::{GameProfiles, GameRole, Storefront};
     use crate::receipt::{ArtifactCacheOutcome, ArtifactReceipt};
+    use crate::recipe_view::evaluate;
+    use crate::resolve::Selection;
+    use crate::session::{CampaignCreated, SourceGameFingerprints};
     use crate::weidu::runner::{RunnerControl, RunnerControlHandle};
+    use crate::Manifest;
 
-    use super::{install_interrupt_handler_with, retain_first_acquisition_receipt};
+    use super::{
+        install_interrupt_handler_with, retain_first_acquisition_receipt, selection_choices,
+        validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource, SelectionOverrides,
+        CLI_FROZEN_RECIPE_SCHEMA,
+    };
 
     fn downloaded_artifact_receipt() -> ArtifactReceipt {
         ArtifactReceipt {
@@ -3391,6 +3412,103 @@ mod tests {
             length: 42,
             sha256: "ab".repeat(32),
             cache_outcome: ArtifactCacheOutcome::Downloaded,
+        }
+    }
+
+    fn frozen_recipe_fixture() -> FrozenCliRecipe {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest");
+        let manifest = Manifest::load(&root).expect("load frozen-recipe manifest fixture");
+        let choices = selection_choices(&manifest, "recommended", &SelectionOverrides::default())
+            .expect("select frozen-recipe fixture");
+        let evaluation = evaluate(
+            &manifest,
+            &Selection {
+                platform: "windows".to_owned(),
+                choices,
+            },
+        )
+        .expect("evaluate frozen-recipe fixture");
+        let profiles = GameProfiles::load(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/games/profiles"),
+        )
+        .expect("load game-profile fixtures");
+        FrozenCliRecipe {
+            schema: CLI_FROZEN_RECIPE_SCHEMA,
+            display_name: "Chriz Easy BG".to_owned(),
+            collection: manifest.collection,
+            artifacts: manifest.artifacts,
+            mods: manifest.mods,
+            presets: manifest.presets,
+            profiles,
+            plan: evaluation.plan,
+            normalized_selection: evaluation.normalized_selection,
+            preset: "recommended".to_owned(),
+            bg1: FrozenSource {
+                role: GameRole::BgeeSod,
+                storefront: Storefront::Steam,
+                root: PathBuf::from(r"C:\Legacy BG1"),
+                build: Some("2.7.3.0".to_owned()),
+                fingerprint: "11".repeat(32),
+            },
+            bg2: FrozenSource {
+                role: GameRole::Bg2ee,
+                storefront: Storefront::Steam,
+                root: PathBuf::from(r"C:\Legacy BG2"),
+                build: Some("2.7.3.0".to_owned()),
+                fingerprint: "22".repeat(32),
+            },
+        }
+    }
+
+    #[test]
+    fn schema_one_frozen_recipe_defaults_the_legacy_display_name_and_still_validates() {
+        let current = frozen_recipe_fixture();
+        let mut legacy = serde_json::to_value(&current).expect("serialize current frozen recipe");
+        legacy["schema"] = serde_json::json!(1);
+        legacy
+            .as_object_mut()
+            .expect("frozen recipe is an object")
+            .remove("display_name");
+        let payload = serde_json::to_vec(&legacy).expect("serialize legacy frozen recipe");
+
+        let frozen: FrozenCliRecipe =
+            serde_json::from_slice(&payload).expect("read schema-one frozen recipe");
+        assert_eq!(frozen.schema, 1);
+        assert_eq!(frozen.display_name, "Chriz BG Collection");
+
+        let managed = PathBuf::from(r"C:\Legacy Managed Install");
+        let envelope = b"legacy-envelope".to_vec();
+        let created = CampaignCreated {
+            install_id: "install-legacy".to_owned(),
+            attempt_id: "attempt-legacy".to_owned(),
+            managed_root: managed.clone(),
+            cache_root: PathBuf::from(r"C:\Legacy Cache"),
+            recipe_payload_sha256: sha256_bytes(&payload),
+            recipe_payload: payload,
+            recipe_envelope_sha256: sha256_bytes(&envelope),
+            recipe_envelope: envelope,
+            selection_sha256: selection_digest(&frozen.normalized_selection)
+                .expect("digest legacy selection"),
+            normalized_selection: frozen.normalized_selection.clone(),
+            plan_sha256: plan_digest(&frozen.plan).expect("digest legacy plan"),
+            source_games: SourceGameFingerprints {
+                bg1: frozen.bg1.fingerprint.clone(),
+                bg2: frozen.bg2.fingerprint.clone(),
+            },
+            artifact_identities: Vec::new(),
+            tool_identities: Vec::new(),
+            staged_bg1: managed.join("bg1"),
+            staged_bg2: managed.join("game"),
+        };
+        validate_frozen_cli_recipe(&created, &frozen)
+            .expect("schema-one frozen recipe remains resumable and reportable");
+
+        for unsupported in [0, 3] {
+            let mut rejected = frozen.clone();
+            rejected.schema = unsupported;
+            let error = validate_frozen_cli_recipe(&created, &rejected)
+                .expect_err("unsupported frozen schema must fail closed");
+            assert_eq!(error.code(), "resume_unavailable");
         }
     }
 
