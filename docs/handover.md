@@ -12,20 +12,33 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 ## Real-alpha status (2026-09-04)
 
 Branch `codex/installer-v0-real-alpha` is pushed. The installer engine and UI are
-functional, the final NSIS lifecycle smoke passed, and the public-alpha recipe validates
-and resolves **35 runs**. Notable ready pins include public CHRIZ-BG-MODPACK
-`0.2.0-alpha.1`, CHRIZ-SOD-REMIX `0.6.4`, Artisan's Kitpack `chriz-v1.3.1`, and Spell
-Revisions `v4.21-chriz.3`.
+functional, and the public-alpha recipe validates and resolves **35 runs**. All **30
+selected artifacts** have passed cold-cache acquisition, extraction, and payload
+verification. Notable ready pins include public CHRIZ-BG-MODPACK `0.2.0-alpha.1`,
+CHRIZ-SOD-REMIX `0.6.4`, Artisan's Kitpack `chriz-v1.3.1`, Spell Revisions
+`v4.21-chriz.3`, and public CHRIZ-BG-REBALANCE `v0.3.1` with its ten-component curated
+fresh selection.
 
-CHRIZ-BG-REBALANCE `v0.3.1` is public and pinned with its ten-component curated fresh
-selection. The detected Steam BG2 source is clean; the BG1 source is rejected for mod
-residue. These checks were read-only and no game directory was modified.
+Tasks 19, 20, and 23 are implemented: public-alpha omissions and evidence are
+release-enforced; immutable recipe envelopes, update classification, and packaging are in
+place; and the Tauri command surface includes restart-safe discovery and resume through the
+immutable campaign index. The final local NSIS lifecycle smoke passed for the **4,378,742
+byte** installer with SHA-256
+`4D10383926161B153005A046AB1B0A6C23BA4BD875992B1536FB872499F9D3BF`.
+
+There is **no full game-install acceptance and no public release yet**. The immediate E2E
+blocker is a genuinely clean Steam BG:EE+SoD 2.7.3 source; the detected Steam BG2 source is
+clean, while the available BG1 source is rejected for mod residue. These checks were
+read-only and no game directory was modified. Production Minisign and Tauri updater keys
+also remain to be provisioned, and Task 24's signed updater UI remains pending.
 
 Immediate next actions only:
 
-1. Obtain or restore a clean BG1 source.
+1. Obtain or restore a genuinely clean Steam BG:EE+SoD 2.7.3 source.
 2. Run the first full installer-driven clean EET build and focused smoke before the public
    installer release.
+3. Provision the production signing keys and complete the Task 24 updater UI before
+   publication.
 
 Other blocked items remain later work and are not expanded here. Older status sections
 below are retained as historical implementation context.

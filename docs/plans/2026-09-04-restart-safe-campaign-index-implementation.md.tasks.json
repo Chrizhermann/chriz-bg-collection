@@ -1,10 +1,10 @@
 {
   "planPath": "docs/plans/2026-09-04-restart-safe-campaign-index-implementation.md",
   "tasks": [
-    {"id": 1, "subject": "Task 1: Add the ledger-backed start index", "status": "pending"},
-    {"id": 2, "subject": "Task 2: Publish only after durable ledger identity", "status": "pending", "blockedBy": [1]},
-    {"id": 3, "subject": "Task 3: Resolve restarted resume through the index", "status": "pending", "blockedBy": [2]},
-    {"id": 4, "subject": "Task 4: Expose the single Resume action", "status": "pending", "blockedBy": [3]}
+    {"id": 1, "subject": "Task 1: Add the ledger-backed start index", "status": "completed"},
+    {"id": 2, "subject": "Task 2: Publish only after durable ledger identity", "status": "completed", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 3: Resolve restarted resume through the index", "status": "completed", "blockedBy": [2]},
+    {"id": 4, "subject": "Task 4: Expose the single Resume action", "status": "completed", "blockedBy": [3]}
   ],
-  "lastUpdated": "2026-09-04"
+  "lastUpdated": "2026-09-04T22:44:14+09:00"
 }
