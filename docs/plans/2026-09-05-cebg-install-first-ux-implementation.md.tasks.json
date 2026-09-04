@@ -1,6 +1,6 @@
 {
   "planPath": "docs/plans/2026-09-05-cebg-install-first-ux-implementation.md",
-  "lastUpdated": "2026-09-05T01:54:14+09:00",
+  "lastUpdated": "2026-09-05T02:17:52+09:00",
   "tasks": [
     {
       "id": 1,
@@ -29,13 +29,13 @@
     {
       "id": 5,
       "subject": "Task 5: Create a verified CEBG desktop shortcut",
-      "status": "in_progress",
+      "status": "completed",
       "blockedBy": [4]
     },
     {
       "id": 6,
       "subject": "Task 6: Verify the desktop UX and package",
-      "status": "pending",
+      "status": "in_progress",
       "blockedBy": [3, 4, 5]
     }
   ]
