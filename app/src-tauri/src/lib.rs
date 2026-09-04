@@ -1,5 +1,6 @@
 pub mod bridge;
 mod commands;
+pub mod consistency;
 pub mod error;
 pub mod shortcut;
 pub mod updates;
@@ -13,6 +14,7 @@ pub fn run() -> tauri::Result<()> {
     let startup_install_id = bridge::parse_startup_install_id(std::env::args_os());
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
             let resource_dir = app.path().resource_dir()?;
             let cache_dir = app.path().app_cache_dir()?;
@@ -24,6 +26,7 @@ pub fn run() -> tauri::Result<()> {
         })
         .invoke_handler(tauri::generate_handler![
             commands::bootstrap,
+            commands::select_profile,
             commands::installation_defaults,
             commands::discover_games,
             commands::choose_game_folder,
@@ -42,6 +45,7 @@ pub fn run() -> tauri::Result<()> {
             commands::list_managed_installations,
             commands::export_diagnostics,
             commands::launch_install,
+            commands::install_radar,
             commands::open_install_folder,
             commands::create_desktop_shortcut,
             commands::check_updates,

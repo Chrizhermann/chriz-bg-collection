@@ -58,6 +58,7 @@ pub struct ApplicationUpdateResponse {
     pub current_version: String,
     pub available_version: Option<String>,
     pub detail: String,
+    pub release_notes: Option<String>,
 }
 
 /// Recipe-relative status for one immutable managed campaign record.
@@ -81,6 +82,16 @@ pub struct UpdateCenterResponse {
     pub application: ApplicationUpdateResponse,
     pub recipe: RecipeUpdateResponse,
     pub managed_copies: Vec<ManagedCopyUpdateResponse>,
+    pub radar: Option<RadarUpdateResponse>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct RadarUpdateResponse {
+    pub state: String,
+    pub current_version: Option<String>,
+    pub available_version: Option<String>,
+    pub detail: String,
+    pub release_notes: Option<String>,
 }
 
 /// In-memory trust boundary for a checked recipe candidate.

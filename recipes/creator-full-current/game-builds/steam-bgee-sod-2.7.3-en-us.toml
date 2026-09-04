@@ -1,0 +1,97 @@
+schema = 1
+id = "steam-bgee-sod-2.7.3-en-us"
+role = "bgee_sod"
+storefront = "steam"
+locale = "en_US"
+executable = "Baldur.exe"
+product_version = "2.7.3.0"
+steam_app_id = 228280
+gog_game_ids = []
+required_files = [
+  "Baldur.exe",
+  "chitin.key",
+  "lang/en_US/dialog.tlk",
+  "engine.lua",
+  "data/25DEFLT.BIF",
+  "dlc/sod-dlc.zip",
+]
+sod_files = ["dlc/sod-dlc.zip"]
+fingerprint_files = ["Baldur.exe", "data/25DEFLT.BIF", "dlc/sod-dlc.zip"]
+
+[[inventory_surfaces]]
+path = "chitin.key"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "dialog.tlk"
+kind = "file"
+allow_missing = true
+
+[[inventory_surfaces]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "engine.lua"
+kind = "file"
+
+[[inventory_surfaces]]
+path = "override"
+kind = "tree"
+allow_missing = true
+
+[[inventory_surfaces]]
+path = "."
+kind = "matching"
+patterns = [
+  "setup-*",
+  "weidu.log",
+  "weidu.exe",
+  "*.debug",
+  "*.debug.log",
+  "dlcmerger",
+  "eet",
+  "stratagems",
+]
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "setup-dlcmerger*"
+recursive = false
+message = "Stale DLC Merger setup files are present."
+
+[[forbidden_residue_patterns]]
+surface = "."
+pattern = "dlcmerger"
+recursive = false
+message = "Stale DLC Merger 1.7 files are present."
+
+[[allowed_clean_variants]]
+id = "steam-2026-07-07"
+
+[[allowed_clean_variants.fingerprints]]
+path = "Baldur.exe"
+sha256 = "187f89e1033999b2c8eae6591641325ba012071030364767f42221ecae92372a"
+
+[[allowed_clean_variants.fingerprints]]
+path = "data/25DEFLT.BIF"
+sha256 = "ca6a661f32039134e74f43f7a756c16fec159936f767aa5bff2310624663ed0e"
+
+[[allowed_clean_variants.fingerprints]]
+path = "dlc/sod-dlc.zip"
+sha256 = "869323f46a752719456a0dfeefe480e583f193e51cf48ef65bc87dc7b9b5d19c"
+
+[[allowed_clean_variants.inventory]]
+path = "chitin.key"
+kind = "file"
+sha256 = "728f50c48187f3a095e262fc2cc9e43004b4519ae9b96dd6c2615aeae4f85bce"
+
+[[allowed_clean_variants.inventory]]
+path = "lang/en_US/dialog.tlk"
+kind = "file"
+sha256 = "1560daed5c26ba9fee774afc9fb04429a610e15e5ecf06b8006bb32c5e1f25a7"
+
+[[allowed_clean_variants.inventory]]
+path = "engine.lua"
+kind = "file"
+sha256 = "5b1e2f8f37095b7eaaf1fb3ace7c8a670de303d2c38acc8de7d6af4ccd89cda4"

@@ -1,0 +1,11 @@
+id = "safana"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Safana in Amn"
+tp2 = "Safana/Safana.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Safana in Amn: v0.5"

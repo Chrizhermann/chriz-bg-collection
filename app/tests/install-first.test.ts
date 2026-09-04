@@ -93,7 +93,7 @@ describe("CEBG install-first experience", () => {
 
     expect(getByRole(root, "heading", { level: 1, name: "Install Chriz Easy BG" })).toBeTruthy();
     expect(getAllByText(root, "Chriz Easy BG").length).toBeGreaterThan(0);
-    expect(getByText(root, "0.1 Alpha")).toBeTruthy();
+    expect(getByText(root, "0.1.0 Alpha 1")).toBeTruthy();
     expect(getByRole(root, "button", { name: "My installs" })).toBeTruthy();
     expect(getByRole(root, "button", { name: "Updates" })).toBeTruthy();
     expect(root.querySelector("aside")).toBeNull();

@@ -1,0 +1,11 @@
+id = "safana-snare-fix"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Remove Thief Set Snare (SPCL412) from Safana CRE files: 1"
+tp2 = "SAFANA_SNARE_FIX/SAFANA_SNARE_FIX.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Remove Thief Set Snare (SPCL412) from Safana CRE files: 1"

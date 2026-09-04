@@ -1,0 +1,11 @@
+id = "elem-prince-clab-fix"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Remove Elemental Prince Call (SPPR724) from Druid/Ranger CLAB tables: 1.0"
+tp2 = "ELEM_PRINCE_CLAB_FIX/Setup-ELEM_PRINCE_CLAB_FIX.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Remove Elemental Prince Call (SPPR724) from Druid/Ranger CLAB tables: 1.0"

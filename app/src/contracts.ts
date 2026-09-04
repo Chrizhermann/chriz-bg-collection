@@ -11,9 +11,12 @@ export type Route =
 
 export interface BackendStatus {
   readonly mode: "fixture" | "native";
+  readonly applicationVersion?: string;
   readonly engineVersion: string;
   readonly recipeVersion: string | null;
   readonly startupInstallId: string | null;
+  readonly profiles?: readonly { readonly id: string; readonly label: string; readonly description: string }[];
+  readonly selectedProfile?: string;
 }
 
 export interface InstallationDefaults {
@@ -211,6 +214,7 @@ export interface BuildSnapshot {
   readonly phases: readonly BuildPhase[];
   readonly logTail: readonly string[];
   readonly manualArchiveName: string | null;
+  readonly recoveryAction?: string;
 }
 
 export interface ManagedInstallation {
@@ -224,6 +228,13 @@ export interface ManagedInstallation {
   readonly available: boolean;
   readonly resumable: boolean;
   readonly recipeVersion?: string | null;
+  readonly radarVersion?: string | null;
+  readonly consistency?: {
+    readonly state: "matches" | "changed" | "unavailable";
+    readonly detail: string;
+    readonly componentCount: number;
+    readonly modCount: number;
+  };
 }
 
 export type AppUpdateState = "up-to-date" | "available" | "offline" | "invalid" | "unavailable";
@@ -235,6 +246,7 @@ export interface ApplicationUpdate {
   readonly currentVersion: string;
   readonly availableVersion: string | null;
   readonly detail: string;
+  readonly releaseNotes?: string;
 }
 
 export interface RecipeUpdateChange {
@@ -269,6 +281,13 @@ export interface UpdateSummary {
   readonly application: ApplicationUpdate;
   readonly recipe: RecipeUpdate;
   readonly managedCopies: readonly ManagedCopyUpdate[];
+  readonly radar?: {
+    readonly state: "up-to-date" | "available" | "not-installed" | "offline";
+    readonly currentVersion: string | null;
+    readonly availableVersion: string | null;
+    readonly detail: string;
+    readonly releaseNotes?: string;
+  };
 }
 
 export interface FixtureOptions {

@@ -1,0 +1,11 @@
+id = "cd-safsod"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Safana SoD Soundset"
+tp2 = "cd_safsod/cd_safsod.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Safana SoD Soundset"

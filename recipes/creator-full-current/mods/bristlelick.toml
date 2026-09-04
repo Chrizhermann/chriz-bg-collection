@@ -1,0 +1,11 @@
+id = "bristlelick"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Bristlelick—the gnoll companion for BGEE"
+tp2 = "Bristlelick/Bristlelick.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Bristlelick—the gnoll companion for BGEE: v2.4"

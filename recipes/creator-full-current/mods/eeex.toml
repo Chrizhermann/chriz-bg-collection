@@ -1,0 +1,43 @@
+id = "eeex"
+artifact_id = "eeex-1.2.0"
+name = "EEex"
+tp2 = "EEex/EEex.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Quick Menu Core"
+
+[[components]]
+id = 1
+name = "EEex"
+
+[[components]]
+id = 2
+name = "Enable effect menu module"
+
+[[components]]
+id = 3
+name = "Enable empty container module"
+
+[[components]]
+id = 4
+name = "Enable hotkey module"
+
+[[components]]
+id = 5
+name = "Enable scale module"
+
+[[components]]
+id = 6
+name = "Enable time step module"
+
+[[components]]
+id = 7
+name = "Enable timer module"
+
+[[components]]
+id = 8
+name = "Experimental - Use LuaJIT"

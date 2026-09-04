@@ -45,7 +45,7 @@ export function gamesScreen(
   next: () => void | Promise<void>,
 ): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("Step 1 of 5", "Find your games", "Choose clean source installations independently. Every freshness finding remains visible."));
+  page.append(screenIntro("", "Find your games", "Choose your original Baldur's Gate games. CEBG will check that they are ready to use."));
   const fields = element("div", "source-grid");
   const bg1 = candidateSelect("Baldur's Gate source", discovery.bg1Candidates, selectedBg1Id, () => onBrowse("bg1"));
   const bg2 = candidateSelect("Baldur's Gate II source", discovery.bg2Candidates, selectedBg2Id, () => onBrowse("bg2"));

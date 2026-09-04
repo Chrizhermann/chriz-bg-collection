@@ -1,0 +1,15 @@
+id = "tnt"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Improved trap detection: instant detection"
+tp2 = "tnt/tnt.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 2
+name = "Improved trap detection: instant detection: v8.40"
+
+[[components]]
+id = 14
+name = "Improved trap detection: core (REQUIRED for any of previous traps components to work): v8.40"

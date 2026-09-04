@@ -1,0 +1,27 @@
+id = "xan"
+artifact_id = "xan-19"
+name = "Xan NPC for Baldur's Gate II"
+tp2 = "Xan/xan.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Xan NPC MOD for Baldur's Gate II"
+
+[[components]]
+id = 1
+name = "Change Xan's class to Fighter/Mage"
+
+[[components]]
+id = 2
+name = "Change Xan's class to Mage"
+
+[[components]]
+id = 3
+name = "Change Xan's class to Sorcerer"
+
+[[components]]
+id = 4
+name = "Change Xan's class to Wild Mage (ToB only)"

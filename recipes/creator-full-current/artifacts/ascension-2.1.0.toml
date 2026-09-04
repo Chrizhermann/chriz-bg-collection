@@ -1,0 +1,32 @@
+id = "ascension-2.1.0"
+name = "Ascension"
+version = "2.1.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip"
+reference = "2.1.0"
+expected_filename = "ascension-2.1.0.zip"
+expected_length = 7826251
+sha256 = "bd0ee14b3770d56104eaa81287c88a8672afa889a35184fb308be12d6d707e77"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["ascension"]
+tp2_paths = ["ascension/Ascension.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/Ascension"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Gibberlings3/Ascension/releases/tag/2.1.0"
+reviewed_on = "2026-09-04"

@@ -1,0 +1,11 @@
+id = "eet-tweaks"
+artifact_id = "creator-full-private-extras-20260902"
+name = "XP for Traps, Spells and Lockpicking -> Vanilla friendly progressive: 1.12"
+tp2 = "EET_Tweaks/EET_Tweaks.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 2042
+name = "XP for Traps, Spells and Lockpicking -> Vanilla friendly progressive: 1.12"

@@ -1,0 +1,63 @@
+id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.3.1"
+name = "CHRIZ-BG-REBALANCE"
+tp2 = "setup-chriz-bg-rebalance.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 100
+name = "SCS: Telekinetic Storm save-for-half repair"
+
+[[components]]
+id = 101
+name = "SCS: restore Freedom scrolls to the Adventurer's Mart"
+
+[[components]]
+id = 120
+name = "SCS + Spell Revisions weapon-protection semantics repair"
+
+[[components]]
+id = 121
+name = "EEex + SCS ambient caster readiness"
+
+[[components]]
+id = 400
+name = "Cleric of Tempus weapon training"
+
+[[components]]
+id = 401
+name = "Cleric of Tempus Holy Power automatic compatibility"
+
+[[components]]
+id = 402
+name = "Cleric of Tempus Holy Power force true-doubling compatibility"
+
+[[components]]
+id = 403
+name = "Cleric of Tempus Holy Power force additive compatibility"
+
+[[components]]
+id = 404
+name = "Cleric of Tempus Chaos of Battle"
+
+[[components]]
+id = 405
+name = "Cleric of Tempus Divination toll"
+
+[[components]]
+id = 406
+name = "Cleric of Tempus engine-table APR variant"
+
+[[components]]
+id = 407
+name = "Cleric of Tempus EEex specialization APR variant"
+
+[[components]]
+id = 409
+name = "Cleric of Tempus EEex specialization APR migration repair"
+
+[[components]]
+id = 408
+name = "Cleric of Tempus updated descriptions"

@@ -25,7 +25,7 @@ export function technicalLog(
   }, "quiet");
   pause.textContent = paused ? "Resume auto-scroll" : "Pause auto-scroll";
   pause.setAttribute("aria-pressed", String(paused));
-  toolbar.append(pause, element("span", undefined, "Full history is retained by the backend."));
+  toolbar.append(pause, element("span", undefined, "Showing recent activity. Export diagnostics for the full log."));
   const output = element("pre");
   output.tabIndex = 0;
   output.textContent = lines.slice(-MAX_VISIBLE_LINES).join("\n");

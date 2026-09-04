@@ -1,0 +1,75 @@
+id = "ascension"
+artifact_id = "ascension-2.1.0"
+name = "Ascension"
+tp2 = "ascension/Ascension.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Rewritten Final Chapter of Throne of Bhaal"
+
+[[components]]
+id = 10
+name = "Balthazar can be redeemed"
+
+[[components]]
+id = 20
+name = "Improved Sarevok-Player Interactions"
+
+[[components]]
+id = 30
+name = "Improved Imoen-Player Interactions in Throne of Bhaal"
+
+[[components]]
+id = 50
+name = "Improved Slayer Transformation"
+
+[[components]]
+id = 60
+name = "David Gaider's expanded epilogues for Bioware NPCs"
+
+[[components]]
+id = 1000
+name = "Tougher Abazigal"
+
+[[components]]
+id = 1100
+name = "Tougher Balthazar"
+
+[[components]]
+id = 1200
+name = "Tougher Demogorgon"
+
+[[components]]
+id = 1300
+name = "Tougher Gromnir"
+
+[[components]]
+id = 1400
+name = "Tougher Illasera"
+
+[[components]]
+id = 1500
+name = "Tougher Yaga-Shura"
+
+[[components]]
+id = 2000
+name = "Full-body portrait for Bodhi"
+
+[[components]]
+id = 2100
+name = "Alternate Balthazar portrait, by Cuv"
+
+[[components]]
+id = 2300
+name = "Sharper portraits of Abazigal and Gromnir for the Enhanced Edition"
+
+[[components]]
+id = 2400
+name = "Slightly improved cutscenes"
+
+[[components]]
+id = 40
+name = "Restored Bhaalspawn Powers: 2.1.0"

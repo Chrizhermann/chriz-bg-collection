@@ -32,6 +32,7 @@ export type AppAction =
   | { readonly type: "set-installation-name"; readonly name: string }
   | { readonly type: "set-destination"; readonly path: string; readonly automatic?: boolean }
   | { readonly type: "set-feature"; readonly id: string; readonly selected: boolean }
+  | { readonly type: "reset-selection" }
   | { readonly type: "evaluation-requested"; readonly revision: number }
   | { readonly type: "evaluation-resolved"; readonly revision: number; readonly evaluation: SelectionEvaluation }
   | { readonly type: "review-frozen"; readonly review: FrozenReview }
@@ -76,6 +77,8 @@ export function reduce(state: AppState, action: AppAction): AppState {
       return { ...state, destinationPath: action.path, destinationAutomatic: action.automatic ?? state.destinationAutomatic };
     case "set-feature":
       return { ...state, selection: { ...state.selection, features: { ...state.selection.features, [action.id]: action.selected } } };
+    case "reset-selection":
+      return { ...state, selection: { platform: state.selection.platform, features: {}, inputs: {} }, frozenReview: null };
     case "evaluation-requested":
       return { ...state, evaluationRevision: action.revision, evaluationPending: true };
     case "evaluation-resolved":

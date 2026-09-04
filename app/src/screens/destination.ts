@@ -10,9 +10,9 @@ export function destinationScreen(
   next: () => void,
 ): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("Step 2 of 5", "Choose a destination", "This must be a new campaign copy outside the store-managed source folders."));
+  page.append(screenIntro("", "Choose an install location", "Choose a new folder for Chriz Easy BG."));
   const field = element("div", "card field-card");
-  const label = element("label", undefined, "Campaign destination");
+  const label = element("label", undefined, "Install location");
   label.htmlFor = "destination-path";
   const input = element("input");
   input.id = "destination-path";
@@ -20,10 +20,10 @@ export function destinationScreen(
   input.value = evaluation.path;
   input.addEventListener("change", () => void onInspect(input.value));
   const browseButton = actionButton("Browse…", onBrowse, "quiet");
-  browseButton.setAttribute("aria-label", "Browse for campaign destination");
+  browseButton.setAttribute("aria-label", "Browse for install location");
   const space = evaluation.requiredSpace !== undefined && evaluation.availableSpace !== undefined
-    ? element("p", "path", `Requires ${evaluation.requiredSpace}; ${evaluation.availableSpace} available in this fixture.`)
-    : element("p", "path", "Exact disk-space and write checks are repeated immediately before the build starts.");
+    ? element("p", "path", `Requires ${evaluation.requiredSpace}; ${evaluation.availableSpace} available.`)
+    : element("p", "path", "CEBG will check the available space before installing.");
   field.append(label, input, browseButton, space);
   const continueButton = actionButton("Continue", next);
   continueButton.disabled = !evaluation.safe;

@@ -205,6 +205,8 @@ pub struct ManagedReport {
 /// Inputs for one new CLI-owned managed installation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstallCommandRequest {
+    /// Desktop application version, when this request originates from the launcher.
+    pub application_version: Option<String>,
     /// Validated player-facing installation name frozen for review and resume.
     pub display_name: String,
     /// Executable recipe directory to freeze.
@@ -286,6 +288,10 @@ pub enum CampaignStatus {
 struct FrozenCliRecipe {
     schema: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    release_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    application_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     display_name: Option<String>,
     collection: Collection,
     artifacts: BTreeMap<String, Artifact>,
@@ -300,6 +306,12 @@ struct FrozenCliRecipe {
 }
 
 impl FrozenCliRecipe {
+    fn recipe_version(&self, digest: &str) -> String {
+        self.release_version
+            .clone()
+            .unwrap_or_else(|| format!("local-{}", &digest[..12]))
+    }
+
     fn effective_display_name(&self) -> &str {
         self.display_name.as_deref().unwrap_or(LEGACY_DISPLAY_NAME)
     }
@@ -313,6 +325,32 @@ struct FrozenSource {
     root: PathBuf,
     build: Option<String>,
     fingerprint: String,
+}
+
+/// Reads optional release metadata bundled with the recipe. The exact version is frozen
+/// into the campaign payload; older local recipes retain their content-hash identity.
+pub fn recipe_release_version(root: &Path) -> Result<Option<String>, CliError> {
+    let path = root.join("release.json");
+    let bytes = match fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(CliError::new("recipe_release_invalid", error.to_string())),
+    };
+    if bytes.len() > 16 * 1024 {
+        return Err(CliError::new(
+            "recipe_release_invalid",
+            "release metadata exceeds 16 KiB",
+        ));
+    }
+    #[derive(Deserialize)]
+    struct Release {
+        version: String,
+    }
+    let release: Release = serde_json::from_slice(&bytes)
+        .map_err(|error| CliError::new("recipe_release_invalid", error.to_string()))?;
+    semver::Version::parse(&release.version)
+        .map_err(|error| CliError::new("recipe_release_invalid", error.to_string()))?;
+    Ok(Some(release.version))
 }
 
 struct PreparedInstall {
@@ -628,6 +666,8 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
     let frozen = FrozenCliRecipe {
         schema: CLI_FROZEN_RECIPE_SCHEMA,
+        release_version: recipe_release_version(&manifest.root)?,
+        application_version: request.application_version.clone(),
         display_name: Some(request.display_name.clone()),
         collection: manifest.collection.clone(),
         artifacts: manifest.artifacts.clone(),
@@ -1056,7 +1096,7 @@ fn validate_report_receipt(
     if receipt.versions.application.trim().is_empty()
         || receipt.versions.engine.trim().is_empty()
         || receipt.versions.manifest_schema != frozen.collection.schema
-        || receipt.versions.recipe != format!("local-{}", &created.recipe_payload_sha256[..12])
+        || receipt.versions.recipe != frozen.recipe_version(&created.recipe_payload_sha256)
     {
         return Err("receipt versions contradict the frozen recipe".to_owned());
     }
@@ -1112,12 +1152,13 @@ fn validate_report_receipt(
 fn validate_cli_identifier(value: &str, label: &str) -> Result<(), String> {
     if value.is_empty()
         || value.len() > 128
+        || matches!(value, "." | "..")
         || !value
             .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
     {
         return Err(format!(
-            "{label} must contain 1-128 ASCII letters, digits, '-' or '_'"
+            "{label} must contain 1-128 ASCII letters, digits, '-', '_' or '.' and cannot be a dot path"
         ));
     }
     Ok(())
@@ -1753,6 +1794,7 @@ struct ReconciledAttemptEvidence<'a> {
     before: &'a [u8],
     after: &'a [u8],
     debug: &'a [u8],
+    terminal_evidence: &'a [u8],
     prompts: Vec<PromptReceipt>,
 }
 
@@ -2524,6 +2566,8 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
         let after = read_optional_weidu_log(self.target_root(run.target))?;
         write_bytes_once(&attempt.evidence_root.join(AFTER_LOG_FILE), &after)?;
         let debug = read_direct_file(&attempt.evidence_root.join(DEBUG_LOG_FILE))?;
+        let stdout = read_direct_file(&attempt.evidence_root.join(STDOUT_FILE))?;
+        let terminal_evidence = select_terminal_evidence(&debug, &stdout);
         let prompts = self.verified_prompt_receipts(attempt, &prepared)?;
         let process: Option<ProcessEvidence> =
             read_optional_json(&attempt.evidence_root.join(PROCESS_RESULT_FILE))?;
@@ -2537,7 +2581,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             }
         }
 
-        let statuses = parse_terminal_statuses(&String::from_utf8_lossy(&debug));
+        let statuses = parse_terminal_statuses(&String::from_utf8_lossy(terminal_evidence));
         let proven_no_process_change = before == after
             && statuses.is_empty()
             && process
@@ -2562,7 +2606,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
                 match reconcile_weidu(
                     &String::from_utf8_lossy(&before),
                     &String::from_utf8_lossy(&after),
-                    &String::from_utf8_lossy(&debug),
+                    &String::from_utf8_lossy(terminal_evidence),
                     &ExpectedRun {
                         tp2: self
                             .frozen
@@ -2624,6 +2668,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
                         before: &before,
                         after: &after,
                         debug: &debug,
+                        terminal_evidence,
                         prompts,
                     },
                 )?;
@@ -2644,6 +2689,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
             before,
             after,
             debug,
+            terminal_evidence,
             prompts,
         } = evidence;
         let before_entries =
@@ -2662,7 +2708,7 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
         }
         let stdout = read_direct_file(&attempt.evidence_root.join(STDOUT_FILE))?;
         let stderr = read_direct_file(&attempt.evidence_root.join(STDERR_FILE))?;
-        let statuses = parse_terminal_statuses(&String::from_utf8_lossy(debug));
+        let statuses = parse_terminal_statuses(&String::from_utf8_lossy(terminal_evidence));
         let warnings = statuses
             .iter()
             .enumerate()
@@ -2887,10 +2933,16 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
         let final_state = self.load_named_evidence("final", "state")?;
         let evidence = ReceiptEvidence {
             versions: ReceiptVersions {
-                application: env!("CARGO_PKG_VERSION").to_owned(),
+                application: self
+                    .frozen
+                    .application_version
+                    .clone()
+                    .unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_owned()),
                 engine: env!("CARGO_PKG_VERSION").to_owned(),
                 manifest_schema: self.frozen.collection.schema,
-                recipe: format!("local-{}", &self.created.recipe_payload_sha256[..12]),
+                recipe: self
+                    .frozen
+                    .recipe_version(&self.created.recipe_payload_sha256),
             },
             source_games: vec![self.frozen.bg1.receipt(), self.frozen.bg2.receipt()],
             artifacts,
@@ -3154,6 +3206,20 @@ fn log_component_receipt(entry: &LogEntry) -> LogComponentReceipt {
     }
 }
 
+fn select_terminal_evidence<'a>(debug: &'a [u8], stdout: &'a [u8]) -> &'a [u8] {
+    // Setup-name WeiDU can redirect its detailed log to SETUP-<MOD>.DEBUG beside the
+    // executable even when --log names our attempt path. In that case the requested
+    // debug file contains only a header, while the runner's synchronized per-attempt
+    // stdout still contains WeiDU's terminal component results. Never replace partial
+    // debug evidence: a single recognized marker keeps debug authoritative so missing
+    // or contradictory component results continue to fail closed.
+    if parse_terminal_statuses(&String::from_utf8_lossy(debug)).is_empty() {
+        stdout
+    } else {
+        debug
+    }
+}
+
 fn inferred_success_exit_code(statuses: &[DebugStatus]) -> Option<i32> {
     if statuses.is_empty()
         || statuses.iter().any(|status| {
@@ -3412,9 +3478,9 @@ mod tests {
     use crate::Manifest;
 
     use super::{
-        install_interrupt_handler_with, retain_first_acquisition_receipt, selection_choices,
-        validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource, SelectionOverrides,
-        CLI_FROZEN_RECIPE_SCHEMA,
+        install_interrupt_handler_with, retain_first_acquisition_receipt, select_terminal_evidence,
+        selection_choices, validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource,
+        SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
     };
 
     fn downloaded_artifact_receipt() -> ArtifactReceipt {
@@ -3447,6 +3513,8 @@ mod tests {
         )
         .expect("load game-profile fixtures");
         FrozenCliRecipe {
+            release_version: None,
+            application_version: None,
             schema: CLI_FROZEN_RECIPE_SCHEMA,
             display_name: Some("Chriz Easy BG".to_owned()),
             collection: manifest.collection,
@@ -3575,6 +3643,25 @@ mod tests {
         assert!(error
             .to_string()
             .contains("differs from its first acquisition evidence"));
+    }
+
+    #[test]
+    fn terminal_evidence_uses_stdout_only_for_a_marker_free_debug_stub() {
+        let debug = b"WeiDU v 24900 Log\ncommand line only\n";
+        let stdout = b"SUCCESSFULLY INSTALLED component 1\n";
+
+        assert!(std::ptr::eq(
+            select_terminal_evidence(debug, stdout),
+            stdout
+        ));
+    }
+
+    #[test]
+    fn partial_debug_terminal_evidence_cannot_be_replaced_by_stdout() {
+        let debug = b"SUCCESSFULLY INSTALLED component 1\n";
+        let stdout = b"SUCCESSFULLY INSTALLED component 1\nSUCCESSFULLY INSTALLED component 2\n";
+
+        assert!(std::ptr::eq(select_terminal_evidence(debug, stdout), debug));
     }
 
     #[test]

@@ -1,0 +1,32 @@
+id = "hidden-gameplay-options-5.2"
+name = "Hidden Gameplay Options"
+version = "5.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Argent77/A7-HiddenGameplayOptions/releases/download/v5.2/win-A7-HiddenGameplayOptions-v5.2.zip"
+reference = "v5.2"
+expected_filename = "win-A7-HiddenGameplayOptions-v5.2.zip"
+expected_length = 2767061
+sha256 = "a7b173f811b1d2137e9836e8dec7118e0a1927ff85e26956d211e0d1b53c2029"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["HiddenGameplayOptions"]
+tp2_paths = ["HiddenGameplayOptions/HiddenGameplayOptions.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Argent77/A7-HiddenGameplayOptions"
+license = "Fetch-only official upstream release; the collection does not redistribute it"
+url = "https://github.com/Argent77/A7-HiddenGameplayOptions/releases/tag/v5.2"
+reviewed_on = "2026-09-04"

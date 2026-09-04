@@ -1,0 +1,1134 @@
+schema = 2
+game_build = "2.7.3.0"
+
+[[runs]]
+run_id = "dlcmerger-bg1"
+mod_id = "dlcmerger"
+phase = "bg1-preparation"
+components = [1]
+args = []
+
+[[runs]]
+run_id = "eefixpack-bg1"
+mod_id = "eefixpack"
+phase = "bg1-preparation"
+components = [0, 2]
+args = []
+
+[[runs]]
+run_id = "bg1ub-bg1"
+mod_id = "bg1ub"
+phase = "bg1-preparation"
+components = [0, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 29, 30, 32, 33, 34]
+args = []
+
+[[runs]]
+run_id = "bg1npc-bg1"
+mod_id = "bg1npc"
+phase = "bg1-preparation"
+components = [0, 10, 90, 111, 120, 130, 240, 160, 200]
+args = []
+
+[[runs]]
+run_id = "eefixpack-bg2"
+mod_id = "eefixpack"
+phase = "bg2-preparation"
+components = [0, 2]
+args = []
+
+[[runs]]
+run_id = "eet-bg2"
+mod_id = "eet"
+phase = "eet-initialization"
+components = [0, 100]
+args = [
+  { kind = "literal", value = "--args-list" },
+  { kind = "literal", value = "p" },
+  { kind = "staged-root", value = "bg1" },
+]
+
+[[runs]]
+run_id = "eeex-bg2"
+mod_id = "eeex"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+args = []
+
+[[runs]]
+run_id = "bubb-spell-menu-bg2"
+mod_id = "bubb-spell-menu"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "bggo-bg2"
+mod_id = "bggo"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "hidden-gameplay-options-bg2"
+mod_id = "hidden-gameplay-options"
+phase = "main"
+components = [10, 11, 12, 13, 14, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 39, 300, 301, 103]
+args = []
+
+[[runs]]
+run_id = "rr-bg2"
+mod_id = "rr"
+phase = "main"
+components = [0, 3, 7, 8, 11, 12, 999]
+args = []
+
+[[runs]]
+run_id = "branwen-bg2"
+mod_id = "branwen"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "evandra-bg2"
+mod_id = "evandra"
+phase = "main"
+components = [0, 1]
+args = []
+
+[[runs]]
+run_id = "fade-bg2"
+mod_id = "fade"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "paina-bg2"
+mod_id = "paina"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "bristlelick-bg2"
+mod_id = "bristlelick"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "sarahtob-bg2"
+mod_id = "sarahtob"
+phase = "main"
+components = [1]
+args = []
+
+[[runs]]
+run_id = "aura-bg1-2-eet-bg2"
+mod_id = "aura-bg1-2-eet"
+phase = "main"
+components = [2, 3, 7, 14]
+args = []
+
+[[runs]]
+run_id = "ub-bg2"
+mod_id = "ub"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+args = []
+
+[[runs]]
+run_id = "xan-bg2"
+mod_id = "xan"
+phase = "main"
+components = [0, 1]
+args = []
+
+[[runs]]
+run_id = "yeslicknpc-bg2"
+mod_id = "yeslicknpc"
+phase = "main"
+components = [1]
+args = []
+
+[[runs]]
+run_id = "ajantisbg2-bg2"
+mod_id = "ajantisbg2"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "sirene-bg2-bg2"
+mod_id = "sirene-bg2"
+phase = "main"
+components = [0, 2, 5]
+args = []
+
+[[runs]]
+run_id = "wings-bg2"
+mod_id = "wings"
+phase = "main"
+components = [0, 1]
+args = []
+
+[[runs]]
+run_id = "ascension-bg2"
+mod_id = "ascension"
+phase = "main"
+components = [0, 10, 20, 30, 40, 50, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2100, 2300, 2400]
+args = []
+
+[[runs]]
+run_id = "spell-rev-bg2"
+mod_id = "spell-rev"
+phase = "main"
+components = [0, 10, 20, 30, 55, 65]
+args = []
+
+[[runs]]
+run_id = "artisanskitpack-bg2"
+mod_id = "artisanskitpack"
+phase = "main"
+components = [1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005, 1007, 1000, 1001, 1008, 1009, 1100, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001, 30001]
+args = []
+
+[[runs]]
+run_id = "bardicwonders-bg2"
+mod_id = "bardicwonders"
+phase = "main"
+components = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1009, 1010, 1011, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 1008]
+args = []
+
+[[runs]]
+run_id = "artisanskitpack-npc-bg2"
+mod_id = "artisanskitpack-npc"
+phase = "main"
+components = [1101, 2001, 3101, 3102, 5102, 7102, 7104, 21001, 20002]
+args = []
+
+[[runs]]
+run_id = "spell-rev-bg2-2"
+mod_id = "spell-rev"
+phase = "main"
+components = [60]
+args = []
+
+[[runs]]
+run_id = "iwdification-bg2"
+mod_id = "iwdification"
+phase = "main"
+components = [10, 60, 130, 140, 190, 120, 30, 40]
+args = []
+
+[[runs]]
+run_id = "iepbanters-bg2"
+mod_id = "iepbanters"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 8]
+args = []
+
+[[runs]]
+run_id = "crossmodbg2-bg2"
+mod_id = "crossmodbg2"
+phase = "main"
+components = [0, 1, 2]
+args = []
+
+[[runs]]
+run_id = "artisanskitpack-tweak-bg2"
+mod_id = "artisanskitpack-tweak"
+phase = "main"
+components = [20101, 1209, 7203]
+args = []
+
+[[runs]]
+run_id = "bastil-bg2"
+mod_id = "bastil"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "aw-pf-soundsets-bg2"
+mod_id = "aw-pf-soundsets"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "hq-soundclips-bg2ee-bg2"
+mod_id = "hq-soundclips-bg2ee"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "c0warlock-bg2"
+mod_id = "c0warlock"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "randomiser-bg2"
+mod_id = "randomiser"
+phase = "main"
+components = [530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100]
+args = []
+
+[[runs]]
+run_id = "cdtweaks-bg2"
+mod_id = "cdtweaks"
+phase = "main"
+components = [40, 60, 110, 130, 170, 180, 2010, 1010, 1020, 1040, 1080, 1120, 1142, 1161, 1180, 1220, 1227, 1230, 1257, 2020, 2030, 2035, 2090, 2152, 2170, 2192, 2210, 2250, 2260, 2270, 2280, 2292, 2312, 2391, 2400, 2410, 2420, 2430, 2500, 2520, 2540, 2590, 2999, 3000, 3008, 3010, 3040, 3080, 3090, 3100, 3110, 3290, 3300, 3310, 3354, 3390, 4031, 4041, 4050, 4061, 4071]
+args = []
+
+[[runs]]
+run_id = "stratagems-bg2"
+mod_id = "stratagems"
+phase = "main"
+components = [2000, 2500, 2510, 3041, 3505, 3540, 4000, 4115, 4210, 4215, 4218, 4250, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
+args = []
+
+[[runs]]
+run_id = "artisanskitpack-tweak-bg2-2"
+mod_id = "artisanskitpack-tweak"
+phase = "main"
+components = [12012, 3202, 3302, 8204]
+args = []
+
+[[runs]]
+run_id = "eet-end-bg2"
+mod_id = "eet-end"
+phase = "eet-finalization"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "bard-spell-fix-bg2"
+mod_id = "bard-spell-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "evandra-sorcerer-bg2"
+mod_id = "evandra-sorcerer"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "safana-snare-fix-bg2"
+mod_id = "safana-snare-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-rumikp-bg2"
+mod_id = "cd-rumikp"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "alora-bg2"
+mod_id = "alora"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "ak-multiclass-profs-fix-bg2"
+mod_id = "ak-multiclass-profs-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-ajanti-bg2"
+mod_id = "cd-ajanti"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-dranger-bg2"
+mod_id = "cd-dranger"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "edwin-amulet-fix-bg2"
+mod_id = "edwin-amulet-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "aura-balance-patch-bg2"
+mod_id = "aura-balance-patch"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "bearskin-mail-fix-bg2"
+mod_id = "bearskin-mail-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "aura-balance-patch-spells-bg2"
+mod_id = "aura-balance-patch-spells"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "branwen-hammer-fix-bg2"
+mod_id = "branwen-hammer-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "bg2ee-eet-fixpack-bg2"
+mod_id = "bg2ee-eet-fixpack"
+phase = "post-eet-end"
+components = [101, 200, 100, 400, 300]
+args = []
+
+[[runs]]
+run_id = "xan-soundset-bg2"
+mod_id = "xan-soundset"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "rondak-bg2"
+mod_id = "rondak"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "elem-prince-clab-fix-bg2"
+mod_id = "elem-prince-clab-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "bardicwonders-bg2-2"
+mod_id = "bardicwonders"
+phase = "post-eet-end"
+components = [1012, 3001]
+args = []
+
+[[runs]]
+run_id = "zg-bgnpc-voices-bgs-bg2"
+mod_id = "zg-bgnpc-voices-bgs"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "eet-tweaks-bg2"
+mod_id = "eet-tweaks"
+phase = "post-eet-end"
+components = [2042]
+args = []
+
+[[runs]]
+run_id = "cd-neera-bg2"
+mod_id = "cd-neera"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-safana-bg2"
+mod_id = "cd-safana"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-jahebg1-bg2"
+mod_id = "cd-jahebg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-jahebg2-bg2"
+mod_id = "cd-jahebg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-yeslick-bg2"
+mod_id = "cd-yeslick"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-edwnbg1-bg2"
+mod_id = "cd-edwnbg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-edwnbg2-bg2"
+mod_id = "cd-edwnbg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-aerie-bg2"
+mod_id = "cd-aerie"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-safsod-bg2"
+mod_id = "cd-safsod"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 410, 430, 440, 450]
+args = []
+
+[[runs]]
+run_id = "safana-bg2"
+mod_id = "safana"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "safana-late-spells-bg2"
+mod_id = "safana-late-spells"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-imobg1-bg2"
+mod_id = "cd-imobg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-imobg2-bg2"
+mod_id = "cd-imobg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "priest-delivery-fix-bg2"
+mod_id = "priest-delivery-fix"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cdtweaks-bg2-2"
+mod_id = "cdtweaks"
+phase = "post-eet-end"
+components = [3347]
+args = []
+
+[[runs]]
+run_id = "akcb-berserker-bg2"
+mod_id = "akcb-berserker"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "cd-sarevok-bg2"
+mod_id = "cd-sarevok"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "chriz-sod-remix-bg2"
+mod_id = "chriz-sod-remix"
+phase = "post-eet-end"
+components = [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 185, 190, 195, 200, 210, 220, 900]
+args = []
+
+[[runs]]
+run_id = "eeexremote-bg2"
+mod_id = "eeexremote"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-rebalance-bg2"
+mod_id = "chriz-bg-rebalance"
+phase = "post-eet-end"
+components = [101]
+args = []
+
+[[runs]]
+run_id = "chriz-sod-remix-bg2-2"
+mod_id = "chriz-sod-remix"
+phase = "post-eet-end"
+components = [175, 230, 240, 250]
+args = []
+
+[[runs]]
+run_id = "abettorhlarebalance-bg2"
+mod_id = "abettorhlarebalance"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-rebalance-bg2-2"
+mod_id = "chriz-bg-rebalance"
+phase = "post-eet-end"
+components = [400, 401, 404, 405, 407, 408, 409]
+args = []
+
+[[runs]]
+run_id = "tnt-bg2"
+mod_id = "tnt"
+phase = "post-eet-end"
+components = [2, 14]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-rebalance-bg2-3"
+mod_id = "chriz-bg-rebalance"
+phase = "post-eet-end"
+components = [120, 121]
+args = []
+
+[[runs]]
+run_id = "buffbot-bg2"
+mod_id = "buffbot"
+phase = "post-eet-end"
+components = [1, 0]
+args = []
+
+[[features]]
+id = "feature:creator-full:all-components"
+title = "Christopher's full current collection"
+description = "Maintained-source replay of Christopher's full current stack; old modpack component 600 and the retired Safana-to-Abettor/Aura-to-Bard monolith branches remain explicit unmapped differences."
+category = "creator-full"
+decision = "mandatory"
+readiness = "experimental"
+components = [
+  { run_id = "dlcmerger-bg1", component = 1 },
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+  { run_id = "bg1ub-bg1", component = 0 },
+  { run_id = "bg1ub-bg1", component = 11 },
+  { run_id = "bg1ub-bg1", component = 12 },
+  { run_id = "bg1ub-bg1", component = 13 },
+  { run_id = "bg1ub-bg1", component = 14 },
+  { run_id = "bg1ub-bg1", component = 16 },
+  { run_id = "bg1ub-bg1", component = 17 },
+  { run_id = "bg1ub-bg1", component = 18 },
+  { run_id = "bg1ub-bg1", component = 19 },
+  { run_id = "bg1ub-bg1", component = 21 },
+  { run_id = "bg1ub-bg1", component = 22 },
+  { run_id = "bg1ub-bg1", component = 29 },
+  { run_id = "bg1ub-bg1", component = 30 },
+  { run_id = "bg1ub-bg1", component = 32 },
+  { run_id = "bg1ub-bg1", component = 33 },
+  { run_id = "bg1ub-bg1", component = 34 },
+  { run_id = "bg1npc-bg1", component = 0 },
+  { run_id = "bg1npc-bg1", component = 10 },
+  { run_id = "bg1npc-bg1", component = 90 },
+  { run_id = "bg1npc-bg1", component = 111 },
+  { run_id = "bg1npc-bg1", component = 120 },
+  { run_id = "bg1npc-bg1", component = 130 },
+  { run_id = "bg1npc-bg1", component = 240 },
+  { run_id = "bg1npc-bg1", component = 160 },
+  { run_id = "bg1npc-bg1", component = 200 },
+  { run_id = "eefixpack-bg2", component = 0 },
+  { run_id = "eefixpack-bg2", component = 2 },
+  { run_id = "eet-bg2", component = 0 },
+  { run_id = "eet-bg2", component = 100 },
+  { run_id = "eeex-bg2", component = 0 },
+  { run_id = "eeex-bg2", component = 1 },
+  { run_id = "eeex-bg2", component = 2 },
+  { run_id = "eeex-bg2", component = 3 },
+  { run_id = "eeex-bg2", component = 4 },
+  { run_id = "eeex-bg2", component = 5 },
+  { run_id = "eeex-bg2", component = 6 },
+  { run_id = "eeex-bg2", component = 7 },
+  { run_id = "eeex-bg2", component = 8 },
+  { run_id = "bubb-spell-menu-bg2", component = 0 },
+  { run_id = "bggo-bg2", component = 0 },
+  { run_id = "hidden-gameplay-options-bg2", component = 10 },
+  { run_id = "hidden-gameplay-options-bg2", component = 11 },
+  { run_id = "hidden-gameplay-options-bg2", component = 12 },
+  { run_id = "hidden-gameplay-options-bg2", component = 13 },
+  { run_id = "hidden-gameplay-options-bg2", component = 14 },
+  { run_id = "hidden-gameplay-options-bg2", component = 16 },
+  { run_id = "hidden-gameplay-options-bg2", component = 18 },
+  { run_id = "hidden-gameplay-options-bg2", component = 19 },
+  { run_id = "hidden-gameplay-options-bg2", component = 20 },
+  { run_id = "hidden-gameplay-options-bg2", component = 22 },
+  { run_id = "hidden-gameplay-options-bg2", component = 23 },
+  { run_id = "hidden-gameplay-options-bg2", component = 24 },
+  { run_id = "hidden-gameplay-options-bg2", component = 25 },
+  { run_id = "hidden-gameplay-options-bg2", component = 27 },
+  { run_id = "hidden-gameplay-options-bg2", component = 28 },
+  { run_id = "hidden-gameplay-options-bg2", component = 29 },
+  { run_id = "hidden-gameplay-options-bg2", component = 30 },
+  { run_id = "hidden-gameplay-options-bg2", component = 32 },
+  { run_id = "hidden-gameplay-options-bg2", component = 33 },
+  { run_id = "hidden-gameplay-options-bg2", component = 34 },
+  { run_id = "hidden-gameplay-options-bg2", component = 35 },
+  { run_id = "hidden-gameplay-options-bg2", component = 36 },
+  { run_id = "hidden-gameplay-options-bg2", component = 37 },
+  { run_id = "hidden-gameplay-options-bg2", component = 39 },
+  { run_id = "hidden-gameplay-options-bg2", component = 300 },
+  { run_id = "hidden-gameplay-options-bg2", component = 301 },
+  { run_id = "hidden-gameplay-options-bg2", component = 103 },
+  { run_id = "rr-bg2", component = 0 },
+  { run_id = "rr-bg2", component = 3 },
+  { run_id = "rr-bg2", component = 7 },
+  { run_id = "rr-bg2", component = 8 },
+  { run_id = "rr-bg2", component = 11 },
+  { run_id = "rr-bg2", component = 12 },
+  { run_id = "rr-bg2", component = 999 },
+  { run_id = "branwen-bg2", component = 0 },
+  { run_id = "evandra-bg2", component = 0 },
+  { run_id = "evandra-bg2", component = 1 },
+  { run_id = "fade-bg2", component = 0 },
+  { run_id = "paina-bg2", component = 0 },
+  { run_id = "bristlelick-bg2", component = 0 },
+  { run_id = "sarahtob-bg2", component = 1 },
+  { run_id = "aura-bg1-2-eet-bg2", component = 2 },
+  { run_id = "aura-bg1-2-eet-bg2", component = 3 },
+  { run_id = "aura-bg1-2-eet-bg2", component = 7 },
+  { run_id = "aura-bg1-2-eet-bg2", component = 14 },
+  { run_id = "ub-bg2", component = 0 },
+  { run_id = "ub-bg2", component = 1 },
+  { run_id = "ub-bg2", component = 2 },
+  { run_id = "ub-bg2", component = 3 },
+  { run_id = "ub-bg2", component = 4 },
+  { run_id = "ub-bg2", component = 5 },
+  { run_id = "ub-bg2", component = 6 },
+  { run_id = "ub-bg2", component = 7 },
+  { run_id = "ub-bg2", component = 8 },
+  { run_id = "ub-bg2", component = 9 },
+  { run_id = "ub-bg2", component = 10 },
+  { run_id = "ub-bg2", component = 12 },
+  { run_id = "ub-bg2", component = 15 },
+  { run_id = "ub-bg2", component = 17 },
+  { run_id = "ub-bg2", component = 18 },
+  { run_id = "ub-bg2", component = 19 },
+  { run_id = "ub-bg2", component = 20 },
+  { run_id = "ub-bg2", component = 21 },
+  { run_id = "ub-bg2", component = 22 },
+  { run_id = "ub-bg2", component = 23 },
+  { run_id = "ub-bg2", component = 24 },
+  { run_id = "ub-bg2", component = 25 },
+  { run_id = "xan-bg2", component = 0 },
+  { run_id = "xan-bg2", component = 1 },
+  { run_id = "yeslicknpc-bg2", component = 1 },
+  { run_id = "ajantisbg2-bg2", component = 0 },
+  { run_id = "sirene-bg2-bg2", component = 0 },
+  { run_id = "sirene-bg2-bg2", component = 2 },
+  { run_id = "sirene-bg2-bg2", component = 5 },
+  { run_id = "wings-bg2", component = 0 },
+  { run_id = "wings-bg2", component = 1 },
+  { run_id = "ascension-bg2", component = 0 },
+  { run_id = "ascension-bg2", component = 10 },
+  { run_id = "ascension-bg2", component = 20 },
+  { run_id = "ascension-bg2", component = 30 },
+  { run_id = "ascension-bg2", component = 40 },
+  { run_id = "ascension-bg2", component = 50 },
+  { run_id = "ascension-bg2", component = 1000 },
+  { run_id = "ascension-bg2", component = 1100 },
+  { run_id = "ascension-bg2", component = 1200 },
+  { run_id = "ascension-bg2", component = 1300 },
+  { run_id = "ascension-bg2", component = 1400 },
+  { run_id = "ascension-bg2", component = 1500 },
+  { run_id = "ascension-bg2", component = 2000 },
+  { run_id = "ascension-bg2", component = 2100 },
+  { run_id = "ascension-bg2", component = 2300 },
+  { run_id = "ascension-bg2", component = 2400 },
+  { run_id = "spell-rev-bg2", component = 0 },
+  { run_id = "spell-rev-bg2", component = 10 },
+  { run_id = "spell-rev-bg2", component = 20 },
+  { run_id = "spell-rev-bg2", component = 30 },
+  { run_id = "spell-rev-bg2", component = 55 },
+  { run_id = "spell-rev-bg2", component = 65 },
+  { run_id = "artisanskitpack-bg2", component = 1 },
+  { run_id = "artisanskitpack-bg2", component = 2 },
+  { run_id = "artisanskitpack-bg2", component = 20000 },
+  { run_id = "artisanskitpack-bg2", component = 20001 },
+  { run_id = "artisanskitpack-bg2", component = 8001 },
+  { run_id = "artisanskitpack-bg2", component = 8101 },
+  { run_id = "artisanskitpack-bg2", component = 8002 },
+  { run_id = "artisanskitpack-bg2", component = 8004 },
+  { run_id = "artisanskitpack-bg2", component = 10002 },
+  { run_id = "artisanskitpack-bg2", component = 10001 },
+  { run_id = "artisanskitpack-bg2", component = 10003 },
+  { run_id = "artisanskitpack-bg2", component = 10004 },
+  { run_id = "artisanskitpack-bg2", component = 1003 },
+  { run_id = "artisanskitpack-bg2", component = 1006 },
+  { run_id = "artisanskitpack-bg2", component = 1004 },
+  { run_id = "artisanskitpack-bg2", component = 1005 },
+  { run_id = "artisanskitpack-bg2", component = 1007 },
+  { run_id = "artisanskitpack-bg2", component = 1000 },
+  { run_id = "artisanskitpack-bg2", component = 1001 },
+  { run_id = "artisanskitpack-bg2", component = 1008 },
+  { run_id = "artisanskitpack-bg2", component = 1009 },
+  { run_id = "artisanskitpack-bg2", component = 1100 },
+  { run_id = "artisanskitpack-bg2", component = 2000 },
+  { run_id = "artisanskitpack-bg2", component = 2010 },
+  { run_id = "artisanskitpack-bg2", component = 2011 },
+  { run_id = "artisanskitpack-bg2", component = 2012 },
+  { run_id = "artisanskitpack-bg2", component = 2002 },
+  { run_id = "artisanskitpack-bg2", component = 3000 },
+  { run_id = "artisanskitpack-bg2", component = 3010 },
+  { run_id = "artisanskitpack-bg2", component = 3003 },
+  { run_id = "artisanskitpack-bg2", component = 3011 },
+  { run_id = "artisanskitpack-bg2", component = 3004 },
+  { run_id = "artisanskitpack-bg2", component = 3001 },
+  { run_id = "artisanskitpack-bg2", component = 3002 },
+  { run_id = "artisanskitpack-bg2", component = 3005 },
+  { run_id = "artisanskitpack-bg2", component = 5100 },
+  { run_id = "artisanskitpack-bg2", component = 5110 },
+  { run_id = "artisanskitpack-bg2", component = 5001 },
+  { run_id = "artisanskitpack-bg2", component = 5002 },
+  { run_id = "artisanskitpack-bg2", component = 7004 },
+  { run_id = "artisanskitpack-bg2", component = 7006 },
+  { run_id = "artisanskitpack-bg2", component = 7001 },
+  { run_id = "artisanskitpack-bg2", component = 7002 },
+  { run_id = "artisanskitpack-bg2", component = 7003 },
+  { run_id = "artisanskitpack-bg2", component = 7005 },
+  { run_id = "artisanskitpack-bg2", component = 9001 },
+  { run_id = "artisanskitpack-bg2", component = 30001 },
+  { run_id = "bardicwonders-bg2", component = 1001 },
+  { run_id = "bardicwonders-bg2", component = 1002 },
+  { run_id = "bardicwonders-bg2", component = 1003 },
+  { run_id = "bardicwonders-bg2", component = 1004 },
+  { run_id = "bardicwonders-bg2", component = 1005 },
+  { run_id = "bardicwonders-bg2", component = 1006 },
+  { run_id = "bardicwonders-bg2", component = 1007 },
+  { run_id = "bardicwonders-bg2", component = 1009 },
+  { run_id = "bardicwonders-bg2", component = 1010 },
+  { run_id = "bardicwonders-bg2", component = 1011 },
+  { run_id = "bardicwonders-bg2", component = 2001 },
+  { run_id = "bardicwonders-bg2", component = 2002 },
+  { run_id = "bardicwonders-bg2", component = 2003 },
+  { run_id = "bardicwonders-bg2", component = 2004 },
+  { run_id = "bardicwonders-bg2", component = 2005 },
+  { run_id = "bardicwonders-bg2", component = 2006 },
+  { run_id = "bardicwonders-bg2", component = 2007 },
+  { run_id = "bardicwonders-bg2", component = 2008 },
+  { run_id = "bardicwonders-bg2", component = 1008 },
+  { run_id = "artisanskitpack-npc-bg2", component = 1101 },
+  { run_id = "artisanskitpack-npc-bg2", component = 2001 },
+  { run_id = "artisanskitpack-npc-bg2", component = 3101 },
+  { run_id = "artisanskitpack-npc-bg2", component = 3102 },
+  { run_id = "artisanskitpack-npc-bg2", component = 5102 },
+  { run_id = "artisanskitpack-npc-bg2", component = 7102 },
+  { run_id = "artisanskitpack-npc-bg2", component = 7104 },
+  { run_id = "artisanskitpack-npc-bg2", component = 21001 },
+  { run_id = "artisanskitpack-npc-bg2", component = 20002 },
+  { run_id = "spell-rev-bg2-2", component = 60 },
+  { run_id = "iwdification-bg2", component = 10 },
+  { run_id = "iwdification-bg2", component = 60 },
+  { run_id = "iwdification-bg2", component = 130 },
+  { run_id = "iwdification-bg2", component = 140 },
+  { run_id = "iwdification-bg2", component = 190 },
+  { run_id = "iwdification-bg2", component = 120 },
+  { run_id = "iwdification-bg2", component = 30 },
+  { run_id = "iwdification-bg2", component = 40 },
+  { run_id = "iepbanters-bg2", component = 0 },
+  { run_id = "iepbanters-bg2", component = 1 },
+  { run_id = "iepbanters-bg2", component = 2 },
+  { run_id = "iepbanters-bg2", component = 3 },
+  { run_id = "iepbanters-bg2", component = 4 },
+  { run_id = "iepbanters-bg2", component = 5 },
+  { run_id = "iepbanters-bg2", component = 8 },
+  { run_id = "crossmodbg2-bg2", component = 0 },
+  { run_id = "crossmodbg2-bg2", component = 1 },
+  { run_id = "crossmodbg2-bg2", component = 2 },
+  { run_id = "artisanskitpack-tweak-bg2", component = 20101 },
+  { run_id = "artisanskitpack-tweak-bg2", component = 1209 },
+  { run_id = "artisanskitpack-tweak-bg2", component = 7203 },
+  { run_id = "bastil-bg2", component = 0 },
+  { run_id = "aw-pf-soundsets-bg2", component = 0 },
+  { run_id = "hq-soundclips-bg2ee-bg2", component = 0 },
+  { run_id = "c0warlock-bg2", component = 0 },
+  { run_id = "randomiser-bg2", component = 530 },
+  { run_id = "randomiser-bg2", component = 540 },
+  { run_id = "randomiser-bg2", component = 560 },
+  { run_id = "randomiser-bg2", component = 570 },
+  { run_id = "randomiser-bg2", component = 9000 },
+  { run_id = "randomiser-bg2", component = 10200 },
+  { run_id = "randomiser-bg2", component = 10210 },
+  { run_id = "randomiser-bg2", component = 10300 },
+  { run_id = "randomiser-bg2", component = 1100 },
+  { run_id = "cdtweaks-bg2", component = 40 },
+  { run_id = "cdtweaks-bg2", component = 60 },
+  { run_id = "cdtweaks-bg2", component = 110 },
+  { run_id = "cdtweaks-bg2", component = 130 },
+  { run_id = "cdtweaks-bg2", component = 170 },
+  { run_id = "cdtweaks-bg2", component = 180 },
+  { run_id = "cdtweaks-bg2", component = 2010 },
+  { run_id = "cdtweaks-bg2", component = 1010 },
+  { run_id = "cdtweaks-bg2", component = 1020 },
+  { run_id = "cdtweaks-bg2", component = 1040 },
+  { run_id = "cdtweaks-bg2", component = 1080 },
+  { run_id = "cdtweaks-bg2", component = 1120 },
+  { run_id = "cdtweaks-bg2", component = 1142 },
+  { run_id = "cdtweaks-bg2", component = 1161 },
+  { run_id = "cdtweaks-bg2", component = 1180 },
+  { run_id = "cdtweaks-bg2", component = 1220 },
+  { run_id = "cdtweaks-bg2", component = 1227 },
+  { run_id = "cdtweaks-bg2", component = 1230 },
+  { run_id = "cdtweaks-bg2", component = 1257 },
+  { run_id = "cdtweaks-bg2", component = 2020 },
+  { run_id = "cdtweaks-bg2", component = 2030 },
+  { run_id = "cdtweaks-bg2", component = 2035 },
+  { run_id = "cdtweaks-bg2", component = 2090 },
+  { run_id = "cdtweaks-bg2", component = 2152 },
+  { run_id = "cdtweaks-bg2", component = 2170 },
+  { run_id = "cdtweaks-bg2", component = 2192 },
+  { run_id = "cdtweaks-bg2", component = 2210 },
+  { run_id = "cdtweaks-bg2", component = 2250 },
+  { run_id = "cdtweaks-bg2", component = 2260 },
+  { run_id = "cdtweaks-bg2", component = 2270 },
+  { run_id = "cdtweaks-bg2", component = 2280 },
+  { run_id = "cdtweaks-bg2", component = 2292 },
+  { run_id = "cdtweaks-bg2", component = 2312 },
+  { run_id = "cdtweaks-bg2", component = 2391 },
+  { run_id = "cdtweaks-bg2", component = 2400 },
+  { run_id = "cdtweaks-bg2", component = 2410 },
+  { run_id = "cdtweaks-bg2", component = 2420 },
+  { run_id = "cdtweaks-bg2", component = 2430 },
+  { run_id = "cdtweaks-bg2", component = 2500 },
+  { run_id = "cdtweaks-bg2", component = 2520 },
+  { run_id = "cdtweaks-bg2", component = 2540 },
+  { run_id = "cdtweaks-bg2", component = 2590 },
+  { run_id = "cdtweaks-bg2", component = 2999 },
+  { run_id = "cdtweaks-bg2", component = 3000 },
+  { run_id = "cdtweaks-bg2", component = 3008 },
+  { run_id = "cdtweaks-bg2", component = 3010 },
+  { run_id = "cdtweaks-bg2", component = 3040 },
+  { run_id = "cdtweaks-bg2", component = 3080 },
+  { run_id = "cdtweaks-bg2", component = 3090 },
+  { run_id = "cdtweaks-bg2", component = 3100 },
+  { run_id = "cdtweaks-bg2", component = 3110 },
+  { run_id = "cdtweaks-bg2", component = 3290 },
+  { run_id = "cdtweaks-bg2", component = 3300 },
+  { run_id = "cdtweaks-bg2", component = 3310 },
+  { run_id = "cdtweaks-bg2", component = 3354 },
+  { run_id = "cdtweaks-bg2", component = 3390 },
+  { run_id = "cdtweaks-bg2", component = 4031 },
+  { run_id = "cdtweaks-bg2", component = 4041 },
+  { run_id = "cdtweaks-bg2", component = 4050 },
+  { run_id = "cdtweaks-bg2", component = 4061 },
+  { run_id = "cdtweaks-bg2", component = 4071 },
+  { run_id = "stratagems-bg2", component = 2000 },
+  { run_id = "stratagems-bg2", component = 2500 },
+  { run_id = "stratagems-bg2", component = 2510 },
+  { run_id = "stratagems-bg2", component = 3041 },
+  { run_id = "stratagems-bg2", component = 3505 },
+  { run_id = "stratagems-bg2", component = 3540 },
+  { run_id = "stratagems-bg2", component = 4000 },
+  { run_id = "stratagems-bg2", component = 4115 },
+  { run_id = "stratagems-bg2", component = 4210 },
+  { run_id = "stratagems-bg2", component = 4215 },
+  { run_id = "stratagems-bg2", component = 4218 },
+  { run_id = "stratagems-bg2", component = 4250 },
+  { run_id = "stratagems-bg2", component = 5900 },
+  { run_id = "stratagems-bg2", component = 6000 },
+  { run_id = "stratagems-bg2", component = 6010 },
+  { run_id = "stratagems-bg2", component = 6030 },
+  { run_id = "stratagems-bg2", component = 6040 },
+  { run_id = "stratagems-bg2", component = 6100 },
+  { run_id = "stratagems-bg2", component = 6200 },
+  { run_id = "stratagems-bg2", component = 6300 },
+  { run_id = "stratagems-bg2", component = 6310 },
+  { run_id = "stratagems-bg2", component = 6320 },
+  { run_id = "stratagems-bg2", component = 6500 },
+  { run_id = "stratagems-bg2", component = 6510 },
+  { run_id = "stratagems-bg2", component = 6520 },
+  { run_id = "stratagems-bg2", component = 6540 },
+  { run_id = "stratagems-bg2", component = 6550 },
+  { run_id = "stratagems-bg2", component = 6560 },
+  { run_id = "stratagems-bg2", component = 6570 },
+  { run_id = "stratagems-bg2", component = 6580 },
+  { run_id = "stratagems-bg2", component = 6590 },
+  { run_id = "stratagems-bg2", component = 6800 },
+  { run_id = "stratagems-bg2", component = 6810 },
+  { run_id = "stratagems-bg2", component = 6820 },
+  { run_id = "stratagems-bg2", component = 6830 },
+  { run_id = "stratagems-bg2", component = 6840 },
+  { run_id = "stratagems-bg2", component = 6850 },
+  { run_id = "stratagems-bg2", component = 7000 },
+  { run_id = "stratagems-bg2", component = 7010 },
+  { run_id = "stratagems-bg2", component = 7020 },
+  { run_id = "stratagems-bg2", component = 7030 },
+  { run_id = "stratagems-bg2", component = 7040 },
+  { run_id = "stratagems-bg2", component = 7050 },
+  { run_id = "stratagems-bg2", component = 7060 },
+  { run_id = "stratagems-bg2", component = 7070 },
+  { run_id = "stratagems-bg2", component = 7080 },
+  { run_id = "stratagems-bg2", component = 7090 },
+  { run_id = "stratagems-bg2", component = 7100 },
+  { run_id = "stratagems-bg2", component = 7110 },
+  { run_id = "stratagems-bg2", component = 7130 },
+  { run_id = "stratagems-bg2", component = 7140 },
+  { run_id = "stratagems-bg2", component = 7150 },
+  { run_id = "stratagems-bg2", component = 7200 },
+  { run_id = "stratagems-bg2", component = 7210 },
+  { run_id = "stratagems-bg2", component = 7220 },
+  { run_id = "stratagems-bg2", component = 7230 },
+  { run_id = "stratagems-bg2", component = 7250 },
+  { run_id = "stratagems-bg2", component = 7900 },
+  { run_id = "stratagems-bg2", component = 8010 },
+  { run_id = "stratagems-bg2", component = 8020 },
+  { run_id = "stratagems-bg2", component = 8040 },
+  { run_id = "stratagems-bg2", component = 8050 },
+  { run_id = "stratagems-bg2", component = 8060 },
+  { run_id = "stratagems-bg2", component = 8070 },
+  { run_id = "stratagems-bg2", component = 8080 },
+  { run_id = "stratagems-bg2", component = 8085 },
+  { run_id = "stratagems-bg2", component = 8100 },
+  { run_id = "stratagems-bg2", component = 8110 },
+  { run_id = "stratagems-bg2", component = 8120 },
+  { run_id = "stratagems-bg2", component = 8130 },
+  { run_id = "stratagems-bg2", component = 8140 },
+  { run_id = "stratagems-bg2", component = 8150 },
+  { run_id = "stratagems-bg2", component = 8160 },
+  { run_id = "stratagems-bg2", component = 8170 },
+  { run_id = "stratagems-bg2", component = 8180 },
+  { run_id = "stratagems-bg2", component = 8190 },
+  { run_id = "artisanskitpack-tweak-bg2-2", component = 12012 },
+  { run_id = "artisanskitpack-tweak-bg2-2", component = 3202 },
+  { run_id = "artisanskitpack-tweak-bg2-2", component = 3302 },
+  { run_id = "artisanskitpack-tweak-bg2-2", component = 8204 },
+  { run_id = "eet-end-bg2", component = 0 },
+  { run_id = "bard-spell-fix-bg2", component = 0 },
+  { run_id = "evandra-sorcerer-bg2", component = 0 },
+  { run_id = "safana-snare-fix-bg2", component = 0 },
+  { run_id = "cd-rumikp-bg2", component = 0 },
+  { run_id = "alora-bg2", component = 0 },
+  { run_id = "ak-multiclass-profs-fix-bg2", component = 0 },
+  { run_id = "cd-ajanti-bg2", component = 0 },
+  { run_id = "cd-dranger-bg2", component = 0 },
+  { run_id = "edwin-amulet-fix-bg2", component = 0 },
+  { run_id = "aura-balance-patch-bg2", component = 0 },
+  { run_id = "bearskin-mail-fix-bg2", component = 0 },
+  { run_id = "aura-balance-patch-spells-bg2", component = 0 },
+  { run_id = "branwen-hammer-fix-bg2", component = 0 },
+  { run_id = "bg2ee-eet-fixpack-bg2", component = 101 },
+  { run_id = "bg2ee-eet-fixpack-bg2", component = 200 },
+  { run_id = "bg2ee-eet-fixpack-bg2", component = 100 },
+  { run_id = "bg2ee-eet-fixpack-bg2", component = 400 },
+  { run_id = "bg2ee-eet-fixpack-bg2", component = 300 },
+  { run_id = "xan-soundset-bg2", component = 0 },
+  { run_id = "rondak-bg2", component = 0 },
+  { run_id = "elem-prince-clab-fix-bg2", component = 0 },
+  { run_id = "bardicwonders-bg2-2", component = 1012 },
+  { run_id = "bardicwonders-bg2-2", component = 3001 },
+  { run_id = "zg-bgnpc-voices-bgs-bg2", component = 0 },
+  { run_id = "eet-tweaks-bg2", component = 2042 },
+  { run_id = "cd-neera-bg2", component = 0 },
+  { run_id = "cd-safana-bg2", component = 0 },
+  { run_id = "cd-jahebg1-bg2", component = 0 },
+  { run_id = "cd-jahebg2-bg2", component = 0 },
+  { run_id = "cd-yeslick-bg2", component = 0 },
+  { run_id = "cd-edwnbg1-bg2", component = 0 },
+  { run_id = "cd-edwnbg2-bg2", component = 0 },
+  { run_id = "cd-aerie-bg2", component = 0 },
+  { run_id = "cd-safsod-bg2", component = 0 },
+  { run_id = "chriz-bg-modpack-bg2", component = 110 },
+  { run_id = "chriz-bg-modpack-bg2", component = 130 },
+  { run_id = "chriz-bg-modpack-bg2", component = 140 },
+  { run_id = "chriz-bg-modpack-bg2", component = 170 },
+  { run_id = "chriz-bg-modpack-bg2", component = 190 },
+  { run_id = "chriz-bg-modpack-bg2", component = 192 },
+  { run_id = "chriz-bg-modpack-bg2", component = 193 },
+  { run_id = "chriz-bg-modpack-bg2", component = 194 },
+  { run_id = "chriz-bg-modpack-bg2", component = 195 },
+  { run_id = "chriz-bg-modpack-bg2", component = 196 },
+  { run_id = "chriz-bg-modpack-bg2", component = 197 },
+  { run_id = "chriz-bg-modpack-bg2", component = 198 },
+  { run_id = "chriz-bg-modpack-bg2", component = 410 },
+  { run_id = "chriz-bg-modpack-bg2", component = 430 },
+  { run_id = "chriz-bg-modpack-bg2", component = 440 },
+  { run_id = "chriz-bg-modpack-bg2", component = 450 },
+  { run_id = "safana-bg2", component = 0 },
+  { run_id = "safana-late-spells-bg2", component = 0 },
+  { run_id = "cd-imobg1-bg2", component = 0 },
+  { run_id = "cd-imobg2-bg2", component = 0 },
+  { run_id = "priest-delivery-fix-bg2", component = 0 },
+  { run_id = "cdtweaks-bg2-2", component = 3347 },
+  { run_id = "akcb-berserker-bg2", component = 0 },
+  { run_id = "cd-sarevok-bg2", component = 0 },
+  { run_id = "chriz-sod-remix-bg2", component = 100 },
+  { run_id = "chriz-sod-remix-bg2", component = 110 },
+  { run_id = "chriz-sod-remix-bg2", component = 120 },
+  { run_id = "chriz-sod-remix-bg2", component = 130 },
+  { run_id = "chriz-sod-remix-bg2", component = 140 },
+  { run_id = "chriz-sod-remix-bg2", component = 150 },
+  { run_id = "chriz-sod-remix-bg2", component = 145 },
+  { run_id = "chriz-sod-remix-bg2", component = 160 },
+  { run_id = "chriz-sod-remix-bg2", component = 170 },
+  { run_id = "chriz-sod-remix-bg2", component = 180 },
+  { run_id = "chriz-sod-remix-bg2", component = 185 },
+  { run_id = "chriz-sod-remix-bg2", component = 190 },
+  { run_id = "chriz-sod-remix-bg2", component = 195 },
+  { run_id = "chriz-sod-remix-bg2", component = 200 },
+  { run_id = "chriz-sod-remix-bg2", component = 210 },
+  { run_id = "chriz-sod-remix-bg2", component = 220 },
+  { run_id = "chriz-sod-remix-bg2", component = 900 },
+  { run_id = "eeexremote-bg2", component = 0 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 101 },
+  { run_id = "chriz-sod-remix-bg2-2", component = 175 },
+  { run_id = "chriz-sod-remix-bg2-2", component = 230 },
+  { run_id = "chriz-sod-remix-bg2-2", component = 240 },
+  { run_id = "chriz-sod-remix-bg2-2", component = 250 },
+  { run_id = "abettorhlarebalance-bg2", component = 0 },
+  { run_id = "chriz-bg-rebalance-bg2-2", component = 400 },
+  { run_id = "chriz-bg-rebalance-bg2-2", component = 401 },
+  { run_id = "chriz-bg-rebalance-bg2-2", component = 404 },
+  { run_id = "chriz-bg-rebalance-bg2-2", component = 405 },
+  { run_id = "chriz-bg-rebalance-bg2-2", component = 407 },
+  { run_id = "chriz-bg-rebalance-bg2-2", component = 408 },
+  { run_id = "chriz-bg-rebalance-bg2-2", component = 409 },
+  { run_id = "tnt-bg2", component = 2 },
+  { run_id = "tnt-bg2", component = 14 },
+  { run_id = "chriz-bg-rebalance-bg2-3", component = 120 },
+  { run_id = "chriz-bg-rebalance-bg2-3", component = 121 },
+  { run_id = "buffbot-bg2", component = 1 },
+  { run_id = "buffbot-bg2", component = 0 },
+]

@@ -29,6 +29,7 @@ export interface Backend {
   // This is the UI adapter boundary, not the eventual Tauri wire shape. Task 23
   // may map snake_case command payloads without leaking transport casing here.
   getStatus(): Promise<BackendStatus>;
+  selectProfile(profileId: string): Promise<BackendStatus>;
   getInstallationDefaults(): Promise<InstallationDefaults>;
   discoverGames(): Promise<GameDiscovery>;
   chooseGameFolder(role: GameRole): Promise<GameCandidate | null>;
@@ -58,6 +59,7 @@ export interface Backend {
   launchInstall(installId: string): Promise<void>;
   openInstallFolder(installId: string): Promise<void>;
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
+  installRadar(installId: string): Promise<void>;
   getUpdates(): Promise<UpdateSummary>;
   installAppUpdate(version: string): Promise<void>;
   activateRecipeUpdate(version: string): Promise<void>;
@@ -72,9 +74,12 @@ export type EventChannelFactory = (onMessage: (event: unknown) => void) => unkno
 
 type BootstrapWire = {
   readonly mode: "native";
+  readonly application_version?: string;
   readonly engine_version: string;
   readonly recipe_version: string | null;
   readonly startup_install_id: string | null;
+  readonly profiles?: BackendStatus["profiles"];
+  readonly selected_profile?: string;
 };
 
 type GameCandidateWire = {
@@ -151,6 +156,13 @@ type ManagedInstallationWire = {
   readonly available: boolean;
   readonly resumable: boolean;
   readonly recipe_version?: string | null;
+  readonly radar_version?: string | null;
+  readonly consistency?: {
+    readonly state: "matches" | "changed" | "unavailable";
+    readonly detail: string;
+    readonly component_count: number;
+    readonly mod_count: number;
+  } | null;
 };
 
 type UpdateSummaryWire = {
@@ -161,6 +173,7 @@ type UpdateSummaryWire = {
     readonly current_version: string;
     readonly available_version: string | null;
     readonly detail: string;
+    readonly release_notes?: string | null;
   };
   readonly recipe: {
     readonly state: UpdateSummary["recipe"]["state"];
@@ -184,6 +197,13 @@ type UpdateSummaryWire = {
     readonly state: UpdateSummary["managedCopies"][number]["state"];
     readonly detail: string;
   }[];
+  readonly radar?: {
+    readonly state: "up-to-date" | "available" | "not-installed" | "offline";
+    readonly current_version: string | null;
+    readonly available_version: string | null;
+    readonly detail: string;
+    readonly release_notes?: string | null;
+  } | null;
 };
 
 type RunSnapshotWire = {
@@ -285,9 +305,21 @@ export class NativeBackend implements Backend {
     const status = await this.#command<BootstrapWire>("bootstrap");
     return {
       mode: status.mode,
+      applicationVersion: status.application_version,
       engineVersion: status.engine_version,
       recipeVersion: status.recipe_version,
       startupInstallId: status.startup_install_id,
+      profiles: status.profiles,
+      selectedProfile: status.selected_profile,
+    };
+  }
+
+  async selectProfile(profileId: string): Promise<BackendStatus> {
+    const status = await this.#command<BootstrapWire>("select_profile", { profileId });
+    return {
+      mode: status.mode, applicationVersion: status.application_version, engineVersion: status.engine_version,
+      recipeVersion: status.recipe_version, startupInstallId: status.startup_install_id,
+      profiles: status.profiles, selectedProfile: status.selected_profile,
     };
   }
 
@@ -419,6 +451,8 @@ export class NativeBackend implements Backend {
       launch_path: launchPath,
       completed_at_millis: completedAtMillis,
       recipe_version: recipeVersion,
+      radar_version: radarVersion,
+      consistency,
       ...installation
     }) => ({
       ...installation,
@@ -426,6 +460,13 @@ export class NativeBackend implements Backend {
       launchPath,
       completedAtMillis,
       recipeVersion,
+      radarVersion,
+      consistency: consistency == null ? undefined : {
+        state: consistency.state,
+        detail: consistency.detail,
+        componentCount: consistency.component_count,
+        modCount: consistency.mod_count,
+      },
     }));
   }
 
@@ -441,6 +482,10 @@ export class NativeBackend implements Backend {
     return this.#command("create_desktop_shortcut", { installId });
   }
 
+  async installRadar(installId: string): Promise<void> {
+    await this.#command("install_radar", { installId });
+  }
+
   async getUpdates(): Promise<UpdateSummary> {
     const update = await this.#command<UpdateSummaryWire>("check_updates");
     return {
@@ -451,6 +496,7 @@ export class NativeBackend implements Backend {
         currentVersion: update.application.current_version,
         availableVersion: update.application.available_version,
         detail: update.application.detail,
+        releaseNotes: update.application.release_notes ?? undefined,
       },
       recipe: {
         state: update.recipe.state,
@@ -474,6 +520,13 @@ export class NativeBackend implements Backend {
         state: copy.state,
         detail: copy.detail,
       })),
+      radar: update.radar == null ? undefined : {
+        state: update.radar.state,
+        currentVersion: update.radar.current_version,
+        availableVersion: update.radar.available_version,
+        detail: update.radar.detail,
+        releaseNotes: update.radar.release_notes ?? undefined,
+      },
     };
   }
 
@@ -532,7 +585,7 @@ export class FixtureBackend implements Backend {
   }
 
   getStatus(): Promise<BackendStatus> {
-    return Promise.resolve({ mode: "fixture", engineVersion: "0.1.0", recipeVersion: "2026.09-fixture", startupInstallId: null });
+    return Promise.resolve({ mode: "fixture", applicationVersion: "0.1.0-alpha.1", engineVersion: "0.1.0", recipeVersion: "2026.09-fixture", startupInstallId: null });
   }
 
   discoverGames(): Promise<GameDiscovery> {
@@ -550,6 +603,10 @@ export class FixtureBackend implements Backend {
         { id: "bg2-store", label: "BGII:EE — verify storefront", path: "C:\\Fixture\\BG2EE Other", storefront: "gog", build: "2.7.3.0", freshness: "unverified-storefront", eligible: false, findings: ["This storefront layout has not been verified yet."] },
       ],
     });
+  }
+
+  selectProfile(_profileId: string): Promise<BackendStatus> {
+    return this.getStatus();
   }
 
   getInstallationDefaults(): Promise<InstallationDefaults> {
@@ -711,6 +768,10 @@ export class FixtureBackend implements Backend {
 
   createDesktopShortcut(_installId: string): Promise<{ readonly path: string }> {
     return Promise.resolve({ path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" });
+  }
+
+  installRadar(_installId: string): Promise<void> {
+    return Promise.resolve();
   }
 
   getUpdates(): Promise<UpdateSummary> {

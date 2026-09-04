@@ -1,0 +1,11 @@
+id = "branwen"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Branwen BG2 NPC mod for players and modders"
+tp2 = "Branwen/branwen.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Branwen BG2 NPC mod for players and modders: v8pre"

@@ -1,0 +1,27 @@
+id = "bg2ee-eet-fixpack"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Branwen BG2: Kit Fix (applies BG1 kit to BG2 CREs): 1.0"
+tp2 = "BG2EE-EET-Fixpack/BG2EE-EET-Fixpack.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 101
+name = "Branwen BG2: Kit Fix (applies BG1 kit to BG2 CREs): 1.0"
+
+[[components]]
+id = 200
+name = "EEex NPC Stat Transfer: BG1 tome bonuses carry to BG2 companions [requires EEex]: 1.0"
+
+[[components]]
+id = 100
+name = "Ajantis BG2: Kit Fix (applies BG1 kit to BG2 CREs): 1.0"
+
+[[components]]
+id = 400
+name = "Edwin Spell Slot Rebalance: strip vanilla CRE-baked +2/level, kit delivers +1/level via new CLAB (AK Red Wizard): 1.0"
+
+[[components]]
+id = 300
+name = "Evil NPCs: complain but never leave due to high reputation (HAPPY.2DA cap): 1.0"

@@ -1,0 +1,103 @@
+id = "ub"
+artifact_id = "ub-28"
+name = "Unfinished Business for BG2"
+tp2 = "ub/setup-ub.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "The Kidnapping of Boo by Cliffette"
+
+[[components]]
+id = 1
+name = "The Suna Seni/Valygar Relationship"
+
+[[components]]
+id = 2
+name = "Kalah and What He Was Promised"
+
+[[components]]
+id = 4
+name = "Gorje Hilldark and the Extended Illithium Quest"
+
+[[components]]
+id = 5
+name = "The Pai'Na/Spider's Bane Quest"
+
+[[components]]
+id = 6
+name = "Restored Crooked Crane Inn"
+
+[[components]]
+id = 7
+name = "Restored Encounters"
+
+[[components]]
+id = 8
+name = "Artemis Entreri in Bodhi's Lair"
+
+[[components]]
+id = 9
+name = "Corrected Xzar's Creations"
+
+[[components]]
+id = 10
+name = "Restored Hell Minions, by SimDing0"
+
+[[components]]
+id = 12
+name = "Item Restorations"
+
+[[components]]
+id = 13
+name = "Yoshimo's Original Portrait"
+
+[[components]]
+id = 14
+name = "Anomen's Original Portrait"
+
+[[components]]
+id = 15
+name = "NPC Portrait Restorations"
+
+[[components]]
+id = 17
+name = "Corrected Character Names and Biographies"
+
+[[components]]
+id = 18
+name = "Restored Minor Dialogs"
+
+[[components]]
+id = 20
+name = "Extended ToB Item Descriptions"
+
+[[components]]
+id = 21
+name = "Throne of Bhaal Minor Restorations"
+
+[[components]]
+id = 22
+name = "Justifier Kit"
+
+[[components]]
+id = 23
+name = "Feralan Kit"
+
+[[components]]
+id = 24
+name = "Sarevok's Remorse"
+
+[[components]]
+id = 25
+name = "The Murder of Acton Balthis, by Kulyok"
+
+[[components]]
+id = 3
+name = "\"Cat and Mouse\" (Bodhi hunts you in Spellhold) by Ghreyfain: v28"
+
+[[components]]
+id = 19
+name = "Restored Bhaalspawn Powers, by David Gaider: v28"

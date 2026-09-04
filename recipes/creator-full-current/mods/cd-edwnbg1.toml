@@ -1,0 +1,11 @@
+id = "cd-edwnbg1"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Edwin BG1 Soundset"
+tp2 = "cd_edwnbg1/cd_edwnbg1.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Edwin BG1 Soundset"

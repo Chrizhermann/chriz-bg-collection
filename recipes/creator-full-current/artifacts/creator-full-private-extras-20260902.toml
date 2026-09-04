@@ -1,0 +1,32 @@
+id = "creator-full-private-extras-20260902"
+name = "Creator full private/manual extras"
+version = "2026-09-02-reference"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://github.com/Chrizhermann/chriz-bg-collection/blob/main/docs/creator-full-install.md"
+reference = "local-reference-2026-09-02"
+expected_filename = "creator-full-private-extras-20260902.zip"
+expected_length = 1263540769
+sha256 = "3b7dbc1994d57842bbddcb93726319fc5599bc5e84758c0cb33bd46ef9ed7c38"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["abettor-hla-rebalance", "ajantisbg2", "AK_MULTICLASS_PROFS_FIX", "AKCB_BERSERKER", "ALORA", "Aura_Balance_Patch", "Aura_Balance_Patch_Spells", "Aura_BG1_2_EET", "aw_PF_soundsets", "BARD_SPELL_FIX", "BardicWonders", "BASTIL", "BEARSKIN_MAIL_FIX", "BG2EE-EET-Fixpack", "Branwen", "BRANWEN_HAMMER_FIX", "Bristlelick", "C0Warlock", "cd_aerie", "cd_ajanti", "cd_dranger", "cd_edwnbg1", "cd_edwnbg2", "cd_imobg1", "cd_imobg2", "cd_jahebg1", "cd_jahebg2", "cd_neera", "cd_rumikp", "cd_safana", "cd_safsod", "cd_sarevok", "cd_yeslick", "cdtweaks", "EDWIN_AMULET_FIX", "EET_Tweaks", "ELEM_PRINCE_CLAB_FIX", "evandra", "EVANDRA_SORCERER", "iwdification", "PRIEST_DELIVERY_FIX", "rondak", "Safana", "SAFANA_LATE_SPELLS", "SAFANA_SNARE_FIX", "Setup-AbettorHLARebalance.tp2", "tnt", "Wings", "xan_soundset", "zg_bgnpc_voices_bgs"]
+tp2_paths = ["ajantisbg2/ajantisbg2.tp2", "AK_MULTICLASS_PROFS_FIX/AK_MULTICLASS_PROFS_FIX.tp2", "AKCB_BERSERKER/setup-AKCB_BERSERKER.tp2", "ALORA/ALORA.tp2", "Aura_Balance_Patch/Setup-Aura_Balance_Patch.tp2", "Aura_Balance_Patch_Spells/Setup-Aura_Balance_Patch_Spells.tp2", "Aura_BG1_2_EET/Setup-Aura_BG1_2_EET.tp2", "aw_PF_soundsets/aw_PF_soundsets.tp2", "BARD_SPELL_FIX/BARD_SPELL_FIX.tp2", "BardicWonders/Setup-BardicWonders.tp2", "BASTIL/BASTIL.tp2", "BEARSKIN_MAIL_FIX/Setup-BEARSKIN_MAIL_FIX.tp2", "BG2EE-EET-Fixpack/BG2EE-EET-Fixpack.tp2", "Branwen/branwen.tp2", "BRANWEN_HAMMER_FIX/Setup-BRANWEN_HAMMER_FIX.tp2", "Bristlelick/Bristlelick.tp2", "C0Warlock/C0Warlock.TP2", "cd_aerie/cd_aerie.tp2", "cd_ajanti/cd_ajanti.tp2", "cd_dranger/cd_dranger.tp2", "cd_edwnbg1/cd_edwnbg1.tp2", "cd_edwnbg2/cd_edwnbg2.tp2", "cd_imobg1/cd_imobg1.tp2", "cd_imobg2/cd_imobg2.tp2", "cd_jahebg1/cd_jahebg1.tp2", "cd_jahebg2/cd_jahebg2.tp2", "cd_neera/cd_neera.tp2", "cd_rumikp/cd_rumikp.tp2", "cd_safana/cd_safana.tp2", "cd_safsod/cd_safsod.tp2", "cd_sarevok/cd_sarevok.tp2", "cd_yeslick/cd_yeslick.tp2", "cdtweaks/setup-cdtweaks.tp2", "EDWIN_AMULET_FIX/EDWIN_AMULET_FIX.tp2", "EET_Tweaks/EET_Tweaks.tp2", "ELEM_PRINCE_CLAB_FIX/Setup-ELEM_PRINCE_CLAB_FIX.tp2", "evandra/setup-evandra.tp2", "EVANDRA_SORCERER/EVANDRA_SORCERER.tp2", "iwdification/setup-iwdification.tp2", "PRIEST_DELIVERY_FIX/PRIEST_DELIVERY_FIX.tp2", "rondak/rondak.tp2", "Safana/Safana.tp2", "SAFANA_LATE_SPELLS/SAFANA_LATE_SPELLS.tp2", "SAFANA_SNARE_FIX/SAFANA_SNARE_FIX.tp2", "Setup-AbettorHLARebalance.tp2", "tnt/tnt.tp2", "Wings/setup-Wings.tp2", "xan_soundset/xan_soundset.tp2", "zg_bgnpc_voices_bgs/zg_bgnpc_voices_bgs.tp2"]
+
+[archive.limits]
+max_depth = 24
+max_entries = 100000
+max_entry_uncompressed_bytes = 1073741824
+max_total_uncompressed_bytes = 21474836480
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-collection"
+license = "Manual local archive containing 49 reference installers; never distribute or bundle"
+url = "https://github.com/Chrizhermann/chriz-bg-collection/blob/main/docs/creator-full-install.md"
+reviewed_on = "2026-09-05"

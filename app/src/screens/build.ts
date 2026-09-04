@@ -5,6 +5,7 @@ import { statusCard } from "../components/status-card";
 import { technicalLog, type TechnicalLogState } from "../components/technical-log";
 
 export interface BuildActions {
+  readonly backToSetup: () => void | Promise<void>;
   readonly advance: () => void | Promise<void>;
   readonly retry: () => void | Promise<void>;
   readonly supplyManual: () => void | Promise<void>;
@@ -19,11 +20,12 @@ export interface BuildActions {
 }
 
 export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTMLElement {
-  const page = element("div", "screen-stack");
-  page.append(screenIntro("CEBG is working", "Installation progress", actions.fixture ? "This local preview demonstrates pauses, attention, failure recovery, and completion." : "CEBG is downloading and installing the reviewed setup into your separate game folder."));
+  const page = element("div", "screen-stack build-screen");
+  page.append(screenIntro("", "Installation progress", ""));
   const tone = snapshot.state === "failed" ? "danger" : snapshot.state === "running" || snapshot.state === "complete" ? "ok" : "warning";
   const stateCard = statusCard(snapshot.headline, snapshot.detail, tone);
   const controls = element("div", "inline-actions");
+  if (snapshot.recoveryAction) stateCard.append(element("p", "recovery-action", snapshot.recoveryAction));
   if (snapshot.state === "waiting-manual") {
     stateCard.append(element("p", "path", snapshot.manualArchiveName ?? ""));
     controls.append(actionButton("Open download page", actions.openManualSource, "quiet"));
@@ -33,13 +35,14 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
     controls.append(actionButton("Continue build", actions.advance));
   } else if (snapshot.state === "failed") {
     if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));
+    else controls.append(actionButton("Back to setup", actions.backToSetup));
     if (actions.diagnosticsAvailable) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));
   } else if (snapshot.state === "running") {
     controls.append(actions.fixture
       ? actionButton("Finish fixture build", actions.advance)
       : actionButton("Cancel build", actions.cancel, "quiet"));
   }
-  stateCard.append(controls);
+  if (controls.childElementCount > 0) stateCard.append(controls);
   page.append(stateCard, campaignLedger(snapshot.phases, true), technicalLog(snapshot.logTail, actions.logState, actions.updateLogState));
   return page;
 }

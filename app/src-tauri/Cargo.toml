@@ -1,6 +1,6 @@
 [package]
 name = "chriz-bg-app"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 description = "Installer and launcher for Chriz Easy BG"
 edition = "2021"
 
@@ -18,6 +18,8 @@ serde_json = "1"
 semver = "1"
 tauri = { version = "=2.11.5", features = [] }
 tauri-plugin-dialog = "=2.7.3"
+tauri-plugin-updater = "=2.11.0"
+time = { version = "0.3", features = ["formatting"] }
 toml = "1"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 
@@ -25,5 +27,6 @@ zip = { version = "8", default-features = false, features = ["deflate"] }
 windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_UI_Shell"] }
 
 [dev-dependencies]
+base64 = "0.22"
 minisign = "0.9.1"
 tempfile = "3"

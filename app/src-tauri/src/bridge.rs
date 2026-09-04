@@ -40,6 +40,15 @@ use crate::updates::{
 
 type Discoverer = dyn Fn(&Path) -> Result<Vec<GameCandidate>, CliError> + Send + Sync;
 
+fn radar_error(error: impl std::fmt::Display) -> CommandError {
+    CommandError::new(
+        "radar_update_failed",
+        "BG Radar Overlay could not be installed.",
+        "Your game is still ready to play. Retry the overlay from Updates.",
+        error.to_string(),
+    )
+}
+
 const REVIEW_LIFETIME: Duration = Duration::from_secs(10 * 60);
 const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
@@ -247,6 +256,7 @@ impl BridgeEngine for DiscovererBridgeEngine {
 
 #[derive(Default)]
 struct BridgeRuntime {
+    app_update_active: bool,
     candidates: HashMap<String, GameCandidate>,
     reviews: HashMap<String, ReviewSnapshot>,
     active_runs: HashMap<String, RunnerControlHandle>,
@@ -270,6 +280,8 @@ struct ReviewSnapshot {
 /// Native adapter configuration and process-local review/run registries shared by commands.
 #[derive(Clone)]
 pub struct NativeBridge {
+    resource_root: Option<PathBuf>,
+    profile_id: String,
     recipe: PathBuf,
     preset: String,
     cache: PathBuf,
@@ -279,6 +291,17 @@ pub struct NativeBridge {
     startup_install_id: Option<String>,
     runtime: Arc<Mutex<BridgeRuntime>>,
     sequence: Arc<AtomicU64>,
+}
+
+pub struct AppUpdateGuard(Arc<Mutex<BridgeRuntime>>);
+
+impl Drop for AppUpdateGuard {
+    fn drop(&mut self) {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .app_update_active = false;
+    }
 }
 
 /// One engine event with a JS-lossless sequence and opaque process-local run identity.
@@ -403,6 +426,8 @@ pub struct ManagedInstallationResponse {
     pub available: bool,
     pub resumable: bool,
     pub recipe_version: Option<String>,
+    pub consistency: Option<crate::consistency::ConsistencySummary>,
+    pub radar_version: Option<String>,
 }
 
 /// Process-local run snapshot. Durable restart recovery remains an explicit post-v0 slice.
@@ -424,10 +449,20 @@ pub struct BootstrapResponse {
     pub mode: String,
     /// Compiled engine crate version.
     pub engine_version: String,
+    pub application_version: String,
+    pub profiles: Vec<InstallProfileResponse>,
+    pub selected_profile: String,
     /// Signed recipe release version; absent until Task 20 supplies it.
     pub recipe_version: Option<String>,
     /// Optional semantic launcher hint; callers must still match it to a current registry record.
     pub startup_install_id: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct InstallProfileResponse {
+    pub id: String,
+    pub label: String,
+    pub description: String,
 }
 
 /// Parses one launcher-provided install identity without granting it filesystem authority.
@@ -564,19 +599,93 @@ impl NativeBridge {
 
     /// Creates the production adapter from Tauri's trusted packaged-resource directory.
     pub fn from_resource_dir(resource_dir: &Path) -> Self {
-        Self::new(resource_dir.join("manifest"), "chris-recommended")
+        let mut bridge = Self::new(resource_dir.join("manifest"), "chris-recommended");
+        bridge.resource_root = Some(resource_dir.to_path_buf());
+        bridge
     }
 
     /// Creates the production adapter with a native-owned writable cache directory.
     pub fn from_resource_dir_with_cache(resource_dir: &Path, cache: &Path) -> Self {
-        Self::with_configuration(
+        let mut bridge = Self::with_configuration(
             resource_dir.join("manifest"),
             "chris-recommended".to_owned(),
             cache.to_path_buf(),
             default_application_data_root(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
-        )
+        );
+        bridge.resource_root = Some(resource_dir.to_path_buf());
+        bridge
+    }
+
+    pub fn profiles(&self) -> Vec<InstallProfileResponse> {
+        let mut profiles = vec![InstallProfileResponse {
+            id: "public-alpha".to_owned(),
+            label: "Recommended setup".to_owned(),
+            description: "Downloadable CEBG alpha collection.".to_owned(),
+        }];
+        if self.resource_root.as_ref().is_some_and(|root| {
+            root.join("recipes/creator-full-current/collection.toml")
+                .is_file()
+        }) {
+            profiles.push(InstallProfileResponse {
+                id: "creator-full-current".to_owned(),
+                label: "Full creator setup".to_owned(),
+                description: "The full mod list; requires your private extras archive.".to_owned(),
+            });
+        }
+        profiles
+    }
+
+    pub fn select_profile(&self, id: &str) -> Result<Self, CommandError> {
+        let mut runtime = self.runtime_lock();
+        if !runtime.active_runs.is_empty() || runtime.app_update_active {
+            return Err(CommandError::new(
+                "build_active",
+                "Wait for the installation to finish.",
+                "Change setup after the current operation finishes.",
+                "profile selection during an active operation",
+            ));
+        }
+        if !self.profiles().iter().any(|profile| profile.id == id) {
+            return Err(CommandError::new(
+                "unknown_profile",
+                "That setup is unavailable.",
+                "Choose one of the included setups.",
+                id,
+            ));
+        }
+        let root = self.resource_root.as_ref().ok_or_else(|| {
+            CommandError::new(
+                "unknown_profile",
+                "Setup selection is unavailable.",
+                "Use a packaged CEBG release.",
+                "no packaged resource root",
+            )
+        })?;
+        let mut next = self.clone();
+        next.profile_id = id.to_owned();
+        if id == "creator-full-current" {
+            next.recipe = root.join("recipes/creator-full-current");
+            next.preset = "creator-full".to_owned();
+        } else {
+            next.recipe = root.join("manifest");
+            next.preset = "chris-recommended".to_owned();
+        }
+        runtime.reviews.clear();
+        Ok(next)
+    }
+
+    fn validation_profile(&self) -> ValidationProfile {
+        if self.profile_id == "creator-full-current" {
+            ValidationProfile::Authoring
+        } else {
+            ValidationProfile::PublicAlpha
+        }
+    }
+
+    pub fn recipe_version(&self) -> Result<Option<String>, CommandError> {
+        bg_engine::cli::recipe_release_version(&self.recipe).map_err(CommandError::from_cli)
     }
 
     /// Attaches a process-start selection hint that remains subject to registry validation.
@@ -658,8 +767,7 @@ impl NativeBridge {
 
     /// Validates the complete public-alpha recipe and its configured preset.
     pub fn bootstrap(&self) -> Result<BootstrapResponse, CommandError> {
-        validate_recipe(&self.recipe, ValidationProfile::PublicAlpha)
-            .map_err(CommandError::from_cli)?;
+        validate_recipe(&self.recipe, self.validation_profile()).map_err(CommandError::from_cli)?;
         GameProfiles::load(self.recipe.join("game-builds")).map_err(|error| {
             CommandError::new(
                 "game_profiles_failed",
@@ -678,7 +786,10 @@ impl NativeBridge {
         Ok(BootstrapResponse {
             mode: "native".to_owned(),
             engine_version: bg_engine::VERSION.to_owned(),
-            recipe_version: None,
+            application_version: env!("CARGO_PKG_VERSION").to_owned(),
+            profiles: self.profiles(),
+            selected_profile: self.profile_id.clone(),
+            recipe_version: self.recipe_version()?,
             startup_install_id: self.startup_install_id.clone(),
         })
     }
@@ -798,8 +909,7 @@ impl NativeBridge {
         let Some(selected) = selected else {
             return Ok(None);
         };
-        validate_recipe(&self.recipe, ValidationProfile::PublicAlpha)
-            .map_err(CommandError::from_cli)?;
+        validate_recipe(&self.recipe, self.validation_profile()).map_err(CommandError::from_cli)?;
         let manifest = Manifest::load(&self.recipe).map_err(|error| {
             CommandError::new(
                 "recipe_load_failed",
@@ -871,8 +981,7 @@ impl NativeBridge {
 
     /// Opens only the HTTPS manual-download page declared by a verified recipe artifact.
     pub fn open_manual_source(&self, artifact_id: &str) -> Result<(), CommandError> {
-        validate_recipe(&self.recipe, ValidationProfile::PublicAlpha)
-            .map_err(CommandError::from_cli)?;
+        validate_recipe(&self.recipe, self.validation_profile()).map_err(CommandError::from_cli)?;
         let manifest = Manifest::load(&self.recipe).map_err(|error| {
             CommandError::new(
                 "recipe_load_failed",
@@ -985,7 +1094,76 @@ impl NativeBridge {
                     "Close any running game instance, then try again.",
                     error,
                 )
-            })
+            })?;
+        if let Ok(overlay) = bg_engine::radar::status(&record.managed_root, working_directory, None)
+        {
+            if overlay.state == bg_engine::radar::RadarState::UpToDate {
+                if let Some(executable) = overlay.executable {
+                    if let Some(directory) = executable.parent() {
+                        // The optional overlay must not prevent the game from launching.
+                        let _ = self.system.launch(&executable, directory);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn install_radar(
+        &self,
+        install_id: &str,
+    ) -> Result<bg_engine::radar::RadarInstallResult, CommandError> {
+        let release = bg_engine::radar::check_latest().map_err(radar_error)?;
+        let _guard = self.begin_app_update()?;
+        let record = self.available_managed_install(install_id)?.record;
+        let game_root = record.managed_root.join("game");
+        bg_engine::radar::install(
+            &self.cache,
+            &record.managed_root,
+            &game_root,
+            &release,
+            &bg_engine::events::ConsoleSink,
+        )
+        .map_err(radar_error)
+    }
+
+    pub fn radar_update(&self) -> crate::updates::RadarUpdateResponse {
+        let latest = bg_engine::radar::check_latest();
+        let current_version = self.list_managed_installations().ok().and_then(|copies| {
+            copies
+                .into_iter()
+                .filter(|copy| copy.available)
+                .max_by_key(|copy| copy.completed_at_millis)
+                .and_then(|copy| copy.radar_version)
+        });
+        match latest {
+            Ok(release) => crate::updates::RadarUpdateResponse {
+                state: if current_version.as_deref() == Some(release.tag.as_str()) {
+                    "up-to-date"
+                } else {
+                    "available"
+                }
+                .to_owned(),
+                current_version,
+                available_version: Some(release.tag.clone()),
+                detail: "Optional overlay. Updated separately without changing your mods or saves."
+                    .to_owned(),
+                release_notes: Some(format!(
+                    "BG Radar Overlay {}\nPublished {}\nhttps://github.com/{}/releases/tag/{}",
+                    release.tag,
+                    release.published_at,
+                    bg_engine::radar::RADAR_REPOSITORY,
+                    release.tag
+                )),
+            },
+            Err(error) => crate::updates::RadarUpdateResponse {
+                state: "offline".to_owned(),
+                current_version,
+                available_version: None,
+                detail: format!("Could not check BG Radar Overlay: {error}"),
+                release_notes: None,
+            },
+        }
     }
 
     /// Opens only the managed root attached to one available immutable registry id.
@@ -1135,6 +1313,7 @@ impl NativeBridge {
         let selection_digest = selection_digest(normalized_selection).map_err(digest_error)?;
         let plan_digest = plan_digest(&plan_report.evaluation.plan).map_err(digest_error)?;
         let request = InstallCommandRequest {
+            application_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
             display_name: display_name.to_owned(),
             recipe: plan_report.recipe.clone(),
             preset: self.preset.clone(),
@@ -1268,6 +1447,20 @@ impl NativeBridge {
         }
     }
 
+    pub fn begin_app_update(&self) -> Result<AppUpdateGuard, CommandError> {
+        let mut state = self.runtime_lock();
+        if !state.active_runs.is_empty() || state.app_update_active {
+            return Err(CommandError::new(
+                "update_busy",
+                "An installation or update is already running.",
+                "Wait for it to finish.",
+                "Update and build workers cannot overlap.",
+            ));
+        }
+        state.app_update_active = true;
+        Ok(AppUpdateGuard(Arc::clone(&self.runtime)))
+    }
+
     /// Returns an honest offline-safe projection until release-time trust material is supplied.
     #[doc(hidden)]
     pub fn unconfigured_update_center(
@@ -1304,6 +1497,7 @@ impl NativeBridge {
                 available_version: None,
                 detail: "The application update key and endpoint must be supplied at release-time."
                     .to_owned(),
+                release_notes: None,
             },
             recipe: RecipeUpdateResponse {
                 state: RecipeUpdateState::Unavailable,
@@ -1316,6 +1510,7 @@ impl NativeBridge {
                 changes: Vec::new(),
             },
             managed_copies,
+            radar: None,
         })
     }
 }
@@ -1330,6 +1525,8 @@ impl NativeBridge {
         system: Arc<dyn BridgeSystem>,
     ) -> Self {
         Self {
+            resource_root: None,
+            profile_id: "public-alpha".to_owned(),
             recipe,
             preset,
             cache,
@@ -1626,7 +1823,7 @@ impl NativeBridge {
         );
         let controls = RunnerControlHandle::new();
         let mut runtime = self.runtime_lock();
-        if !runtime.active_runs.is_empty() {
+        if !runtime.active_runs.is_empty() || runtime.app_update_active {
             return Err(CommandError::new(
                 "build_already_running",
                 "Another installer build is already running.",
@@ -2389,6 +2586,14 @@ fn project_managed_install(
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let available = card.availability == InstallAvailability::Available;
     let record = card.record;
+    let consistency = available.then(|| crate::consistency::inspect(&record.managed_root));
+    let radar_version = if available {
+        bg_engine::radar::status(&record.managed_root, record.managed_root.join("game"), None)
+            .ok()
+            .and_then(|status| status.installed_version)
+    } else {
+        None
+    };
     let path = display_windows_path(&record.managed_root)?;
     let receipt = record.managed_root.join(".chriz/install-receipt.json");
     let receipt_path = display_windows_path(&receipt)?;
@@ -2408,6 +2613,8 @@ fn project_managed_install(
         available,
         resumable: false,
         recipe_version: Some(record.recipe_version),
+        consistency,
+        radar_version,
     })
 }
 
@@ -2428,6 +2635,8 @@ fn project_managed_campaign(
         receipt_path: None,
         launch_path: None,
         completed_at_millis: None,
+        consistency: None,
+        radar_version: None,
         available: false,
         resumable,
         recipe_version: None,

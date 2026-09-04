@@ -1,0 +1,255 @@
+id = "cdtweaks"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Change Viconia's Skin Color to Dark Blue"
+tp2 = "cdtweaks/setup-cdtweaks.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 40
+name = "Change Viconia's Skin Color to Dark Blue: v18"
+
+[[components]]
+id = 60
+name = "Weapon Animation Tweaks: v18"
+
+[[components]]
+id = 110
+name = "Icon Improvements: v18"
+
+[[components]]
+id = 130
+name = "Force All Dialogue to Pause Game: v18"
+
+[[components]]
+id = 170
+name = "Unique Icons [Lava] -> Only replace icons that aren't already unique: v18"
+
+[[components]]
+id = 180
+name = "Unique Containers [Miloch] -> Fixes only: v18"
+
+[[components]]
+id = 2010
+name = "Separate Resist Fire/Cold Icon into Separate Icons [Angel]: v18"
+
+[[components]]
+id = 1010
+name = "More Interjections: v18"
+
+[[components]]
+id = 1020
+name = "Alter HP Triggers for NPC Wounded Dialogues: v18"
+
+[[components]]
+id = 1040
+name = "Improved Athkatlan City Guard: v18"
+
+[[components]]
+id = 1080
+name = "Add Bags of Holding: v18"
+
+[[components]]
+id = 1120
+name = "Stores Sell Higher Stacks of Items: v18"
+
+[[components]]
+id = 1142
+name = "Gems and Potions Require Identification -> Just potions: v18"
+
+[[components]]
+id = 1161
+name = "Multiple Strongholds [Sabre, Baldurdash, Weimer] -> Keep class restrictions: v18"
+
+[[components]]
+id = 1180
+name = "Female Edwina [Davide Carte, Wendy Yung, Weimer]: v18"
+
+[[components]]
+id = 1220
+name = "Allow Cromwell to Upgrade Watcher's Keep Items: v18"
+
+[[components]]
+id = 1227
+name = "Adjust Cromwell's Forging Time -> Full 24 hours (BG2EE default, includes sleep): v18"
+
+[[components]]
+id = 1230
+name = "Allow Cespenar to Use Cromwell Recipes: v18"
+
+[[components]]
+id = 1257
+name = "Move NPCs to Convenient Locations: Alora, Eldoth, Quayle, Shar-Teel, Tiax, and Viconia: v18"
+
+[[components]]
+id = 2020
+name = "Two-Handed Bastard Swords: v18"
+
+[[components]]
+id = 2030
+name = "Two-Handed Katanas: v18"
+
+[[components]]
+id = 2035
+name = "Two-Handed Axes: v18"
+
+[[components]]
+id = 2090
+name = "Change Experience Point Cap -> Remove experience cap: v18"
+
+[[components]]
+id = 2152
+name = "Wear Multiple Protection Items -> Allow armor plus one protection item [Angel]: v18"
+
+[[components]]
+id = 2170
+name = "Cast Spells from Scrolls (and Other Items) at Character Level: v18"
+
+[[components]]
+id = 2192
+name = "Limit Ability of Storekeepers to Identify Items -> Hybrid of both methods: v18"
+
+[[components]]
+id = 2210
+name = "Change Grandmastery Bonuses -> True grandmastery [Baldurdash]: v18"
+
+[[components]]
+id = 2250
+name = "Un-Nerfed Sorcerer Spell Progression Table: v18"
+
+[[components]]
+id = 2260
+name = "Alter Mage Spell Progression Table -> Un-nerfed table [Blucher]: v18"
+
+[[components]]
+id = 2270
+name = "Alter Bard Spell Progression Table -> Un-nerfed table [Blucher]: v18"
+
+[[components]]
+id = 2280
+name = "Alter Cleric Spell Progression Table -> Un-nerfed table [Blucher]: v18"
+
+[[components]]
+id = 2292
+name = "Alter Druid Spell and Level Progression Tables -> Use cleric level progression changes with normal druid spell table: v18"
+
+[[components]]
+id = 2312
+name = "Add Save Penalties for Spells Cast by High-Level Casters -> Arcane and divine magic: v18"
+
+[[components]]
+id = 2391
+name = "Alter Paladin Spell Progression Table -> BG2-Style Progression (Up To Level Six Spells) [TotoR]: v18"
+
+[[components]]
+id = 2400
+name = "Alter Ranger Spell Progression Table -> Rangers Use Icewind Dale-Heart of Winter Spell Tables [grogerson]: v18"
+
+[[components]]
+id = 2410
+name = "Druids Use 3E Alignment Restrictions: v18"
+
+[[components]]
+id = 2420
+name = "Loosen Equipment Restrictions for Cleric Multi- and Dual-Classes: v18"
+
+[[components]]
+id = 2430
+name = "Change Equipment Restrictions for Druid Multi- and Dual-Classes -> Loosen equipment restrictions: v18"
+
+[[components]]
+id = 2500
+name = "Exceptional Strength Weight Limit Changes [sarevok57]: v18"
+
+[[components]]
+id = 2520
+name = "Allow Mages to Use Bucklers and Thieves to Use Small Shields [Angel]: v18"
+
+[[components]]
+id = 2540
+name = "Speed Up de'Arnise Keep Stronghold Quests: v18"
+
+[[components]]
+id = 2590
+name = "Thieves Can Backstab With More Weapons With \"Use Any Item\" or as Dual- and Multi-Classes: v18"
+
+[[components]]
+id = 2999
+name = "Max HP at Level One: v18"
+
+[[components]]
+id = 3000
+name = "Higher HP on Level Up -> Maximum: v18"
+
+[[components]]
+id = 3008
+name = "Allow HP Rolls Through Level 20 [Angel]: v18"
+
+[[components]]
+id = 3010
+name = "Maximum HP Creatures [the bigg] -> For all creatures in game: v18"
+
+[[components]]
+id = 3040
+name = "Make Bags of Holding Bottomless: v18"
+
+[[components]]
+id = 3080
+name = "Increase Ammo Stack Size -> Unlimited ammo stacking: v18"
+
+[[components]]
+id = 3090
+name = "Increase Jewelry, Gem, and Miscellaneous Item Stacks -> Unlimited jewelry, gem, and miscellaneous item stacking: v18"
+
+[[components]]
+id = 3100
+name = "Increase Potion Stacking -> Unlimited potion stacking: v18"
+
+[[components]]
+id = 3110
+name = "Increase Scroll Stacking -> Unlimited scroll stacking: v18"
+
+[[components]]
+id = 3290
+name = "Personalize Automatic Save Names -> Use scheme: 000000000-Protagonist-Save-Name: v18"
+
+[[components]]
+id = 3300
+name = "Death Cam: v18"
+
+[[components]]
+id = 3310
+name = "Start New Games with Party AI Turned Off: v18"
+
+[[components]]
+id = 3354
+name = "Create Interval Saves [argent77] -> Every 15 minutes (cycle through four saves): v18"
+
+[[components]]
+id = 3390
+name = "Automatic Use of Ranger Tracking Skill: v18"
+
+[[components]]
+id = 4031
+name = "Consistent Stats: Edwin -> Use BG2 values: v18"
+
+[[components]]
+id = 4041
+name = "Consistent Stats: Jaheira -> Use BG2 values: v18"
+
+[[components]]
+id = 4050
+name = "Change Jaheira to Neutral Good Alignment: v18"
+
+[[components]]
+id = 4061
+name = "Consistent Stats: Minsc -> Use BG2 values: v18"
+
+[[components]]
+id = 4071
+name = "Consistent Stats: Viconia -> Use BG2 values: v18"
+
+[[components]]
+id = 3347
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Customize (via cdtweaks.txt): v18"

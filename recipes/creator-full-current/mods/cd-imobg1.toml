@@ -1,0 +1,11 @@
+id = "cd-imobg1"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Imoen (BG1) Soundset"
+tp2 = "cd_imobg1/cd_imobg1.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Imoen (BG1) Soundset"

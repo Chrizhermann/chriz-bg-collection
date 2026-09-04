@@ -87,6 +87,64 @@ fn create_store(fixture: &CampaignFixture) -> SessionStore {
     .unwrap()
 }
 
+#[test]
+fn production_artifact_identities_can_be_frozen_and_reopened() {
+    let mut fixture = campaign_fixture();
+    let manifest =
+        bg_engine::Manifest::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest"))
+            .unwrap();
+    fixture.created.artifact_identities.clear();
+    fixture.created.tool_identities.clear();
+    for artifact in manifest.artifacts.values() {
+        let identity = FrozenIdentity {
+            id: artifact.id.clone(),
+            version: artifact.version.clone(),
+            sha256: artifact.source.sha256.clone(),
+            length: artifact.source.expected_length.unwrap(),
+        };
+        if artifact.tool.is_some() {
+            fixture.created.tool_identities.push(identity);
+        } else {
+            fixture.created.artifact_identities.push(identity);
+        }
+    }
+    let store = create_store(&fixture);
+    store
+        .replay()
+        .unwrap()
+        .validate_resume(&fixture.created)
+        .unwrap();
+    SessionStore::open(&fixture.managed_root)
+        .unwrap()
+        .replay()
+        .unwrap();
+}
+
+#[test]
+fn artifact_identity_validation_still_rejects_paths_and_empty_ids() {
+    for id in [
+        "",
+        ".",
+        "..",
+        "../mod",
+        "mod/file",
+        "mod\\file",
+        "mod:stream",
+    ] {
+        let mut fixture = campaign_fixture();
+        fixture.created.artifact_identities[0].id = id.to_owned();
+        assert!(
+            SessionStore::create(
+                &fixture.managed_root,
+                SessionEvent::Created(Box::new(fixture.created)),
+            )
+            .is_err(),
+            "accepted unsafe artifact id {id:?}"
+        );
+        assert!(!fixture.managed_root.join(".chriz").exists());
+    }
+}
+
 fn ledger(root: &Path) -> PathBuf {
     root.join(".chriz/ledger")
 }

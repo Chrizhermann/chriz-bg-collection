@@ -29,6 +29,7 @@ hex = "0.4"
 fs4 = "0.13"
 url = "2"
 zip = { version = "8", default-features = false, features = ["deflate"] }
+sevenz-rust2 = { version = "0.22.2", default-features = false, features = ["util"] }
 walkdir = "2"
 crossbeam-channel = "0.5"
 same-file = "1"
@@ -51,3 +52,4 @@ windows-sys = { version = "0.61", features = [
 [dev-dependencies]
 minisign = "0.9.1"
 tiny_http = "0.12"
+sevenz-rust2 = { version = "0.22.2", default-features = false, features = ["compress", "util"] }

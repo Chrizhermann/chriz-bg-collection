@@ -1,0 +1,39 @@
+id = "iwdification"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Icewind Dale Casting Graphics (Andyr)"
+tp2 = "iwdification/setup-iwdification.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 10
+name = "Icewind Dale Casting Graphics (Andyr): v11"
+
+[[components]]
+id = 60
+name = "Two-Handed Axe Item Pack: v11"
+
+[[components]]
+id = 130
+name = "Use IWD Damage Animations: v11"
+
+[[components]]
+id = 140
+name = "Randomized Enemy Equipment -> Add High Quality Items: v11"
+
+[[components]]
+id = 190
+name = "Increase Spear Damage: v11"
+
+[[components]]
+id = 120
+name = "Thief Class Update: Evasion -> Add evasion to thieves and all thief kits: v11"
+
+[[components]]
+id = 30
+name = "IWD Arcane Spell Pack: v11"
+
+[[components]]
+id = 40
+name = "IWD Divine Spell Pack: v11"

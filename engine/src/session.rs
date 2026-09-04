@@ -642,7 +642,7 @@ fn normalize_identities(
 ) -> Result<()> {
     let mut ids = BTreeSet::new();
     for identity in identities.iter_mut() {
-        validate_identifier(&identity.id, label, error_path)?;
+        validate_artifact_identifier(&identity.id, label, error_path)?;
         if identity.version.trim().is_empty() {
             return Err(ledger_error(
                 error_path,
@@ -686,6 +686,23 @@ fn validate_identifier(value: &str, label: &str, path: &Path) -> Result<()> {
         return Err(ledger_error(
             path,
             &format!("{label} must contain 1-128 ASCII letters, digits, '-' or '_'"),
+        ));
+    }
+    Ok(())
+}
+
+// Artifact IDs include dotted upstream versions. Install/attempt IDs above remain stricter.
+fn validate_artifact_identifier(value: &str, label: &str, path: &Path) -> Result<()> {
+    if value.is_empty()
+        || value.len() > 128
+        || matches!(value, "." | "..")
+        || !value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        return Err(ledger_error(
+            path,
+            &format!("{label} contains invalid artifact id {value:?}"),
         ));
     }
     Ok(())

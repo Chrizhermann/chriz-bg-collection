@@ -1,4 +1,5 @@
 import type {
+  BackendStatus,
   DestinationEvaluation,
   GameCandidate,
   GameDiscovery,
@@ -17,6 +18,9 @@ export interface InstallScreenModel {
   readonly evaluationPending: boolean;
   readonly starting: boolean;
   readonly createDesktopShortcut: boolean;
+  readonly profiles?: BackendStatus["profiles"];
+  readonly selectedProfile?: string;
+  readonly changingProfile?: boolean;
 }
 
 export interface InstallScreenActions {
@@ -28,6 +32,7 @@ export interface InstallScreenActions {
   readonly customize: () => void | Promise<void>;
   readonly install: () => void | Promise<void>;
   readonly changeDesktopShortcut: (selected: boolean) => void | Promise<void>;
+  readonly selectProfile?: (profileId: string) => void | Promise<void>;
 }
 
 function selectedCandidate(candidates: readonly GameCandidate[], selectedId: string): GameCandidate | undefined {
@@ -100,7 +105,7 @@ function field(labelText: string, id: string, value: string): { wrapper: HTMLEle
 
 export function installScreen(model: InstallScreenModel, actions: InstallScreenActions): HTMLElement {
   const page = element("div", "screen-stack install-screen");
-  page.append(screenIntro("Everything in one place", "Install Chriz Easy BG", "CEBG finds your games, uses the recommended setup, and builds a separate installation for you."));
+  page.append(screenIntro("", "Install Chriz Easy BG", "Your games, with Chriz's recommended mods. Ready to install in a separate folder."));
 
   const sources = element("section", "source-grid install-sources");
   sources.setAttribute("aria-label", "Found game sources");
@@ -151,7 +156,25 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   );
   const customize = actionButton("Customize", actions.customize, "quiet");
   customize.disabled = model.starting;
-  recipe.append(recipeCopy, customize);
+  recipe.append(recipeCopy);
+  if ((model.profiles?.length ?? 0) > 1 && actions.selectProfile !== undefined) {
+    recipe.classList.add("has-profiles");
+    const label = element("label", "visually-hidden", "Mod setup");
+    label.htmlFor = "install-profile";
+    const select = element("select", "profile-select");
+    select.id = label.htmlFor;
+    select.disabled = model.starting || model.changingProfile === true;
+    for (const profile of model.profiles ?? []) {
+      const option = element("option", undefined, profile.label);
+      option.value = profile.id;
+      option.selected = profile.id === model.selectedProfile;
+      option.title = profile.description;
+      select.append(option);
+    }
+    select.addEventListener("change", () => void actions.selectProfile?.(select.value));
+    recipe.append(label, select);
+  }
+  recipe.append(customize);
   if (model.evaluation !== null && model.evaluation.findings.length > 0) {
     const notices = element("details", "recipe-notices");
     notices.append(element("summary", undefined, `${model.evaluation.findings.length} setup ${model.evaluation.findings.length === 1 ? "note" : "notes"}`));
@@ -175,8 +198,8 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const finish = element("section", `install-ready ${ready ? "is-ready" : "needs-attention"}`);
   const readiness = element("div");
   readiness.append(
-    element("h2", undefined, ready ? "Ready to install" : "Needs attention"),
-    element("p", undefined, ready ? "Everything required for this installation is ready." : "Resolve the highlighted item before installing."),
+    element("h2", undefined, model.starting ? "Starting installation" : model.evaluationPending ? "Checking your choices" : ready ? "Ready to install" : "Needs attention"),
+    element("p", undefined, model.starting ? "Preparing your selected setup…" : model.evaluationPending ? "This will only take a moment." : ready ? "Everything required for this installation is ready." : "Resolve the highlighted item before installing."),
   );
   const install = actionButton(model.starting ? "Starting installation…" : "Install Chriz Easy BG", actions.install);
   install.disabled = !ready;

@@ -5,10 +5,10 @@ import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate
 import { buildScreen } from "./screens/build";
 import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
-import { homeScreen, type ShortcutFeedback } from "./screens/home";
+import { homeScreen, type AddonFeedback, type ShortcutFeedback } from "./screens/home";
 import { reviewScreen } from "./screens/review";
 import { installScreen } from "./screens/install";
-import { setupScreen } from "./screens/setup";
+import { setupScreen, type SetupViewState } from "./screens/setup";
 import { updatesScreen } from "./screens/updates";
 import {
   automaticInstallationPath,
@@ -95,6 +95,12 @@ class AppController implements AppHandle {
   #logState: TechnicalLogState = { paused: false, open: false };
   #createDesktopShortcutAfterInstall = true;
   #shortcutFeedback: ShortcutFeedback | null = null;
+  #checkingUpdates = false;
+  #installingUpdate = false;
+  #setupView: SetupViewState = { search: "", category: "" };
+  #changingProfile = false;
+  #radarAttempts = new Set<string>();
+  #addonFeedback: AddonFeedback | null = null;
 
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
@@ -104,6 +110,10 @@ class AppController implements AppHandle {
       this.backend.listManagedInstallations(),
     ]);
     this.#status = status;
+    this.#updates = { ...this.#updates,
+      application: { ...this.#updates.application, currentVersion: status.applicationVersion ?? status.engineVersion },
+      recipe: { ...this.#updates.recipe, currentVersion: status.recipeVersion ?? "bundled" },
+    };
     this.#installations = installations;
     const selected = preferredInstallation(installations, status.startupInstallId, readRememberedInstallId());
     this.#installId = selected?.id ?? null;
@@ -113,6 +123,9 @@ class AppController implements AppHandle {
       await this.#prepareInstallFlow();
     }
     this.#render();
+    if (status.mode === "native") void this.#checkUpdates(false).catch(() => {
+      // Offline startup must not block setup or Play; Updates offers an explicit retry.
+    });
   }
 
   async #prepareInstallFlow(): Promise<void> {
@@ -153,7 +166,12 @@ class AppController implements AppHandle {
     }
     if (route === "welcome") await this.#prepareInstallFlow();
     if (route === "complete") route = "home";
-    if (route === "updates") this.#updates = await this.backend.getUpdates();
+    if (route === this.#state.route) return;
+    if (route === "updates") {
+      this.#dispatch({ type: "navigate", route });
+      await this.#checkUpdates();
+      return;
+    }
     if (route === "build" && this.#status.mode === "fixture") {
       this.#dispatch({ type: "build-updated", build: await this.backend.getBuildSnapshot() });
     }
@@ -182,6 +200,61 @@ class AppController implements AppHandle {
     if (!this.#beginIdentityEdit()) return;
     this.#dispatch({ type: "set-feature", id, selected });
     await this.#evaluate(true, `feature-${id}`);
+  }
+
+  async #selectProfile(profileId: string): Promise<void> {
+    if (profileId === this.#status.selectedProfile || this.#changingProfile || !this.#beginIdentityEdit()) return;
+    this.#changingProfile = true;
+    this.#render();
+    try {
+      this.#status = await this.backend.selectProfile(profileId);
+      this.#dispatch({ type: "reset-selection" });
+      this.#setupView = { search: "", category: "" };
+      await this.#evaluate(false);
+    } finally {
+      this.#changingProfile = false;
+      this.#render();
+    }
+  }
+
+  async #backFromSecondary(): Promise<void> {
+    const route = this.#state.history.at(-1) ?? "welcome";
+    if (route === "welcome") await this.#prepareInstallFlow();
+    if (this.#state.history.length > 0) this.#dispatch({ type: "back" });
+    else this.#dispatch({ type: "navigate", route, remember: false });
+    this.#render();
+  }
+
+  async #checkUpdates(render = true): Promise<void> {
+    if (this.#checkingUpdates) return;
+    this.#checkingUpdates = true;
+    if (render) this.#render();
+    try {
+      this.#updates = await this.backend.getUpdates();
+    } finally {
+      this.#checkingUpdates = false;
+      if (render) this.#render();
+      this.#updateBadge();
+    }
+  }
+
+  #updateBadge(): void {
+    const available = this.#updates.application.state === "available" || this.#updates.recipe.state === "available"
+      || this.#updates.radar?.state === "available";
+    const button = this.root.querySelector<HTMLButtonElement>('[data-action="updates"]');
+    button?.setAttribute("data-update-available", String(available));
+    if (button) button.title = available ? "An update is available" : "Check versions and updates";
+  }
+
+  async #backToSetup(): Promise<void> {
+    this.#dispatch({ type: "build-cleared" });
+    this.#dispatch({ type: "review-cleared" });
+    this.#runId = null;
+    this.#installId = null;
+    this.#commandError = null;
+    await this.#prepareInstallFlow();
+    await this.#inspectDestination(this.#state.destinationPath);
+    await this.navigate("welcome");
   }
 
   async #inspectDestination(path: string, automatic = this.#state.destinationAutomatic, render = true): Promise<void> {
@@ -283,7 +356,7 @@ class AppController implements AppHandle {
       await this.backend.continueWaiting(this.#runId);
       const build = this.#state.build;
       if (build !== null) {
-        this.#dispatch({ type: "build-updated", build: { ...build, state: "running", headline: "Build in progress", detail: "WeiDU is continuing under installer supervision." } });
+        this.#dispatch({ type: "build-updated", build: { ...build, state: "running", headline: "Installation in progress", detail: "Continuing your installation…" } });
       }
       this.#render();
       return;
@@ -398,6 +471,7 @@ class AppController implements AppHandle {
   }
 
   #canInstall(): boolean {
+    if (this.#changingProfile) return false;
     const bg1 = this.#discovery?.bg1Candidates.find((candidate) => candidate.id === this.#state.selectedBg1Id);
     const bg2 = this.#discovery?.bg2Candidates.find((candidate) => candidate.id === this.#state.selectedBg2Id);
     return installationReadiness({
@@ -448,7 +522,7 @@ class AppController implements AppHandle {
     return {
       state: "running",
       headline: "Installation in progress",
-      detail: "The reviewed installation is starting in its separate game folder.",
+      detail: "Preparing your game folder…",
       phases: phases.map((phase, index) => ({ ...phase, state: index === 0 ? "current" : "pending" })),
       logTail: [],
       manualArchiveName: null,
@@ -464,7 +538,7 @@ class AppController implements AppHandle {
     switch (event.type) {
       case "campaign_started":
         this.#installId = event.install_id;
-        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "CEBG is applying the exact reviewed setup.", logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
+        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "Setting up your selected mods…", logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
         break;
       case "phase_started": {
         const phaseIds: Readonly<Record<string, string>> = {
@@ -483,7 +557,7 @@ class AppController implements AppHandle {
         break;
       }
       case "step_started":
-        next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
+        next = { ...current, detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
         break;
       case "step_progress":
         next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.id} ${event.done}/${event.total}`) };
@@ -498,7 +572,7 @@ class AppController implements AppHandle {
         next = event.outcome === "failed" && current.manualArchiveName !== null
           ? { ...current, state: "waiting-manual", headline: "Manual archive needed", logTail: log(`${event.id}: failed`) }
           : event.outcome === "failed"
-          ? { ...current, state: "running", headline: "Finalizing failure evidence", detail: `The engine is closing ${event.id} safely before Retry becomes available.`, logTail: log(`${event.id}: failed`) }
+          ? { ...current, state: "running", headline: "Stopping installation", detail: "Saving progress before retry becomes available…", logTail: log(`${event.id}: failed`) }
           : { ...current, logTail: log(`${event.id}: ${event.outcome}`) };
         break;
       case "manual_download_needed":
@@ -511,7 +585,7 @@ class AppController implements AppHandle {
             : { ...current, state: "failed", headline: "The build stopped safely", detail: event.message, logTail: log(event.message) };
           if (this.#status.mode === "native") void this.#refreshRetryAvailability(envelope.runId);
         } else {
-          next = { ...current, state: "running", headline: "Finalizing failure evidence", detail: event.message, logTail: log(event.message) };
+          next = { ...current, state: "running", headline: "Stopping installation", detail: event.message, logTail: log(event.message) };
         }
         break;
       case "campaign_finished":
@@ -537,6 +611,7 @@ class AppController implements AppHandle {
       this.#installId = selected?.id ?? null;
       if (selected !== null) rememberInstallId(selected.id);
       this.#dispatch({ type: "navigate", route: "home", remember: false });
+      if (completed?.available === true) await this.#installCompletionRadar(completed);
       if (completed?.available === true && this.#createDesktopShortcutAfterInstall) {
         this.#render();
         await this.#createDesktopShortcut(completed.id);
@@ -555,10 +630,38 @@ class AppController implements AppHandle {
     this.#render();
   }
 
+  async #installCompletionRadar(installation: ManagedInstallation): Promise<void> {
+    if (installation.radarVersion || this.#radarAttempts.has(installation.id)) return;
+    this.#radarAttempts.add(installation.id);
+    this.#addonFeedback = { installId: installation.id, state: "installing" };
+    this.#render();
+    try {
+      await this.backend.installRadar(installation.id);
+      this.#installations = await this.backend.listManagedInstallations();
+      this.#addonFeedback = null;
+    } catch {
+      this.#addonFeedback = { installId: installation.id, state: "failed" };
+    }
+    this.#render();
+  }
+
   async #refreshRetryAvailability(runId: string): Promise<void> {
     try {
       const snapshot = await this.backend.getRunSnapshot(runId);
+      if (runId !== this.#runId) return;
       this.#retryAvailable = snapshot.status === "failed" && snapshot.report !== null;
+      if (snapshot.error !== null && this.#state.build !== null) {
+        const current = this.#state.build;
+        const diagnostic = `${snapshot.error.code}: ${snapshot.error.technical_detail}`;
+        this.#dispatch({ type: "build-updated", build: {
+          ...current,
+          ...(current.state === "waiting-manual" ? {} : {
+            detail: snapshot.error.message,
+            recoveryAction: snapshot.error.recovery_action,
+          }),
+          logTail: current.logTail.includes(diagnostic) ? current.logTail : [...current.logTail, diagnostic].slice(-200),
+        } });
+      }
       this.#render();
     } catch (error: unknown) {
       this.#commandError = error instanceof BackendCommandError ? error : null;
@@ -598,7 +701,31 @@ class AppController implements AppHandle {
   }
 
   async #installAppUpdate(version: string): Promise<void> {
-    await this.backend.installAppUpdate(version);
+    if (this.#installingUpdate) return;
+    this.#installingUpdate = true;
+    this.#render();
+    try {
+      await this.backend.installAppUpdate(version);
+    } finally {
+      this.#installingUpdate = false;
+      this.#render();
+    }
+  }
+
+  async #installRadar(): Promise<void> {
+    const installation = this.#installations.find((item) => item.id === this.#installId && item.available);
+    if (installation === undefined || this.#installingUpdate) return;
+    this.#installingUpdate = true;
+    this.#render();
+    try {
+      await this.backend.installRadar(installation.id);
+      this.#installations = await this.backend.listManagedInstallations();
+      if (this.#addonFeedback?.installId === installation.id) this.#addonFeedback = null;
+      await this.#checkUpdates();
+    } finally {
+      this.#installingUpdate = false;
+      this.#render();
+    }
   }
 
   async #buildUpdatedCopy(version: string): Promise<void> {
@@ -611,6 +738,7 @@ class AppController implements AppHandle {
     this.#dispatch({ type: "build-cleared" });
     this.#createDesktopShortcutAfterInstall = true;
     this.#shortcutFeedback = null;
+    this.#addonFeedback = null;
     await this.#prepareInstallFlow();
     this.#dispatch({ type: "navigate", route: "welcome" });
     this.#render();
@@ -633,6 +761,9 @@ class AppController implements AppHandle {
   }
 
   #render(focusTargetId?: string): void {
+    const previousRoute = this.root.querySelector<HTMLElement>(".app-shell")?.dataset.route;
+    const sameRoute = previousRoute === this.#state.route;
+    const scrollTop = sameRoute ? this.root.querySelector("main")?.scrollTop ?? 0 : 0;
     const evaluation = this.#state.evaluation;
     const navigate = (route: Route): Promise<void> => this.navigate(route);
     const safely = (operation: () => Promise<void>): void => this.#safely(operation);
@@ -648,6 +779,7 @@ class AppController implements AppHandle {
         createShortcut: (installId) => this.#createDesktopShortcut(installId),
       },
       this.#shortcutFeedback,
+      this.#addonFeedback,
     );
     let content: HTMLElement;
     switch (this.#state.route) {
@@ -656,13 +788,13 @@ class AppController implements AppHandle {
         break;
       case "updates":
         content = updatesScreen(this.#updates, {
-          checkAgain: () => safely(async () => {
-            this.#updates = await this.backend.getUpdates();
-            this.#render();
-          }),
+          checkAgain: () => safely(() => this.#checkUpdates()),
           installApplication: (version) => safely(() => this.#installAppUpdate(version)),
           buildUpdatedCopy: (version) => safely(() => this.#buildUpdatedCopy(version)),
-        });
+          installRadar: this.#installations.some((item) => item.id === this.#installId && item.available) ? () => safely(() => this.#installRadar()) : undefined,
+          installationName: this.#installations.find((item) => item.id === this.#installId && item.available)?.name,
+          radarVersion: this.#installations.find((item) => item.id === this.#installId && item.available)?.radarVersion,
+        }, this.#checkingUpdates, this.#installingUpdate);
         break;
       case "welcome":
         if (this.#discovery === null || evaluation === null) {
@@ -676,9 +808,12 @@ class AppController implements AppHandle {
           installationName: this.#state.installationName,
           destination: this.#destination,
           evaluation,
-          evaluationPending: this.#state.evaluationPending,
+          evaluationPending: this.#state.evaluationPending || this.#changingProfile,
           starting: this.#starting,
           createDesktopShortcut: this.#createDesktopShortcutAfterInstall,
+          profiles: this.#status.profiles,
+          selectedProfile: this.#status.selectedProfile,
+          changingProfile: this.#changingProfile,
         }, {
           selectSource: (game, id) => safely(() => this.#selectGame(game, id)),
           browseSource: (game) => safely(() => this.#chooseGameFolder(game)),
@@ -686,6 +821,7 @@ class AppController implements AppHandle {
           changeLocation: (path) => safely(() => this.#changeInstallLocation(path)),
           browseLocation: () => safely(() => this.#chooseDestinationFolder()),
           customize: () => safely(() => this.#customizeInstallation()),
+          selectProfile: (profileId) => safely(() => this.#selectProfile(profileId)),
           install: () => safely(() => this.#startInstallation()),
           changeDesktopShortcut: (selected) => {
             if (!this.#starting) this.#createDesktopShortcutAfterInstall = selected;
@@ -721,7 +857,7 @@ class AppController implements AppHandle {
           content = statusCard("Preparing setup", "CEBG is loading the recommended choices.", "ok");
           break;
         }
-        content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => safely(() => navigate("welcome")), () => safely(() => navigate("welcome")));
+        content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => safely(() => navigate("welcome")), () => safely(() => navigate("welcome")), this.#setupView);
         break;
       case "review":
         if (evaluation === null) {
@@ -732,6 +868,7 @@ class AppController implements AppHandle {
         break;
       case "build":
         content = buildScreen(this.#state.build ?? { state: "running", headline: "Build in progress", detail: "Loading fixture snapshot.", phases: (evaluation?.plan.phases ?? []).map((phase, index) => ({ ...phase, state: index === 0 ? "current" : "pending" })), logTail: [], manualArchiveName: null }, {
+          backToSetup: () => safely(() => this.#backToSetup()),
           advance: () => safely(() => this.#advanceBuild()),
           retry: () => safely(() => this.#retryBuild()),
           supplyManual: () => safely(() => this.#supplyManualArchive()),
@@ -760,8 +897,15 @@ class AppController implements AppHandle {
       content,
       (route) => safely(() => navigate(route)),
       this.#status.mode,
+      ["home", "updates"].includes(this.#state.route) ? () => safely(() => this.#backFromSecondary()) : undefined,
+      this.#status.applicationVersion ?? this.#status.engineVersion,
     ));
-    (focusTargetId ? this.root.querySelector<HTMLElement>(`#${focusTargetId}`) : this.root.querySelector<HTMLElement>("h1"))?.focus();
+    this.#updateBadge();
+    const main = this.root.querySelector("main");
+    if (main !== null) main.scrollTop = scrollTop;
+    if (focusTargetId || !sameRoute) {
+      (focusTargetId ? this.root.querySelector<HTMLElement>(`#${focusTargetId}`) : this.root.querySelector<HTMLElement>("h1"))?.focus({ preventScroll: true });
+    }
   }
 }
 

@@ -57,6 +57,14 @@ impl CommandError {
                 "The selected collection options are not compatible.",
                 "Review the unavailable options and try again.",
             ),
+            "campaign_error" | "recipe_freeze_failed" => (
+                "The installation could not finish.",
+                "See the technical log for the cause. Retry if available, or return to setup.",
+            ),
+            "unsafe_target" => (
+                "The install folder could not be used.",
+                "Return to setup and check the install location. See the technical log for details.",
+            ),
             _ => (
                 "The installer could not complete that check.",
                 "Retry the check. If it still fails, keep the technical detail for diagnosis.",

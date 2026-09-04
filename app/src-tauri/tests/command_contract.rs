@@ -659,7 +659,18 @@ fn production_bridge_loads_only_the_recipe_bundled_below_the_resource_directory(
     let status = bridge.bootstrap().expect("bootstrap packaged recipe");
 
     assert_eq!(status.mode, "native");
-    assert_eq!(status.recipe_version, None);
+    assert_eq!(status.recipe_version.as_deref(), Some("0.1.0-alpha.2"));
+}
+
+#[test]
+fn packaged_profiles_are_selected_by_known_identity_only() {
+    let bridge = NativeBridge::from_resource_dir(&workspace_root());
+    let status = bridge.bootstrap().unwrap();
+    assert_eq!(status.profiles.len(), 2);
+    let full = bridge.select_profile("creator-full-current").unwrap();
+    let status = full.bootstrap().unwrap();
+    assert_eq!(status.selected_profile, "creator-full-current");
+    assert!(full.select_profile("../manifest").is_err());
 }
 
 #[test]

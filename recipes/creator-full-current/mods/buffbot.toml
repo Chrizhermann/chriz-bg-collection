@@ -1,0 +1,15 @@
+id = "buffbot"
+artifact_id = "buffbot-1.8.3-alpha"
+name = "BuffBot"
+tp2 = "buffbot/setup-buffbot.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 1
+name = "BuffBot: EEex LuaJIT Support (auto-detected)"
+
+[[components]]
+id = 0
+name = "BuffBot: In-Game Buff Automation"

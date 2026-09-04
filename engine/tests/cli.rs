@@ -261,6 +261,7 @@ fn install_args<'a>(
 
 fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
     InstallCommandRequest {
+        application_version: None,
         display_name: "Chriz Easy BG".to_owned(),
         recipe: fixture.recipe.clone(),
         preset: "recommended".to_owned(),
@@ -1063,6 +1064,28 @@ fn resume_rejects_a_requested_install_id_that_does_not_match_the_ledger() {
 #[test]
 fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() {
     let fixture = executable_fixture();
+    fs::write(
+        fixture.recipe.join("release.json"),
+        r#"{"version":"0.1.0-alpha.2","label":"Test collection"}"#,
+    )
+    .unwrap();
+    // Production artifact IDs carry dotted versions; exercise them through the entire run.
+    let artifact_path = fixture.recipe.join("artifacts/eefixpack.toml");
+    let artifact = fs::read_to_string(&artifact_path)
+        .unwrap()
+        .replace("id = \"eefixpack\"", "id = \"eefixpack-2026.08\"");
+    fs::write(
+        fixture.recipe.join("artifacts/eefixpack-2026.08.toml"),
+        artifact,
+    )
+    .unwrap();
+    fs::remove_file(artifact_path).unwrap();
+    let mod_path = fixture.recipe.join("mods/eefixpack.toml");
+    let mod_text = fs::read_to_string(&mod_path).unwrap().replace(
+        "artifact_id = \"eefixpack\"",
+        "artifact_id = \"eefixpack-2026.08\"",
+    );
+    fs::write(mod_path, mod_text).unwrap();
     let mut command = executable_command(&fixture);
     command.args(install_args(
         &fixture.recipe,
@@ -1095,6 +1118,7 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
             .expect("parse durable success receipt");
     assert_eq!(receipt.schema_version, RECEIPT_SCHEMA_VERSION);
     assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert_eq!(receipt.versions.recipe, "0.1.0-alpha.2");
     assert_eq!(receipt.plan.runs.len(), 2);
     assert_eq!(receipt.runs.len(), receipt.plan.runs.len());
     assert_eq!(receipt.artifacts.len(), 2);
@@ -1134,6 +1158,54 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
             }
         }
     }
+}
+
+#[cfg(windows)]
+#[test]
+fn setup_name_log_override_reconciles_from_attempt_owned_stdout() {
+    let fixture = executable_fixture();
+    let mut command = executable_command(&fixture);
+    command
+        .env("CHRIZ_TEST_MOCK_WEIDU_SETUP_LOG_OVERRIDE", "1")
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ));
+
+    let output = command
+        .output()
+        .expect("execute setup-name log override campaign");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    let replay = SessionStore::open(&fixture.managed)
+        .expect("open completed campaign")
+        .replay()
+        .expect("replay completed campaign");
+    let steps_root = fixture
+        .managed
+        .join(".chriz/attempts")
+        .join(&replay.created().attempt_id)
+        .join("steps");
+    let attempt_root = fs::read_dir(steps_root)
+        .expect("read completed step evidence")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().join("attempt-0001"))
+        .find(|path| path.join("weidu.debug.log").is_file())
+        .expect("find completed WeiDU attempt evidence");
+    let debug = fs::read_to_string(attempt_root.join("weidu.debug.log"))
+        .expect("read overridden debug stub");
+    let stdout =
+        fs::read_to_string(attempt_root.join("stdout.log")).expect("read attempt-owned stdout");
+    assert!(!debug.contains("SUCCESSFULLY INSTALLED"));
+    assert!(stdout.contains("SUCCESSFULLY INSTALLED"));
 }
 
 #[cfg(windows)]

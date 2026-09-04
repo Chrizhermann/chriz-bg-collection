@@ -1,0 +1,51 @@
+id = "randomiser"
+artifact_id = "randomiser-8.1.1"
+name = "Item Randomiser"
+tp2 = "randomiser/randomiser.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 500
+name = "Randomly replace the WIS tome normally found in TotSC with one of the 6 available types"
+
+[[components]]
+id = 510
+name = "Randomly not randomise items"
+
+[[components]]
+id = 530
+name = "Randomise scrolls"
+
+[[components]]
+id = 540
+name = "Randomise the heads of the Flail of Ages"
+
+[[components]]
+id = 560
+name = "More Spell Shield scrolls"
+
+[[components]]
+id = 570
+name = "Randomise the appearance of cursed items"
+
+[[components]]
+id = 9000
+name = "Cespenar can forge SoA items"
+
+[[components]]
+id = 10200
+name = "All scrolls from 9 out of 10 stores"
+
+[[components]]
+id = 10210
+name = "Duergar merchants"
+
+[[components]]
+id = 10300
+name = "Prevent Watcher's Keep statues from disappearing"
+
+[[components]]
+id = 1100
+name = "Mode 1: Randomise with in-game scripts. No items are lost"

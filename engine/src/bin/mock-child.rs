@@ -100,13 +100,21 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
         .append(true)
         .create(true)
         .open(&debug_path)?;
+    let setup_name_log_override = env::var_os("CHRIZ_TEST_MOCK_WEIDU_SETUP_LOG_OVERRIDE").is_some();
+    if setup_name_log_override {
+        writeln!(debug, "WeiDU v 24900 Log")?;
+    }
     for component in &components {
         writeln!(
             log,
             "~{tp2}~ #{language} #{component} // Synthetic component {component}"
         )?;
-        writeln!(debug, "SUCCESSFULLY INSTALLED component {component}")?;
-        println!("installed synthetic component {component}");
+        if setup_name_log_override {
+            println!("SUCCESSFULLY INSTALLED component {component}");
+        } else {
+            writeln!(debug, "SUCCESSFULLY INSTALLED component {component}")?;
+            println!("installed synthetic component {component}");
+        }
     }
     log.sync_all()?;
     debug.sync_all()

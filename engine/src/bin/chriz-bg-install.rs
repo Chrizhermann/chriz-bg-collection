@@ -272,6 +272,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
             let controls = RunnerControlHandle::new();
             install_interrupt_handler(&controls)?;
             let request = InstallCommandRequest {
+                application_version: None,
                 display_name: args.name.clone(),
                 recipe: args.recipe.clone(),
                 preset: args.preset.clone(),

@@ -1,0 +1,32 @@
+id = "eeexremote-0.2.0"
+name = "EEex Remote Console"
+version = "0.2.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164"
+reference = "661927e56e28435541a3128568cd4ee6d5d80164"
+expected_filename = "eeex-remote-console-661927e56e28435541a3128568cd4ee6d5d80164.zip"
+expected_length = 26360
+sha256 = "d634b1e8f0a253bb1100b924d9a400c2cc7eb74b0d919881739b8cc680a7483a"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["eeexremote", "setup-eeexremote.tp2"]
+tp2_paths = ["setup-eeexremote.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 2097152
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/eeex-remote-console"
+license = "Fetch-only Christopher Hermann source commit; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/eeex-remote-console/commit/661927e56e28435541a3128568cd4ee6d5d80164"
+reviewed_on = "2026-09-04"

@@ -58,6 +58,26 @@ class ShortcutCompletionBackend extends FixtureBackend {
 }
 
 describe("Chriz Easy BG application flow", () => {
+  it("tries Radar once after completion and keeps Play available if the addon fails", async () => {
+    class AddonFailureBackend extends ShortcutCompletionBackend {
+      radarCalls: string[] = [];
+      override installRadar(installId: string): Promise<void> {
+        this.radarCalls.push(installId);
+        return Promise.reject(new Error("Release download is offline"));
+      }
+    }
+    const backend = new AddonFailureBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+    await waitFor(() => expect(getByText(root, "BG Radar Overlay couldn't be added. Your game is ready; retry the overlay from Updates.")).toBeTruthy());
+    expect(backend.radarCalls).toEqual(["completed"]);
+    expect((getByRole(root, "button", { name: "Play Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(backend.shortcutCalls).toEqual(["completed"]);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.replaceChildren();
@@ -164,7 +184,9 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByRole(root, "heading", { level: 2, name: "Chriz Easy BG" })).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Updates" }));
     expect(getByRole(root, "heading", { level: 1, name: "Updates" })).toBeTruthy();
-    expect(getByText(root, "Your current game stays safe.")).toBeTruthy();
+    expect(getByText(root, "CEBG app")).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Back" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Check for updates" })).toBeTruthy();
     expect(queryByText(root, "Update now")).toBeNull();
   });
 
@@ -205,7 +227,7 @@ describe("Chriz Easy BG application flow", () => {
     await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
 
     await waitFor(() => expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy());
-    expect(backend.registryReads).toBe(2);
+    expect(backend.registryReads).toBe(3);
     expect(backend.shortcutCalls).toEqual(["completed"]);
     expect(getByText(root, "Shortcut created on your desktop.")).toBeTruthy();
     expect(getByRole(root, "button", { name: "Play Chriz Easy BG" })).toBeTruthy();
@@ -311,8 +333,11 @@ describe("Chriz Easy BG application flow", () => {
     await mountApp(root, backend);
     await user.click(getByRole(root, "button", { name: "Updates" }));
 
-    expect(getByText(root, "Application 0.1.0-alpha.2")).toBeTruthy();
-    expect(getByText(root, "Recipe 0.1.0-alpha.2")).toBeTruthy();
+    expect(getByRole(root, "button", { name: "CEBG app 0.1.0-alpha.2 changelog" })).toBeTruthy();
+    const collectionChangelog = getByRole(root, "button", { name: "Collection 0.1.0-alpha.2 changelog" });
+    expect(collectionChangelog.getAttribute("aria-expanded")).toBe("false");
+    await user.click(collectionChangelog);
+    expect(collectionChangelog.getAttribute("aria-expanded")).toBe("true");
     expect(getByText(root, /installer did not inspect your save/)).toBeTruthy();
     expect(getByText(root, "Moved campaign")).toBeTruthy();
     expect(queryByText(root, "Patch campaign")).toBeNull();
@@ -405,7 +430,7 @@ describe("Chriz Easy BG application flow", () => {
     const user = userEvent.setup();
     await mountApp(root, backend);
 
-    expect(backend.calls).toEqual(["status", "registry"]);
+    expect(backend.calls).toEqual(["status", "registry", "updates"]);
     expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();
     expect(getByRole(root, "button", { name: "Play Chriz Easy BG" })).toBeTruthy();
     expect(getByRole(root, "button", { name: "Open game folder" })).toBeTruthy();
@@ -416,7 +441,8 @@ describe("Chriz Easy BG application flow", () => {
     await user.click(getByRole(root, "button", { name: "Open game folder" }));
     expect(backend.launched).toEqual(["ready"]);
     expect(backend.opened).toEqual(["ready"]);
-    expect(backend.calls).not.toContain("updates");
+    expect(backend.calls.filter((call) => call === "updates")).toHaveLength(1);
+    expect(backend.calls).not.toContain("discovery");
   });
 
   it("opens a resumable-only registry on Continue installation", async () => {
@@ -899,7 +925,7 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByText(root, "The build stopped safely")).toBeTruthy();
     expect(queryByText(root, "Retry failed step")).toBeNull();
     await user.click(getByRole(root, "button", { name: "My installs" }));
-    expect(getByRole(root, "heading", { level: 1, name: "No installations yet" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "My installs" })).toBeTruthy();
   });
 
   it("preserves a failed native snapshot and Retry when resume is rejected", async () => {

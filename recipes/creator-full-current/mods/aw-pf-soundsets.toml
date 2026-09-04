@@ -1,0 +1,11 @@
+id = "aw-pf-soundsets"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Pathfinder Soundset"
+tp2 = "aw_PF_soundsets/aw_PF_soundsets.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Pathfinder Soundset"

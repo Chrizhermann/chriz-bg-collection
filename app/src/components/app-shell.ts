@@ -16,10 +16,11 @@ export function actionButton(label: string, action: () => void | Promise<void>, 
 
 export function screenIntro(eyebrow: string, title: string, lede: string): HTMLElement {
   const header = element("header", "screen-intro");
-  header.append(element("p", "eyebrow", eyebrow));
+  if (eyebrow) header.append(element("p", "eyebrow", eyebrow));
   const heading = element("h1", undefined, title);
   heading.tabIndex = -1;
-  header.append(heading, element("p", "lede", lede));
+  header.append(heading);
+  if (lede) header.append(element("p", "lede", lede));
   return header;
 }
 
@@ -35,15 +36,18 @@ export function createAppShell(
   content: HTMLElement,
   navigate: (route: Route) => void | Promise<void>,
   mode: "fixture" | "native" = "fixture",
+  back?: () => void | Promise<void>,
+  version = "0.1.0-alpha.1",
 ): HTMLElement {
   const shell = element("div", "app-shell");
   shell.dataset.mode = mode;
+  shell.dataset.route = route;
   const header = element("header", "app-header");
   const brand = element("div", "brand");
   const mark = element("span", "brand-mark", "C");
   mark.setAttribute("aria-hidden", "true");
   const copy = element("div", "brand-copy");
-  copy.append(element("strong", undefined, "Chriz Easy BG"), element("small", undefined, "0.1 Alpha"));
+  copy.append(element("strong", undefined, "Chriz Easy BG"), element("small", undefined, version.replace(/-alpha\.?/i, " Alpha ")));
   brand.append(mark, copy);
   const nav = element("nav", "header-actions");
   nav.setAttribute("aria-label", "CEBG");
@@ -52,11 +56,20 @@ export function createAppShell(
     { route: "updates" as const, label: "Updates" },
   ]) {
     const button = actionButton(item.label, () => navigate(item.route), "header-button");
+    if (item.route === "updates") {
+      button.dataset.action = "updates";
+      button.setAttribute("aria-label", "Updates");
+    }
     if (route === item.route) button.setAttribute("aria-current", "page");
     nav.append(button);
   }
   header.append(brand, nav);
   const main = element("main", "screen");
+  if (back !== undefined) {
+    const navigation = element("div", "screen-navigation");
+    navigation.append(actionButton("Back", back, "quiet compact"));
+    main.append(navigation);
+  }
   main.append(content);
   shell.append(header, main);
   return shell;

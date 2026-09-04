@@ -11,6 +11,7 @@ pub mod manifest;
 pub mod orchestrator;
 pub mod postcondition;
 pub mod preflight;
+pub mod radar;
 pub mod receipt;
 pub mod recipe_envelope;
 pub mod recipe_view;

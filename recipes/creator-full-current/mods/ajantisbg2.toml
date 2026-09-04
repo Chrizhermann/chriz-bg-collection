@@ -1,0 +1,11 @@
+id = "ajantisbg2"
+artifact_id = "creator-full-private-extras-20260902"
+name = "Sir Ajantis NPC for BGII: 21"
+tp2 = "ajantisbg2/ajantisbg2.tp2"
+language = 1
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Sir Ajantis NPC for BGII: 21"
