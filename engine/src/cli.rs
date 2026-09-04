@@ -123,7 +123,7 @@ pub enum ValidationProfile {
     /// Permit authoring-only warnings while still rejecting structural errors.
     #[default]
     Authoring,
-    /// Treat every current warning as release-blocking until Task 19's richer gate exists.
+    /// Enforce static evidence, omission, and approved-tail records for the public alpha.
     PublicAlpha,
 }
 
@@ -394,7 +394,21 @@ pub fn validate_recipe(
     profile: ValidationProfile,
 ) -> Result<ValidationReport, CliError> {
     let manifest = load_recipe(recipe)?;
-    let findings = validate::validate(&manifest)
+    let mut raw_findings = validate::validate(&manifest);
+    if profile == ValidationProfile::PublicAlpha {
+        raw_findings.extend(
+            crate::release_validate::validate_public_alpha(&manifest).map_err(|error| {
+                CliError::new(
+                    "validation_failed",
+                    format!(
+                        "recipe {} could not load public-alpha release records: {error}",
+                        manifest.root.display()
+                    ),
+                )
+            })?,
+        );
+    }
+    let findings = raw_findings
         .into_iter()
         .map(|finding| ValidationFinding {
             severity: match finding.severity {

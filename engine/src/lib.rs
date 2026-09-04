@@ -14,6 +14,7 @@ pub mod preflight;
 pub mod receipt;
 pub mod recipe_view;
 pub mod registry;
+pub mod release_validate;
 pub mod resolve;
 pub mod session;
 pub mod stage;

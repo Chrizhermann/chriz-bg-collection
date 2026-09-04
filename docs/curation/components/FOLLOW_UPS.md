@@ -1,6 +1,6 @@
 # Curation follow-ups
 
-Last consolidated: 2026-09-01.
+Last consolidated: 2026-09-04.
 
 This is the single revisit queue for unresolved curation work. Component choices remain
 authoritative in their individual catalogs; this file does not create or change a Chris
@@ -10,6 +10,17 @@ only when the required artifact, static validation, or live evidence actually ex
 Items under **Release gates** block the corresponding selected feature or first complete
 stack. Items under **Conditional/future gates** do not block release while that feature
 remains unavailable or excluded.
+
+## v0.1.0-alpha.1 release record
+
+- [x] The `public-alpha` profile now requires usable artifacts, rejects selected FAIL
+  placeholders, and requires accepted static-test evidence for every resolved run.
+- [x] Post-EET runs and every currently unresolved default/mandatory choice are recorded in
+  `manifest/releases/v0.1.0-alpha.1/known-limitations.toml`; each omission has Christopher's
+  approval, its technical reason, and user-visible wording.
+- [ ] Runtime acceptance remains explicitly `pending` in
+  `manifest/releases/v0.1.0-alpha.1/acceptance.toml`. Static recipe tests do not satisfy the
+  clean installer-driven EET build, loader boot, BG1 start, or save/reload checks.
 
 ## Release gates — source and immutable pins
 

@@ -1,0 +1,74 @@
+schema = 1
+release = "v0.1.0-alpha.1"
+preset = "chris-recommended"
+approved_tail_runs = [
+  "chriz-sod-remix-bg2",
+  "hiddengameplayoptions-bg2",
+  "chriz-bg-rebalance-bg2",
+  "chriz-bg-modpack-bg2",
+  "spell-rev-npc-spellbooks-bg2",
+  "buffbot-bg2",
+]
+
+[[omissions]]
+feature_id = "feature:bg1npc:component-160"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "The component installs copyrighted portraits that the public recipe cannot redistribute."
+user_facing_limitation = "BG1 NPC Project portraits are unavailable in this public alpha."
+
+[[omissions]]
+feature_id = "mod:evandra"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "The Evandra archive still requires a manually supplied, provenance-verified source."
+user_facing_limitation = "Evandra is unavailable in this public alpha until a redistributable source is verified."
+
+[[omissions]]
+feature_id = "feature:artisanskitpack:component-8101"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "This component is incompatible with the selected Spell Revisions setup."
+user_facing_limitation = "Revised Stormlord is unavailable when Spell Revisions is selected."
+
+[[omissions]]
+feature_id = "feature:artisanskitpack-npc:component-5102"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "This component is incompatible with the selected Spell Revisions setup."
+user_facing_limitation = "Red Wizard Edwin is unavailable when Spell Revisions is selected."
+
+[[omissions]]
+feature_id = "feature:artisanskitpack-npc:component-10004"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "This component is incompatible with the selected Spell Revisions setup."
+user_facing_limitation = "Stormlord Yeslick is unavailable when Spell Revisions is selected."
+
+[[omissions]]
+feature_id = "feature:artisanskitpack-npc:component-99001"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "The component requires Bardic Wonders, which is not part of this alpha recipe."
+user_facing_limitation = "Troubadour Garrick is unavailable until Bardic Wonders is included."
+
+[[omissions]]
+feature_id = "feature:randomiser:component-10300"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "The selected SCS component 8040 already provides this functionality."
+user_facing_limitation = "Randomiser's Watcher's Keep statue safeguard is omitted because SCS supplies the selected equivalent."
+
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-400"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "The Branwen Spiritual Hammer repair is not enabled in the frozen alpha recipe."
+user_facing_limitation = "Branwen's Spell Revisions Spiritual Hammer repair is unavailable in this alpha."
+
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-430"
+approved_by = "Christopher"
+approved_on = "2026-09-04"
+reason = "The repair requires Tweaks Anthology component 2170, which is not available in the alpha recipe."
+user_facing_limitation = "Use Any Item scroll caster-level repair is unavailable because its required Tweaks component is not installed."
