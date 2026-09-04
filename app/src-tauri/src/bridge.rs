@@ -533,6 +533,17 @@ impl NativeBridge {
         Ok(response)
     }
 
+    /// Validates a native folder choice immediately; cancellation leaves bridge state unchanged.
+    pub fn choose_game_folder(
+        &self,
+        role: GameRole,
+        selected: Option<PathBuf>,
+    ) -> Result<Option<GameCandidateResponse>, CommandError> {
+        selected
+            .map(|path| self.inspect_game_path(role, &path))
+            .transpose()
+    }
+
     /// Evaluates the configured preset plus a normalized semantic frontend selection.
     pub fn evaluate_build(
         &self,
@@ -557,6 +568,18 @@ impl NativeBridge {
     ) -> Result<DestinationEvaluationResponse, CommandError> {
         let (bg1, bg2) = self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
         inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)
+    }
+
+    /// Validates a native destination choice immediately; cancellation is a no-op.
+    pub fn choose_destination_folder(
+        &self,
+        selected: Option<PathBuf>,
+        bg1_candidate_id: &str,
+        bg2_candidate_id: &str,
+    ) -> Result<Option<DestinationEvaluationResponse>, CommandError> {
+        selected
+            .map(|path| self.inspect_destination(&path, bg1_candidate_id, bg2_candidate_id))
+            .transpose()
     }
 
     /// Re-inspects exact server-side candidates and freezes a short-lived, single-use review.

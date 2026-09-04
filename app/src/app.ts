@@ -200,6 +200,28 @@ class AppController implements AppHandle {
     this.#render();
   }
 
+  async #chooseGameFolder(game: "bg1" | "bg2"): Promise<void> {
+    const role = game === "bg1" ? "bgee_sod" : "bg2ee";
+    const candidate = await this.backend.chooseGameFolder(role);
+    if (candidate === null) return;
+    const key = game === "bg1" ? "bg1Candidates" : "bg2Candidates";
+    const candidates = this.#discovery[key].filter((entry) => entry.id !== candidate.id);
+    this.#discovery = { ...this.#discovery, [key]: [...candidates, candidate] };
+    this.#dispatch({ type: "select-game", game, id: candidate.id });
+    this.#render();
+  }
+
+  async #chooseDestinationFolder(): Promise<void> {
+    const evaluation = await this.backend.chooseDestinationFolder(
+      this.#state.selectedBg1Id,
+      this.#state.selectedBg2Id,
+    );
+    if (evaluation === null) return;
+    this.#destination = evaluation;
+    this.#dispatch({ type: "set-destination", path: evaluation.path });
+    this.#render();
+  }
+
   async #cancelBuild(): Promise<void> {
     if (this.#runId !== null) await this.backend.cancelRun(this.#runId);
   }
@@ -339,12 +361,19 @@ class AppController implements AppHandle {
           this.#state.selectedBg1Id,
           this.#state.selectedBg2Id,
           (game, id) => this.#dispatch({ type: "select-game", game, id }),
+          (game) => safely(() => this.#chooseGameFolder(game)),
           () => this.#back(),
           () => safely(() => navigate("destination")),
         );
         break;
       case "destination":
-        content = destinationScreen(this.#destination, (path) => safely(() => this.#inspectDestination(path)), () => this.#back(), () => safely(() => navigate("setup")));
+        content = destinationScreen(
+          this.#destination,
+          (path) => safely(() => this.#inspectDestination(path)),
+          () => safely(() => this.#chooseDestinationFolder()),
+          () => this.#back(),
+          () => safely(() => navigate("setup")),
+        );
         break;
       case "setup":
         content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => this.#back(), () => safely(() => navigate("review")));

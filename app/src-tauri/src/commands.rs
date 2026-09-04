@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use bg_engine::games::GameRole;
 use bg_engine::recipe_view::NormalizedSelection;
 use tauri::ipc::Channel;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::{DialogExt, FilePath};
 
 use crate::bridge::{
     BootstrapResponse, DestinationEvaluationResponse, EvaluateBuildResponse, FrozenReviewResponse,
@@ -37,6 +38,21 @@ where
         .map_err(CommandError::background_task)?
 }
 
+fn folder_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
+    selected
+        .map(|path| {
+            path.simplified().into_path().map_err(|error| {
+                CommandError::new(
+                    "folder_choice_invalid",
+                    "The selected folder could not be read as a local Windows path.",
+                    "Choose a local folder and try again.",
+                    error.to_string(),
+                )
+            })
+        })
+        .transpose()
+}
+
 #[tauri::command]
 pub async fn bootstrap(state: State<'_, BridgeState>) -> Result<BootstrapResponse, CommandError> {
     let bridge = state.bridge.clone();
@@ -49,6 +65,24 @@ pub async fn discover_games(
 ) -> Result<GameDiscoveryResponse, CommandError> {
     let bridge = state.bridge.clone();
     background(move || bridge.discover_games()).await
+}
+
+#[tauri::command]
+pub async fn choose_game_folder(
+    app: AppHandle,
+    state: State<'_, BridgeState>,
+    role: GameRole,
+) -> Result<Option<GameCandidateResponse>, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        let title = match role {
+            GameRole::BgeeSod => "Choose Baldur's Gate: Enhanced Edition with SoD",
+            GameRole::Bg2ee => "Choose Baldur's Gate II: Enhanced Edition",
+        };
+        let selected = folder_path(app.dialog().file().set_title(title).blocking_pick_folder())?;
+        bridge.choose_game_folder(role, selected)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -80,6 +114,26 @@ pub async fn inspect_destination(
     let bridge = state.bridge.clone();
     background(move || {
         bridge.inspect_destination(&PathBuf::from(path), &bg1_candidate_id, &bg2_candidate_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn choose_destination_folder(
+    app: AppHandle,
+    state: State<'_, BridgeState>,
+    bg1_candidate_id: String,
+    bg2_candidate_id: String,
+) -> Result<Option<DestinationEvaluationResponse>, CommandError> {
+    let bridge = state.bridge.clone();
+    background(move || {
+        let selected = folder_path(
+            app.dialog()
+                .file()
+                .set_title("Choose a new campaign destination")
+                .blocking_pick_folder(),
+        )?;
+        bridge.choose_destination_folder(selected, &bg1_candidate_id, &bg2_candidate_id)
     })
     .await
 }

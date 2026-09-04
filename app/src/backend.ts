@@ -28,7 +28,9 @@ export interface Backend {
   // may map snake_case command payloads without leaking transport casing here.
   getStatus(): Promise<BackendStatus>;
   discoverGames(): Promise<GameDiscovery>;
+  chooseGameFolder(role: GameRole): Promise<GameCandidate | null>;
   inspectGamePath(role: GameRole, path: string): Promise<GameCandidate>;
+  chooseDestinationFolder(bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation | null>;
   inspectDestination(path: string, bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation>;
   evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation>;
   freezeReview(
@@ -232,8 +234,17 @@ export class NativeBackend implements Backend {
     };
   }
 
+  async chooseGameFolder(role: GameRole): Promise<GameCandidate | null> {
+    const candidate = await this.#command<GameCandidateWire | null>("choose_game_folder", { role });
+    return candidate === null ? null : projectCandidate(candidate);
+  }
+
   async inspectGamePath(role: GameRole, path: string): Promise<GameCandidate> {
     return projectCandidate(await this.#command<GameCandidateWire>("inspect_game_path", { role, path }));
+  }
+
+  chooseDestinationFolder(bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation | null> {
+    return this.#command("choose_destination_folder", { bg1CandidateId, bg2CandidateId });
   }
 
   inspectDestination(path: string, bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation> {
@@ -388,6 +399,11 @@ export class FixtureBackend implements Backend {
     });
   }
 
+  async chooseGameFolder(role: GameRole): Promise<GameCandidate | null> {
+    const path = role === "bgee_sod" ? "C:\\Fixture\\Browsed BGEE" : "C:\\Fixture\\Browsed BG2EE";
+    return this.inspectGamePath(role, path);
+  }
+
   async inspectGamePath(role: GameRole, path: string): Promise<GameCandidate> {
     const discovery = await this.discoverGames();
     const candidates = role === "bgee_sod" ? discovery.bg1Candidates : discovery.bg2Candidates;
@@ -401,6 +417,10 @@ export class FixtureBackend implements Backend {
       eligible: false,
       findings: ["Fixture browsing never accepts an unmodeled source as clean."],
     };
+  }
+
+  chooseDestinationFolder(bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation | null> {
+    return this.inspectDestination("D:\\Fixture Campaigns\\Browsed Chriz EET Alpha", bg1CandidateId, bg2CandidateId);
   }
 
   inspectDestination(path: string, _bg1CandidateId: string, _bg2CandidateId: string): Promise<DestinationEvaluation> {

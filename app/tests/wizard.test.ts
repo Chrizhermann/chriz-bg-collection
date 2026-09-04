@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { BackendCommandError, FixtureBackend, NativeBackend, type EventChannelFactory, type InvokeCommand } from "../src/backend";
-import type { RunEventEnvelope } from "../src/contracts";
+import type { GameCandidate, GameRole, RunEventEnvelope } from "../src/contracts";
 import { mountApp } from "../src/app";
 import { technicalLog } from "../src/components/technical-log";
 
@@ -146,6 +146,53 @@ describe("guided collection wizard", () => {
 
     expect((optional as HTMLInputElement).checked).toBe(false);
     expect(getByText(root, "2 campaign choices selected")).toBeTruthy();
+  });
+
+  it("uses native folder choices and immediately shows their validated results", async () => {
+    class FolderChoiceBackend extends FixtureBackend {
+      override chooseGameFolder(role: GameRole): Promise<GameCandidate | null> {
+        return Promise.resolve({
+          id: `chosen-${role}`,
+          label: role === "bgee_sod" ? "BG:EE + SoD — chosen clean folder" : "BGII:EE — chosen clean folder",
+          path: role === "bgee_sod" ? "C:\\Chosen BGEE" : "C:\\Chosen BG2EE",
+          storefront: "steam",
+          build: "2.7.3.0",
+          freshness: "fresh",
+          eligible: true,
+          findings: ["Clean supported installation."],
+        });
+      }
+
+      override chooseDestinationFolder(): Promise<{
+        readonly path: string;
+        readonly safe: boolean;
+        readonly title: string;
+        readonly detail: string;
+      } | null> {
+        return Promise.resolve({
+          path: "D:\\Chosen Campaign",
+          safe: true,
+          title: "Safe separate destination",
+          detail: "The source games and their saves will remain untouched.",
+        });
+      }
+    }
+
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, new FolderChoiceBackend());
+
+    await user.click(getByRole(root, "button", { name: "Begin setup" }));
+    await user.click(getByRole(root, "button", { name: "Browse for Baldur's Gate source" }));
+    expect(getByText(root, "C:\\Chosen BGEE")).toBeTruthy();
+    expect((getByLabelText(root, "Baldur's Gate source") as HTMLSelectElement).value).toBe("chosen-bgee_sod");
+
+    await user.click(getByRole(root, "button", { name: "Continue" }));
+    await user.click(getByRole(root, "button", { name: "Browse for campaign destination" }));
+    expect((getByLabelText(root, "Campaign destination") as HTMLInputElement).value).toBe("D:\\Chosen Campaign");
+    expect(getByText(root, "Safe separate destination")).toBeTruthy();
+    expect((getByRole(root, "button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("uses the native discovery, destination, review, and event path without fixture controls", async () => {

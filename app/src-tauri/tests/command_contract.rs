@@ -360,6 +360,26 @@ fn explicit_game_paths_are_inspected_by_the_engine_before_projection() {
 }
 
 #[test]
+fn chosen_game_folders_are_validated_and_cancelled_choices_are_noops() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let bridge = NativeBridge::new(recipe, "recommended");
+    let game = workspace_root().join("engine/tests/fixtures/games/content/steam-bgee-sod");
+
+    assert_eq!(
+        bridge
+            .choose_game_folder(GameRole::BgeeSod, None)
+            .expect("cancel folder choice"),
+        None
+    );
+    let inspected = bridge
+        .choose_game_folder(GameRole::BgeeSod, Some(game.clone()))
+        .expect("inspect chosen folder")
+        .expect("chosen folder response");
+
+    assert_eq!(Path::new(&inspected.path), game.canonicalize().unwrap());
+}
+
+#[test]
 fn evaluate_build_returns_only_semantic_ui_projection_and_phase_summaries() {
     let bridge = NativeBridge::new(workspace_root().join("manifest"), "chris-recommended");
 
@@ -678,6 +698,49 @@ fn destination_checks_use_registered_candidates_and_never_create_the_target() {
         &discovery.selected_bg2_id,
     );
     assert_eq!(occupied_error.unwrap_err().code, "destination_unsafe");
+}
+
+#[test]
+fn chosen_destinations_are_validated_and_cancelled_choices_are_noops() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let cache = recipe.parent().unwrap().join("cache");
+    fs::create_dir(&cache).expect("create cache fixture");
+    let bg1 = recipe.parent().unwrap().join("clean-bg1");
+    let bg2 = recipe.parent().unwrap().join("clean-bg2");
+    fs::create_dir(&bg1).expect("create BG1 fixture");
+    fs::create_dir(&bg2).expect("create BG2 fixture");
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(recipe, "recommended", &cache, engine);
+    let discovery = bridge.discover_games().expect("register discovered games");
+    let destination = cache.parent().unwrap().join("chosen-campaign");
+    let canonical_destination = cache
+        .parent()
+        .unwrap()
+        .canonicalize()
+        .unwrap()
+        .join("chosen-campaign");
+
+    assert_eq!(
+        bridge
+            .choose_destination_folder(
+                None,
+                "not-consulted-after-cancel",
+                "not-consulted-after-cancel",
+            )
+            .expect("cancel folder choice"),
+        None
+    );
+    let inspected = bridge
+        .choose_destination_folder(
+            Some(destination.clone()),
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("inspect chosen destination")
+        .expect("chosen destination response");
+
+    assert!(inspected.safe);
+    assert_eq!(Path::new(&inspected.path), canonical_destination);
 }
 
 #[test]

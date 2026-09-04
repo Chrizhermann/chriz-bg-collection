@@ -116,6 +116,49 @@ describe("native command adapter", () => {
     expect(JSON.stringify(evaluation)).not.toContain("components");
   });
 
+  it("maps native folder choices through their engine-validated command results", async () => {
+    const invoke = vi.fn<InvokeCommand>(async (command, args) => {
+      switch (command) {
+        case "choose_game_folder":
+          expect(args).toEqual({ role: "bgee_sod" });
+          return {
+            id: "chosen-bg1",
+            label: "BG:EE + SoD — chosen clean folder",
+            path: "C:\\Chosen BGEE",
+            storefront: "steam",
+            build: "2.7.3.0",
+            freshness: "fresh",
+            eligible: true,
+            findings: ["Clean supported installation."],
+          };
+        case "choose_destination_folder":
+          expect(args).toEqual({ bg1CandidateId: "chosen-bg1", bg2CandidateId: "bg2" });
+          return {
+            path: "D:\\Chosen Campaign",
+            safe: true,
+            title: "Safe separate destination",
+            detail: "The source games and their saves will remain untouched.",
+          };
+        default:
+          throw new Error(`Unexpected command ${command}`);
+      }
+    });
+    const backend = new NativeBackend(invoke);
+
+    await expect(backend.chooseGameFolder("bgee_sod")).resolves.toMatchObject({
+      id: "chosen-bg1",
+      eligible: true,
+    });
+    await expect(backend.chooseDestinationFolder("chosen-bg1", "bg2")).resolves.toMatchObject({
+      path: "D:\\Chosen Campaign",
+      safe: true,
+    });
+
+    const cancelled = new NativeBackend(async () => null);
+    await expect(cancelled.chooseGameFolder("bg2ee")).resolves.toBeNull();
+    await expect(cancelled.chooseDestinationFolder("bg1", "bg2")).resolves.toBeNull();
+  });
+
   it("preserves the serialized recovery contract from rejected native commands", async () => {
     const backend = new NativeBackend(async () => {
       throw {
