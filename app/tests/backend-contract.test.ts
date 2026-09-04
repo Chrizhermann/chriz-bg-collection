@@ -264,14 +264,26 @@ describe("native command adapter", () => {
       switch (command) {
         case "list_managed_installations":
           expect(args).toBeUndefined();
-          return [{
-            id: "install-ready",
-            name: "Ready campaign",
-            path: "D:\\Campaigns\\Ready",
-            status: "Ready to play",
-            receipt_path: "D:\\Campaigns\\Ready\\install-receipt.json",
-            available: true,
-          }];
+          return [
+            {
+              id: "install-ready",
+              name: "Ready campaign",
+              path: "D:\\Campaigns\\Ready",
+              status: "Ready to play",
+              receipt_path: "D:\\Campaigns\\Ready\\install-receipt.json",
+              available: true,
+              resumable: false,
+            },
+            {
+              id: "install-restart",
+              name: "Incomplete campaign",
+              path: "D:\\Campaigns\\Restart",
+              status: "Build interrupted — ready to resume",
+              receipt_path: null,
+              available: false,
+              resumable: true,
+            },
+          ];
         case "open_manual_source":
           expect(args).toEqual({ artifactId: "manual-fixture" });
           return null;
@@ -288,14 +300,26 @@ describe("native command adapter", () => {
     });
     const backend = new NativeBackend(invoke);
 
-    await expect(backend.listManagedInstallations()).resolves.toEqual([{
-      id: "install-ready",
-      name: "Ready campaign",
-      path: "D:\\Campaigns\\Ready",
-      status: "Ready to play",
-      receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json",
-      available: true,
-    }]);
+    await expect(backend.listManagedInstallations()).resolves.toEqual([
+      {
+        id: "install-ready",
+        name: "Ready campaign",
+        path: "D:\\Campaigns\\Ready",
+        status: "Ready to play",
+        receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json",
+        available: true,
+        resumable: false,
+      },
+      {
+        id: "install-restart",
+        name: "Incomplete campaign",
+        path: "D:\\Campaigns\\Restart",
+        status: "Build interrupted — ready to resume",
+        receiptPath: null,
+        available: false,
+        resumable: true,
+      },
+    ]);
     await expect(backend.openManualSource("manual-fixture")).resolves.toBeUndefined();
     await expect(backend.exportDiagnostics("install-ready")).resolves.toEqual({
       path: "D:\\Diagnostics\\install-ready.zip",

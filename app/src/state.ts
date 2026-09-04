@@ -44,7 +44,7 @@ export function initialState(): AppState {
 export function reduce(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case "navigate":
-      if (action.route === "build" && state.frozenReview === null) return state;
+      if (action.route === "build" && state.frozenReview === null && state.build === null) return state;
       return { ...state, route: action.route, history: action.remember === false ? state.history : [...state.history, state.route] };
     case "back": {
       const route = state.history.at(-1);

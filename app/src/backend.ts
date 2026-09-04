@@ -137,8 +137,9 @@ type ManagedInstallationWire = {
   readonly name: string;
   readonly path: string;
   readonly status: string;
-  readonly receipt_path: string;
+  readonly receipt_path: string | null;
   readonly available: boolean;
+  readonly resumable: boolean;
 };
 
 type RunSnapshotWire = {
@@ -570,7 +571,7 @@ export class FixtureBackend implements Backend {
   }
 
   listManagedInstallations(): Promise<ManagedInstallation[]> {
-    return Promise.resolve([{ id: "fixture-install", name: this.#options.textOverrides?.campaignName ?? "Chriz EET — Stream test", path: "D:\\Fixture Campaigns\\Chriz EET Stream Test", status: "Ready to play", receiptPath: "D:\\Fixture Campaigns\\Chriz EET Stream Test\\install-receipt.json", available: true }]);
+    return Promise.resolve([{ id: "fixture-install", name: this.#options.textOverrides?.campaignName ?? "Chriz EET — Stream test", path: "D:\\Fixture Campaigns\\Chriz EET Stream Test", status: "Ready to play", receiptPath: "D:\\Fixture Campaigns\\Chriz EET Stream Test\\install-receipt.json", available: true, resumable: false }]);
   }
 
   launchInstall(_installId: string): Promise<void> {

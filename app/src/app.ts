@@ -369,6 +369,15 @@ class AppController implements AppHandle {
     await this.backend.openInstallFolder(installId);
   }
 
+  async #resumeManagedInstall(installId: string): Promise<void> {
+    this.#installId = installId;
+    this.#retryAvailable = false;
+    this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
+    this.#dispatch({ type: "navigate", route: "build" });
+    this.#render();
+    await this.#retryBuild();
+  }
+
   #render(focusTargetId?: string): void {
     const evaluation = this.#state.evaluation;
     if (evaluation === null) return;
@@ -381,6 +390,7 @@ class AppController implements AppHandle {
           begin: () => safely(() => navigate("welcome")),
           launch: (installId) => safely(() => this.#launchInstall(installId)),
           openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
+          resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
         });
         break;
       case "updates":

@@ -136,6 +136,7 @@ describe("guided collection wizard", () => {
       updateChecks = 0;
       launched: string[] = [];
       opened: string[] = [];
+      resumed: string[] = [];
 
       override getStatus() {
         return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
@@ -143,8 +144,9 @@ describe("guided collection wizard", () => {
 
       override listManagedInstallations() {
         return Promise.resolve([
-          { id: "ready", name: "Ready campaign", path: "D:\\Campaigns\\Ready", status: "Ready to play", receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json", available: true },
-          { id: "missing", name: "Moved campaign", path: "D:\\Campaigns\\Missing", status: "Folder unavailable", receiptPath: "D:\\Campaigns\\Missing\\install-receipt.json", available: false },
+          { id: "ready", name: "Ready campaign", path: "D:\\Campaigns\\Ready", status: "Ready to play", receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json", available: true, resumable: false },
+          { id: "interrupted", name: "Interrupted campaign", path: "D:\\Campaigns\\Restart", status: "Build interrupted — ready to resume", receiptPath: null, available: false, resumable: true },
+          { id: "missing", name: "Moved campaign", path: "D:\\Campaigns\\Missing", status: "Folder unavailable", receiptPath: null, available: false, resumable: false },
         ]);
       }
 
@@ -162,6 +164,11 @@ describe("guided collection wizard", () => {
         this.opened.push(installId);
         return Promise.resolve();
       }
+
+      override resumeBuild(installId: string, _onEvent: (event: RunEventEnvelope) => void) {
+        this.resumed.push(installId);
+        return Promise.resolve({ runId: "resume-run" });
+      }
     }
 
     const backend = new ManagedCampaignBackend();
@@ -172,15 +179,21 @@ describe("guided collection wizard", () => {
     await handle.navigate("home");
 
     expect(getByText(root, "Ready campaign")).toBeTruthy();
+    expect(getByText(root, "Interrupted campaign")).toBeTruthy();
     expect(getByText(root, "Moved campaign")).toBeTruthy();
     expect(getAllByRole(root, "button", { name: "Play" })).toHaveLength(1);
     expect(getAllByRole(root, "button", { name: "Open folder" })).toHaveLength(1);
+    expect(getAllByRole(root, "button", { name: "Resume build" })).toHaveLength(1);
     expect(backend.updateChecks).toBe(0);
 
     await user.click(getByRole(root, "button", { name: "Play" }));
     await user.click(getByRole(root, "button", { name: "Open folder" }));
+    await user.click(getByRole(root, "button", { name: "Resume build" }));
     expect(backend.launched).toEqual(["ready"]);
     expect(backend.opened).toEqual(["ready"]);
+    expect(backend.resumed).toEqual(["interrupted"]);
+    expect(getByRole(root, "heading", { level: 1, name: "Build your campaign" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 2, name: "Build in progress" })).toBeTruthy();
   });
 
   it("does not let a late evaluation overwrite a newer selection", async () => {
