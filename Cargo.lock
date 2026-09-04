@@ -401,6 +401,7 @@ dependencies = [
  "hex",
  "pelite",
  "same-file",
+ "semver",
  "serde",
  "serde_json",
  "sha2",

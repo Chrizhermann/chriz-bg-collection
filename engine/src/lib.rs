@@ -18,6 +18,7 @@ pub mod release_validate;
 pub mod resolve;
 pub mod session;
 pub mod stage;
+pub mod updates;
 pub mod validate;
 pub mod weidu;
 

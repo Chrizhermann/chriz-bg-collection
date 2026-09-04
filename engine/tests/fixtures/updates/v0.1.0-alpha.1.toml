@@ -1,0 +1,66 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.1"
+published_at = "2026-09-04T00:00:00Z"
+minimum_app_version = "0.1.0"
+supersedes = "0.1.0-alpha.0"
+
+[[changes]]
+id = "current"
+title = "Current-save change"
+summary = "Generic current-save guidance."
+save_applicability = "current-save"
+urgency = "critical"
+covers = ["feature:current"]
+
+[[changes]]
+id = "before-npc"
+title = "Before-NPC change"
+summary = "Applies before the named NPC joins."
+save_applicability = "before-npc-join"
+urgency = "recommended"
+condition_note = "Applies only before the NPC is first instantiated."
+covers = ["feature:npc"]
+
+[[changes]]
+id = "before-area"
+title = "Before-area change"
+summary = "Applies before the named area is visited."
+save_applicability = "before-area-visit"
+urgency = "optional"
+condition_note = "Applies only before the area is first visited."
+covers = ["feature:area"]
+
+[[changes]]
+id = "before-event"
+title = "Before-event change"
+summary = "Applies before the named event."
+save_applicability = "before-event"
+urgency = "informational"
+condition_note = "Applies only before the event occurs."
+covers = ["run:event"]
+
+[[changes]]
+id = "next-playthrough"
+title = "Next-playthrough change"
+summary = "Useful on a future playthrough."
+save_applicability = "next-playthrough"
+urgency = "informational"
+covers = ["artifact:next"]
+
+[[changes]]
+id = "new-game"
+title = "New-game change"
+summary = "Requires a newly created game."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["input:new/game"]
+
+[[changes]]
+id = "unknown"
+title = "Unknown applicability"
+summary = "No safe generic save claim exists yet."
+save_applicability = "unknown"
+urgency = "optional"
+condition_note = "Build an updated copy; applicability to existing saves is unknown."
+covers = ["game-profile:steam.toml"]

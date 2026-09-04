@@ -1,0 +1,6 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.0"
+published_at = "2026-09-03T00:00:00Z"
+minimum_app_version = "0.1.0"
+changes = []
