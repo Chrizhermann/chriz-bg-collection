@@ -400,6 +400,17 @@ fieldset {
   color: var(--ember);
 }
 
+.location-finding {
+  margin-top: 0.35rem;
+  color: var(--ember);
+  font-size: 0.76rem;
+  font-weight: 400;
+}
+
+.location-finding p {
+  margin: 0.12rem 0 0;
+}
+
 .location-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -112,6 +112,24 @@ describe("CEBG install-first experience", () => {
     expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("explains why an unsafe install location needs attention", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, new InstallBackend());
+
+    expect(queryByText(root, "The source games and their saves will remain untouched.")).toBeNull();
+
+    const location = getByLabelText(root, "Install location") as HTMLInputElement;
+    await user.clear(location);
+    await user.type(location, "C:\\SteamApps\\Chriz Easy BG");
+    fireEvent.change(location);
+
+    await waitFor(() => expect(getByText(root, "Choose a separate install location")).toBeTruthy());
+    expect(getByText(root, "The collection cannot be built inside a store-managed game folder.")).toBeTruthy();
+    expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("keeps multiple detected sources selectable and their findings collapsed", async () => {
     class MultipleBackend extends InstallBackend {
       override async discoverGames() {

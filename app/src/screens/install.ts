@@ -119,6 +119,17 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const locationControls = element("div", "location-controls");
   const changeLocation = actionButton("Change", actions.browseLocation, "quiet");
   changeLocation.setAttribute("aria-label", "Change install location");
+  if (!model.destination.safe) {
+    const locationFinding = element("div", "location-finding");
+    locationFinding.id = "install-location-finding";
+    locationFinding.setAttribute("role", "status");
+    locationFinding.append(
+      element("strong", undefined, model.destination.title),
+      element("p", undefined, model.destination.detail),
+    );
+    location.input.setAttribute("aria-describedby", locationFinding.id);
+    location.wrapper.append(locationFinding);
+  }
   locationControls.append(location.wrapper, changeLocation);
   location.input.addEventListener("change", () => void actions.changeLocation(location.input.value));
   fields.append(name.wrapper, locationControls);
