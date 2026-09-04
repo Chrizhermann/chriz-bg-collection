@@ -1546,6 +1546,7 @@ where
     F: Fn(RunEventEnvelope) + Send + Sync + 'static,
 {
     SequencedEventSink::new(run_id, move |envelope| {
+        let envelope = project_run_event(envelope);
         {
             let mut state = runtime
                 .lock()
@@ -1560,6 +1561,13 @@ where
         }
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| listener(envelope)));
     })
+}
+
+fn project_run_event(mut envelope: RunEventEnvelope) -> RunEventEnvelope {
+    if let EngineEvent::ManualDownloadNeeded { drop_dir, .. } = &mut envelope.event {
+        *drop_dir = display_windows_path_text(drop_dir);
+    }
+    envelope
 }
 
 fn finish_worker(
@@ -2043,12 +2051,15 @@ fn path_to_string(path: &Path) -> Result<String, CommandError> {
 /// Formats a native path for display without changing the canonical path used by the engine.
 pub fn display_windows_path(path: &Path) -> Result<String, CommandError> {
     let path = path_to_string(path)?;
+    Ok(display_windows_path_text(&path))
+}
+
+fn display_windows_path_text(path: &str) -> String {
     if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
-        return Ok(format!(r"\\{unc}"));
+        return format!(r"\\{unc}");
     }
-    Ok(path
-        .strip_prefix(r"\\?\")
-        .map_or(path.clone(), str::to_owned))
+    path.strip_prefix(r"\\?\")
+        .map_or_else(|| path.to_owned(), str::to_owned)
 }
 
 fn unix_nanos() -> Result<u128, CommandError> {

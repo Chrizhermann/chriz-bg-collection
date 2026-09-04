@@ -144,6 +144,7 @@ struct FakeBridgeEngine {
     installs: Mutex<Vec<(InstallCommandRequest, InstallReviewIdentity)>>,
     resumes: Mutex<Vec<(String, PathBuf)>>,
     controls: Mutex<Vec<RunnerControl>>,
+    manual_download_drop_dir: Mutex<Option<String>>,
     review_recipe_digest: Mutex<String>,
     install_release: Condvar,
     install_released: Mutex<bool>,
@@ -157,6 +158,7 @@ impl FakeBridgeEngine {
             installs: Mutex::new(Vec::new()),
             resumes: Mutex::new(Vec::new()),
             controls: Mutex::new(Vec::new()),
+            manual_download_drop_dir: Mutex::new(None),
             review_recipe_digest: Mutex::new("aa".repeat(32)),
             install_release: Condvar::new(),
             install_released: Mutex::new(false),
@@ -170,6 +172,10 @@ impl FakeBridgeEngine {
 
     fn change_review_identity(&self) {
         *self.review_recipe_digest.lock().unwrap() = "dd".repeat(32);
+    }
+
+    fn emit_manual_download_from(&self, drop_dir: &str) {
+        *self.manual_download_drop_dir.lock().unwrap() = Some(drop_dir.to_owned());
     }
 }
 
@@ -362,6 +368,14 @@ impl BridgeEngine for FakeBridgeEngine {
             install_id: "install-fixture".to_owned(),
             resumed: false,
         });
+        if let Some(drop_dir) = self.manual_download_drop_dir.lock().unwrap().clone() {
+            sink.emit(EngineEvent::ManualDownloadNeeded {
+                mod_id: "manual-fixture".to_owned(),
+                page: "https://example.invalid/manual-fixture".to_owned(),
+                expected_sha256: "11".repeat(32),
+                drop_dir,
+            });
+        }
         let released = self.install_released.lock().unwrap();
         let _released = self
             .install_release
@@ -444,6 +458,66 @@ fn display_paths_hide_only_windows_verbatim_prefixes() {
         display_windows_path(Path::new(r"D:\Games\Example")).unwrap(),
         r"D:\Games\Example"
     );
+}
+
+#[test]
+fn manual_download_paths_are_prettified_in_live_events_and_snapshots_only() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let bg1 = root.join("clean-bg1");
+    let bg2 = root.join("clean-bg2");
+    fs::create_dir(&cache).unwrap();
+    fs::create_dir(&bg1).unwrap();
+    fs::create_dir(&bg2).unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let canonical_drop_dir = r"\\?\C:\Installer Cache\manual";
+    engine.emit_manual_download_from(canonical_drop_dir);
+    let bridge = NativeBridge::with_engine(recipe, "recommended", cache, engine.clone());
+    let discovery = bridge.discover_games().unwrap();
+    let review = bridge
+        .freeze_review(
+            "Chriz Easy BG",
+            &NormalizedSelection {
+                platform: "windows".to_owned(),
+                features: Default::default(),
+                inputs: Default::default(),
+            },
+            &root.join("installation"),
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .unwrap();
+    let (event_tx, event_rx) = mpsc::channel::<RunEventEnvelope>();
+    let started = bridge
+        .start_build(&review.review_token, move |event| {
+            let _ = event_tx.send(event);
+        })
+        .unwrap();
+
+    let _started_event = event_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    let live = event_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    let EngineEvent::ManualDownloadNeeded { drop_dir, .. } = live.event else {
+        panic!("expected live manual-download event");
+    };
+    assert_eq!(drop_dir, r"C:\Installer Cache\manual");
+
+    let snapshot = bridge.get_run_snapshot(&started.run_id).unwrap();
+    let stored_drop_dir = snapshot.events.iter().find_map(|event| match &event.event {
+        EngineEvent::ManualDownloadNeeded { drop_dir, .. } => Some(drop_dir.as_str()),
+        _ => None,
+    });
+    assert_eq!(stored_drop_dir, Some(r"C:\Installer Cache\manual"));
+    assert_eq!(
+        engine.manual_download_drop_dir.lock().unwrap().as_deref(),
+        Some(canonical_drop_dir)
+    );
+
+    engine.release_install();
+    while !matches!(
+        event_rx.recv_timeout(Duration::from_secs(2)).unwrap().event,
+        EngineEvent::CampaignFinished { .. }
+    ) {}
 }
 
 #[test]
