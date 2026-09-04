@@ -862,15 +862,44 @@ input[type="text"] {
   .screen {
     padding-inline: 1rem;
   }
-}
 
-@media (max-width: 38rem) {
   .source-grid,
   .review-layout,
   .install-field-grid {
     grid-template-columns: 1fr;
   }
+}
 
+@media (min-width: 53.01rem) and (max-height: 48rem) {
+  .screen {
+    padding-block: 0.65rem;
+  }
+
+  .install-screen {
+    gap: 0.45rem;
+  }
+
+  .install-screen .screen-intro h1 {
+    font-size: 2.25rem;
+  }
+
+  .install-screen .lede {
+    margin-top: 0.25rem;
+    line-height: 1.3;
+  }
+
+  .install-screen .card,
+  .install-ready {
+    padding: 0.7rem 0.9rem;
+  }
+
+  .install-sources,
+  .install-settings {
+    gap: 0.45rem;
+  }
+}
+
+@media (max-width: 38rem) {
   .app-header {
     min-height: 4rem;
   }
