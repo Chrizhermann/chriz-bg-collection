@@ -285,8 +285,8 @@ pub enum CampaignStatus {
 #[serde(deny_unknown_fields)]
 struct FrozenCliRecipe {
     schema: u32,
-    #[serde(default = "legacy_display_name")]
-    display_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    display_name: Option<String>,
     collection: Collection,
     artifacts: BTreeMap<String, Artifact>,
     mods: BTreeMap<String, ModFile>,
@@ -299,8 +299,10 @@ struct FrozenCliRecipe {
     bg2: FrozenSource,
 }
 
-fn legacy_display_name() -> String {
-    LEGACY_DISPLAY_NAME.to_owned()
+impl FrozenCliRecipe {
+    fn effective_display_name(&self) -> &str {
+        self.display_name.as_deref().unwrap_or(LEGACY_DISPLAY_NAME)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -572,7 +574,7 @@ pub fn review_install(request: &InstallCommandRequest) -> Result<InstallReviewId
     let prepared = prepare_install(request)?;
     Ok(install_review_identity(
         &prepared.created,
-        &prepared.frozen.display_name,
+        prepared.frozen.effective_display_name(),
     ))
 }
 
@@ -584,7 +586,8 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
     let prepared = prepare_install(request)?;
-    let current = install_review_identity(&prepared.created, &prepared.frozen.display_name);
+    let current =
+        install_review_identity(&prepared.created, prepared.frozen.effective_display_name());
     if current != *expected {
         return Err(CliError::new(
             "review_changed",
@@ -625,7 +628,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
     let frozen = FrozenCliRecipe {
         schema: CLI_FROZEN_RECIPE_SCHEMA,
-        display_name: request.display_name.clone(),
+        display_name: Some(request.display_name.clone()),
         collection: manifest.collection.clone(),
         artifacts: manifest.artifacts.clone(),
         mods: manifest.mods.clone(),
@@ -1324,7 +1327,13 @@ fn validate_frozen_cli_recipe(
             ),
         ));
     }
-    validate_display_name(&frozen.display_name).map_err(|error| {
+    if frozen.schema == CLI_FROZEN_RECIPE_SCHEMA && frozen.display_name.is_none() {
+        return Err(CliError::new(
+            "resume_unavailable",
+            "schema-two frozen installation is missing its display name",
+        ));
+    }
+    validate_display_name(frozen.effective_display_name()).map_err(|error| {
         CliError::new(
             "resume_unavailable",
             format!("frozen installation name is invalid: {error}"),
@@ -1855,7 +1864,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         reserve_save_identity(
             &CliDocumentsLocator,
             layout,
-            &self.frozen.display_name,
+            self.frozen.effective_display_name(),
             &self.created.install_id,
         )
         .map_err(step_error)
@@ -2889,8 +2898,13 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
             runs,
             final_state,
         };
-        ManagedReceiptWriter::new(store, registry, self.frozen.display_name.clone(), evidence)
-            .write(draft)
+        ManagedReceiptWriter::new(
+            store,
+            registry,
+            self.frozen.effective_display_name().to_owned(),
+            evidence,
+        )
+        .write(draft)
     }
 }
 
@@ -3434,7 +3448,7 @@ mod tests {
         .expect("load game-profile fixtures");
         FrozenCliRecipe {
             schema: CLI_FROZEN_RECIPE_SCHEMA,
-            display_name: "Chriz Easy BG".to_owned(),
+            display_name: Some("Chriz Easy BG".to_owned()),
             collection: manifest.collection,
             artifacts: manifest.artifacts,
             mods: manifest.mods,
@@ -3460,6 +3474,33 @@ mod tests {
         }
     }
 
+    fn created_for_frozen_recipe(frozen: &FrozenCliRecipe, payload: Vec<u8>) -> CampaignCreated {
+        let managed = PathBuf::from(r"C:\Legacy Managed Install");
+        let envelope = b"legacy-envelope".to_vec();
+        CampaignCreated {
+            install_id: "install-legacy".to_owned(),
+            attempt_id: "attempt-legacy".to_owned(),
+            managed_root: managed.clone(),
+            cache_root: PathBuf::from(r"C:\Legacy Cache"),
+            recipe_payload_sha256: sha256_bytes(&payload),
+            recipe_payload: payload,
+            recipe_envelope_sha256: sha256_bytes(&envelope),
+            recipe_envelope: envelope,
+            selection_sha256: selection_digest(&frozen.normalized_selection)
+                .expect("digest frozen selection"),
+            normalized_selection: frozen.normalized_selection.clone(),
+            plan_sha256: plan_digest(&frozen.plan).expect("digest frozen plan"),
+            source_games: SourceGameFingerprints {
+                bg1: frozen.bg1.fingerprint.clone(),
+                bg2: frozen.bg2.fingerprint.clone(),
+            },
+            artifact_identities: Vec::new(),
+            tool_identities: Vec::new(),
+            staged_bg1: managed.join("bg1"),
+            staged_bg2: managed.join("game"),
+        }
+    }
+
     #[test]
     fn schema_one_frozen_recipe_defaults_the_legacy_display_name_and_still_validates() {
         let current = frozen_recipe_fixture();
@@ -3474,32 +3515,10 @@ mod tests {
         let frozen: FrozenCliRecipe =
             serde_json::from_slice(&payload).expect("read schema-one frozen recipe");
         assert_eq!(frozen.schema, 1);
-        assert_eq!(frozen.display_name, "Chriz BG Collection");
+        assert!(frozen.display_name.is_none());
+        assert_eq!(frozen.effective_display_name(), "Chriz BG Collection");
 
-        let managed = PathBuf::from(r"C:\Legacy Managed Install");
-        let envelope = b"legacy-envelope".to_vec();
-        let created = CampaignCreated {
-            install_id: "install-legacy".to_owned(),
-            attempt_id: "attempt-legacy".to_owned(),
-            managed_root: managed.clone(),
-            cache_root: PathBuf::from(r"C:\Legacy Cache"),
-            recipe_payload_sha256: sha256_bytes(&payload),
-            recipe_payload: payload,
-            recipe_envelope_sha256: sha256_bytes(&envelope),
-            recipe_envelope: envelope,
-            selection_sha256: selection_digest(&frozen.normalized_selection)
-                .expect("digest legacy selection"),
-            normalized_selection: frozen.normalized_selection.clone(),
-            plan_sha256: plan_digest(&frozen.plan).expect("digest legacy plan"),
-            source_games: SourceGameFingerprints {
-                bg1: frozen.bg1.fingerprint.clone(),
-                bg2: frozen.bg2.fingerprint.clone(),
-            },
-            artifact_identities: Vec::new(),
-            tool_identities: Vec::new(),
-            staged_bg1: managed.join("bg1"),
-            staged_bg2: managed.join("game"),
-        };
+        let created = created_for_frozen_recipe(&frozen, payload);
         validate_frozen_cli_recipe(&created, &frozen)
             .expect("schema-one frozen recipe remains resumable and reportable");
 
@@ -3510,6 +3529,26 @@ mod tests {
                 .expect_err("unsupported frozen schema must fail closed");
             assert_eq!(error.code(), "resume_unavailable");
         }
+    }
+
+    #[test]
+    fn schema_two_frozen_recipe_rejects_a_missing_display_name() {
+        let current = frozen_recipe_fixture();
+        let mut missing = serde_json::to_value(&current).expect("serialize current frozen recipe");
+        missing
+            .as_object_mut()
+            .expect("frozen recipe is an object")
+            .remove("display_name");
+        let payload = serde_json::to_vec(&missing).expect("serialize incomplete schema-two recipe");
+        let frozen: FrozenCliRecipe =
+            serde_json::from_slice(&payload).expect("parse incomplete schema-two recipe");
+        let created = created_for_frozen_recipe(&frozen, payload);
+
+        let error = validate_frozen_cli_recipe(&created, &frozen)
+            .expect_err("schema two must require an explicit display name");
+
+        assert_eq!(error.code(), "resume_unavailable");
+        assert!(error.to_string().contains("display name"));
     }
 
     #[test]
