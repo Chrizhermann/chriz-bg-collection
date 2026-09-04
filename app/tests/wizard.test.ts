@@ -1,16 +1,36 @@
 // @vitest-environment jsdom
 
-import { getAllByRole, getByLabelText, getByRole, getByText, queryByText } from "@testing-library/dom";
+import { getByLabelText, getByRole, getByText, queryByText } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BackendCommandError, FixtureBackend, NativeBackend, type EventChannelFactory, type InvokeCommand } from "../src/backend";
-import type { GameCandidate, GameRole, RunEventEnvelope } from "../src/contracts";
+import type { GameCandidate, GameRole, ManagedInstallation, RunEventEnvelope } from "../src/contracts";
 import { mountApp } from "../src/app";
 import { technicalLog } from "../src/components/technical-log";
 
+function managedInstallation(overrides: Partial<ManagedInstallation> = {}): ManagedInstallation {
+  return {
+    id: "ready",
+    name: "Chriz Easy BG",
+    path: "D:\\Installations\\Chriz Easy BG",
+    status: "Ready to play",
+    receiptPath: "D:\\Installations\\Chriz Easy BG\\install-receipt.json",
+    launchPath: "D:\\Installations\\Chriz Easy BG\\InfinityLoader.exe",
+    completedAtMillis: 1_788_451_200_000,
+    available: true,
+    resumable: false,
+    recipeVersion: "0.1.0-alpha.1",
+    ...overrides,
+  };
+}
+
 describe("Chriz Easy BG application flow", () => {
-  afterEach(() => document.body.replaceChildren());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.replaceChildren();
+    window.localStorage.clear();
+  });
 
   it("customizes the recommended setup and completes the fixture installation", async () => {
     const root = document.createElement("div");
@@ -58,8 +78,8 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByText(root, "Build in progress")).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Finish fixture build" }));
 
-    expect(getByRole(root, "heading", { level: 1, name: "Chriz Easy BG is ready" })).toBeTruthy();
-    expect(getByText(root, "Installation record saved")).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Play Chriz Easy BG" })).toBeTruthy();
   });
 
   it("surfaces every non-fresh source reason", async () => {
@@ -106,10 +126,9 @@ describe("Chriz Easy BG application flow", () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    await mountApp(root, new FixtureBackend());
+    await mountApp(root, new FixtureBackend({ managedInstallations: [managedInstallation()] }));
 
-    await user.click(getByRole(root, "button", { name: "My installs" }));
-    expect(getByRole(root, "heading", { level: 1, name: "My installs" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();
     expect(getByRole(root, "heading", { level: 2, name: "Chriz Easy BG" })).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Updates" }));
     expect(getByRole(root, "heading", { level: 1, name: "Updates" })).toBeTruthy();
@@ -236,28 +255,30 @@ describe("Chriz Easy BG application flow", () => {
     expect(queryByText(root, "Create updated installation")).toBeNull();
   });
 
-  it("loads native installations without checking updates and scopes card actions by availability", async () => {
-    class ManagedCampaignBackend extends FixtureBackend {
-      updateChecks = 0;
+  it("loads a ready installation before discovery and keeps Play independent from updates", async () => {
+    class ReadyBackend extends FixtureBackend {
+      calls: string[] = [];
       launched: string[] = [];
       opened: string[] = [];
-      resumed: string[] = [];
 
       override getStatus() {
+        this.calls.push("status");
         return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
       }
 
       override listManagedInstallations() {
-        return Promise.resolve([
-          { id: "ready", name: "Ready campaign", path: "D:\\Campaigns\\Ready", status: "Ready to play", receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json", available: true, resumable: false },
-          { id: "interrupted", name: "Interrupted campaign", path: "D:\\Campaigns\\Restart", status: "Build interrupted — ready to resume", receiptPath: null, available: false, resumable: true },
-          { id: "missing", name: "Moved campaign", path: "D:\\Campaigns\\Missing", status: "Folder unavailable", receiptPath: null, available: false, resumable: false },
-        ]);
+        this.calls.push("registry");
+        return Promise.resolve([managedInstallation()]);
       }
 
-      override getUpdates() {
-        this.updateChecks += 1;
-        return super.getUpdates();
+      override discoverGames(): Promise<never> {
+        this.calls.push("discovery");
+        return Promise.reject(new Error("The old source games are offline."));
+      }
+
+      override getUpdates(): Promise<never> {
+        this.calls.push("updates");
+        return Promise.reject(new Error("Updates are offline."));
       }
 
       override launchInstall(installId: string) {
@@ -269,6 +290,48 @@ describe("Chriz Easy BG application flow", () => {
         this.opened.push(installId);
         return Promise.resolve();
       }
+    }
+
+    const backend = new ReadyBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+
+    expect(backend.calls).toEqual(["status", "registry"]);
+    expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Play Chriz Easy BG" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Open game folder" })).toBeTruthy();
+    const details = getByText(root, "Installation details").closest("details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+
+    await user.click(getByRole(root, "button", { name: "Play Chriz Easy BG" }));
+    await user.click(getByRole(root, "button", { name: "Open game folder" }));
+    expect(backend.launched).toEqual(["ready"]);
+    expect(backend.opened).toEqual(["ready"]);
+    expect(backend.calls).not.toContain("updates");
+  });
+
+  it("opens a resumable-only registry on Continue installation", async () => {
+    class ResumableBackend extends FixtureBackend {
+      resumed: string[] = [];
+
+      constructor() {
+        super({ managedInstallations: [managedInstallation({
+          id: "interrupted",
+          name: "Interrupted install",
+          status: "Build interrupted — ready to resume",
+          receiptPath: null,
+          launchPath: null,
+          completedAtMillis: null,
+          available: false,
+          resumable: true,
+        })] });
+      }
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+      }
 
       override resumeBuild(installId: string, _onEvent: (event: RunEventEnvelope) => void) {
         this.resumed.push(installId);
@@ -276,29 +339,113 @@ describe("Chriz Easy BG application flow", () => {
       }
     }
 
-    const backend = new ManagedCampaignBackend();
+    const backend = new ResumableBackend();
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
-    const handle = await mountApp(root, backend);
-    await handle.navigate("home");
+    await mountApp(root, backend);
 
-    expect(getByText(root, "Ready campaign")).toBeTruthy();
-    expect(getByText(root, "Interrupted campaign")).toBeTruthy();
-    expect(getByText(root, "Moved campaign")).toBeTruthy();
-    expect(getAllByRole(root, "button", { name: "Play" })).toHaveLength(1);
-    expect(getAllByRole(root, "button", { name: "Open folder" })).toHaveLength(1);
-    expect(getAllByRole(root, "button", { name: "Continue installation" })).toHaveLength(1);
-    expect(backend.updateChecks).toBe(0);
-
-    await user.click(getByRole(root, "button", { name: "Play" }));
-    await user.click(getByRole(root, "button", { name: "Open folder" }));
+    expect(getByRole(root, "button", { name: "Continue installation" })).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Continue installation" }));
-    expect(backend.launched).toEqual(["ready"]);
-    expect(backend.opened).toEqual(["ready"]);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
     expect(backend.resumed).toEqual(["interrupted"]);
     expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
-    expect(getByRole(root, "heading", { level: 2, name: "Installation in progress" })).toBeTruthy();
+  });
+
+  it("shows a stale-only registry as missing with a path to a new installation", async () => {
+    const root = document.createElement("div");
+    document.body.append(root);
+    await mountApp(root, new FixtureBackend({ managedInstallations: [managedInstallation({
+      id: "missing",
+      name: "Moved install",
+      status: "Folder unavailable",
+      receiptPath: null,
+      launchPath: null,
+      completedAtMillis: null,
+      available: false,
+      resumable: false,
+    })] }));
+
+    expect(getByRole(root, "heading", { level: 1, name: "Installation not found" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "New installation" })).toBeTruthy();
+  });
+
+  it("remembers a valid selected installation and otherwise falls back to the newest ready one", async () => {
+    const older = managedInstallation({ id: "older", name: "Older install", completedAtMillis: 100 });
+    const newer = managedInstallation({ id: "newer", name: "Newest install", completedAtMillis: 200 });
+    window.localStorage.setItem("cebg.last-install-id", "older");
+    const firstRoot = document.createElement("div");
+    document.body.append(firstRoot);
+    const user = userEvent.setup();
+    await mountApp(firstRoot, new FixtureBackend({ managedInstallations: [newer, older] }));
+
+    expect(getByRole(firstRoot, "heading", { level: 2, name: "Older install" })).toBeTruthy();
+    expect((getByLabelText(firstRoot, "Switch install") as HTMLSelectElement).value).toBe("older");
+    await user.selectOptions(getByLabelText(firstRoot, "Switch install"), "newer");
+    expect(getByRole(firstRoot, "heading", { level: 2, name: "Newest install" })).toBeTruthy();
+    expect(window.localStorage.getItem("cebg.last-install-id")).toBe("newer");
+
+    window.localStorage.setItem("cebg.last-install-id", "no-longer-present");
+    const secondRoot = document.createElement("div");
+    document.body.append(secondRoot);
+    await mountApp(secondRoot, new FixtureBackend({ managedInstallations: [older, newer] }));
+
+    expect(getByRole(secondRoot, "heading", { level: 2, name: "Newest install" })).toBeTruthy();
+    expect((getByLabelText(secondRoot, "Switch install") as HTMLSelectElement).value).toBe("newer");
+  });
+
+  it("still opens the launcher when local storage is unavailable", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("storage blocked"); });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage blocked"); });
+    const root = document.createElement("div");
+    document.body.append(root);
+
+    await mountApp(root, new FixtureBackend({ managedInstallations: [managedInstallation()] }));
+
+    expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();
+  });
+
+  it("keeps a completed build visible when its launcher registry refresh fails", async () => {
+    class RefreshFailureBackend extends FixtureBackend {
+      #registryReads = 0;
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null });
+      }
+
+      override listManagedInstallations() {
+        this.#registryReads += 1;
+        if (this.#registryReads > 1) return Promise.reject(new Error("registry unavailable"));
+        return Promise.resolve([managedInstallation({
+          id: "interrupted",
+          status: "Build interrupted — ready to resume",
+          receiptPath: null,
+          launchPath: null,
+          completedAtMillis: null,
+          available: false,
+          resumable: true,
+        })]);
+      }
+
+      override resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void) {
+        queueMicrotask(() => {
+          onEvent({ runId: "resume-run", sequenceAsString: "1", event: { type: "campaign_started", install_id: installId, resumed: true } });
+          onEvent({ runId: "resume-run", sequenceAsString: "2", event: { type: "campaign_finished", install_id: installId } });
+        });
+        return Promise.resolve({ runId: "resume-run" });
+      }
+    }
+
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, new RefreshFailureBackend());
+    await user.click(getByRole(root, "button", { name: "Continue installation" }));
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
+    expect(getByRole(root, "alert").textContent).toContain("launcher record could not be refreshed");
   });
 
   it("does not let a late evaluation overwrite a newer selection", async () => {
@@ -365,6 +512,7 @@ describe("Chriz Easy BG application flow", () => {
   it("uses the native discovery, destination, review, and event path without fixture controls", async () => {
     const calls: string[] = [];
     let emitNative: ((event: unknown) => void) | undefined;
+    let registryReads = 0;
     const channelFactory: EventChannelFactory = (onMessage) => {
       emitNative = onMessage;
       return { nativeChannel: true };
@@ -382,7 +530,20 @@ describe("Chriz Easy BG application flow", () => {
       switch (command) {
         case "bootstrap": return { mode: "native", engine_version: "0.1.0", recipe_version: null };
         case "installation_defaults": return { name: "Chriz Easy BG", path: "D:\\Native Campaign" };
-        case "list_managed_installations": return [];
+        case "list_managed_installations":
+          registryReads += 1;
+          return registryReads === 1 ? [] : [{
+            id: "native-install",
+            name: "Chriz Easy BG",
+            path: "D:\\Native Campaign",
+            status: "Ready to play",
+            receipt_path: "D:\\Native Campaign\\install-receipt.json",
+            launch_path: "D:\\Native Campaign\\InfinityLoader.exe",
+            completed_at_millis: 1_788_451_200_000,
+            available: true,
+            resumable: false,
+            recipe_version: "0.1.0-alpha.1",
+          }];
         case "discover_games": return {
           bg1_candidates: [{ id: "native-bg1", label: "BG1 clean", path: "C:\\BG1", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: [] }],
           bg2_candidates: [{ id: "native-bg2", label: "BG2 clean", path: "C:\\BG2", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: [] }],
@@ -408,7 +569,8 @@ describe("Chriz Easy BG application flow", () => {
 
     await mountApp(root, new NativeBackend(invoke, channelFactory));
 
-    expect(calls.slice(0, 3)).toEqual(["bootstrap", "discover_games", "installation_defaults"]);
+    expect(calls.slice(0, 2)).toEqual(["bootstrap", "list_managed_installations"]);
+    expect(calls.indexOf("discover_games")).toBeGreaterThan(calls.indexOf("list_managed_installations"));
     expect(calls).toEqual(expect.arrayContaining(["inspect_destination", "list_managed_installations", "evaluate_build"]));
     await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
 
@@ -424,7 +586,8 @@ describe("Chriz Easy BG application flow", () => {
       event: { type: "campaign_finished", install_id: "native-install" },
     });
     await new Promise((resolve) => window.setTimeout(resolve, 0));
-    expect(getByRole(root, "heading", { level: 1, name: "Chriz Easy BG is ready" })).toBeTruthy();
+    expect(registryReads).toBe(2);
+    expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Play Chriz Easy BG" }));
     await user.click(getByRole(root, "button", { name: "Open game folder" }));
     expect(calls.slice(-2)).toEqual(["launch_install", "open_install_folder"]);
@@ -605,7 +768,7 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByText(root, "The build stopped safely")).toBeTruthy();
     expect(queryByText(root, "Retry failed step")).toBeNull();
     await user.click(getByRole(root, "button", { name: "My installs" }));
-    expect(getByRole(root, "heading", { level: 1, name: "My installs" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "No installations yet" })).toBeTruthy();
   });
 
   it("preserves a failed native snapshot and Retry when resume is rejected", async () => {

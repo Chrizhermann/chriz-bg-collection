@@ -218,6 +218,8 @@ export interface ManagedInstallation {
   readonly path: string;
   readonly status: string;
   readonly receiptPath: string | null;
+  readonly launchPath: string | null;
+  readonly completedAtMillis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
   readonly recipeVersion?: string | null;
@@ -270,6 +272,7 @@ export interface UpdateSummary {
 
 export interface FixtureOptions {
   readonly evaluationDelays?: readonly number[];
+  readonly managedInstallations?: readonly ManagedInstallation[];
   readonly textOverrides?: {
     readonly campaignName?: string;
     readonly logLine?: string;

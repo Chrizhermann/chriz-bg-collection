@@ -6,31 +6,82 @@ export interface HomeActions {
   readonly launch: (installId: string) => void | Promise<void>;
   readonly openFolder: (installId: string) => void | Promise<void>;
   readonly resume: (installId: string) => void | Promise<void>;
+  readonly select: (installId: string) => void | Promise<void>;
 }
 
-export function homeScreen(installations: readonly ManagedInstallation[], actions: HomeActions): HTMLElement {
-  const page = element("div", "screen-stack");
-  page.append(screenIntro("Ready when you are", "My installs", "Each Chriz Easy BG installation stays separate from your original games."));
-  const list = element("div", "installation-list");
-  installations.forEach((installation) => {
-    const card = element("article", "card installation-card");
-    card.append(element("p", "badge ok", installation.status), element("h2", undefined, installation.name), element("p", "path", installation.path));
-    if (installation.receiptPath !== null) {
-      card.append(element("p", undefined, `Receipt: ${installation.receiptPath}`));
-    }
-    if (installation.available) {
-      const controls = element("div", "inline-actions");
-      controls.append(
-        actionButton("Play", () => actions.launch(installation.id)),
-        actionButton("Open folder", () => actions.openFolder(installation.id), "quiet"),
-      );
-      card.append(controls);
-    } else if (installation.resumable) {
-      card.append(actionButton("Continue installation", () => actions.resume(installation.id)));
-    }
-    list.append(card);
-  });
-  if (installations.length === 0) list.append(element("p", "card", "No Chriz Easy BG installation is registered yet."));
-  page.append(list, screenActions(null, actionButton("New installation", actions.begin)));
+function installationPicker(
+  installations: readonly ManagedInstallation[],
+  selectedId: string,
+  selectInstallation: (installId: string) => void | Promise<void>,
+): HTMLElement | null {
+  if (installations.length < 2) return null;
+  const field = element("div", "install-switcher");
+  const label = element("label", undefined, "Switch install");
+  const select = element("select");
+  for (const installation of installations) {
+    const option = element("option", undefined, installation.name);
+    option.value = installation.id;
+    option.selected = installation.id === selectedId;
+    select.append(option);
+  }
+  select.addEventListener("change", () => void selectInstallation(select.value));
+  label.append(select);
+  field.append(label);
+  return field;
+}
+
+function installationDetails(installation: ManagedInstallation): HTMLDetailsElement {
+  const details = element("details", "installation-details");
+  details.append(element("summary", undefined, "Installation details"));
+  const rows = element("dl", "installation-detail-list");
+  const appendRow = (label: string, value: string | null): void => {
+    if (value !== null) rows.append(element("dt", undefined, label), element("dd", "path", value));
+  };
+  appendRow("Install location", installation.path);
+  appendRow("Game launcher", installation.launchPath);
+  appendRow("Installation receipt", installation.receiptPath);
+  appendRow("Recipe version", installation.recipeVersion ?? null);
+  details.append(rows);
+  return details;
+}
+
+export function homeScreen(
+  installations: readonly ManagedInstallation[],
+  selected: ManagedInstallation | null,
+  actions: HomeActions,
+): HTMLElement {
+  const page = element("div", "screen-stack launcher-screen");
+  if (selected === null) {
+    page.append(screenIntro("Your installations", "No installations yet", "Create Chriz Easy BG when you are ready to play."));
+    page.append(screenActions(null, actionButton("New installation", actions.begin)));
+    return page;
+  }
+
+  if (selected.available) {
+    page.append(screenIntro("Your game is ready", "Ready to play", "Continue your adventure or open the game folder."));
+  } else if (selected.resumable) {
+    page.append(screenIntro("CEBG can continue", "Continue your installation", "Your previous progress is saved and ready to resume."));
+  } else {
+    page.append(screenIntro("CEBG remembers this install", "Installation not found", "The registered game folder moved or is no longer available."));
+  }
+
+  const card = element("section", "card launcher-card");
+  card.append(
+    element("p", `badge ${selected.available ? "ok" : selected.resumable ? "warning" : "danger"}`, selected.status),
+    element("h2", undefined, selected.name),
+  );
+  const picker = installationPicker(installations, selected.id, actions.select);
+  if (picker !== null) card.append(picker);
+  const controls = element("div", "inline-actions launcher-actions");
+  if (selected.available) {
+    controls.append(
+      actionButton("Play Chriz Easy BG", () => actions.launch(selected.id)),
+      actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"),
+    );
+  } else if (selected.resumable) {
+    controls.append(actionButton("Continue installation", () => actions.resume(selected.id)));
+  }
+  card.append(controls, installationDetails(selected));
+  page.append(card, screenActions(null, actionButton("New installation", actions.begin, "quiet")));
   return page;
 }

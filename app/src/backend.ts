@@ -144,6 +144,8 @@ type ManagedInstallationWire = {
   readonly path: string;
   readonly status: string;
   readonly receipt_path: string | null;
+  readonly launch_path: string | null;
+  readonly completed_at_millis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
   readonly recipe_version?: string | null;
@@ -409,9 +411,17 @@ export class NativeBackend implements Backend {
 
   async listManagedInstallations(): Promise<ManagedInstallation[]> {
     const installations = await this.#command<ManagedInstallationWire[]>("list_managed_installations");
-    return installations.map(({ receipt_path: receiptPath, recipe_version: recipeVersion, ...installation }) => ({
+    return installations.map(({
+      receipt_path: receiptPath,
+      launch_path: launchPath,
+      completed_at_millis: completedAtMillis,
+      recipe_version: recipeVersion,
+      ...installation
+    }) => ({
       ...installation,
       receiptPath,
+      launchPath,
+      completedAtMillis,
       recipeVersion,
     }));
   }
@@ -667,7 +677,21 @@ export class FixtureBackend implements Backend {
   }
 
   listManagedInstallations(): Promise<ManagedInstallation[]> {
-    return Promise.resolve([{ id: "fixture-install", name: this.#options.textOverrides?.campaignName ?? "Chriz Easy BG", path: "D:\\Fixture Installations\\Chriz Easy BG", status: "Ready to play", receiptPath: "D:\\Fixture Installations\\Chriz Easy BG\\install-receipt.json", available: true, resumable: false }]);
+    if (this.#options.managedInstallations !== undefined) {
+      return Promise.resolve([...this.#options.managedInstallations]);
+    }
+    if (this.#buildIndex < 4) return Promise.resolve([]);
+    return Promise.resolve([{
+      id: "fixture-install",
+      name: this.#options.textOverrides?.campaignName ?? "Chriz Easy BG",
+      path: "D:\\Fixture Installations\\Chriz Easy BG",
+      status: "Ready to play",
+      receiptPath: "D:\\Fixture Installations\\Chriz Easy BG\\install-receipt.json",
+      launchPath: "D:\\Fixture Installations\\Chriz Easy BG\\InfinityLoader.exe",
+      completedAtMillis: 1_788_451_200_000,
+      available: true,
+      resumable: false,
+    }]);
   }
 
   launchInstall(_installId: string): Promise<void> {

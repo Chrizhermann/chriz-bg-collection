@@ -47,6 +47,17 @@ describe("CEBG security and accessibility", () => {
     const handle = await mountApp(
       root,
       new FixtureBackend({
+        managedInstallations: [{
+          id: "hostile-install",
+          name: attack,
+          path: attack,
+          status: "Ready to play",
+          receiptPath: attack,
+          launchPath: attack,
+          completedAtMillis: 1,
+          available: true,
+          resumable: false,
+        }],
         textOverrides: {
           campaignName: attack,
           logLine: attack,
@@ -59,6 +70,7 @@ describe("CEBG security and accessibility", () => {
 
     await handle.navigate("home");
     expect(root.textContent).toContain(attack);
+    await handle.navigate("welcome");
     await handle.navigate("games");
     expect(root.textContent).toContain(attack);
     await handle.navigate("setup");
@@ -114,7 +126,7 @@ describe("CEBG security and accessibility", () => {
     await activate("Continue build");
     await activate("Retry failed step");
     await activate("Finish fixture build");
-    expect(getByRole(root, "heading", { level: 1, name: "Chriz Easy BG is ready" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();
   });
 
   it("keeps compact layouts and motion preferences in the shared design contract", () => {
