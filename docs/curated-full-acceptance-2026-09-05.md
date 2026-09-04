@@ -80,6 +80,9 @@ the missing archive request; the actual file picker then supplied the exact loca
 Attempt 3 has passed that acquisition and is downloading the remaining sources with a
 responsive UI. It is safe to continue monitoring this run; never rewrite its frozen recipe.
 
+Latest checkpoint: all acquisitions completed, BG1 staging completed, BG2 staging started
+(ledger record 77). The active bounded follow-up points to this same run and app alpha.5.
+
 While downloading normally, do not poll repeatedly. The manual Evandra source may request
 `C:\CEBG-creator-full-cache\manual\creator-full-private-extras-20260902.zip`; supply that
 exact user-owned archive through the UI. Its narrowed frozen contract publishes only Evandra.
