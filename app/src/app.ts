@@ -26,6 +26,7 @@ export interface AppHandle {
 }
 
 const LAST_INSTALL_STORAGE_KEY = "cebg.last-install-id";
+const LOG_RENDER_INTERVAL_MS = 100;
 
 function readRememberedInstallId(): string | null {
   try {
@@ -101,6 +102,7 @@ class AppController implements AppHandle {
   #changingProfile = false;
   #radarAttempts = new Set<string>();
   #addonFeedback: AddonFeedback | null = null;
+  #logRenderTimer: number | null = null;
 
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
@@ -599,7 +601,19 @@ class AppController implements AppHandle {
       void this.#finishInstallation(event.install_id);
       return;
     }
+    if (event.type === "step_progress" || event.type === "console_line") {
+      this.#scheduleLogRender();
+      return;
+    }
     this.#render();
+  }
+
+  #scheduleLogRender(): void {
+    if (!this.#logState.open || this.#logRenderTimer !== null) return;
+    this.#logRenderTimer = window.setTimeout(() => {
+      this.#logRenderTimer = null;
+      this.#render();
+    }, LOG_RENDER_INTERVAL_MS);
   }
 
   async #finishInstallation(installId: string): Promise<void> {
@@ -761,6 +775,10 @@ class AppController implements AppHandle {
   }
 
   #render(focusTargetId?: string): void {
+    if (this.#logRenderTimer !== null) {
+      window.clearTimeout(this.#logRenderTimer);
+      this.#logRenderTimer = null;
+    }
     const previousRoute = this.root.querySelector<HTMLElement>(".app-shell")?.dataset.route;
     const sameRoute = previousRoute === this.#state.route;
     const scrollTop = sameRoute ? this.root.querySelector("main")?.scrollTop ?? 0 : 0;

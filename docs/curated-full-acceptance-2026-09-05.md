@@ -7,7 +7,7 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 - Worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - Frozen recipe: `recipes/curated-full-current`, preset `chris-recommended`,
-  recipe/app version `0.1.0-alpha.4`.
+  recipe version `0.1.0-alpha.4`; app is now `0.1.0-alpha.5` after the live progress fix.
 - Selection comes from curation and later approvals, never a replay of historical logs.
   See [the approved reconciliation plan](plans/2026-09-05-curation-reconciliation.md).
 - The new real installation **is running from the installed alpha.4 native UI**.
@@ -15,10 +15,10 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
   Install id: `install-66c8b55f3690bda2e3a5`.
   Recipe SHA-256: `3c0386d4033ea093ba861abd05ab080060eafca21d9169f21efb31bdff3f74b9`.
   App cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
-  Initial app PID: `36828` (verify current executable identity before acting).
+  Current app PID: `84760` (verify current executable identity before acting).
 - The NSIS installer retained its earlier registered smoke-test location:
   `target/nsis-smoke-20260905-022935/chriz-bg-app.exe`. That installed app reports alpha.4
-  and is the active runner. The old `%LOCALAPPDATA%\Chriz Easy BG` alpha.1 executable is
+  (now upgraded to alpha.5) and is the active runner. The old `%LOCALAPPDATA%\Chriz Easy BG` alpha.1 executable is
   not the test runner and is closed. Do not delete the active NSIS test location.
 - Durable progress is under the new root's `.chriz/ledger/` (latest numbered records),
   with frozen recipe under `.chriz/recipe/`. Do not dump record zero: it is a large payload.
@@ -67,10 +67,34 @@ that the public channel is live, and signature verification alone is not an appl
 
 ## Continuation
 
+Live defect found and fixed before any WeiDU work: attempt 1 correctly stopped at the missing
+manual Evandra archive, but every 64 KiB progress event rebuilt the whole UI, causing a large
+display backlog. Tauri Channel GC was ruled out by its actual installed source. App alpha.5
+now avoids redraws for closed-log progress/console events and caps open-log redraws at 10 Hz;
+manual/error/completion transitions stay immediate. All 64 frontend tests/typecheck passed.
+The new signed NSIS was installed successfully and its actual signature verified.
+
+Native alpha.5 relaunched with `--install-id=install-66c8b55f3690bda2e3a5`. The selected
+folder was visually verified before Continue. Attempt 2 immediately and correctly showed
+the missing archive request; the actual file picker then supplied the exact local archive.
+Attempt 3 has passed that acquisition and is downloading the remaining sources with a
+responsive UI. It is safe to continue monitoring this run; never rewrite its frozen recipe.
+
 While downloading normally, do not poll repeatedly. The manual Evandra source may request
 `C:\CEBG-creator-full-cache\manual\creator-full-private-extras-20260902.zip`; supply that
 exact user-owned archive through the UI. Its narrowed frozen contract publishes only Evandra.
 Do not copy the old extracted-layout cache or stage its other mods.
+
+Small UX follow-ups observed, not reasons to interrupt a working installation:
+
+- A restarted/resumed run lacks its phase list; the empty list incorrectly announces
+  "All phases complete" to accessibility. Populate resume phases from its frozen plan.
+- The manual-source card leaks the raw native error/path; retain friendly instructions and
+  move the diagnostic text to Technical log.
+- My installs/Updates remain visually enabled while navigation deliberately stays on the
+  active build. Make that state clear; do not confuse it with a broken click.
+
+These are recorded for later, not an invitation to restart the entire test for cosmetic fixes.
 
 After acquisition/staging, let all 43 runs finish. On a failure, inspect the exact current
 attempt and report; fix an in-scope installer/recipe defect with bounded verification, but

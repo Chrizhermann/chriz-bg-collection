@@ -750,6 +750,75 @@ describe("Chriz Easy BG application flow", () => {
     expect(calls.slice(-2)).toEqual(["launch_install", "open_install_folder"]);
   });
 
+  it("bounds log-only renders during native event bursts and renders manual action immediately", async () => {
+    class BurstBackend extends FixtureBackend {
+      listener: ((event: RunEventEnvelope) => void) | null = null;
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
+      }
+
+      override startBuild(_reviewToken: string, onEvent: (event: RunEventEnvelope) => void) {
+        this.listener = onEvent;
+        return Promise.resolve({ runId: "run-burst" });
+      }
+    }
+
+    const backend = new BurstBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+    const emit = backend.listener as (event: RunEventEnvelope) => void;
+    const replaceChildren = vi.spyOn(root, "replaceChildren");
+
+    for (let sequence = 1; sequence <= 250; sequence += 1) {
+      emit({
+        runId: "run-burst",
+        sequenceAsString: String(sequence),
+        event: { type: "step_progress", id: "acquire:eet", done: sequence * 65_536, total: 64_000_000 },
+      });
+    }
+    expect(replaceChildren).not.toHaveBeenCalled();
+
+    await user.click(getByText(root, "Technical log"));
+    replaceChildren.mockClear();
+    for (let sequence = 251; sequence <= 500; sequence += 1) {
+      emit({
+        runId: "run-burst",
+        sequenceAsString: String(sequence),
+        event: { type: "step_progress", id: "acquire:eet", done: sequence * 65_536, total: 64_000_000 },
+      });
+    }
+    expect(replaceChildren).not.toHaveBeenCalled();
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    expect(replaceChildren).toHaveBeenCalledTimes(1);
+    expect(root.querySelector("pre")?.textContent).toContain("500: acquire:eet");
+
+    replaceChildren.mockClear();
+    emit({
+      runId: "run-burst",
+      sequenceAsString: "501",
+      event: { type: "step_progress", id: "acquire:bggo", done: 65_536, total: 1_000_000 },
+    });
+    emit({
+      runId: "run-burst",
+      sequenceAsString: "502",
+      event: {
+        type: "manual_download_needed",
+        mod_id: "evandra",
+        page: "https://example.invalid/evandra",
+        expected_sha256: "22".repeat(32),
+        drop_dir: "installer-owned cache",
+      },
+    });
+    expect(getByText(root, "Manual archive needed")).toBeTruthy();
+    expect(replaceChildren).toHaveBeenCalledTimes(1);
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    expect(replaceChildren).toHaveBeenCalledTimes(1);
+  });
+
   it("selects a requested manual archive and resumes the failed native build", async () => {
     class ManualArchiveBackend extends FixtureBackend {
       openedSources: string[] = [];
