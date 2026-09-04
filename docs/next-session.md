@@ -62,7 +62,7 @@ Chris explicitly wants the much larger save-analysis project.
 | Repository/layer | Required work before the affected feature is release-ready |
 |---|---|
 | `chriz-bg-modpack` | Replace `500` with semantic Kagain, Skie, Faldorn, Dynaheir, Kivan, Viconia, and Shar-Teel components; merge Sarah's separately reviewed components when ready. Implement conditional Fade `110`, Kivan quest `130`, Mazzy `140`, Safana `150`, Skie `160`, Branwen `400`, and Yeslick/Keldorn `410`. Retire `120`/`500`; verify retirement of `200`/`210`/`300`. Keep Safana unavailable until every class/spell/snare/late-spell/SoD-inventory piece is semantic and tested. |
-| Artisan fork | Publish the Shapeshifter footprint fix; redesign priest delivery; keep `30001/300010` unavailable; correct EEex-v1.2 dependency detection and verify refreshed prerequisites. Move the Xan EET-variant repair into NPC component `20002`. |
+| Artisan fork | `chriz-v1.3.1` is pinned with the Shapeshifter footprint and Xan EET-assignment repairs. Keep `30001/300010` unavailable; the broader priest-delivery and EEex dependency redesign remains separate. |
 | Bardic Wonders fork | Integrate and release the finite Abettor-HLA work; add SR fixtures for `1008/1009/2008`; correct legacy EEex detection. |
 | Aura fork | Reconcile the seven missing upstream commits, compare the old spell-patch snapshot, verify all six legacy item changes, fix component `6` EEex detection, then release. |
 | Spell Revisions fork | `v4.21-chriz.3` is published and pinned with `SR_SUBSPELL_FIX` absorbed into component `60`; preserve the early core/late NPC-spellbook split. |

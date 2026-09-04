@@ -1,0 +1,36 @@
+id = "artisans-kitpack-chriz-v1.3.1"
+name = "The Artisan's Kitpack — Chriz Balance Patch"
+version = "chriz-v1.3.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/archive/ac718614991e34b4f720807bec5edc96266c6c5e.zip"
+reference = "ac718614991e34b4f720807bec5edc96266c6c5e"
+expected_filename = "ac718614991e34b4f720807bec5edc96266c6c5e.zip"
+expected_length = 90042157
+sha256 = "a97bd3a83b8f120bd70a24ec26770b5ad5737669d0b6e548631827df1adda31f"
+redirect_hosts = ["codeload.github.com"]
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["ArtisansKitpack", "ArtisansKitpack_npc", "ArtisansKitpack_tweak"]
+tp2_paths = [
+  "ArtisansKitpack/ArtisansKitpack.TP2",
+  "ArtisansKitpack_npc/ArtisansKitpack_npc.TP2",
+  "ArtisansKitpack_tweak/ArtisansKitpack_tweak.TP2",
+]
+
+[archive.limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch"
+license = "Fetch-only maintained fork release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/chriz-v1.3.1"
+reviewed_on = "2026-09-04"

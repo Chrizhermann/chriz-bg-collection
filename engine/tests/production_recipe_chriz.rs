@@ -135,7 +135,7 @@ fn keeps_bg_rebalance_visible_but_blocked_until_its_dependencies_are_available()
     assert!(!parent.interactive);
     assert_eq!(
         parent.unavailable_reason.as_deref(),
-        Some("Requires Artisan's Kitpack, which is not yet available in this recipe baseline.")
+        Some("A reviewed BG Rebalance release is not yet pinned for the public alpha.")
     );
     assert!(evaluation
         .plan

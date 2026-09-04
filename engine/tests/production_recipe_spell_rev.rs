@@ -206,4 +206,21 @@ fn preserves_the_scs_conflict_without_blocking_deferred_rr_compatibility() {
         .filter(|feature| feature.id.starts_with("feature:rr:"))
         .flat_map(|feature| &feature.conflicts)
         .all(|conflict| conflict.feature_id != "mod:spell-rev"));
+
+    for feature_id in [
+        "feature:artisanskitpack:component-8101",
+        "feature:artisanskitpack-npc:component-5102",
+        "feature:artisanskitpack-npc:component-10004",
+    ] {
+        let feature = manifest
+            .collection
+            .features
+            .iter()
+            .find(|feature| feature.id == feature_id)
+            .unwrap_or_else(|| panic!("missing Artisan compatibility feature {feature_id}"));
+        assert!(feature.conflicts.iter().any(|conflict| {
+            conflict.feature_id == "feature:spell-rev:mandatory-components"
+                && conflict.reason == "Unavailable with Spell Revisions."
+        }));
+    }
 }

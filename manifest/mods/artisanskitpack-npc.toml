@@ -1,0 +1,67 @@
+id = "artisanskitpack-npc"
+artifact_id = "artisans-kitpack-chriz-v1.3.1"
+name = "The Artisan's Kitpack — NPC Assignments"
+tp2 = "ArtisansKitpack_npc/ArtisansKitpack_npc.TP2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 1101
+name = "Give Khalid the Vanguard Kit"
+
+[[components]]
+id = 2001
+name = "Rashemi Berserker Ranger Kit for Minsc"
+
+[[components]]
+id = 3101
+name = "Give Ajantis the Divine Champion Kit"
+
+[[components]]
+id = 3102
+name = "Make Mazzy a Divine Champion"
+
+[[components]]
+id = 5101
+name = "Give Cernd the Elementalist Kit"
+
+[[components]]
+id = 5102
+name = "Red Wizard Mage Kit for Edwin"
+
+[[components]]
+id = 7101
+name = "Make Imoen a Rogue Archer"
+
+[[components]]
+id = 7102
+name = "Make Imoen a Trickster"
+
+[[components]]
+id = 7104
+name = "Give Hexxat the Invisible Blade Kit"
+
+[[components]]
+id = 21001
+name = "Give Jan the Arcane Trickster Kit"
+
+[[components]]
+id = 9101
+name = "Give M'khiin the Warhorn Shaman Kit"
+
+[[components]]
+id = 10004
+name = "Make Rasaad a Sacred Fist"
+
+[[components]]
+id = 20002
+name = "Make Xan an Eldritch Knight"
+
+[[components]]
+id = 200010
+name = "Make Nalia an Arcane Trickster Sorcerer"
+
+[[components]]
+id = 99001
+name = "Give Garrick the Troubadour Kit"

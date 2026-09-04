@@ -392,13 +392,18 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "xan-bg2",
             "yeslicknpc-bg2",
             "sirene-bg2",
-            "iepbanters-bg2",
-            "crossmodbg2-bg2",
             "ascension-bg2",
             "spell-rev-core-bg2",
+            "artisanskitpack-main-bg2",
+            "artisanskitpack-npc-bg2",
+            "iepbanters-bg2",
+            "crossmodbg2-bg2",
+            "artisanskitpack-tweak-early-bg2",
             "hq-soundclips-bg2ee-bg2",
-            "stratagems-bg2",
             "randomiser-bg2",
+            "stratagems-bg2",
+            "artisanskitpack-tweak-late-bg2",
+            "artisanskitpack-npc-late-bg2",
             "eet-end-bg2",
             "chriz-sod-remix-bg2",
             "hiddengameplayoptions-bg2",
@@ -408,7 +413,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "buffbot-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..24]
+    assert!(manifest.collection.runs[6..29]
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);
@@ -421,11 +426,11 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
         UB_AUTHORED_COMPONENTS
     );
     assert_eq!(
-        manifest.collection.runs[19].components,
+        manifest.collection.runs[17].components,
         ASCENSION_COMPONENTS
     );
     assert!(!manifest.collection.runs[13].components.contains(&19));
-    assert!(!manifest.collection.runs[19].components.contains(&40));
+    assert!(!manifest.collection.runs[17].components.contains(&40));
 }
 
 #[test]

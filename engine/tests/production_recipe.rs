@@ -767,6 +767,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "artisans-kitpack-chriz-v1.3.1",
+            (
+                "codeload.github.com",
+                Some("The-Artisan-s-Kitpack-Chriz-Balance-Patch-ac718614991e34b4f720807bec5edc96266c6c5e"),
+                ObservedArchiveShape {
+                    max_depth: 8,
+                    entry_count: 2_963,
+                    max_entry_uncompressed_bytes: 6_142_193,
+                    total_uncompressed_bytes: 117_836_522,
+                    max_compression_ratio: 432,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);

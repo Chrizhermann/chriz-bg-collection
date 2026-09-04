@@ -114,7 +114,7 @@ fn authors_the_tail_in_dependency_order_and_keeps_buffbot_absolute_last() {
         .unwrap();
     let eet_end = run_ids.iter().position(|id| *id == "eet-end-bg2").unwrap();
     let buffbot = run_ids.iter().position(|id| *id == "buffbot-bg2").unwrap();
-    assert!(scs < randomiser && randomiser < eet_end && eet_end < buffbot);
+    assert!(randomiser < scs && scs < eet_end && eet_end < buffbot);
     assert_eq!(buffbot, run_ids.len() - 1);
 
     let runs = &manifest.collection.runs;

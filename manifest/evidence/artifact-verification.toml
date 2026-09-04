@@ -484,3 +484,35 @@ entry_count = 1747
 max_entry_uncompressed_bytes = 1364992
 total_uncompressed_bytes = 12846108
 max_compression_ratio = 23
+
+[[artifacts]]
+artifact_id = "artisans-kitpack-chriz-v1.3.1"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/archive/ac718614991e34b4f720807bec5edc96266c6c5e.zip"
+source_reference = "ac718614991e34b4f720807bec5edc96266c6c5e"
+observed_final_host = "codeload.github.com"
+actual_length = 90042157
+actual_sha256 = "a97bd3a83b8f120bd70a24ec26770b5ad5737669d0b6e548631827df1adda31f"
+wrapper_kind = "single-wrapper"
+wrapper_directory = "The-Artisan-s-Kitpack-Chriz-Balance-Patch-ac718614991e34b4f720807bec5edc96266c6c5e"
+materialized_publish_roots = ["ArtisansKitpack", "ArtisansKitpack_npc", "ArtisansKitpack_tweak"]
+declared_tp2_paths = [
+  "ArtisansKitpack/ArtisansKitpack.TP2",
+  "ArtisansKitpack_npc/ArtisansKitpack_npc.TP2",
+  "ArtisansKitpack_tweak/ArtisansKitpack_tweak.TP2",
+]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 512
+
+[artifacts.observed_shape]
+max_depth = 8
+entry_count = 2963
+max_entry_uncompressed_bytes = 6142193
+total_uncompressed_bytes = 117836522
+max_compression_ratio = 432

@@ -124,14 +124,14 @@ class CatalogParserTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2] / "docs" / "curation" / "components"
         rows = load_catalogs(root)
 
-        self.assertEqual(len(rows), 1_173)
+        self.assertEqual(len(rows), 1_181)
         self.assertEqual(
             decision_totals(rows),
             {
-                Decision.EXCLUDED: 592,
+                Decision.EXCLUDED: 583,
                 Decision.OPTIONAL: 158,
-                Decision.DEFAULT: 290,
-                Decision.MANDATORY: 133,
+                Decision.DEFAULT: 299,
+                Decision.MANDATORY: 141,
             },
         )
 
@@ -353,13 +353,13 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_173)
-        self.assertEqual(result.excluded_rows, 592)
-        self.assertEqual(result.feature_rows + result.omission_rows, 581)
+        self.assertEqual(result.mapped_rows, 1_181)
+        self.assertEqual(result.excluded_rows, 583)
+        self.assertEqual(result.feature_rows + result.omission_rows, 598)
         self.assertEqual(result.choice_groups, 60)
         self.assertEqual(result.optional_none_groups, 13)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1173", coverage_report(rows, result))
+        self.assertIn("rows=1181", coverage_report(rows, result))
 
     def test_current_map_freezes_reviewed_omissions_and_atomic_bundles(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -375,8 +375,6 @@ default = "none"
         self.assertEqual(
             omission_rows,
             {
-                RowKey("ARTISANSKITPACK", 5110),
-                RowKey("ARTISANSKITPACK_NPC", 20002),
                 RowKey("ASCENSION", 40),
                 RowKey("AURA_BG1_2_EET", 2),
                 RowKey("AURA_BG1_2_EET", 3),
@@ -390,6 +388,14 @@ default = "none"
                 RowKey("SAFANA", 0),
                 RowKey("UB", 19),
             },
+        )
+        self.assertEqual(
+            targets["feature:artisanskitpack:component-5110"].rows,
+            (RowKey("ARTISANSKITPACK", 5110),),
+        )
+        self.assertEqual(
+            targets["feature:artisanskitpack-npc:component-20002"].rows,
+            (RowKey("ARTISANSKITPACK_NPC", 20002),),
         )
         self.assertEqual(
             targets["feature:chriz-bg-rebalance:tempus-bundle"].rows,

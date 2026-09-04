@@ -7,6 +7,9 @@ expected_optional_none_groups = 13
 expected_fixed_groups = 10
 
 parents = [
+  "mod:artisanskitpack",
+  "mod:artisanskitpack-npc",
+  "mod:artisanskitpack-tweak",
   "mod:ascension",
   "mod:buffbot",
   "mod:chriz-bg-modpack",
@@ -220,18 +223,6 @@ excluded = [5, 6]
 [[catalogs]]
 id = "YESLICKNPC"
 excluded = []
-
-[[targets]]
-id = "omission:artisan-shapeshifter-footprint-fix"
-kind = "omission"
-rows = ["ARTISANSKITPACK:5110"]
-reason = "The selected custom-sprite route remains unavailable until the pathfinding-footprint fix is published in a fetchable Artisan fork release."
-
-[[targets]]
-id = "omission:artisan-xan-eet-assignment"
-kind = "omission"
-rows = ["ARTISANSKITPACK_NPC:20002"]
-reason = "The EET Xan variant repair has not yet been migrated into a maintained, released assignment path, so this dependent conversion remains unavailable."
 
 [[targets]]
 id = "omission:restored-bhaalspawn-provider"
@@ -570,6 +561,12 @@ kind = "feature"
 rows = ["ARTISANSKITPACK:5100"]
 
 [[targets]]
+id = "feature:artisanskitpack:component-5110"
+kind = "feature"
+rows = ["ARTISANSKITPACK:5110"]
+parent = "mod:artisanskitpack"
+
+[[targets]]
 id = "feature:artisanskitpack:component-5001"
 kind = "feature"
 rows = ["ARTISANSKITPACK:5001"]
@@ -673,6 +670,12 @@ rows = ["ARTISANSKITPACK_NPC:9101"]
 id = "feature:artisanskitpack-npc:component-10004"
 kind = "feature"
 rows = ["ARTISANSKITPACK_NPC:10004"]
+
+[[targets]]
+id = "feature:artisanskitpack-npc:component-20002"
+kind = "feature"
+rows = ["ARTISANSKITPACK_NPC:20002"]
+parent = "mod:artisanskitpack-npc"
 
 [[targets]]
 id = "feature:artisanskitpack-npc:component-200010"

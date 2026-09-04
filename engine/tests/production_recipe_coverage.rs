@@ -65,6 +65,9 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "sirene-bg2" => "SIRENE_BG2",
         "spell-rev" => "SPELL_REV",
         "ascension" => "ASCENSION",
+        "artisanskitpack" => "ARTISANSKITPACK",
+        "artisanskitpack-npc" => "ARTISANSKITPACK_NPC",
+        "artisanskitpack-tweak" => "ARTISANSKITPACK_TWEAK",
         "stratagems" => "STRATAGEMS",
         "randomiser" => "RANDOMISER",
         "buffbot" => "BUFFBOT",
@@ -140,6 +143,9 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
     assert_eq!(
         manifest.mods.keys().cloned().collect::<Vec<_>>(),
         [
+            "artisanskitpack",
+            "artisanskitpack-npc",
+            "artisanskitpack-tweak",
             "ascension",
             "bg1npc",
             "bg1ub",
