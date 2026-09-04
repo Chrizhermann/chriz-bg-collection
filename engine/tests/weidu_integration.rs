@@ -88,6 +88,17 @@ impl Harness {
         components: &[u32],
         prompts: Vec<ResolvedPrompt>,
     ) -> Invocation {
+        self.invocation_with_args(attempt_name, mode, components, Vec::new(), prompts)
+    }
+
+    fn invocation_with_args(
+        &self,
+        attempt_name: &str,
+        mode: InvocationMode,
+        components: &[u32],
+        run_args: Vec<bg_engine::manifest::RunArg>,
+        prompts: Vec<ResolvedPrompt>,
+    ) -> Invocation {
         let attempt = self._temp.path().join(attempt_name);
         fs::create_dir(&attempt).expect("create invocation attempt directory");
         build(
@@ -98,7 +109,7 @@ impl Harness {
                 explicit_tp2_tested: mode == InvocationMode::ExplicitTp2,
                 language: 0,
                 remaining_components: components.to_vec(),
-                run_args: Vec::new(),
+                run_args,
                 prompts,
             },
             &self.roots,
@@ -179,6 +190,55 @@ impl Harness {
             .collect::<BTreeSet<_>>();
         assert_eq!(actual, expected, "unexpected override publication set");
     }
+}
+
+#[test]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+fn staged_root_argument_survives_eet_style_path_sanitization() {
+    use bg_engine::manifest::RunArg;
+
+    let harness = Harness::new();
+    fs::create_dir_all(harness.game.root.join("movies")).expect("create sentinel directory");
+    fs::write(
+        harness.game.root.join("movies/sodcin05.wbm"),
+        b"synthetic SoD movie sentinel",
+    )
+    .expect("write SoD movie sentinel");
+    let components = [50];
+    let invocation = harness.invocation_with_args(
+        "eet-path",
+        InvocationMode::SetupName,
+        &components,
+        vec![
+            RunArg::Literal("--args-list".to_owned()),
+            RunArg::Literal("p".to_owned()),
+            RunArg::StagedRoot(GameRoot::Bg1),
+        ],
+        Vec::new(),
+    );
+
+    let evidence = harness.run_sync(invocation, "eet-path");
+
+    assert_eq!(
+        evidence.outcome,
+        RunOutcome::Exited { code: 0 },
+        "real WeiDU output:\n{}\ndebug log:\n{}",
+        evidence.output,
+        evidence.debug
+    );
+    assert_eq!(
+        reconcile(
+            &evidence.before_log,
+            &evidence.after_log,
+            &evidence.output,
+            &expected_run(&components, 0),
+        ),
+        Reconciliation::ProvenDone
+    );
+    assert_eq!(
+        fs::read(harness.game.override_dir().join("tmpathok.txt")).unwrap(),
+        b"EET-style path accepted\n"
+    );
 }
 
 #[test]

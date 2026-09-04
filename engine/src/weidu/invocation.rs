@@ -743,9 +743,7 @@ pub fn build(
     for argument in &input.run_args {
         match argument {
             RunArg::Literal(value) => args.push(OsString::from(value)),
-            RunArg::StagedRoot(root) => {
-                args.push(canonical_roots.get(*root).as_os_str().to_owned())
-            }
+            RunArg::StagedRoot(root) => args.push(mod_script_path(canonical_roots.get(*root))),
         }
     }
 
@@ -807,6 +805,33 @@ impl CanonicalRoots {
             GameRoot::Bg2 => &self.bg2,
         }
     }
+}
+
+#[cfg(windows)]
+fn mod_script_path(path: &Path) -> OsString {
+    // EET sanitizes '?' and slashes inside argv paths. Keep canonical paths internally,
+    // but send the equivalent ordinary drive/UNC spelling to the mod script.
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    const VERBATIM_PREFIX: &[u16] = &[b'\\' as u16, b'\\' as u16, b'?' as u16, b'\\' as u16];
+    const UNC_PREFIX: &[u16] = &[b'U' as u16, b'N' as u16, b'C' as u16, b'\\' as u16];
+
+    let path = path.as_os_str().encode_wide().collect::<Vec<_>>();
+    let Some(without_verbatim) = path.strip_prefix(VERBATIM_PREFIX) else {
+        return OsString::from_wide(&path);
+    };
+    if let Some(unc) = without_verbatim.strip_prefix(UNC_PREFIX) {
+        let mut ordinary = vec![b'\\' as u16, b'\\' as u16];
+        ordinary.extend_from_slice(unc);
+        OsString::from_wide(&ordinary)
+    } else {
+        OsString::from_wide(without_verbatim)
+    }
+}
+
+#[cfg(not(windows))]
+fn mod_script_path(path: &Path) -> OsString {
+    path.as_os_str().to_owned()
 }
 
 fn normalize_tp2_path(value: &str) -> Result<String, InvocationError> {
@@ -1320,7 +1345,7 @@ mod tests {
     }
 
     #[test]
-    fn eet_initialization_ends_with_typed_bg1_args_list() {
+    fn eet_initialization_sends_a_mod_compatible_typed_bg1_path() {
         let fixture = Fixture::new(b"pinned weidu");
         let mut eet = input(GameRoot::Bg2);
         eet.tp2 = "eet/eet.tp2".to_owned();
@@ -1336,7 +1361,14 @@ mod tests {
         assert_eq!(tail[0], OsStr::new("--args-list"));
         assert_eq!(tail[1], OsStr::new("p"));
         assert!(!tail.iter().any(|arg| arg == OsStr::new("s")));
-        assert_eq!(tail[2], canonical(&fixture.roots.bg1).as_os_str());
+        let canonical_bg1 = canonical(&fixture.roots.bg1);
+        let canonical_bg1_text = canonical_bg1.to_string_lossy();
+        let expected_bg1 = canonical_bg1_text
+            .strip_prefix(r"\\?\")
+            .unwrap_or(&canonical_bg1_text)
+            .to_owned();
+        assert_eq!(tail[2], OsStr::new(&expected_bg1));
+        assert!(!tail[2].to_string_lossy().starts_with(r"\\?\"));
     }
 
     #[test]

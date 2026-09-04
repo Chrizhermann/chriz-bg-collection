@@ -53,6 +53,32 @@ another round of cosmetic refactoring. Preserve all older curation/owning-reposi
   full recipe and WeiDU evidence-source fix; its actual signature test passed.
 - All 22 Python tooling tests passed after final generator normalization.
 
+## First overnight follow-up: EET path compatibility
+
+At 2026-09-04 21:22 UTC the full run had completed all acquisition/materialization,
+all 28 BG1 components, and the two BG2 EE Fixpack components. EET then rolled back
+with `End_of_file`; the verified failed receipt says the exact EET run is retryable.
+There is no successful final installation receipt yet.
+
+Root cause is the Windows path passed to EET, not missing SoD data: CEBG passed the
+canonical `\\?\C:\Users\chris\Games\CEBG-Full-20260905\bg1` as a typed staged-root
+argument. EET `lib/bgee_dir.tph` strips `?` and replaces backslashes, corrupting the
+prefix before its movie-file check. The expected `movies/sodcin05.wbm` exists. The focused
+Rust invocation fix now renders ordinary drive/UNC syntax only at the mod-script argument
+boundary, retaining canonical path validation internally. The unit regression and a real
+pinned-WeiDU synthetic EET-style movie-sentinel regression both passed.
+
+The same managed installation resumed safely with the corrected optimized driver at
+`target/full-install-20260905-r3/chriz-bg-install.exe`. The **current log** is now
+`target/full-install-20260905-r3/resume.log`. Real EET accepted the ordinary BG1 path,
+validated all 28 BG1 components, and reached TLK merging. No new game copy was needed.
+
+The desktop build **0.1.0-alpha.3** completed successfully, while the unchanged collection
+recipe stays **0.1.0-alpha.2**. Its actual setup signature passed verification against the
+embedded public key. Keep the earlier alpha.2 package for an actual signed update-cycle
+test; do not confuse a signature check with a tested download/apply/restart cycle.
+No frozen recipe, ledger, game source, or mod source was edited for this repair.
+
 ## Real installation runs / cleanup
 
 - Recommended alpha: `C:\Users\chris\Games\CEBG-alpha-test-20260905`,
@@ -79,11 +105,11 @@ another round of cosmetic refactoring. Preserve all older curation/owning-reposi
   they were deleted or bypass that rejection. Download cache is reusable and should stay.
 - Corrected full target: `C:\Users\chris\Games\CEBG-Full-20260905`.
   Install id: `install-8a3cab271f29d2c47f61`; active log:
-  `target/full-install-20260905-r2/run.log`. Copied optimized driver:
-  `target/full-install-20260905-r2/chriz-bg-install.exe`.
+  `target/full-install-20260905-r3/resume.log`. Copied optimized driver:
+  `target/full-install-20260905-r3/chriz-bg-install.exe`.
   Started after the completion-evidence fix and final recipe normalization; freeze,
-  preflight, all verified cache acquisition and both source copies succeeded. Mod
-  materialization is now running. Final plan: 90 runs,
+  preflight, all verified cache acquisition and both source copies succeeded. All
+  materialization and BG1 preparation completed; see the EET follow-up above. Final plan: 90 runs,
   488 components, 31 artifacts. The recipe preserves maintained replacements once;
   explicit outcome differences are old modpack 600 and the legacy Safana-to-Abettor /
   Aura-to-Bard assignments. Sirene deliberately uses the approved native True Paladin.
@@ -96,7 +122,8 @@ another round of cosmetic refactoring. Preserve all older curation/owning-reposi
 
 ## Release boundary
 
-App version is `0.1.0-alpha.2`. Signing private key lives outside the repository at
+App version is `0.1.0-alpha.3`; the bundled recipe remains `0.1.0-alpha.2`.
+Signing private key lives outside the repository at
 `%LOCALAPPDATA%\Chriz Easy BG Developer\signing\cebg-updater.key`; never print/commit it.
 The proposed public distribution-only repository is `Chrizhermann/chriz-easy-bg`.
 It has **not** been created/published, so the configured public update endpoint is not
@@ -104,7 +131,15 @@ live yet. The existing collection repository remains private. Public publication
 explicit release authorization under the existing implementation plan; do not expose its
 history or the private extras archive. See `cebg-release.md` for the prepared feed helper.
 
-Final local Windows package:
+Current local Windows package:
+`target/release/bundle/nsis/Chriz Easy BG_0.1.0-alpha.3_x64-setup.exe`
+(5,093,355 bytes; SHA-256
+`B878EBA376C6C1C598700B8BD072B1181F33B8D721A5258D95A0F34F93C7D1A3`).
+The signed NSIS build and actual package/public-key verification passed. Matching `.sig`
+is beside it; local update feed and checksums are in `target/cebg-release/0.1.0-alpha.3/`.
+This package includes the EET staged-path fix. Nothing has been published.
+
+Retained previous package for update-cycle acceptance:
 `target/release/bundle/nsis/Chriz Easy BG_0.1.0-alpha.2_x64-setup.exe`
 (5,092,074 bytes; SHA-256
 `2B31F86F18C96115BE3535682B3FE2A6652047EBE7780BCA30C5C7578BC0DE17`).
@@ -115,7 +150,7 @@ packaged recipe's parsed content. Tauri signatures are not Windows Authenticode 
 
 ## Finish line
 
-1. The corrected full recipe, signed alpha.2 and full managed run are prepared/launched.
+1. The corrected full recipe, signed alpha.3 app and full managed run are prepared/launched.
    Continue the current run; do not start another copy just to repeat static checks.
 2. Investigate actual install failures without skipping components or altering frozen
    evidence; resume safe failures, make a new copy only when required.
@@ -123,6 +158,29 @@ packaged recipe's parsed content. Tauri signatures are not Windows Authenticode 
    new-game / save-reload acceptance if available. Preserve the successful copy.
 4. Record final paths/results here, hand over any owning-repo gap (notably legacy modpack
    600's Spellhold/Bodhi fix), and request public distribution authorization separately.
+
+## Proportionate acceptance coverage
+
+The user explicitly asked for more than an installation check. Use one complete real
+installation, short packaged-app journeys, and small targeted failure fixtures; do not
+repeat the whole mod stack for every edge case. Keep evidence categories distinct:
+
+- Downloads: exercise an uncached download, verified cache reuse, and a bounded failed /
+  interrupted acquisition case. The earlier recommended-profile cold acquisition covered
+  30 artifacts; this full run uses the verified cache and is not a new cold-download test.
+- Full installation: successful final receipt plus exact ordered WeiDU lists, followed by
+  game boot, new-game and save/reload smoke acceptance. These remain pending.
+- Packaged app: brief navigation/readiness/progress/failure/reopen-launcher journeys,
+  including Play and Open game folder. Headless layout tests alone are not this acceptance.
+- Updates: actual old-to-new signed check/download/apply/restart cycle, version display,
+  unchanged managed game registration, and useful offline/no-update behavior. Signature
+  verification has passed; the real update cycle has not. The public feed is not live.
+- Radar and consistency: successful add-on installation/receipt and bounded launch check;
+  receipt/WeiDU mismatch must show an understandable changed state without claiming a
+  full override audit. Preserve the user's existing game and overlay processes.
+
+Do not call the overall product accepted solely because unit tests or the final install
+receipt pass. Record any unavailable interactive acceptance explicitly rather than looping.
 
 ## Bounded overnight continuation
 

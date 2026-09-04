@@ -36,3 +36,17 @@ PRINT ~TESTMOD_UNEXPECTED_PROMPT: type beta~
 ACTION_READLN testmod_unexpected_answer
 COPY ~testmod/unexpected-result.txt~ ~override/tmunexpected.txt~
   EVALUATE_BUFFER
+
+BEGIN ~Accept an EET-style staged BG1 path~
+DESIGNATED 50
+
+OUTER_SPRINT testmod_bg1_dir ~%argv[1]%~
+OUTER_PATCH_SAVE testmod_bg1_dir ~%testmod_bg1_dir%~ BEGIN
+  REPLACE_TEXTUALLY ~[*?"<>|]~ ~~
+  REPLACE_TEXTUALLY ~\\~ ~/~
+END
+ACTION_IF FILE_EXISTS ~%testmod_bg1_dir%/movies/sodcin05.wbm~ BEGIN
+  COPY ~testmod/path-result.txt~ ~override/tmpathok.txt~
+END ELSE BEGIN
+  FAIL ~TESTMOD_EET_PATH_SENTINEL_MISSING~
+END
