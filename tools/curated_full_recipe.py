@@ -22,7 +22,7 @@ if __package__ in {None, ""}:
 from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_map
 
 
-RECIPE_VERSION = "0.1.0-alpha.7"
+RECIPE_VERSION = "0.1.0-alpha.8"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
 

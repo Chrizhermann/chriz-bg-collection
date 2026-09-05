@@ -1,7 +1,7 @@
 id = "chriz-sod-remix"
 artifact_id = "chriz-sod-remix-0.6.5"
 name = "CHRIZ-SOD-REMIX"
-tp2 = "setup-chriz-sod-remix.tp2"
+tp2 = "chriz-sod-remix/setup-chriz-sod-remix.tp2"
 language = 0
 weidu_artifact_id = "weidu-249-amd64"
 invocation_mode = "setup-name"

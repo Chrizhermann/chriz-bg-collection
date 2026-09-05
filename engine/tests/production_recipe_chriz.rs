@@ -25,23 +25,23 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.4"];
-    assert_eq!(artifact.version, "0.6.4");
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.5"];
+    assert_eq!(artifact.version, "0.6.5");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.4/chriz-sod-remix-v0.6.4.zip"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.5/chriz-sod-remix-v0.6.5.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.4");
+    assert_eq!(artifact.source.reference, "v0.6.5");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-sod-remix-v0.6.4.zip")
+        Some("chriz-sod-remix-v0.6.5.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_459_461));
+    assert_eq!(artifact.source.expected_length, Some(1_460_498));
     assert_eq!(
         artifact.source.sha256,
-        "560168af4de06aaa17419213801447863be58f3f74454470c314b03edad79db3"
+        "e964507612730d0c44c0ea155291a1935ee8a6355cc83566be6a14f069e9d601"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -57,7 +57,7 @@ fn freezes_the_reviewed_sod_remix_release() {
     );
     assert_eq!(
         manifest.mods["chriz-sod-remix"].tp2,
-        "setup-chriz-sod-remix.tp2"
+        "chriz-sod-remix/setup-chriz-sod-remix.tp2"
     );
 }
 

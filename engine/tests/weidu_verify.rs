@@ -63,6 +63,35 @@ fn exact_tail_and_complete_success_markers_prove_done() {
 }
 
 #[test]
+fn setup_name_requires_the_exact_nested_tp2_path_logged_by_weidu() {
+    let after = format!(
+        "{BEFORE}~CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2~ #0 #100 // first\n\
+         ~CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2~ #0 #900 // last\n"
+    );
+    let debug = "SUCCESSFULLY INSTALLED first\nSUCCESSFULLY INSTALLED last\n";
+    let nested = ExpectedRun {
+        tp2: "chriz-sod-remix/setup-chriz-sod-remix.tp2".to_owned(),
+        language: 0,
+        components: vec![100, 900],
+        exit_code: 0,
+    };
+
+    assert_eq!(
+        reconcile(BEFORE, &after, debug, &nested),
+        Reconciliation::ProvenDone
+    );
+
+    let root_alias = ExpectedRun {
+        tp2: "setup-chriz-sod-remix.tp2".to_owned(),
+        ..nested
+    };
+    assert_eq!(
+        reconcile(BEFORE, &after, debug, &root_alias),
+        Reconciliation::StackDisturbed
+    );
+}
+
+#[test]
 fn warning_success_requires_the_warning_marker_and_exact_tail() {
     assert_eq!(
         reconcile(BEFORE, COMPLETE, DEBUG_WARNING, &run(3)),

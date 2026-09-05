@@ -51,6 +51,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
             self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.5")
+            # Setup-name WeiDU resolves the nested copy when both identical TP2s
+            # are shipped. The frozen expected log identity must use that path.
+            self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
                 (output / "artifacts/chriz-sod-remix-0.6.5.toml").read_text(encoding="utf-8")
             )
@@ -96,7 +99,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("chriz-bg-modpack-bg2"), order.index("cdtweaks-spell-save-penalties-bg2"))
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.7")
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.8")
             self.assertFalse((output / "reference").exists())
 
     def test_reconciliation_covers_every_default_and_mandatory_row(self) -> None:
