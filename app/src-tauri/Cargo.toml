@@ -1,6 +1,6 @@
 [package]
 name = "chriz-bg-app"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 description = "Installer and launcher for Chriz Easy BG"
 edition = "2021"
 

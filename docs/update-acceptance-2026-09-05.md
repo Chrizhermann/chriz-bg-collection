@@ -59,3 +59,18 @@ This is meaningful signed check/download/verification acceptance, but it is not 
 updater lifecycle. The harness intentionally never calls `install` or `download_and_install`:
 automatic NSIS apply, process exit, relaunch into the new version, displayed version, and
 preservation of the managed-install registry across that restart remain untested here.
+
+## Alpha.6 result
+
+The same real-plugin test passed for alpha.5-to-alpha.6 check, download, exact setup-byte
+identity, and rejection of a one-byte-modified setup with the unchanged signature.
+
+- Setup: `target/release/bundle/nsis/Chriz Easy BG_0.1.0-alpha.6_x64-setup.exe`
+- Size: 5,093,916 bytes
+- SHA-256: `3c991e61049807bacd1f0ad9265a66156f656af2057c3f165447008e59dc1896`
+- Local unpublished feed: `target/cebg-release/0.1.0-alpha.6/`; recipe version alpha.5
+- Separate silent NSIS installation exited zero; installed EXE reports alpha.6.
+
+The existing compiled acceptance harness was reused with `CEBG_UPDATER_SETUP`,
+`CEBG_UPDATER_VERSION=0.1.0-alpha.6`, and `CEBG_UPDATER_CURRENT_VERSION=0.1.0-alpha.5`.
+Automatic apply/restart remains untested; this manual local upgrade does not replace it.

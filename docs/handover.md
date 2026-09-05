@@ -19,9 +19,11 @@ Start with [the approved reconciliation path](plans/2026-09-05-curation-reconcil
 The overnight `creator-full-current` recipe bypassed recorded curation; it is invalid as
 the curated collection. **Do not repair Bristlelick or resume that selection.** Curation
 files are intact. Restore them as the authority, preserve deferred mod work, check changed
-ordering against mod documentation/source. The corrected alpha.4 recipe now validates and
-the new native-UI install is running (43 runs / 430 components); the bounded acceptance
-follow-up is active. Existing alpha.3 packages still contain the old profile; source guards
+ordering against mod documentation/source. The corrected alpha.5 recipe now validates and
+the replacement r2 install is running through the same engine CLI (43 runs / 430 components).
+The alpha.4 native run stopped on component-order verification, not missing components;
+all three native-order mismatches are fixed without changing selections. The bounded
+acceptance follow-up is active. Existing alpha.3 packages still contain the old profile; source guards
 do not retroactively fix those binaries. Installer acceptance remains the main priority.
 
 ## Historical overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)

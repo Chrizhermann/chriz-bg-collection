@@ -7,23 +7,27 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 - Worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - Frozen recipe: `recipes/curated-full-current`, preset `chris-recommended`,
-  recipe version `0.1.0-alpha.4`; app is now `0.1.0-alpha.5` after the live progress fix.
+  recipe version `0.1.0-alpha.5`; signed app alpha.6 is packaged and installed locally.
 - Selection comes from curation and later approvals, never a replay of historical logs.
   See [the approved reconciliation plan](plans/2026-09-05-curation-reconciliation.md).
-- The new real installation **is running from the installed alpha.4 native UI**.
-  Target: `C:\Users\chris\Games\CEBG-Curated-20260905`.
-  Install id: `install-66c8b55f3690bda2e3a5`.
-  Recipe SHA-256: `3c0386d4033ea093ba861abd05ab080060eafca21d9169f21efb31bdff3f74b9`.
+- The replacement real installation **is running through the same engine CLI backend**.
+  Target: `C:\Users\chris\Games\CEBG-Curated-20260905-r2`.
+  Install id: `install-55cd391fcb89a92eac0c`.
+  Recipe SHA-256: `43fb80da6240a24bd31fdb6a554f4d17b6e267463db1bf2413162af6be449187`.
   App cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
-  Current app PID: `84760` (verify current executable identity before acting).
+  CLI PID: `81680` (verify identity before acting), executable
+  `target/full-install-20260905-r3/chriz-bg-install.exe`. This fresh attempt honestly has
+  no originating desktop-app version; launcher rediscovery remains part of acceptance.
+  CLI logs: `target/curated-r2-install.stdout.log` and `target/curated-r2-install.stderr.log`.
 - The NSIS installer retained its earlier registered smoke-test location:
-  `target/nsis-smoke-20260905-022935/chriz-bg-app.exe`. That installed app reports alpha.4
-  (now upgraded to alpha.5) and is the active runner. The old `%LOCALAPPDATA%\Chriz Easy BG` alpha.1 executable is
-  not the test runner and is closed. Do not delete the active NSIS test location.
+  `target/nsis-smoke-20260905-022935/chriz-bg-app.exe`. That installed app now reports
+  alpha.6 and is closed; it is not the replacement run's owner. The old
+  `%LOCALAPPDATA%\Chriz Easy BG` alpha.1 executable is also closed. Do not delete
+  the NSIS test location while preparing/upgrading the packaged launcher.
 - Durable progress is under the new root's `.chriz/ledger/` (latest numbered records),
   with frozen recipe under `.chriz/recipe/`. Do not dump record zero: it is a large payload.
-  No CLI output log exists for this UI-started run. Use the engine report, bounded latest
-  ledger records and the native UI. Never start a concurrent resume while the UI worker runs.
+  Use the engine report and bounded latest ledger records. Never start a concurrent resume
+  while the CLI worker runs; the old native window is not the replacement's progress view.
 - The invalid `creator-full-current` recipe and old failed installations must not be resumed.
 
 ## Practical acceptance
@@ -34,7 +38,7 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 - [x] Download/cache/retry coverage includes real artifacts and bounded failure cases.
 - [ ] Receipt version and exact installed WeiDU component list agree with the frozen plan.
 - [ ] Launcher rediscovery, Play, game-folder action and update screen exercised.
-- [ ] Signed update check/download/rejection tested; apply/restart coverage stated separately.
+- [x] Signed update check/download/rejection tested; apply/restart coverage stated separately.
 - [ ] Latest verified BG Radar Overlay installed into the successful game copy.
 - [ ] Bounded game launch/new-game/save-reload smoke, with no other game disturbed.
 - [ ] Disposable test cleanup completed where permitted; successful copy retained.
@@ -67,6 +71,51 @@ that the public channel is live, and signature verification alone is not an appl
 
 ## Continuation
 
+### Native component-order failure and fresh replacement
+
+The first curated UI run stopped at ledger record 154, `install:bg1npc-bg1`, with
+`fresh_copy_required`: exact WeiDU suffix mismatch. Its WeiDU process exited **0** and
+installed all eight requested components; the only difference was native `240, 200`
+versus recipe `200, 240`. The curation catalog already documented the correct order.
+Do not resume or edit that frozen alpha.4 copy.
+
+A bounded read-only audit of 36 staged TP2 catalogs covered all 43 selected runs. It found
+no missing IDs and two further order errors in Artisan main and Randomiser. All three are
+fixed in recipe alpha.5. Before starting r2, every run's selected component set was compared
+with the failed receipt: all are identical, only those three sequences changed. The plan
+still contains 43 runs / 430 components and public-alpha validation has zero findings.
+The red/green regressions and all 28 authoring-tool tests pass. Fix commits: `db1fbba` and
+`42178af`; generated static evidence references the latter.
+
+Failure diagnostics are retained separately in `target/curated-bg1npc-order-failure-20260905/`
+(194 files). Compact source audit: `target/curated-component-native-order-audit-20260905.md`;
+durable source findings are also in [source/order evidence](curated-full-sources-order.md).
+The old managed folder is still present: its cleanup command was rejected before execution.
+The proposed `frozen-state` copy inside the diagnostic directory was part of that rejected
+command, so it was not made. Do not retry this deletion through another route.
+
+Replacement r2 reused the verified acquisition cache and finished staging both games;
+ledger 79 is materializing BG1 UB. The worker remains PID 81680 at this checkpoint.
+Native UI start, error handling, manual acquisition and resume were exercised on the first
+attempt; the replacement uses the CLI to keep the fresh rebuild in the background.
+After it completes, exercise the packaged launcher against its registered install ID and
+perform the remaining Radar/game/update acceptance, without substituting CLI start for a
+claim that every UI lifecycle has passed.
+
+The failed native view still offers a generic Retry action for `fresh_copy_required` and
+announces an empty phase list as complete. The engine blocks an unsafe retry, but the UI
+must explain the need for a new copy and remove this affordance before public release.
+
+App alpha.6 was built and signed, then passed the real updater check/download/byte-identity
+and one-byte tamper rejection test as an alpha.5-to-alpha.6 update. Its NSIS package is
+5,093,916 bytes, SHA-256 `3c991e61049807bacd1f0ad9265a66156f656af2057c3f165447008e59dc1896`.
+The old stopped native window was closed; silent NSIS installation exited zero and the
+installed EXE now reports alpha.6. The local unpublished feed is
+`target/cebg-release/0.1.0-alpha.6/` and labels recipe alpha.5 separately.
+This is still not an automatic updater apply/restart acceptance claim.
+
+### Earlier acquisition/progress fix (historical first run)
+
 Live defect found and fixed before any WeiDU work: attempt 1 correctly stopped at the missing
 manual Evandra archive, but every 64 KiB progress event rebuilt the whole UI, causing a large
 display backlog. Tauri Channel GC was ruled out by its actual installed source. App alpha.5
@@ -78,10 +127,10 @@ Native alpha.5 relaunched with `--install-id=install-66c8b55f3690bda2e3a5`. The 
 folder was visually verified before Continue. Attempt 2 immediately and correctly showed
 the missing archive request; the actual file picker then supplied the exact local archive.
 Attempt 3 has passed that acquisition and is downloading the remaining sources with a
-responsive UI. It is safe to continue monitoring this run; never rewrite its frozen recipe.
+responsive UI. This is historical; that alpha.4 copy later failed and must not be resumed.
 
-Latest checkpoint: all acquisitions completed, BG1 staging completed, BG2 staging started
-(ledger record 77). The active bounded follow-up points to this same run and app alpha.5.
+Earlier checkpoint: all acquisitions completed, BG1 staging completed, BG2 staging started
+(ledger record 77). The current bounded follow-up now points to replacement r2 above.
 
 While downloading normally, do not poll repeatedly. The manual Evandra source may request
 `C:\CEBG-creator-full-cache\manual\creator-full-private-extras-20260902.zip`; supply that
@@ -114,11 +163,12 @@ All clean Steam sources, `C:\Games` references, saves and stream installations r
 untouched. Do not weaken validation, edit a frozen recipe/ledger or omit a curated component
 to obtain a passing run. Deferred mod design discussions remain deferred.
 
-Two earlier cleanup requests were rejected by the tool policy before execution. Do not retry
+Three cleanup requests were rejected by the tool policy before execution. Do not retry
 those deletions by another route, and do not report them as removed:
 
 - `C:\CEBG-Full-20260905` (`install-daea3ea2007ad86185b2`).
 - `C:\Users\chris\Games\CEBG-alpha-test-20260905` (`install-3e091429c2b2d8889c15`).
+- `C:\Users\chris\Games\CEBG-Curated-20260905` (`install-66c8b55f3690bda2e3a5`).
 
 The separate invalid legacy full run `C:\Users\chris\Games\CEBG-Full-20260905`
 (`install-8a3cab271f29d2c47f61`) remains historical evidence, not the corrected run.
