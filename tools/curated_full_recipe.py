@@ -36,6 +36,35 @@ BG1NPC_NATIVE_ORDER = [
     240, 241, 150, 155, 160, 200,
 ]
 
+# Exact pinned Artisan chriz-v1.3.1 and Randomiser v8.1.1 TP2 order, restricted
+# to offered choices. Re-audit a newly offered ID instead of guessing its position.
+NATIVE_RUN_ORDERS = {
+    "artisanskitpack-main-bg2": [
+        1, 2, 20000, 20001, 8001, 8101, 8002, 8004,
+        10001, 10002, 10003, 10004, 1100, 1003, 1006, 1004, 1005,
+        1007, 1000, 1001, 1008, 1009, 2000, 2010, 2011, 2012, 2002,
+        3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110,
+        5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001,
+    ],
+    "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],
+}
+
+
+def _preserve_native_run_orders(collection: str) -> str:
+    for run_id, native_order in NATIVE_RUN_ORDERS.items():
+        pattern = rf'(?m)(^run_id = "{re.escape(run_id)}"\nmod_id = "[^"\n]+"\nphase = "[^"\n]+"\n)components = (\[[^\]\n]*\])'
+        matches = list(re.finditer(pattern, collection))
+        if len(matches) != 1:
+            raise ValueError(f"native component order requires one run: {run_id}")
+        match = matches[0]
+        components = tomllib.loads(f"components = {match.group(2)}")["components"]
+        unknown = set(components) - set(native_order)
+        if unknown or len(components) != len(set(components)):
+            raise ValueError(f"{run_id} requires a component-order audit: {components}")
+        ordered = [component for component in native_order if component in components]
+        collection = collection[:match.start()] + match.group(1) + f"components = {ordered}" + collection[match.end():]
+    return collection
+
 CATALOG_RUNS = {
     "BG1NPC": "bg1npc-bg1",
     "BRANWEN": "branwen-bg2",
@@ -668,6 +697,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         (destination / "artifacts" / filename).write_text(text, encoding="utf-8", newline="\n")
 
     base_collection = (root / "manifest/collection.toml").read_text(encoding="utf-8").replace("\r\n", "\n")
+    base_collection = _preserve_native_run_orders(base_collection)
     base = tomllib.loads(base_collection)
     rows = load_catalogs(root / "docs/curation/components")
     curation_map = load_curation_map(root / "manifest/curation-map.toml")

@@ -6,12 +6,18 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from tools.curated_full_recipe import build_recipe
+from tools.curated_full_recipe import _preserve_native_run_orders, build_recipe
 
 
 class CuratedFullRecipeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[2]
+
+    def test_new_offered_component_requires_native_order_audit(self) -> None:
+        collection = (self.root / "manifest/collection.toml").read_text(encoding="utf-8")
+        collection = collection.replace("components = [1, 2, 20000", "components = [999999, 1, 2, 20000", 1)
+        with self.assertRaisesRegex(ValueError, "requires a component-order audit"):
+            _preserve_native_run_orders(collection)
 
     def test_build_is_curation_derived_and_preserves_required_regressions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -33,6 +39,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(bg1npc_components.index(240), bg1npc_components.index(160))
             self.assertLess(bg1npc_components.index(241), bg1npc_components.index(160))
             self.assertLess(bg1npc_components.index(160), bg1npc_components.index(200))
+            artisan_components = runs["artisanskitpack-main-bg2"]["components"]
+            self.assertLess(artisan_components.index(10001), artisan_components.index(10002))
+            self.assertLess(artisan_components.index(1100), artisan_components.index(1003))
+            randomiser_components = runs["randomiser-bg2"]["components"]
+            self.assertLess(randomiser_components.index(1100), randomiser_components.index(9000))
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])

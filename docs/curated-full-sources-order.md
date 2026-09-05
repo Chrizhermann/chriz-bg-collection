@@ -47,6 +47,13 @@ root, while immediate reuse requires the existing broad archive declaration.
   but recipe alpha.4 expected `200, 240` and correctly failed exact-suffix verification.
   Recipe alpha.5 restores the already documented native order for every offered BG1 NPC
   choice. No selections or safety checks are removed; that failed copy cannot be resumed.
+- A follow-up audit used WeiDU 249 `--list-components-json` on all 36 exact staged TP2s
+  covering 43 selected runs. There were no missing selected IDs and only two additional
+  order mismatches: Artisan main must place `10001` before `10002`, and `1100` before
+  `1003` (TP2 lines 974/978/994/998); Randomiser must place `1100` before `9000`,
+  `10200`, and `10210` (TP2 lines 124/425/446/455). Alpha.5 corrects these too, including
+  optional choices, without changing the set of selected components. The other 40 runs
+  already matched their exact native component order.
 - Bardic Wonders `1008` prints `[1] Yes` and `[2] No` for its Garrick assignment. The
   curated single-assignment route must answer literal integer **`2`**, not the historical
   replay's `1`. Then install Artisan NPC `99001`: the exact pinned `chriz-v1.3.1`
