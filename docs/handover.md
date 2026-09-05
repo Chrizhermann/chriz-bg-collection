@@ -43,6 +43,14 @@ update notifications and the post-app-update/new-setup action are now visually t
 predates this slice. Next signed candidate must include it. Public Evandra acquisition
 needs the verified original standalone package, not the creator's private aggregate ZIP.
 
+Latest queued requirements are captured in [recovery and casual customization](plans/2026-09-05-recovery-and-casual-customization.md).
+Dual update notification is implemented in source. **Safe pause/app-close handling is
+missing and is the next installer priority**: Cancel currently kills WeiDU and must not be
+advertised as Pause. A read-only recovery matrix and bounded test plan are documented.
+Customize QoL follows (493-control catalog -> common changes + advanced); no curation was
+changed. Optional confirmed SoD skip with +250,000 protagonist-only XP was dispatched to
+the owning SoD task; separate from component 290 and frozen r4, not a first-alpha blocker.
+
 ## Historical overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)
 
 Start with [`overnight-2026-09-05.md`](overnight-2026-09-05.md): current code changes,

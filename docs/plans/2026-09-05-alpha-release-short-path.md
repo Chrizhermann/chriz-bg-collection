@@ -4,6 +4,11 @@ Christopher asked for a practical alpha release tonight, clarification of CLI ve
 desktop installation acceptance, and a visual test of app/collection update notifications.
 This is the release plan, not authorization to publish a repository, tag or update feed.
 
+Christopher subsequently agreed to this alpha scope and queued recovery/customization/
+skip-SoD requirements. [The captured priorities](2026-09-05-recovery-and-casual-customization.md)
+keep safe pause/close handling ahead of Customize QoL; the optional SoD skip remains
+parallel owning-repo work for an early alpha, not a reason to restart the running install.
+
 ## Reuse the real work already running
 
 Fresh r4 uses the same engine preparation and `execute_frozen_campaign` pipeline as the
