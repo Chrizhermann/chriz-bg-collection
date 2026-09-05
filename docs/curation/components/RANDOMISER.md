@@ -11,6 +11,12 @@ Listed at installed version **7**. The maintained fork target is **v8.1.1** at c
   a separate component toggle. Components `500`–`570` must be installed before it.
 - Component `510` needs an integer value from 0 through 100 when enabled; the UI must
   collect that value rather than exposing only a checkbox.
+- On a fresh installation, `1100` asks whether to leave items needed by other mods in
+  place when Xan `0` or Rogue Rebalancing `12` is installed. The recorded answer is **yes**
+  (see the 2026-08-19 installer design). Script `y` only after observing that exact prompt,
+  and only when one of those component-owning features is effectively selected. With both
+  absent there is no prompt. Re-audit this trigger list if another supported NPC/mod is
+  added to Randomiser's `lists/mod_compat.2da` intersection with the collection.
 - Component `570` is unavailable with Cursed Item Revisions component `0`.
 - Component `10300` remains a default choice, but is unavailable while SCS component
   `8040` is selected. Keep it visible and disabled with the note: **Already provided by

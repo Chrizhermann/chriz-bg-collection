@@ -40,6 +40,14 @@ root, while immediate reuse requires the existing broad archive declaration.
 
 ## Required prompt and order changes
 
+- Randomiser `1100` has a fresh-install compatibility `ACTION_READLN` in `lib/arrays.tpa`
+  lines 22-30. `lists/mod_compat.2da` matches the curated Xan `0` and RR `12` components;
+  the approved 2026-08-19 installer design already specifies `y` (leave required items in
+  place). Recipe alpha.5 omitted the prompt, causing `End_of_file` and rollback of `1100`.
+  Alpha.6 restores this output-gated answer only when either owning feature is effective.
+  It also restores the catalog's explicit Randomiser-after-SCS placement, before EET_END.
+  Fresh copies do not contain prior randomisation state, so the saved-state preservation
+  prompt in `lib/random_seed.tpa` is not part of this new-install recipe.
 - BG1 NPC v32 declares its Kivan choices `240`/`241` before portraits `160` and
   player-initiated dialogues `200` (`bg1npc.tp2` lines 590/598/633/644). WeiDU
   `--force-install-list` follows this source order, not the numeric order in the catalog.

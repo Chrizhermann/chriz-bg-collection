@@ -474,6 +474,10 @@ pub struct PromptStep {
     pub expected_output: String,
     /// Typed literal or feature-input reference providing the answer.
     pub answer: PromptAnswer,
+    /// Semantic features of which at least one must be effective before this prompt is authored.
+    /// An empty list keeps the prompt unconditional.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub when_any_features: Vec<String>,
 }
 
 /// One player-facing semantic feature and its exact component expansion.

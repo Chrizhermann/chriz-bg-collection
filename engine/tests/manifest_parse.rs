@@ -1,6 +1,6 @@
 use bg_engine::manifest::{
     AcquisitionPolicy, Artifact, Collection, GameRoot, InvocationMode, ModFile, Phase,
-    Postcondition, RunArg, SourceKind,
+    Postcondition, PromptStep, RunArg, SourceKind,
 };
 
 fn collection_fixture() -> String {
@@ -126,6 +126,21 @@ fn parses_installer_referencing_separate_mod_and_weidu_artifacts() {
     assert_eq!(installer.invocation_mode, InvocationMode::ExplicitTp2);
     assert_eq!(installer.components.len(), 2);
     assert_eq!(installer.components[1].stdin.as_deref(), Some("1\n"));
+}
+
+#[test]
+fn unconditional_prompt_steps_preserve_the_legacy_serialized_shape() {
+    let prompt: PromptStep = toml::from_str(
+        r#"expected_output = "Confirm"
+answer = { kind = "literal", value = { kind = "boolean", value = true } }"#,
+    )
+    .unwrap();
+
+    assert!(prompt.when_any_features.is_empty());
+    assert_eq!(
+        serde_json::to_string(&prompt).unwrap(),
+        r#"{"expected_output":"Confirm","answer":{"kind":"literal","value":{"kind":"boolean","value":true}}}"#
+    );
 }
 
 #[test]

@@ -787,11 +787,33 @@ fn prompt_input_references_must_name_a_declared_feature_input() {
                 feature_id: "missing-feature".to_owned(),
                 input_id: "missing-input".to_owned(),
             }),
+            when_any_features: Vec::new(),
         });
 
     let findings = validate(&manifest);
 
     assert_has_error(&findings, "prompt-input-references");
+}
+
+#[test]
+fn prompt_conditions_must_name_declared_features_exactly() {
+    let mut manifest = good();
+    manifest.mods.get_mut("eefixpack").unwrap().components[0]
+        .prompts
+        .push(PromptStep {
+            expected_output: "Choose".to_owned(),
+            answer: PromptAnswer::Literal(bg_engine::manifest::InputValue::Boolean(true)),
+            when_any_features: vec!["feature-with-a-typo".to_owned()],
+        });
+
+    let findings = validate(&manifest);
+
+    assert_has_error(&findings, "feature-references");
+    assert!(findings.iter().any(|finding| {
+        finding.rule == "feature-references"
+            && finding.message.contains("feature-with-a-typo")
+            && finding.message.contains("prompt")
+    }));
 }
 
 #[test]

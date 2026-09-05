@@ -233,37 +233,7 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
     }
 
     let base_effective = base_effective_features(manifest, &desired);
-    let mut effective = base_effective.clone();
-    loop {
-        let previous = effective.clone();
-        for feature in manifest
-            .collection
-            .features
-            .iter()
-            .filter(|feature| feature.decision != Decision::Excluded)
-        {
-            let mut selected = base_effective.get(&feature.id).copied().unwrap_or(false);
-            if selected {
-                if let Some(parent) = &feature.parent {
-                    selected &= previous.get(parent).copied().unwrap_or(false);
-                }
-                selected &= feature
-                    .requires
-                    .iter()
-                    .all(|required| previous.get(required).copied().unwrap_or(false));
-                selected &= feature.conflicts.iter().all(|conflict| {
-                    !base_effective
-                        .get(&conflict.feature_id)
-                        .copied()
-                        .unwrap_or(false)
-                });
-            }
-            effective.insert(feature.id.clone(), selected);
-        }
-        if effective == previous {
-            break;
-        }
-    }
+    let effective = effective_features(manifest, &base_effective);
 
     let mut categories = Vec::new();
     let mut seen_categories = BTreeSet::new();
@@ -362,6 +332,17 @@ pub fn render_prompt_script(
     component_ref: &ComponentRef,
     selection: &NormalizedSelection,
 ) -> Result<PromptScript> {
+    let base_effective = base_effective_features(manifest, &selection.features);
+    let effective = effective_features(manifest, &base_effective);
+    render_prompt_script_for_effective(manifest, component_ref, selection, &effective)
+}
+
+fn render_prompt_script_for_effective(
+    manifest: &Manifest,
+    component_ref: &ComponentRef,
+    selection: &NormalizedSelection,
+    effective: &BTreeMap<String, bool>,
+) -> Result<PromptScript> {
     let run = manifest
         .collection
         .runs
@@ -392,6 +373,14 @@ pub fn render_prompt_script(
 
     let mut steps = Vec::with_capacity(component.prompts.len());
     for prompt in &component.prompts {
+        if !prompt.when_any_features.is_empty()
+            && !prompt
+                .when_any_features
+                .iter()
+                .any(|feature_id| effective.get(feature_id).copied().unwrap_or(false))
+        {
+            continue;
+        }
         let answer = match &prompt.answer {
             PromptAnswer::Literal(value) => render_literal(value),
             PromptAnswer::Input(input_ref) => {
@@ -547,6 +536,44 @@ fn base_effective_features(
     selected
 }
 
+fn effective_features(
+    manifest: &Manifest,
+    base_effective: &BTreeMap<String, bool>,
+) -> BTreeMap<String, bool> {
+    let mut effective = base_effective.clone();
+    loop {
+        let previous = effective.clone();
+        for feature in manifest
+            .collection
+            .features
+            .iter()
+            .filter(|feature| feature.decision != Decision::Excluded)
+        {
+            let mut selected = base_effective.get(&feature.id).copied().unwrap_or(false);
+            if selected {
+                if let Some(parent) = &feature.parent {
+                    selected &= previous.get(parent).copied().unwrap_or(false);
+                }
+                selected &= feature
+                    .requires
+                    .iter()
+                    .all(|required| previous.get(required).copied().unwrap_or(false));
+                selected &= feature.conflicts.iter().all(|conflict| {
+                    !base_effective
+                        .get(&conflict.feature_id)
+                        .copied()
+                        .unwrap_or(false)
+                });
+            }
+            effective.insert(feature.id.clone(), selected);
+        }
+        if effective == previous {
+            break;
+        }
+    }
+    effective
+}
+
 fn unavailable_reason(
     feature: &Feature,
     features: &BTreeMap<&str, &Feature>,
@@ -621,13 +648,14 @@ fn build_plan(
         })?;
         let mut prompt_scripts = Vec::new();
         for component in &components {
-            let script = render_prompt_script(
+            let script = render_prompt_script_for_effective(
                 manifest,
                 &ComponentRef {
                     run_id: run.run_id.clone(),
                     component: *component,
                 },
                 normalized,
+                effective,
             )?;
             if !script.steps.is_empty() {
                 prompt_scripts.push(script);

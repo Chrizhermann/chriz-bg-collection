@@ -466,10 +466,12 @@ fn prompt_answers_are_rendered_stepwise_from_literals_and_validated_input_refs()
                 feature_id: "prompt-feature".to_owned(),
                 input_id: "mode".to_owned(),
             }),
+            when_any_features: Vec::new(),
         },
         PromptStep {
             expected_output: "Confirm".to_owned(),
             answer: PromptAnswer::Literal(InputValue::Boolean(true)),
+            when_any_features: Vec::new(),
         },
     ];
     let mut prompt_feature = feature(
@@ -503,4 +505,108 @@ fn prompt_answers_are_rendered_stepwise_from_literals_and_validated_input_refs()
     assert_eq!(script.steps[0].expected_output, "Choose mode");
     assert_eq!(script.steps[0].answer, "1\n");
     assert_eq!(script.steps[1].answer, "true\n");
+}
+
+fn conditional_prompt_manifest() -> Manifest {
+    let mut manifest = semantic_manifest();
+    let prompt_run = "conditional-prompt-mod";
+    add_run(&mut manifest, prompt_run, &[10]);
+    manifest.mods.get_mut(prompt_run).unwrap().components[0].prompts = vec![PromptStep {
+        expected_output: "Install compatibility patch?".to_owned(),
+        answer: PromptAnswer::Literal(InputValue::Boolean(true)),
+        when_any_features: vec!["condition-a".to_owned(), "condition-b".to_owned()],
+    }];
+    manifest.collection.features.extend([
+        feature(
+            "conditional-prompt-owner",
+            Decision::Default,
+            component_refs(prompt_run, &[10]),
+        ),
+        feature("condition-a", Decision::Optional, Vec::new()),
+        feature("condition-b", Decision::Optional, Vec::new()),
+    ]);
+    manifest
+}
+
+#[test]
+fn conditional_prompt_is_omitted_when_all_conditions_are_effectively_off() {
+    let manifest = conditional_prompt_manifest();
+
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let run = evaluation
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.run_id == "conditional-prompt-mod")
+        .unwrap();
+
+    assert_eq!(run.components, [10]);
+    assert!(run.prompt_scripts.is_empty());
+}
+
+#[test]
+fn conditional_prompt_is_emitted_once_when_either_condition_is_effective() {
+    let manifest = conditional_prompt_manifest();
+
+    for feature_ids in [
+        &["condition-a"][..],
+        &["condition-b"][..],
+        &["condition-a", "condition-b"][..],
+    ] {
+        let mut selection = Selection::defaults("windows");
+        for feature_id in feature_ids {
+            selection.set_feature(feature_id, true);
+        }
+
+        let evaluation = evaluate(&manifest, &selection).unwrap();
+        let run = evaluation
+            .plan
+            .runs
+            .iter()
+            .find(|run| run.run_id == "conditional-prompt-mod")
+            .unwrap();
+
+        assert_eq!(run.components, [10]);
+        assert_eq!(run.prompt_scripts.len(), 1);
+        assert_eq!(run.prompt_scripts[0].steps.len(), 1);
+        assert_eq!(
+            run.prompt_scripts[0].steps[0].expected_output,
+            "Install compatibility patch?"
+        );
+    }
+}
+
+#[test]
+fn conditional_prompt_uses_effective_state_when_selected_child_has_disabled_parent() {
+    let mut manifest = conditional_prompt_manifest();
+    let condition = manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == "condition-a")
+        .unwrap();
+    condition.parent = Some("condition-parent".to_owned());
+    manifest
+        .collection
+        .features
+        .push(feature("condition-parent", Decision::Optional, Vec::new()));
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("condition-a", true);
+
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+    let run = evaluation
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.run_id == "conditional-prompt-mod")
+        .unwrap();
+
+    assert!(evaluation
+        .normalized_selection
+        .features
+        .get("condition-a")
+        .copied()
+        .unwrap());
+    assert!(!evaluation.view.control("condition-a").unwrap().selected);
+    assert!(run.prompt_scripts.is_empty());
 }

@@ -50,3 +50,4 @@ name = "Prevent Watcher's Keep statues from disappearing"
 [[components]]
 id = 1100
 name = "Mode 1: Randomise with in-game scripts. No items are lost"
+prompts = [{ expected_output = "Do you wish to leave these items where they are? Please answer [y]es or [n]o.", when_any_features = ["feature:xan:mandatory-components", "feature:rr:component-12"], answer = { kind = "literal", value = { kind = "choice", value = "y" } } }]

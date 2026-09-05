@@ -1187,6 +1187,25 @@ fn check_feature_references(manifest: &Manifest, findings: &mut Vec<Finding>) {
         }
     }
 
+    for (mod_id, mod_file) in &manifest.mods {
+        for component in &mod_file.components {
+            for prompt in &component.prompts {
+                for condition in &prompt.when_any_features {
+                    if !feature_ids.contains(condition.as_str()) {
+                        error(
+                            findings,
+                            RULE_FEATURE_REFERENCES,
+                            format!(
+                                "installer {mod_id:?} component {} prompt references unknown conditional feature {condition:?}",
+                                component.id
+                            ),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     let runs = manifest
         .collection
         .runs

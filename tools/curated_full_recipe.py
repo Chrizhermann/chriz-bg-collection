@@ -22,7 +22,7 @@ if __package__ in {None, ""}:
 from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_map
 
 
-RECIPE_VERSION = "0.1.0-alpha.5"
+RECIPE_VERSION = "0.1.0-alpha.6"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
 
@@ -730,6 +730,19 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         if base_collection.count(marker) != 1:
             raise ValueError(f"collection marker is not unique: {marker}")
         base_collection = base_collection.replace(marker, block + marker, 1)
+
+    # RANDOMISER.md explicitly keeps the fresh-stack run after SCS. Leave the
+    # earlier Tweaks/IWDification insertions in place; move only Randomiser's run.
+    randomiser_runs = list(re.finditer(
+        r'(?ms)^\[\[runs\]\]\nrun_id = "randomiser-bg2"\n.*?(?=^\[\[runs\]\])',
+        base_collection,
+    ))
+    late_kit_marker = '[[runs]]\nrun_id = "artisanskitpack-tweak-late-bg2"'
+    if len(randomiser_runs) != 1 or base_collection.count(late_kit_marker) != 1:
+        raise ValueError("Randomiser's reviewed post-SCS placement is ambiguous")
+    randomiser_run = randomiser_runs[0].group(0)
+    base_collection = base_collection.replace(randomiser_run, "", 1)
+    base_collection = base_collection.replace(late_kit_marker, randomiser_run + late_kit_marker, 1)
 
     base_collection = _replace_feature(
         base_collection,
