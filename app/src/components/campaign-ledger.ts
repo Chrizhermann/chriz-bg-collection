@@ -35,7 +35,12 @@ export function campaignLedger(phases: readonly (PhaseSummary | BuildPhase)[], a
   });
   wrapper.append(heading, list);
   if (announce) {
-    const live = element("p", "visually-hidden", currentTitle ? `Current phase: ${currentTitle}` : "All phases complete");
+    const allDone = phases.length > 0 && phases.every((phase) => "state" in phase && phase.state === "done");
+    const announcement = currentTitle ? `Current phase: ${currentTitle}`
+      : allDone ? "All phases complete"
+      : phases.length === 0 ? "Installation progress is not available yet."
+      : "Waiting to start installation steps.";
+    const live = element("p", "visually-hidden", announcement);
     live.setAttribute("role", "status");
     live.setAttribute("aria-live", "polite");
     live.setAttribute("aria-atomic", "true");

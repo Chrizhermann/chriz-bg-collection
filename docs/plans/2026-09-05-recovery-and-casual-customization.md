@@ -34,6 +34,11 @@ interception; the worker is an in-process thread, not a durable background servi
 
 ### Required small recovery slice (before presenting pausing as supported)
 
+Update 2026-09-06: [failure-detail and progress-announcement fixes](../failure-ui-acceptance-2026-09-06.md)
+are implemented in source. Empty/pending lists no longer claim completion;
+the engine report reason stays visible and sealed failures still prohibit Retry.
+Safe pause, close handling and reconstructing the actual resumed phases remain unimplemented.
+
 - **Pause safely** requests a stop at the next verified pipeline boundary. During WeiDU,
   finish the whole current mod invocation and commit its verification/ledger first—not
   an arbitrary component, log line, or suspended process. Do not start another mod.

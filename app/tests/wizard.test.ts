@@ -1075,7 +1075,7 @@ describe("Chriz Easy BG application flow", () => {
             install_id: "install-sealed",
             managed_root: "D:\\Sealed Campaign",
             plan_sha256: "22".repeat(32),
-            status: { status: "fresh_copy_required", step_id: "install:test", reason: "exact WeiDU suffix mismatch" },
+            status: { status: "fresh_copy_required", step_id: "install:test", reason: "Components 170, 192 were not recorded as installed; the selected mod run completed only partially." },
           },
           error: {
             code: "campaign_error",
@@ -1100,7 +1100,8 @@ describe("Chriz Easy BG application flow", () => {
     await waitFor(() => expect(getByText(root, "A new installation is needed")).toBeTruthy());
 
     expect(getByText(root, "This copy cannot be resumed safely. Its failure evidence has been preserved.")).toBeTruthy();
-    expect(getByText(root, "Return to setup and choose a new empty folder for a fresh installation.")).toBeTruthy();
+    expect(getByText(root, "Components 170, 192 were not recorded as installed; the selected mod run completed only partially.")).toBeTruthy();
+    expect(getByText(root, "Resolve the reported problem before starting a new installation in a new empty folder.")).toBeTruthy();
     expect(queryByText(root, "Retry failed step")).toBeNull();
     expect(getByRole(root, "button", { name: "Start new installation" })).toBeTruthy();
 
@@ -1161,6 +1162,7 @@ describe("Chriz Easy BG application flow", () => {
     await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     const retry = getByRole(root, "button", { name: "Retry failed step" });
+    expect(getByText(root, "fixture failure")).toBeTruthy();
 
     await user.click(getByRole(root, "button", { name: "Export diagnostics" }));
     expect(backend.diagnosticInstalls).toEqual(["install-failed"]);

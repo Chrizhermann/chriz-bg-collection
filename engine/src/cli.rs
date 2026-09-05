@@ -64,7 +64,10 @@ use crate::weidu::invocation::{
     build as build_invocation, verify_tool_contract, Invocation, InvocationInput, ResolvedPrompt,
     StagedRoots, VerifiedWeidu,
 };
-use crate::weidu::log::{parse_active_entries, parse_terminal_statuses, DebugStatus, LogEntry};
+use crate::weidu::log::{
+    has_new_uninstall_comment, normalize_tp2_key, parse_active_entries, parse_terminal_statuses,
+    DebugStatus, LogEntry,
+};
 use crate::weidu::runner::{
     parse_prompt_results, run_controlled, PromptAnswerEvidence, RunOutcome, RunnerControlHandle,
     RunnerRequest, PROMPT_RESULTS_FILE_NAME,
@@ -2632,10 +2635,15 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
                     Reconciliation::UnchangedRetryable => InstallReconciliation::Retry {
                         remaining: prepared.components.clone(),
                     },
-                    Reconciliation::StackDisturbed => InstallReconciliation::FreshCopyRequired {
-                        reason: "WeiDU.log changed outside the exact frozen component suffix"
-                            .to_owned(),
-                    },
+                    Reconciliation::StackDisturbed => stack_disturbed_reconciliation(
+                        &String::from_utf8_lossy(&before),
+                        &String::from_utf8_lossy(&after),
+                        &run.run_id,
+                        &run.mod_id,
+                        &self.frozen.mods[&run.mod_id].tp2,
+                        self.frozen.mods[&run.mod_id].language,
+                        &prepared.components,
+                    ),
                     Reconciliation::Ambiguous => InstallReconciliation::FreshCopyRequired {
                         reason: "WeiDU debug/log/exit evidence is incomplete or contradictory"
                             .to_owned(),
@@ -3192,6 +3200,89 @@ fn expected_log_components(
     Ok(expected)
 }
 
+fn non_prefix_component_diagnostic(
+    before: &str,
+    after: &str,
+    run_id: &str,
+    mod_id: &str,
+    tp2: &str,
+    language: u32,
+    requested: &[u32],
+) -> Option<String> {
+    if requested.is_empty() || has_new_uninstall_comment(before, after) {
+        return None;
+    }
+    let before_entries = parse_active_entries(before).ok()?;
+    let after_entries = parse_active_entries(after).ok()?;
+    if after_entries.len() < before_entries.len()
+        || !before_entries
+            .iter()
+            .zip(&after_entries)
+            .all(|(left, right)| same_log_entry(left, right))
+    {
+        return None;
+    }
+
+    let tp2_key = normalize_tp2_key(tp2);
+    let appended = &after_entries[before_entries.len()..];
+    if appended.is_empty()
+        || appended
+            .iter()
+            .any(|entry| entry.tp2_key != tp2_key || entry.language != language)
+    {
+        return None;
+    }
+
+    let mut installed = Vec::with_capacity(appended.len());
+    let mut requested_cursor = 0;
+    for entry in appended {
+        let offset = requested[requested_cursor..]
+            .iter()
+            .position(|component| *component == entry.component)?;
+        requested_cursor += offset + 1;
+        installed.push(entry.component);
+    }
+    let missing = requested
+        .iter()
+        .copied()
+        .filter(|component| !installed.contains(component))
+        .collect::<Vec<_>>();
+    if missing.is_empty() {
+        return None;
+    }
+    let missing = missing
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    Some(format!(
+        "For run {run_id:?} (mod {mod_id:?}), {} of {} requested components are recorded. Components {missing} are not recorded as installed. Missing rows do not identify the cause; see the attempt diagnostics.",
+        installed.len(),
+        requested.len(),
+    ))
+}
+
+fn stack_disturbed_reconciliation(
+    before: &str,
+    after: &str,
+    run_id: &str,
+    mod_id: &str,
+    tp2: &str,
+    language: u32,
+    requested: &[u32],
+) -> InstallReconciliation {
+    let reason =
+        non_prefix_component_diagnostic(before, after, run_id, mod_id, tp2, language, requested)
+            .map_or_else(
+                || "WeiDU.log changed outside the exact frozen component suffix".to_owned(),
+                |detail| {
+                    format!("WeiDU.log changed outside the exact frozen component suffix. {detail}")
+                },
+            );
+    InstallReconciliation::FreshCopyRequired { reason }
+}
+
 fn same_log_entry(left: &LogEntry, right: &LogEntry) -> bool {
     left.tp2_key == right.tp2_key
         && left.language == right.language
@@ -3478,9 +3569,10 @@ mod tests {
     use crate::Manifest;
 
     use super::{
-        install_interrupt_handler_with, retain_first_acquisition_receipt, select_terminal_evidence,
-        selection_choices, validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource,
-        SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
+        install_interrupt_handler_with, non_prefix_component_diagnostic,
+        retain_first_acquisition_receipt, select_terminal_evidence, selection_choices,
+        stack_disturbed_reconciliation, validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource,
+        InstallReconciliation, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
     };
 
     fn downloaded_artifact_receipt() -> ArtifactReceipt {
@@ -3662,6 +3754,88 @@ mod tests {
         let stdout = b"SUCCESSFULLY INSTALLED component 1\nSUCCESSFULLY INSTALLED component 2\n";
 
         assert!(std::ptr::eq(select_terminal_evidence(debug, stdout), debug));
+    }
+
+    #[test]
+    fn non_prefix_modpack_completion_names_unrecorded_requested_components() {
+        let requested = [
+            110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 410, 430, 440, 450,
+        ];
+        let installed = [
+            110, 130, 140, 190, 193, 194, 195, 196, 197, 198, 410, 430, 440, 450,
+        ];
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let mut after = before.to_owned();
+        for component in installed {
+            after.push_str(&format!(
+                "~CHRIZ-BG-MODPACK/SETUP-CHRIZ-BG-MODPACK.TP2~ #0 #{component} // selected\n"
+            ));
+        }
+
+        let detail = non_prefix_component_diagnostic(
+            before,
+            &after,
+            "modpack-main",
+            "chriz-bg-modpack",
+            "chriz-bg-modpack/setup-chriz-bg-modpack.tp2",
+            0,
+            &requested,
+        )
+        .expect("ordered non-prefix completion should produce bounded context");
+
+        assert!(detail.contains("run \"modpack-main\" (mod \"chriz-bg-modpack\")"));
+        assert!(detail.contains("14 of 16 requested components"));
+        assert!(detail.contains("170, 192"));
+        assert!(detail.contains("not recorded as installed"));
+        assert!(detail.contains("Missing rows do not identify the cause"));
+
+        assert!(matches!(
+            stack_disturbed_reconciliation(
+                before,
+                &after,
+                "modpack-main",
+                "chriz-bg-modpack",
+                "chriz-bg-modpack/setup-chriz-bg-modpack.tp2",
+                0,
+                &requested,
+            ),
+            InstallReconciliation::FreshCopyRequired { reason }
+                if reason.contains("170, 192")
+        ));
+    }
+
+    #[test]
+    fn unrelated_stack_addition_is_not_attributed_to_missing_requested_components() {
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let after = concat!(
+            "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n",
+            "~OTHER/SETUP-OTHER.TP2~ #0 #7 // unrelated\n"
+        );
+
+        assert!(non_prefix_component_diagnostic(
+            before,
+            after,
+            "modpack-main",
+            "chriz-bg-modpack",
+            "chriz-bg-modpack/setup-chriz-bg-modpack.tp2",
+            0,
+            &[110, 170],
+        )
+        .is_none());
+        assert_eq!(
+            stack_disturbed_reconciliation(
+                before,
+                after,
+                "modpack-main",
+                "chriz-bg-modpack",
+                "chriz-bg-modpack/setup-chriz-bg-modpack.tp2",
+                0,
+                &[110, 170],
+            ),
+            InstallReconciliation::FreshCopyRequired {
+                reason: "WeiDU.log changed outside the exact frozen component suffix".to_owned(),
+            }
+        );
     }
 
     #[test]

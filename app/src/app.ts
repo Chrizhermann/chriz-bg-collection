@@ -685,18 +685,22 @@ class AppController implements AppHandle {
       this.#retryAvailable = snapshot.status === "failed"
         && snapshot.report !== null
         && !freshCopyRequired;
-      if (this.#state.build !== null && (freshCopyRequired || snapshot.error !== null)) {
+      const failureReason = snapshot.status === "failed"
+        ? snapshot.report?.status.reason?.trim() || undefined
+        : undefined;
+      if (this.#state.build !== null && (freshCopyRequired || snapshot.error !== null || failureReason !== undefined)) {
         const current = this.#state.build;
         const diagnostic = snapshot.error === null
           ? null
           : `${snapshot.error.code}: ${snapshot.error.technical_detail}`;
         this.#dispatch({ type: "build-updated", build: {
           ...current,
+          failureReason,
           ...(freshCopyRequired ? {
             state: "failed" as const,
             headline: "A new installation is needed",
             detail: "This copy cannot be resumed safely. Its failure evidence has been preserved.",
-            recoveryAction: "Return to setup and choose a new empty folder for a fresh installation.",
+            recoveryAction: "Resolve the reported problem before starting a new installation in a new empty folder.",
             manualArchiveName: null,
             freshCopyRequired: true,
           } : current.state === "waiting-manual" || snapshot.error === null ? {} : {

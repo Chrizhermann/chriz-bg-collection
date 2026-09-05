@@ -74,6 +74,11 @@ Latest queued requirements are captured in [recovery and casual customization](p
 Dual update notification is implemented in source. **Safe pause/app-close handling is
 missing and is the next installer priority**: Cancel currently kills WeiDU and must not be
 advertised as Pause. A read-only recovery matrix and bounded test plan are documented.
+The [failure-detail slice](failure-ui-acceptance-2026-09-06.md) is now implemented
+in source: retain the actual report reason, identify safely attributable missing
+component log rows, keep fresh-copy recovery strict, and do not announce empty
+progress as complete. 91 frontend / 9 focused CLI tests and responsive checks passed;
+not in installed alpha.8. Modpack owning task was still active at the latest check.
 The requested [common Customize controls](customization-acceptance-2026-09-06.md) are now
 implemented in source: six bundles, category bulk actions, preserved preferences and
 visible collateral, with 88 frontend / 16 recipe-view / 4 authoring tests passing.

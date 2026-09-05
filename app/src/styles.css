@@ -733,6 +733,11 @@ input[type="search"] {
   margin-top: 0.45rem;
 }
 
+.status-card .failure-reason {
+  color: var(--vellum);
+  overflow-wrap: anywhere;
+}
+
 input[type="search"] {
   min-height: 44px;
 }

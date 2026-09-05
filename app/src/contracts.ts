@@ -217,6 +217,7 @@ export interface BuildSnapshot {
   readonly logTail: readonly string[];
   readonly manualArchiveName: string | null;
   readonly recoveryAction?: string;
+  readonly failureReason?: string;
   readonly freshCopyRequired?: boolean;
 }
 

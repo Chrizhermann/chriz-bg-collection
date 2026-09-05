@@ -24,6 +24,7 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
   page.append(screenIntro("", "Installation progress", ""));
   const tone = snapshot.state === "failed" ? "danger" : snapshot.state === "running" || snapshot.state === "complete" ? "ok" : "warning";
   const stateCard = statusCard(snapshot.headline, snapshot.detail, tone);
+  if (snapshot.failureReason) stateCard.insertBefore(element("p", "failure-reason", snapshot.failureReason), stateCard.children[1] ?? null);
   const controls = element("div", "inline-actions");
   if (snapshot.recoveryAction) stateCard.append(element("p", "recovery-action", snapshot.recoveryAction));
   if (snapshot.state === "waiting-manual") {
