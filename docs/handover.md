@@ -4,6 +4,18 @@ Live entry point for anyone (user, future agent) picking up work on this repo.
 
 ## Public alpha publication checkpoint — 2026-09-06
 
+**Published and complete:** https://bg.chrizfader.org/collection now serves the
+alpha download/guide/overview/roadmap/credits. Website owner verified production
+merge `0cda80e65a0a9c0a5a2cb1b7a8b2b579ab8f92ca`, Cloudflare build
+`7e3a258a-3af7-4593-a92f-a1ecaba12552`, 57 passing site tests, successful GitHub/
+Workers builds, live page/content/header/route checks and an independent installer
+hash match. Public setup and updater feed also passed this task's anonymous hash/
+signature checks. See [publication evidence](publication-acceptance-2026-09-06.md).
+No further full install or review loop is queued. Tomorrow's follow-ups are native
+updater apply/restart and pause-close acceptance, public alpha reports, and the
+already-approved post-alpha customization improvements. The fresh updater mock
+harness's loader failure is private issue2, not a demonstrated app startup failure.
+
 Christopher explicitly authorized publication after announcing the forthcoming
 download on Discord. App `0.1.0-alpha.10` / recipe `0.1.0-alpha.11` is the candidate.
 The separate public distribution repo `Chrizhermann/chriz-easy-bg` now exists;

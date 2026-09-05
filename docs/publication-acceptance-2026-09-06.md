@@ -48,7 +48,7 @@ Corrected feed SHA-256: `b76ff7abbfccac3b0a7e68d361ea07a859044f1a82ce5d77e020442
 
 The website task received the exact verified binary URL/hash and public component
 list, with authorization to deploy `/collection`. Website deployment/public-page
-verification is pending at this checkpoint; binary and feed checks are complete. Native updater
+verification is complete as recorded below; binary and feed checks are complete. Native updater
 apply/restart, safe-pause close behavior and every customization remain alpha
 acceptance boundaries rather than claimed live tests.
 
@@ -57,3 +57,32 @@ The fresh mock-harness loader failure is tracked in private collection issue2;
 see `docs/issues/updater-harness-entrypoint.md`. Identical old/new static imports
 and absence of mock markers in the release app did not establish an app-startup
 defect; the earlier working harness and public signature/download tests passed.
+
+## Website deployment — complete
+
+The owning website task reported these checks on 2026-09-06:
+
+- Live https://bg.chrizfader.org/collection.
+- PR3 merged: https://github.com/Chrizhermann/twitch-setup-chriz/pull/3.
+- Feature commit `4ef925a55b4c49ae3ba1e2696efe360660f97469`; production merge
+  `0cda80e65a0a9c0a5a2cb1b7a8b2b579ab8f92ca`.
+- Cloudflare build `7e3a258a-3af7-4593-a92f-a1ecaba12552`.
+- Site57/57 tests, 20-file artifact, Wrangler dry-run, GitHub test-and-build and
+  Workers build for the same production commit passed.
+- Custom-domain and Workers-domain `/collection`/content JSON200, expected
+  `/`302 and unknown-route404, required security headers, deployed asset hashes
+  matching the production artifact and exact app/recipe/download/hash content.
+- Independent public setup download matched 5,392,890 bytes and the SHA-256 above;
+  release notes, components, sums and outbound links were publicly accessible.
+- Remote feature branch deleted after merge, website worktree clean. No native
+  installer/browser UI launched. Separate mods-catalogue idea remains planning-only.
+
+Root independently observed the merged PR and green GitHub test checks. Root's
+web-reader refused the custom-domain URL; it was not retried through another route.
+Live route/content/deployment claims above are explicitly the website owner's
+verification, not an invented second browser check.
+
+The page provides the quick guide at top, Windows alpha warning, clean English
+Steam2.7.3 scope, download, overview, roadmap, source/credits links and honest known
+limitations. No Discord/forum/email was sent by this task; Christopher made his
+own announcement. Existing game installations/saves remain untouched.
