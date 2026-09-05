@@ -656,15 +656,15 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
             ),
         ),
         (
-            "chriz-sod-remix-0.6.4",
+            "chriz-sod-remix-0.6.5",
             (
                 "release-assets.githubusercontent.com",
                 None,
                 ObservedArchiveShape {
                     max_depth: 4,
-                    entry_count: 107,
+                    entry_count: 106,
                     max_entry_uncompressed_bytes: 1_364_992,
-                    total_uncompressed_bytes: 1_854_278,
+                    total_uncompressed_bytes: 1_857_050,
                     max_compression_ratio: 7,
                 },
             ),
@@ -740,15 +740,15 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
             ),
         ),
         (
-            "chriz-bg-modpack-0.2.0-alpha.1",
+            "chriz-bg-modpack-0.2.0-alpha.5",
             (
                 "release-assets.githubusercontent.com",
                 None,
                 ObservedArchiveShape {
                     max_depth: 4,
-                    entry_count: 24,
+                    entry_count: 33,
                     max_entry_uncompressed_bytes: 1_364_992,
-                    total_uncompressed_bytes: 1_514_224,
+                    total_uncompressed_bytes: 1_581_319,
                     max_compression_ratio: 6,
                 },
             ),
@@ -820,8 +820,9 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
             .artifacts
             .get(&record.artifact_id)
             .unwrap_or_else(|| panic!("unknown evidence artifact {}", record.artifact_id));
-        let (expected_host, expected_wrapper, expected_shape) =
-            &expected_observations[record.artifact_id.as_str()];
+        let (expected_host, expected_wrapper, expected_shape) = expected_observations
+            .get(record.artifact_id.as_str())
+            .unwrap_or_else(|| panic!("missing expected observations for {}", record.artifact_id));
 
         assert_eq!(record.immutable_source_url, artifact.source.url);
         assert_eq!(record.source_reference, artifact.source.reference);

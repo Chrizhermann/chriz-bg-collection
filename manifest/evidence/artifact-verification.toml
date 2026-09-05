@@ -432,12 +432,13 @@ total_uncompressed_bytes = 52541
 max_compression_ratio = 4
 
 [[artifacts]]
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.1"
-immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.1/chriz-bg-modpack-v0.2.0-alpha.1.zip"
-source_reference = "v0.2.0-alpha.1"
+# Refreshed independently on 2026-09-06 with the same author verifier in a new cache.
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.5"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.5/chriz-bg-modpack-v0.2.0-alpha.5.zip"
+source_reference = "v0.2.0-alpha.5"
 observed_final_host = "release-assets.githubusercontent.com"
-actual_length = 1309177
-actual_sha256 = "16453c1e9d1ff76a1e697426cda33d1b6cac3243d7310f7fda6d90410fca243c"
+actual_length = 1335026
+actual_sha256 = "2278c839f60e019bedba355cb794176a052d24b68db2851248af926580840b33"
 wrapper_kind = "direct"
 materialized_publish_roots = ["chriz-bg-modpack", "setup-chriz-bg-modpack.tp2"]
 declared_tp2_paths = ["setup-chriz-bg-modpack.tp2"]
@@ -453,9 +454,9 @@ max_compression_ratio = 100
 
 [artifacts.observed_shape]
 max_depth = 4
-entry_count = 24
+entry_count = 33
 max_entry_uncompressed_bytes = 1364992
-total_uncompressed_bytes = 1514224
+total_uncompressed_bytes = 1581319
 max_compression_ratio = 6
 
 [[artifacts]]

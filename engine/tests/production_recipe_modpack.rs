@@ -26,23 +26,23 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["chriz-bg-modpack-0.2.0-alpha.1"];
-    assert_eq!(artifact.version, "0.2.0-alpha.1");
+    let artifact = &manifest.artifacts["chriz-bg-modpack-0.2.0-alpha.5"];
+    assert_eq!(artifact.version, "0.2.0-alpha.5");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.1");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.5");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.1/chriz-bg-modpack-v0.2.0-alpha.1.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.5/chriz-bg-modpack-v0.2.0-alpha.5.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.1.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.5.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_309_177));
+    assert_eq!(artifact.source.expected_length, Some(1_335_026));
     assert_eq!(
         artifact.source.sha256,
-        "16453c1e9d1ff76a1e697426cda33d1b6cac3243d7310f7fda6d90410fca243c"
+        "2278c839f60e019bedba355cb794176a052d24b68db2851248af926580840b33"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -80,7 +80,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(run.components, MODPACK_COMPONENTS);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.1");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.5");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");

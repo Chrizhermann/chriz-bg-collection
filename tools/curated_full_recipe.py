@@ -22,7 +22,7 @@ if __package__ in {None, ""}:
 from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_map
 
 
-RECIPE_VERSION = "0.1.0-alpha.8"
+RECIPE_VERSION = "0.1.0-alpha.9"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
 
@@ -87,18 +87,18 @@ CATEGORY_BY_GROUP = {
 
 
 ARTIFACTS = {
-    "bardicwonders-v2.9c-balance.2.toml": """id = "bardicwonders-v2.9c-balance.2"
+    "bardicwonders-v2.9c-balance.3.toml": """id = "bardicwonders-v2.9c-balance.3"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.2"
+version = "2.9c-balance.3"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-tag-archive"
-url = "https://codeload.github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/zip/refs/tags/v2.9c-balance.2"
-reference = "v2.9c-balance.2"
-expected_filename = "Bardic-Wonders-Chriz-Balance-Patch-2.9c-balance.2.zip"
-expected_length = 5234586
-sha256 = "bfa16cde633d9722ecc9ddb84693e0ff07dfb5fb2ebf1ec6a6b9d0e3a29cb4fb"
+url = "https://codeload.github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/zip/refs/tags/v2.9c-balance.3"
+reference = "v2.9c-balance.3"
+expected_filename = "Bardic-Wonders-Chriz-Balance-Patch-2.9c-balance.3.zip"
+expected_length = 5282818
+sha256 = "3cee2244562e048c1f1b466520ed0f34da4078f6e78fe42ebf8a562c8d063cb0"
 redirect_hosts = []
 
 [archive]
@@ -117,8 +117,8 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.2"
-reviewed_on = "2026-09-05"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.3"
+reviewed_on = "2026-09-06"
 """,
     "branwen-8.toml": """id = "branwen-8"
 name = "Branwen for BGII"
@@ -223,7 +223,7 @@ reviewed_on = "2026-09-05"
 
 
 MOD_SPECS = {
-    "bardicwonders": ("bardicwonders-v2.9c-balance.2", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
+    "bardicwonders": ("bardicwonders-v2.9c-balance.3", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("creator-full-private-extras-20260902", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
@@ -678,7 +678,8 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for directory in ["artifacts", "game-builds", "mods", "releases"]:
         shutil.copytree(root / "manifest" / directory, destination / directory, dirs_exist_ok=True)
-    (destination / "artifacts/chriz-sod-remix-0.6.4.toml").unlink(missing_ok=True)
+    for obsolete in ["chriz-sod-remix-0.6.4", "chriz-bg-modpack-0.2.0-alpha.1", "bardicwonders-v2.9c-balance.2"]:
+        (destination / "artifacts" / f"{obsolete}.toml").unlink(missing_ok=True)
     shutil.copytree(root / "manifest/presets", destination / "presets", dirs_exist_ok=True)
     shutil.copy2(
         root / "recipes/creator-full-current/artifacts/creator-full-private-extras-20260902.toml",

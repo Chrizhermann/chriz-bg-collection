@@ -22,7 +22,13 @@ class CuratedFullRecipeTests(unittest.TestCase):
     def test_build_is_curation_derived_and_preserves_required_regressions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "recipe"
+            (output / "artifacts").mkdir(parents=True)
+            for stale in ["chriz-bg-modpack-0.2.0-alpha.1", "bardicwonders-v2.9c-balance.2"]:
+                (output / "artifacts" / f"{stale}.toml").write_text(f'id = "{stale}"\n', encoding="utf-8")
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
+            modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.5")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -73,6 +79,49 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
+            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.3")
+            bardic_artifact = tomllib.loads(
+                (output / "artifacts/bardicwonders-v2.9c-balance.3.toml").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertFalse(
+                (output / "artifacts/bardicwonders-v2.9c-balance.2.toml").exists()
+            )
+            self.assertEqual(bardic_artifact["version"], "2.9c-balance.3")
+            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.3")
+            self.assertEqual(
+                bardic_artifact["source"]["url"],
+                "https://codeload.github.com/Chrizhermann/"
+                "Bardic-Wonders-Chriz-Balance-Patch/zip/refs/tags/v2.9c-balance.3",
+            )
+            self.assertEqual(
+                bardic_artifact["source"]["expected_filename"],
+                "Bardic-Wonders-Chriz-Balance-Patch-2.9c-balance.3.zip",
+            )
+            self.assertEqual(bardic_artifact["source"]["expected_length"], 5282818)
+            self.assertEqual(
+                bardic_artifact["source"]["sha256"],
+                "3cee2244562e048c1f1b466520ed0f34da4078f6e78fe42ebf8a562c8d063cb0",
+            )
+            self.assertEqual(bardic_artifact["archive"]["root_rule"], "single-wrapper")
+            self.assertEqual(bardic_artifact["archive"]["publish_roots"], ["BardicWonders"])
+            self.assertEqual(
+                bardic_artifact["archive"]["tp2_paths"],
+                ["BardicWonders/Setup-BardicWonders.tp2"],
+            )
+            # The release fixes already-selected Abettor content; it must not
+            # alter the curated defaults or their pinned TP2 declaration order.
+            self.assertEqual(
+                runs["bardicwonders-bg2"]["components"],
+                [
+                    1001, 1002, 1003, 1004, 1005, 1006, 1007, 1009, 1010,
+                    1011, 2002, 2007, 2008, 2003, 2004, 2005, 2006,
+                ],
+            )
+            bardic_main = runs["bardicwonders-bg2"]["components"]
+            self.assertLess(bardic_main.index(1004), bardic_main.index(2007))
+            self.assertLess(bardic_main.index(2007), bardic_main.index(2004))
             private_artifact = tomllib.loads(
                 (output / "artifacts/creator-full-private-extras-20260902.toml").read_text(encoding="utf-8")
             )
@@ -114,7 +163,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("chriz-bg-modpack-bg2"), order.index("cdtweaks-spell-save-penalties-bg2"))
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.8")
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.9")
             self.assertFalse((output / "reference").exists())
 
     def test_common_customization_routes_preserve_dependency_collateral(self) -> None:
