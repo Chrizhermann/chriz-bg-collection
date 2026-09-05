@@ -332,6 +332,15 @@ or quarantine legacy-replay resume affordances; profile selection itself is alre
 
 ## Boundaries and cleanup inventory
 
+Future NEW agent test installations belong under `C:\CEBG-Tests\<unique-run-name>`
+(user requested a different destination after the cleanup backlog). Do not relocate any
+existing blocked target there, and do not move/restart the active r5 installation. Keep
+ordinary player destinations configurable and unchanged. There is only one local fixed
+drive currently detected (C:); this is ownership separation, not a second-disk migration.
+Changing the destination does not establish that a future cleanup command will be allowed.
+Keep the active run and any successful copy promised to Christopher; preserve compact
+failure diagnostics and clean obsolete full copies when allowed, reporting blockers early.
+
 All clean Steam sources, `C:\Games` references, saves and stream installations remain
 untouched. Do not weaken validation, edit a frozen recipe/ledger or omit a curated component
 to obtain a passing run. Deferred mod design discussions remain deferred.

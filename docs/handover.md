@@ -47,6 +47,14 @@ needs the verified original standalone package, not the creator's private aggreg
 The explicit seven-copy cleanup request was tool-rejected too: seven blocked targets now exist;
 see the acceptance record. No workaround deletion is allowed. Nothing was removed.
 
+Christopher requested a separate destination for future tests. Use
+`C:\CEBG-Tests\<unique-run-name>` for NEW agent-owned disposable installations, not the
+user's normal Games folder or scattered C: roots. Keep frozen r5 where it is; no move,
+rename or restart is implied. Public/player install defaults are unchanged. This separation
+is for clear ownership and cleanup, not a workaround or guarantee about deletion policy.
+Preserve small diagnostics and retire failed full copies when permitted; surface a blocked
+cleanup backlog before starting additional large test copies.
+
 Latest queued requirements are captured in [recovery and casual customization](plans/2026-09-05-recovery-and-casual-customization.md).
 Dual update notification is implemented in source. **Safe pause/app-close handling is
 missing and is the next installer priority**: Cancel currently kills WeiDU and must not be
