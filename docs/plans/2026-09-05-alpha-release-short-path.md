@@ -9,6 +9,12 @@ skip-SoD requirements. [The captured priorities](2026-09-05-recovery-and-casual-
 keep safe pause/close handling ahead of Customize QoL; the optional SoD skip remains
 parallel owning-repo work for an early alpha, not a reason to restart the running install.
 
+Today's finished owning-repo work may enter the first alpha. Consult the
+[bounded mod intake queue](2026-09-05-first-alpha-mod-intake.md) once before freezing
+the next release candidate. R5 remains immutable; newer additions need their own
+proportionate integration evidence and accurate versions, not a claim that R5
+already tested them. Do not hold the installer for unfinished mod work.
+
 ## Reuse the real work already running
 
 Current r5 replaces r4 after a diagnosed recipe-only TP2-alias mismatch, not to repeat a

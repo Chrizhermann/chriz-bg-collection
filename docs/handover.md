@@ -57,6 +57,13 @@ is for clear ownership and cleanup, not a workaround or guarantee about deletion
 Preserve small diagnostics and retire failed full copies when permitted; surface a blocked
 cleanup backlog before starting additional large test copies.
 
+Christopher also permits today's finished mod work in the first alpha. The
+[cross-repo intake queue](plans/2026-09-05-first-alpha-mod-intake.md) records two
+available pin updates (modpack utility XP 610 and Bardic Abettor fixes), the
+Yoshimo/Hexxat release in progress, and the remaining WIP. Reconcile ready work
+once for the next recipe candidate; do not change or restart frozen r5, invent
+new defaults, or let WIP become an installer blocker.
+
 Latest queued requirements are captured in [recovery and casual customization](plans/2026-09-05-recovery-and-casual-customization.md).
 Dual update notification is implemented in source. **Safe pause/app-close handling is
 missing and is the next installer priority**: Cancel currently kills WeiDU and must not be
