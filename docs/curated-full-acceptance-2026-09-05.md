@@ -336,7 +336,7 @@ All clean Steam sources, `C:\Games` references, saves and stream installations r
 untouched. Do not weaken validation, edit a frozen recipe/ledger or omit a curated component
 to obtain a passing run. Deferred mod design discussions remain deferred.
 
-Five cleanup targets were rejected by the tool policy before execution. Do not retry
+Seven cleanup targets were rejected by the tool policy before execution. Do not retry
 those deletions by another route, and do not report them as removed:
 
 - `C:\CEBG-Full-20260905` (`install-daea3ea2007ad86185b2`).
@@ -344,6 +344,19 @@ those deletions by another route, and do not report them as removed:
 - `C:\Users\chris\Games\CEBG-Curated-20260905` (`install-66c8b55f3690bda2e3a5`).
 - `C:\Users\chris\Games\CEBG-Curated-20260905-r2` (`install-55cd391fcb89a92eac0c`).
 - `C:\Users\chris\Games\CEBG-Curated-20260905-r3` (`install-c117933c9f2de8edc020`).
+- `C:\Users\chris\Games\CEBG-Curated-20260905-r4` (`install-83f1bf87d5eb83425ed7`).
+- `C:\Users\chris\Games\CEBG-Full-20260905` (`install-8a3cab271f29d2c47f61`).
+
+Christopher explicitly requested removal of the seven obsolete copies after the inventory
+found approximately 106.14 GB of files. Normal PowerShell deletion was attempted again
+under that new request and was again rejected before execution (`blocked by policy`).
+No deletion occurred and no alternative route was attempted. All seven identities were
+checked, no reparse/save directories or exact-target processes were found, and diagnostic
+archives were preserved in `target/cleanup-20260905/<install-id>.zip` (6,495,871 bytes total).
+The initial aborted root had no receipt, so its entire small 2.4 MB folder was archived;
+the other six use the engine's sanitized diagnostic export. These archives are local only.
+The current r5, accepted focused SoD test, user's earlier Chriz Easy BG root, source games
+and stream installation remain excluded from cleanup.
 
 The separate invalid legacy full run `C:\Users\chris\Games\CEBG-Full-20260905`
 (`install-8a3cab271f29d2c47f61`) remains historical evidence, not the corrected run.

@@ -44,7 +44,7 @@ update notifications and the post-app-update/new-setup action are now visually t
 ([evidence](updates-ui-acceptance-2026-09-05.md), 80 frontend tests); the installed alpha.8
 predates this slice. Next signed candidate must include it. Public Evandra acquisition
 needs the verified original standalone package, not the creator's private aggregate ZIP.
-R2/r3 deletion requests were tool-rejected too: five protected cleanup targets now exist;
+The explicit seven-copy cleanup request was tool-rejected too: seven blocked targets now exist;
 see the acceptance record. No workaround deletion is allowed. Nothing was removed.
 
 Latest queued requirements are captured in [recovery and casual customization](plans/2026-09-05-recovery-and-casual-customization.md).
