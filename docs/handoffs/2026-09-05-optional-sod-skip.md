@@ -36,3 +36,21 @@ must not duplicate the award or transition. Main character is not an arbitrary p
    automatically authorized by this handoff. Never edit the user's stream game/saves.
 
 The collection task continues installer acceptance and recovery work in parallel.
+
+## Inventory choice approved (2026-09-05)
+
+The owning task returned design commit `e17064c053bce8840e5014565fc6c3050fa940a0`
+on `codex/optional-sod-skip`, with the proposal in
+`docs/design/wave1/06-optional-sod-skip.md`. It reports the requested bedroom hook is
+valid, but normal import only sees current party possessions and could miss the stored
+backpacks, off-party imported Imoen's gear, and imported finale ground loot.
+
+Christopher approved including those belongings in **EET's normal BG2 equipment-import
+handling**. This is not permission to carry every item into BG2 or bypass import rules.
+Verify actual EET behavior and ground-pile provenance; do not invent item destinations,
+sweep unrelated room loot, or add SoD rewards, refunds or quest completion rewards.
+
+Approval was sent to the owning task to resume bounded implementation and focused tests.
+Proposed component 910 and requirements remain the owning task's design, not a released
+or collection-selected component. No candidate code or live acceptance has been reported
+yet. Published v0.6.5 and frozen collection r4 remain unchanged.
