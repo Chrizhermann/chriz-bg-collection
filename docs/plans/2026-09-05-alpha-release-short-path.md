@@ -4,6 +4,13 @@ Christopher asked for a practical alpha release tonight, clarification of CLI ve
 desktop installation acceptance, and a visual test of app/collection update notifications.
 This is the release plan, not authorization to publish a repository, tag or update feed.
 
+**2026-09-06 update:** [targeted recovery](../targeted-recovery-2026-09-06.md)
+supersedes the r6 path below. R6 was stopped before mod installation; the existing
+r5 game now has all 430 components after localized modpack replacement and the
+remaining three commands. Preserve earlier Bardic balance.2. Next integrate truthful
+managed recovery provenance and perform remaining launch/update/Radar acceptance.
+No new full rebuild without discussing necessity/cost with Christopher.
+
 Christopher subsequently agreed to this alpha scope and queued recovery/customization/
 skip-SoD requirements. [The captured priorities](2026-09-05-recovery-and-casual-customization.md)
 keep safe pause/close handling ahead of Customize QoL; the optional SoD skip remains

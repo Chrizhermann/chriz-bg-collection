@@ -11,6 +11,18 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 
 ## Current priority — curation-derived recipe, not historical replay (2026-09-05)
 
+**Latest instruction (2026-09-06 KST): [targeted r5 recovery](targeted-recovery-2026-09-06.md).**
+Christopher approved repairing just the failed modpack rather than repeating the full
+installation. **R5 has now completed all 430 components through supervised recovery**:
+16/16 corrected modpack components and the three remaining commands passed, preserving
+the prior 383 active BG2 entries. Final exact-order audit passed. Original managed
+failure history remains intact; composite recovery receipt/UI integration is next.
+R6 was deliberately stopped before mod installation. Its cleanup was tool-rejected;
+do not retry deletion by another route, resume it or start a full copy. The recovered
+r5 retains earlier Bardic balance.2 and all approved selections. No game smoke/Radar
+acceptance yet. The status below is the preceding r6
+snapshot and is superseded by the targeted recovery record.
+
 The user has now requested the complete corrected installation/test/cleanup flow. Continue
 from [the current acceptance run](curated-full-acceptance-2026-09-05.md), not the invalid
 overnight replay. Recipe reconstruction and source/order verification run in parallel.

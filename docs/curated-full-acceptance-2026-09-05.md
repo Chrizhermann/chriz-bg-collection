@@ -5,6 +5,19 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 ## Authority and current state
 
+**Superseding current operation:** [targeted r5 recovery](targeted-recovery-2026-09-06.md).
+R6 was deliberately stopped during `stage:bg2` at ledger 73, before any mod run,
+at 2026-09-06T01:38:53+09:00. Christopher approved in-place recovery of the failed
+modpack on r5; no full copy or earlier-mod replay. Do not resume r6. Retain original
+r5 failed evidence and record explicit recovery provenance; never fake managed success.
+The targeted repair and all three remaining commands have now passed (02:08 KST
+final audit): 27 BG1 + 403 BG2 components in the exact original plan order, with
+modpack alpha.5 and retained Bardic balance.2. The supervised game is complete;
+managed composite-recovery receipt/UI and launch/Radar acceptance remain pending.
+Stopped r6 cleanup was tool-rejected before execution; do not retry another route.
+
+### Historical r6 startup snapshot (subsequently stopped deliberately)
+
 **R6 is the active worker (2026-09-06 KST), with recipe 0.1.0-alpha.9.** The two
 owning-repo modpack fixes are released and pinned; Bardic balance.3 is also included.
 Full installation acceptance is still pending. This is not a claim that the game or
