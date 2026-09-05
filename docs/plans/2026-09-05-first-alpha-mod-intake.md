@@ -1,13 +1,16 @@
 # First-alpha intake from the owning mod repositories
 
-Checked 2026-09-05, approximately 23:20 KST. Christopher permits work completed
+Checked 2026-09-05, approximately 23:20 KST; modpack release/failure status updated
+2026-09-06 KST. Christopher permits work completed
 today to enter the first public alpha; newer unfinished components need not hold
 up the installer. This is an intake queue, **not an already changed recipe**.
 
 ## Preserve the current acceptance run
 
-R5 remains the frozen alpha.8 recipe: 43 runs / 430 components. Its worker was
-still active in SCS during this check. Do not change its pins, selection, ledger
+R5 remains the frozen alpha.8 recipe: 43 runs / 430 components. It is now terminal
+after modpack 170/192 failed; both bugs persist in alpha.4. See the
+[owning-repo handoff](../handoffs/2026-09-06-modpack-xan-viconia.md).
+Do not change its pins, selection, ledger
 or receipt, restart it for each new mod release, or deploy anything into the
 stream game. Additional accepted work belongs in the next versioned candidate.
 R5 cannot provide acceptance evidence for versions/components it did not install.
@@ -18,7 +21,7 @@ R5 cannot provide acceptance evidence for versions/components it did not install
 |---|---|---|
 | Modpack progressive utility XP, **610** | Public **v0.2.0-alpha.3**, newer than pinned alpha.1. Component implemented; owner records successful native startup/load/save and one scribing award, plus Christopher's successful test. Rounding was subsequently changed and covered automatically. | Ready for recipe intake as the requested utility-XP replacement. Requires EEex; place after EET finalization and other utility-XP tweaks. Add its catalog/feature/order declaration and an explicit curation decision; do not guess mandatory versus default/optional. |
 | Bardic Wonders Abettor fixes | Public **v2.9c-balance.3**, newer than pinned balance.2. Affects already-selected **1004/2004/2007**. | Queue pin update without changing those selections. Do not add the separate existing-playthrough repair component to a fresh installation. Preserve Darkbloom 1006's Spell Revisions exclusion. Ordinary party invisibility at Symphony start/end remains an owner's known unverified behavior, not a newly imposed release blocker. |
-| Yoshimo / Hexxat choices | Owning task **Add Yoshimo and Hexxat kits** is executing the user's merge/tag/package/release request. New unpublished IDs are being moved to **220–223** because 190/192/193 already belong to other NPCs. | Eligible when the actual release asset is available. Verify final IDs before wiring Yoshimo Swashbuckler and Hexxat Shadowdancer / Fighter-Thief / Assassin. Preserve Hexxat exclusivity. Expose alternatives without inventing a new checked default. Owner's focused review/tests are sufficient; the owner explicitly did not make another live test a release blocker. |
+| Yoshimo / Hexxat choices | Public **v0.2.0-alpha.4**, public main `9280222`, release asset verified by owner; 298 tests, Linux CI and Windows packaging passed. Final IDs **220–223**, no existing IDs changed. | Ready for intake: Yoshimo Swashbuckler and Hexxat Shadowdancer / Fighter-Thief / Assassin. Preserve Hexxat exclusivity. Expose alternatives without inventing a new checked default. Live recruitment remains untested as agreed. This release does not fix the separate 170/192 integration failures. |
 | Imoen Spellhold XP, **620** | Implemented locally, requires EEex, 186 tests and installer checks reported. Average of the other party members, capped at 3 million mage XP; user's recruitment test has not been reported complete. | Pending owning-task acceptance/release, not part of the published alpha.3 payload. Keep separate from utility XP 610. |
 | New BG Rebalance dragon work | **Review open rebalance todos** is still discussing/researching encounter design. Public release remains the already-pinned **v0.3.1**. | WIP. Recheck the eventual release delta; do not treat discussed dragon rules as implemented components. Existing accepted ambient/urgent 120/121 stay included. |
 | Optional SoD skip | Native ground-pile probe failed, including restart/reload persistence; collection method needs replacement before banking/transition integration. Owner commit **19e221b**, 24 automated tests do not override the native failure. Released **v0.6.5** is unchanged. | Do not ingest the prototype. Keep the released SoD selection; skip can join when actually ready, otherwise an early follow-up alpha. Separate from deferred 290. See the existing [handoff](../handoffs/2026-09-05-optional-sod-skip.md). |
@@ -65,6 +68,7 @@ passed, but do not demand another exhaustive review before alpha intake.
    safe pause/close and remaining native/update/distribution acceptance.
 
 Sources: [modpack alpha.3 release](https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.3),
+[modpack alpha.4 release](https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.4),
 [public modpack tag comparison](https://github.com/Chrizhermann/chriz-bg-modpack/compare/v0.2.0-alpha.1...v0.2.0-alpha.3),
 [Bardic balance.3 release](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.3),
 the owning task summaries, and the modpack's current `docs/utility-xp.md` /

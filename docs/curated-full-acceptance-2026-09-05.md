@@ -5,6 +5,17 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 ## Authority and current state
 
+**R5 is terminal, not running (checked 2026-09-06 KST).** Modpack **170 (Xan)**
+and **192 (Viconia)** failed; the other 14 selected modpack components succeeded.
+WeiDU exit 2, ledger 222 `fresh_copy_required`, terminal receipt
+`terminal-0000000222-277ba8822bcb84fe`. The previous 383 log rows are unchanged;
+the final log has 397 rows. This non-prefix partial completion cannot resume.
+SoD Remix and BG Rebalance completed. Both modpack bugs remain in newest public
+alpha.4. See the [bounded diagnosis and owning-repo handoff](handoffs/2026-09-06-modpack-xan-viconia.md).
+Keep r5 read-only for small reproduction fixtures; do not start another full
+copy until the owner fixes and tests these exact input shapes. Local diagnostics:
+`target/curated-r5-modpack-failure-20260906.zip`. The stream game is untouched.
+
 **Current run is r5, not r4.** R4 stopped after all 30 SoD Remix components installed
 successfully: the recipe expected the root TP2 alias, whereas setup-name WeiDU logged
 the byte-identical nested TP2. The immutable failure remains; no seal was removed.
@@ -14,8 +25,8 @@ See [the bounded diagnosis and correction](handoffs/2026-09-05-sod-tp2-identity.
 - Install ID: `install-e6325c7c98451ad4901e`; attempt `attempt-aba3cbb32e1956c690b8`.
 - Frozen recipe `0.1.0-alpha.8`, SHA-256
   `cb220e5de749a779ec0e87337534fd803c11805375011e4b2856984120b4da34`.
-- PID `45792`, started `2026-09-05T21:38:57.4010069+09:00`. Reuses the unchanged engine
-  executable `target/full-install-20260905-r4/chriz-bg-install.exe`; verify both before use.
+- Former PID `45792`, started `2026-09-05T21:38:57.4010069+09:00`, has exited.
+  Used unchanged engine `target/full-install-20260905-r4/chriz-bg-install.exe`.
 - Logs: `target/curated-r5-install.stdout.log` and `.stderr.log`. This human-output invocation
   writes progress to stderr; a nonempty stderr file alone is not an error.
 - Exact same 43 runs / 430 components, sources and cache. Selection hash
@@ -24,7 +35,7 @@ See [the bounded diagnosis and correction](handoffs/2026-09-05-sod-tp2-identity.
 - Recipe-only fix `b14c50a`; generated recipe commit `c4d607e`. 28 Python tool tests,
   4 production Chriz recipe tests and 11 WeiDU-verifier tests passed. Generic exact-path
   verification remains strict. Other remaining root-TP2 releases lack the duplicate alias.
-- First verified checkpoint: ledger 71 (`stage:bg1`), all acquisitions complete, worker alive.
+- Historical first checkpoint: ledger 71 (`stage:bg1`), all acquisitions complete.
   This CLI-originated run has no originating desktop-app version. Do not invent one.
 - R2/r3 cleanup was also tool-rejected before execution; nothing was deleted. Do not retry
   these paths by another route. Diagnostics are retained. R5's actual preflight passed:

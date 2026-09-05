@@ -19,10 +19,16 @@ Start with [the approved reconciliation path](plans/2026-09-05-curation-reconcil
 The overnight `creator-full-current` recipe bypassed recorded curation; it is invalid as
 the curated collection. **Do not repair Bristlelick or resume that selection.** Curation
 files are intact. Restore them as the authority, preserve deferred mod work, check changed
-ordering against mod documentation/source. **Fresh run r5 is now running** at
+ordering against mod documentation/source. **Run r5 has failed** at
 `C:\Users\chris\Games\CEBG-Curated-20260905-r5`, installation
 `install-e6325c7c98451ad4901e`. Its frozen alpha.8 recipe retains exactly **43 runs /
 430 components**, including all 30 approved SoD components; Aura and 290 remain deferred.
+Modpack **170 (Xan)** and **192 (Viconia)** failed while its other 14 selected
+components succeeded. Ledger 222 is terminal `fresh_copy_required`, worker exited;
+the previous 383 WeiDU rows are unchanged. Both bugs persist in public alpha.4.
+The [owning-repo handoff](handoffs/2026-09-06-modpack-xan-viconia.md) records exact
+input fixtures and a bounded fix/test scope. Keep r5 read-only; do not resume,
+change its seal/recipe, omit components, or blindly rebuild. SoD and BG Rebalance passed.
 SoD v0.6.5 is published, independently downloaded/hash-verified, and pinned. Its mod bytes
 match the candidate Christopher accepted in focused gameplay/save-reload testing. See the
 [owning-repo handoff](handoffs/2026-09-05-sod-remix-component-120.md).
@@ -32,7 +38,7 @@ a recipe TP2-alias mismatch after all 30 SoD components succeeded. The nested ca
 path is corrected with regression coverage; no component choices changed. Failed r3/r4
 remain immutable and must not resume. App alpha.8 is built and installed locally and fixes
 the misleading Retry option when a new copy is required. Radar Latest 2.5.0.0 download,
-layout and seven engine tests passed; add it after r5 has a successful receipt. The
+layout and seven engine tests passed; add it only to a successfully completed copy. The
 [current acceptance record](curated-full-acceptance-2026-09-05.md) has the exact worker,
 frozen hash, logs, remaining launch/update acceptance and cleanup boundaries. Full fresh
 collection acceptance is **not complete**. Older packages/status below are historical;
@@ -60,7 +66,7 @@ cleanup backlog before starting additional large test copies.
 Christopher also permits today's finished mod work in the first alpha. The
 [cross-repo intake queue](plans/2026-09-05-first-alpha-mod-intake.md) records two
 available pin updates (modpack utility XP 610 and Bardic Abettor fixes), the
-Yoshimo/Hexxat release in progress, and the remaining WIP. Reconcile ready work
+published Yoshimo/Hexxat alpha.4 release, and the remaining WIP. Reconcile ready work
 once for the next recipe candidate; do not change or restart frozen r5, invent
 new defaults, or let WIP become an installer blocker.
 
@@ -72,7 +78,7 @@ The requested [common Customize controls](customization-acceptance-2026-09-06.md
 implemented in source: six bundles, category bulk actions, preserved preferences and
 visible collateral, with 88 frontend / 16 recipe-view / 4 authoring tests passing.
 Headless real-catalog layout checks passed. Not in the installed alpha.8 yet; authoring
-changes must enter the next versioned recipe, not running r5. Yeslick's original-class
+changes must enter the next versioned recipe, not frozen r5. Yeslick's original-class
 route currently also excludes combined modpack dispel fix 410; owning-repo follow-up is
 recorded. Typed advanced inputs and broader Customize QoL remain; no default curation changed.
 Optional confirmed SoD skip with +250,000 protagonist-only XP was dispatched to
