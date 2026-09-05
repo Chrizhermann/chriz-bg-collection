@@ -106,6 +106,13 @@ can now start a new disposable SoD character there for the focused pool check; n
 save import is needed. Exact paths and cleanup ownership are in the handoff. No game has
 been launched by either task, and publication still awaits his explicit decision.
 
+Christopher has now accepted the focused gameplay test, including save/reload (relayed
+with the owning task's bounded screenshot evidence). Details and remaining evidence limits
+are in the handoff. Implementation is unchanged; the final release will refresh packaged
+documentation. Wait for publication and verify its final artifact/hash before re-pin or
+rebuild. Do not remove the retained test copy/profile yet. Full collection acceptance is
+still incomplete.
+
 ### Current r3 checkpoint
 
 The conditional-prompt fix is committed as `6a2558b`, and recipe alpha.6 static evidence

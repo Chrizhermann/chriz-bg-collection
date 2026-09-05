@@ -1,13 +1,34 @@
-# CHRIZ-SOD-REMIX 120 blocks full curated installation
+# CHRIZ-SOD-REMIX 120/225 fix acceptance and release handoff
 
-## Ready for Christopher's focused in-game check
+## Focused runtime acceptance received (2026-09-05)
+
+Christopher reports the test looks good. The owning task additionally confirms his
+explicit save/reload acceptance and screenshots showing the 3,000 party-total scepter
+reward, the tested character's 1,000-XP omen reward, approved Caelar text, and repeated
+dormant responses without a second visible XP award. Screenshots do not separately prove
+one-Essence refusal, inventory consumption, or every party-slot reward; those have the
+passing installed-resource verifier as evidence. Natural acquisition remains a later
+playthrough check. This accepts the focused fix, not the whole collection installation.
+
+The owning task recorded acceptance in documentation-only commit `d1300e1`; tested
+implementation remains `3b21d6f` and RC hash remains `1113b9e6fd0f2929fce187a1a693b253b30b34da80c48850c9741333847d891e`.
+Its detailed record is
+`C:\src\private\chriz-sod-rebalance\.worktrees\sod120-compat-v0.6.5\docs\playtest\2026-09-05-scrying-pool-v065.md`.
+
+Publication still awaits Christopher's explicit decision in the SoD task. The final
+archive will refresh its packaged feature-inventory documentation without a mod-code
+change, so verify the eventual published artifact and its new hash rather than assuming
+the RC ZIP is the final release. Collection pins are unchanged; frozen r3 must not resume.
+No rebuild or test-copy/profile cleanup starts yet. Component 290 remains separate.
+
+## Retained focused-test setup
 
 After native acceptance, the owning SoD task configured only the retained disposable
 clone's `engine.lua` to use the unique profile name `CEBG SoD120 v065 Test`, and created
 fresh finalized-EET/SoD/console configuration at
 `C:\Users\chris\OneDrive\Documents\CEBG SoD120 v065 Test\Baldur.lua`.
-The collection verified those paths/configuration exist. No game has been launched and
-no existing saves were imported or modified. This supersedes the earlier compatible-seed
+The collection verified those paths/configuration exist. At preparation no game had been
+launched and no existing saves were imported or modified. This supersedes the earlier compatible-seed
 discussion: use a **new disposable SoD character** in this separate profile.
 
 Launch only `C:\Users\chris\Games\CEBG-SOD120-v065-test\game\InfinityLoader.exe`,
