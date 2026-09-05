@@ -17,9 +17,12 @@ instead of the historical worktree paths below. CI's later synthetic-fixture cas
 documentation count corrections did not change the mod payload (parse scope: TP2 plus
 33 TPA libraries). Full 30-component bundle retained; 290 still deferred.
 
-Next collection recipe is alpha.7, app alpha.8. Re-pin only to the verified published
-artifact and start a new managed copy; never resume or mutate frozen r3. Retain the focused
-test copy/profile until the final collection cleanup is coordinated.
+Collection recipe alpha.7 now pins that verified published artifact, and the complete
+fresh r4 installation has started (43 runs / 430 components, including all 30 SoD
+components). App alpha.8 is packaged. See the [current acceptance record](../curated-full-acceptance-2026-09-05.md)
+for exact identities/progress. Never resume or mutate frozen r3. Retain the focused test
+copy/profile until the final collection cleanup is coordinated. Publication-waiting notes
+below are historical and superseded by this section.
 
 ## Focused runtime acceptance received (2026-09-05)
 

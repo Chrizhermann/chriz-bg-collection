@@ -84,3 +84,22 @@ The setup is `target/release/bundle/nsis/Chriz Easy BG_0.1.0-alpha.7_x64-setup.e
 The local unpublished feed is `target/cebg-release/0.1.0-alpha.7/`, with recipe alpha.6.
 Separate silent NSIS installation exited zero and the installed EXE reports alpha.7.
 Automatic updater apply/restart remains untested.
+
+## Alpha.8 result
+
+The existing real-plugin harness passed alpha.7-to-alpha.8 feed check, full download,
+signature verification, exact setup-byte identity, and changed-artifact rejection
+(one test passed, exit zero). The signed setup is
+`target/release/bundle/nsis/Chriz Easy BG_0.1.0-alpha.8_x64-setup.exe`:
+
+- Size: 5,102,476 bytes.
+- SHA-256: `151d4f7ac8faab61aa3024cef6c13ffe9c348038afacfed103ef9afd3354fa16`.
+- Signature SHA-256: `8079a37e285b7f966ecbcf0afd654d855565fdda43319eb51b6569a2337c1c1f`.
+- Local unpublished feed: `target/cebg-release/0.1.0-alpha.8/`, recipe alpha.7.
+- Feed SHA-256: `6a37b0ff1e973186c44b64a84ca112d715c77708715c7bbfe8c839ed2b53a724`.
+- All three checksum-manifest entries independently rehashed and matched.
+
+A separate silent local NSIS upgrade exited zero and the installed EXE reports alpha.8
+at `target/nsis-smoke-20260905-022935/chriz-bg-app.exe`. It remains closed while the
+independent CLI game installation runs. Automatic updater apply/restart and the public
+channel remain unproven/unpublished; the manual upgrade does not substitute for either.

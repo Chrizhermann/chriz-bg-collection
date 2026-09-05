@@ -19,24 +19,22 @@ Start with [the approved reconciliation path](plans/2026-09-05-curation-reconcil
 The overnight `creator-full-current` recipe bypassed recorded curation; it is invalid as
 the curated collection. **Do not repair Bristlelick or resume that selection.** Curation
 files are intact. Restore them as the authority, preserve deferred mod work, check changed
-ordering against mod documentation/source. The corrected alpha.6 recipe validates, but
-replacement r3 is now stopped at SoD Remix 120 after SCS/Randomiser/EET_END passed.
-Its source assumes nonexistent BDSCRY state 4; see the [owning-repo handoff](handoffs/2026-09-05-sod-remix-component-120.md).
-The alpha.4 native run stopped on component order; r2 stopped on a missing scripted
-Randomiser compatibility answer. All three native-order errors and the conditional `y`
-answer are fixed without changing component selections (43 runs / 430 components). The
-user explicitly retained the full SoD bundle and authorized the source fix. The owning
-SoD task returned local v0.6.5 candidate `3b21d6f` (11 tests reported passing); its old
-state-4 assumption came from the Aura-expanded dev layout. Christopher does not require
-Aura support and can do focused live testing. The candidate is not published/pinned and
-focused native repair acceptance now passes on a disposable r3/game clone: 120/225 install
-with exit 0 and semantic verifier reports zero failures. Christopher has also accepted the
-focused gameplay/save-reload test. Full fresh collection acceptance still remains; see the
-handoff for exact evidence and temporary clone ownership. The acceptance follow-up remains
-paused awaiting the owning task's authorized publication and verified final artifact, with component
-290 still separate and deferred. No fourth blind rebuild was started. Existing alpha.3
-packages still contain the old profile; source guards
-do not retroactively fix those binaries. Installer acceptance remains the main priority.
+ordering against mod documentation/source. **Fresh run r4 is now running** at
+`C:\Users\chris\Games\CEBG-Curated-20260905-r4`, installation
+`install-83f1bf87d5eb83425ed7`. Its frozen alpha.7 recipe retains exactly **43 runs /
+430 components**, including all 30 approved SoD components; Aura and 290 remain deferred.
+SoD v0.6.5 is published, independently downloaded/hash-verified, and pinned. Its mod bytes
+match the candidate Christopher accepted in focused gameplay/save-reload testing. See the
+[owning-repo handoff](handoffs/2026-09-05-sod-remix-component-120.md).
+
+The prior native-order and conditional Randomiser-answer failures are fixed. Failed r3
+remains immutable and must not resume. App alpha.8 is built and installed locally and fixes
+the misleading Retry option when a new copy is required. Radar Latest 2.5.0.0 download,
+layout and seven engine tests passed; add it after r4 has a successful receipt. The
+[current acceptance record](curated-full-acceptance-2026-09-05.md) has the exact worker,
+frozen hash, logs, remaining launch/update acceptance and cleanup boundaries. Full fresh
+collection acceptance is **not complete**. Older packages/status below are historical;
+there is still no public CEBG release/update channel. Installer acceptance is the priority.
 
 ## Historical overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)
 

@@ -5,11 +5,39 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 ## Authority and current state
 
-**Continuation authorized:** SoD v0.6.5 is now published and independently verified.
-The upcoming alpha.7 recipe retains the exact curated component choices; app alpha.8
+**Full fresh installation r4 is running:** SoD v0.6.5 is published and independently
+verified. Frozen alpha.7 retains the exact curated component choices; app alpha.8
 also fixes the misleading Retry action for structured `fresh_copy_required` receipts
-(65 frontend tests/typecheck passed, commit `a7bd8cf`). Fresh target is planned as
-`C:\Users\chris\Games\CEBG-Curated-20260905-r4`; it has not started yet.
+(65 frontend tests/typecheck passed, commit `a7bd8cf`).
+
+- Root: `C:\Users\chris\Games\CEBG-Curated-20260905-r4`.
+- Install ID: `install-83f1bf87d5eb83425ed7`.
+- Attempt ID: `attempt-06284c52f0b43b3c6f2d`.
+- Frozen recipe SHA-256:
+  `e9b6b96e17f41a9033d5b9bede6acd06df7caad84b648c4177fc0ad15f50d247`.
+- Preset: `chris-recommended`, recipe `0.1.0-alpha.7`, 43 runs / 430 components.
+  Authored SoD pin commit `3357f1d`; generated recipe `3ec32ed`. Identity-masked plan
+  hash is unchanged, proving no component selection/order change from the approved plan.
+- CLI PID `87448`, started `2026-09-05T19:21:45.9712007+09:00`, executable
+  `target/full-install-20260905-r4/chriz-bg-install.exe` in the active worktree below.
+  Verify executable/start time before relying on this PID. Do not start another resume.
+- Logs: `target/curated-r4-install.stdout.log`, `target/curated-r4-install.stderr.log`.
+- Cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
+- Sources: clean Steam BG:EE+SoD and BG2:EE 2.7.3; both remain read-only.
+- Latest bounded checkpoint: ledger 99, BG2 Sarah artifact materialization, worker alive.
+  Inspect only the newest ledger records for progress; record zero is a large frozen payload.
+- Signed app alpha.8 packaging passed; silent local NSIS upgrade exited zero and the
+  installed EXE reports alpha.8 at `target/nsis-smoke-20260905-022935/chriz-bg-app.exe`.
+  The app remains closed. This CLI-originated run has no originating desktop-app version;
+  do not invent one. Rediscovery/launcher acceptance remains to do.
+- Alpha.7-to-alpha.8 real updater check/download/signature/byte-identity/tamper-rejection
+  passed. Signed setup is 5,102,476 bytes, SHA-256
+  `151d4f7ac8faab61aa3024cef6c13ffe9c348038afacfed103ef9afd3354fa16`.
+  Local unpublished feed: `target/cebg-release/0.1.0-alpha.8/`; see
+  [updater evidence](update-acceptance-2026-09-05.md). Automatic apply/restart remains untested.
+- Existing acceptance follow-up is active again, every 30 minutes for 12 checks. Its
+  current prompt names this exact r4 identity, continues practical acceptance/cleanup,
+  stays quiet on unchanged progress, and prohibits retries of rejected cleanup targets.
 
 Radar Latest is now 2.5.0.0, published 2026-09-05. `BG2RadarOverlay.7z` is 68,222,139
 bytes, SHA-256 `b8622e03526be812fce22690508a59445687a7c4354a9f55bd1d3e4be88f8f9c`.
@@ -17,7 +45,7 @@ Real download/layout checks and all seven focused engine Radar tests pass withou
 changes. Verified archive is `target/radar-2.5.0.0-acceptance/BG2RadarOverlay.7z`.
 Install this latest verified add-on only after the new game's completed receipt exists.
 
-The r3/package snapshot below remains historical until replaced by the new run details.
+### Historical r3/package snapshot (not the current run)
 
 - Worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - Frozen recipe: `recipes/curated-full-current`, preset `chris-recommended`,
@@ -86,7 +114,10 @@ that the public channel is live, and signature verification alone is not an appl
 
 ## Continuation
 
-### Current blocker: SoD Remix 120 (r3)
+### Resolved historical blocker: SoD Remix 120 (r3)
+
+The following records the sequence before publication; the current r4 details above
+supersede its waiting/pause instructions. Failed r3 remains immutable.
 
 The bounded follow-up found r3 terminal at ledger 216. SCS, Randomiser, EET_END, and late
 Bardic 1012/3001 passed. SoD Remix 120 failed because `csrhood.d` addresses BDSCRY state 4,
@@ -127,7 +158,7 @@ documentation. Wait for publication and verify its final artifact/hash before re
 rebuild. Do not remove the retained test copy/profile yet. Full collection acceptance is
 still incomplete.
 
-### Current r3 checkpoint
+### Historical r3 checkpoint
 
 The conditional-prompt fix is committed as `6a2558b`, and recipe alpha.6 static evidence
 references that commit. `cargo test -p chriz-bg-engine` passed all runnable tests (seven
