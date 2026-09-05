@@ -75,6 +75,11 @@ use crate::weidu::runner::{
 use crate::weidu::verify::{reconcile as reconcile_weidu, ExpectedRun, Reconciliation};
 use crate::Manifest;
 
+mod recovery;
+pub use recovery::{
+    accept_supervised_recovery, inspect_supervised_recovery, SupervisedRecoveryRequest,
+};
+
 const GAME_PROFILE_DIRECTORY: &str = "game-builds";
 const STATE_DIRECTORY: &str = ".chriz";
 const ATTEMPTS_DIRECTORY: &str = "attempts";
@@ -203,6 +208,10 @@ pub struct ManagedReport {
     pub managed_root: PathBuf,
     /// Exact latest immutable terminal receipt.
     pub receipt: InstallReceipt,
+    /// Separate completion lineage after an explicitly supervised repair. The original
+    /// terminal receipt above retains its actual failed outcome.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<crate::recovery_receipt::RecoveryReceipt>,
 }
 
 /// Inputs for one new CLI-owned managed installation.
@@ -1017,9 +1026,11 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
             ),
         )
     })?;
+    let recovery = recovery::report_recovery(&managed_root, &receipt, &frozen)?;
     Ok(ManagedReport {
         managed_root,
         receipt,
+        recovery,
     })
 }
 

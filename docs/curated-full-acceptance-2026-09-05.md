@@ -12,8 +12,10 @@ modpack on r5; no full copy or earlier-mod replay. Do not resume r6. Retain orig
 r5 failed evidence and record explicit recovery provenance; never fake managed success.
 The targeted repair and all three remaining commands have now passed (02:08 KST
 final audit): 27 BG1 + 403 BG2 components in the exact original plan order, with
-modpack alpha.5 and retained Bardic balance.2. The supervised game is complete;
-managed composite-recovery receipt/UI and launch/Radar acceptance remain pending.
+modpack alpha.5 and retained Bardic balance.2. [Managed recovery completion](managed-recovery-acceptance-2026-09-06.md)
+now passed: separate receipt/registry, isolated save identity, readback and launcher
+consistency. Radar 2.5.0.0 is installed and its second check reused the current owned
+files. Native current UI, gameplay and app-update apply/restart remain pending.
 Stopped r6 cleanup was tool-rejected before execution; do not retry another route.
 
 ### Historical r6 startup snapshot (subsequently stopped deliberately)

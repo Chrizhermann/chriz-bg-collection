@@ -325,6 +325,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     "ok": true,
                     "managed_root": report.managed_root,
                     "receipt": report.receipt,
+                    "recovery": report.recovery,
                 }));
             } else {
                 println!(
@@ -334,6 +335,14 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     report.receipt.outcome
                 );
                 println!("Plan SHA-256: {}", report.receipt.plan_sha256);
+                if let Some(recovery) = report.recovery {
+                    println!(
+                        "Current installation: {} — verified supervised recovery",
+                        recovery.effective_version()
+                    );
+                    println!("Launch: {}", recovery.final_state.launch_path.display());
+                    println!("The original failed attempt above remains historical evidence.");
+                }
             }
         }
         Command::Diagnostics {

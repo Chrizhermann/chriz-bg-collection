@@ -14,14 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.next().is_some() {
         return Err("unexpected argument".into());
     }
-    let receipt: bg_engine::receipt::InstallReceipt =
-        serde_json::from_slice(&std::fs::read(root.join(".chriz/install-receipt.json"))?)?;
-    if !matches!(
-        receipt.outcome,
-        bg_engine::receipt::ReceiptOutcome::Succeeded
-    ) {
-        return Err("the game installation has not completed successfully".into());
-    }
+    bg_engine::recovery_receipt::read_completed_state(&root)?;
     let release = bg_engine::radar::check_latest()?;
     let installed = bg_engine::radar::install(
         &cache,

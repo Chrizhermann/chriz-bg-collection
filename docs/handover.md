@@ -16,12 +16,19 @@ Christopher approved repairing just the failed modpack rather than repeating the
 installation. **R5 has now completed all 430 components through supervised recovery**:
 16/16 corrected modpack components and the three remaining commands passed, preserving
 the prior 383 active BG2 entries. Final exact-order audit passed. Original managed
-failure history remains intact; composite recovery receipt/UI integration is next.
+failure history remains intact. [Managed recovery completion](managed-recovery-acceptance-2026-09-06.md)
+now passed too: separate receipt and registry, final isolated save identity, exact
+versions, launcher consistency, CLI report and idempotent publication. Radar 2.5.0.0
+is installed and its second current-release check reused the installation. Next is
+current native package/launcher, game startup/save-reload and app-update apply/restart
+acceptance, not another mod installation.
 R6 was deliberately stopped before mod installation. Its cleanup was tool-rejected;
 do not retry deletion by another route, resume it or start a full copy. The recovered
-r5 retains earlier Bardic balance.2 and all approved selections. No game smoke/Radar
-acceptance yet. The status below is the preceding r6
+r5 retains earlier Bardic balance.2 and all approved selections. No game smoke yet.
+The status below is the preceding r6
 snapshot and is superseded by the targeted recovery record.
+
+### Historical r6 context — superseded by completed r5 recovery above
 
 The user has now requested the complete corrected installation/test/cleanup flow. Continue
 from [the current acceptance run](curated-full-acceptance-2026-09-05.md), not the invalid

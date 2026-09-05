@@ -7,8 +7,9 @@ This is the release plan, not authorization to publish a repository, tag or upda
 **2026-09-06 update:** [targeted recovery](../targeted-recovery-2026-09-06.md)
 supersedes the r6 path below. R6 was stopped before mod installation; the existing
 r5 game now has all 430 components after localized modpack replacement and the
-remaining three commands. Preserve earlier Bardic balance.2. Next integrate truthful
-managed recovery provenance and perform remaining launch/update/Radar acceptance.
+remaining three commands. Preserve earlier Bardic balance.2. [Managed recovery completion](../managed-recovery-acceptance-2026-09-06.md)
+has now passed, with separate receipt/registry, isolated saves and Radar 2.5.0.0 installed.
+Next perform current native launcher, gameplay and app-update apply/restart acceptance.
 No new full rebuild without discussing necessity/cost with Christopher.
 
 Christopher subsequently agreed to this alpha scope and queued recovery/customization/

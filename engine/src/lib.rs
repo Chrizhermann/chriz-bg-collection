@@ -15,6 +15,7 @@ pub mod radar;
 pub mod receipt;
 pub mod recipe_envelope;
 pub mod recipe_view;
+pub mod recovery_receipt;
 pub mod registry;
 pub mod release_validate;
 pub mod resolve;

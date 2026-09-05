@@ -8,11 +8,17 @@ without discussing necessity and cost with Christopher.
 
 ## Current operation
 
-**Supervised game installation is COMPLETE; managed recovery integration is not yet
-complete.** Final audit at 02:08 KST verified every TP2/language/component in exact
+**Game installation and managed recovery registration are COMPLETE.** See
+[managed completion/Radar acceptance](managed-recovery-acceptance-2026-09-06.md):
+separate recovery receipt, isolated save identity, registry and report readback passed;
+Radar 2.5.0.0 is installed. Current native UI and gameplay acceptance remain pending.
+**Do not rerun the completed recovery commands below.**
+
+Final audit at 02:08 KST verified every TP2/language/component in exact
 plan order: BG1 27 + BG2 403 = **430 components**. All five real WeiDU operations
 (uninstall, modpack install, CDTweaks 2312, SR 60, BuffBot 1/0) exited zero.
-No game launch/save-reload test or Radar installation occurred in this recovery slice.
+No game launch/save-reload test occurred in the repair slice. Radar was installed
+in the subsequent managed-completion slice linked above.
 
 - R6 PID 47680 was deliberately stopped at 2026-09-06T01:38:53+09:00 during
   `stage:bg2`, ledger 73. BG1 staging had completed; no WeiDU child existed (only
@@ -60,8 +66,9 @@ No game launch/save-reload test or Radar installation occurred in this recovery 
 
 Original r5 terminal state must not be unsealed or falsely reported complete. The
 supervised operation records create-once intent/process/verification sidecars; a
-repaired game is not automatically an accepted managed campaign. Proper recovery
-lineage/receipt and launcher integration remain separate work.
+repaired game is not automatically an accepted managed campaign. The subsequent
+managed-completion slice now supplies separate recovery lineage and registration,
+without changing the original failed attempt or ledger seal.
 
 The new pure engine planner `weidu::recovery` recognizes a provable ordered subset
 at the end of an unchanged install stack, returns reverse-stack uninstall order,
@@ -70,9 +77,9 @@ WeiDU-verifier tests pass. It is not yet wired to an automatic recovery button.
 
 ## Next bounded installer work
 
-1. Add explicit recovery provenance/receipt handling for the repaired existing root,
-   referencing the original failed history and verified sidecar operations. Do not
-   rewrite a seal, invent successful historical events, or require a whole game clone.
+1. Done: explicit recovery provenance/receipt and registry handling for the existing
+   root, referencing failed history and verified operations. Native current UI
+   acceptance remains; do not repeat completed metadata publication or mod installs.
 2. Surface repair eligibility separately from genuinely unrecoverable state, then
    connect a guarded repair action. The new planner is a building block, not a UI
    completion claim. A changed mod version must be recorded, not hidden in alpha.8.
