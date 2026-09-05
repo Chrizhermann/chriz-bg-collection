@@ -153,6 +153,7 @@ fn semantic_manifest() -> Manifest {
         feature_id: "scs-8040".to_owned(),
         reason: "Already provided by SCS component 8040 (Improved random spawns).".to_owned(),
     });
+    randomiser_10300.requires.push("scs-core".to_owned());
 
     manifest.collection.features = vec![
         feature(
@@ -314,6 +315,28 @@ fn authors_compatibility_reasons_and_omits_conflicting_components() {
         Some("Already provided by SCS component 8040 (Improved random spawns).")
     );
     assert!(evaluation.plan.components_for("randomiser").is_none());
+}
+
+#[test]
+fn feature_controls_expose_authored_constraints_without_inventing_reciprocals() {
+    let evaluation = evaluate(&semantic_manifest(), &Selection::defaults("windows")).unwrap();
+
+    let randomiser = evaluation.view.control("randomiser-10300").unwrap();
+    assert_eq!(randomiser.requires, ["scs-core"]);
+    assert_eq!(randomiser.conflicts, ["scs-8040"]);
+
+    let scs_8040 = evaluation.view.control("scs-8040").unwrap();
+    assert!(scs_8040.requires.is_empty());
+    assert!(scs_8040.conflicts.is_empty());
+
+    let scs_4240 = evaluation.view.control("scs-4240").unwrap();
+    assert_eq!(scs_4240.conflicts, ["spell-revisions"]);
+    assert!(evaluation
+        .view
+        .control("spell-revisions")
+        .unwrap()
+        .conflicts
+        .is_empty());
 }
 
 #[test]

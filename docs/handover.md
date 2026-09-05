@@ -68,9 +68,17 @@ Latest queued requirements are captured in [recovery and casual customization](p
 Dual update notification is implemented in source. **Safe pause/app-close handling is
 missing and is the next installer priority**: Cancel currently kills WeiDU and must not be
 advertised as Pause. A read-only recovery matrix and bounded test plan are documented.
-Customize QoL follows (493-control catalog -> common changes + advanced); no curation was
-changed. Optional confirmed SoD skip with +250,000 protagonist-only XP was dispatched to
+The requested [common Customize controls](customization-acceptance-2026-09-06.md) are now
+implemented in source: six bundles, category bulk actions, preserved preferences and
+visible collateral, with 88 frontend / 16 recipe-view / 4 authoring tests passing.
+Headless real-catalog layout checks passed. Not in the installed alpha.8 yet; authoring
+changes must enter the next versioned recipe, not running r5. Yeslick's original-class
+route currently also excludes combined modpack dispel fix 410; owning-repo follow-up is
+recorded. Typed advanced inputs and broader Customize QoL remain; no default curation changed.
+Optional confirmed SoD skip with +250,000 protagonist-only XP was dispatched to
 the owning SoD task; separate from component 290 and frozen r4, not a first-alpha blocker.
+Its native ground-pile probe subsequently failed (owning commit 19e221b); that prototype
+must not enter the recipe. Released SoD v0.6.5 is unaffected.
 
 ## Historical overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)
 

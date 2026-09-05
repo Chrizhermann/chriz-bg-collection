@@ -6,7 +6,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from tools.curated_full_recipe import _preserve_native_run_orders, build_recipe
+from tools.curated_full_recipe import _effective_features, _preserve_native_run_orders, build_recipe
 
 
 class CuratedFullRecipeTests(unittest.TestCase):
@@ -82,7 +82,22 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(prompt["answer"]["value"], {"kind": "integer", "value": 2})
             self.assertEqual(features["feature:chriz-bg-modpack:component-400"]["requires"], ["feature:branwen:component-0", "mod:spell-rev"])
             self.assertEqual(features["feature:chriz-bg-modpack:component-430"]["requires"], ["feature:cdtweaks:component-2170"])
-            self.assertEqual(features["feature:bardicwonders:component-1006"]["readiness"], "blocked")
+            self.assertEqual(features["mod:bardicwonders"]["decision"], "default")
+            bardic_features = [
+                feature
+                for feature in collection["features"]
+                if feature["id"].startswith("feature:bardicwonders:")
+            ]
+            self.assertEqual(len(bardic_features), 20)
+            self.assertTrue(
+                all(feature["parent"] == "mod:bardicwonders" for feature in bardic_features)
+            )
+            darkbloom = features["feature:bardicwonders:component-1006"]
+            self.assertEqual(darkbloom["readiness"], "ready")
+            self.assertEqual(
+                [conflict["feature_id"] for conflict in darkbloom["conflicts"]],
+                ["feature:spell-rev:mandatory-components"],
+            )
             self.assertEqual(features["feature:iwdification:mandatory-components"]["components"], [{"run_id": "iwdification-bg2", "component": 30}, {"run_id": "iwdification-bg2", "component": 40}])
             self.assertNotIn(120, runs["iwdification-bg2"]["components"])
             self.assertIn(2720, runs["cdtweaks-bg2"]["components"])
@@ -101,6 +116,94 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.8")
             self.assertFalse((output / "reference").exists())
+
+    def test_common_customization_routes_preserve_dependency_collateral(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            baseline = tomllib.loads(
+                (output / "presets/chris-recommended.toml").read_text(encoding="utf-8")
+            )["selections"]
+
+            artisan_off = baseline.copy()
+            for feature_id in (
+                "mod:artisanskitpack",
+                "mod:artisanskitpack-npc",
+                "mod:artisanskitpack-tweak",
+            ):
+                artisan_off[feature_id] = "off"
+            effective = _effective_features(collection, artisan_off)
+            self.assertFalse(
+                any(
+                    selected
+                    for feature_id, selected in effective.items()
+                    if feature_id.startswith("feature:artisanskitpack")
+                )
+            )
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-140"])
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-170"])
+
+            bardic_off = baseline.copy()
+            bardic_off["mod:bardicwonders"] = "off"
+            effective = _effective_features(collection, bardic_off)
+            self.assertFalse(
+                any(
+                    selected
+                    for feature_id, selected in effective.items()
+                    if feature_id.startswith("feature:bardicwonders:")
+                )
+            )
+            self.assertFalse(effective["feature:artisanskitpack-npc:component-99001"])
+
+            spell_revisions_off = baseline.copy()
+            spell_revisions_off["mod:spell-rev"] = "off"
+            effective = _effective_features(collection, spell_revisions_off)
+            self.assertFalse(
+                any(
+                    selected
+                    for feature_id, selected in effective.items()
+                    if feature_id.startswith("feature:spell-rev:")
+                )
+            )
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-400"])
+            self.assertTrue(effective["feature:bardicwonders:component-1006"])
+            self.assertTrue(effective["feature:artisanskitpack:component-8101"])
+
+            original_classes = baseline.copy()
+            original_classes["feature:yeslicknpc:component-0"] = "on"
+            original_classes["feature:yeslicknpc:component-1"] = "off"
+            artisan_npc_components = (
+                1101,
+                2001,
+                3101,
+                3102,
+                5101,
+                5102,
+                7101,
+                7102,
+                7104,
+                21001,
+                9101,
+                10004,
+                20002,
+                99001,
+                200010,
+            )
+            for component in artisan_npc_components:
+                original_classes[f"feature:artisanskitpack-npc:component-{component}"] = "off"
+            for component in (110, 190, 192, 193, 194, 195, 196, 198):
+                original_classes[f"feature:chriz-bg-modpack:component-{component}"] = "off"
+            for component in (1, 2, 3, 4):
+                original_classes[f"feature:xan:component-{component}"] = "off"
+            effective = _effective_features(collection, original_classes)
+            self.assertTrue(effective["feature:yeslicknpc:component-0"])
+            self.assertFalse(effective["feature:yeslicknpc:component-1"])
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-140"])
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-170"])
+            self.assertTrue(effective["feature:chriz-bg-modpack:component-197"])
+            for component in (130, 430, 440, 450):
+                self.assertTrue(effective[f"feature:chriz-bg-modpack:component-{component}"])
 
     def test_reconciliation_covers_every_default_and_mandatory_row(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -41,6 +41,10 @@ pub struct FeatureControl {
     pub readiness: Readiness,
     /// Parent semantic id, when present.
     pub parent: Option<String>,
+    /// Semantic feature ids this feature requires.
+    pub requires: Vec<String>,
+    /// Semantic feature ids this feature conflicts with, as authored.
+    pub conflicts: Vec<String>,
     /// Effective selected state after readiness and compatibility evaluation.
     pub selected: bool,
     /// Whether the player can change this feature directly.
@@ -301,6 +305,12 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
             decision: feature.decision,
             readiness: feature.readiness,
             parent: feature.parent.clone(),
+            requires: feature.requires.clone(),
+            conflicts: feature
+                .conflicts
+                .iter()
+                .map(|conflict| conflict.feature_id.clone())
+                .collect(),
             selected,
             interactive,
             unavailable_reason: reason,

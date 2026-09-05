@@ -1,9 +1,18 @@
 import type { SelectionEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
+import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles } from "../customization";
 
 export interface SetupViewState {
   search: string;
   category: string;
+  advancedOpen?: boolean;
+  bundleMemory?: Record<string, Readonly<Record<string, boolean>>>;
+  adjustedChoices?: readonly string[];
+}
+
+export interface SetupBatchActions {
+  change(changes: Record<string, boolean>, focusId: string): void | Promise<void>;
+  reset(): void | Promise<void>;
 }
 
 const decisionLabels = { mandatory: "Always included", default: "Recommended", optional: "Optional", excluded: "Not included" } as const;
@@ -14,11 +23,59 @@ export function setupScreen(
   back: () => void,
   next: () => void,
   viewState: SetupViewState = { search: "", category: "" },
+  batch?: SetupBatchActions,
 ): HTMLElement {
   const page = element("div", "screen-stack setup-screen");
   const header = element("div", "setup-toolbar");
   const top = element("div", "setup-heading");
-  top.append(screenIntro("", "Customize your installation", "Recommended choices are selected. Change anything you like."), screenActions(back, actionButton("Done", next)));
+  top.append(screenIntro("", "Customize your installation", "Chriz’s setup is ready to install. Change just the things you want."), screenActions(back, actionButton("Done", next)));
+  header.append(top);
+  page.append(header);
+  const bundles = batch ? commonBundles(evaluation) : [];
+  if (batch && bundles.length > 0) {
+    const common = element("section", "common-choices");
+    const title = element("h2", undefined, "Common changes");
+    common.setAttribute("aria-label", "Common changes");
+    const choices = element("div", "common-choice-grid");
+    for (const bundle of bundles) {
+      const row = element("label", "common-choice");
+      const checkbox = element("input");
+      checkbox.type = "checkbox";
+      checkbox.id = `bundle-${bundle.id}`;
+      checkbox.checked = bundleSelected(evaluation, bundle);
+      checkbox.setAttribute("aria-label", bundle.title);
+      checkbox.setAttribute("aria-describedby", `${checkbox.id}-description`);
+      const copy = element("span");
+      copy.append(element("strong", undefined, bundle.title));
+      const description = element("span", "common-choice-description", bundle.description);
+      description.id = `${checkbox.id}-description`;
+      copy.append(description);
+      row.append(checkbox, copy);
+      checkbox.addEventListener("change", () => {
+        const turningAway = bundle.id === "original-companions" ? checkbox.checked : !checkbox.checked;
+        viewState.bundleMemory ??= {};
+        if (turningAway) viewState.bundleMemory[bundle.id] = Object.fromEntries(bundle.ids.map(id => [id, evaluation.normalizedSelection.features[id] ?? false]));
+        void batch.change(bundleChanges(evaluation, bundle, checkbox.checked, viewState.bundleMemory[bundle.id]), checkbox.id);
+      });
+      choices.append(row);
+    }
+    const reset = actionButton("Reset to Chriz’s setup", () => { viewState.bundleMemory = {}; void batch.reset(); }, "quiet");
+    reset.classList.add("button-quiet");
+    common.append(title, choices, reset);
+    page.append(common);
+  }
+  if (viewState.adjustedChoices?.length) {
+    const effects = element("details", "setup-effects");
+    effects.append(element("summary", undefined, `Also adjusted: ${viewState.adjustedChoices.length} related choices`));
+    const list = element("ul");
+    viewState.adjustedChoices.forEach(text => list.append(element("li", undefined, text)));
+    effects.append(list);
+    page.append(effects);
+  }
+  const advanced = element("details", "setup-advanced");
+  advanced.open = viewState.advancedOpen ?? bundles.length === 0;
+  advanced.addEventListener("toggle", () => { viewState.advancedOpen = advanced.open; });
+  advanced.append(element("summary", undefined, "Advanced options by category"));
   const filters = element("div", "setup-filters");
   const searchLabel = element("label", undefined, "Find a mod or option");
   const search = element("input");
@@ -45,13 +102,24 @@ export function setupScreen(
   const summary = element("p", "choice-summary", `${evaluation.selectedChoiceCount} choices included`);
   summary.setAttribute("role", "status");
   filters.append(searchLabel, categoryLabel, summary);
-  header.append(top, filters);
-  page.append(header);
+  advanced.append(filters);
   const groups = element("div", "setup-groups");
   const filterable: { group: HTMLElement; category: string; rows: { element: HTMLElement; text: string }[] }[] = [];
   evaluation.view.categories.forEach((category) => {
     const fieldset = element("fieldset", "choice-group card");
     fieldset.append(element("legend", undefined, category));
+    if (batch) {
+      const buttons = element("div", "category-actions");
+      for (const [selected, label] of [[true, "Include all compatible"], [false, "Exclude all optional"]] as const) {
+        const id = `category-${category}-${selected ? "include" : "exclude"}`;
+        const changes = bulkCategoryChanges(evaluation, category, selected);
+        const button = actionButton(label, () => { void batch.change(changes, id); }, "quiet");
+        button.id = id;
+        button.disabled = Object.keys(changes).length === 0;
+        buttons.append(button);
+      }
+      fieldset.append(buttons, element("p", "category-hint", "Required fixes stay included. Unavailable choices and conflicting alternatives are left out."));
+    }
     const rows: { element: HTMLElement; text: string }[] = [];
     evaluation.view.controls.filter((control) => control.category === category).forEach((control) => {
       const row = element("div", `control-row ${control.interactive ? "" : "is-unavailable"}`.trim());
@@ -113,7 +181,8 @@ export function setupScreen(
   search.addEventListener("input", filter);
   categorySelect.addEventListener("change", filter);
   filter();
-  page.append(groups, empty);
+  advanced.append(groups, empty);
+  page.append(advanced);
   if (evaluation.findings.length > 0) {
     const notices = element("details", "recipe-notices setup-notices");
     const heading = element("summary", undefined, `${evaluation.findings.length} setup ${evaluation.findings.length === 1 ? "note" : "notes"}`);

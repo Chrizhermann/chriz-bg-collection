@@ -382,6 +382,13 @@ def _feature_blocks(root: Path, collection: dict) -> str:
         'description = "Install the curated IWDification spell packs and selected visual, item, and rule updates."\n'
         'category = "collection"\n'
         'decision = "default"\n'
+        'readiness = "ready"\n',
+        "[[features]]\n"
+        'id = "mod:bardicwonders"\n'
+        'title = "Bardic Wonders"\n'
+        'description = "Install the curated Bardic Wonders kits, bard systems, spells, and compatibility patch."\n'
+        'category = "kits"\n'
+        'decision = "default"\n'
         'readiness = "ready"\n'
     ]
     for target in curation_map.targets:
@@ -411,19 +418,21 @@ def _feature_blocks(root: Path, collection: dict) -> str:
             f"description = {_q(first.component if len(target_rows) == 1 else 'Install the curated mandatory IWD arcane and divine spell packs.')}",
             f"category = {_q(category)}",
             f"decision = {_q(next(iter(decisions)).value)}",
-            'readiness = "blocked"'
-            if target.target_id == "feature:bardicwonders:component-1006"
-            else 'readiness = "ready"',
+            'readiness = "ready"',
         ]
-        if target.target_id == "feature:bardicwonders:component-1006":
-            lines.append(
-                'unavailable_reason = "Darkbloom is unavailable with the selected Spell Revisions setup."'
-            )
-        if target.parent:
-            lines.append(f"parent = {_q(target.parent)}")
+        parent = "mod:bardicwonders" if first.catalog == "BARDICWONDERS" else target.parent
+        if parent:
+            lines.append(f"parent = {_q(parent)}")
         if requires:
             lines.append("requires = [" + ", ".join(_q(value) for value in requires) + "]")
         feature_conflicts = conflicts.get(target.target_id, [])
+        if target.target_id == "feature:bardicwonders:component-1006":
+            feature_conflicts.append(
+                (
+                    "feature:spell-rev:mandatory-components",
+                    "Unavailable with Spell Revisions.",
+                )
+            )
         if feature_conflicts:
             lines.append(
                 "conflicts = ["

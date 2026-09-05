@@ -753,6 +753,95 @@ input[type="search"] {
   justify-content: space-between;
 }
 
+.setup-heading h1 {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+}
+
+.common-choices h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.common-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1.5rem;
+}
+
+.common-choice {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.7rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--slate);
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.common-choice input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--teal);
+}
+
+.common-choice-description {
+  display: block;
+  max-width: 65ch;
+  margin-top: 0.3rem;
+  color: var(--vellum-dim);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.common-choices .button-quiet {
+  margin-top: 0.65rem;
+  background: none;
+  font-size: 0.85rem;
+}
+
+.setup-advanced > summary,
+.setup-effects > summary {
+  padding: 0.65rem 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.setup-effects {
+  border-left: 3px solid var(--brass);
+  padding-left: 0.85rem;
+  font-size: 0.85rem;
+}
+
+.setup-advanced .setup-groups {
+  margin-top: 1rem;
+}
+
+.category-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.category-actions .button {
+  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.category-hint {
+  font-size: 0.75rem;
+  color: var(--vellum-dim);
+  line-height: 1.4;
+}
+
+@media (max-width: 700px) {
+  .common-choice-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .setup-heading .screen-actions {
   flex-shrink: 0;
   margin: 0;

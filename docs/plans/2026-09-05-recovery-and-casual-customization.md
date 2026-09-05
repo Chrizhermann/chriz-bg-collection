@@ -69,6 +69,12 @@ Source pointers: `engine/src/acquire/cache.rs` (partial resume),
 
 ## 3. Customize for a casual player (after recovery)
 
+Update 2026-09-06: Christopher explicitly requested these grouped controls next. The
+[implemented source slice and bounded acceptance](../customization-acceptance-2026-09-06.md)
+supersede the unimplemented status below for common bundles/category actions. Safe
+pause/close remains the next installer priority; typed advanced inputs remain unfinished.
+Nothing changed in the running r5 recipe or the installed native package.
+
 Read-only source-backed review, not a completed rendered UI audit: current full catalog
 projects 493 controls across 25 categories into a flat checkbox view. Preserve advanced
 power but do not ask someone changing two preferences to understand that catalog.

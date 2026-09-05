@@ -200,9 +200,28 @@ class AppController implements AppHandle {
   }
 
   async #toggleFeature(id: string, selected: boolean): Promise<void> {
+    await this.#changeFeatures({ [id]: selected }, `feature-${id}`);
+  }
+
+  async #changeFeatures(changes: Record<string, boolean>, focusId: string): Promise<void> {
     if (!this.#beginIdentityEdit()) return;
-    this.#dispatch({ type: "set-feature", id, selected });
-    await this.#evaluate(true, `feature-${id}`);
+    const before = this.#state.evaluation;
+    this.#dispatch({ type: "set-features", changes });
+    const previousRevision = this.#revision;
+    await this.#evaluate(false);
+    if (this.#revision !== previousRevision + 1) return;
+    this.#setupView.adjustedChoices = this.#state.evaluation?.view.controls.filter(control => {
+      const previous = before?.view.controls.find(c => c.id === control.id);
+      return previous && previous.selected !== control.selected && !(control.id in changes);
+    }).map(control => `${control.selected ? "Included" : "Left out"}: ${control.title}`) ?? [];
+    this.#render(focusId);
+  }
+
+  async #resetChoices(): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
+    this.#dispatch({ type: "reset-selection" });
+    this.#setupView.adjustedChoices = [];
+    await this.#evaluate();
   }
 
   async #selectProfile(profileId: string): Promise<void> {
@@ -890,7 +909,10 @@ class AppController implements AppHandle {
           content = statusCard("Preparing setup", "CEBG is loading the recommended choices.", "ok");
           break;
         }
-        content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => safely(() => navigate("welcome")), () => safely(() => navigate("welcome")), this.#setupView);
+        content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => safely(() => navigate("welcome")), () => safely(() => navigate("welcome")), this.#setupView, {
+          change: (changes, focusId) => safely(() => this.#changeFeatures(changes, focusId)),
+          reset: () => safely(() => this.#resetChoices()),
+        });
         break;
       case "review":
         if (evaluation === null) {

@@ -102,6 +102,8 @@ export interface FeatureControl {
   readonly decision: FeatureDecision;
   readonly readiness: "ready" | "experimental" | "blocked";
   readonly parent: string | null;
+  readonly requires?: readonly string[];
+  readonly conflicts?: readonly string[];
   readonly selected: boolean;
   readonly interactive: boolean;
   readonly unavailableReason: string | null;
