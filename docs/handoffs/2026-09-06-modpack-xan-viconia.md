@@ -1,7 +1,62 @@
-# R5 modpack failure: Xan 170 and Viconia 192
+# Modpack alpha.5 resolution: Xan 170 and Viconia 192
 
 Checked 2026-09-06 KST. This is owning-repo work, not a reason to drop approved
 components or relax the collection's exact WeiDU verification.
+
+## Resolution published and independently pinned
+
+Both component blockers are fixed in normal GitHub Latest
+[`v0.2.0-alpha.5`](https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.5):
+
+- Commit `d4b1e687242ceff1f37968614d142ce90191060d`; annotated tag object
+  `3cbc93cf6e59b7bffa4186d107438b05982c2da6`.
+- Release ZIP `chriz-bg-modpack-v0.2.0-alpha.5.zip`, 1,335,026 bytes, SHA-256
+  `2278c839f60e019bedba355cb794176a052d24b68db2851248af926580840b33`.
+- The collection independently downloaded and verified the immutable package with
+  the author verifier in a new cache. The direct archive contained the exact 33-file
+  allowlist, published only `chriz-bg-modpack` plus
+  `setup-chriz-bg-modpack.tp2`, and had 1,581,319 uncompressed bytes. The new pin
+  is part of recipe `0.1.0-alpha.9`.
+
+Component 170 now resolves the canonical `MAGESCHOOL_ENCHANTER` symbol. Against
+the captured r5 `KIT.IDS`, it converted source kit `0x02000000` to installed C0EK
+`0x40330000`. All three targeted Xan resources passed public installation,
+idempotent repeat installation, and exact uninstall. `XAN_` and unrelated effects,
+XP, and THAC0 remained unchanged. The final TPA SHA-256 is
+`2d0be9c56039726c2fbebc8e86b87d4eb75807f819002cbbc2c22accb7a9508e`.
+
+Component 192 now accepts only one terminal populated priest range extending past
+the authoritative memorized-record count when declarations were originally ordered
+and contiguous and only empty ranges follow it. It clamps the terminal count and
+later empty indices without adding, deleting, reordering, or changing spell records
+or flags. The two affected shapes were:
+
+- `VICONI4`: seven records; final range `4/4` becomes `4/3`, later empty index
+  `8` becomes `7`.
+- `VICONI6_`: eleven records; final range `10/3` becomes `10/1`, later empty
+  index `13` becomes `11`.
+
+All ten captured Viconia resources passed public installation, idempotent repeat
+conversion, and exact uninstall. Ambiguous ranges, invalid flags, and physical
+section overlap still fail. The approved class, skill, proficiency, and ability
+policy did not change. The final TPA SHA-256 is
+`f222bba4132075786a66bbea1cac3945155f75af7e2305dab09008108c96bf1e`.
+
+The owner reported 304 local tests with package acceptance, passing Linux PR and
+merged-main CI plus Windows release packaging. The published ZIP's 31 source files
+matched the immutable tag blobs byte-for-byte; its checksum, per-file manifest,
+33-file allowlist, and pinned WeiDU executable also matched. The owning checks used
+small effective resources captured from r5 with synthetic KEY/TLK scaffolding. They
+prove the two component fixes, repeat safety, and uninstall restoration; they are
+**not** a full clone, full curated installation, native game run, live recruitment,
+or save repair. R5 remained read-only and is still a historical failed installation.
+A fresh collection run is the integration boundary.
+
+## Historical r5 failure diagnosis
+
+The remainder of this document preserves the evidence and diagnosis that were sent
+to the owning repository before alpha.5. References to alpha.4 and the requested
+next candidate describe that point in time, not the current published state.
 
 ## Outcome and boundaries
 

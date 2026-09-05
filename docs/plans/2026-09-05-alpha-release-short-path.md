@@ -11,30 +11,31 @@ parallel owning-repo work for an early alpha, not a reason to restart the runnin
 
 Today's finished owning-repo work may enter the first alpha. Consult the
 [bounded mod intake queue](2026-09-05-first-alpha-mod-intake.md) once before freezing
-the next release candidate. R5 remains immutable; newer additions need their own
-proportionate integration evidence and accurate versions, not a claim that R5
-already tested them. Do not hold the installer for unfinished mod work.
+the next release candidate. R5 remains immutable, terminal failure evidence. Released
+modpack alpha.5 repairs and Bardic balance.3 are now pinned in alpha.9 for r6; the
+43-run / 430-component selection, order and arguments are unchanged. New components
+still need their own selection policy; do not hold the installer for unfinished work.
 
 ## Reuse the real work already running
 
-Current r5 replaces r4 after a diagnosed recipe-only TP2-alias mismatch, not to repeat a
-button click. All 30 SoD components succeeded in r4; its immutable failure stays intact.
-The corrected alpha.8 recipe has unchanged component selections/order and plan hash.
+Current r6 replaces terminal r5 after the owning repository released and tested both
+modpack fixes. R4's TP2-alias mismatch and r5's Xan/Viconia failures remain historical
+evidence, not resume targets. Alpha.9 retains the approved selected components.
 
-Fresh r5 uses the same engine preparation and `execute_frozen_campaign` pipeline as the
+Fresh r6 uses the same engine preparation and `execute_frozen_campaign` pipeline as the
 desktop app. The desktop route additionally validates its reviewed identity/token,
-handles native events/dialogs, and records its application version. R5 was started by
+handles native events/dialogs, and records its application version. R6 was started by
 the CLI, so it correctly has no originating app version. Do not fabricate one.
 
 Do not repeat all 43 runs merely to say a button started them. Previous native attempts
 already exercised actual start, manual archive supply, progress, failure and resume.
-Complete r5 and separately verify the packaged app's remaining lifecycle seams. Report
+Complete r6 and separately verify the packaged app's remaining lifecycle seams. Report
 these evidence scopes accurately rather than claiming an uninterrupted native end-to-end
 run that did not happen.
 
 ## Minimum useful release sequence
 
-1. Complete r5; verify successful receipt, frozen version and exact WeiDU component list.
+1. Complete r6; verify successful receipt, frozen version and exact WeiDU component list.
 2. Add the newest verified Radar release to that successful game copy.
 3. Rediscover it in packaged CEBG; test Play, Open game folder, Back and Updates.
 4. Launch a new game and save/reload. Christopher can perform the gameplay smoke once
@@ -63,7 +64,8 @@ and its ordinary download chooser were checked: Windows `evandra-v2.2.exe` (12.8
 route exists; availability is not the blocker. Obtain/verify the standalone package,
 its digest/layout and full relevant payload equality, then freeze that acquisition
 contract. Do not silently drop Evandra or other approved choices to get a release out.
-This does not change the frozen r5 installation.
+This does not change the frozen running installation; a public acquisition change needs
+its own versioned recipe.
 
 ## Updates in the alpha
 

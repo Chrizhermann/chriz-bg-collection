@@ -5,18 +5,70 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 ## Authority and current state
 
+**R6 is the active worker (2026-09-06 KST), with recipe 0.1.0-alpha.9.** The two
+owning-repo modpack fixes are released and pinned; Bardic balance.3 is also included.
+Full installation acceptance is still pending. This is not a claim that the game or
+new native package has been tested.
+
+- Root: `C:\Users\chris\CEBG-Tests\CEBG-Curated-20260906-r6`.
+- Worker PID `47680`, started `2026-09-06T01:15:42.2792485+09:00`. Check executable
+  and start time before trusting this PID; never start a concurrent resume.
+- Executable: `target/full-install-20260906-r6/chriz-bg-install.exe`, SHA-256
+  `1ba8b272a2888054e83df6179756e32a78a93baef4129b4c8f0087879ef02782`.
+  Built from current source including failure-detail commit `6fdc537`; copied to
+  this unique stable path so subsequent Cargo builds cannot overwrite the worker.
+- Logs: `target/curated-r6-install-retry1.stdout.log` and `.stderr.log`.
+  Human progress goes to stderr; nonempty stderr alone does not mean failure.
+- Initial PID `34316` (01:08:08) stopped at freeze because the new parent
+  `C:\Users\chris\CEBG-Tests` did not exist. No game copy/install or managed root
+  was created. Original `target/curated-r6-install.*.log` retained. Created only
+  the approved parent directory and restarted into the still-absent same r6 root,
+  with separate logs. This was a launch prerequisite, not a mod failure or a
+  resumed sealed attempt.
+- Verified retry checkpoint: freeze/preflight completed; ledger 44 records successful
+  Bardic balance.3 acquisition, worker alive. No successful receipt yet.
+- Frozen install ID `install-364d44c34b4bedd299fa`; attempt
+  `attempt-46a13ffb4bb62697d802`. Payload SHA-256
+  `c965acfcb35bdb1a95a37e3b46c538e71e2088041aace02b4bc427f2a170c057`,
+  envelope SHA-256 `fd6485823c178099d69b5f86e5b2ecafc7fd0989fb06ba7b39b504e67b3f2c26`.
+  Both actual files match the ledger identities. Read only newest small records for
+  progress; do not dump record zero (large embedded payload).
+- Same read-only clean Steam BG:EE+SoD / BG2:EE 2.7.3 sources and existing cache
+  `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`; 261.34 GB free
+  before launch. No old-folder deletion or stream-game mutation was performed.
+- Preset `chris-recommended`; **43 runs / 430 components**. Comparing every resolved
+  run field except `artifact_id` proves identical selections, order, arguments,
+  prompts and postconditions. JSON-normalized comparison SHA-256:
+  `6204d12e3ebbedb2636508e316950e587dbfe52ac1bbcf978f0c1f182537ece8`.
+  This comparison hash is not the engine's plan or frozen-payload digest.
+- Pins: modpack `0.2.0-alpha.5`, Bardic `v2.9c-balance.3`. No other mod-version
+  changes. New companion 220-223 and utility-XP 610 remain unselected; the latter's
+  selection policy is awaiting Christopher. Future answers must not mutate r6.
+- Authored source commit `3756eee222d6a226ef9aa3a6c9ef63319fbdbceb`, generated
+  recipe `ec4a85f`. Engine validation: `ok: true`, no findings. Four focused authoring
+  tests and 11 production recipe tests passed (one separate network test ignored).
+  The two changed artifacts separately passed real cold downloads/extraction through
+  `chriz-bg-author artifact verify`. A stale test-only SoD 0.6.4 expectation was
+  corrected to the already-pinned and verified 0.6.5 contract; no SoD pin/choice change.
+- This CLI-originated installation has no originating desktop-app version. Installed
+  signed app alpha.8 is unchanged and predates the new UI work; build a distinct
+  signed candidate before native UI/launcher/update acceptance claims.
+
+### Historical r5 failure (terminal, not a resume target)
+
 **R5 is terminal, not running (checked 2026-09-06 KST).** Modpack **170 (Xan)**
 and **192 (Viconia)** failed; the other 14 selected modpack components succeeded.
 WeiDU exit 2, ledger 222 `fresh_copy_required`, terminal receipt
 `terminal-0000000222-277ba8822bcb84fe`. The previous 383 log rows are unchanged;
 the final log has 397 rows. This non-prefix partial completion cannot resume.
-SoD Remix and BG Rebalance completed. Both modpack bugs remain in newest public
-alpha.4. See the [bounded diagnosis and owning-repo handoff](handoffs/2026-09-06-modpack-xan-viconia.md).
-Keep r5 read-only for small reproduction fixtures; do not start another full
-copy until the owner fixes and tests these exact input shapes. Local diagnostics:
+SoD Remix and BG Rebalance completed. Both bugs were reproduced through alpha.4;
+the owner has now fixed and released them in alpha.5. See the
+[bounded diagnosis and owning-repo handoff](handoffs/2026-09-06-modpack-xan-viconia.md).
+Keep r5 read-only; the owner captured and tested the small reproduction fixtures.
+R6 is the fresh integration test, not an r5 resume. Local diagnostics:
 `target/curated-r5-modpack-failure-20260906.zip`. The stream game is untouched.
 
-**Current run is r5, not r4.** R4 stopped after all 30 SoD Remix components installed
+**R5 replaced r4.** R4 stopped after all 30 SoD Remix components installed
 successfully: the recipe expected the root TP2 alias, whereas setup-name WeiDU logged
 the byte-identical nested TP2. The immutable failure remains; no seal was removed.
 See [the bounded diagnosis and correction](handoffs/2026-09-05-sod-tp2-identity.md).
