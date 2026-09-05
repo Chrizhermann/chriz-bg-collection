@@ -74,3 +74,13 @@ identity, and rejection of a one-byte-modified setup with the unchanged signatur
 The existing compiled acceptance harness was reused with `CEBG_UPDATER_SETUP`,
 `CEBG_UPDATER_VERSION=0.1.0-alpha.6`, and `CEBG_UPDATER_CURRENT_VERSION=0.1.0-alpha.5`.
 Automatic apply/restart remains untested; this manual local upgrade does not replace it.
+
+## Alpha.7 result
+
+The real-plugin check/download/byte-identity/tamper-rejection test passed again for
+alpha.6-to-alpha.7. Signed setup size is 5,100,157 bytes; SHA-256
+`4edeb0d2eb2a201edde82766acf64610616830f6a62cb9bf77d2ea0da28553ae`.
+The setup is `target/release/bundle/nsis/Chriz Easy BG_0.1.0-alpha.7_x64-setup.exe`.
+The local unpublished feed is `target/cebg-release/0.1.0-alpha.7/`, with recipe alpha.6.
+Separate silent NSIS installation exited zero and the installed EXE reports alpha.7.
+Automatic updater apply/restart remains untested.

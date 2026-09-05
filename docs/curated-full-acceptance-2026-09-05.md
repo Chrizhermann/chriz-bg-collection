@@ -7,28 +7,29 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 - Worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - Frozen recipe: `recipes/curated-full-current`, preset `chris-recommended`,
-  recipe version `0.1.0-alpha.5`; signed app alpha.6 is packaged and installed locally.
+  recipe version `0.1.0-alpha.6`; signed app alpha.7 is packaged and installed locally.
 - Selection comes from curation and later approvals, never a replay of historical logs.
   See [the approved reconciliation plan](plans/2026-09-05-curation-reconciliation.md).
 - The replacement real installation **is running through the same engine CLI backend**.
-  Target: `C:\Users\chris\Games\CEBG-Curated-20260905-r2`.
-  Install id: `install-55cd391fcb89a92eac0c`.
-  Recipe SHA-256: `43fb80da6240a24bd31fdb6a554f4d17b6e267463db1bf2413162af6be449187`.
+  Target: `C:\Users\chris\Games\CEBG-Curated-20260905-r3`.
+  Install id: `install-c117933c9f2de8edc020`.
+  Recipe SHA-256: `e5ced746536e989e7482834b0f2bb40e18bc1fba595ac13a7e27112c96c2563a`.
   App cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
-  CLI PID: `81680` (verify identity before acting), executable
-  `target/full-install-20260905-r3/chriz-bg-install.exe`. This fresh attempt honestly has
+  CLI PID: `33316` (verify identity before acting), executable
+  `target/full-install-20260905-r4/chriz-bg-install.exe`. This fresh attempt honestly has
   no originating desktop-app version; launcher rediscovery remains part of acceptance.
-  CLI logs: `target/curated-r2-install.stdout.log` and `target/curated-r2-install.stderr.log`.
+  CLI logs: `target/curated-r3-install.stdout.log` and `target/curated-r3-install.stderr.log`.
 - The NSIS installer retained its earlier registered smoke-test location:
   `target/nsis-smoke-20260905-022935/chriz-bg-app.exe`. That installed app now reports
-  alpha.6 and is closed; it is not the replacement run's owner. The old
+  alpha.7 and is closed; it is not the replacement run's owner. The old
   `%LOCALAPPDATA%\Chriz Easy BG` alpha.1 executable is also closed. Do not delete
   the NSIS test location while preparing/upgrading the packaged launcher.
 - Durable progress is under the new root's `.chriz/ledger/` (latest numbered records),
   with frozen recipe under `.chriz/recipe/`. Do not dump record zero: it is a large payload.
   Use the engine report and bounded latest ledger records. Never start a concurrent resume
   while the CLI worker runs; the old native window is not the replacement's progress view.
-- The invalid `creator-full-current` recipe and old failed installations must not be resumed.
+- The invalid `creator-full-current` recipe and old failed installations (including r2)
+  must not be resumed.
 
 ## Practical acceptance
 
@@ -70,6 +71,57 @@ that the public channel is live, and signature verification alone is not an appl
   Automatic updater apply/restart remains distinct from this manual NSIS installation.
 
 ## Continuation
+
+### Current r3 checkpoint
+
+The conditional-prompt fix is committed as `6a2558b`, and recipe alpha.6 static evidence
+references that commit. `cargo test -p chriz-bg-engine` passed all runnable tests (seven
+environment-gated ignored), formatting passed, and all 28 authoring-tool tests passed.
+The actual full-recipe plan has zero public-alpha validation findings and still contains
+43 runs / 430 components, with every run's component sequence identical to r2. The only
+run-order change is Randomiser immediately after SCS, per existing curation. The default
+plan now emits exactly one `y\n` compatibility response; turning off Xan and RR12 emits
+no Randomiser prompt and preserves its exact components. This is planning/automated
+evidence, not proof that the new full install or game acceptance has completed.
+
+R3 has already reused all verified acquisitions and reached BG1 staging (ledger 71).
+It uses the freshly compiled, separately pinned CLI named above. Do not use the older
+`target/full-install-20260905-r3` binary to load recipe alpha.6: it predates the new optional
+prompt condition field. The old r2 installation remains terminal and is never a resume target.
+
+App alpha.7 contains the conditional-prompt engine and recipe alpha.6. Its signed NSIS
+package is 5,100,157 bytes, SHA-256
+`4edeb0d2eb2a201edde82766acf64610616830f6a62cb9bf77d2ea0da28553ae`.
+The actual updater check/download/byte-identity and tamper rejection passed from alpha.6
+to alpha.7. Separate silent NSIS installation exited zero and the installed EXE reports
+alpha.7; it remains closed while the CLI install runs. The local unpublished feed is
+`target/cebg-release/0.1.0-alpha.7/`. Automatic apply/restart is still not proven by this.
+The freshly rebuilt native app's 36 command-contract tests and two packaging tests passed;
+the separate ignored package-signature test is superseded here by the actual updater's
+successful verification of the full alpha.7 setup download.
+
+### Randomiser compatibility prompt failure (r2)
+
+R2 passed BG1 preparation, EET, the selected NPC/kit layers and ordinary Tweaks Anthology,
+then stopped at ledger 206 on Randomiser `1100`. This is not another item-removal defect:
+`lib/arrays.tpa` printed the compatibility question but the frozen recipe had no answer.
+WeiDU received EOF, rolled back `1100`, installed the later requested Randomiser utilities,
+and exited 2. Exact log verification correctly required a fresh copy. R2 must not resume.
+
+The earlier approved installer design already records `y`: leave other mods' required
+items in place. The question appears with Xan `0` or RR `12` in the supported curated
+stack. The fix adds `when_any_features` to authored prompts, evaluated against effective
+selection without activating any mods. The `y` response remains output-gated; disabling
+both triggering features produces no pending prompt. Unknown feature IDs are rejected.
+
+Recipe alpha.6 also restores the curation catalog's Randomiser-after-SCS position. Its
+component choices remain unchanged. A focused audit of all 12 remaining r2 runs found no
+other unmodeled reachable prompts: SCS READLN branches are debug/test-only in the pinned
+configuration, other CDTweaks questions belong to unselected components, and the fresh
+Randomiser run has no prior state requiring a preservation answer.
+
+R2 diagnostics were exported to `target/curated-randomiser-prompt-failure-20260905/`
+(498 files). R2 remains as failure evidence; no cleanup has been attempted on it.
 
 ### Native component-order failure and fresh replacement
 
