@@ -93,8 +93,12 @@ The owning task has now returned local v0.6.5 candidate commit `3b21d6f` and rep
 11 passing tests. It attributes the old state-4 assumption to the Aura-expanded dev
 dialogue; Christopher explicitly does not require Aura support. Candidate archive hash
 was checked locally; details are in the handoff. It is not published or collection-pinned,
-and fresh native/live acceptance remains pending. The existing stream-copy read-only
-verifier is not fresh-install evidence for this candidate.
+and a complete fresh install/live acceptance remain pending. A focused new-code repair
+on a disposable r3/game clone now passed: 120/225 installed with WeiDU exit 0, exact old
+344-row prefix preserved (346 rows after), and semantic verifier reports zero failures.
+See the handoff for evidence and test-copy ownership. No game was launched; the partial
+tail clone is not a completed collection installation. The existing stream-copy read-only
+verifier remains baseline-only evidence, distinct from this new native check.
 
 ### Current r3 checkpoint
 

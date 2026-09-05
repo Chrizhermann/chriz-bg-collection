@@ -29,7 +29,9 @@ user explicitly retained the full SoD bundle and authorized the source fix. The 
 SoD task returned local v0.6.5 candidate `3b21d6f` (11 tests reported passing); its old
 state-4 assumption came from the Aura-expanded dev layout. Christopher does not require
 Aura support and can do focused live testing. The candidate is not published/pinned and
-new-code native/live acceptance is still pending; see the handoff for exact evidence.
+focused native repair acceptance now passes on a disposable r3/game clone: 120/225 install
+with exit 0 and semantic verifier reports zero failures. Full fresh-install/in-game
+acceptance still remains; see the handoff for exact evidence and temporary clone ownership.
 The acceptance follow-up remains paused awaiting testing and a usable release, with component
 290 still separate and deferred. No fourth blind rebuild was started. Existing alpha.3
 packages still contain the old profile; source guards

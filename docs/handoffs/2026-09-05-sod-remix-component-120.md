@@ -1,5 +1,46 @@
 # CHRIZ-SOD-REMIX 120 blocks full curated installation
 
+## Focused native repair acceptance PASSED (2026-09-05)
+
+The collection created only `C:\Users\chris\Games\CEBG-SOD120-v065-test\game`, a
+disposable copy of frozen r3's game directory (not its managed `.chriz` state). Robocopy
+copied 161,404 files / 11.326 GiB with zero failures or mismatches; code 1 means files
+were copied successfully. No Baldur/InfinityLoader process was running.
+
+The exact v0.6.5 RC below was extracted there and only the missing components 120/225
+were installed using its packaged WeiDU. **Exit 0; both components successfully installed;
+no original label-4/index-out-of-bounds failure or other ERROR/WARNING in the transcript.**
+WeiDU identities increased from 344 to 346 with the original 344-row prefix unchanged and
+only 120/225 appended; existing 220 remains. WeiDU regenerated the older SoD rows' version
+comments as v0.6.5 from the current TP2. Those comments are not evidence of reinstalling
+the other 28 components: their prior v0.6.4 operations were retained.
+
+The source-repository semantic verifier then passed against these **newly patched bytes**:
+`SUMMARY: 0 failure(s)`. It covers picker gating, Essence placement/consumption, once-only
+1,000 XP per player slot, and absence of dialogue/cutscene/travel/spawn actions. Its first
+invocation required `game/weidu.exe`; the packaged setup executable was copied to that
+alias only in the disposable clone, after which verification passed.
+
+Evidence in the collection worktree:
+
+- `target/sod120-v065-copy.log`
+- `target/sod120-v065-install.log`
+- `target/sod120-v065-before-weidu.log`
+- `target/sod120-v065-verifier-with-weidu.log`
+
+Frozen r3's WeiDU.log and BDSCRY.dlg hashes were unchanged after the check:
+`93ede256c8aca44c2af9781080e6548b10a47c7957fbf8dabc3a7a5ff98ae5a2` and
+`807bdb045b3f67e0fc64ac72719e6bb97a9e1b8cbd7b4c60be125bbd6c55ac67`.
+
+This is a successful focused repair test, **not a full fresh curated installation**.
+No game was launched or save modified. The clone lacks the remaining collection tail and
+must not be represented as the completed stream-ready install. Keep it temporarily for
+Christopher's focused pool test, then remove only this disposable test when no longer
+needed. Do not load an arbitrary stream save without checking its recipe/TLK compatibility;
+prefer a fresh disposable test character if a compatible seed is unavailable. The owning
+task has received the exact results and is handling live-test instructions/publication
+coordination. No release was published or collection pin changed here.
+
 ## Local fix candidate received (2026-09-05)
 
 The owning task reports a fix on `codex/fix-sod120-compat-v0.6.5`, commit
@@ -15,7 +56,8 @@ BDIMOEN fixtures, portable WeiDU discovery, and the 120/220/225 contract. Its re
 scrying verifier on `C:\BG-EET-RC-20260903\game` also reports zero failures. **That
 read-only check is not evidence that the new candidate was installed or played.** The
 collection requested explicit separation of fresh-fix testing from existing-copy baseline
-checks, plus Christopher's exact remaining live-test steps. No live acceptance is claimed.
+checks, plus Christopher's exact remaining live-test steps. The focused new-code native
+check is now recorded above; in-game acceptance remains unclaimed.
 
 Executable-bearing local release candidate:
 `C:\Users\chris\Documents\Codex\2026-09-05\sod-remix-v0.6.5-rc-3b21d6f-r2\chriz-sod-remix-v0.6.5.zip`.
