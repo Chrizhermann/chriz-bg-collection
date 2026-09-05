@@ -332,8 +332,9 @@ or quarantine legacy-replay resume affordances; profile selection itself is alre
 
 ## Boundaries and cleanup inventory
 
-Future NEW agent test installations belong under `C:\CEBG-Tests\<unique-run-name>`
-(user requested a different destination after the cleanup backlog). Do not relocate any
+Future NEW agent test installations belong under `C:\Users\chris\CEBG-Tests\<unique-run-name>`
+(user requested a different destination and no folders directly under C:). The earlier
+`C:\CEBG-Tests` proposal was never created or used. Do not relocate any
 existing blocked target there, and do not move/restart the active r5 installation. Keep
 ordinary player destinations configurable and unchanged. There is only one local fixed
 drive currently detected (C:); this is ownership separation, not a second-disk migration.
@@ -366,6 +367,11 @@ The initial aborted root had no receipt, so its entire small 2.4 MB folder was a
 the other six use the engine's sanitized diagnostic export. These archives are local only.
 The current r5, accepted focused SoD test, user's earlier Chriz Easy BG root, source games
 and stream installation remain excluded from cleanup.
+
+Christopher is now manually deleting the seven obsolete copies. Do not race that work or
+assume all seven still exist. The root-level location is not established as the cause of
+the tool restriction: the earlier r2/r3-only command, entirely inside the user directory,
+was also rejected. Future destination separation is organizational, not a permission fix.
 
 The separate invalid legacy full run `C:\Users\chris\Games\CEBG-Full-20260905`
 (`install-8a3cab271f29d2c47f61`) remains historical evidence, not the corrected run.

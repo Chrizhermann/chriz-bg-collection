@@ -44,12 +44,14 @@ update notifications and the post-app-update/new-setup action are now visually t
 ([evidence](updates-ui-acceptance-2026-09-05.md), 80 frontend tests); the installed alpha.8
 predates this slice. Next signed candidate must include it. Public Evandra acquisition
 needs the verified original standalone package, not the creator's private aggregate ZIP.
-The explicit seven-copy cleanup request was tool-rejected too: seven blocked targets now exist;
-see the acceptance record. No workaround deletion is allowed. Nothing was removed.
+The explicit seven-copy cleanup request was tool-rejected too; see the acceptance record.
+Christopher is now deleting those copies manually. Do not race his cleanup or assume each
+folder still exists. No agent workaround deletion is allowed; the agent removed nothing.
 
 Christopher requested a separate destination for future tests. Use
-`C:\CEBG-Tests\<unique-run-name>` for NEW agent-owned disposable installations, not the
-user's normal Games folder or scattered C: roots. Keep frozen r5 where it is; no move,
+`C:\Users\chris\CEBG-Tests\<unique-run-name>` for NEW agent-owned disposable installations,
+not the user's normal Games folder or any folder directly under C:. Christopher rejected
+the earlier root-level proposal; it was not created or used. Keep frozen r5 where it is; no move,
 rename or restart is implied. Public/player install defaults are unchanged. This separation
 is for clear ownership and cleanup, not a workaround or guarantee about deletion policy.
 Preserve small diagnostics and retire failed full copies when permitted; surface a blocked
