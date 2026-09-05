@@ -12,6 +12,7 @@ export interface UpdateActions {
 
 const stateLabels: Readonly<Record<string, string>> = {
   "up-to-date": "Up to date", available: "Update available",
+  "local-available": "New installation available",
   "requires-app": "Update CEBG first", offline: "Could not connect",
   invalid: "Could not verify update", replayed: "Outdated update ignored",
   unavailable: "Not available yet", "not-installed": "Not installed",
@@ -19,11 +20,13 @@ const stateLabels: Readonly<Record<string, string>> = {
 
 function versionRow(
   title: string, currentVersion: string | null, availableVersion: string | null,
-  state: string, changelog: HTMLElement, action?: HTMLButtonElement,
+  state: string, changelog: HTMLElement, action?: HTMLButtonElement, note?: string, currentLabel = "Installed",
 ): HTMLElement {
   const row = element("article", "update-row");
+  if (["available", "requires-app", "local-available"].includes(state) && availableVersion !== null) row.classList.add("available");
   const installed = element("div", "update-installed");
-  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `Installed: ${currentVersion === "bundled" ? "Bundled alpha" : currentVersion}`));
+  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? "Bundled alpha" : currentVersion}`));
+  if (note !== undefined) installed.append(element("p", "update-purpose", note));
   const latest = element("div", "update-latest");
   if (availableVersion !== null) {
     changelog.hidden = true;
@@ -61,8 +64,9 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   const appVersion = updates.application.availableVersion;
   versions.append(versionRow("CEBG app", updates.application.currentVersion, appVersion, updates.application.state, appNotes,
     updates.application.state === "available" && appVersion !== null
-      ? actionButton("Install application update", () => actions.installApplication(appVersion), "quiet compact")
-      : undefined));
+      ? actionButton("Update CEBG app", () => actions.installApplication(appVersion), "primary compact")
+      : undefined,
+    updates.application.state === "available" ? "Updates the installer and launcher, not your game files." : undefined));
 
   const recipeNotes = element("div", "update-changelog");
   recipeNotes.append(element("h3", undefined, "What's new"));
@@ -73,11 +77,19 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
     recipeNotes.append(item);
   }
   if (updates.recipe.changes.length === 0) recipeNotes.append(element("p", undefined, "No changelog was included with this update."));
-  const recipeVersion = updates.recipe.availableVersion;
-  versions.append(versionRow("Collection", updates.recipe.currentVersion, recipeVersion, updates.recipe.state, recipeNotes,
-    updates.recipe.state === "available" && recipeVersion !== null
+  const localCollectionAvailable = updates.recipe.state === "up-to-date" && updates.managedCopies.some((copy) => copy.state === "update-available");
+  const recipeVersion = localCollectionAvailable ? updates.recipe.currentVersion : updates.recipe.availableVersion;
+  const recipeState = localCollectionAvailable ? "local-available" : updates.recipe.state;
+  versions.append(versionRow("Collection", updates.recipe.currentVersion, recipeVersion, recipeState, recipeNotes,
+    (updates.recipe.state === "available" || localCollectionAvailable) && recipeVersion !== null
       ? actionButton("Create updated installation", () => actions.buildUpdatedCopy(recipeVersion), "quiet compact")
-      : undefined));
+      : undefined,
+    updates.recipe.state === "requires-app"
+      ? "For your next playthrough. Included with the CEBG app update; your current game stays unchanged."
+      : updates.recipe.state === "available" && updates.recipe.disposition === "deferred-for-next-playthrough"
+        ? "For your next playthrough"
+        : localCollectionAvailable ? "For your next playthrough. Creates a new installation; your current game stays unchanged." : undefined,
+    "Included in CEBG"));
   if (updates.radar !== undefined) {
     const radar = updates.radar;
     const notes = element("div", "update-changelog");
@@ -96,10 +108,8 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
     versions.querySelectorAll<HTMLButtonElement>("button").forEach((button) => { button.disabled = true; });
   }
   page.append(versions);
-  if (updates.recipe.state === "available") {
-    page.append(element("p", "update-note", updates.recipe.disposition === "deferred-for-next-playthrough"
-      ? "For your next playthrough. Creates a new installation; this won't change your current save."
-      : "Collection updates create a new installation. Open the changelog for save compatibility."));
+  if (updates.recipe.state === "available" && updates.recipe.disposition !== "deferred-for-next-playthrough") {
+    page.append(element("p", "update-note", "Collection updates create a new installation. Open the changelog for save compatibility."));
   }
   if (updates.radar !== undefined && actions.installRadar === undefined) {
     page.append(element("p", "update-note", "BG Radar Overlay can be added after your game installation finishes."));

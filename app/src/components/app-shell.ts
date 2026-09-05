@@ -59,6 +59,11 @@ export function createAppShell(
     if (item.route === "updates") {
       button.dataset.action = "updates";
       button.setAttribute("aria-label", "Updates");
+      const container = element("span", "update-nav-item");
+      container.append(button);
+      if (route === item.route) button.setAttribute("aria-current", "page");
+      nav.append(container);
+      continue;
     }
     if (route === item.route) button.setAttribute("aria-current", "page");
     nav.append(button);

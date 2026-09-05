@@ -5,6 +5,14 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 ## Authority and current state
 
+**Latest UI/release planning:** [short alpha path](plans/2026-09-05-alpha-release-short-path.md)
+and [update-state visual acceptance](updates-ui-acceptance-2026-09-05.md). The source now
+has explicit app/collection/Radar notifications, accessible tooltip, and current-bundle
+new-install action (80 frontend tests and web build passed). These are not yet in the
+installed signed alpha.8; package a new version before claiming native acceptance of them.
+The original standalone Evandra download is available; its public acquisition contract
+must replace the private aggregate contract before public release. Do not alter frozen r4.
+
 **Full fresh installation r4 is running:** SoD v0.6.5 is published and independently
 verified. Frozen alpha.7 retains the exact curated component choices; app alpha.8
 also fixes the misleading Retry action for structured `fresh_copy_required` receipts

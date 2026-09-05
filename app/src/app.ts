@@ -10,6 +10,7 @@ import { reviewScreen } from "./screens/review";
 import { installScreen } from "./screens/install";
 import { setupScreen, type SetupViewState } from "./screens/setup";
 import { updatesScreen } from "./screens/updates";
+import { updateUpdatesControl } from "./components/update-notification";
 import {
   automaticInstallationPath,
   initialState,
@@ -241,11 +242,8 @@ class AppController implements AppHandle {
   }
 
   #updateBadge(): void {
-    const available = this.#updates.application.state === "available" || this.#updates.recipe.state === "available"
-      || this.#updates.radar?.state === "available";
     const button = this.root.querySelector<HTMLButtonElement>('[data-action="updates"]');
-    button?.setAttribute("data-update-available", String(available));
-    if (button) button.title = available ? "An update is available" : "Check versions and updates";
+    if (button) updateUpdatesControl(button, this.#updates);
   }
 
   async #backToSetup(): Promise<void> {
@@ -758,7 +756,9 @@ class AppController implements AppHandle {
   }
 
   async #buildUpdatedCopy(version: string): Promise<void> {
-    await this.backend.activateRecipeUpdate(version);
+    const usesCurrentRecipe = version === this.#updates.recipe.currentVersion
+      && this.#updates.managedCopies.some((copy) => copy.state === "update-available");
+    if (!usesCurrentRecipe) await this.backend.activateRecipeUpdate(version);
     await this.#beginNewInstallation();
   }
 

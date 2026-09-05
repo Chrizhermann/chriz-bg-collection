@@ -344,7 +344,10 @@ describe("Chriz Easy BG application flow", () => {
     expect(queryByText(root, "Update installation")).toBeNull();
     expect(queryByText(root, "Uninstall mod")).toBeNull();
 
-    await user.click(getByRole(root, "button", { name: "Install application update" }));
+    expect(getByText(root, "Updates the installer and launcher, not your game files.")).toBeTruthy();
+    expect(getByText(root, "For your next playthrough")).toBeTruthy();
+    expect(root.querySelectorAll(".update-row.available")).toHaveLength(2);
+    await user.click(getByRole(root, "button", { name: "Update CEBG app" }));
     expect(backend.installedAppVersions).toEqual(["0.1.0-alpha.2"]);
     await user.click(getByRole(root, "button", { name: "Create updated installation" }));
     expect(backend.activatedRecipeVersions).toEqual(["0.1.0-alpha.2"]);
@@ -383,8 +386,58 @@ describe("Chriz Easy BG application flow", () => {
 
     expect(getByText(root, /Last checked 2026-09-03 08:30 UTC/)).toBeTruthy();
     expect(getByText(root, /signature was invalid.*trusted recipe was kept/i)).toBeTruthy();
-    expect(queryByText(root, "Install application update")).toBeNull();
+    expect(queryByText(root, "Update CEBG app")).toBeNull();
     expect(queryByText(root, "Create updated installation")).toBeNull();
+  });
+
+  it("explains when the collection update is included with the CEBG app update", async () => {
+    class BundledRecipeBackend extends FixtureBackend {
+      override async getUpdates() {
+        const updates = await super.getUpdates();
+        return {
+          ...updates,
+          application: { ...updates.application, state: "available" as const, availableVersion: "0.1.0-alpha.9" },
+          recipe: { ...updates.recipe, state: "requires-app" as const, availableVersion: "0.1.0-alpha.9", disposition: "app-update-required" as const },
+        };
+      }
+    }
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, new BundledRecipeBackend());
+    await user.click(getByRole(root, "button", { name: "Updates" }));
+    expect(getByText(root, "For your next playthrough. Included with the CEBG app update; your current game stays unchanged.")).toBeTruthy();
+    expect(getByRole(root, "tooltip").textContent).toContain("CEBG app and collection");
+    expect(queryByText(root, "Create updated installation")).toBeNull();
+  });
+
+  it("creates from the recipe already included in CEBG without activating a remote recipe", async () => {
+    class CurrentRecipeBackend extends FixtureBackend {
+      activated: string[] = [];
+      override async getUpdates() {
+        const updates = await super.getUpdates();
+        return {
+          ...updates,
+          recipe: { ...updates.recipe, state: "up-to-date" as const, currentVersion: "0.1.0-alpha.9", availableVersion: null, disposition: "up-to-date" as const },
+          managedCopies: [{ installId: "old", name: "Old game", path: "D:\\Old", installedRecipeVersion: "0.1.0-alpha.8", state: "update-available" as const, detail: "A newer collection is included." }],
+        };
+      }
+      override activateRecipeUpdate(version: string) {
+        this.activated.push(version);
+        return Promise.reject(new Error("The bundled recipe must not be activated."));
+      }
+    }
+    const backend = new CurrentRecipeBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Updates" }));
+    expect(getByText(root, "Included in CEBG: 0.1.0-alpha.9")).toBeTruthy();
+    expect(getByText(root, "New installation available")).toBeTruthy();
+    await user.click(getByRole(root, "button", { name: "Create updated installation" }));
+    expect(backend.activated).toEqual([]);
+    expect(getByRole(root, "heading", { name: "Install Chriz Easy BG" })).toBeTruthy();
   });
 
   it("loads a ready installation before discovery and keeps Play independent from updates", async () => {

@@ -36,6 +36,13 @@ frozen hash, logs, remaining launch/update acceptance and cleanup boundaries. Fu
 collection acceptance is **not complete**. Older packages/status below are historical;
 there is still no public CEBG release/update channel. Installer acceptance is the priority.
 
+Christopher's [short alpha-release path](plans/2026-09-05-alpha-release-short-path.md)
+avoids another whole install merely to start it through a different entrypoint. Source
+update notifications and the post-app-update/new-setup action are now visually tested
+([evidence](updates-ui-acceptance-2026-09-05.md), 80 frontend tests); the installed alpha.8
+predates this slice. Next signed candidate must include it. Public Evandra acquisition
+needs the verified original standalone package, not the creator's private aggregate ZIP.
+
 ## Historical overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)
 
 Start with [`overnight-2026-09-05.md`](overnight-2026-09-05.md): current code changes,
