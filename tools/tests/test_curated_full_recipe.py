@@ -49,6 +49,23 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["when_any_features"], ["feature:xan:mandatory-components", "feature:rr:component-12"])
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
+            sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.5")
+            sod_artifact = tomllib.loads(
+                (output / "artifacts/chriz-sod-remix-0.6.5.toml").read_text(encoding="utf-8")
+            )
+            self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
+            self.assertEqual(sod_artifact["version"], "0.6.5")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.5")
+            self.assertEqual(
+                sod_artifact["source"]["expected_filename"],
+                "chriz-sod-remix-v0.6.5.zip",
+            )
+            self.assertEqual(sod_artifact["source"]["expected_length"], 1460498)
+            self.assertEqual(
+                sod_artifact["source"]["sha256"],
+                "e964507612730d0c44c0ea155291a1935ee8a6355cc83566be6a14f069e9d601",
+            )
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
@@ -79,7 +96,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("chriz-bg-modpack-bg2"), order.index("cdtweaks-spell-save-penalties-bg2"))
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.6")
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.7")
             self.assertFalse((output / "reference").exists())
 
     def test_reconciliation_covers_every_default_and_mandatory_row(self) -> None:

@@ -22,7 +22,7 @@ if __package__ in {None, ""}:
 from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_map
 
 
-RECIPE_VERSION = "0.1.0-alpha.6"
+RECIPE_VERSION = "0.1.0-alpha.7"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
 
@@ -669,6 +669,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for directory in ["artifacts", "game-builds", "mods", "releases"]:
         shutil.copytree(root / "manifest" / directory, destination / directory, dirs_exist_ok=True)
+    (destination / "artifacts/chriz-sod-remix-0.6.4.toml").unlink(missing_ok=True)
     shutil.copytree(root / "manifest/presets", destination / "presets", dirs_exist_ok=True)
     shutil.copy2(
         root / "recipes/creator-full-current/artifacts/creator-full-private-extras-20260902.toml",
