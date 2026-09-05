@@ -40,6 +40,13 @@ root, while immediate reuse requires the existing broad archive declaration.
 
 ## Required prompt and order changes
 
+- BG1 NPC v32 declares its Kivan choices `240`/`241` before portraits `160` and
+  player-initiated dialogues `200` (`bg1npc.tp2` lines 590/598/633/644). WeiDU
+  `--force-install-list` follows this source order, not the numeric order in the catalog.
+  The first corrected full run installed all eight selected components and exited zero,
+  but recipe alpha.4 expected `200, 240` and correctly failed exact-suffix verification.
+  Recipe alpha.5 restores the already documented native order for every offered BG1 NPC
+  choice. No selections or safety checks are removed; that failed copy cannot be resumed.
 - Bardic Wonders `1008` prints `[1] Yes` and `[2] No` for its Garrick assignment. The
   curated single-assignment route must answer literal integer **`2`**, not the historical
   replay's `1`. Then install Artisan NPC `99001`: the exact pinned `chriz-v1.3.1`

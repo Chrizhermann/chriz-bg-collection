@@ -22,9 +22,19 @@ if __package__ in {None, ""}:
 from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_map
 
 
-RECIPE_VERSION = "0.1.0-alpha.4"
+RECIPE_VERSION = "0.1.0-alpha.5"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
+
+# bg1npc v32 bg1npc.tp2: DESIGNATED declaration order (not numeric ID order).
+# --force-install-list selects components but WeiDU still visits the TP2 in this order.
+BG1NPC_NATIVE_ORDER = [
+    0, 10,
+    20, 21, 22, 23, 24, 30, 31, 32, 33, 34, 40, 41, 42, 43, 44,
+    50, 51, 52, 53, 54, 60, 61, 62, 63, 64, 70, 71, 72, 73, 74,
+    80, 90, 100, 110, 111, 112, 113, 114, 120, 130, 131,
+    240, 241, 150, 155, 160, 200,
+]
 
 CATALOG_RUNS = {
     "BG1NPC": "bg1npc-bg1",
@@ -663,6 +673,10 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     curation_map = load_curation_map(root / "manifest/curation-map.toml")
     target_rows = {row for target in curation_map.targets if target.kind == "feature" for row in target.rows}
     bg1_components = [row.component_id for row in rows if row.catalog == "BG1NPC" and RowKey(row.catalog, row.component_id) in target_rows]
+    unknown_bg1_components = set(bg1_components) - set(BG1NPC_NATIVE_ORDER)
+    if unknown_bg1_components:
+        raise ValueError(f"BG1NPC components lack verified native order: {sorted(unknown_bg1_components)}")
+    bg1_components = [component for component in BG1NPC_NATIVE_ORDER if component in bg1_components]
     base_collection = re.sub(
         r'(?ms)(run_id = "bg1npc-bg1"\nmod_id = "bg1npc"\nphase = "bg1-preparation"\n)components = \[[^\]]*\]',
         rf'\1components = [{", ".join(map(str, bg1_components))}]',

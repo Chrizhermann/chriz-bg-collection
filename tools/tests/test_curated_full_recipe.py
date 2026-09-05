@@ -28,6 +28,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 set(),
             )
             self.assertNotIn("creator-full", preset["selections"])
+            # WeiDU follows the pinned TP2 declaration order, not catalog/ID order.
+            bg1npc_components = runs["bg1npc-bg1"]["components"]
+            self.assertLess(bg1npc_components.index(240), bg1npc_components.index(160))
+            self.assertLess(bg1npc_components.index(241), bg1npc_components.index(160))
+            self.assertLess(bg1npc_components.index(160), bg1npc_components.index(200))
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
@@ -56,7 +61,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("chriz-bg-modpack-bg2"), order.index("cdtweaks-spell-save-penalties-bg2"))
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.4")
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.5")
             self.assertFalse((output / "reference").exists())
 
     def test_reconciliation_covers_every_default_and_mandatory_row(self) -> None:
