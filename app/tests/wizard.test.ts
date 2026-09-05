@@ -997,6 +997,64 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByRole(root, "heading", { level: 1, name: "My installs" })).toBeTruthy();
   });
 
+  it("requires a new installation for a fresh-copy-sealed terminal receipt", async () => {
+    class FreshCopyRequiredBackend extends FixtureBackend {
+      diagnosticInstalls: string[] = [];
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
+      }
+
+      override startBuild(_reviewToken: string, onEvent: Parameters<FixtureBackend["startBuild"]>[1]) {
+        queueMicrotask(() => {
+          onEvent({ runId: "run-sealed", sequenceAsString: "1", event: { type: "campaign_started", install_id: "install-sealed", resumed: false } });
+          onEvent({ runId: "run-sealed", sequenceAsString: "2", event: { type: "error", step_id: null, message: "The installer could not complete that check." } });
+        });
+        return Promise.resolve({ runId: "run-sealed" });
+      }
+
+      override getRunSnapshot(runId: string) {
+        return Promise.resolve({
+          runId,
+          status: "failed",
+          events: [],
+          report: {
+            install_id: "install-sealed",
+            managed_root: "D:\\Sealed Campaign",
+            plan_sha256: "22".repeat(32),
+            status: { status: "fresh_copy_required", step_id: "install:test", reason: "exact WeiDU suffix mismatch" },
+          },
+          error: {
+            code: "campaign_error",
+            message: "The installer could not complete that check.",
+            recovery_action: "Retry the check.",
+            technical_detail: "fixture generic failure",
+          },
+        });
+      }
+
+      override exportDiagnostics(installId: string) {
+        this.diagnosticInstalls.push(installId);
+        return Promise.resolve({ path: "D:\\Diagnostics\\install-sealed.zip" });
+      }
+    }
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    const backend = new FreshCopyRequiredBackend();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+    await waitFor(() => expect(getByText(root, "A new installation is needed")).toBeTruthy());
+
+    expect(getByText(root, "This copy cannot be resumed safely. Its failure evidence has been preserved.")).toBeTruthy();
+    expect(getByText(root, "Return to setup and choose a new empty folder for a fresh installation.")).toBeTruthy();
+    expect(queryByText(root, "Retry failed step")).toBeNull();
+    expect(getByRole(root, "button", { name: "Start new installation" })).toBeTruthy();
+
+    await user.click(getByRole(root, "button", { name: "Export diagnostics" }));
+    expect(backend.diagnosticInstalls).toEqual(["install-sealed"]);
+  });
+
   it("preserves a failed native snapshot and Retry when resume is rejected", async () => {
     class RejectingResumeBackend extends FixtureBackend {
       diagnosticInstalls: string[] = [];

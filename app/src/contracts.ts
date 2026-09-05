@@ -215,6 +215,7 @@ export interface BuildSnapshot {
   readonly logTail: readonly string[];
   readonly manualArchiveName: string | null;
   readonly recoveryAction?: string;
+  readonly freshCopyRequired?: boolean;
 }
 
 export interface ManagedInstallation {

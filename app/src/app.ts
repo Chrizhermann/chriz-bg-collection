@@ -663,17 +663,32 @@ class AppController implements AppHandle {
     try {
       const snapshot = await this.backend.getRunSnapshot(runId);
       if (runId !== this.#runId) return;
-      this.#retryAvailable = snapshot.status === "failed" && snapshot.report !== null;
-      if (snapshot.error !== null && this.#state.build !== null) {
+      const freshCopyRequired = snapshot.status === "failed"
+        && snapshot.report?.status.status === "fresh_copy_required";
+      this.#retryAvailable = snapshot.status === "failed"
+        && snapshot.report !== null
+        && !freshCopyRequired;
+      if (this.#state.build !== null && (freshCopyRequired || snapshot.error !== null)) {
         const current = this.#state.build;
-        const diagnostic = `${snapshot.error.code}: ${snapshot.error.technical_detail}`;
+        const diagnostic = snapshot.error === null
+          ? null
+          : `${snapshot.error.code}: ${snapshot.error.technical_detail}`;
         this.#dispatch({ type: "build-updated", build: {
           ...current,
-          ...(current.state === "waiting-manual" ? {} : {
+          ...(freshCopyRequired ? {
+            state: "failed" as const,
+            headline: "A new installation is needed",
+            detail: "This copy cannot be resumed safely. Its failure evidence has been preserved.",
+            recoveryAction: "Return to setup and choose a new empty folder for a fresh installation.",
+            manualArchiveName: null,
+            freshCopyRequired: true,
+          } : current.state === "waiting-manual" || snapshot.error === null ? {} : {
             detail: snapshot.error.message,
             recoveryAction: snapshot.error.recovery_action,
           }),
-          logTail: current.logTail.includes(diagnostic) ? current.logTail : [...current.logTail, diagnostic].slice(-200),
+          logTail: diagnostic === null || current.logTail.includes(diagnostic)
+            ? current.logTail
+            : [...current.logTail, diagnostic].slice(-200),
         } });
       }
       this.#render();

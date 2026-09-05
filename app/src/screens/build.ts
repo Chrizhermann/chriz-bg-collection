@@ -34,7 +34,8 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
   } else if (snapshot.state === "attention") {
     controls.append(actionButton("Continue build", actions.advance));
   } else if (snapshot.state === "failed") {
-    if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));
+    if (snapshot.freshCopyRequired) controls.append(actionButton("Start new installation", actions.backToSetup));
+    else if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));
     else controls.append(actionButton("Back to setup", actions.backToSetup));
     if (actions.diagnosticsAvailable) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));
   } else if (snapshot.state === "running") {
