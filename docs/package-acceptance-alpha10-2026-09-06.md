@@ -1,5 +1,12 @@
 # Local alpha.10 package acceptance (2026-09-06)
 
+**Publication follow-up:** the same signed binary is now public. See
+`docs/publication-acceptance-2026-09-06.md` for anonymous download/signature verification
+and the corrected dotted GitHub asset filename/feed. The original local-feed hashes
+below are historical, not the final published metadata. Fresh mock-harness startup
+failure is tracked privately in `Chrizhermann/chriz-bg-collection#2`; the bounded
+import comparison below did not demonstrate a production-app startup defect.
+
 This is a local, unpublished Windows package of app `0.1.0-alpha.10` with bundled recipe
 `0.1.0-alpha.11`. No installer, application, browser, game, or updater installation was
 launched.
@@ -39,13 +46,32 @@ The prior alpha.9 setup remains present at its original 5,252,740 bytes and SHA-
 The freshly built setup passed the ignored `package_config` signature test against the
 bundled updater public key: 1 passed, 0 failed.
 
-The current dependency feature set does not expose `tauri::test` while recompiling
-`updater_download_acceptance.rs`. As authorized for this acceptance, the existing compiled
-headless harness
+As authorized for this acceptance, the existing compiled headless harness
 `target/debug/deps/updater_download_acceptance-d26df3b5ef40af79.exe` was run directly with
 app version `0.1.0-alpha.10`, current version `0.1.0-alpha.9`, and the new setup. Its real
 Tauri loopback update check, download, exact-byte comparison, signature verification, and
 tamper rejection passed: 1 passed, 0 failed.
+
+### Feature-enabled rebuild follow-up
+
+A subsequent clean compilation supplied the required `tauri/test` dependency feature and
+completed successfully, but Windows terminated the newly generated test executable before
+test enumeration with `0xc0000139` (`STATUS_ENTRYPOINT_NOT_FOUND`). A second clean build in
+an independent target directory with incremental compilation disabled and static Rust
+linkage preferred reproduced the same pre-test loader failure. Consequently, neither fresh
+binary executed the ignored test body; this follow-up does not replace the passing direct
+run of the pre-existing headless harness recorded above.
+
+Read-only PE inspection found the old passing harness and both fresh failing harnesses have
+the same normalized static DLL/function import set. None imports `chriz_bg_app_lib.dll` or
+`WebView2Loader.dll`; both old and new harnesses contain `MockRuntime` and `tauri::test`
+markers that are absent from the release application executable. The Windows event log did
+not identify the missing dynamically resolved entry point. This bounds the reproduced
+failure to test-harness startup rather than demonstrating an application startup defect,
+but the exact missing entry point remains unresolved and should be tracked privately.
+
+The package also passed a Microsoft Defender custom-file scan: exit code 0, no threats
+found.
 
 ## Local update feed
 

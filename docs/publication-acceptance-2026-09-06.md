@@ -51,3 +51,9 @@ list, with authorization to deploy `/collection`. Website deployment/public-page
 verification is pending at this checkpoint; binary and feed checks are complete. Native updater
 apply/restart, safe-pause close behavior and every customization remain alpha
 acceptance boundaries rather than claimed live tests.
+
+Private source checkpoint `aa44060` is pushed on `codex/installer-v0-real-alpha`.
+The fresh mock-harness loader failure is tracked in private collection issue2;
+see `docs/issues/updater-harness-entrypoint.md`. Identical old/new static imports
+and absence of mock markers in the release app did not establish an app-startup
+defect; the earlier working harness and public signature/download tests passed.
