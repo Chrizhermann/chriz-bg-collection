@@ -3178,7 +3178,7 @@ requires = ["mod:eet-end"]
 [[features]]
 id = "feature:chriz-sod-remix:mandatory-components"
 title = "Complete CHRIZ-SOD-REMIX setup"
-description = "Install all 30 reviewed v0.6.4 components as one indivisible bundle, including the camp-chest treasure route."
+description = "Install all 30 reviewed v0.6.5 components as one indivisible bundle, including the camp-chest treasure route."
 category = "collection"
 decision = "mandatory"
 readiness = "ready"
