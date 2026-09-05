@@ -10,12 +10,12 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
   recipe version `0.1.0-alpha.6`; signed app alpha.7 is packaged and installed locally.
 - Selection comes from curation and later approvals, never a replay of historical logs.
   See [the approved reconciliation plan](plans/2026-09-05-curation-reconciliation.md).
-- The replacement real installation **is running through the same engine CLI backend**.
+- The replacement installation **is stopped: SoD Remix 120 needs an owning-repo fix**.
   Target: `C:\Users\chris\Games\CEBG-Curated-20260905-r3`.
   Install id: `install-c117933c9f2de8edc020`.
   Recipe SHA-256: `e5ced746536e989e7482834b0f2bb40e18bc1fba595ac13a7e27112c96c2563a`.
   App cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
-  CLI PID: `33316` (verify identity before acting), executable
+  Former CLI PID: `33316` (exited), executable
   `target/full-install-20260905-r4/chriz-bg-install.exe`. This fresh attempt honestly has
   no originating desktop-app version; launcher rediscovery remains part of acceptance.
   CLI logs: `target/curated-r3-install.stdout.log` and `target/curated-r3-install.stderr.log`.
@@ -71,6 +71,20 @@ that the public channel is live, and signature verification alone is not an appl
   Automatic updater apply/restart remains distinct from this manual NSIS installation.
 
 ## Continuation
+
+### Current blocker: SoD Remix 120 (r3)
+
+The bounded follow-up found r3 terminal at ledger 216. SCS, Randomiser, EET_END, and late
+Bardic 1012/3001 passed. SoD Remix 120 failed because `csrhood.d` addresses BDSCRY state 4,
+but the actual restored dialogue has only four states (0-3); dependent 225 was skipped.
+The latest published source is still v0.6.4. This needs a source-repository compatibility
+fix and a new pin, not another recipe-only tweak or a component omission.
+
+Read the [complete owning-repo handoff](handoffs/2026-09-05-sod-remix-component-120.md).
+Failure diagnostics are saved separately (553 files). No fourth full rebuild was started,
+no source mod edits or publication were made, and no game-launch acceptance was attempted
+on this incomplete copy. The automatic follow-up is paused pending the user's direction
+to hand off the fix/release to the SoD task. Full installation acceptance remains incomplete.
 
 ### Current r3 checkpoint
 
