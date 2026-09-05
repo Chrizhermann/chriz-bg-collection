@@ -11,20 +11,24 @@ parallel owning-repo work for an early alpha, not a reason to restart the runnin
 
 ## Reuse the real work already running
 
-Fresh r4 uses the same engine preparation and `execute_frozen_campaign` pipeline as the
+Current r5 replaces r4 after a diagnosed recipe-only TP2-alias mismatch, not to repeat a
+button click. All 30 SoD components succeeded in r4; its immutable failure stays intact.
+The corrected alpha.8 recipe has unchanged component selections/order and plan hash.
+
+Fresh r5 uses the same engine preparation and `execute_frozen_campaign` pipeline as the
 desktop app. The desktop route additionally validates its reviewed identity/token,
-handles native events/dialogs, and records its application version. R4 was started by
+handles native events/dialogs, and records its application version. R5 was started by
 the CLI, so it correctly has no originating app version. Do not fabricate one.
 
 Do not repeat all 43 runs merely to say a button started them. Previous native attempts
 already exercised actual start, manual archive supply, progress, failure and resume.
-Complete r4 and separately verify the packaged app's remaining lifecycle seams. Report
+Complete r5 and separately verify the packaged app's remaining lifecycle seams. Report
 these evidence scopes accurately rather than claiming an uninterrupted native end-to-end
 run that did not happen.
 
 ## Minimum useful release sequence
 
-1. Complete r4; verify successful receipt, frozen version and exact WeiDU component list.
+1. Complete r5; verify successful receipt, frozen version and exact WeiDU component list.
 2. Add the newest verified Radar release to that successful game copy.
 3. Rediscover it in packaged CEBG; test Play, Open game folder, Back and Updates.
 4. Launch a new game and save/reload. Christopher can perform the gameplay smoke once
@@ -53,7 +57,7 @@ and its ordinary download chooser were checked: Windows `evandra-v2.2.exe` (12.8
 route exists; availability is not the blocker. Obtain/verify the standalone package,
 its digest/layout and full relevant payload equality, then freeze that acquisition
 contract. Do not silently drop Evandra or other approved choices to get a release out.
-This does not change the frozen r4 installation.
+This does not change the frozen r5 installation.
 
 ## Updates in the alpha
 

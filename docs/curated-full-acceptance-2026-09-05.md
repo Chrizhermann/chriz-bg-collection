@@ -5,15 +5,42 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 ## Authority and current state
 
+**Current run is r5, not r4.** R4 stopped after all 30 SoD Remix components installed
+successfully: the recipe expected the root TP2 alias, whereas setup-name WeiDU logged
+the byte-identical nested TP2. The immutable failure remains; no seal was removed.
+See [the bounded diagnosis and correction](handoffs/2026-09-05-sod-tp2-identity.md).
+
+- Root: `C:\Users\chris\Games\CEBG-Curated-20260905-r5`.
+- Install ID: `install-e6325c7c98451ad4901e`; attempt `attempt-aba3cbb32e1956c690b8`.
+- Frozen recipe `0.1.0-alpha.8`, SHA-256
+  `cb220e5de749a779ec0e87337534fd803c11805375011e4b2856984120b4da34`.
+- PID `45792`, started `2026-09-05T21:38:57.4010069+09:00`. Reuses the unchanged engine
+  executable `target/full-install-20260905-r4/chriz-bg-install.exe`; verify both before use.
+- Logs: `target/curated-r5-install.stdout.log` and `.stderr.log`. This human-output invocation
+  writes progress to stderr; a nonempty stderr file alone is not an error.
+- Exact same 43 runs / 430 components, sources and cache. Selection hash
+  `c30cd756e7db86def60cca27425b5af27d358faf3c1eede79a4987e4a9dc15bd` and plan hash
+  `ef683e075fa7a620cd68051d2c51d0b274bf497b4975cd66683c94aa9341d499` are unchanged.
+- Recipe-only fix `b14c50a`; generated recipe commit `c4d607e`. 28 Python tool tests,
+  4 production Chriz recipe tests and 11 WeiDU-verifier tests passed. Generic exact-path
+  verification remains strict. Other remaining root-TP2 releases lack the duplicate alias.
+- First verified checkpoint: ledger 71 (`stage:bg1`), all acquisitions complete, worker alive.
+  This CLI-originated run has no originating desktop-app version. Do not invent one.
+- R2/r3 cleanup was also tool-rejected before execution; nothing was deleted. Do not retry
+  these paths by another route. Diagnostics are retained. R5's actual preflight passed:
+  approximately 43.21 GB required versus 50.54 GB available before it began.
+
 **Latest UI/release planning:** [short alpha path](plans/2026-09-05-alpha-release-short-path.md)
 and [update-state visual acceptance](updates-ui-acceptance-2026-09-05.md). The source now
 has explicit app/collection/Radar notifications, accessible tooltip, and current-bundle
 new-install action (80 frontend tests and web build passed). These are not yet in the
 installed signed alpha.8; package a new version before claiming native acceptance of them.
 The original standalone Evandra download is available; its public acquisition contract
-must replace the private aggregate contract before public release. Do not alter frozen r4.
+must replace the private aggregate contract before public release. Do not alter frozen r5.
 
-**Full fresh installation r4 is running:** SoD v0.6.5 is published and independently
+### Historical r4 identity (terminal, not a resume target)
+
+**R4 stopped at ledger 216 with a TP2 identity mismatch:** SoD v0.6.5 is published and independently
 verified. Frozen alpha.7 retains the exact curated component choices; app alpha.8
 also fixes the misleading Retry action for structured `fresh_copy_required` receipts
 (65 frontend tests/typecheck passed, commit `a7bd8cf`).
@@ -32,7 +59,7 @@ also fixes the misleading Retry action for structured `fresh_copy_required` rece
 - Logs: `target/curated-r4-install.stdout.log`, `target/curated-r4-install.stderr.log`.
 - Cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
 - Sources: clean Steam BG:EE+SoD and BG2:EE 2.7.3; both remain read-only.
-- Latest bounded checkpoint: ledger 99, BG2 Sarah artifact materialization, worker alive.
+- Final checkpoint: ledger 216, `fresh_copy_required` after SoD; worker exited.
   Inspect only the newest ledger records for progress; record zero is a large frozen payload.
 - Signed app alpha.8 packaging passed; silent local NSIS upgrade exited zero and the
   installed EXE reports alpha.8 at `target/nsis-smoke-20260905-022935/chriz-bg-app.exe`.
@@ -309,12 +336,14 @@ All clean Steam sources, `C:\Games` references, saves and stream installations r
 untouched. Do not weaken validation, edit a frozen recipe/ledger or omit a curated component
 to obtain a passing run. Deferred mod design discussions remain deferred.
 
-Three cleanup requests were rejected by the tool policy before execution. Do not retry
+Five cleanup targets were rejected by the tool policy before execution. Do not retry
 those deletions by another route, and do not report them as removed:
 
 - `C:\CEBG-Full-20260905` (`install-daea3ea2007ad86185b2`).
 - `C:\Users\chris\Games\CEBG-alpha-test-20260905` (`install-3e091429c2b2d8889c15`).
 - `C:\Users\chris\Games\CEBG-Curated-20260905` (`install-66c8b55f3690bda2e3a5`).
+- `C:\Users\chris\Games\CEBG-Curated-20260905-r2` (`install-55cd391fcb89a92eac0c`).
+- `C:\Users\chris\Games\CEBG-Curated-20260905-r3` (`install-c117933c9f2de8edc020`).
 
 The separate invalid legacy full run `C:\Users\chris\Games\CEBG-Full-20260905`
 (`install-8a3cab271f29d2c47f61`) remains historical evidence, not the corrected run.

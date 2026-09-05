@@ -19,18 +19,20 @@ Start with [the approved reconciliation path](plans/2026-09-05-curation-reconcil
 The overnight `creator-full-current` recipe bypassed recorded curation; it is invalid as
 the curated collection. **Do not repair Bristlelick or resume that selection.** Curation
 files are intact. Restore them as the authority, preserve deferred mod work, check changed
-ordering against mod documentation/source. **Fresh run r4 is now running** at
-`C:\Users\chris\Games\CEBG-Curated-20260905-r4`, installation
-`install-83f1bf87d5eb83425ed7`. Its frozen alpha.7 recipe retains exactly **43 runs /
+ordering against mod documentation/source. **Fresh run r5 is now running** at
+`C:\Users\chris\Games\CEBG-Curated-20260905-r5`, installation
+`install-e6325c7c98451ad4901e`. Its frozen alpha.8 recipe retains exactly **43 runs /
 430 components**, including all 30 approved SoD components; Aura and 290 remain deferred.
 SoD v0.6.5 is published, independently downloaded/hash-verified, and pinned. Its mod bytes
 match the candidate Christopher accepted in focused gameplay/save-reload testing. See the
 [owning-repo handoff](handoffs/2026-09-05-sod-remix-component-120.md).
 
-The prior native-order and conditional Randomiser-answer failures are fixed. Failed r3
-remains immutable and must not resume. App alpha.8 is built and installed locally and fixes
+The prior native-order and conditional Randomiser-answer failures are fixed. R4 then hit
+a recipe TP2-alias mismatch after all 30 SoD components succeeded. The nested canonical
+path is corrected with regression coverage; no component choices changed. Failed r3/r4
+remain immutable and must not resume. App alpha.8 is built and installed locally and fixes
 the misleading Retry option when a new copy is required. Radar Latest 2.5.0.0 download,
-layout and seven engine tests passed; add it after r4 has a successful receipt. The
+layout and seven engine tests passed; add it after r5 has a successful receipt. The
 [current acceptance record](curated-full-acceptance-2026-09-05.md) has the exact worker,
 frozen hash, logs, remaining launch/update acceptance and cleanup boundaries. Full fresh
 collection acceptance is **not complete**. Older packages/status below are historical;
@@ -42,6 +44,8 @@ update notifications and the post-app-update/new-setup action are now visually t
 ([evidence](updates-ui-acceptance-2026-09-05.md), 80 frontend tests); the installed alpha.8
 predates this slice. Next signed candidate must include it. Public Evandra acquisition
 needs the verified original standalone package, not the creator's private aggregate ZIP.
+R2/r3 deletion requests were tool-rejected too: five protected cleanup targets now exist;
+see the acceptance record. No workaround deletion is allowed. Nothing was removed.
 
 Latest queued requirements are captured in [recovery and casual customization](plans/2026-09-05-recovery-and-casual-customization.md).
 Dual update notification is implemented in source. **Safe pause/app-close handling is
