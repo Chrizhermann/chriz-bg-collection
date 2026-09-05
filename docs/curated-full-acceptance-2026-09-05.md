@@ -89,6 +89,13 @@ He can perform focused live tests there. The automatic installation follow-up re
 paused while the fix/test/release candidate is prepared. Full acceptance remains incomplete;
 no component selections were changed and unrelated component 290 remains deferred.
 
+The owning task has now returned local v0.6.5 candidate commit `3b21d6f` and reports
+11 passing tests. It attributes the old state-4 assumption to the Aura-expanded dev
+dialogue; Christopher explicitly does not require Aura support. Candidate archive hash
+was checked locally; details are in the handoff. It is not published or collection-pinned,
+and fresh native/live acceptance remains pending. The existing stream-copy read-only
+verifier is not fresh-install evidence for this candidate.
+
 ### Current r3 checkpoint
 
 The conditional-prompt fix is committed as `6a2558b`, and recipe alpha.6 static evidence

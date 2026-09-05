@@ -26,8 +26,11 @@ The alpha.4 native run stopped on component order; r2 stopped on a missing scrip
 Randomiser compatibility answer. All three native-order errors and the conditional `y`
 answer are fixed without changing component selections (43 runs / 430 components). The
 user explicitly retained the full SoD bundle and authorized the source fix. The owning
-SoD task has received the handoff and is active; Christopher can do focused live testing.
-The acceptance follow-up remains paused awaiting that fix/test candidate, with component
+SoD task returned local v0.6.5 candidate `3b21d6f` (11 tests reported passing); its old
+state-4 assumption came from the Aura-expanded dev layout. Christopher does not require
+Aura support and can do focused live testing. The candidate is not published/pinned and
+new-code native/live acceptance is still pending; see the handoff for exact evidence.
+The acceptance follow-up remains paused awaiting testing and a usable release, with component
 290 still separate and deferred. No fourth blind rebuild was started. Existing alpha.3
 packages still contain the old profile; source guards
 do not retroactively fix those binaries. Installer acceptance remains the main priority.
