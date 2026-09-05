@@ -1,0 +1,32 @@
+id = "evandra-2.2-windows"
+name = "Evandra NPC"
+version = "2.2"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://www.gibberlings3.net/files/file/1008-evandra/?do=download"
+reference = "2.2-windows"
+expected_filename = "evandra-v2.2.exe"
+expected_length = 13430253
+sha256 = "21724b6d4679d6df6dbcf95a0a4dbe6ee41d5bfdb3ae13907ec89f5d00014861"
+redirect_hosts = []
+
+[archive]
+kind = "self-extracting-rar"
+root_rule = "direct"
+publish_roots = ["evandra"]
+tp2_paths = ["evandra/setup-evandra.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://www.gibberlings3.net/mods/npcs/evandra/"
+license = "User downloads the official release; CEBG does not redistribute it or execute the self-extractor"
+url = "https://www.gibberlings3.net/files/file/1008-evandra/"
+reviewed_on = "2026-09-06"

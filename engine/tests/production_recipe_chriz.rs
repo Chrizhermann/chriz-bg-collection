@@ -9,7 +9,7 @@ use bg_engine::Manifest;
 
 const SOD_REMIX_COMPONENTS: &[u32] = &[
     100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215,
-    220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900,
+    220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910,
 ];
 const BG_REBALANCE_COMPONENTS: &[u32] = &[100, 101, 120, 121, 400, 401, 404, 405, 407, 408];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
@@ -25,23 +25,23 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.5"];
-    assert_eq!(artifact.version, "0.6.5");
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.7"];
+    assert_eq!(artifact.version, "0.6.7");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.5/chriz-sod-remix-v0.6.5.zip"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.7/chriz-sod-remix-v0.6.7.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.5");
+    assert_eq!(artifact.source.reference, "v0.6.7");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-sod-remix-v0.6.5.zip")
+        Some("chriz-sod-remix-v0.6.7.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_460_498));
+    assert_eq!(artifact.source.expected_length, Some(1_509_999));
     assert_eq!(
         artifact.source.sha256,
-        "e964507612730d0c44c0ea155291a1935ee8a6355cc83566be6a14f069e9d601"
+        "d82213b29e1d24cbd14562bbd57c9dab8d165e4ca80cb4d2f6f25bd590fb9155"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -115,6 +115,11 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
         .expect("SoD Remix bundle");
     assert_eq!(bundle.decision, Decision::Mandatory);
     assert_eq!(bundle.readiness, Readiness::Ready);
+    assert_eq!(parent.requires, ["mod:eet-end"]);
+    for prerequisite in [110, 140, 150, 160] {
+        assert!(run.components.contains(&prerequisite));
+    }
+    assert!(!run.components.contains(&291));
 
     let mut selection = Selection::defaults("windows");
     selection.set_feature("mod:chriz-sod-remix", false);

@@ -124,14 +124,14 @@ class CatalogParserTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2] / "docs" / "curation" / "components"
         rows = load_catalogs(root)
 
-        self.assertEqual(len(rows), 1_181)
+        self.assertEqual(len(rows), 1_189)
         self.assertEqual(
             decision_totals(rows),
             {
-                Decision.EXCLUDED: 583,
-                Decision.OPTIONAL: 158,
-                Decision.DEFAULT: 299,
-                Decision.MANDATORY: 141,
+                Decision.EXCLUDED: 584,
+                Decision.OPTIONAL: 161,
+                Decision.DEFAULT: 301,
+                Decision.MANDATORY: 143,
             },
         )
 
@@ -353,13 +353,13 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_181)
-        self.assertEqual(result.excluded_rows, 583)
-        self.assertEqual(result.feature_rows + result.omission_rows, 598)
-        self.assertEqual(result.choice_groups, 60)
+        self.assertEqual(result.mapped_rows, 1_189)
+        self.assertEqual(result.excluded_rows, 584)
+        self.assertEqual(result.feature_rows + result.omission_rows, 605)
+        self.assertEqual(result.choice_groups, 61)
         self.assertEqual(result.optional_none_groups, 13)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1181", coverage_report(rows, result))
+        self.assertIn("rows=1189", coverage_report(rows, result))
 
     def test_current_map_freezes_reviewed_omissions_and_atomic_bundles(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -435,10 +435,10 @@ default = "none"
                     185,
                     190,
                     195,
+                    210,
                     197,
                     187,
                     200,
-                    210,
                     215,
                     220,
                     225,
@@ -450,10 +450,26 @@ default = "none"
                     260,
                     270,
                     280,
+                    290,
                     900,
+                    910,
                 )
             ),
         )
+        self.assertEqual(
+            targets["feature:chriz-bg-modpack:component-610"].rows,
+            (RowKey("CHRIZ-BG-MODPACK", 610),),
+        )
+        hexxat = next(
+            group
+            for group in curation_map.choice_groups
+            if group.group_id == "choice:chriz-bg-modpack:hexxat-class"
+        )
+        self.assertEqual(
+            hexxat.options,
+            tuple(RowKey("CHRIZ-BG-MODPACK", component) for component in (221, 222, 223)),
+        )
+        self.assertEqual(hexxat.default, "CHRIZ-BG-MODPACK:221")
 
 
 if __name__ == "__main__":

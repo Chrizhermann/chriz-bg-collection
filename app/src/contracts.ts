@@ -161,6 +161,7 @@ export type EngineEvent =
   | { readonly type: "attention_required"; readonly step_id: string; readonly reason: string; readonly last_output: string }
   | { readonly type: "step_finished"; readonly id: string; readonly outcome: "succeeded" | "failed" | "skipped" }
   | { readonly type: "campaign_finished"; readonly install_id: string }
+  | { readonly type: "campaign_paused"; readonly install_id: string; readonly after_step_id: string }
   | { readonly type: "manual_download_needed"; readonly mod_id: string; readonly page: string; readonly expected_sha256: string; readonly drop_dir: string }
   | { readonly type: "error"; readonly step_id: string | null; readonly message: string };
 
@@ -179,6 +180,16 @@ export interface ManualArchiveSupply {
   readonly filename: string;
   readonly sha256: string;
   readonly length: number;
+}
+
+export interface ManualDownloadRequirement {
+  readonly artifactId: string;
+  readonly modIds: readonly string[];
+  readonly title: string;
+  readonly filename: string;
+  readonly length: number;
+  readonly ready: boolean;
+  readonly detail: string | null;
 }
 
 export interface CampaignReport {
@@ -201,6 +212,8 @@ export type BuildState =
   | "attention"
   | "failed"
   | "running"
+  | "pausing"
+  | "paused"
   | "complete";
 
 export type PhaseState = "done" | "current" | "pending" | "failed";

@@ -13,6 +13,35 @@ class CuratedFullRecipeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[2]
 
+    def test_evandra_uses_official_windows_archive_without_private_aggregate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            mod = tomllib.loads((output / "mods/evandra.toml").read_text(encoding="utf-8"))
+            self.assertEqual(mod["artifact_id"], "evandra-2.2-windows")
+            self.assertFalse((output / "artifacts/creator-full-private-extras-20260902.toml").exists())
+            artifact = tomllib.loads((output / "artifacts/evandra-2.2-windows.toml").read_text(encoding="utf-8"))
+            self.assertEqual(artifact["source"]["expected_filename"], "evandra-v2.2.exe")
+            self.assertEqual(artifact["source"]["expected_length"], 13430253)
+            self.assertEqual(artifact["source"]["sha256"], "21724b6d4679d6df6dbcf95a0a4dbe6ee41d5bfdb3ae13907ec89f5d00014861")
+            self.assertEqual(artifact["archive"]["kind"], "self-extracting-rar")
+            self.assertEqual(artifact["archive"]["publish_roots"], ["evandra"])
+
+    def test_skipping_evandra_omits_core_and_crossmod_but_keeps_other_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            baseline = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
+            defaults = _effective_features(collection, baseline)
+            self.assertTrue(defaults["feature:evandra:mandatory-components"])
+            self.assertTrue(defaults["feature:evandra:component-1"])
+            skipped = _effective_features(collection, {**baseline, "mod:evandra": "off"})
+            changes = {key for key in defaults if defaults[key] != skipped[key]}
+            self.assertEqual(changes, {"mod:evandra", "feature:evandra:mandatory-components", "feature:evandra:component-1"})
+            self.assertFalse(skipped["feature:evandra:mandatory-components"])
+            self.assertFalse(skipped["feature:evandra:component-1"])
+
     def test_new_offered_component_requires_native_order_audit(self) -> None:
         collection = (self.root / "manifest/collection.toml").read_text(encoding="utf-8")
         collection = collection.replace("components = [1, 2, 20000", "components = [999999, 1, 2, 20000", 1)
@@ -23,7 +52,13 @@ class CuratedFullRecipeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "recipe"
             (output / "artifacts").mkdir(parents=True)
-            for stale in ["chriz-bg-modpack-0.2.0-alpha.1", "bardicwonders-v2.9c-balance.2"]:
+            for stale in [
+                "chriz-bg-modpack-0.2.0-alpha.1",
+                "bardicwonders-v2.9c-balance.2",
+                "chriz-sod-remix-0.6.5",
+                "chriz-sod-remix-0.6.6",
+                "creator-full-private-extras-20260902",
+            ]:
                 (output / "artifacts" / f"{stale}.toml").write_text(f'id = "{stale}"\n', encoding="utf-8")
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
@@ -56,26 +91,29 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.5")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.7")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.5.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.7.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.5")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.5")
+            self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
+            self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
+            self.assertEqual(sod_artifact["version"], "0.6.7")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.7")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.5.zip",
+                "chriz-sod-remix-v0.6.7.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 1460498)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 1509999)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "e964507612730d0c44c0ea155291a1935ee8a6355cc83566be6a14f069e9d601",
+                "d82213b29e1d24cbd14562bbd57c9dab8d165e4ca80cb4d2f6f25bd590fb9155",
             )
-            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900])
+            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910])
+            self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
@@ -122,15 +160,57 @@ class CuratedFullRecipeTests(unittest.TestCase):
             bardic_main = runs["bardicwonders-bg2"]["components"]
             self.assertLess(bardic_main.index(1004), bardic_main.index(2007))
             self.assertLess(bardic_main.index(2007), bardic_main.index(2004))
-            private_artifact = tomllib.loads(
-                (output / "artifacts/creator-full-private-extras-20260902.toml").read_text(encoding="utf-8")
+            evandra_artifact = tomllib.loads(
+                (output / "artifacts/evandra-2.2-windows.toml").read_text(encoding="utf-8")
             )
-            self.assertEqual(private_artifact["archive"]["publish_roots"], ["evandra"])
-            self.assertEqual(private_artifact["archive"]["tp2_paths"], ["evandra/setup-evandra.tp2"])
+            self.assertFalse((output / "artifacts/creator-full-private-extras-20260902.toml").exists())
+            self.assertEqual(evandra_artifact["archive"]["publish_roots"], ["evandra"])
+            self.assertEqual(evandra_artifact["archive"]["tp2_paths"], ["evandra/setup-evandra.tp2"])
             prompt = next(component for component in bardic["components"] if component["id"] == 1008)["prompts"][0]
             self.assertEqual(prompt["answer"]["value"], {"kind": "integer", "value": 2})
             self.assertEqual(features["feature:chriz-bg-modpack:component-400"]["requires"], ["feature:branwen:component-0", "mod:spell-rev"])
             self.assertEqual(features["feature:chriz-bg-modpack:component-430"]["requires"], ["feature:cdtweaks:component-2170"])
+            self.assertEqual(
+                features["feature:chriz-bg-modpack:component-610"]["requires"],
+                ["feature:eeex:mandatory-components", "mod:eet-end"],
+            )
+            self.assertEqual(features["feature:chriz-bg-modpack:component-220"]["decision"], "default")
+            hexxat = [features[f"feature:chriz-bg-modpack:component-{component}"] for component in (221, 222, 223)]
+            self.assertEqual([feature["decision"] for feature in hexxat], ["default", "optional", "optional"])
+            self.assertEqual(
+                [[conflict["feature_id"] for conflict in feature["conflicts"]] for feature in hexxat],
+                [
+                    ["feature:chriz-bg-modpack:component-222", "feature:chriz-bg-modpack:component-223", "feature:artisanskitpack-npc:component-7104"],
+                    ["feature:chriz-bg-modpack:component-221", "feature:chriz-bg-modpack:component-223", "feature:artisanskitpack-npc:component-7104"],
+                    ["feature:chriz-bg-modpack:component-221", "feature:chriz-bg-modpack:component-222", "feature:artisanskitpack-npc:component-7104"],
+                ],
+            )
+            artisan_hexxat = features["feature:artisanskitpack-npc:component-7104"]
+            self.assertEqual(artisan_hexxat["decision"], "optional")
+            self.assertEqual(
+                [conflict["feature_id"] for conflict in artisan_hexxat["conflicts"]],
+                [f"feature:chriz-bg-modpack:component-{component}" for component in (221, 222, 223)],
+            )
+            conflict_reasons = {
+                conflict["feature_id"]: conflict["reason"]
+                for feature in [*hexxat, artisan_hexxat]
+                for conflict in feature["conflicts"]
+            }
+            self.assertIn("Shadowdancer", conflict_reasons["feature:chriz-bg-modpack:component-221"])
+            self.assertIn("Fighter/Thief", conflict_reasons["feature:chriz-bg-modpack:component-222"])
+            self.assertIn("Assassin", conflict_reasons["feature:chriz-bg-modpack:component-223"])
+            self.assertIn("Invisible Blade", conflict_reasons["feature:artisanskitpack-npc:component-7104"])
+            self.assertNotIn("feature:artisanskitpack-npc:component-7104", preset["selections"])
+            for component in (220, 221, 610):
+                self.assertEqual(
+                    preset["selections"][f"feature:chriz-bg-modpack:component-{component}"],
+                    "on",
+                )
+            for component in (222, 223):
+                self.assertNotIn(
+                    f"feature:chriz-bg-modpack:component-{component}",
+                    preset["selections"],
+                )
             self.assertEqual(features["mod:bardicwonders"]["decision"], "default")
             bardic_features = [
                 feature
@@ -163,7 +243,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("chriz-bg-modpack-bg2"), order.index("cdtweaks-spell-save-penalties-bg2"))
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.9")
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.11")
             self.assertFalse((output / "reference").exists())
 
     def test_common_customization_routes_preserve_dependency_collateral(self) -> None:
@@ -241,7 +321,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             )
             for component in artisan_npc_components:
                 original_classes[f"feature:artisanskitpack-npc:component-{component}"] = "off"
-            for component in (110, 190, 192, 193, 194, 195, 196, 198):
+            for component in (110, 190, 192, 193, 194, 195, 196, 198, 220, 221, 222, 223):
                 original_classes[f"feature:chriz-bg-modpack:component-{component}"] = "off"
             for component in (1, 2, 3, 4):
                 original_classes[f"feature:xan:component-{component}"] = "off"
@@ -250,6 +330,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse(effective["feature:yeslicknpc:component-1"])
             self.assertFalse(effective["feature:chriz-bg-modpack:component-140"])
             self.assertFalse(effective["feature:chriz-bg-modpack:component-170"])
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-220"])
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-221"])
             self.assertTrue(effective["feature:chriz-bg-modpack:component-197"])
             for component in (130, 430, 440, 450):
                 self.assertTrue(effective[f"feature:chriz-bg-modpack:component-{component}"])
@@ -260,10 +342,13 @@ class CuratedFullRecipeTests(unittest.TestCase):
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             report = (output / "RECONCILIATION.md").read_text(encoding="utf-8")
             self.assertIn("Engine-equivalent resolved-selection summary", report)
-            self.assertIn("440 default/mandatory rows", report)
+            self.assertIn("444 default/mandatory rows", report)
             self.assertIn("`IWDIFICATION:120` | default", report)
             self.assertIn("`BARDICWONDERS:1006` | default", report)
             self.assertIn("`CHRIZ-BG-MODPACK:400` | mandatory", report)
+            self.assertIn("`CHRIZ-BG-MODPACK:610` | default", report)
+            self.assertIn("`CHRIZ-SOD-REMIX:290` | mandatory", report)
+            self.assertIn("`CHRIZ-SOD-REMIX:910` | mandatory", report)
 
 
 if __name__ == "__main__":

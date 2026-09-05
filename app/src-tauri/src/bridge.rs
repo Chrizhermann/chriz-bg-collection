@@ -1,8 +1,9 @@
 //! Read-only native adapter over the engine's presentation-neutral CLI operations.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::{OsStr, OsString};
 use std::fs;
+use std::io;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -21,13 +22,14 @@ use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameProfiles, GameRole, Storefront,
 };
 use bg_engine::loader::Manifest;
-use bg_engine::manifest::{AcquisitionPolicy, InputValue, Phase};
+use bg_engine::manifest::{AcquisitionPolicy, ArchiveKind, InputValue, Phase};
 use bg_engine::preflight::is_creator_protected_destination;
 use bg_engine::recipe_view::{FeatureControl, NormalizedSelection, RecipeView, SelectionFinding};
 use bg_engine::registry::{
     CampaignAvailability, InstallAvailability, ManagedCampaignCard, ManagedInstallCard,
     ManagedInstallRegistry,
 };
+use bg_engine::resolve::InstallPlan;
 use bg_engine::weidu::runner::RunnerControlHandle;
 use serde::Serialize;
 
@@ -393,6 +395,19 @@ pub struct ManualArchiveResponse {
     pub filename: String,
     pub sha256: String,
     pub length: u64,
+}
+
+/// One selected manual artifact and its exact installer-owned cache readiness.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ManualDownloadRequirementResponse {
+    pub artifact_id: String,
+    pub mod_ids: Vec<String>,
+    pub title: String,
+    pub filename: String,
+    pub length: u64,
+    pub ready: bool,
+    pub detail: Option<String>,
 }
 
 /// One sanitized diagnostics archive created through a native file choice.
@@ -893,6 +908,124 @@ impl NativeBridge {
         Ok(project_evaluation(report.evaluation))
     }
 
+    /// Lists selected manual artifacts and verifies only their exact installer-owned cache paths.
+    pub fn inspect_manual_downloads(
+        &self,
+        selection: &NormalizedSelection,
+    ) -> Result<Vec<ManualDownloadRequirementResponse>, CommandError> {
+        let report = plan_recipe(
+            &self.recipe,
+            &self.preset,
+            &selection.platform,
+            &selection_overrides(selection),
+        )
+        .map_err(CommandError::from_cli)?;
+        self.manual_download_requirements(&report.evaluation.plan)
+    }
+
+    fn manual_download_requirements(
+        &self,
+        plan: &InstallPlan,
+    ) -> Result<Vec<ManualDownloadRequirementResponse>, CommandError> {
+        let manifest = Manifest::load(&self.recipe).map_err(|error| {
+            CommandError::new(
+                "recipe_load_failed",
+                "The installer recipe could not be verified.",
+                "Repair or replace the installer recipe, then try again.",
+                error.to_string(),
+            )
+        })?;
+        let mut owners = BTreeMap::<String, BTreeSet<String>>::new();
+        for run in &plan.runs {
+            for artifact_id in [&run.artifact_id, &run.weidu_artifact_id] {
+                let artifact = manifest.artifacts.get(artifact_id).ok_or_else(|| {
+                    invalid_manual_contract(artifact_id, "resolved artifact metadata")
+                })?;
+                if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
+                    owners
+                        .entry(artifact_id.clone())
+                        .or_default()
+                        .insert(run.mod_id.clone());
+                }
+            }
+        }
+
+        owners
+            .into_iter()
+            .map(|(artifact_id, mod_ids)| {
+                let artifact = &manifest.artifacts[&artifact_id];
+                let filename = artifact
+                    .source
+                    .expected_filename
+                    .as_deref()
+                    .filter(|filename| {
+                        let mut components = Path::new(filename).components();
+                        matches!(components.next(), Some(Component::Normal(_)))
+                            && components.next().is_none()
+                    })
+                    .ok_or_else(|| {
+                        invalid_manual_contract(&artifact_id, "safe expected filename")
+                    })?;
+                let length = artifact.source.expected_length.ok_or_else(|| {
+                    invalid_manual_contract(&artifact_id, "expected archive length")
+                })?;
+                let mod_ids = mod_ids.into_iter().collect::<Vec<_>>();
+                let title = mod_ids
+                    .iter()
+                    .map(|mod_id| {
+                        manifest
+                            .mods
+                            .get(mod_id)
+                            .map(|mod_file| mod_file.name.as_str())
+                            .unwrap_or(mod_id.as_str())
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let path = self.cache.join("manual").join(filename);
+                let (ready, detail) =
+                    inspect_manual_cache_file(&path, &artifact.source.sha256, length, filename);
+                Ok(ManualDownloadRequirementResponse {
+                    artifact_id,
+                    mod_ids,
+                    title,
+                    filename: filename.to_owned(),
+                    length,
+                    ready,
+                    detail,
+                })
+            })
+            .collect()
+    }
+
+    fn ensure_manual_downloads_ready(&self, plan: &InstallPlan) -> Result<(), CommandError> {
+        let missing = self
+            .manual_download_requirements(plan)?
+            .into_iter()
+            .filter(|requirement| !requirement.ready)
+            .collect::<Vec<_>>();
+        if missing.is_empty() {
+            return Ok(());
+        }
+        let detail = missing
+            .iter()
+            .map(|requirement| {
+                format!(
+                    "{} ({}): {}",
+                    requirement.title,
+                    requirement.filename,
+                    requirement.detail.as_deref().unwrap_or("not ready")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        Err(CommandError::new(
+            "manual_download_required",
+            "A selected mod still needs its official download.",
+            "Choose the exact official archive, or skip that mod before starting the installation.",
+            detail,
+        ))
+    }
+
     /// Validates a prospective managed-copy destination without creating or claiming it.
     pub fn inspect_destination(
         &self,
@@ -996,6 +1129,45 @@ impl NativeBridge {
             sha256: published.sha256,
             length: published.length,
         }))
+    }
+
+    /// Returns the sole extension allowed by this manual artifact's validated archive kind.
+    #[doc(hidden)]
+    pub fn manual_archive_filter_extensions(
+        &self,
+        artifact_id: &str,
+    ) -> Result<Vec<String>, CommandError> {
+        validate_recipe(&self.recipe, self.validation_profile()).map_err(CommandError::from_cli)?;
+        let manifest = Manifest::load(&self.recipe).map_err(|error| {
+            CommandError::new(
+                "recipe_load_failed",
+                "The installer recipe could not be verified.",
+                "Repair or replace the installer recipe, then try again.",
+                error.to_string(),
+            )
+        })?;
+        let artifact = manifest.artifacts.get(artifact_id).ok_or_else(|| {
+            CommandError::new(
+                "manual_archive_unknown",
+                "That file is not part of this installer recipe.",
+                "Return to setup and choose the download requested there.",
+                format!("unknown manual artifact id {artifact_id:?}"),
+            )
+        })?;
+        if artifact.acquisition != AcquisitionPolicy::ManualUserSupplied {
+            return Err(CommandError::new(
+                "manual_archive_not_allowed",
+                "That recipe file is not supplied manually.",
+                "Return to setup and use the requested download action.",
+                format!("artifact {artifact_id:?} is {:?}", artifact.acquisition),
+            ));
+        }
+        let extension = match artifact.archive.kind {
+            ArchiveKind::Zip => "zip",
+            ArchiveKind::Iemod => "iemod",
+            ArchiveKind::SelfExtractingRar => "exe",
+        };
+        Ok(vec![extension.to_owned()])
     }
 
     /// Opens only the HTTPS manual-download page declared by a verified recipe artifact.
@@ -1302,6 +1474,10 @@ impl NativeBridge {
         bg1_candidate_id: &str,
         bg2_candidate_id: &str,
     ) -> Result<FrozenReviewResponse, CommandError> {
+        let overrides = selection_overrides(selection);
+        let plan_report = plan_recipe(&self.recipe, &self.preset, &selection.platform, &overrides)
+            .map_err(CommandError::from_cli)?;
+        self.ensure_manual_downloads_ready(&plan_report.evaluation.plan)?;
         let (registered_bg1, registered_bg2) =
             self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
         let bg1 = self.reinspect_source(&registered_bg1, GameRole::BgeeSod)?;
@@ -1324,9 +1500,6 @@ impl NativeBridge {
                 error,
             )
         })?;
-        let overrides = selection_overrides(selection);
-        let plan_report = plan_recipe(&self.recipe, &self.preset, &selection.platform, &overrides)
-            .map_err(CommandError::from_cli)?;
         let normalized_selection = &plan_report.evaluation.normalized_selection;
         let recipe_digest = recipe_directory_digest(&plan_report.recipe)?;
         let selection_digest = selection_digest(normalized_selection).map_err(digest_error)?;
@@ -1403,6 +1576,14 @@ impl NativeBridge {
             .remove(review_token)
             .ok_or_else(invalid_review_token)?;
         self.validate_review_snapshot(&review)?;
+        let plan = plan_recipe(
+            &review.request.recipe,
+            &review.request.preset,
+            &review.request.platform,
+            &review.request.overrides,
+        )
+        .map_err(CommandError::from_cli)?;
+        self.ensure_manual_downloads_ready(&plan.evaluation.plan)?;
         self.spawn_install_worker(review.request, review.engine_identity, listener)
     }
 
@@ -1445,9 +1626,24 @@ impl NativeBridge {
         Ok(())
     }
 
+    /// Requests a cooperative stop after the active step is durably complete.
+    pub fn pause_run(&self, run_id: &str) -> Result<(), CommandError> {
+        self.active_controls(run_id)?.pause_after_boundary();
+        if let Some(snapshot) = self.runtime_lock().run_snapshots.get_mut(run_id) {
+            snapshot.status = "pausing".to_owned();
+        }
+        Ok(())
+    }
+
     #[doc(hidden)]
     pub fn active_run_count(&self) -> usize {
         self.runtime_lock().active_runs.len()
+    }
+
+    /// Returns the sole active run id, when this process owns a build worker.
+    #[doc(hidden)]
+    pub fn active_run_id(&self) -> Option<String> {
+        self.runtime_lock().active_runs.keys().next().cloned()
     }
 
     /// Refuses application or trusted-recipe replacement while this process owns a build.
@@ -1912,6 +2108,11 @@ fn finish_worker(
         Ok(Ok(report)) if matches!(report.status, bg_engine::cli::CampaignStatus::Complete) => {
             (Some(report), None)
         }
+        Ok(Ok(report))
+            if matches!(report.status, bg_engine::cli::CampaignStatus::Paused { .. }) =>
+        {
+            (Some(report), None)
+        }
         Ok(Ok(report)) => {
             let error = CommandError::from_cli(CliError::from_campaign(report.clone()));
             (Some(report), Some(error))
@@ -1949,10 +2150,10 @@ fn finish_worker(
                 .insert(report.install_id.clone(), report.managed_root.clone());
         }
         if let Some(snapshot) = state.run_snapshots.get_mut(run_id) {
-            snapshot.status = if error.is_some() {
-                "failed".to_owned()
-            } else {
-                "complete".to_owned()
+            snapshot.status = match report.as_ref().map(|report| &report.status) {
+                Some(bg_engine::cli::CampaignStatus::Paused { .. }) => "paused".to_owned(),
+                _ if error.is_some() => "failed".to_owned(),
+                _ => "complete".to_owned(),
             };
             snapshot.report = report;
             snapshot.error = error;
@@ -2465,6 +2666,57 @@ fn invalid_manual_contract(artifact_id: &str, missing: &str) -> CommandError {
         "Install a corrected recipe release before continuing.",
         format!("manual artifact {artifact_id:?} has no valid {missing}"),
     )
+}
+
+fn inspect_manual_cache_file(
+    path: &Path,
+    expected_sha256: &str,
+    expected_length: u64,
+    filename: &str,
+) -> (bool, Option<String>) {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return (false, Some(format!("{filename} has not been supplied yet")));
+        }
+        Err(error) => {
+            return (
+                false,
+                Some(format!("could not inspect {filename}: {error}")),
+            );
+        }
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return (
+            false,
+            Some(format!("{filename} is not a regular cache file")),
+        );
+    }
+    if metadata.len() != expected_length {
+        return (
+            false,
+            Some(format!(
+                "{filename} has length {}; expected {expected_length}",
+                metadata.len()
+            )),
+        );
+    }
+    match bg_engine::acquire::provide_manual_archive(path, expected_sha256) {
+        Ok(verified) if verified.length == expected_length => (true, None),
+        Ok(verified) => (
+            false,
+            Some(format!(
+                "{filename} has length {}; expected {expected_length}",
+                verified.length
+            )),
+        ),
+        Err(_) => (
+            false,
+            Some(format!(
+                "{filename} does not match the exact archive required by this recipe"
+            )),
+        ),
+    }
 }
 
 fn changed_review(reason: &str) -> CommandError {

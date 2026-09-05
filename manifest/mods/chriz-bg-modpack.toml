@@ -55,6 +55,22 @@ id = 198
 name = "Kivan: Archer kit"
 
 [[components]]
+id = 220
+name = "Yoshimo: Swashbuckler"
+
+[[components]]
+id = 221
+name = "Hexxat: Shadowdancer"
+
+[[components]]
+id = 222
+name = "Hexxat: Fighter/Thief multiclass"
+
+[[components]]
+id = 223
+name = "Hexxat: Assassin"
+
+[[components]]
 id = 400
 name = "Branwen Spiritual Hammer: repair magical-weapon charges"
 
@@ -73,3 +89,7 @@ name = "Ascension Improved Slayer Transformation: repair EE Fixpack subspell lin
 [[components]]
 id = 450
 name = "SCS shapechange spells: repair the EE Fixpack interaction"
+
+[[components]]
+id = 610
+name = "Progressive utility XP for locks, traps, and learning spells"

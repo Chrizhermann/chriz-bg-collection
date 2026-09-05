@@ -7,8 +7,14 @@ Listed at installed version **v2.2**.
 
 - Component `0` is the core and is included automatically when Evandra is selected.
   Component `1` requires `0` and remains an optional default.
-- Evandra v2.2 is a manual, page-gated download and may not be rehosted. The UI/install
-  flow must identify the required archive and ask the user to provide it.
+- Evandra v2.2 is a manual, page-gated download and may not be rehosted. The approved
+  temporary alpha flow asks **before copying/installing**: download from the official
+  page, choose the downloaded file, or skip Evandra (including crossmod component `1`).
+  The Windows file is `evandra-v2.2.exe`, 13,430,253 bytes, SHA-256
+  `21724b6d4679d6df6dbcf95a0a4dbe6ee41d5bfdb3ae13907ec89f5d00014861`.
+  CEBG verifies its exact contents, caches it, and unpacks the RAR payload without
+  executing the self-extractor. The Linux ZIP is not requested. See
+  `docs/handoffs/2026-09-06-evandra-public-acquisition.md` for evidence/status.
 
 ## Related collection layers
 

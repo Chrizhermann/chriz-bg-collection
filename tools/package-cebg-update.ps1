@@ -13,6 +13,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
 
+    [string]$PublishedSetupFilename,
     [string]$RecipeVersion = $Version,
     [string]$Notes = "Chriz Easy BG $Version."
 )
@@ -40,6 +41,13 @@ try {
     throw 'The Tauri .sig file must contain a nonempty base64 signature.'
 }
 if ([string]::IsNullOrWhiteSpace($RecipeVersion)) { throw 'RecipeVersion cannot be empty.' }
+if ([string]::IsNullOrWhiteSpace($PublishedSetupFilename)) {
+    $PublishedSetupFilename = $setup.Name -replace ' ', '.'
+}
+if ($PublishedSetupFilename -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]*\.exe$') {
+    throw 'PublishedSetupFilename must be a portable ASCII .exe filename without directories.'
+}
+$publishedSignatureFilename = "$PublishedSetupFilename.sig"
 
 $output = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDirectory)
 $feedPath = Join-Path $output 'latest.json'
@@ -53,7 +61,7 @@ foreach ($inputFile in @($setup.FullName, $signatureFile.FullName)) {
 $setupHash = (Get-FileHash -LiteralPath $setup.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
 $signatureHash = (Get-FileHash -LiteralPath $signatureFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
 $releaseTag = [Uri]::EscapeDataString("v$Version")
-$assetName = [Uri]::EscapeDataString($setup.Name)
+$assetName = [Uri]::EscapeDataString($PublishedSetupFilename)
 $feed = [ordered]@{
     version = $Version
     recipe_version = $RecipeVersion
@@ -71,7 +79,7 @@ $feed = [ordered]@{
 $utf8 = [Text.UTF8Encoding]::new($false)
 [IO.File]::WriteAllText($feedPath, ($feed | ConvertTo-Json -Depth 5) + "`n", $utf8)
 $feedHash = (Get-FileHash -LiteralPath $feedPath -Algorithm SHA256).Hash.ToLowerInvariant()
-$checksums = @("$setupHash  $($setup.Name)", "$signatureHash  $($signatureFile.Name)", "$feedHash  latest.json")
+$checksums = @("$setupHash  $PublishedSetupFilename", "$signatureHash  $publishedSignatureFilename", "$feedHash  latest.json")
 [IO.File]::WriteAllText($checksumsPath, ($checksums -join "`n") + "`n", $utf8)
 
-[pscustomobject]@{ FeedPath = $feedPath; ChecksumsPath = $checksumsPath; SetupSha256 = $setupHash }
+[pscustomobject]@{ FeedPath = $feedPath; ChecksumsPath = $checksumsPath; SetupSha256 = $setupHash; PublishedSetupFilename = $PublishedSetupFilename }

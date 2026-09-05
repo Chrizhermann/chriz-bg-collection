@@ -22,10 +22,31 @@ fn bundle_resources_include_production_game_profiles() {
     .expect("parse Tauri configuration");
     let profile_root = crate_root.join("../../manifest/game-builds");
 
-    assert_eq!(
-        config["bundle"]["resources"]["../../manifest/"],
-        "manifest/"
-    );
+    let resources = config["bundle"]["resources"].as_object().unwrap();
+    assert!(!resources.contains_key("../../manifest/"));
+    for relative in [
+        "collection.toml",
+        "release.json",
+        "artifacts/",
+        "mods/",
+        "presets/",
+        "game-builds/",
+        "releases/",
+    ] {
+        assert_eq!(
+            resources[&format!("../../manifest/{relative}")],
+            format!("manifest/{relative}")
+        );
+    }
+    for authoring in [
+        "reference/",
+        "evidence/",
+        "curation-map.toml",
+        "install-order.tsv",
+        "mod-sources.tsv",
+    ] {
+        assert!(!resources.contains_key(&format!("../../manifest/{authoring}")));
+    }
     assert_eq!(
         config["bundle"]["resources"]["../../recipes/curated-full-current/"],
         "recipes/curated-full-current/"
@@ -37,6 +58,21 @@ fn bundle_resources_include_production_game_profiles() {
         .join("steam-bgee-sod-2.7.3-en-us.toml")
         .is_file());
     assert!(profile_root.join("steam-bg2ee-2.7.3-en-us.toml").is_file());
+}
+
+#[test]
+fn bundle_resources_include_application_and_decoder_notices() {
+    let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let config: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(crate_root.join("tauri.conf.json")).unwrap())
+            .unwrap();
+    for (source, target) in [
+        ("../../LICENSE", "LICENSE"),
+        ("../../THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"),
+    ] {
+        assert_eq!(config["bundle"]["resources"][source], target);
+        assert!(crate_root.join(source).is_file());
+    }
 }
 
 #[test]

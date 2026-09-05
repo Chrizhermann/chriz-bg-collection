@@ -640,6 +640,7 @@ fn check_one_artifact_contract(id: &str, artifact: &Artifact, findings: &mut Vec
             match artifact.archive.kind {
                 crate::manifest::ArchiveKind::Zip => filename.ends_with(".zip"),
                 crate::manifest::ArchiveKind::Iemod => filename.ends_with(".iemod"),
+                crate::manifest::ArchiveKind::SelfExtractingRar => filename.ends_with(".exe"),
             }
         })
     {

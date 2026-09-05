@@ -8,11 +8,11 @@ use bg_engine::games::GameRole;
 use bg_engine::lock::{LockError, TargetLock};
 use bg_engine::manifest::{GameRoot, Phase, Postcondition, RunArg};
 use bg_engine::orchestrator::{
-    run_campaign, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
-    CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest,
-    InstallLogVerifier, InstallReconciliation, InvocationBuilder, MaterializationOutcome,
-    MaterializationTask, MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft,
-    ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt, StepFailure,
+    run_campaign, run_campaign_controlled, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer,
+    BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder,
+    CampaignRequest, InstallLogVerifier, InstallReconciliation, InvocationBuilder,
+    MaterializationOutcome, MaterializationTask, MutationCheck, ProcessResult, ProcessRunner,
+    ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt, StepFailure,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -20,6 +20,7 @@ use bg_engine::session::{
     CampaignCreated, FrozenIdentity, SessionEvent, SessionReplay, SessionStore,
     SourceGameFingerprints,
 };
+use bg_engine::weidu::runner::RunnerControlHandle;
 
 const RECIPE_PAYLOAD: &[u8] = b"PK\x03\x04signed alpha recipe";
 const RECIPE_ENVELOPE: &[u8] = br#"{"recipe_id":"alpha","version":"0.1.0"}"#;
@@ -182,6 +183,8 @@ struct FakeDeps {
     record_was_first_dependency: bool,
     now: u64,
     staged_files: Vec<(GameRole, PathBuf, Vec<u8>)>,
+    pause_after_operation: Option<String>,
+    controls: Option<RunnerControlHandle>,
 }
 
 impl CampaignRecorder for FakeDeps {
@@ -234,6 +237,9 @@ impl ArtifactAcquirer for FakeDeps {
         *self.acquisitions.entry(identity.id.clone()).or_default() += 1;
         self.acquired_identities
             .push((identity.id.clone(), identity.length, kind));
+        if self.pause_after_operation.as_deref() == Some(&operation) {
+            self.controls.as_ref().unwrap().pause_after_boundary();
+        }
         self.maybe_fail(&operation)
     }
 }
@@ -572,6 +578,40 @@ fn complete_build_uses_stable_order_one_acquisition_per_identity_and_holds_targe
             "Build the EET campaign",
         ]
     );
+}
+
+#[test]
+fn pause_waits_for_a_durable_boundary_and_resume_starts_with_the_next_step() {
+    let fixture = Fixture::new();
+    let sink = RecordingSink::default();
+    let controls = RunnerControlHandle::new();
+    let mut deps = FakeDeps {
+        pause_after_operation: Some("acquire:eefix".to_owned()),
+        controls: Some(controls.clone()),
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign_controlled(&fixture.request, &mut deps, &sink, &controls).unwrap();
+
+    assert_eq!(
+        outcome,
+        CampaignOutcome::Paused {
+            after_step_id: "acquire:eefix".to_owned(),
+        }
+    );
+    assert_eq!(
+        completed_step_ids(&fixture.request.created.managed_root),
+        vec!["preflight", "acquire:eefix"]
+    );
+    assert!(deps.receipts.is_empty(), "pause is not a terminal receipt");
+
+    let mut resumed = FakeDeps::default();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.acquisitions.get("eefix"), None);
+    assert_eq!(resumed.acquisitions.get("weidu"), Some(&1));
 }
 
 #[test]

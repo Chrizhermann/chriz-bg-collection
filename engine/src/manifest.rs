@@ -116,6 +116,8 @@ pub enum ArchiveKind {
     Zip,
     /// An Infinity Engine mod archive using ZIP framing.
     Iemod,
+    /// A Windows executable containing an embedded RAR archive; the executable is never run.
+    SelfExtractingRar,
 }
 
 /// How the payload is rooted inside the downloaded archive.

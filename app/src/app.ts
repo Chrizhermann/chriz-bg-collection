@@ -1,7 +1,7 @@
 import { BackendCommandError, type Backend } from "./backend";
 import { createAppShell } from "./components/app-shell";
 import type { TechnicalLogState } from "./components/technical-log";
-import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, ManagedInstallation, Route, RunEventEnvelope, UpdateSummary } from "./contracts";
+import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, ManagedInstallation, ManualDownloadRequirement, Route, RunEventEnvelope, UpdateSummary } from "./contracts";
 import { buildScreen } from "./screens/build";
 import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
@@ -89,7 +89,12 @@ class AppController implements AppHandle {
   #revision = 0;
   #destinationRevision = 0;
   #identityRevision = 0;
+  #manualDownloadRevision = 0;
   #starting = false;
+  #manualDownloads: readonly ManualDownloadRequirement[] = [];
+  #manualDownloadGateVisible = false;
+  #manualDownloadCheckingArtifactId: string | null = null;
+  #manualDownloadError: { readonly artifactId: string; readonly message: string } | null = null;
   #runId: string | null = null;
   #installId: string | null = null;
   #retryAvailable = false;
@@ -486,7 +491,73 @@ class AppController implements AppHandle {
 
   #beginIdentityEdit(): boolean {
     ++this.#identityRevision;
+    this.#clearManualDownloadGate();
     return !this.#starting;
+  }
+
+  #clearManualDownloadGate(): void {
+    ++this.#manualDownloadRevision;
+    this.#manualDownloads = [];
+    this.#manualDownloadGateVisible = false;
+    this.#manualDownloadCheckingArtifactId = null;
+    this.#manualDownloadError = null;
+  }
+
+  async #inspectManualDownloads(identityRevision = this.#identityRevision): Promise<readonly ManualDownloadRequirement[] | null> {
+    const revision = ++this.#manualDownloadRevision;
+    const requirements = await this.backend.inspectManualDownloads(this.#state.selection);
+    if (revision !== this.#manualDownloadRevision || identityRevision !== this.#identityRevision) return null;
+    this.#manualDownloads = requirements;
+    return requirements;
+  }
+
+  #manualDownloadErrorMessage(error: unknown): string {
+    if (error instanceof BackendCommandError) return `${error.message} ${error.recoveryAction}`;
+    return "That file could not be checked. Choose the official downloaded file again.";
+  }
+
+  async #chooseUpfrontManualArchive(artifactId: string): Promise<void> {
+    if (this.#starting || this.#manualDownloadCheckingArtifactId !== null) return;
+    const identityRevision = this.#identityRevision;
+    this.#manualDownloadCheckingArtifactId = artifactId;
+    this.#manualDownloadError = null;
+    this.#render();
+    try {
+      const supplied = await this.backend.supplyManualArchive(artifactId);
+      if (supplied === null || identityRevision !== this.#identityRevision) return;
+      const requirements = await this.#inspectManualDownloads(identityRevision);
+      const pending = requirements?.find((requirement) => requirement.artifactId === artifactId && !requirement.ready);
+      if (pending !== undefined) {
+        this.#manualDownloadError = { artifactId, message: pending.detail ?? "That file did not match the official download. Choose it again." };
+      }
+    } catch (error: unknown) {
+      if (identityRevision === this.#identityRevision) {
+        this.#manualDownloadError = { artifactId, message: this.#manualDownloadErrorMessage(error) };
+      }
+    } finally {
+      if (identityRevision === this.#identityRevision) {
+        this.#manualDownloadCheckingArtifactId = null;
+        this.#render();
+      }
+    }
+  }
+
+  async #openUpfrontManualSource(artifactId: string): Promise<void> {
+    if (this.#starting || this.#manualDownloadCheckingArtifactId !== null) return;
+    await this.backend.openManualSource(artifactId);
+  }
+
+  async #skipManualDownload(requirement: ManualDownloadRequirement): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
+    const identityRevision = this.#identityRevision;
+    const changes = Object.fromEntries(requirement.modIds.map((modId) => [modId.includes(":") ? modId : `mod:${modId}`, false]));
+    this.#dispatch({ type: "set-features", changes });
+    await this.#evaluate(false);
+    if (identityRevision !== this.#identityRevision) return;
+    const requirements = await this.#inspectManualDownloads(identityRevision);
+    if (requirements === null) return;
+    this.#manualDownloadGateVisible = requirements.length > 0;
+    this.#render();
   }
 
   #canInstall(): boolean {
@@ -510,15 +581,73 @@ class AppController implements AppHandle {
     this.#starting = true;
     this.#render();
     try {
+      const requirements = await this.#inspectManualDownloads(identityRevision);
+      if (requirements === null) {
+        if (identityRevision !== this.#identityRevision) {
+          throw new BackendCommandError({
+            code: "installation_identity_changed",
+            message: "Installation details changed while starting.",
+            recovery_action: "Review the current installation details, then choose Install Chriz Easy BG again.",
+            technical_detail: "An installation identity control changed while manual downloads were being inspected.",
+          });
+        }
+        return;
+      }
+      if (requirements.some((requirement) => !requirement.ready)) {
+        this.#manualDownloadGateVisible = true;
+        if (this.#state.route === "review") {
+          this.#dispatch({ type: "navigate", route: "welcome", remember: false });
+        }
+        return;
+      }
       await this.#freezeReview(true, identityRevision);
     } finally {
       this.#starting = false;
-      if (this.#state.route === "welcome") this.#render();
+      if (this.#state.route === "welcome" || this.#state.route === "review") this.#render();
     }
   }
 
   async #cancelBuild(): Promise<void> {
     if (this.#runId !== null) await this.backend.cancelRun(this.#runId);
+  }
+
+  async #pauseBuild(): Promise<void> {
+    if (this.#runId === null || this.#state.build === null) return;
+    const runId = this.#runId;
+    const current = this.#state.build;
+    this.#dispatch({ type: "build-updated", build: {
+      ...current,
+      state: "pausing",
+      headline: "Pausing after the current mod…",
+      detail: "The current operation may take a while. CEBG will stop only after its result and recovery checkpoint are safely recorded.",
+    } });
+    this.#render();
+    await this.backend.pauseRun(runId);
+    await this.#waitForPause(runId);
+  }
+
+  async #waitForPause(runId: string): Promise<void> {
+    while (runId === this.#runId) {
+      const snapshot = await this.backend.getRunSnapshot(runId);
+      if (snapshot.status === "paused") {
+        if (snapshot.report !== null) this.#installId = snapshot.report.install_id;
+        this.#retryAvailable = true;
+        const current = this.#state.build;
+        if (current !== null) this.#dispatch({ type: "build-updated", build: {
+          ...current,
+          state: "paused",
+          headline: "Paused — safe to close CEBG",
+          detail: "The completed work is recorded. Resume this installation to continue with the next pipeline step.",
+        } });
+        this.#render();
+        return;
+      }
+      if (snapshot.status === "failed" || snapshot.status === "complete") {
+        await this.#refreshRetryAvailability(runId);
+        return;
+      }
+      await new Promise(resolve => window.setTimeout(resolve, 250));
+    }
   }
 
   #safely(operation: () => Promise<void>): void {
@@ -610,6 +739,11 @@ class AppController implements AppHandle {
       case "campaign_finished":
         this.#installId = event.install_id;
         next = { ...current, state: "complete", headline: "Installation verified", detail: "The game folder and its installation record are complete.", phases: current.phases.map((phase) => ({ ...phase, state: "done" })), logTail: log(`${envelope.sequenceAsString}: installation complete`) };
+        break;
+      case "campaign_paused":
+        this.#installId = event.install_id;
+        this.#retryAvailable = true;
+        next = { ...current, state: "paused", headline: "Paused — safe to close CEBG", detail: "The completed work is recorded. Resume this installation to continue with the next pipeline step.", logTail: log(`${envelope.sequenceAsString}: paused after ${event.after_step_id}`) };
         break;
     }
     this.#dispatch({ type: "build-updated", build: next });
@@ -788,6 +922,7 @@ class AppController implements AppHandle {
   async #beginNewInstallation(): Promise<void> {
     this.#dispatch({ type: "review-cleared" });
     this.#dispatch({ type: "build-cleared" });
+    this.#clearManualDownloadGate();
     this.#createDesktopShortcutAfterInstall = true;
     this.#shortcutFeedback = null;
     this.#addonFeedback = null;
@@ -870,6 +1005,10 @@ class AppController implements AppHandle {
           profiles: this.#status.profiles,
           selectedProfile: this.#status.selectedProfile,
           changingProfile: this.#changingProfile,
+          manualDownloads: this.#manualDownloads,
+          manualDownloadGateVisible: this.#manualDownloadGateVisible,
+          manualDownloadCheckingArtifactId: this.#manualDownloadCheckingArtifactId,
+          manualDownloadError: this.#manualDownloadError,
         }, {
           selectSource: (game, id) => safely(() => this.#selectGame(game, id)),
           browseSource: (game) => safely(() => this.#chooseGameFolder(game)),
@@ -879,6 +1018,9 @@ class AppController implements AppHandle {
           customize: () => safely(() => this.#customizeInstallation()),
           selectProfile: (profileId) => safely(() => this.#selectProfile(profileId)),
           install: () => safely(() => this.#startInstallation()),
+          openManualSource: (artifactId) => safely(() => this.#openUpfrontManualSource(artifactId)),
+          chooseManualArchive: (artifactId) => safely(() => this.#chooseUpfrontManualArchive(artifactId)),
+          skipManualDownload: (requirement) => safely(() => this.#skipManualDownload(requirement)),
           changeDesktopShortcut: (selected) => {
             if (!this.#starting) this.#createDesktopShortcutAfterInstall = selected;
           },
@@ -923,7 +1065,7 @@ class AppController implements AppHandle {
           content = statusCard("Preparing review", "CEBG is checking the selected setup.", "ok");
           break;
         }
-        content = reviewScreen(evaluation, this.#destination, this.#selectedGames(), () => this.#back(), () => safely(() => this.#freezeReview()));
+        content = reviewScreen(evaluation, this.#destination, this.#selectedGames(), () => this.#back(), () => safely(() => this.#startInstallation()));
         break;
       case "build":
         content = buildScreen(this.#state.build ?? { state: "running", headline: "Build in progress", detail: "Loading fixture snapshot.", phases: (evaluation?.plan.phases ?? []).map((phase, index) => ({ ...phase, state: index === 0 ? "current" : "pending" })), logTail: [], manualArchiveName: null }, {
@@ -932,7 +1074,8 @@ class AppController implements AppHandle {
           retry: () => safely(() => this.#retryBuild()),
           supplyManual: () => safely(() => this.#supplyManualArchive()),
           openManualSource: () => safely(() => this.#openManualSource()),
-          cancel: () => safely(() => this.#cancelBuild()),
+          pause: () => safely(() => this.#pauseBuild()),
+          stopNow: () => safely(() => this.#cancelBuild()),
           diagnostics: () => safely(() => this.#exportDiagnostics()),
           diagnosticsAvailable: this.#installId !== null,
           fixture: this.#status.mode === "fixture",

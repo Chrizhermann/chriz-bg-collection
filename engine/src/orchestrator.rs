@@ -16,6 +16,7 @@ use crate::postcondition;
 use crate::preflight::is_creator_protected_destination;
 use crate::resolve::{InstallPlan, PlannedRun};
 use crate::session::{CampaignCreated, FrozenIdentity, SessionEvent, SessionReplay, SessionStore};
+use crate::weidu::runner::RunnerControlHandle;
 
 /// Frozen inputs and lock location for one new build or exact resume.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -234,6 +235,11 @@ pub struct ReceiptDraft {
 pub enum CampaignOutcome {
     /// Every selected logical step completed and the receipt sink accepted the result.
     Complete,
+    /// The current step completed durably and no later pipeline step was started.
+    Paused {
+        /// Last pipeline step proven complete before orchestration stopped.
+        after_step_id: String,
+    },
     /// A retryable operation failed; no later step ran.
     Failed {
         /// Logical step that remains pending.
@@ -433,6 +439,20 @@ where
     D: CampaignDependencies,
     S: EventSink,
 {
+    run_campaign_controlled(request, dependencies, sink, &RunnerControlHandle::new())
+}
+
+/// Run a campaign with cooperative pause and force-cancel controls supplied by the caller.
+pub fn run_campaign_controlled<D, S>(
+    request: &CampaignRequest,
+    dependencies: &mut D,
+    sink: &S,
+    controls: &RunnerControlHandle,
+) -> Result<CampaignOutcome, OrchestratorError>
+where
+    D: CampaignDependencies,
+    S: EventSink,
+{
     let schedule = build_schedule(request)?;
     reject_protected_or_relative_target(&request.created.managed_root)?;
     reject_lock_registry_overlap(request)?;
@@ -497,11 +517,17 @@ where
         schedule,
         progress,
         active_phase: None,
+        controls,
     };
     let outcome = machine.run()?;
     if outcome == CampaignOutcome::Complete {
         sink.emit(EngineEvent::CampaignFinished {
             install_id: request.created.install_id.clone(),
+        });
+    } else if let CampaignOutcome::Paused { after_step_id } = &outcome {
+        sink.emit(EngineEvent::CampaignPaused {
+            install_id: request.created.install_id.clone(),
+            after_step_id: after_step_id.clone(),
         });
     }
     drop(target_lock);
@@ -885,6 +911,11 @@ where
                 "success receipt must be written by the receipt pipeline step".to_owned(),
             ));
         }
+        CampaignOutcome::Paused { .. } => {
+            return Err(OrchestratorError::InvalidCampaign(
+                "a paused campaign must not publish a terminal receipt".to_owned(),
+            ));
+        }
         CampaignOutcome::Failed { step_id, reason } => ReceiptDraftOutcome::Failed {
             step_id: step_id.clone(),
             detail: reason.clone(),
@@ -910,6 +941,7 @@ struct CampaignMachine<'a, D, S> {
     schedule: Vec<PipelineStep>,
     progress: Progress,
     active_phase: Option<Phase>,
+    controls: &'a RunnerControlHandle,
 }
 
 impl<D, S> CampaignMachine<'_, D, S>
@@ -928,6 +960,13 @@ where
                 let replay = self.store.replay()?;
                 write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
                 return Ok(outcome);
+            }
+            if self.progress.completed_prefix < self.schedule.len()
+                && self.controls.pause_requested()
+            {
+                return Ok(CampaignOutcome::Paused {
+                    after_step_id: step.id,
+                });
             }
         }
         Ok(CampaignOutcome::Complete)

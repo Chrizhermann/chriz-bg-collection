@@ -15,7 +15,8 @@ use crate::bridge::{
     BootstrapResponse, DesktopShortcutResponse, DestinationEvaluationResponse,
     DiagnosticsExportResponse, EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse,
     GameDiscoveryResponse, InstallationDefaultsResponse, ManagedInstallationResponse,
-    ManualArchiveResponse, NativeBridge, RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
+    ManualArchiveResponse, ManualDownloadRequirementResponse, NativeBridge, RunEventEnvelope,
+    RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 use crate::updates::UpdateCenterResponse;
@@ -34,6 +35,29 @@ impl BridgeState {
             bridge: Arc::new(Mutex::new(bridge)),
             application_update: Arc::new(Mutex::new(None)),
         }
+    }
+
+    pub(crate) fn active_run_id(&self) -> Option<String> {
+        self.bridge
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .active_run_id()
+    }
+
+    pub(crate) fn pause_run_now(&self, run_id: &str) {
+        let _ = self
+            .bridge
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .pause_run(run_id);
+    }
+
+    pub(crate) fn cancel_run_now(&self, run_id: &str) {
+        let _ = self
+            .bridge
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .cancel_run(run_id);
     }
 }
 
@@ -165,6 +189,19 @@ pub async fn evaluate_build(
 }
 
 #[tauri::command]
+pub async fn inspect_manual_downloads(
+    state: State<'_, BridgeState>,
+    selection: NormalizedSelection,
+) -> Result<Vec<ManualDownloadRequirementResponse>, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.inspect_manual_downloads(&selection)).await
+}
+
+#[tauri::command]
 pub async fn inspect_destination(
     state: State<'_, BridgeState>,
     path: String,
@@ -218,10 +255,13 @@ pub async fn supply_manual_archive(
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone();
     background(move || {
+        let extensions = bridge.manual_archive_filter_extensions(&artifact_id)?;
+        let extension_refs = extensions.iter().map(String::as_str).collect::<Vec<_>>();
         let selected = local_path(
             app.dialog()
                 .file()
-                .set_title(format!("Choose downloaded archive for {artifact_id}"))
+                .set_title(format!("Choose official download for {artifact_id}"))
+                .add_filter("Official mod download", &extension_refs)
                 .blocking_pick_file(),
         )?;
         bridge.supply_manual_archive(&artifact_id, selected)
@@ -591,4 +631,14 @@ pub async fn cancel_run(state: State<'_, BridgeState>, run_id: String) -> Result
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone();
     background(move || bridge.cancel_run(&run_id)).await
+}
+
+#[tauri::command]
+pub async fn pause_run(state: State<'_, BridgeState>, run_id: String) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.pause_run(&run_id)).await
 }

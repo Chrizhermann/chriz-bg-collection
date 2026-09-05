@@ -71,6 +71,7 @@ struct RunnerControlState {
     generation: u64,
     active: Option<(u64, Sender<RunnerControl>)>,
     cancel_requested: bool,
+    pause_requested: bool,
 }
 
 impl RunnerControlHandle {
@@ -132,6 +133,24 @@ impl RunnerControlHandle {
         if let Some(sender) = sender {
             let _ = sender.send(RunnerControl::Cancel);
         }
+    }
+
+    /// Request a cooperative campaign stop after the current durable pipeline boundary.
+    ///
+    /// Unlike [`Self::cancel`], this never sends a control message to the active child process.
+    pub fn pause_after_boundary(&self) {
+        self.state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .pause_requested = true;
+    }
+
+    /// Whether a cooperative boundary stop has been requested for this campaign.
+    pub fn pause_requested(&self) -> bool {
+        self.state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .pause_requested
     }
 }
 

@@ -1,18 +1,25 @@
 # CHRIZ-BG-MODPACK — components
 
-Refreshed for public release **v0.2.0-alpha.1**.
-34 current or historical entries; the public installer exposes 18 and the collection selects
-17 because component `195` already includes the work from standalone component `160`.
+Refreshed for public release **v0.2.0-alpha.5**.
+39 current or historical entries; the public installer exposes 22 and the recommended
+collection selects 18. Component `195` already includes the work from standalone component
+`160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
 ## Implementation status
 
 - The public alpha implements `110`, `130`, `140`, `160`, `170`, `190`, `192`–`198`,
-  `400`, `410`, `430`, `440`, and `450`. It contains no advertised FAIL placeholders.
+  `220`–`223`, `400`, `410`, `430`, `440`, `450`, and `610`. It contains no advertised
+  FAIL placeholders.
 - The collection exposes every implemented component except standalone `160`, whose exact
   skill repair is invoked atomically by the default Skie component `195`.
-- Components `140`, `170`, `400`, and `430` remain visible but unavailable until their
-  respective Artisan, Spell Revisions, or Tweaks Anthology prerequisites enter the recipe.
+- Components `400` and `430` remain visible but conditionally inactive unless their Branwen /
+  Spell Revisions or Tweaks Anthology prerequisites are selected.
+- Yoshimo `220` is a default companion conversion. Hexxat `221` (Shadowdancer) is the
+  default; `222` and `223` are unchecked alternatives, mutually exclusive with each other
+  and with Artisan's Invisible Blade component `7104`.
+- Progressive utility XP `610` is a default-checked option. It requires the working EEex
+  runtime and runs in the existing post-EET_end modpack slot, after earlier XP-table tweaks.
 - Components `120`, `200`, `210`, and `300` are retired/superseded. The other historical
   numbers below remain excluded; component `600` is intentionally outside the fresh preset.
 - See [Collection tail fixes](COLLECTION_TAIL_FIXES.md) for the complete mapping of all
@@ -38,6 +45,10 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 196 | Faldorn: Avenger kit | chriz-bg-modpack: NPC fixes |  |  | default |
 | 197 | Dynaheir: learn the installed Haste spell | chriz-bg-modpack: NPC fixes |  |  | default |
 | 198 | Kivan: Archer kit | chriz-bg-modpack: NPC fixes |  |  | default |
+| 220 | Yoshimo: Swashbuckler | chriz-bg-modpack: NPC fixes |  |  | default |
+| 221 | Shadowdancer | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | default |
+| 222 | Fighter/Thief multiclass | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | optional |
+| 223 | Assassin | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | optional |
 | 200 | Artisan Kitpack: fix missing multiclass proficiency stats | chriz-bg-modpack: Kit fixes |  |  | |
 | 210 | Druid/Ranger: remove Elemental Prince Call (SPPR724) from CLAB tables | chriz-bg-modpack: Kit fixes |  |  | |
 | 300 | Red Bearskin Mail: Rashemi Berserker kit usability fix | chriz-bg-modpack: Item fixes |  |  | |
@@ -55,3 +66,4 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 513 | Historical evil-NPC reputation migration slot (superseded by CDTweaks `3121`) | chriz-bg-modpack: Meta / multi-fix |  |  | |
 | 514 | Historical Edwin spell-slot migration slot (audit required) | chriz-bg-modpack: Meta / multi-fix |  |  | |
 | 600 | Disable UB "Cat and Mouse" Bodhi hunts in the Spellhold maze (and fix the ultimatum deadlock under SCS) | chriz-bg-modpack: Gameplay tweaks |  | ✓ | |
+| 610 | Progressive utility XP for locks, traps, and learning spells | chriz-bg-modpack: Gameplay tweaks |  |  | default |

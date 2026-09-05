@@ -10,7 +10,8 @@ export interface BuildActions {
   readonly retry: () => void | Promise<void>;
   readonly supplyManual: () => void | Promise<void>;
   readonly openManualSource: () => void | Promise<void>;
-  readonly cancel: () => void | Promise<void>;
+  readonly pause: () => void | Promise<void>;
+  readonly stopNow: () => void | Promise<void>;
   readonly diagnostics: () => void | Promise<void>;
   readonly diagnosticsAvailable: boolean;
   readonly fixture: boolean;
@@ -39,10 +40,13 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
     else if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));
     else controls.append(actionButton("Back to setup", actions.backToSetup));
     if (actions.diagnosticsAvailable) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));
+  } else if (snapshot.state === "paused") {
+    controls.append(actionButton("Resume installation", actions.retry));
   } else if (snapshot.state === "running") {
     controls.append(actions.fixture
       ? actionButton("Finish fixture build", actions.advance)
-      : actionButton("Cancel build", actions.cancel, "quiet"));
+      : actionButton("Pause after current mod", actions.pause));
+    if (!actions.fixture) controls.append(actionButton("Stop now (may need repair)", actions.stopNow, "quiet"));
   }
   if (controls.childElementCount > 0) stateCard.append(controls);
   page.append(stateCard, campaignLedger(snapshot.phases, true), technicalLog(snapshot.logTail, actions.logState, actions.updateLogState));

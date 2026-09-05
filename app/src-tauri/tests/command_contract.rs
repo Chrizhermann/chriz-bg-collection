@@ -81,7 +81,7 @@ acquisition = "manual-user-supplied"
 
 [source]
 kind = "manual"
-url = "https://example.invalid/manual-fixture"
+url = "https://example.invalid/{id}"
 reference = "1.0"
 expected_filename = "{filename}"
 expected_length = {length}
@@ -102,9 +102,9 @@ max_total_uncompressed_bytes = 4194304
 max_compression_ratio = 100
 
 [provenance]
-homepage = "https://example.invalid/manual-fixture"
+homepage = "https://example.invalid/{id}"
 license = "User-supplied test fixture"
-url = "https://example.invalid/manual-fixture"
+url = "https://example.invalid/{id}"
 reviewed_on = "2026-09-04"
 "#,
         length = bytes.len(),
@@ -114,6 +114,58 @@ reviewed_on = "2026-09-04"
         manifest,
     )
     .expect("write manual artifact fixture");
+}
+
+fn set_artifact_archive_kind(recipe: &Path, id: &str, kind: &str) {
+    let path = recipe.join("artifacts").join(format!("{id}.toml"));
+    let contents = fs::read_to_string(&path)
+        .unwrap()
+        .replace("kind = \"zip\"", &format!("kind = \"{kind}\""));
+    fs::write(path, contents).unwrap();
+}
+
+fn make_eefixpack_manual(recipe: &Path, filename: &str, bytes: &[u8]) {
+    let path = recipe.join("artifacts/eefixpack.toml");
+    let contents = fs::read_to_string(&path)
+        .unwrap()
+        .replace(
+            "acquisition = \"fetch-only\"",
+            "acquisition = \"manual-user-supplied\"",
+        )
+        .replace("kind = \"github-release\"", "kind = \"manual\"")
+        .replace(
+            "expected_filename = \"ee-fixpack.zip\"",
+            &format!("expected_filename = \"{filename}\""),
+        )
+        .replace(
+            "expected_length = 1",
+            &format!("expected_length = {}", bytes.len()),
+        )
+        .replace(
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            &sha256_bytes(bytes),
+        );
+    fs::write(path, contents).unwrap();
+    let collection = recipe.join("collection.toml");
+    let mut contents = fs::read_to_string(&collection).unwrap();
+    contents.push_str(
+        r#"
+
+[[features]]
+id = "feature:eefixpack:required"
+title = "EE Fixpack"
+description = "Required fixture components."
+category = "core"
+decision = "mandatory"
+readiness = "ready"
+components = [
+  { run_id = "eefixpack-bg1", component = 0 },
+  { run_id = "eefixpack-bg1", component = 2 },
+  { run_id = "eefixpack-bg2", component = 0 },
+]
+"#,
+    );
+    fs::write(collection, contents).unwrap();
 }
 
 fn candidate(
@@ -1337,6 +1389,173 @@ fn manual_archive_selection_uses_only_the_trusted_recipe_identity_and_owned_cach
 }
 
 #[test]
+fn manual_picker_filter_accepts_each_declared_archive_kind_without_executing_sfx_bytes() {
+    let (temp, recipe) = recipe_with_profiles();
+    let sfx_bytes = b"synthetic executable-framed fixture; never execute";
+    add_manual_artifact(&recipe, "manual-zip", "manual.zip", b"zip");
+    add_manual_artifact(&recipe, "manual-iemod", "manual.iemod", b"iemod");
+    set_artifact_archive_kind(&recipe, "manual-iemod", "iemod");
+    add_manual_artifact(&recipe, "manual-sfx", "manual.exe", sfx_bytes);
+    set_artifact_archive_kind(&recipe, "manual-sfx", "self-extracting-rar");
+    let selected = temp.path().join("official-windows-sfx.exe");
+    fs::write(&selected, sfx_bytes).unwrap();
+    let bridge = NativeBridge::new(&recipe, "recommended");
+
+    assert_eq!(
+        bridge
+            .manual_archive_filter_extensions("manual-zip")
+            .unwrap(),
+        vec!["zip"]
+    );
+    assert_eq!(
+        bridge
+            .manual_archive_filter_extensions("manual-iemod")
+            .unwrap(),
+        vec!["iemod"]
+    );
+    assert_eq!(
+        bridge
+            .manual_archive_filter_extensions("manual-sfx")
+            .unwrap(),
+        vec!["exe"]
+    );
+    let supplied = bridge
+        .supply_manual_archive("manual-sfx", Some(selected))
+        .unwrap()
+        .unwrap();
+    assert_eq!(supplied.filename, "manual.exe");
+    assert_eq!(supplied.length, sfx_bytes.len() as u64);
+    assert_eq!(
+        fs::read(temp.path().join(".chriz-cache/manual/manual.exe")).unwrap(),
+        sfx_bytes
+    );
+}
+
+#[test]
+fn manual_download_inspection_is_selection_scoped_deduped_read_only_and_exact() {
+    let (temp, recipe) = recipe_with_profiles();
+    let expected = b"exact manual fixture";
+    make_eefixpack_manual(&recipe, "eefix-official.zip", expected);
+    add_manual_artifact(&recipe, "unused-manual", "unused.zip", b"unused");
+    let cache = temp.path().join("manual-cache");
+    let bridge = NativeBridge::with_engine(
+        &recipe,
+        "recommended",
+        &cache,
+        Arc::new(FakeBridgeEngine::new(
+            temp.path().join("bg1"),
+            temp.path().join("bg2"),
+        )),
+    );
+    let selection = NormalizedSelection {
+        platform: "windows".to_owned(),
+        features: Default::default(),
+        inputs: Default::default(),
+    };
+
+    let missing = bridge.inspect_manual_downloads(&selection).unwrap();
+    assert_eq!(missing.len(), 1, "two resolved runs share one artifact");
+    assert_eq!(missing[0].artifact_id, "eefixpack");
+    assert_eq!(missing[0].mod_ids, vec!["eefixpack"]);
+    assert_eq!(missing[0].title, "EE Fixpack");
+    assert_eq!(missing[0].filename, "eefix-official.zip");
+    assert_eq!(missing[0].length, expected.len() as u64);
+    assert!(!missing[0].ready);
+    assert!(missing[0]
+        .detail
+        .as_deref()
+        .unwrap()
+        .contains("not been supplied"));
+    assert!(!cache.exists(), "inspection must not create the cache");
+
+    let cached = cache.join("manual/eefix-official.zip");
+    fs::create_dir_all(cached.parent().unwrap()).unwrap();
+    fs::write(&cached, b"short").unwrap();
+    let wrong_length = bridge.inspect_manual_downloads(&selection).unwrap();
+    assert!(!wrong_length[0].ready);
+    assert!(wrong_length[0]
+        .detail
+        .as_deref()
+        .unwrap()
+        .contains("length"));
+
+    fs::write(&cached, vec![b'x'; expected.len()]).unwrap();
+    let wrong_hash = bridge.inspect_manual_downloads(&selection).unwrap();
+    assert!(!wrong_hash[0].ready);
+    assert!(wrong_hash[0]
+        .detail
+        .as_deref()
+        .unwrap()
+        .contains("does not match"));
+
+    fs::write(&cached, expected).unwrap();
+    let ready = bridge.inspect_manual_downloads(&selection).unwrap();
+    assert!(ready[0].ready);
+    assert_eq!(ready[0].detail, None);
+    assert_eq!(fs::read(&cached).unwrap(), expected);
+}
+
+#[test]
+fn freeze_and_start_recheck_manual_readiness_before_a_worker_can_start() {
+    let (temp, recipe) = recipe_with_profiles();
+    let expected = b"exact manual fixture";
+    make_eefixpack_manual(&recipe, "eefix-official.zip", expected);
+    let cache = temp.path().join("cache");
+    let bg1 = temp.path().join("clean-bg1");
+    let bg2 = temp.path().join("clean-bg2");
+    fs::create_dir(&bg1).unwrap();
+    fs::create_dir(&bg2).unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(bg1, bg2));
+    let bridge = NativeBridge::with_engine(&recipe, "recommended", &cache, engine.clone());
+    let selection = NormalizedSelection {
+        platform: "windows".to_owned(),
+        features: Default::default(),
+        inputs: Default::default(),
+    };
+
+    let error = bridge
+        .freeze_review(
+            "CEBG",
+            &selection,
+            &temp.path().join("campaign"),
+            "unused-bg1",
+            "unused-bg2",
+        )
+        .unwrap_err();
+    assert_eq!(error.code, "manual_download_required");
+    assert_eq!(bridge.active_run_count(), 0);
+    assert!(engine.installs.lock().unwrap().is_empty());
+    assert!(
+        !cache.exists(),
+        "missing-manual freeze must not initialize cache directories"
+    );
+
+    let selected = temp.path().join("selected.zip");
+    fs::write(&selected, expected).unwrap();
+    bridge
+        .supply_manual_archive("eefixpack", Some(selected))
+        .unwrap();
+    let discovery = bridge.discover_games().unwrap();
+    let review = bridge
+        .freeze_review(
+            "CEBG",
+            &selection,
+            &temp.path().join("campaign"),
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .unwrap();
+    fs::remove_file(cache.join("manual/eefix-official.zip")).unwrap();
+
+    let error = bridge
+        .start_build(&review.review_token, |_| {})
+        .unwrap_err();
+    assert_eq!(error.code, "manual_download_required");
+    assert_eq!(bridge.active_run_count(), 0);
+    assert!(engine.installs.lock().unwrap().is_empty());
+}
+
+#[test]
 fn build_controls_are_scoped_to_the_named_active_run() {
     let (_temp, recipe) = recipe_with_profiles();
     let cache = recipe.parent().unwrap().join("cache");
@@ -1374,6 +1593,18 @@ fn build_controls_are_scoped_to_the_named_active_run() {
     bridge
         .continue_waiting(&started.run_id)
         .expect("continue named run");
+    assert_eq!(
+        bridge.pause_run("run-not-active").unwrap_err().code,
+        "run_unknown"
+    );
+    bridge.pause_run(&started.run_id).expect("pause named run");
+    assert_eq!(
+        bridge
+            .get_run_snapshot(&started.run_id)
+            .expect("read pausing snapshot")
+            .status,
+        "pausing"
+    );
     assert_eq!(
         bridge.cancel_run("run-not-active").unwrap_err().code,
         "run_unknown"

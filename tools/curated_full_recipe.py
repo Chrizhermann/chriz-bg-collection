@@ -22,7 +22,7 @@ if __package__ in {None, ""}:
 from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_map
 
 
-RECIPE_VERSION = "0.1.0-alpha.9"
+RECIPE_VERSION = "0.1.0-alpha.11"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
 
@@ -226,7 +226,7 @@ MOD_SPECS = {
     "bardicwonders": ("bardicwonders-v2.9c-balance.3", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
-    "evandra": ("creator-full-private-extras-20260902", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
+    "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
     "iwdification": ("iwdification-11", "IWDification", "iwdification/setup-iwdification.tp2", "IWDIFICATION"),
 }
 
@@ -407,6 +407,8 @@ def _feature_blocks(root: Path, collection: dict) -> str:
             requires = ["feature:eeex:mandatory-components"]
         elif target.target_id == "feature:bardicwonders:component-3001":
             requires = ["feature:bardicwonders:component-1012"]
+        elif target.target_id == "feature:evandra:component-1":
+            requires = ["feature:evandra:mandatory-components"]
         components = [
             f'  {{ run_id = {_q(_run_for(RowKey(row.catalog, row.component_id)))}, component = {row.component_id} }},'
             for row in target_rows
@@ -678,32 +680,16 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for directory in ["artifacts", "game-builds", "mods", "releases"]:
         shutil.copytree(root / "manifest" / directory, destination / directory, dirs_exist_ok=True)
-    for obsolete in ["chriz-sod-remix-0.6.4", "chriz-bg-modpack-0.2.0-alpha.1", "bardicwonders-v2.9c-balance.2"]:
+    for obsolete in [
+        "chriz-sod-remix-0.6.4",
+        "chriz-sod-remix-0.6.5",
+        "chriz-sod-remix-0.6.6",
+        "chriz-bg-modpack-0.2.0-alpha.1",
+        "bardicwonders-v2.9c-balance.2",
+        "creator-full-private-extras-20260902",
+    ]:
         (destination / "artifacts" / f"{obsolete}.toml").unlink(missing_ok=True)
     shutil.copytree(root / "manifest/presets", destination / "presets", dirs_exist_ok=True)
-    shutil.copy2(
-        root / "recipes/creator-full-current/artifacts/creator-full-private-extras-20260902.toml",
-        destination / "artifacts/creator-full-private-extras-20260902.toml",
-    )
-    private_artifact_path = destination / "artifacts/creator-full-private-extras-20260902.toml"
-    private_artifact = private_artifact_path.read_text(encoding="utf-8")
-    private_artifact = re.sub(
-        r'publish_roots = \[[^\n]*\]',
-        'publish_roots = ["evandra"]',
-        private_artifact,
-        count=1,
-    )
-    private_artifact = re.sub(
-        r'tp2_paths = \[[^\n]*\]',
-        'tp2_paths = ["evandra/setup-evandra.tp2"]',
-        private_artifact,
-        count=1,
-    )
-    private_artifact = private_artifact.replace(
-        'license = "Manual local archive containing 49 reference installers; never distribute or bundle"',
-        'license = "Manual local archive used only to acquire the independently curated Evandra v2.2 installer; never distribute or bundle"',
-    )
-    private_artifact_path.write_text(private_artifact, encoding="utf-8", newline="\n")
     for filename, text in ARTIFACTS.items():
         (destination / "artifacts" / filename).write_text(text, encoding="utf-8", newline="\n")
 
@@ -759,7 +745,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         base_collection,
         "mod:evandra",
         {
-            "description": _q("Install page-gated Evandra v2.2 from the exact user-supplied archive; the collection never redistributes it."),
+            "description": _q("Download Evandra v2.2 from its official page and choose evandra-v2.2.exe before installation, or skip Evandra. CEBG verifies and unpacks it without running the EXE; it never redistributes the mod."),
             "readiness": '"ready"',
             "unavailable_reason": None,
         },

@@ -2,6 +2,31 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Public alpha publication checkpoint — 2026-09-06
+
+Christopher explicitly authorized publication after announcing the forthcoming
+download on Discord. App `0.1.0-alpha.10` / recipe `0.1.0-alpha.11` is the candidate.
+The separate public distribution repo `Chrizhermann/chriz-easy-bg` now exists;
+**this collection source repository remains private**. Website task
+`Build interactive BG run page` owns `/collection`, quick guide at top, overview,
+roadmap, credits and deployment, gated on the exact verified public binary URL/hash.
+
+Final source intake includes official Windows Evandra download-or-skip and SoD
+Remix `v0.6.7`/component910. Christopher accepted the six-person skip Yes route;
+the owner released commit `a6826ca1452cbe500c5e111f117b56a983a55d0d` with 82 Windows/
+Linux tests. The first recipe's 31 SoD components now include 910 as the 32nd;
+291/901 remain excluded. The early skip prompt is default inside the SoD toggle.
+No full installation was restarted. R5 and all game/save sources remain untouched.
+
+Frontend typecheck/all101 tests, 23 Python curation/generator tests, native command
+contracts39, focused recipe/archive/materialization/validation tests passed.
+RAR extraction safety review issues were fixed and rechecked; all183 Evandra files
+match the accepted reference. Public bundle resources now exclude creator/live
+reference TSVs and authoring inventories, and include application/UnRAR notices.
+Signed packaging and public download/feed verification are next; do not claim
+native updater apply/restart, close/pause interaction or another end-to-end install.
+See `docs/releases/0.1.0-alpha.10.md` for the player-facing scope/limits.
+
 ## What this is
 
 The umbrella/orchestrator for the whole modded-BG stack: manifest + install order + presets
@@ -10,6 +35,31 @@ mods **without redistributing them**. Architecture + rationale: chriz-bg-rebalan
 `docs/plans/2026-07-03-umbrella-analysis.md` (user-approved 2026-07-03).
 
 ## Current priority — curation-derived recipe, not historical replay (2026-09-05)
+
+**Latest approvals (2026-09-06):** [release intake and website coordination](plans/2026-09-06-release-intake-and-website-roadmap.md).
+Christopher reports r5 gameplay without crashes/issues. Include released utility
+XP610, Yoshimo/Hexxat choices220-223 and SoDv0.6.6 ending290 in the next recipe;
+Hexxat's approved default is Shadowdancer221;222/223 remain alternatives. Imoen620 and dragon
+work remain WIP. FullSoDskip is reportedly nearly ready: owning-task readiness
+refresh requested before intake. Website task owns roadmap aggregation; later
+UI-mod selection includes compatibility checks. Recipealpha10 source integration
+and focused verification are complete; see [intake evidence](recipe-intake-2026-09-06.md).
+Safe pause/app-close is implemented with focused automated checks;
+native interaction and real WeiDU pause acceptance remain pending. These changes
+were packaged and signed locally as app alpha.9 / recipe alpha.10; see
+[package evidence](package-acceptance-2026-09-06.md). R5 is not being modified or rebuilt.
+Christopher approved friendlier exclusive-choice dropdown/radio controls for a
+post-alpha patch, not the initial release. Current conflict blocking/reasons remain.
+
+**Evandra public acquisition:** automatic official download was approved, but the
+ordinary HTTP probe received a Cloudflare browser challenge. Christopher then
+approved an upfront download-or-skip exception and supplied official Windows
+`evandra-v2.2.exe`. Recipe alpha.11 now pins its exact size/hash rather than the
+private aggregate; explicit RAR SFX extraction never executes the downloaded EXE.
+The early UI gate and native readiness checks are implemented and focused tests
+pass; final payload comparison/package integration are underway. See the
+[current checkpoint and unsent G3 request](handoffs/2026-09-06-evandra-public-acquisition.md).
+Do not bypass the challenge, mirror the mod, or publish the older private contract.
 
 **Latest instruction (2026-09-06 KST): [targeted r5 recovery](targeted-recovery-2026-09-06.md).**
 Christopher approved repairing just the failed modpack rather than repeating the full

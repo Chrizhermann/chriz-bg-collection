@@ -1,5 +1,5 @@
 id = "chriz-sod-remix"
-artifact_id = "chriz-sod-remix-0.6.5"
+artifact_id = "chriz-sod-remix-0.6.7"
 name = "CHRIZ-SOD-REMIX"
 tp2 = "chriz-sod-remix/setup-chriz-sod-remix.tp2"
 language = 0
@@ -123,5 +123,13 @@ id = 280
 name = "SoD remix: no party dispel at the basement reveal"
 
 [[components]]
+id = 290
+name = "SoD remix: end after the playable victory celebration"
+
+[[components]]
 id = 900
 name = "Collected in the camp chest at the Coast Way crossing"
+
+[[components]]
+id = 910
+name = "Offer to skip SoD at palace arrival (EET, experimental)"

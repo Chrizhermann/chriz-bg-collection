@@ -8,11 +8,12 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
-    110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 400, 410, 430, 440, 450,
+    110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 400, 410, 430,
+    440, 450, 610,
 ];
 
 const RECOMMENDED_COMPONENTS: &[u32] = &[
-    110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 410, 440, 450,
+    110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 410, 440, 450, 610,
 ];
 
 fn recipe_root() -> PathBuf {
@@ -127,7 +128,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.unavailable_reason.is_some(), "{id}");
     }
 
-    for component in [110, 190, 192, 193, 194, 195, 196, 197, 198] {
+    for component in [110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 610] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -148,6 +149,135 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert_eq!(control.readiness, Readiness::Ready, "{id}");
         assert!(control.selected, "{id}");
     }
+
+    for component in [222, 223] {
+        let id = format!("feature:chriz-bg-modpack:component-{component}");
+        let control = evaluation
+            .view
+            .control(&id)
+            .unwrap_or_else(|| panic!("missing control {id}"));
+        assert_eq!(control.decision, Decision::Optional, "{id}");
+        assert_eq!(control.readiness, Readiness::Ready, "{id}");
+        assert!(!control.selected, "{id}");
+    }
+
+    let utility_xp = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:chriz-bg-modpack:component-610")
+        .expect("utility XP feature");
+    assert_eq!(
+        utility_xp.requires,
+        ["feature:eeex:mandatory-components", "mod:eet-end"]
+    );
+
+    assert_eq!(
+        evaluation
+            .plan
+            .runs
+            .iter()
+            .map(|run| run.components.len())
+            .sum::<usize>(),
+        344
+    );
+}
+
+#[test]
+fn hexxat_choices_are_mutually_exclusive_and_shadowdancer_is_the_default() {
+    let manifest = recipe();
+    for component in [221, 222, 223] {
+        let feature = manifest
+            .collection
+            .features
+            .iter()
+            .find(|feature| feature.id == format!("feature:chriz-bg-modpack:component-{component}"))
+            .unwrap_or_else(|| panic!("missing Hexxat component {component}"));
+        let conflicts = feature
+            .conflicts
+            .iter()
+            .map(|conflict| conflict.feature_id.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(conflicts.len(), 3);
+        for other in [221, 222, 223] {
+            if component != other {
+                assert!(conflicts
+                    .contains(&format!("feature:chriz-bg-modpack:component-{other}").as_str()));
+            }
+        }
+        assert!(conflicts.contains(&"feature:artisanskitpack-npc:component-7104"));
+    }
+
+    let artisan_hexxat = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:artisanskitpack-npc:component-7104")
+        .expect("Artisan Hexxat option");
+    assert_eq!(artisan_hexxat.decision, Decision::Optional);
+    for component in [221, 222, 223] {
+        assert!(artisan_hexxat.conflicts.iter().any(|conflict| {
+            conflict.feature_id == format!("feature:chriz-bg-modpack:component-{component}")
+        }));
+    }
+
+    let defaults = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let artisan_control = defaults
+        .view
+        .control("feature:artisanskitpack-npc:component-7104")
+        .expect("Artisan Hexxat control");
+    assert!(!artisan_control.selected);
+    assert!(!artisan_control.interactive);
+    assert!(artisan_control
+        .unavailable_reason
+        .as_deref()
+        .expect("active alternative reason")
+        .contains("Shadowdancer"));
+
+    let mut fighter_thief = Selection::defaults("windows");
+    fighter_thief.set_feature("feature:chriz-bg-modpack:component-221", false);
+    fighter_thief.set_feature("feature:chriz-bg-modpack:component-222", true);
+    let evaluation = evaluate(&manifest, &fighter_thief).unwrap();
+    let components = evaluation
+        .plan
+        .components_for("chriz-bg-modpack-bg2")
+        .expect("modpack run");
+    assert!(!components.contains(&221));
+    assert!(components.contains(&222));
+    assert!(!components.contains(&223));
+
+    let mut from_artisan = Selection::defaults("windows");
+    from_artisan.set_feature("feature:chriz-bg-modpack:component-221", false);
+    from_artisan.set_feature("feature:artisanskitpack-npc:component-7104", true);
+    let artisan_evaluation = evaluate(&manifest, &from_artisan).unwrap();
+    assert!(artisan_evaluation
+        .plan
+        .components_for("artisanskitpack-npc-bg2")
+        .expect("Artisan NPC run")
+        .contains(&7104));
+
+    from_artisan.set_feature("feature:artisanskitpack-npc:component-7104", false);
+    from_artisan.set_feature("feature:chriz-bg-modpack:component-221", true);
+    let shadowdancer_evaluation = evaluate(&manifest, &from_artisan).unwrap();
+    assert!(shadowdancer_evaluation
+        .plan
+        .components_for("chriz-bg-modpack-bg2")
+        .expect("modpack run")
+        .contains(&221));
+    assert!(!shadowdancer_evaluation
+        .plan
+        .components_for("artisanskitpack-npc-bg2")
+        .expect("Artisan NPC run")
+        .contains(&7104));
+
+    let mut no_artisan = Selection::defaults("windows");
+    no_artisan.set_feature("mod:artisanskitpack-npc", false);
+    let no_artisan_evaluation = evaluate(&manifest, &no_artisan).unwrap();
+    assert!(no_artisan_evaluation
+        .plan
+        .components_for("chriz-bg-modpack-bg2")
+        .expect("modpack run remains independent")
+        .contains(&221));
 }
 
 #[test]

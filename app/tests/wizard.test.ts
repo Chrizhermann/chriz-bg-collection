@@ -761,6 +761,7 @@ describe("Chriz Easy BG application flow", () => {
           selected_bg2_id: "native-bg2",
         };
         case "evaluate_build": return evaluation;
+        case "inspect_manual_downloads": return [];
         case "inspect_destination":
           expect(args).toEqual({ path: "D:\\Native Campaign", bg1CandidateId: "native-bg1", bg2CandidateId: "native-bg2" });
           return { path: "D:\\Native Campaign", safe: true, title: "Ready", detail: "Isolated." };
@@ -784,12 +785,13 @@ describe("Chriz Easy BG application flow", () => {
     expect(calls).toEqual(expect.arrayContaining(["inspect_destination", "list_managed_installations", "evaluate_build"]));
     await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
 
-    expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
+    await waitFor(() => expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy());
     expect(queryByText(root, "Finish fixture build")).toBeNull();
-    expect(getByRole(root, "button", { name: "Cancel build" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Pause after current mod" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Stop now (may need repair)" })).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "My installs" }));
     expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy();
-    expect(getByRole(root, "button", { name: "Cancel build" })).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Pause after current mod" })).toBeTruthy();
     (emitNative as (event: RunEventEnvelope | unknown) => void)({
       run_id: "native-run",
       sequence_as_string: "1",

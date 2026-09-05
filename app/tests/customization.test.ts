@@ -34,7 +34,10 @@ describe("common customization bundles", () => {
     const e = evaluation([
       control("feature:yeslicknpc:component-0", { selected: false, decision: "optional", interactive: false, unavailableReason: "Choose one class" }),
       control("feature:yeslicknpc:component-1"),
-      control("feature:chriz-bg-modpack:component-192"), control("feature:artisanskitpack-npc:component-5102", { selected: false, interactive: false }),
+      control("feature:chriz-bg-modpack:component-192"),
+      control("feature:chriz-bg-modpack:component-220"), control("feature:chriz-bg-modpack:component-221"),
+      control("feature:chriz-bg-modpack:component-222", { selected: false }), control("feature:chriz-bg-modpack:component-223", { selected: false }),
+      control("feature:artisanskitpack-npc:component-5102", { selected: false, interactive: false }),
       control("feature:xan:component-1"), control("feature:xan:mandatory-components", { decision: "mandatory" }),
       control("feature:chriz-bg-modpack:component-197"), control("feature:chriz-bg-modpack:component-130", { decision: "mandatory" }),
       control("feature:sirene-bg2:component-5"), control("feature:sarah:component-1"),
@@ -43,7 +46,10 @@ describe("common customization bundles", () => {
     expect(bundleSelected(e, bundle)).toBe(false);
     expect(bundleChanges(e, bundle, true)).toEqual({
       "feature:yeslicknpc:component-0": true, "feature:yeslicknpc:component-1": false,
-      "feature:chriz-bg-modpack:component-192": false, "feature:artisanskitpack-npc:component-5102": false,
+      "feature:chriz-bg-modpack:component-192": false,
+      "feature:chriz-bg-modpack:component-220": false, "feature:chriz-bg-modpack:component-221": false,
+      "feature:chriz-bg-modpack:component-222": false, "feature:chriz-bg-modpack:component-223": false,
+      "feature:artisanskitpack-npc:component-5102": false,
       "feature:xan:component-1": false,
     });
   });

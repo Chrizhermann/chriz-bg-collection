@@ -2,7 +2,46 @@
 
 Christopher asked for a practical alpha release tonight, clarification of CLI versus
 desktop installation acceptance, and a visual test of app/collection update notifications.
-This is the release plan, not authorization to publish a repository, tag or update feed.
+Publication was explicitly authorized on 2026-09-06 after Christopher's Discord
+announcement. Publish the verified alpha binary/update feed in the separate public
+`Chrizhermann/chriz-easy-bg` repository; keep this collection source/history private.
+The existing website task owns the collection page and deployment, after receiving
+the exact verified release URL. The earlier snapshots below are historical.
+
+Current finish line: app alpha.10 / recipe alpha.11, official Windows Evandra
+download-or-skip and accepted SoD v0.6.7 skip910. No second full install is required
+for these bounded acquisition/recipe changes. Record the remaining alpha acceptance
+limits honestly in the release guide.
+
+## Latest user follow-up (2026-09-06)
+
+Christopher is playing recovered r5 and reports no crashes or issues so far.
+This is user-reported initial gameplay acceptance, not confirmation of every
+save/reload, Radar or installer-update check. Do not interrupt his session.
+
+- Radar convenience: Christopher notes the executable can live in the game root
+  and accepts a small launcher button as an alternative. Queue **Open Radar**
+  beside the other launcher actions, using the selected installation's managed
+  add-on path. Existing r5 files need not be moved while he plays. This button
+  is a requested follow-up, not yet implemented.
+- Website distribution belongs with the existing **Build interactive BG run page**
+  task in `twitch-setup-chriz` (task `01a061fe-a68c-74b1-8272-5bfa9251a731`).
+  Coordinate the CEBG alpha download/version/changelog link there once the signed
+  public artifact and URL are ready; no website deployment was performed here.
+- SoD full-campaign skip is still separate from the newly released **v0.6.6**
+  victory-ending component **290**. The recipe and r5 still use **v0.6.5**;
+  the optional-skip prototype is not release-ready. See the intake queue.
+- A public download still needs the current signed package and self-update
+  apply/restart acceptance, safe pause/app-close work, and a verified standalone
+  Evandra acquisition contract. A playable r5 does not establish those seams.
+
+The alpha.9 app compiled and NSIS generation completed. Its original password
+prompt was cancelled; the signing issue is now resolved by explicitly supplying
+the existing key's empty password. The built candidate now has a verified Tauri
+signature, and the real updater's loopback download/tamper-rejection check passed.
+It predates the newly approved recipe/lifecycle changes and must be rebuilt and
+re-signed after integration. No installation or apply/restart acceptance occurred.
+Keep current desktop-control restrictions and all no-rebuild boundaries.
 
 **2026-09-06 update:** [targeted recovery](../targeted-recovery-2026-09-06.md)
 supersedes the r6 path below. R6 was stopped before mod installation; the existing

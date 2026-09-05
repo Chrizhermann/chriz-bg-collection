@@ -400,6 +400,7 @@ fn verify_artifact(
         format: match artifact.archive.kind {
             ArchiveKind::Zip => ArchiveFormat::Zip,
             ArchiveKind::Iemod => ArchiveFormat::Iemod,
+            ArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
         },
         expected_roots: artifact.archive.publish_roots.clone(),
         expected_tp2_paths: artifact.archive.tp2_paths.clone(),
@@ -504,7 +505,7 @@ fn verify_standalone_contract(
         .path_segments()
         .and_then(|mut segments| segments.next_back())
         .unwrap_or_default();
-    let url_names_archive = [".zip", ".iemod"]
+    let url_names_archive = [".zip", ".iemod", ".exe"]
         .iter()
         .any(|extension| url_filename.to_ascii_lowercase().ends_with(extension));
     if url_names_archive && !url_filename.eq_ignore_ascii_case(filename) {

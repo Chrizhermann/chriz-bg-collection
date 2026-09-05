@@ -1,8 +1,8 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1181
-expected_choice_groups = 60
+expected_rows = 1189
+expected_choice_groups = 61
 expected_optional_none_groups = 13
 expected_fixed_groups = 10
 
@@ -122,7 +122,7 @@ excluded = [402, 403, 406, 409]
 
 [[catalogs]]
 id = "CHRIZ-SOD-REMIX"
-excluded = [901]
+excluded = [291, 901]
 
 [[catalogs]]
 id = "CROSSMODBG2"
@@ -293,7 +293,7 @@ parent = "mod:chriz-bg-rebalance"
 [[targets]]
 id = "feature:chriz-sod-remix:mandatory-components"
 kind = "feature"
-rows = ["CHRIZ-SOD-REMIX:100", "CHRIZ-SOD-REMIX:110", "CHRIZ-SOD-REMIX:120", "CHRIZ-SOD-REMIX:130", "CHRIZ-SOD-REMIX:140", "CHRIZ-SOD-REMIX:150", "CHRIZ-SOD-REMIX:145", "CHRIZ-SOD-REMIX:160", "CHRIZ-SOD-REMIX:170", "CHRIZ-SOD-REMIX:180", "CHRIZ-SOD-REMIX:175", "CHRIZ-SOD-REMIX:185", "CHRIZ-SOD-REMIX:190", "CHRIZ-SOD-REMIX:195", "CHRIZ-SOD-REMIX:197", "CHRIZ-SOD-REMIX:187", "CHRIZ-SOD-REMIX:200", "CHRIZ-SOD-REMIX:210", "CHRIZ-SOD-REMIX:215", "CHRIZ-SOD-REMIX:220", "CHRIZ-SOD-REMIX:225", "CHRIZ-SOD-REMIX:245", "CHRIZ-SOD-REMIX:230", "CHRIZ-SOD-REMIX:240", "CHRIZ-SOD-REMIX:250", "CHRIZ-SOD-REMIX:255", "CHRIZ-SOD-REMIX:260", "CHRIZ-SOD-REMIX:270", "CHRIZ-SOD-REMIX:280", "CHRIZ-SOD-REMIX:900"]
+rows = ["CHRIZ-SOD-REMIX:100", "CHRIZ-SOD-REMIX:110", "CHRIZ-SOD-REMIX:120", "CHRIZ-SOD-REMIX:130", "CHRIZ-SOD-REMIX:140", "CHRIZ-SOD-REMIX:150", "CHRIZ-SOD-REMIX:145", "CHRIZ-SOD-REMIX:160", "CHRIZ-SOD-REMIX:170", "CHRIZ-SOD-REMIX:180", "CHRIZ-SOD-REMIX:175", "CHRIZ-SOD-REMIX:185", "CHRIZ-SOD-REMIX:190", "CHRIZ-SOD-REMIX:195", "CHRIZ-SOD-REMIX:210", "CHRIZ-SOD-REMIX:197", "CHRIZ-SOD-REMIX:187", "CHRIZ-SOD-REMIX:200", "CHRIZ-SOD-REMIX:215", "CHRIZ-SOD-REMIX:220", "CHRIZ-SOD-REMIX:225", "CHRIZ-SOD-REMIX:245", "CHRIZ-SOD-REMIX:230", "CHRIZ-SOD-REMIX:240", "CHRIZ-SOD-REMIX:250", "CHRIZ-SOD-REMIX:255", "CHRIZ-SOD-REMIX:260", "CHRIZ-SOD-REMIX:270", "CHRIZ-SOD-REMIX:280", "CHRIZ-SOD-REMIX:290", "CHRIZ-SOD-REMIX:900", "CHRIZ-SOD-REMIX:910"]
 parent = "mod:chriz-sod-remix"
 
 [[targets]]
@@ -1945,6 +1945,30 @@ rows = ["CHRIZ-BG-MODPACK:198"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
+id = "feature:chriz-bg-modpack:component-220"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:220"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-221"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:221"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-222"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:222"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-223"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:223"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
 id = "feature:chriz-bg-modpack:component-400"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:400"]
@@ -1975,6 +1999,12 @@ rows = ["CHRIZ-BG-MODPACK:450"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
+id = "feature:chriz-bg-modpack:component-610"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:610"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
 id = "feature:eet:component-100"
 kind = "feature"
 rows = ["EET:100"]
@@ -1983,6 +2013,7 @@ rows = ["EET:100"]
 id = "feature:evandra:component-1"
 kind = "feature"
 rows = ["EVANDRA:1"]
+parent = "mod:evandra"
 
 [[targets]]
 id = "feature:fade:component-2"
@@ -2749,6 +2780,13 @@ catalog = "CDTWEAKS"
 subgroup = "Add Save Penalties for Spells Cast by High-Level Casters"
 options = ["CDTWEAKS:2312"]
 default = "CDTWEAKS:2312"
+
+[[choice_groups]]
+id = "choice:chriz-bg-modpack:hexxat-class"
+catalog = "CHRIZ-BG-MODPACK"
+subgroup = "Hexxat: choose a class or kit"
+options = ["CHRIZ-BG-MODPACK:221", "CHRIZ-BG-MODPACK:222", "CHRIZ-BG-MODPACK:223"]
+default = "CHRIZ-BG-MODPACK:221"
 
 [[choice_groups]]
 id = "choice:cdtweaks:adjust-cromwell-s-forging-time"

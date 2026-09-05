@@ -31,7 +31,7 @@ Refreshed for the selected Artisan fork release **chriz-v1.3.1**
 | 5102 | Artisan's Kitpack: Red Wizard Mage Kit for Edwin |  |  | ✓ | default |
 | 7101 | Rogue Archer |  | Artisan's Kitpack: Make Imoen a |  | optional |
 | 7102 | Trickster |  | Artisan's Kitpack: Make Imoen a |  | default |
-| 7104 | Artisan's Kitpack: Give Hexxat the Invisible Blade Kit |  |  | ✓ | default |
+| 7104 | Artisan's Kitpack: Give Hexxat the Invisible Blade Kit |  |  | ✓ | optional |
 | 21001 | Artisan's Kitpack: Give Jan the Arcane Trickster Kit |  |  | ✓ | default |
 | 9101 | Artisan's Kitpack: Give M'khiin the Warhorn Shaman Kit |  |  |  | default |
 | 10004 | Artisan's Kitpack: Make Rasaad a Sacred Fist |  |  |  | default |

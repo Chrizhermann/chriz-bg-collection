@@ -453,6 +453,17 @@ fn shared_control_handle_forwards_continue_waiting_to_the_active_runner() {
 }
 
 #[test]
+fn pause_request_is_sticky_without_interrupting_the_active_runner() {
+    let controls = RunnerControlHandle::new();
+    let registration = controls.register().expect("register active runner");
+
+    controls.pause_after_boundary();
+
+    assert!(controls.pause_requested());
+    assert!(registration.receiver().try_recv().is_err());
+}
+
+#[test]
 fn process_spawn_failure_is_reported_without_panicking() {
     let mut harness = Harness::start_program(
         Path::new("definitely-missing-runner-test.exe").to_path_buf(),

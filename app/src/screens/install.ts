@@ -3,6 +3,7 @@ import type {
   DestinationEvaluation,
   GameCandidate,
   GameDiscovery,
+  ManualDownloadRequirement,
   SelectionEvaluation,
 } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
@@ -21,6 +22,10 @@ export interface InstallScreenModel {
   readonly profiles?: BackendStatus["profiles"];
   readonly selectedProfile?: string;
   readonly changingProfile?: boolean;
+  readonly manualDownloads: readonly ManualDownloadRequirement[];
+  readonly manualDownloadGateVisible: boolean;
+  readonly manualDownloadCheckingArtifactId: string | null;
+  readonly manualDownloadError: { readonly artifactId: string; readonly message: string } | null;
 }
 
 export interface InstallScreenActions {
@@ -33,6 +38,70 @@ export interface InstallScreenActions {
   readonly install: () => void | Promise<void>;
   readonly changeDesktopShortcut: (selected: boolean) => void | Promise<void>;
   readonly selectProfile?: (profileId: string) => void | Promise<void>;
+  readonly openManualSource: (artifactId: string) => void | Promise<void>;
+  readonly chooseManualArchive: (artifactId: string) => void | Promise<void>;
+  readonly skipManualDownload: (requirement: ManualDownloadRequirement) => void | Promise<void>;
+}
+
+function formatFileSize(length: number): string {
+  if (length < 1_000_000) return `${Math.max(1, Math.round(length / 1_000))} KB`;
+  return `${(length / 1_000_000).toFixed(1)} MB`;
+}
+
+function manualDownloadPanel(model: InstallScreenModel, actions: InstallScreenActions): HTMLElement {
+  const panel = element("section", "manual-download-panel");
+  panel.setAttribute("aria-labelledby", "manual-download-title");
+  const missingCount = model.manualDownloads.filter((requirement) => !requirement.ready).length;
+  panel.append(element("p", "manual-download-kicker", missingCount === 0
+    ? "Official file verified"
+    : missingCount === 1 ? "One official file needed" : `${missingCount} official files needed`));
+  const heading = element("h2", undefined, "Finish the download before installation");
+  heading.id = "manual-download-title";
+  panel.append(
+    heading,
+    element("p", "manual-download-intro", "CEBG cannot redistribute this mod. Download its official file, then choose that file here so CEBG can verify it."),
+  );
+
+  for (const requirement of model.manualDownloads) {
+    const checking = model.manualDownloadCheckingArtifactId === requirement.artifactId;
+    const row = element("article", `manual-download-row ${requirement.ready ? "is-ready" : "needs-file"}`);
+    row.dataset.artifactId = requirement.artifactId;
+    const copy = element("div", "manual-download-copy");
+    copy.append(
+      element("h3", undefined, requirement.ready ? `${requirement.title} is ready` : requirement.title),
+      element("p", undefined, requirement.detail ?? (requirement.ready
+        ? "The official file passed its identity check."
+        : "Choose the exact official file shown below.")),
+      element("p", "manual-download-file", `${requirement.filename} (${formatFileSize(requirement.length)})`),
+    );
+    const status = element("p", `manual-download-status ${requirement.ready ? "is-ready" : "needs-file"}`, requirement.ready ? "Verified and ready" : "File required");
+    status.setAttribute("role", "status");
+    row.append(copy, status);
+
+    if (!requirement.ready) {
+      if (checking) {
+        const checkingStatus = element("p", "manual-download-checking", `Checking ${requirement.filename}…`);
+        checkingStatus.setAttribute("role", "status");
+        row.append(checkingStatus);
+      }
+      if (model.manualDownloadError?.artifactId === requirement.artifactId) {
+        const error = element("p", "manual-download-error", model.manualDownloadError.message);
+        error.setAttribute("role", "alert");
+        row.append(error);
+      }
+      const controls = element("div", "manual-download-actions");
+      const download = actionButton(`Download ${requirement.title}`, () => actions.openManualSource(requirement.artifactId), "quiet");
+      const choose = actionButton("Choose downloaded file", () => actions.chooseManualArchive(requirement.artifactId));
+      const skip = actionButton(`Skip ${requirement.title}`, () => actions.skipManualDownload(requirement), "quiet");
+      download.disabled = model.starting || checking;
+      choose.disabled = model.starting || checking;
+      skip.disabled = model.starting || checking;
+      controls.append(download, choose, skip);
+      row.append(controls);
+    }
+    panel.append(row);
+  }
+  return panel;
 }
 
 function selectedCandidate(candidates: readonly GameCandidate[], selectedId: string): GameCandidate | undefined {
@@ -186,7 +255,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
 
   const bg1 = selectedCandidate(model.discovery.bg1Candidates, model.selectedBg1Id);
   const bg2 = selectedCandidate(model.discovery.bg2Candidates, model.selectedBg2Id);
-  const ready = installationReadiness({
+  const selectionReady = installationReadiness({
     starting: model.starting,
     name: model.installationName,
     bg1,
@@ -195,6 +264,9 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     evaluation: model.evaluation,
     evaluationPending: model.evaluationPending,
   });
+  const manualDownloadPending = model.manualDownloadGateVisible
+    && (model.manualDownloadCheckingArtifactId !== null || model.manualDownloads.some((requirement) => !requirement.ready));
+  const ready = selectionReady && !manualDownloadPending;
   const finish = element("section", `install-ready ${ready ? "is-ready" : "needs-attention"}`);
   const readiness = element("div");
   readiness.append(
@@ -214,6 +286,10 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   finishActions.append(shortcutChoice, install);
   finish.append(readiness, finishActions);
 
-  page.append(sources, settings, recipe, finish);
+  page.append(sources, settings, recipe);
+  if (model.manualDownloadGateVisible && model.manualDownloads.length > 0) {
+    page.append(manualDownloadPanel(model, actions));
+  }
+  page.append(finish);
   return page;
 }

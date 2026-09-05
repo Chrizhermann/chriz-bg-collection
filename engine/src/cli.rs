@@ -33,7 +33,7 @@ use crate::manifest::{
     GameRoot, InvocationMode, ModFile, PresetFile,
 };
 use crate::orchestrator::{
-    run_campaign, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
+    run_campaign_controlled, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
     CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest,
     InstallLogVerifier, InstallReconciliation, InvocationBuilder, MaterializationOutcome,
     MaterializationTask, MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter,
@@ -279,6 +279,11 @@ pub struct CampaignReport {
 pub enum CampaignStatus {
     /// Every frozen step completed and its receipt was published.
     Complete,
+    /// The current step completed durably and the frozen campaign can be resumed.
+    Paused {
+        /// Last pipeline step proven complete before orchestration stopped.
+        after_step_id: String,
+    },
     /// One retryable step failed and can be resumed from the frozen campaign.
     Failed {
         /// Stable failed pipeline step.
@@ -419,6 +424,10 @@ impl CliError {
             CampaignStatus::Complete => (
                 "invalid_campaign_result",
                 "a complete campaign cannot be represented as an error".to_owned(),
+            ),
+            CampaignStatus::Paused { .. } => (
+                "invalid_campaign_result",
+                "a paused campaign is resumable and cannot be represented as an error".to_owned(),
             ),
             CampaignStatus::Failed { step_id, reason } => {
                 let code = if step_id == "preflight" && reason.contains("source_not_fresh") {
@@ -863,7 +872,7 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
         sink,
         controls.clone(),
     );
-    let outcome = run_campaign(&request, &mut dependencies, sink)
+    let outcome = run_campaign_controlled(&request, &mut dependencies, sink, controls)
         .map_err(|error| map_orchestrator_error(error, &created))?;
     Ok(CampaignReport {
         install_id: created.install_id,
@@ -871,6 +880,7 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
         plan_sha256: created.plan_sha256,
         status: match outcome {
             CampaignOutcome::Complete => CampaignStatus::Complete,
+            CampaignOutcome::Paused { after_step_id } => CampaignStatus::Paused { after_step_id },
             CampaignOutcome::Failed { step_id, reason } => {
                 CampaignStatus::Failed { step_id, reason }
             }
@@ -2056,6 +2066,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 format: match artifact.archive.kind {
                     ManifestArchiveKind::Zip => ArchiveFormat::Zip,
                     ManifestArchiveKind::Iemod => ArchiveFormat::Iemod,
+                    ManifestArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
                 },
                 expected_roots: artifact.archive.publish_roots.clone(),
                 expected_tp2_paths: artifact.archive.tp2_paths.clone(),

@@ -67,6 +67,13 @@ pub enum EngineEvent {
         /// Stable managed-install identity.
         install_id: String,
     },
+    /// A cooperative stop reached a durable boundary with no child process active.
+    CampaignPaused {
+        /// Stable managed-install identity that can be resumed later.
+        install_id: String,
+        /// Last pipeline step proven complete before stopping.
+        after_step_id: String,
+    },
     /// A mod cannot be fetched automatically; the user has to download it.
     ManualDownloadNeeded {
         /// Manifest id of the mod that needs downloading.
@@ -174,6 +181,10 @@ impl ConsoleSink {
             EngineEvent::CampaignFinished { install_id } => {
                 format!("Campaign {install_id} complete")
             }
+            EngineEvent::CampaignPaused {
+                install_id,
+                after_step_id,
+            } => format!("Campaign {install_id} paused after [{after_step_id}]"),
             EngineEvent::ManualDownloadNeeded {
                 mod_id,
                 page,

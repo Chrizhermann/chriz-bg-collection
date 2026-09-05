@@ -30,6 +30,8 @@ fs4 = "0.13"
 url = "2"
 zip = { version = "8", default-features = false, features = ["deflate"] }
 sevenz-rust2 = { version = "0.22.2", default-features = false, features = ["util"] }
+unrar_sys = "=0.5.8"
+widestring = "1"
 walkdir = "2"
 crossbeam-channel = "0.5"
 same-file = "1"

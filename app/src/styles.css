@@ -641,6 +641,104 @@ fieldset {
   padding-left: 1.2rem;
 }
 
+.manual-download-panel {
+  padding: 0.85rem 1rem;
+  border-left: 4px solid var(--brass);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+}
+
+.manual-download-panel h2,
+.manual-download-panel h3,
+.manual-download-panel p {
+  margin: 0;
+}
+
+.manual-download-kicker {
+  margin-bottom: 0.18rem !important;
+  color: var(--brass);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.manual-download-intro {
+  max-width: 72ch;
+  margin-top: 0.25rem !important;
+  color: var(--vellum-dim);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.manual-download-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem 1rem;
+  align-items: start;
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--slate);
+}
+
+.manual-download-row h3 {
+  font-size: 1rem;
+}
+
+.manual-download-copy > p {
+  margin-top: 0.2rem;
+  color: var(--vellum-dim);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.manual-download-file {
+  color: var(--vellum) !important;
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
+.manual-download-status {
+  color: var(--brass);
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.manual-download-status.is-ready {
+  color: var(--teal);
+}
+
+.manual-download-checking,
+.manual-download-error {
+  grid-column: 1 / -1;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.manual-download-checking {
+  border-left: 3px solid var(--teal);
+  background: rgba(117, 186, 180, 0.08);
+}
+
+.manual-download-error {
+  border-left: 3px solid var(--ember);
+  color: var(--ember);
+  background: rgba(228, 123, 103, 0.08);
+}
+
+.manual-download-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.manual-download-actions .button {
+  min-block-size: 40px;
+  padding: 0.48rem 0.75rem;
+  font-size: 0.8rem;
+}
+
 .install-ready {
   display: flex;
   gap: 1rem;
@@ -1355,6 +1453,14 @@ input[type="search"] {
   .install-finish-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .manual-download-row {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-download-status {
+    grid-row: 2;
   }
 
   .install-finish-actions .button {

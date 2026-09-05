@@ -278,7 +278,7 @@ args = []
 run_id = "chriz-sod-remix-bg2"
 mod_id = "chriz-sod-remix"
 phase = "post-eet-end"
-components = [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 900]
+components = [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910]
 args = []
 
 [[runs]]
@@ -306,7 +306,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 400, 410, 430, 440, 450]
+components = [110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 400, 410, 430, 440, 450, 610]
 args = []
 
 [[runs]]
@@ -1253,7 +1253,7 @@ components = [{ run_id = "rr-bg2", component = 999 }]
 [[features]]
 id = "mod:evandra"
 title = "Evandra NPC"
-description = "Install page-gated Evandra v2.2 from the exact user-supplied archive; the collection never redistributes it."
+description = "Download Evandra v2.2 from its official page and choose evandra-v2.2.exe before installation, or skip Evandra. CEBG verifies and unpacks it without running the EXE; it never redistributes the mod."
 category = "npcs"
 decision = "default"
 readiness = "ready"
@@ -2587,10 +2587,15 @@ id = "feature:artisanskitpack-npc:component-7104"
 title = "Hexxat: Invisible Blade"
 description = "Give Hexxat the Invisible Blade kit."
 category = "npcs"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:artisanskitpack-npc"
 requires = ["feature:artisanskitpack:component-7005"]
+conflicts = [
+  { feature_id = "feature:chriz-bg-modpack:component-221", reason = "Conflicts with Hexxat: Shadowdancer (modpack component 221)." },
+  { feature_id = "feature:chriz-bg-modpack:component-222", reason = "Conflicts with Hexxat: Fighter/Thief (modpack component 222)." },
+  { feature_id = "feature:chriz-bg-modpack:component-223", reason = "Conflicts with Hexxat: Assassin (modpack component 223)." },
+]
 components = [{ run_id = "artisanskitpack-npc-bg2", component = 7104 }]
 
 [[features]]
@@ -3178,7 +3183,7 @@ requires = ["mod:eet-end"]
 [[features]]
 id = "feature:chriz-sod-remix:mandatory-components"
 title = "Complete CHRIZ-SOD-REMIX setup"
-description = "Install all 30 reviewed v0.6.5 components as one indivisible bundle, including the camp-chest treasure route."
+description = "Install all 32 reviewed v0.6.7 fresh-install components as one indivisible bundle, including the accepted EET SoD skip, victory ending, and camp-chest treasure route."
 category = "collection"
 decision = "mandatory"
 readiness = "ready"
@@ -3213,7 +3218,9 @@ components = [
   { run_id = "chriz-sod-remix-bg2", component = 260 },
   { run_id = "chriz-sod-remix-bg2", component = 270 },
   { run_id = "chriz-sod-remix-bg2", component = 280 },
+  { run_id = "chriz-sod-remix-bg2", component = 290 },
   { run_id = "chriz-sod-remix-bg2", component = 900 },
+  { run_id = "chriz-sod-remix-bg2", component = 910 },
 ]
 
 [[features]]
@@ -3415,6 +3422,61 @@ parent = "mod:chriz-bg-modpack"
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 198 }]
 
 [[features]]
+id = "feature:chriz-bg-modpack:component-220"
+title = "Make Yoshimo a Swashbuckler"
+description = "Convert every joinable Yoshimo template to the installed Swashbuckler kit while preserving his identity and equipment."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 220 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-221"
+title = "Make Hexxat a Shadowdancer"
+description = "Convert every joinable Hexxat template to the installed Shadowdancer kit while preserving her vampire abilities."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+conflicts = [
+  { feature_id = "feature:chriz-bg-modpack:component-222", reason = "Conflicts with Hexxat: Fighter/Thief (modpack component 222)." },
+  { feature_id = "feature:chriz-bg-modpack:component-223", reason = "Conflicts with Hexxat: Assassin (modpack component 223)." },
+  { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
+]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 221 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-222"
+title = "Make Hexxat a Fighter/Thief"
+description = "Convert every joinable Hexxat template to Fighter/Thief using the installed progression tables."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+conflicts = [
+  { feature_id = "feature:chriz-bg-modpack:component-221", reason = "Conflicts with Hexxat: Shadowdancer (modpack component 221)." },
+  { feature_id = "feature:chriz-bg-modpack:component-223", reason = "Conflicts with Hexxat: Assassin (modpack component 223)." },
+  { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
+]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 222 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-223"
+title = "Make Hexxat an Assassin"
+description = "Convert every joinable Hexxat template to the installed Assassin kit while preserving her vampire abilities."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+conflicts = [
+  { feature_id = "feature:chriz-bg-modpack:component-221", reason = "Conflicts with Hexxat: Shadowdancer (modpack component 221)." },
+  { feature_id = "feature:chriz-bg-modpack:component-222", reason = "Conflicts with Hexxat: Fighter/Thief (modpack component 222)." },
+  { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
+]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 223 }]
+
+[[features]]
 id = "feature:chriz-bg-modpack:component-400"
 title = "Repair Branwen's Spiritual Hammer"
 description = "Restore the magical weapon's on-hit delivery in the Spell Revisions version of Branwen's innate."
@@ -3469,6 +3531,17 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 450 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-610"
+title = "Scale utility XP with party progress"
+description = "Progressively scale lock, trap, and spell-learning XP from early BG1 through BG2 using the released default curve."
+category = "convenience"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components", "mod:eet-end"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 610 }]
 
 [[features]]
 id = "mod:buffbot"
@@ -5343,6 +5416,8 @@ description = "Crossmod Content"
 category = "npcs"
 decision = "default"
 readiness = "ready"
+parent = "mod:evandra"
+requires = ["feature:evandra:mandatory-components"]
 components = [{ run_id = "evandra-crossmod-bg2", component = 1 }]
 
 [[features]]

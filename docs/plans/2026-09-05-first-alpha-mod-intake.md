@@ -1,5 +1,12 @@
 # First-alpha intake from the owning mod repositories
 
+**2026-09-06 approvals supersede the pending-selection notes below:**
+[current intake and website handoffs](2026-09-06-release-intake-and-website-roadmap.md).
+610,220-223 and releasedSoD290 are approved for recipe intake; Hexxat default
+is explicitly Shadowdancer221. Component620/dragons remain WIP. Full skip
+has a new owner-readiness request. Implementation targets recipealpha10 and is
+not yet an accepted build. Older rows remain the preceding snapshot.
+
 Checked 2026-09-05, approximately 23:20 KST; recipe and modpack status updated
 2026-09-06 KST. Christopher permits work completed
 today to enter the first public alpha; newer unfinished components need not hold
@@ -7,6 +14,22 @@ up the installer. This is an intake queue plus a record of what entered the next
 versioned recipe; release availability by itself still does not select a component.
 
 ## Preserve the current acceptance run
+
+**Latest correction (2026-09-06):** the failure snapshot below is historical.
+R5 has completed all 430 selected components through the documented supervised
+repair, with modpack alpha.5 and retained Bardic balance.2. Christopher now
+reports initial gameplay without crashes or issues. The source recipe alpha.9
+instead pins Bardic balance.3; neither recipe nor current r5 has automatically
+selected new components simply because their package was released.
+
+The SoD owner published **v0.6.6** at **2026-09-05 17:28:49 UTC** (verified via
+the GitHub release API on 2026-09-06). It includes the accepted, tested EET
+victory-ending **290** and repair-only **291**, retaining v0.6.5 fixes. This is
+not the optional full-SoD skip. Current recipe/r5 remain v0.6.5 with 290 absent;
+the old '290 unfinished' deferral is no longer an accurate owner-status claim.
+Intake still needs the new artifact pin and explicit collection selection;
+fresh installations must not select repair-only 291. Do not patch playing r5.
+Source: [SoD v0.6.6 release](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/tag/v0.6.6).
 
 R5 remains the frozen alpha.8 recipe: 43 runs / 430 components. It is terminal
 after pinned alpha.1 modpack 170/192 failed (both bugs also persisted in alpha.4). They are now

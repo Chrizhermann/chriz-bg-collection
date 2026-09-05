@@ -14,6 +14,7 @@ import type {
   GameRole,
   InstallationDefaults,
   ManualArchiveSupply,
+  ManualDownloadRequirement,
   ManagedInstallation,
   NormalizedSelection,
   PhaseSummary,
@@ -37,6 +38,7 @@ export interface Backend {
   chooseDestinationFolder(bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation | null>;
   inspectDestination(path: string, bg1CandidateId: string, bg2CandidateId: string): Promise<DestinationEvaluation>;
   evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation>;
+  inspectManualDownloads(selection: NormalizedSelection): Promise<ManualDownloadRequirement[]>;
   freezeReview(
     displayName: string,
     selection: NormalizedSelection,
@@ -50,6 +52,7 @@ export interface Backend {
   openManualSource(artifactId: string): Promise<void>;
   getRunSnapshot(runId: string): Promise<RunSnapshot>;
   continueWaiting(runId: string): Promise<void>;
+  pauseRun(runId: string): Promise<void>;
   cancelRun(runId: string): Promise<void>;
   getBuildSnapshot(): Promise<BuildSnapshot>;
   advanceBuild(): Promise<BuildSnapshot>;
@@ -143,6 +146,16 @@ type ManualArchiveSupplyWire = {
   readonly filename: string;
   readonly sha256: string;
   readonly length: number;
+};
+
+type ManualDownloadRequirementWire = {
+  readonly artifact_id: string;
+  readonly mod_ids: readonly string[];
+  readonly title: string;
+  readonly filename: string;
+  readonly length: number;
+  readonly ready: boolean;
+  readonly detail: string | null;
 };
 
 type ManagedInstallationWire = {
@@ -359,6 +372,19 @@ export class NativeBackend implements Backend {
     return projectEvaluation(evaluation);
   }
 
+  async inspectManualDownloads(selection: NormalizedSelection): Promise<ManualDownloadRequirement[]> {
+    const requirements = await this.#command<readonly ManualDownloadRequirementWire[]>("inspect_manual_downloads", { selection });
+    return requirements.map(requirement => ({
+      artifactId: requirement.artifact_id,
+      modIds: requirement.mod_ids,
+      title: requirement.title,
+      filename: requirement.filename,
+      length: requirement.length,
+      ready: requirement.ready,
+      detail: requirement.detail,
+    }));
+  }
+
   async freezeReview(
     displayName: string,
     selection: NormalizedSelection,
@@ -422,6 +448,10 @@ export class NativeBackend implements Backend {
 
   async continueWaiting(runId: string): Promise<void> {
     await this.#command("continue_waiting", { runId });
+  }
+
+  async pauseRun(runId: string): Promise<void> {
+    await this.#command("pause_run", { runId });
   }
 
   async cancelRun(runId: string): Promise<void> {
@@ -688,6 +718,10 @@ export class FixtureBackend implements Backend {
     return { reviewToken: "fixture-review-token", digest: "fixture-review-8d6d75", displayName, destination, gameLabels, evaluation };
   }
 
+  inspectManualDownloads(_selection: NormalizedSelection): Promise<ManualDownloadRequirement[]> {
+    return Promise.resolve([]);
+  }
+
   startBuild(_reviewToken: string, _onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
     return Promise.resolve({ runId: "fixture-run" });
   }
@@ -715,6 +749,10 @@ export class FixtureBackend implements Backend {
   }
 
   continueWaiting(_runId: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  pauseRun(_runId: string): Promise<void> {
     return Promise.resolve();
   }
 

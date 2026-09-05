@@ -184,16 +184,21 @@ describe("native command adapter", () => {
 
   it("maps a native manual archive selection without accepting a caller-owned path", async () => {
     const invoke = vi.fn<InvokeCommand>(async (command, args) => {
-      expect(command).toBe("supply_manual_archive");
-      expect(args).toEqual({ artifactId: "manual-fixture" });
-      return {
-        artifact_id: "manual-fixture",
-        filename: "manual-fixture.zip",
-        sha256: "11".repeat(32),
-        length: 1234,
-      };
+      if (command === "inspect_manual_downloads") {
+        expect(args).toEqual({ selection: { platform: "windows", features: {}, inputs: {} } });
+        return [{ artifact_id: "manual-fixture", mod_ids: ["evandra"], title: "Evandra", filename: "manual-fixture.zip", length: 1234, ready: false, detail: "Not supplied" }];
+      }
+      if (command === "supply_manual_archive") {
+        expect(args).toEqual({ artifactId: "manual-fixture" });
+        return { artifact_id: "manual-fixture", filename: "manual-fixture.zip", sha256: "11".repeat(32), length: 1234 };
+      }
+      throw new Error(`Unexpected command ${command}`);
     });
     const backend = new NativeBackend(invoke);
+
+    await expect(backend.inspectManualDownloads({ platform: "windows", features: {}, inputs: {} })).resolves.toEqual([{
+      artifactId: "manual-fixture", modIds: ["evandra"], title: "Evandra", filename: "manual-fixture.zip", length: 1234, ready: false, detail: "Not supplied",
+    }]);
 
     await expect(backend.supplyManualArchive("manual-fixture")).resolves.toEqual({
       artifactId: "manual-fixture",
@@ -264,6 +269,7 @@ describe("native command adapter", () => {
           expect(args).toEqual({ runId: "run-1" });
           return { run_id: "run-1", status: "running", events: [], report: null, error: null };
         case "continue_waiting":
+        case "pause_run":
         case "cancel_run":
           expect(args).toEqual({ runId: "run-1" });
           return null;
@@ -281,6 +287,7 @@ describe("native command adapter", () => {
     expect(events[0]).toMatchObject({ runId: "run-1", sequenceAsString: "1", event: { type: "campaign_started" } });
     await expect(backend.getRunSnapshot("run-1")).resolves.toMatchObject({ runId: "run-1", status: "running" });
     await expect(backend.continueWaiting("run-1")).resolves.toBeUndefined();
+    await expect(backend.pauseRun("run-1")).resolves.toBeUndefined();
     await expect(backend.cancelRun("run-1")).resolves.toBeUndefined();
   });
 

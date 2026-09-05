@@ -9,6 +9,9 @@ use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 use zip::{CompressionMethod, ZipArchive};
 
+#[cfg(windows)]
+use widestring::WideCString;
+
 use super::AcquireError;
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -60,6 +63,8 @@ pub enum ArchiveFormat {
     Zip,
     /// An `.iemod` artifact, which uses ZIP framing.
     Iemod,
+    /// A Windows self-extracting RAR archive; its executable stub is never run.
+    SelfExtractingRar,
 }
 
 /// Exact archive shape and bounds authored by a recipe.
@@ -159,7 +164,7 @@ pub fn extract_archive(
     // Both supported kinds deliberately use the same framing. Keeping this match explicit makes
     // a future format addition fail compilation until extraction support is consciously chosen.
     match requirements.format {
-        ArchiveFormat::Zip | ArchiveFormat::Iemod => {}
+        ArchiveFormat::Zip | ArchiveFormat::Iemod | ArchiveFormat::SelfExtractingRar => {}
     }
 
     let expected_digest = validate_digest(&requirements.artifact_sha256)?;
@@ -170,20 +175,38 @@ pub fn extract_archive(
             "an all-zero SHA-256 is not immutable provenance".to_owned(),
         ));
     }
-    let (archive_length, actual_digest, prefix) = hash_archive(archive_path)?;
+    let snapshot_parent = extraction_cache.join("archive-snapshots");
+    fs::create_dir_all(&snapshot_parent).map_err(|source| AcquireError::Io {
+        action: "create archive snapshot directory",
+        path: snapshot_parent.clone(),
+        source,
+    })?;
+    let (snapshot, archive_length, actual_digest, prefix) =
+        snapshot_archive(archive_path, &snapshot_parent)?;
     if expected_digest.bytes().any(|byte| byte != b'0') && actual_digest != expected_digest {
         return Err(AcquireError::HashMismatch {
             expected: expected_digest,
             actual: actual_digest,
         });
     }
-    if archive_length < 4 || prefix != *b"PK\x03\x04" {
+    if matches!(
+        requirements.format,
+        ArchiveFormat::Zip | ArchiveFormat::Iemod
+    ) && (archive_length < 4 || prefix != *b"PK\x03\x04")
+    {
         let message = if matches!(requirements.mode, ArchiveMode::Public) {
             "self-extracting/prefixed ZIP files are not accepted"
         } else {
             "archive must begin with a ZIP local-file header"
         };
         return Err(AcquireError::PublicArchiveRejected(message.to_owned()));
+    }
+    if matches!(requirements.format, ArchiveFormat::SelfExtractingRar)
+        && (archive_length < 2 || prefix[..2] != *b"MZ")
+    {
+        return Err(AcquireError::PublicArchiveRejected(
+            "self-extracting RAR archive must begin with an MZ executable header".to_owned(),
+        ));
     }
 
     let digest = actual_digest;
@@ -200,22 +223,33 @@ pub fn extract_archive(
         );
     }
 
-    let file = File::open(archive_path).map_err(|source| AcquireError::Io {
-        action: "open archive",
-        path: archive_path.to_path_buf(),
-        source,
-    })?;
-    let mut archive = ZipArchive::new(file).map_err(|source| AcquireError::ArchiveFormat {
-        path: archive_path.to_path_buf(),
-        message: source.to_string(),
-    })?;
-    let (entries, wrapper_directory) = validate_central_directory(
-        &mut archive,
-        archive_path,
-        &expected_roots,
-        &expected_tp2_paths,
-        &requirements.limits,
-    )?;
+    let (entries, wrapper_directory) = match requirements.format {
+        ArchiveFormat::Zip | ArchiveFormat::Iemod => {
+            let file = File::open(snapshot.path()).map_err(|source| AcquireError::Io {
+                action: "open archive",
+                path: archive_path.to_path_buf(),
+                source,
+            })?;
+            let mut archive =
+                ZipArchive::new(file).map_err(|source| AcquireError::ArchiveFormat {
+                    path: archive_path.to_path_buf(),
+                    message: source.to_string(),
+                })?;
+            validate_central_directory(
+                &mut archive,
+                snapshot.path(),
+                &expected_roots,
+                &expected_tp2_paths,
+                &requirements.limits,
+            )?
+        }
+        ArchiveFormat::SelfExtractingRar => validate_rar_entries(
+            snapshot.path(),
+            &expected_roots,
+            &expected_tp2_paths,
+            &requirements.limits,
+        )?,
+    };
 
     let temporary_parent = extraction_cache.join("temporary");
     fs::create_dir_all(&temporary_parent).map_err(|source| AcquireError::Io {
@@ -224,15 +258,26 @@ pub fn extract_archive(
         source,
     })?;
     let temporary = create_temporary_directory(&temporary_parent, &digest)?;
-    let result = extract_validated_entries(
-        archive,
-        &entries,
-        &temporary,
-        &digest,
-        wrapper_directory.clone(),
-        &expected_roots,
-        &expected_tp2_paths,
-    );
+    let result = match requirements.format {
+        ArchiveFormat::Zip | ArchiveFormat::Iemod => extract_zip_entries(
+            snapshot.path(),
+            &entries,
+            &temporary,
+            &digest,
+            wrapper_directory.clone(),
+            &expected_roots,
+            &expected_tp2_paths,
+        ),
+        ArchiveFormat::SelfExtractingRar => extract_rar_entries(
+            snapshot.path(),
+            &entries,
+            &temporary,
+            &digest,
+            wrapper_directory.clone(),
+            &expected_roots,
+            &expected_tp2_paths,
+        ),
+    };
     if let Err(error) = result {
         let _ = fs::remove_dir_all(&temporary);
         return Err(error);
@@ -316,7 +361,10 @@ fn validate_digest(value: &str) -> Result<String, AcquireError> {
     Ok(value.to_ascii_lowercase())
 }
 
-fn hash_archive(path: &Path) -> Result<(u64, String, [u8; 4]), AcquireError> {
+fn snapshot_archive(
+    path: &Path,
+    snapshot_parent: &Path,
+) -> Result<(tempfile::NamedTempFile, u64, String, [u8; 4]), AcquireError> {
     let metadata = fs::symlink_metadata(path).map_err(|source| AcquireError::Io {
         action: "inspect archive",
         path: path.to_path_buf(),
@@ -327,18 +375,26 @@ fn hash_archive(path: &Path) -> Result<(u64, String, [u8; 4]), AcquireError> {
             "archive path must name a regular non-symlink file".to_owned(),
         ));
     }
-    let mut file = File::open(path).map_err(|source| AcquireError::Io {
+    let mut input = File::open(path).map_err(|source| AcquireError::Io {
         action: "open archive for hashing",
         path: path.to_path_buf(),
         source,
     })?;
+    let mut snapshot = tempfile::Builder::new()
+        .prefix("verified-archive-")
+        .tempfile_in(snapshot_parent)
+        .map_err(|source| AcquireError::Io {
+            action: "create archive snapshot",
+            path: snapshot_parent.to_path_buf(),
+            source,
+        })?;
     let mut hash = Sha256::new();
     let mut length = 0_u64;
     let mut prefix = [0_u8; 4];
     let mut prefix_length = 0_usize;
     let mut buffer = [0_u8; BUFFER_SIZE];
     loop {
-        let read = file.read(&mut buffer).map_err(|source| AcquireError::Io {
+        let read = input.read(&mut buffer).map_err(|source| AcquireError::Io {
             action: "read archive for hashing",
             path: path.to_path_buf(),
             source,
@@ -355,8 +411,23 @@ fn hash_archive(path: &Path) -> Result<(u64, String, [u8; 4]), AcquireError> {
             AcquireError::ArchiveLimitExceeded("archive length overflowed u64".to_owned())
         })?;
         hash.update(&buffer[..read]);
+        snapshot
+            .write_all(&buffer[..read])
+            .map_err(|source| AcquireError::Io {
+                action: "write archive snapshot",
+                path: snapshot.path().to_path_buf(),
+                source,
+            })?;
     }
-    Ok((length, hex::encode(hash.finalize()), prefix))
+    snapshot
+        .as_file()
+        .sync_all()
+        .map_err(|source| AcquireError::Io {
+            action: "sync archive snapshot",
+            path: snapshot.path().to_path_buf(),
+            source,
+        })?;
+    Ok((snapshot, length, hex::encode(hash.finalize()), prefix))
 }
 
 fn validate_central_directory<R: Read + std::io::Seek>(
@@ -520,6 +591,268 @@ fn validate_central_directory<R: Read + std::io::Seek>(
     Ok((entries, wrapper))
 }
 
+#[cfg(not(windows))]
+fn validate_rar_entries(
+    archive_path: &Path,
+    _expected_roots: &[String],
+    _expected_tp2_paths: &[String],
+    _limits: &ArchiveLimits,
+) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
+    Err(AcquireError::ArchiveFormat {
+        path: archive_path.to_path_buf(),
+        message: "self-extracting RAR archives are supported only by the Windows installer"
+            .to_owned(),
+    })
+}
+
+#[cfg(windows)]
+fn validate_rar_entries(
+    archive_path: &Path,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+    limits: &ArchiveLimits,
+) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
+    let path = WideCString::from_os_str(archive_path).map_err(|_| {
+        AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
+    })?;
+    let mut open =
+        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_LIST_INCSPLIT);
+    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
+    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
+        return Err(AcquireError::ArchiveFormat {
+            path: archive_path.to_path_buf(),
+            message: format!("UnRAR open failed with code {}", open.open_result),
+        });
+    }
+    struct Guard(*const unrar_sys::Handle);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            unsafe { unrar_sys::RARCloseArchive(self.0) };
+        }
+    }
+    let _guard = Guard(handle);
+    if open.flags & (unrar_sys::ROADF_VOLUME | unrar_sys::ROADF_FIRSTVOLUME) != 0 {
+        return Err(AcquireError::ArchiveFormat {
+            path: archive_path.to_path_buf(),
+            message: "multi-volume RAR archives are unsupported".to_owned(),
+        });
+    }
+    if open.flags & unrar_sys::ROADF_ENCHEADERS != 0 {
+        return Err(AcquireError::ArchiveFormat {
+            path: archive_path.to_path_buf(),
+            message: "encrypted RAR headers are unsupported".to_owned(),
+        });
+    }
+    if open.flags & unrar_sys::ROADF_SOLID != 0 {
+        return Err(AcquireError::ArchiveFormat {
+            path: archive_path.to_path_buf(),
+            message: "solid RAR archives are unsupported".to_owned(),
+        });
+    }
+
+    let mut entries = Vec::new();
+    let mut destination_kinds = BTreeMap::<String, bool>::new();
+    let mut total = 0_u64;
+    loop {
+        let mut header = unrar_sys::HeaderDataEx::default();
+        let code = unsafe {
+            unrar_sys::RARReadHeaderEx(handle, std::ptr::from_mut(&mut header).cast_const())
+        };
+        if code == unrar_sys::ERAR_END_ARCHIVE {
+            break;
+        }
+        if code != unrar_sys::ERAR_SUCCESS {
+            return Err(AcquireError::ArchiveFormat {
+                path: archive_path.to_path_buf(),
+                message: format!("UnRAR header read failed with code {code}"),
+            });
+        }
+        if entries.len() >= limits.max_entries {
+            return Err(AcquireError::ArchiveLimitExceeded(format!(
+                "RAR entries exceed the maximum of {}",
+                limits.max_entries
+            )));
+        }
+        let name = unsafe {
+            WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
+        }
+        .to_os_string()
+        .into_string()
+        .map_err(|_| AcquireError::UnsafeArchiveEntry {
+            entry: "<non-Unicode RAR path>".to_owned(),
+            message: "archive entry path is not Unicode".to_owned(),
+        })?;
+        let is_directory = header.flags & unrar_sys::RHDF_DIRECTORY != 0;
+        let normalized = normalize_relative_path(&name, is_directory)?;
+        let depth = normalized.split('/').count();
+        if depth > limits.max_depth {
+            return Err(AcquireError::ArchiveLimitExceeded(format!(
+                "entry `{name}` has depth {depth}, maximum {}",
+                limits.max_depth
+            )));
+        }
+        if header.flags
+            & (unrar_sys::RHDF_SPLITBEFORE
+                | unrar_sys::RHDF_SPLITAFTER
+                | unrar_sys::RHDF_ENCRYPTED
+                | unrar_sys::RHDF_SOLID)
+            != 0
+        {
+            return Err(AcquireError::ArchiveFormat {
+                path: archive_path.to_path_buf(),
+                message: format!("split, encrypted, or solid RAR entry `{name}` is unsupported"),
+            });
+        }
+        if header.redir_type != 0 {
+            return Err(AcquireError::UnsafeArchiveEntry {
+                entry: name,
+                message: "RAR links, junctions, references, and redirections are unsupported"
+                    .to_owned(),
+            });
+        }
+        if header.host_os > 3 {
+            return Err(AcquireError::UnsafeArchiveEntry {
+                entry: name,
+                message: format!("unknown RAR host OS {}", header.host_os),
+            });
+        }
+        if header.host_os == 3 {
+            let unix_kind = header.file_attr & 0xf000;
+            let expected_kind = if is_directory { 0x4000 } else { 0x8000 };
+            if unix_kind != expected_kind {
+                return Err(AcquireError::UnsafeArchiveEntry {
+                    entry: name,
+                    message: "only regular files and directories are accepted".to_owned(),
+                });
+            }
+        }
+        let size = (u64::from(header.unp_size_high) << 32) | u64::from(header.unp_size);
+        let packed = (u64::from(header.pack_size_high) << 32) | u64::from(header.pack_size);
+        if !is_directory {
+            if size > limits.max_entry_uncompressed_bytes {
+                return Err(AcquireError::ArchiveLimitExceeded(format!(
+                    "entry `{normalized}` is {size} bytes, maximum {}",
+                    limits.max_entry_uncompressed_bytes
+                )));
+            }
+            total = total.checked_add(size).ok_or_else(|| {
+                AcquireError::ArchiveLimitExceeded(
+                    "aggregate uncompressed size overflowed u64".to_owned(),
+                )
+            })?;
+            if total > limits.max_total_uncompressed_bytes {
+                return Err(AcquireError::ArchiveLimitExceeded(format!(
+                    "aggregate uncompressed size {total} exceeds {}",
+                    limits.max_total_uncompressed_bytes
+                )));
+            }
+            if size > packed.max(1).saturating_mul(limits.max_compression_ratio) {
+                return Err(AcquireError::ArchiveLimitExceeded(format!(
+                    "entry `{normalized}` exceeds compression ratio {}",
+                    limits.max_compression_ratio
+                )));
+            }
+        }
+        let key = casefold(&normalized);
+        if destination_kinds.insert(key, is_directory).is_some() {
+            return Err(AcquireError::UnsafeArchiveEntry {
+                entry: normalized,
+                message: "case-insensitive duplicate destination".to_owned(),
+            });
+        }
+        entries.push(ValidatedEntry {
+            index: entries.len(),
+            archive_path: normalized.clone(),
+            relative_path: normalized,
+            size,
+            is_directory,
+        });
+        let process = unsafe {
+            unrar_sys::RARProcessFileW(
+                handle,
+                unrar_sys::RAR_SKIP,
+                std::ptr::null(),
+                std::ptr::null(),
+            )
+        };
+        if process != unrar_sys::ERAR_SUCCESS {
+            return Err(AcquireError::ArchiveFormat {
+                path: archive_path.to_path_buf(),
+                message: format!("UnRAR skip failed with code {process}"),
+            });
+        }
+    }
+    finalize_entry_inventory(
+        entries,
+        destination_kinds,
+        expected_roots,
+        expected_tp2_paths,
+    )
+}
+
+fn finalize_entry_inventory(
+    mut entries: Vec<ValidatedEntry>,
+    destination_kinds: BTreeMap<String, bool>,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
+    let keys: Vec<_> = destination_kinds.keys().cloned().collect();
+    for key in &keys {
+        if destination_kinds.get(key) == Some(&false) {
+            let prefix = format!("{key}/");
+            if keys.iter().any(|other| other.starts_with(&prefix)) {
+                return Err(AcquireError::UnsafeArchiveEntry {
+                    entry: key.clone(),
+                    message: "file/directory prefix collision".to_owned(),
+                });
+            }
+        }
+    }
+    let wrapper = select_wrapper(&entries, expected_roots, expected_tp2_paths)?;
+    let wrapper_key = wrapper.as_ref().map(|value| casefold(value));
+    if let Some(wrapper_key) = wrapper_key.as_deref() {
+        entries.retain(|entry| casefold(&entry.archive_path) != wrapper_key);
+    }
+    for entry in &mut entries {
+        if let Some(wrapper_key) = wrapper_key.as_deref() {
+            let prefix = format!("{wrapper_key}/");
+            if !casefold(&entry.archive_path).starts_with(&prefix) {
+                return Err(AcquireError::ArchiveLayout(format!(
+                    "entry `{}` is outside wrapper `{}`",
+                    entry.archive_path,
+                    wrapper.as_deref().unwrap_or_default()
+                )));
+            }
+            let separator = entry.archive_path.find('/').ok_or_else(|| {
+                AcquireError::ArchiveLayout("wrapper directory contains no payload".to_owned())
+            })?;
+            entry.relative_path = entry.archive_path[separator + 1..].to_owned();
+        }
+    }
+    let expected_tp2_keys: BTreeSet<_> = expected_tp2_paths
+        .iter()
+        .map(|path| casefold(path))
+        .collect();
+    for entry in entries.iter().filter(|entry| !entry.is_directory) {
+        let key = casefold(&entry.relative_path);
+        let inside = expected_roots
+            .iter()
+            .any(|root| path_is_within_root(root, &entry.relative_path));
+        if inside && key.ends_with(".tp2") && !expected_tp2_keys.contains(&key) {
+            return Err(AcquireError::ArchiveLayout(format!(
+                "undeclared TP2 `{}`",
+                entry.relative_path
+            )));
+        }
+    }
+    entries.retain(|entry| {
+        expected_roots
+            .iter()
+            .any(|root| path_is_within_root(root, &entry.relative_path))
+    });
+    Ok((entries, wrapper))
+}
+
 fn select_wrapper(
     entries: &[ValidatedEntry],
     expected_roots: &[String],
@@ -601,8 +934,8 @@ fn path_is_within_root(root: &str, path: &str) -> bool {
     path == root || path.starts_with(&format!("{root}/"))
 }
 
-fn extract_validated_entries<R: Read + std::io::Seek>(
-    mut archive: ZipArchive<R>,
+fn extract_zip_entries(
+    archive_path: &Path,
     entries: &[ValidatedEntry],
     temporary: &Path,
     digest: &str,
@@ -610,6 +943,15 @@ fn extract_validated_entries<R: Read + std::io::Seek>(
     expected_roots: &[String],
     expected_tp2_paths: &[String],
 ) -> Result<(), AcquireError> {
+    let file = File::open(archive_path).map_err(|source| AcquireError::Io {
+        action: "open archive",
+        path: archive_path.to_path_buf(),
+        source,
+    })?;
+    let mut archive = ZipArchive::new(file).map_err(|source| AcquireError::ArchiveFormat {
+        path: archive_path.to_path_buf(),
+        message: source.to_string(),
+    })?;
     let mut records = Vec::new();
     for plan in entries.iter().filter(|entry| !entry.is_directory) {
         let output = join_relative(temporary, &plan.relative_path);
@@ -680,6 +1022,324 @@ fn extract_validated_entries<R: Read + std::io::Seek>(
             sha256: hex::encode(hash.finalize()),
         });
     }
+    write_extraction_marker(
+        temporary,
+        digest,
+        wrapper_directory,
+        expected_roots,
+        expected_tp2_paths,
+        records,
+    )
+}
+
+#[cfg(not(windows))]
+fn extract_rar_entries(
+    archive_path: &Path,
+    _entries: &[ValidatedEntry],
+    _temporary: &Path,
+    _digest: &str,
+    _wrapper_directory: Option<String>,
+    _expected_roots: &[String],
+    _expected_tp2_paths: &[String],
+) -> Result<(), AcquireError> {
+    Err(AcquireError::ArchiveFormat {
+        path: archive_path.to_path_buf(),
+        message: "self-extracting RAR archives are supported only by the Windows installer"
+            .to_owned(),
+    })
+}
+
+#[cfg(windows)]
+struct RarCallbackState {
+    output: Option<File>,
+    hash: Sha256,
+    length: u64,
+    expected_length: u64,
+    error: Option<String>,
+}
+
+#[cfg(windows)]
+extern "C" fn rar_callback(
+    message: unrar_sys::UINT,
+    user_data: unrar_sys::LPARAM,
+    data: unrar_sys::LPARAM,
+    length: unrar_sys::LPARAM,
+) -> std::os::raw::c_int {
+    if user_data == 0 {
+        return -1;
+    }
+    let state = unsafe { &mut *(user_data as *mut RarCallbackState) };
+    if message != unrar_sys::UCM_PROCESSDATA {
+        state.error = Some("RAR requested a password or another volume".to_owned());
+        return -1;
+    }
+    if data == 0 || length < 0 {
+        state.error = Some("UnRAR returned an invalid data callback".to_owned());
+        return -1;
+    }
+    let Ok(chunk_length) = usize::try_from(length) else {
+        state.error = Some("UnRAR callback length does not fit usize".to_owned());
+        return -1;
+    };
+    let Ok(chunk_length_u64) = u64::try_from(chunk_length) else {
+        state.error = Some("UnRAR callback length does not fit u64".to_owned());
+        return -1;
+    };
+    let Some(next_length) = state.length.checked_add(chunk_length_u64) else {
+        state.error = Some("RAR extracted length overflowed u64".to_owned());
+        return -1;
+    };
+    if next_length > state.expected_length {
+        state.error = Some(format!(
+            "RAR entry produced more than its declared {} bytes",
+            state.expected_length
+        ));
+        return -1;
+    }
+    let bytes = unsafe { std::slice::from_raw_parts(data as *const u8, chunk_length) };
+    let Some(output) = state.output.as_mut() else {
+        state.error = Some("RAR produced data for an unselected entry".to_owned());
+        return -1;
+    };
+    if let Err(error) = output.write_all(bytes) {
+        state.error = Some(format!("write extracted RAR file: {error}"));
+        return -1;
+    }
+    state.hash.update(bytes);
+    state.length = next_length;
+    0
+}
+
+#[cfg(windows)]
+fn extract_rar_entries(
+    archive_path: &Path,
+    entries: &[ValidatedEntry],
+    temporary: &Path,
+    digest: &str,
+    wrapper_directory: Option<String>,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> Result<(), AcquireError> {
+    let path = WideCString::from_os_str(archive_path).map_err(|_| {
+        AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
+    })?;
+    let mut open =
+        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_EXTRACT);
+    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
+    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
+        return Err(AcquireError::ArchiveFormat {
+            path: archive_path.to_path_buf(),
+            message: format!("UnRAR open failed with code {}", open.open_result),
+        });
+    }
+    struct Guard(*const unrar_sys::Handle);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            unsafe { unrar_sys::RARCloseArchive(self.0) };
+        }
+    }
+    let _guard = Guard(handle);
+    if open.flags
+        & (unrar_sys::ROADF_VOLUME
+            | unrar_sys::ROADF_FIRSTVOLUME
+            | unrar_sys::ROADF_ENCHEADERS
+            | unrar_sys::ROADF_SOLID)
+        != 0
+    {
+        return Err(AcquireError::ArchiveFormat {
+            path: archive_path.to_path_buf(),
+            message: "RAR archive flags changed between validation and extraction".to_owned(),
+        });
+    }
+    let selected = entries
+        .iter()
+        .filter(|entry| !entry.is_directory)
+        .map(|entry| (entry.index, entry))
+        .collect::<BTreeMap<_, _>>();
+    let mut extracted_indices = BTreeSet::new();
+    let mut records = Vec::new();
+    let mut index = 0_usize;
+    loop {
+        let mut header = unrar_sys::HeaderDataEx::default();
+        let code = unsafe {
+            unrar_sys::RARReadHeaderEx(handle, std::ptr::from_mut(&mut header).cast_const())
+        };
+        if code == unrar_sys::ERAR_END_ARCHIVE {
+            break;
+        }
+        if code != unrar_sys::ERAR_SUCCESS {
+            return Err(AcquireError::ArchiveFormat {
+                path: archive_path.to_path_buf(),
+                message: format!("UnRAR header read failed with code {code}"),
+            });
+        }
+        let current_name = unsafe {
+            WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
+        }
+        .to_string_lossy()
+        .replace('\\', "/");
+        if let Some(plan) = selected.get(&index) {
+            if !current_name.eq_ignore_ascii_case(&plan.archive_path)
+                || ((u64::from(header.unp_size_high) << 32) | u64::from(header.unp_size))
+                    != plan.size
+            {
+                return Err(AcquireError::ArchiveFormat {
+                    path: archive_path.to_path_buf(),
+                    message: format!(
+                        "RAR entry metadata changed before extraction at `{current_name}`"
+                    ),
+                });
+            }
+            let output = join_relative(temporary, &plan.relative_path);
+            let parent = output.parent().ok_or_else(|| {
+                AcquireError::InvalidRequest("archive output has no parent".to_owned())
+            })?;
+            fs::create_dir_all(parent).map_err(|source| AcquireError::Io {
+                action: "create extracted file directory",
+                path: parent.to_path_buf(),
+                source,
+            })?;
+            let output_file = File::create(&output).map_err(|source| AcquireError::Io {
+                action: "create extracted RAR file",
+                path: output.clone(),
+                source,
+            })?;
+            let mut state = RarCallbackState {
+                output: Some(output_file),
+                hash: Sha256::new(),
+                length: 0,
+                expected_length: plan.size,
+                error: None,
+            };
+            unsafe {
+                unrar_sys::RARSetCallback(
+                    handle,
+                    Some(rar_callback),
+                    std::ptr::from_mut(&mut state) as unrar_sys::LPARAM,
+                )
+            };
+            let process = unsafe {
+                unrar_sys::RARProcessFileW(
+                    handle,
+                    unrar_sys::RAR_TEST,
+                    std::ptr::null(),
+                    std::ptr::null(),
+                )
+            };
+            unsafe { unrar_sys::RARSetCallback(handle, None, 0) };
+            if let Some(message) = state.error {
+                return Err(AcquireError::ArchiveFormat {
+                    path: PathBuf::from(&plan.archive_path),
+                    message,
+                });
+            }
+            if process != unrar_sys::ERAR_SUCCESS || state.length != plan.size {
+                return Err(AcquireError::ArchiveFormat {
+                    path: PathBuf::from(&plan.archive_path),
+                    message: format!(
+                        "UnRAR returned {process}; entry announced {} bytes but produced {}",
+                        plan.size, state.length
+                    ),
+                });
+            }
+            let output_file = state
+                .output
+                .take()
+                .ok_or_else(|| AcquireError::ArchiveFormat {
+                    path: output.clone(),
+                    message: "RAR output file disappeared during extraction".to_owned(),
+                })?;
+            output_file.sync_all().map_err(|source| AcquireError::Io {
+                action: "sync extracted RAR file",
+                path: output.clone(),
+                source,
+            })?;
+            let sha256 = hex::encode(state.hash.finalize());
+            let metadata = fs::symlink_metadata(&output).map_err(|source| AcquireError::Io {
+                action: "inspect extracted RAR file",
+                path: output.clone(),
+                source,
+            })?;
+            if !metadata.is_file()
+                || metadata.file_type().is_symlink()
+                || metadata.len() != plan.size
+            {
+                return Err(AcquireError::ArchiveFormat {
+                    path: output,
+                    message: format!("RAR entry announced {} bytes but did not produce one regular file of that size", plan.size),
+                });
+            }
+            records.push(ExtractedFile {
+                relative_path: plan.relative_path.clone(),
+                length: state.length,
+                sha256,
+            });
+            extracted_indices.insert(index);
+        } else {
+            let mut state = RarCallbackState {
+                output: None,
+                hash: Sha256::new(),
+                length: 0,
+                expected_length: 0,
+                error: None,
+            };
+            unsafe {
+                unrar_sys::RARSetCallback(
+                    handle,
+                    Some(rar_callback),
+                    std::ptr::from_mut(&mut state) as unrar_sys::LPARAM,
+                )
+            };
+            let process = unsafe {
+                unrar_sys::RARProcessFileW(
+                    handle,
+                    unrar_sys::RAR_SKIP,
+                    std::ptr::null(),
+                    std::ptr::null(),
+                )
+            };
+            unsafe { unrar_sys::RARSetCallback(handle, None, 0) };
+            if let Some(message) = state.error {
+                return Err(AcquireError::ArchiveFormat {
+                    path: archive_path.to_path_buf(),
+                    message,
+                });
+            }
+            if process != unrar_sys::ERAR_SUCCESS {
+                return Err(AcquireError::ArchiveFormat {
+                    path: archive_path.to_path_buf(),
+                    message: format!("UnRAR skip failed with code {process}"),
+                });
+            }
+        }
+        index = index.checked_add(1).ok_or_else(|| {
+            AcquireError::ArchiveLimitExceeded("RAR entry index overflowed usize".to_owned())
+        })?;
+    }
+    if extracted_indices.len() != selected.len() {
+        return Err(AcquireError::ArchiveFormat {
+            path: archive_path.to_path_buf(),
+            message: "not every validated RAR entry was extracted".to_owned(),
+        });
+    }
+    write_extraction_marker(
+        temporary,
+        digest,
+        wrapper_directory,
+        expected_roots,
+        expected_tp2_paths,
+        records,
+    )
+}
+
+fn write_extraction_marker(
+    temporary: &Path,
+    digest: &str,
+    wrapper_directory: Option<String>,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+    mut records: Vec<ExtractedFile>,
+) -> Result<(), AcquireError> {
     records.sort_by_key(|record| casefold(&record.relative_path));
     let marker = ExtractionMarker {
         version: EXTRACTION_MARKER_VERSION,
@@ -1070,4 +1730,46 @@ pub(super) fn join_relative(root: &Path, relative: &str) -> PathBuf {
 
 pub(super) fn casefold(value: &str) -> String {
     value.to_lowercase()
+}
+
+#[cfg(all(test, windows))]
+mod rar_safety_tests {
+    use super::*;
+
+    #[test]
+    fn callback_rejects_overproduction_before_writing_the_chunk() {
+        let temporary = tempfile::NamedTempFile::new().unwrap();
+        let output = temporary.reopen().unwrap();
+        let mut state = RarCallbackState {
+            output: Some(output),
+            hash: Sha256::new(),
+            length: 0,
+            expected_length: 3,
+            error: None,
+        };
+        let bytes = [1_u8, 2, 3, 4];
+        let result = rar_callback(
+            unrar_sys::UCM_PROCESSDATA,
+            std::ptr::from_mut(&mut state) as unrar_sys::LPARAM,
+            bytes.as_ptr() as unrar_sys::LPARAM,
+            bytes.len() as unrar_sys::LPARAM,
+        );
+
+        assert_eq!(result, -1);
+        assert_eq!(state.length, 0);
+        assert_eq!(fs::read(temporary.path()).unwrap(), Vec::<u8>::new());
+    }
+
+    #[test]
+    fn engine_owned_snapshot_is_stable_after_source_changes() {
+        let temporary = tempfile::TempDir::new().unwrap();
+        let source = temporary.path().join("source.exe");
+        fs::write(&source, b"MZoriginal").unwrap();
+        let (snapshot, _, digest, _) = snapshot_archive(&source, temporary.path()).unwrap();
+
+        fs::write(&source, b"MZreplacement").unwrap();
+
+        assert_eq!(fs::read(snapshot.path()).unwrap(), b"MZoriginal");
+        assert_eq!(digest, hex::encode(Sha256::digest(b"MZoriginal")));
+    }
 }
