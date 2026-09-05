@@ -1,5 +1,25 @@
 # CHRIZ-SOD-REMIX 120 blocks full curated installation
 
+## Ready for Christopher's focused in-game check
+
+After native acceptance, the owning SoD task configured only the retained disposable
+clone's `engine.lua` to use the unique profile name `CEBG SoD120 v065 Test`, and created
+fresh finalized-EET/SoD/console configuration at
+`C:\Users\chris\OneDrive\Documents\CEBG SoD120 v065 Test\Baldur.lua`.
+The collection verified those paths/configuration exist. No game has been launched and
+no existing saves were imported or modified. This supersedes the earlier compatible-seed
+discussion: use a **new disposable SoD character** in this separate profile.
+
+Launch only `C:\Users\chris\Games\CEBG-SOD120-v065-test\game\InfinityLoader.exe`,
+with all other Baldur/InfinityLoader games closed. The exact short staging and pass/fail
+instructions are in
+`C:\Users\chris\Documents\Codex\2026-09-05\chriz-sod-remix-v0.6.5-rc\LIVE-TEST.md`.
+They exercise one-Essence refusal, two-Essence consumption/text/XP, no cinematic/travel,
+and dormant state after save/reload. Component 290 and the unfinished collection tail
+are outside this test. Retain both this test game directory and its unique profile until
+Christopher finishes; then they are disposable cleanup targets, never the stream profile.
+Publication is ready but still awaits Christopher's explicit decision in the SoD task.
+
 ## Focused native repair acceptance PASSED (2026-09-05)
 
 The collection created only `C:\Users\chris\Games\CEBG-SOD120-v065-test\game`, a

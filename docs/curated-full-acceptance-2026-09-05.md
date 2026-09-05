@@ -100,6 +100,12 @@ See the handoff for evidence and test-copy ownership. No game was launched; the 
 tail clone is not a completed collection installation. The existing stream-copy read-only
 verifier remains baseline-only evidence, distinct from this new native check.
 
+The owning task has prepared a separate `CEBG SoD120 v065 Test` save/configuration profile
+for that retained clone and a `LIVE-TEST.md` beside the local release candidate. Christopher
+can now start a new disposable SoD character there for the focused pool check; no existing
+save import is needed. Exact paths and cleanup ownership are in the handoff. No game has
+been launched by either task, and publication still awaits his explicit decision.
+
 ### Current r3 checkpoint
 
 The conditional-prompt fix is committed as `6a2558b`, and recipe alpha.6 static evidence
