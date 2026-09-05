@@ -5,6 +5,20 @@ downloads, updates, launcher/game checks and cleanup. Keep a successful install 
 
 ## Authority and current state
 
+**Continuation authorized:** SoD v0.6.5 is now published and independently verified.
+The upcoming alpha.7 recipe retains the exact curated component choices; app alpha.8
+also fixes the misleading Retry action for structured `fresh_copy_required` receipts
+(65 frontend tests/typecheck passed, commit `a7bd8cf`). Fresh target is planned as
+`C:\Users\chris\Games\CEBG-Curated-20260905-r4`; it has not started yet.
+
+Radar Latest is now 2.5.0.0, published 2026-09-05. `BG2RadarOverlay.7z` is 68,222,139
+bytes, SHA-256 `b8622e03526be812fce22690508a59445687a7c4354a9f55bd1d3e4be88f8f9c`.
+Real download/layout checks and all seven focused engine Radar tests pass without code
+changes. Verified archive is `target/radar-2.5.0.0-acceptance/BG2RadarOverlay.7z`.
+Install this latest verified add-on only after the new game's completed receipt exists.
+
+The r3/package snapshot below remains historical until replaced by the new run details.
+
 - Worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - Frozen recipe: `recipes/curated-full-current`, preset `chris-recommended`,
   recipe version `0.1.0-alpha.6`; signed app alpha.7 is packaged and installed locally.

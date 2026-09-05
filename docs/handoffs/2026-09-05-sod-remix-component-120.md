@@ -1,5 +1,26 @@
 # CHRIZ-SOD-REMIX 120/225 fix acceptance and release handoff
 
+## Published release verified; collection continuation authorized
+
+Christopher authorized standard mod finish-off and continuation here. The owning task
+published [v0.6.5](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/tag/v0.6.5),
+annotated tag peeling to `a2762f5da0e77d38dfd5eb10c69d51beb25c8d93`.
+The final [ZIP](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.5/chriz-sod-remix-v0.6.5.zip)
+is 1,460,498 bytes with SHA-256
+`e964507612730d0c44c0ea155291a1935ee8a6355cc83566be6a14f069e9d601`.
+The collection independently downloaded and verified it, then compared all 106 file
+entries with the accepted RC: **only COMPONENTS.md differs; no mod/WeiDU bytes changed**.
+
+The owning task's completed fix worktree may now be removed as its own repo cleanup.
+Use the [tagged acceptance record](https://github.com/Chrizhermann/chriz-sod-rebalance/blob/v0.6.5/docs/playtest/2026-09-05-scrying-pool-v065.md)
+instead of the historical worktree paths below. CI's later synthetic-fixture casing and
+documentation count corrections did not change the mod payload (parse scope: TP2 plus
+33 TPA libraries). Full 30-component bundle retained; 290 still deferred.
+
+Next collection recipe is alpha.7, app alpha.8. Re-pin only to the verified published
+artifact and start a new managed copy; never resume or mutate frozen r3. Retain the focused
+test copy/profile until the final collection cleanup is coordinated.
+
 ## Focused runtime acceptance received (2026-09-05)
 
 Christopher reports the test looks good. The owning task additionally confirms his
