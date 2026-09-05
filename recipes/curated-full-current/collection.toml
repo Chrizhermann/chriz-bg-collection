@@ -3502,6 +3502,15 @@ readiness = "ready"
 
 
 [[features]]
+id = "mod:bardicwonders"
+title = "Bardic Wonders"
+description = "Install the curated Bardic Wonders kits, bard systems, spells, and compatibility patch."
+category = "kits"
+decision = "default"
+readiness = "ready"
+
+
+[[features]]
 id = "feature:evandra:mandatory-components"
 title = "Evandra NPC"
 description = "Evandra NPC"
@@ -3531,6 +3540,7 @@ description = "Bardic Wonders: Blade Overhaul"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1001 }]
 
 [[features]]
@@ -3540,6 +3550,7 @@ description = "Bardic Wonders: Jester Overhaul"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1002 }]
 
 [[features]]
@@ -3549,6 +3560,7 @@ description = "Bardic Wonders: Skald Overhaul"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1003 }]
 
 [[features]]
@@ -3558,6 +3570,7 @@ description = "Bardic Wonders: Abettor of Mask Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1004 }]
 
 [[features]]
@@ -3567,6 +3580,7 @@ description = "Bardic Wonders: Dancer Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1005 }]
 
 [[features]]
@@ -3575,8 +3589,9 @@ title = "Bardic Wonders: Darkbloom Bard Kit"
 description = "Bardic Wonders: Darkbloom Bard Kit"
 category = "kits"
 decision = "default"
-readiness = "blocked"
-unavailable_reason = "Darkbloom is unavailable with the selected Spell Revisions setup."
+readiness = "ready"
+parent = "mod:bardicwonders"
+conflicts = [{ feature_id = "feature:spell-rev:mandatory-components", reason = "Unavailable with Spell Revisions." }]
 components = [{ run_id = "bardicwonders-bg2", component = 1006 }]
 
 [[features]]
@@ -3586,6 +3601,7 @@ description = "Bardic Wonders: Storm Drummer Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1007 }]
 
 [[features]]
@@ -3595,6 +3611,7 @@ description = "Bardic Wonders: Troubadour Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-garrick-bg2", component = 1008 }]
 
 [[features]]
@@ -3604,6 +3621,7 @@ description = "Bardic Wonders: Deathsinger Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1009 }]
 
 [[features]]
@@ -3613,6 +3631,7 @@ description = "Bardic Wonders: Strategist Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1010 }]
 
 [[features]]
@@ -3622,6 +3641,7 @@ description = "Bardic Wonders: Kapellmeister Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 1011 }]
 
 [[features]]
@@ -3631,6 +3651,7 @@ description = "Bardic Wonders: Gallant Paladin Kit"
 category = "kits"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 requires = ["feature:eeex:mandatory-components"]
 components = [{ run_id = "bardicwonders-dialogue-patch-bg2", component = 1012 }]
 
@@ -3641,6 +3662,7 @@ description = "Bardic Wonders: Inspirations"
 category = "tweaks"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 2002 }]
 
 [[features]]
@@ -3650,6 +3672,7 @@ description = "Bardic Wonders: High Level Abilities"
 category = "tweaks"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 2007 }]
 
 [[features]]
@@ -3659,6 +3682,7 @@ description = "Bardic Wonders: New Bard Spells"
 category = "tweaks"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 2008 }]
 
 [[features]]
@@ -3668,6 +3692,7 @@ description = "Bardic Wonders: Armored Casting for Bards"
 category = "tweaks"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 2003 }]
 
 [[features]]
@@ -3677,6 +3702,7 @@ description = "Bardic Wonders: Bard Song Mechanics Tweak"
 category = "tweaks"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 2004 }]
 
 [[features]]
@@ -3686,6 +3712,7 @@ description = "Bardic Wonders: Item Restriction Tweaks—Bards may use mage item
 category = "tweaks"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 2005 }]
 
 [[features]]
@@ -3695,6 +3722,7 @@ description = "Bardic Wonders: Bard Song Overhead Visual Effect"
 category = "tweaks"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 components = [{ run_id = "bardicwonders-bg2", component = 2006 }]
 
 [[features]]
@@ -3704,6 +3732,7 @@ description = "Bardic Wonders: Patch Dialogue Class Checks for: Gallant, Mage/Ba
 category = "compatibility"
 decision = "default"
 readiness = "ready"
+parent = "mod:bardicwonders"
 requires = ["feature:bardicwonders:component-1012"]
 components = [{ run_id = "bardicwonders-dialogue-patch-bg2", component = 3001 }]
 

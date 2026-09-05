@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 440 default/mandatory rows — conditional inactive: 5, deferred: 7, selected for installation: 428.
+Engine-equivalent resolved-selection summary: 440 default/mandatory rows — conditional inactive: 6, deferred: 6, selected for installation: 428.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -89,26 +89,26 @@ Engine-equivalent resolved-selection summary: 440 default/mandatory rows — con
 | `ASCENSION:2100` | default | `feature:ascension:component-2100` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 2100 |  |
 | `ASCENSION:2300` | default | `feature:ascension:component-2300` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 2300 |  |
 | `ASCENSION:2400` | default | `feature:ascension:component-2400` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 2400 |  |
-| `BARDICWONDERS:1001` | default | `feature:bardicwonders:component-1001` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1001 |  |
-| `BARDICWONDERS:1002` | default | `feature:bardicwonders:component-1002` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1002 |  |
-| `BARDICWONDERS:1003` | default | `feature:bardicwonders:component-1003` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1003 |  |
-| `BARDICWONDERS:1004` | default | `feature:bardicwonders:component-1004` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1004 |  |
-| `BARDICWONDERS:1005` | default | `feature:bardicwonders:component-1005` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1005 |  |
-| `BARDICWONDERS:1006` | default | `feature:bardicwonders:component-1006` | deferred | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1006 | Darkbloom is unavailable with the selected Spell Revisions setup. |
-| `BARDICWONDERS:1007` | default | `feature:bardicwonders:component-1007` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1007 |  |
-| `BARDICWONDERS:1008` | default | `feature:bardicwonders:component-1008` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1008 |  |
-| `BARDICWONDERS:1009` | default | `feature:bardicwonders:component-1009` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1009 |  |
-| `BARDICWONDERS:1010` | default | `feature:bardicwonders:component-1010` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1010 |  |
-| `BARDICWONDERS:1011` | default | `feature:bardicwonders:component-1011` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1011 |  |
-| `BARDICWONDERS:1012` | default | `feature:bardicwonders:component-1012` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 1012 |  |
-| `BARDICWONDERS:2002` | default | `feature:bardicwonders:component-2002` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 2002 |  |
-| `BARDICWONDERS:2007` | default | `feature:bardicwonders:component-2007` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 2007 |  |
-| `BARDICWONDERS:2008` | default | `feature:bardicwonders:component-2008` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 2008 |  |
-| `BARDICWONDERS:2003` | default | `feature:bardicwonders:component-2003` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 2003 |  |
-| `BARDICWONDERS:2004` | default | `feature:bardicwonders:component-2004` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 2004 |  |
-| `BARDICWONDERS:2005` | default | `feature:bardicwonders:component-2005` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 2005 |  |
-| `BARDICWONDERS:2006` | default | `feature:bardicwonders:component-2006` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 2006 |  |
-| `BARDICWONDERS:3001` | default | `feature:bardicwonders:component-3001` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.2 2.9c-balance.2 (v2.9c-balance.2), component 3001 |  |
+| `BARDICWONDERS:1001` | default | `feature:bardicwonders:component-1001` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1001 |  |
+| `BARDICWONDERS:1002` | default | `feature:bardicwonders:component-1002` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1002 |  |
+| `BARDICWONDERS:1003` | default | `feature:bardicwonders:component-1003` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1003 |  |
+| `BARDICWONDERS:1004` | default | `feature:bardicwonders:component-1004` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1004 |  |
+| `BARDICWONDERS:1005` | default | `feature:bardicwonders:component-1005` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1005 |  |
+| `BARDICWONDERS:1006` | default | `feature:bardicwonders:component-1006` | conditional inactive | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1006 | Conflicts with feature:spell-rev:mandatory-components. |
+| `BARDICWONDERS:1007` | default | `feature:bardicwonders:component-1007` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1007 |  |
+| `BARDICWONDERS:1008` | default | `feature:bardicwonders:component-1008` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1008 |  |
+| `BARDICWONDERS:1009` | default | `feature:bardicwonders:component-1009` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1009 |  |
+| `BARDICWONDERS:1010` | default | `feature:bardicwonders:component-1010` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1010 |  |
+| `BARDICWONDERS:1011` | default | `feature:bardicwonders:component-1011` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1011 |  |
+| `BARDICWONDERS:1012` | default | `feature:bardicwonders:component-1012` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 1012 |  |
+| `BARDICWONDERS:2002` | default | `feature:bardicwonders:component-2002` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 2002 |  |
+| `BARDICWONDERS:2007` | default | `feature:bardicwonders:component-2007` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 2007 |  |
+| `BARDICWONDERS:2008` | default | `feature:bardicwonders:component-2008` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 2008 |  |
+| `BARDICWONDERS:2003` | default | `feature:bardicwonders:component-2003` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 2003 |  |
+| `BARDICWONDERS:2004` | default | `feature:bardicwonders:component-2004` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 2004 |  |
+| `BARDICWONDERS:2005` | default | `feature:bardicwonders:component-2005` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 2005 |  |
+| `BARDICWONDERS:2006` | default | `feature:bardicwonders:component-2006` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 2006 |  |
+| `BARDICWONDERS:3001` | default | `feature:bardicwonders:component-3001` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.3 2.9c-balance.3 (v2.9c-balance.3), component 3001 |  |
 | `BG1NPC:0` | default | `feature:bg1npc:component-0` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 0 |  |
 | `BG1NPC:10` | default | `feature:bg1npc:component-10` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 10 |  |
 | `BG1NPC:90` | default | `feature:bg1npc:component-90` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 90 |  |
@@ -198,23 +198,23 @@ Engine-equivalent resolved-selection summary: 440 default/mandatory rows — con
 | `CDTWEAKS:4050` | default | `feature:cdtweaks:component-4050` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 4050 |  |
 | `CDTWEAKS:4061` | default | `feature:cdtweaks:component-4061` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 4061 |  |
 | `CDTWEAKS:4071` | default | `feature:cdtweaks:component-4071` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 4071 |  |
-| `CHRIZ-BG-MODPACK:110` | default | `feature:chriz-bg-modpack:component-110` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 110 |  |
-| `CHRIZ-BG-MODPACK:130` | mandatory | `feature:chriz-bg-modpack:component-130` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 130 |  |
-| `CHRIZ-BG-MODPACK:140` | mandatory | `feature:chriz-bg-modpack:component-140` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 140 |  |
-| `CHRIZ-BG-MODPACK:170` | mandatory | `feature:chriz-bg-modpack:component-170` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 170 |  |
-| `CHRIZ-BG-MODPACK:190` | default | `feature:chriz-bg-modpack:component-190` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 190 |  |
-| `CHRIZ-BG-MODPACK:192` | default | `feature:chriz-bg-modpack:component-192` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 192 |  |
-| `CHRIZ-BG-MODPACK:193` | default | `feature:chriz-bg-modpack:component-193` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 193 |  |
-| `CHRIZ-BG-MODPACK:194` | default | `feature:chriz-bg-modpack:component-194` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 194 |  |
-| `CHRIZ-BG-MODPACK:195` | default | `feature:chriz-bg-modpack:component-195` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 195 |  |
-| `CHRIZ-BG-MODPACK:196` | default | `feature:chriz-bg-modpack:component-196` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 196 |  |
-| `CHRIZ-BG-MODPACK:197` | default | `feature:chriz-bg-modpack:component-197` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 197 |  |
-| `CHRIZ-BG-MODPACK:198` | default | `feature:chriz-bg-modpack:component-198` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 198 |  |
-| `CHRIZ-BG-MODPACK:400` | mandatory | `feature:chriz-bg-modpack:component-400` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 400 | Requires feature:branwen:component-0. |
-| `CHRIZ-BG-MODPACK:410` | mandatory | `feature:chriz-bg-modpack:component-410` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 410 |  |
-| `CHRIZ-BG-MODPACK:430` | mandatory | `feature:chriz-bg-modpack:component-430` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 430 |  |
-| `CHRIZ-BG-MODPACK:440` | mandatory | `feature:chriz-bg-modpack:component-440` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 440 |  |
-| `CHRIZ-BG-MODPACK:450` | mandatory | `feature:chriz-bg-modpack:component-450` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.1 0.2.0-alpha.1 (v0.2.0-alpha.1), component 450 |  |
+| `CHRIZ-BG-MODPACK:110` | default | `feature:chriz-bg-modpack:component-110` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 110 |  |
+| `CHRIZ-BG-MODPACK:130` | mandatory | `feature:chriz-bg-modpack:component-130` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 130 |  |
+| `CHRIZ-BG-MODPACK:140` | mandatory | `feature:chriz-bg-modpack:component-140` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 140 |  |
+| `CHRIZ-BG-MODPACK:170` | mandatory | `feature:chriz-bg-modpack:component-170` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 170 |  |
+| `CHRIZ-BG-MODPACK:190` | default | `feature:chriz-bg-modpack:component-190` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 190 |  |
+| `CHRIZ-BG-MODPACK:192` | default | `feature:chriz-bg-modpack:component-192` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 192 |  |
+| `CHRIZ-BG-MODPACK:193` | default | `feature:chriz-bg-modpack:component-193` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 193 |  |
+| `CHRIZ-BG-MODPACK:194` | default | `feature:chriz-bg-modpack:component-194` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 194 |  |
+| `CHRIZ-BG-MODPACK:195` | default | `feature:chriz-bg-modpack:component-195` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 195 |  |
+| `CHRIZ-BG-MODPACK:196` | default | `feature:chriz-bg-modpack:component-196` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 196 |  |
+| `CHRIZ-BG-MODPACK:197` | default | `feature:chriz-bg-modpack:component-197` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 197 |  |
+| `CHRIZ-BG-MODPACK:198` | default | `feature:chriz-bg-modpack:component-198` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 198 |  |
+| `CHRIZ-BG-MODPACK:400` | mandatory | `feature:chriz-bg-modpack:component-400` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 400 | Requires feature:branwen:component-0. |
+| `CHRIZ-BG-MODPACK:410` | mandatory | `feature:chriz-bg-modpack:component-410` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 410 |  |
+| `CHRIZ-BG-MODPACK:430` | mandatory | `feature:chriz-bg-modpack:component-430` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 430 |  |
+| `CHRIZ-BG-MODPACK:440` | mandatory | `feature:chriz-bg-modpack:component-440` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 440 |  |
+| `CHRIZ-BG-MODPACK:450` | mandatory | `feature:chriz-bg-modpack:component-450` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.5 0.2.0-alpha.5 (v0.2.0-alpha.5), component 450 |  |
 | `CHRIZ-BG-REBALANCE:100` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.3.1 0.3.1 (v0.3.1), component 100 |  |
 | `CHRIZ-BG-REBALANCE:101` | default | `feature:chriz-bg-rebalance:component-101` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.3.1 0.3.1 (v0.3.1), component 101 |  |
 | `CHRIZ-BG-REBALANCE:120` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.3.1 0.3.1 (v0.3.1), component 120 |  |
