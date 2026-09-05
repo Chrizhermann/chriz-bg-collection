@@ -83,8 +83,11 @@ fix and a new pin, not another recipe-only tweak or a component omission.
 Read the [complete owning-repo handoff](handoffs/2026-09-05-sod-remix-component-120.md).
 Failure diagnostics are saved separately (553 files). No fourth full rebuild was started,
 no source mod edits or publication were made, and no game-launch acceptance was attempted
-on this incomplete copy. The automatic follow-up is paused pending the user's direction
-to hand off the fix/release to the SoD task. Full installation acceptance remains incomplete.
+on this incomplete copy. Christopher has now explicitly retained the full SoD Remix bundle
+and authorized the source fix; the handoff was dispatched and the owning SoD task is active.
+He can perform focused live tests there. The automatic installation follow-up remains
+paused while the fix/test/release candidate is prepared. Full acceptance remains incomplete;
+no component selections were changed and unrelated component 290 remains deferred.
 
 ### Current r3 checkpoint
 

@@ -55,6 +55,15 @@ fixed 210-before-197 declaration issue. Remaining collection tail runs were not 
 
 ## Owning repository and next scope
 
+### User decision and dispatch (2026-09-05)
+
+Christopher explicitly rejected deferring the bundle: keep the full approved SoD Remix
+selection and fix component 120 now in its owning task. He can perform the focused live
+tests. The handoff was sent to task `019f6539-74ef-7260-93c3-00b63cee296a`, which is active.
+It requests a bounded fix, current/older-layout fixture coverage, checks of the 120/220/225
+interaction, and a short exact live-test checklist. Unrelated component-290 ending work
+stays separate. No collection component selection was changed.
+
 The fix belongs in `Chrizhermann/chriz-sod-rebalance`, not in a patched copy embedded in
 the collection. The local checkout `C:\src\private\chriz-sod-rebalance` still contains
 the same unguarded state references and has an unrelated untracked `AGENTS.md` to preserve.
@@ -68,10 +77,12 @@ Recommended bounded work:
    skip a missing numeric state if the intended dialogue survives elsewhere.
 3. Test the current layout and the older supported layout, plus the dependent 225 path.
 4. Prepare the normal source-repository release, including the conventional Windows WeiDU
-   executable. Publication and collection re-pin await the user's direction in this task.
+   executable. Confirm applicable publication authority before pushing/tagging/releasing;
+   return the tested release/pin details to the collection task for acceptance continuation.
 5. Only then plan the next complete acceptance attempt. The frozen failed r3 cannot resume
    with a different recipe or silently edited source. Avoid another blind full rebuild.
 
-No changes have been made to the owning mod repository, the failed game's evidence,
-Steam sources, protected C:\Games references, stream installation, or saves. This handoff
-has been written locally but has **not** been sent to the owning task yet.
+At initial handoff creation, no changes had been made to the owning mod repository, the
+failed game's evidence, Steam sources, protected C:\Games references, stream installation,
+or saves. The owning task is now implementing the authorized fix; frozen game evidence
+and protected installations remain read-only.

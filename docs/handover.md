@@ -25,8 +25,11 @@ Its source assumes nonexistent BDSCRY state 4; see the [owning-repo handoff](han
 The alpha.4 native run stopped on component order; r2 stopped on a missing scripted
 Randomiser compatibility answer. All three native-order errors and the conditional `y`
 answer are fixed without changing component selections (43 runs / 430 components). The
-acceptance follow-up is paused for direction on the SoD source fix/release; no fourth
-blind rebuild was started. Existing alpha.3 packages still contain the old profile; source guards
+user explicitly retained the full SoD bundle and authorized the source fix. The owning
+SoD task has received the handoff and is active; Christopher can do focused live testing.
+The acceptance follow-up remains paused awaiting that fix/test candidate, with component
+290 still separate and deferred. No fourth blind rebuild was started. Existing alpha.3
+packages still contain the old profile; source guards
 do not retroactively fix those binaries. Installer acceptance remains the main priority.
 
 ## Historical overnight continuation — CEBG app alpha.3 / recipe alpha.2 (2026-09-05)
