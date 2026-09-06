@@ -31,6 +31,36 @@ struct Fixture {
     output: PathBuf,
 }
 
+#[test]
+fn pre_spawn_guard_evidence_is_exported_and_personal_paths_are_redacted() {
+    let fixture = fixture(false);
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/pre-spawn-failure.json",
+        &serde_json::to_vec(&serde_json::json!({
+            "run_id": "eet-core", "attempt": 1, "components": [0],
+            "guard": "invocation-build", "failure": fixture.home.to_string_lossy(),
+            "files_sha256": { "before.log": "a".repeat(64) }
+        })).unwrap(),
+    );
+    export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed.clone(),
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output.clone(),
+        redact_roots: vec![fixture.home.clone()],
+    })
+    .unwrap();
+    let entries = zip_entries(&fixture.output);
+    let (_, bytes) = entries
+        .iter()
+        .find(|(name, _)| name.ends_with("/pre-spawn-failure.json"))
+        .expect("guard evidence must be in the diagnostic bundle");
+    let evidence: serde_json::Value = serde_json::from_slice(bytes).unwrap();
+    assert_eq!(evidence["guard"], "invocation-build");
+    assert_eq!(evidence["files_sha256"]["before.log"], "a".repeat(64));
+    assert!(!String::from_utf8_lossy(bytes).contains(fixture.home.to_string_lossy().as_ref()));
+}
+
 fn fixture(include_success: bool) -> Fixture {
     let temp = TempDir::new().unwrap();
     let managed = temp.path().join("managed");

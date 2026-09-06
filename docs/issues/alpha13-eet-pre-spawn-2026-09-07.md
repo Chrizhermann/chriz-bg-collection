@@ -35,4 +35,31 @@ killed, no installation retried, and no file in the target was changed by this t
 Fixes must preserve live-process/TLK guards and ambiguous launched-attempt protection.
 Missing output alone is not proof that WeiDU never ran. Validate with small fixtures,
 then allow the same managed copy to continue through the installer; do not restart
-the complete mod stack as a workaround. Implementation/acceptance is pending.
+the complete mod stack as a workaround.
+
+## Fix and real continuation
+
+The Windows probe now checks a process handle without waiting, including the actual
+exit-code-259 case; conservative inspection remains when synchronization rights are
+unavailable. Four native process regressions and all 19 existing preflight tests pass.
+
+Pre-spawn guard failures now retain a hash-bound evidence record. Recovery checks
+that record, terminal ledger identity, exact allowed files and unchanged WeiDU.log.
+The alpha.13 before-log-only case has a narrowly restricted compatibility path.
+Launched/incomplete and altered evidence remain fail-closed. CLI 29, orchestrator 28
+and diagnostics 12 tests pass, including both guard boundaries and corruption cases.
+Engine all-targets Clippy passes after fixing an equivalent case-comparison lint.
+
+Christopher subsequently authorized overnight continuation, with cleanup/restart
+only if safe recovery is impossible, and a patch release as needed. At 06:37 KST,
+2026-09-07, the freshly compiled release CLI resumed the same managed copy using
+the same engine entry point as the native app. Native registry and ledger identity
+matched `install-5f63e5d7939d3f509139`; frozen recipe SHA256 and plan were unchanged.
+Ledger 155 starts EET attempt 2, and actual EET resource-import output followed.
+The five completed mod runs were not repeated. This is successful continuation,
+not yet proof of a completed full installation or gameplay acceptance.
+
+The old failed alpha.13 app was closed normally before continuation. Background
+worker PID at launch: 40540. Monitoring output is under
+`target/cebg-overnight/alpha14-resume-20260907/`; the authoritative evidence remains
+the managed copy's ledger and receipts. Do not start a second worker while it runs.

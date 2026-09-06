@@ -4,6 +4,15 @@ Live entry point for anyone (user, future agent) picking up work on this repo.
 
 ## Launcher friction patch + current EET recovery incident — 2026-09-07
 
+**Overnight update:** the pre-spawn recovery/process fixes pass focused tests and
+Christopher's exact `CEBG-Tests/Alpha13-20260907` copy resumed at EET attempt 2,
+ledger 155, at 06:37 KST. Five previous mod runs were retained. Background worker
+PID at launch is 40540; logs: `target/cebg-overnight/alpha14-resume-20260907/`.
+Do not launch another worker or restart the stack. App alpha.14 is being packaged;
+recipe alpha.12 is unchanged. Full install completion is not yet established.
+Christopher authorized releasing a fix and only using cleanup/restart if recovery
+cannot safely work. Cleanup UI is deferred: [roadmap](plans/2026-09-07-managed-install-cleanup.md).
+
 Source-only launcher patch: separate Play shortcut names with safe collision handling,
 unfinished setup preferences restored with fresh checks, and visible native error
 details. Windows shortcut tests 7, native command contracts 39, frontend tests 139,
@@ -13,9 +22,9 @@ or change to game installs. See [scope/acceptance](plans/2026-09-07-launcher-fri
 Christopher's live alpha.13 test stopped before invoking EET: the process check saw
 `game/EET/bin/win32/x86_64/weidu.exe`. The five preceding mod runs succeeded. That
 process was absent during inspection; EET has only a before-log, identical to current
-WeiDU.log. Recovery currently mishandles this never-spawned evidence shape, so he was
-asked to preserve the folder and hold off on Retry. Process-liveness and pre-spawn
-recovery fixes are in progress, using small fixtures only. Do not restart the entire
+WeiDU.log. Alpha.13 mishandles this never-spawned evidence shape, so he was
+asked to preserve the folder and hold off on Retry in that old app. Process-liveness
+and pre-spawn recovery fixes are complete in the alpha.14 source. Do not restart the entire
 installation or claim other agents caused the process match without evidence.
 See [incident/evidence](issues/alpha13-eet-pre-spawn-2026-09-07.md).
 

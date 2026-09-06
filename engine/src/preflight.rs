@@ -1062,19 +1062,17 @@ fn probe_exclusive_writable_files(paths: &[PathBuf]) -> Result<(), ExclusiveFile
 #[cfg(windows)]
 fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
     use std::mem::size_of;
-    use std::os::windows::ffi::OsStringExt;
 
     use windows_sys::Win32::Foundation::{
         CloseHandle, GetLastError, ERROR_INVALID_PARAMETER, ERROR_NO_MORE_FILES, HANDLE,
-        INVALID_HANDLE_VALUE, STILL_ACTIVE,
+        INVALID_HANDLE_VALUE,
     };
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
         TH32CS_SNAPPROCESS,
     };
     use windows_sys::Win32::System::Threading::{
-        GetExitCodeProcess, OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
-        PROCESS_QUERY_LIMITED_INFORMATION,
+        OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_SYNCHRONIZE,
     };
 
     struct HandleGuard(HANDLE);
@@ -1111,8 +1109,20 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
             .unwrap_or(entry.szExeFile.len());
         let process_name = String::from_utf16_lossy(&entry.szExeFile[..name_length]);
         let relevant = is_relevant_process_name(&process_name);
-        let process =
-            unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, entry.th32ProcessID) };
+        let mut process = unsafe {
+            OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
+                0,
+                entry.th32ProcessID,
+            )
+        };
+        let has_synchronize = !process.is_null();
+        if process.is_null() {
+            // Synchronization may be denied even when image/exit queries are allowed.
+            // Retain the existing query-only inspection instead of requiring elevation.
+            process =
+                unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, entry.th32ProcessID) };
+        }
         if process.is_null() {
             if relevant {
                 let source = io::Error::last_os_error();
@@ -1131,37 +1141,13 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
             }
         } else {
             let process = HandleGuard(process);
-            let mut buffer = vec![0_u16; 32_768];
-            let mut length = buffer.len() as u32;
-            if unsafe {
-                QueryFullProcessImageNameW(
-                    process.0,
-                    PROCESS_NAME_WIN32,
-                    buffer.as_mut_ptr(),
-                    &mut length,
-                )
-            } != 0
-            {
-                paths.push(PathBuf::from(OsString::from_wide(
-                    &buffer[..length as usize],
-                )));
-            } else if relevant {
-                let source = io::Error::last_os_error();
-                let mut exit_code = 0_u32;
-                let exited = unsafe { GetExitCodeProcess(process.0, &mut exit_code) } != 0
-                    && exit_code != STILL_ACTIVE as u32;
-                // QueryFullProcessImageNameW can race a process exit even though our snapshot and
-                // handle were valid. Ignore only a process now proven exited; an uninspectable live
-                // process still blocks mutation.
-                if !exited {
-                    return Err(io::Error::new(
-                        source.kind(),
-                        format!(
-                            "could not resolve relevant process {process_name:?} (pid {}): {source}",
-                            entry.th32ProcessID
-                        ),
-                    ));
-                }
+            if let Some(path) = inspected_process_path(
+                process.0,
+                has_synchronize,
+                &process_name,
+                entry.th32ProcessID,
+            )? {
+                paths.push(path);
             }
         }
         has_entry = unsafe { Process32NextW(snapshot, &mut entry) } != 0;
@@ -1173,6 +1159,80 @@ fn system_running_executable_paths() -> io::Result<Vec<PathBuf>> {
         }
     }
     Ok(paths)
+}
+
+#[cfg(windows)]
+fn inspected_process_path(
+    process: windows_sys::Win32::Foundation::HANDLE,
+    has_synchronize: bool,
+    process_name: &str,
+    process_id: u32,
+) -> io::Result<Option<PathBuf>> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::System::Threading::{QueryFullProcessImageNameW, PROCESS_NAME_WIN32};
+
+    let mut buffer = vec![0_u16; 32_768];
+    let mut length = buffer.len() as u32;
+    let image = if unsafe {
+        QueryFullProcessImageNameW(
+            process,
+            PROCESS_NAME_WIN32,
+            buffer.as_mut_ptr(),
+            &mut length,
+        )
+    } != 0
+    {
+        Ok(PathBuf::from(OsString::from_wide(
+            &buffer[..length as usize],
+        )))
+    } else {
+        Err(io::Error::last_os_error())
+    };
+    filter_running_process_image(process, has_synchronize, process_name, process_id, image)
+}
+
+#[cfg(windows)]
+fn filter_running_process_image(
+    process: windows_sys::Win32::Foundation::HANDLE,
+    has_synchronize: bool,
+    process_name: &str,
+    process_id: u32,
+    image: io::Result<PathBuf>,
+) -> io::Result<Option<PathBuf>> {
+    use windows_sys::Win32::Foundation::{STILL_ACTIVE, WAIT_OBJECT_0, WAIT_TIMEOUT};
+    use windows_sys::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject};
+
+    // A successfully resolved image is not proof of liveness: the process may
+    // exit between snapshot, path resolution and this check. A signaled handle
+    // also distinguishes actual exit code 259 from the STILL_ACTIVE sentinel.
+    let waited = has_synchronize.then(|| unsafe { WaitForSingleObject(process, 0) });
+    let exited = match waited {
+        Some(WAIT_OBJECT_0) => true,
+        Some(WAIT_TIMEOUT) => false,
+        _ => {
+            let mut exit_code = 0_u32;
+            (unsafe { GetExitCodeProcess(process, &mut exit_code) }) != 0
+                && exit_code != STILL_ACTIVE as u32
+        }
+    };
+    if exited {
+        return Ok(None);
+    }
+    // Unknown exit state remains potentially live, preserving both the target
+    // path guard and fail-closed errors for relevant uninspectable processes.
+    let source = match image {
+        Ok(path) => return Ok(Some(path)),
+        Err(source) => source,
+    };
+    if is_relevant_process_name(process_name) {
+        return Err(io::Error::new(
+            source.kind(),
+            format!(
+                "could not resolve relevant process {process_name:?} (pid {process_id}): {source}",
+            ),
+        ));
+    }
+    Ok(None)
 }
 
 #[cfg(windows)]
@@ -1200,4 +1260,139 @@ fn is_windows_reparse_point(metadata: &fs::Metadata) -> bool {
 #[cfg(not(windows))]
 fn is_windows_reparse_point(_metadata: &fs::Metadata) -> bool {
     false
+}
+
+#[cfg(all(test, windows))]
+mod process_tests {
+    use super::*;
+    use std::os::windows::io::AsRawHandle;
+    use std::os::windows::process::CommandExt;
+    use std::process::{Child, Command, Stdio};
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
+
+    fn fixture_process(script: &str) -> (tempfile::TempDir, Child) {
+        let temp = tempfile::tempdir().expect("create process fixture folder");
+        let executable = temp.path().join("weidu.exe");
+        fs::copy(
+            std::env::var_os("COMSPEC").expect("locate Windows command interpreter"),
+            &executable,
+        )
+        .expect("copy tiny process fixture executable");
+        let child = Command::new(executable)
+            .args(["/D", "/C", script])
+            .current_dir(temp.path())
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("start owned process fixture");
+        (temp, child)
+    }
+
+    fn inspect_child(child: &Child, has_synchronize: bool) -> io::Result<Option<PathBuf>> {
+        inspected_process_path(
+            child.as_raw_handle() as HANDLE,
+            has_synchronize,
+            "weidu.exe",
+            child.id(),
+        )
+    }
+
+    #[test]
+    fn resolved_image_of_an_exited_process_is_not_running() {
+        let (_temp, mut child) = fixture_process("set /p fixture_input= & exit /b 0");
+        let image = inspect_child(&child, true)
+            .expect("query live process")
+            .expect("resolve live image before exit");
+        drop(child.stdin.take());
+        assert_eq!(child.wait().expect("wait for fixture exit").code(), Some(0));
+        assert_eq!(
+            filter_running_process_image(
+                child.as_raw_handle() as HANDLE,
+                true,
+                "weidu.exe",
+                child.id(),
+                Ok(image),
+            )
+            .expect("recheck retained handle after successful path query"),
+            None
+        );
+    }
+
+    #[test]
+    fn signaled_process_with_exit_code_259_is_not_running() {
+        let (_temp, mut child) = fixture_process("exit /b 259");
+        assert_eq!(
+            child.wait().expect("wait for fixture exit").code(),
+            Some(259)
+        );
+        assert_eq!(
+            inspect_child(&child, true).expect("inspect retained handle"),
+            None
+        );
+    }
+
+    #[test]
+    fn live_process_is_reported_with_or_without_synchronize_rights() {
+        let (temp, mut child) = fixture_process("set /p fixture_input= & exit /b 0");
+        let waitable = inspect_child(&child, true);
+        let query_only = inspect_child(&child, false);
+        let denied = filter_running_process_image(
+            child.as_raw_handle() as HANDLE,
+            true,
+            "weidu.exe",
+            child.id(),
+            Err(io::Error::from(io::ErrorKind::PermissionDenied)),
+        );
+        drop(child.stdin.take());
+        child.wait().expect("wait for fixture after stdin closes");
+        let expected = fs::canonicalize(temp.path().join("weidu.exe")).unwrap();
+        for found in [waitable, query_only] {
+            let path = found
+                .expect("inspect live process")
+                .expect("live image path");
+            assert_eq!(fs::canonicalize(path).unwrap(), expected);
+        }
+        assert_eq!(
+            denied
+                .expect_err("retain relevant inspection failure")
+                .kind(),
+            io::ErrorKind::PermissionDenied
+        );
+    }
+
+    #[test]
+    fn query_only_fallback_does_not_confuse_exit_259_with_proven_exit() {
+        use std::os::windows::io::{FromRawHandle, OwnedHandle};
+        use windows_sys::Win32::System::Threading::{
+            OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+        };
+
+        for exit_code in [0, 259] {
+            let (_temp, mut child) =
+                fixture_process(&format!("set /p fixture_input= & exit /b {exit_code}"));
+            let raw = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, child.id()) };
+            assert!(!raw.is_null(), "open fixture with query-only access");
+            let query_only = unsafe { OwnedHandle::from_raw_handle(raw.cast()) };
+            let image = inspect_child(&child, true)
+                .expect("inspect live fixture")
+                .expect("resolve fixture image");
+            drop(child.stdin.take());
+            assert_eq!(
+                child.wait().expect("wait for fixture exit").code(),
+                Some(exit_code)
+            );
+            let filtered = filter_running_process_image(
+                query_only.as_raw_handle() as HANDLE,
+                false,
+                "weidu.exe",
+                child.id(),
+                Ok(image),
+            )
+            .expect("filter query-only image conservatively");
+            assert_eq!(filtered.is_none(), exit_code == 0);
+        }
+    }
 }

@@ -11,8 +11,9 @@ use bg_engine::orchestrator::{
     run_campaign, run_campaign_controlled, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer,
     BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder,
     CampaignRequest, InstallLogVerifier, InstallReconciliation, InvocationBuilder,
-    MaterializationOutcome, MaterializationTask, MutationCheck, ProcessResult, ProcessRunner,
-    ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt, StepFailure,
+    MaterializationOutcome, MaterializationTask, MutationCheck, MutationKind, ProcessResult,
+    ProcessRunner, ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt,
+    StepFailure,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -232,6 +233,7 @@ impl CampaignPreflight for FakeDeps {
     fn recheck_before_mutation(&mut self, check: &MutationCheck) -> Result<(), StepFailure> {
         self.trace
             .push(format!("check:{}:{}", check.kind.as_str(), check.step_id));
+        self.maybe_fail(&format!("check:{}:{}", check.kind.as_str(), check.step_id))?;
         self.maybe_fail(&format!("check:{}", check.step_id))
     }
 }
@@ -355,6 +357,22 @@ impl InstallLogVerifier for FakeDeps {
     ) -> Result<(), StepFailure> {
         self.trace.push(format!("snapshot-before:{}", run.run_id));
         Ok(())
+    }
+
+    fn record_pre_spawn_failure(
+        &mut self,
+        run: &PlannedRun,
+        components: &[u32],
+        _attempt: &StepAttempt,
+        kind: MutationKind,
+        _failure: &StepFailure,
+    ) -> Result<String, StepFailure> {
+        self.trace.push(format!(
+            "pre-spawn-failure:{}:{}:{components:?}",
+            kind.as_str(),
+            run.run_id
+        ));
+        Ok(sha256_bytes(b"synthetic durable guard evidence"))
     }
 
     fn record_invocation(
@@ -1206,6 +1224,47 @@ fn invocation_build_and_spawn_each_receive_an_immediate_safety_recheck() {
         assert_eq!(
             deps.trace[spawn - 1],
             format!("check:process-spawn:install:{run}")
+        );
+    }
+}
+
+#[test]
+fn rejected_install_guards_record_the_exact_suffix_without_starting_the_runner() {
+    for kind in ["invocation-build", "process-spawn"] {
+        let fixture = Fixture::new();
+        let sink = RecordingSink::default();
+        let mut deps = FakeDeps {
+            fail_once: Some(format!("check:{kind}:install:eefix-bg2")),
+            ..FakeDeps::default()
+        };
+        let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+        assert!(
+            matches!(outcome, CampaignOutcome::Failed { ref step_id, .. } if step_id == "install:eefix-bg2")
+        );
+        assert!(deps
+            .trace
+            .contains(&format!("pre-spawn-failure:{kind}:eefix-bg2:[0, 2]")));
+        assert!(!deps.trace.contains(&"run:eefix-bg2".to_owned()));
+        let terminal = SessionStore::open(&fixture.request.created.managed_root)
+            .unwrap()
+            .replay()
+            .unwrap();
+        assert!(
+            matches!(&terminal.records.last().unwrap().event, SessionEvent::StepFailed { detail, .. }
+            if detail.contains("Pre-spawn evidence SHA-256: "))
+        );
+        deps.trace.clear();
+        assert_eq!(
+            run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+            CampaignOutcome::Complete
+        );
+        assert!(!deps.trace.contains(&"run:eefix-bg1".to_owned()));
+        assert_eq!(
+            deps.trace
+                .iter()
+                .filter(|entry| entry.as_str() == "run:eefix-bg2")
+                .count(),
+            1
         );
     }
 }

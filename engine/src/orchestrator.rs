@@ -364,6 +364,17 @@ pub trait InstallLogVerifier {
         attempt: &StepAttempt,
     ) -> Result<(), StepFailure>;
 
+    /// Sync evidence proving an immediate safety guard returned before the process runner.
+    /// Return its SHA-256 to bind the exact record into the terminal ledger failure.
+    fn record_pre_spawn_failure(
+        &mut self,
+        run: &PlannedRun,
+        components: &[u32],
+        attempt: &StepAttempt,
+        kind: MutationKind,
+        failure: &StepFailure,
+    ) -> Result<String, StepFailure>;
+
     /// Persist and sync the prepared invocation digest before spawn intent.
     fn record_invocation(
         &mut self,
@@ -1195,16 +1206,47 @@ where
         attempt: &StepAttempt,
     ) -> Result<InstallReconciliation, StepFailure> {
         self.dependencies.snapshot_before(run, attempt)?;
-        self.recheck(step, run.target, MutationKind::InvocationBuild)?;
+        self.recheck_install_before_spawn(
+            step,
+            run,
+            components,
+            attempt,
+            MutationKind::InvocationBuild,
+        )?;
         let built = self.dependencies.build(run, components, attempt)?;
         if built.identity_digest.trim().is_empty() {
             return Err(StepFailure::new("invocation identity digest is empty"));
         }
         self.dependencies
             .record_invocation(run, attempt, &built.identity_digest)?;
-        self.recheck(step, run.target, MutationKind::ProcessSpawn)?;
+        self.recheck_install_before_spawn(
+            step,
+            run,
+            components,
+            attempt,
+            MutationKind::ProcessSpawn,
+        )?;
         let result = self.dependencies.run(built.invocation, attempt)?;
         self.dependencies.sync_and_reconcile(run, attempt, result)
+    }
+
+    fn recheck_install_before_spawn(
+        &mut self,
+        step: &PipelineStep,
+        run: &PlannedRun,
+        components: &[u32],
+        attempt: &StepAttempt,
+        kind: MutationKind,
+    ) -> Result<(), StepFailure> {
+        if let Err(failure) = self.recheck(step, run.target, kind) {
+            let digest = self
+                .dependencies
+                .record_pre_spawn_failure(run, components, attempt, kind, &failure)?;
+            return Err(StepFailure::new(format!(
+                "{failure}\nPre-spawn evidence SHA-256: {digest}"
+            )));
+        }
+        Ok(())
     }
 
     fn postcondition_failure(

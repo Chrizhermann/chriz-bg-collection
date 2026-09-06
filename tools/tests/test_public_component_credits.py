@@ -41,7 +41,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(self.result["componentCount"], 434)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
-        self.assertEqual(self.result["applicationVersion"], "0.1.0-alpha.13")
+        self.assertEqual(self.result["applicationVersion"], "0.1.0-alpha.14")
         self.assertEqual(self.result["recipeVersion"], "0.1.0-alpha.12")
         encoded = json.dumps(self.result).lower()
         for forbidden in ("artifact_id", "source_reference", "expected_filename", ".zip", ".iemod", "c:\\\\", "creator-full"):
