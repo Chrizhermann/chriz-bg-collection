@@ -34,7 +34,7 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
     if (actions.fixture) controls.append(actionButton("I added the archive", actions.advance));
     else if (actions.retryAvailable) controls.append(actionButton("Choose downloaded archive", actions.supplyManual));
   } else if (snapshot.state === "attention") {
-    controls.append(actionButton("Continue build", actions.advance));
+    controls.append(actionButton("Keep waiting", actions.advance));
   } else if (snapshot.state === "failed") {
     if (snapshot.freshCopyRequired) controls.append(actionButton("Start new installation", actions.backToSetup));
     else if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));

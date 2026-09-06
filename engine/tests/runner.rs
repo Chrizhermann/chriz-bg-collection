@@ -230,10 +230,12 @@ fn unmatched_prompt_alerts_once_and_stays_alive_until_explicit_cancel() {
     match attention {
         EngineEvent::AttentionRequired {
             step_id,
+            reason,
             last_output,
             ..
         } => {
             assert_eq!(step_id, "install:testmod");
+            assert!(reason.contains("installation is still running"));
             assert!(last_output.contains("Unexpected prompt"));
         }
         _ => unreachable!(),
@@ -283,6 +285,40 @@ fn legitimately_quiet_child_can_continue_waiting_and_exit_normally() {
         RunOutcome::Exited { code: 0 }
     );
     assert!(harness.console_text().contains("quiet-exit"));
+}
+
+#[cfg(windows)]
+#[test]
+fn output_after_attention_rearms_the_silence_watchdog() {
+    let threshold = Duration::from_millis(100);
+    let mut harness = Harness::start_program(
+        PathBuf::from("powershell.exe"),
+        [
+            OsString::from("-NoProfile"),
+            OsString::from("-NonInteractive"),
+            OsString::from("-Command"),
+            OsString::from(
+                "Start-Sleep -Milliseconds 175; [Console]::Out.WriteLine('resumed-output'); Start-Sleep -Milliseconds 250",
+            ),
+        ],
+        vec![],
+        threshold,
+    );
+
+    harness.wait_for_event(Duration::from_secs(3), |event| {
+        matches!(event, EngineEvent::AttentionRequired { .. })
+    });
+    harness.wait_for_event(Duration::from_secs(3), |event| {
+        matches!(event, EngineEvent::ConsoleLine { line, .. } if line.contains("resumed-output"))
+    });
+    harness.wait_for_event(Duration::from_secs(3), |event| {
+        matches!(event, EngineEvent::AttentionRequired { .. })
+    });
+
+    assert_eq!(
+        harness.wait_outcome(Duration::from_secs(5)),
+        RunOutcome::Exited { code: 0 }
+    );
 }
 
 #[test]

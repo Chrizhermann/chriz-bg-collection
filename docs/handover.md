@@ -2,6 +2,26 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## EET Documents-path and quiet-install fixes — 2026-09-07 (app alpha.13)
+
+The community EET failure is an upstream Windows path parser truncating a spaced
+Documents registry value, not a timeout or missing first game launch. A narrowly
+hash-checked staged-file correction runs before EET core, preserving original
+downloads/cache and recording exported per-attempt compatibility evidence.
+Focused tests and a real verified WeiDU249 `--nogame` macro test pass.
+
+The separate quiet-install notice now waits five minutes, clears on resumed output/
+next successful step, truthfully says the process is still running and offers
+**Keep waiting**. Frontend 111, Python 35 and focused native/engine checks pass.
+App alpha.13 packaging/publication is in progress; recipe alpha.12 and all 434
+recommended choices/pins remain unchanged. See [acceptance](patch-acceptance-alpha13-2026-09-07.md)
+and [release notes](releases/0.1.0-alpha.13.md).
+
+Christopher chose that the affected tester can **start new with the fixed version**.
+Do not spend more time on manual recovery instructions: the old frozen recipe also
+contains SoD0.6.7, whereas the current recipe includes corrected SoD0.6.8. No game
+or tester folder was modified or restarted by this task; no full install is queued.
+
 ## Installation-folder hotfix — 2026-09-07 (app alpha.12)
 
 A community user had to manually create the default user Games directory. The exact

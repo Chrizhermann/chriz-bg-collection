@@ -98,6 +98,7 @@ const PROCESS_OUTPUT_FILE: &str = "process-output.log";
 const STDOUT_FILE: &str = "stdout.log";
 const STDERR_FILE: &str = "stderr.log";
 const DEBUG_LOG_FILE: &str = "weidu.debug.log";
+const WEIDU_SILENCE_THRESHOLD: Duration = Duration::from_secs(5 * 60);
 static CAMPAIGN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 type InterruptHandler = Box<dyn FnMut() + Send + 'static>;
@@ -2459,6 +2460,26 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
             })
             .collect();
         let tool = self.verified_tool(&run.weidu_artifact_id)?;
+        // Run here, not only during materialization, so retrying an older frozen EET
+        // attempt receives the same narrowly hash-guarded Windows compatibility fix.
+        let artifact = self.artifact(&run.artifact_id)?;
+        if let Some(compatibility) =
+            crate::weidu::eet_compat::prepare(crate::weidu::eet_compat::EetCompatibilityInput {
+                mod_id: &run.mod_id,
+                artifact_id: &run.artifact_id,
+                artifact_sha256: &artifact.source.sha256,
+                target: run.target,
+                tp2: &mod_file.tp2,
+                components,
+                target_root: self.target_root(run.target),
+            })
+            .map_err(step_error)?
+        {
+            write_json_once(
+                &attempt.evidence_root.join("eet-compatibility.json"),
+                &compatibility,
+            )?;
+        }
         let invocation = build_invocation(
             &InvocationInput {
                 target: run.target,
@@ -2520,7 +2541,7 @@ impl<S: EventSink + Sync> ProcessRunner<Invocation> for GuardedCliDependencies<'
                 invocation,
                 step_id: attempt.step_id.clone(),
                 output_log: output_log.clone(),
-                silence_threshold: Duration::from_secs(30),
+                silence_threshold: WEIDU_SILENCE_THRESHOLD,
             },
             &self.controls,
             BorrowedSink(self.sink),

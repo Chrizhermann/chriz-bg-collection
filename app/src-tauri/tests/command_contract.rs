@@ -1211,10 +1211,8 @@ fn restart_keeps_stale_and_fresh_copy_campaigns_visible_but_not_resumable() {
     assert!(cards
         .iter()
         .any(|card| card.id == "install-stale-start" && card.status.contains("unavailable")));
-    assert!(cards
-        .iter()
-        .any(|card| card.id == "install-sealed"
-            && card.status == "Needs attention — automatic resume unavailable"));
+    assert!(cards.iter().any(|card| card.id == "install-sealed"
+        && card.status == "Needs attention — automatic resume unavailable"));
     assert_eq!(
         bridge
             .resume_build("install-stale-start", |_| {})
@@ -1854,7 +1852,12 @@ fn diagnostics_and_manual_page_use_native_choices_plus_trusted_recipe_identity()
     fs::create_dir(&cache).unwrap();
     fs::create_dir_all(output.parent().unwrap()).unwrap();
     publish_managed_install(&app_data, &managed, "install-task23");
-    publish_started_campaign(&app_data, &incomplete, &cache, "install-incomplete-diagnostics");
+    publish_started_campaign(
+        &app_data,
+        &incomplete,
+        &cache,
+        "install-incomplete-diagnostics",
+    );
     let canonical_managed = managed.canonicalize().unwrap();
     let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
     let system = Arc::new(RecordingBridgeSystem::default());

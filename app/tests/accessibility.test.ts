@@ -123,7 +123,7 @@ describe("CEBG security and accessibility", () => {
 
     await activate("Install Chriz Easy BG");
     await activate("I added the archive");
-    await activate("Continue build");
+    await activate("Keep waiting");
     await activate("Retry failed step");
     await activate("Finish fixture build");
     expect(getByRole(root, "heading", { level: 1, name: "Ready to play" })).toBeTruthy();

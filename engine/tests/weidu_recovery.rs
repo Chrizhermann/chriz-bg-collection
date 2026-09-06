@@ -72,9 +72,8 @@ fn plans_sod_thirty_one_of_thirty_two_with_component_900_gap_as_top_tail_rollbac
         tp2: "chriz-sod-remix/setup-chriz-sod-remix.tp2".to_owned(),
         language: 0,
         components: vec![
-            100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210,
-            197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290,
-            900, 910,
+            100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187,
+            200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910,
         ],
     };
     let installed = install

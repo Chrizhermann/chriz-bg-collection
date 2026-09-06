@@ -126,6 +126,39 @@ fn fixture(include_success: bool) -> Fixture {
 }
 
 #[test]
+fn exports_eet_compatibility_hash_evidence_without_mod_payloads() {
+    let fixture = fixture(false);
+    let evidence = br#"{"fix_id":"eet-windows-documents-path-v1","relative_path":"EET/lib/macros.tph","observed_before_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","observed_after_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","changed":true}"#;
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/eet-compatibility.json",
+        evidence,
+    );
+    write(
+        &fixture.managed,
+        "game/EET/lib/macros.tph",
+        b"not for diagnostics",
+    );
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    let exported = entries
+        .iter()
+        .find(|(name, _)| name.ends_with("/eet-compatibility.json"))
+        .expect("the applied compatibility correction must be included in diagnostics");
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&exported.1).unwrap(),
+        serde_json::from_slice::<serde_json::Value>(evidence).unwrap()
+    );
+    assert!(!entries.iter().any(|(name, _)| name.ends_with("macros.tph")));
+}
+
+#[test]
 fn summary_explains_empty_attempts_without_claiming_the_process_never_started() {
     let fixture = fixture(false);
     write(&fixture.managed, ".chriz/attempts/attempt-001/receipt.json", &serde_json::to_vec(&serde_json::json!({

@@ -122,7 +122,7 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByText(root, "Manual archive needed")).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "I added the archive" }));
     expect(getByText(root, "Your attention is needed")).toBeTruthy();
-    await user.click(getByRole(root, "button", { name: "Continue build" }));
+    await user.click(getByRole(root, "button", { name: "Keep waiting" }));
     expect(getByText(root, "A fixture step failed")).toBeTruthy();
     await user.click(getByRole(root, "button", { name: "Export diagnostics" }));
     expect(getByText(root, /Diagnostics exported to/)).toBeTruthy();
@@ -902,6 +902,69 @@ describe("Chriz Easy BG application flow", () => {
     expect(replaceChildren).toHaveBeenCalledTimes(1);
     await new Promise((resolve) => window.setTimeout(resolve, 120));
     expect(replaceChildren).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears a silence warning when native work visibly resumes", async () => {
+    class SilenceBackend extends FixtureBackend {
+      listener: ((event: RunEventEnvelope) => void) | null = null;
+      continueCalls = 0;
+
+      override getStatus() {
+        return Promise.resolve({ mode: "native" as const, engineVersion: "0.1.0", recipeVersion: null, startupInstallId: null });
+      }
+
+      override startBuild(_reviewToken: string, onEvent: (event: RunEventEnvelope) => void) {
+        this.listener = onEvent;
+        return Promise.resolve({ runId: "run-silence" });
+      }
+
+      override continueWaiting(runId: string) {
+        expect(runId).toBe("run-silence");
+        this.continueCalls += 1;
+        return Promise.resolve();
+      }
+    }
+
+    const backend = new SilenceBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+    const emit = backend.listener as (event: RunEventEnvelope) => void;
+    let sequence = 1;
+    const attention = () => emit({
+      runId: "run-silence",
+      sequenceAsString: String(sequence++),
+      event: { type: "attention_required", step_id: "install:slow", reason: "The installation is still running.", last_output: "working" },
+    });
+
+    attention();
+    expect(getByText(root, "Your attention is needed")).toBeTruthy();
+    expect(getByRole(root, "button", { name: "Keep waiting" })).toBeTruthy();
+    emit({ runId: "run-silence", sequenceAsString: String(sequence++), event: { type: "console_line", step_id: "install:slow", stream: "stdout", line: "resumed" } });
+    expect(queryByText(root, "Your attention is needed")).toBeNull();
+    expect(getByRole(root, "button", { name: "Pause after current mod" })).toBeTruthy();
+
+    attention();
+    emit({ runId: "run-silence", sequenceAsString: String(sequence++), event: { type: "step_started", id: "install:next", label: "Next component" } });
+    expect(queryByText(root, "Your attention is needed")).toBeNull();
+
+    attention();
+    emit({ runId: "run-silence", sequenceAsString: String(sequence++), event: { type: "step_finished", id: "install:slow", outcome: "succeeded" } });
+    expect(queryByText(root, "Your attention is needed")).toBeNull();
+
+    attention();
+    await user.click(getByRole(root, "button", { name: "Keep waiting" }));
+    expect(backend.continueCalls).toBe(1);
+
+    emit({ runId: "run-silence", sequenceAsString: String(sequence++), event: { type: "campaign_paused", install_id: "install-silence", after_step_id: "install:slow" } });
+    emit({ runId: "run-silence", sequenceAsString: String(sequence++), event: { type: "console_line", step_id: "install:slow", stream: "stdout", line: "late output" } });
+    expect(getByText(root, "Paused — safe to close CEBG")).toBeTruthy();
+
+    emit({ runId: "run-silence", sequenceAsString: String(sequence++), event: { type: "error", step_id: null, message: "terminal failure" } });
+    emit({ runId: "run-silence", sequenceAsString: String(sequence++), event: { type: "console_line", step_id: "install:slow", stream: "stderr", line: "late error output" } });
+    expect(getByText(root, "The build stopped safely")).toBeTruthy();
   });
 
   it("selects a requested manual archive and resumes the failed native build", async () => {

@@ -434,7 +434,7 @@ pub fn run<S: EventSink>(
         if exit_status.is_none() && !attention_active && Instant::now() >= silence_deadline {
             sink.emit(EngineEvent::AttentionRequired {
                 step_id: request.step_id.clone(),
-                reason: "WeiDU produced no output before the silence threshold; it may be waiting for an unexpected prompt."
+                reason: "WeiDU has produced no output for a while. The installation is still running; it may be processing a slow step or waiting for an unexpected prompt."
                     .to_owned(),
                 last_output: String::from_utf8_lossy(&last_output).into_owned(),
             });
@@ -450,9 +450,8 @@ pub fn run<S: EventSink>(
         match output_rx.recv_timeout(wait) {
             Ok(OutputMessage::Chunk { stream, bytes }) => {
                 remember_output(&mut last_output, &bytes);
-                if !attention_active {
-                    silence_deadline = Instant::now() + request.silence_threshold;
-                }
+                attention_active = false;
+                silence_deadline = Instant::now() + request.silence_threshold;
                 sink.emit(EngineEvent::ConsoleLine {
                     step_id: request.step_id.clone(),
                     stream,

@@ -682,6 +682,7 @@ class AppController implements AppHandle {
     const current = this.#state.build ?? this.#initialNativeBuild();
     let next: BuildSnapshot = current;
     const event = envelope.event;
+    const attentionWasActive = current.state === "attention";
     const log = (line: string): readonly string[] => [...current.logTail, line].slice(-200);
     switch (event.type) {
       case "campaign_started":
@@ -705,13 +706,17 @@ class AppController implements AppHandle {
         break;
       }
       case "step_started":
-        next = { ...current, detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
+        next = attentionWasActive
+          ? { ...current, state: "running", headline: "Installation in progress", detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) }
+          : { ...current, detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
         break;
       case "step_progress":
         next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.id} ${event.done}/${event.total}`) };
         break;
       case "console_line":
-        next = { ...current, logTail: log(event.line) };
+        next = attentionWasActive
+          ? { ...current, state: "running", headline: "Installation in progress", detail: "WeiDU is producing output again. The installation is still running.", logTail: log(event.line) }
+          : { ...current, logTail: log(event.line) };
         break;
       case "attention_required":
         next = { ...current, state: "attention", headline: "Your attention is needed", detail: event.reason, logTail: log(event.last_output) };
@@ -721,6 +726,8 @@ class AppController implements AppHandle {
           ? { ...current, state: "waiting-manual", headline: "Manual archive needed", logTail: log(`${event.id}: failed`) }
           : event.outcome === "failed"
           ? { ...current, state: "running", headline: "Stopping installation", detail: "Saving progress before retry becomes available…", logTail: log(`${event.id}: failed`) }
+          : attentionWasActive
+          ? { ...current, state: "running", headline: "Installation in progress", detail: "The previous installation step finished.", logTail: log(`${event.id}: ${event.outcome}`) }
           : { ...current, logTail: log(`${event.id}: ${event.outcome}`) };
         break;
       case "manual_download_needed":
@@ -752,7 +759,7 @@ class AppController implements AppHandle {
       void this.#finishInstallation(event.install_id);
       return;
     }
-    if (event.type === "step_progress" || event.type === "console_line") {
+    if (event.type === "step_progress" || (event.type === "console_line" && !attentionWasActive)) {
       this.#scheduleLogRender();
       return;
     }

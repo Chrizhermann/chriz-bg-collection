@@ -104,19 +104,24 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
                 });
             }
         }
-        components.extend(entries.iter().zip(consumed).filter_map(|(actual, consumed)| {
-            (!consumed).then(|| {
-                let (title, version) = display_annotation(actual.annotation.as_deref());
-                InstalledComponentSummary {
-                    target: target.to_owned(),
-                    tp2: actual.tp2.clone(),
-                    component: actual.component,
-                    title,
-                    version,
-                    status: "extra".to_owned(),
-                }
-            })
-        }));
+        components.extend(
+            entries
+                .iter()
+                .zip(consumed)
+                .filter_map(|(actual, consumed)| {
+                    (!consumed).then(|| {
+                        let (title, version) = display_annotation(actual.annotation.as_deref());
+                        InstalledComponentSummary {
+                            target: target.to_owned(),
+                            tp2: actual.tp2.clone(),
+                            component: actual.component,
+                            title,
+                            version,
+                            status: "extra".to_owned(),
+                        }
+                    })
+                }),
+        );
     }
     Ok(ConsistencySummary {
         state: if changed { "changed" } else { "matches" }.to_owned(),
