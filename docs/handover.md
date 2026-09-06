@@ -20,13 +20,47 @@ of this publication line. Do not replace its dirty worktree or the running alpha
 installation. Publishing source does not publish a new app version or alter the
 existing `chriz-easy-bg` downloads/updater. Authenticode enrollment remains separate.
 
+## Alpha.14 published; overnight test continued without restart — 2026-09-07
+
+- App **0.1.0-alpha.14** is [published](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.14).
+  Signed public setup/download verified; live alpha update feed points to it.
+  Collection **alpha.12**, all 434 recommended components/pins, and user selections
+  are unchanged. Build source commit: `5610783590ad49b24101d5d3a6a85b018abadb7e`.
+- Christopher's exact `C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` installation
+  resumed at EET attempt 2 with the new release engine. Ledger 156 proves EET
+  completed; EET components 0/100 are recorded. Main mods are now installing.
+  Five prior successful runs were preserved. Nothing was deleted or restarted.
+- Background CLI worker started as PID 40540; check its current identity/status,
+  newest ledger and `target/cebg-overnight/alpha14-resume-20260907/stderr.log` before
+  doing anything. Do not start a duplicate worker. Same native registry ID:
+  `install-5f63e5d7939d3f509139`. The CLI uses the native app's frozen-campaign engine,
+  but native GUI process controls cannot attach to this background worker.
+- The old failed alpha.13 app closed normally. Unattended NSIS execution was blocked
+  by the tool environment before starting, so the installed app remains alpha.13;
+  do not retry that blocked operation by another route. The verified alpha.14 setup
+  is in Downloads for Christopher to apply. This does not affect the running patched
+  game-install engine. Native updater apply/restart acceptance remains unclaimed.
+- Reused heartbeat `cebg-overnight-install-follow-up` checks every 20 minutes,
+  staying quiet while progress is normal. On completion verify the receipt, retain
+  the successful copy and pause the heartbeat. On failure preserve evidence and use
+  bounded diagnosis/safe recovery. Cleanup/restart of this exact test is authorized
+  only as a fallback; stream games, source games, saves and shared cache are protected.
+- Website owner has the verified release handoff; deployment is pending its reply.
+  The separate source audit task reports the source repository is now public and
+  `origin/main` includes build source `5610783` plus audited docs/CI. Do not override
+  its work or force-push. Remaining cleanup UI is documented, deferred, not implemented.
+
+See [patch acceptance](patch-acceptance-alpha14-2026-09-07.md),
+[incident](issues/alpha13-eet-pre-spawn-2026-09-07.md), and
+[cleanup roadmap](plans/2026-09-07-managed-install-cleanup.md).
+
 ## Launcher friction patch + current EET recovery incident — 2026-09-07
 
 **Overnight update:** the pre-spawn recovery/process fixes pass focused tests and
 Christopher's exact `CEBG-Tests/Alpha13-20260907` copy resumed at EET attempt 2,
 ledger 155, at 06:37 KST. Five previous mod runs were retained. Background worker
 PID at launch is 40540; logs: `target/cebg-overnight/alpha14-resume-20260907/`.
-Do not launch another worker or restart the stack. App alpha.14 is being packaged;
+Do not launch another worker or restart the stack. App alpha.14 is now published;
 recipe alpha.12 is unchanged. Full install completion is not yet established.
 Christopher authorized releasing a fix and only using cleanup/restart if recovery
 cannot safely work. Cleanup UI is deferred: [roadmap](plans/2026-09-07-managed-install-cleanup.md).
@@ -34,8 +68,8 @@ cannot safely work. Cleanup UI is deferred: [roadmap](plans/2026-09-07-managed-i
 Source-only launcher patch: separate Play shortcut names with safe collision handling,
 unfinished setup preferences restored with fresh checks, and visible native error
 details. Windows shortcut tests 7, native command contracts 39, frontend tests 139,
-TypeScript and Vite build pass. Public app/recipe remain alpha.13/alpha.12; no release
-or change to game installs. See [scope/acceptance](plans/2026-09-07-launcher-friction-patch.md).
+TypeScript and Vite build pass. These changes are included in alpha.14 without
+changing the recipe. See [scope/acceptance](plans/2026-09-07-launcher-friction-patch.md).
 
 Christopher's live alpha.13 test stopped before invoking EET: the process check saw
 `game/EET/bin/win32/x86_64/weidu.exe`. The five preceding mod runs succeeded. That
