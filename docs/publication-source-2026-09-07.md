@@ -19,6 +19,9 @@ The owning installer task completed alpha.14 while source publication was being
 prepared. Only its finalized committed source was imported, without altering its
 production code, recipe, lockfiles or generated notices. Publication-specific work
 adds documentation, attribution, dependency notices and hosted build verification.
+Build-readiness follow-ups correct test setup and stale test expectations, plus one
+behavior-preserving `filter`/`map` lint cleanup in the launcher consistency summary.
+The immutable commit above remains the source for the released alpha.14 binary.
 
 The old default branch's curation documents precede the integrated approved source
 snapshot. Publication preserves current curation and both histories, bringing forward
@@ -102,6 +105,12 @@ bump. Its application, recovery and feed changes are separate from this publicat
   canonicalize their existing temporary parent before creating child paths. Full
   path, error-code and no-write assertions are retained, including checks for
   nonexistent paths. Native CI collects all target failures before returning an error.
+  The [full-suite run](https://github.com/Chrizhermann/chriz-bg-collection/actions/runs/34063864397)
+  passed those CLI tests and identified stale SoD 0.6.7/base-manifest count assertions,
+  a watchdog test dependent on child-process timing, one Clippy lint and an npm-cache
+  lookup mismatch. Recipe assertions now reflect the previously approved 0.6.8/345
+  base-manifest intake; the curated runtime remains at 434 components. The watchdog
+  test uses explicit child-process handshakes while retaining its alert assertions.
   Current CI status is available in
   [Windows source checks](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml).
 

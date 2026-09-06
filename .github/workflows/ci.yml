@@ -90,6 +90,10 @@ jobs:
       - name: Install locked frontend dependencies
         working-directory: app
         run: |
+          $cebgNpmCache = (npm.cmd config get cache).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "CEBG_NPM_CACHE=$cebgNpmCache" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+          $cebgNpmCache | Set-Content -LiteralPath ../target/ci-evidence/npm-cache.txt -Encoding utf8
           npm.cmd ci 2>&1 | Tee-Object -FilePath ../target/ci-evidence/npm-ci.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -128,9 +132,7 @@ jobs:
       - name: Verify locked dependency notices
         if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
-          $cebgNpmCache = (npm.cmd --prefix app config get cache).Trim()
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python tools/generate-third-party-notices.py --check --npm-cache $cebgNpmCache 2>&1 | Tee-Object -FilePath target/ci-evidence/dependency-notices.log
+          python tools/generate-third-party-notices.py --check --npm-cache $env:CEBG_NPM_CACHE 2>&1 | Tee-Object -FilePath target/ci-evidence/dependency-notices.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build an unsigned NSIS development package

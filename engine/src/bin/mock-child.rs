@@ -4,7 +4,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::io::{self, BufRead, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::thread;
@@ -29,6 +29,7 @@ fn dispatch(args: Vec<OsString>) -> io::Result<()> {
         "emit-prompt-exit" => emit_prompt_exit(),
         "unmatched-prompt" => unmatched_prompt(),
         "quiet" => quiet(parse_millis(args.get(1))?),
+        "gated-output" => gated_output(required_path(args.get(1))?, required_path(args.get(2))?),
         "expect-eof" => expect_eof(),
         "invalid-utf8" => invalid_utf8(),
         "large-streams" => large_streams(parse_usize(args.get(1))?),
@@ -219,6 +220,20 @@ fn unmatched_prompt() -> io::Result<()> {
 fn quiet(delay: Duration) -> io::Result<()> {
     thread::sleep(delay);
     println!("quiet-exit");
+    Ok(())
+}
+
+fn gated_output(resume_marker: PathBuf, exit_marker: PathBuf) -> io::Result<()> {
+    wait_for_marker(&resume_marker)?;
+    println!("resumed-output");
+    io::stdout().flush()?;
+    wait_for_marker(&exit_marker)
+}
+
+fn wait_for_marker(marker: &Path) -> io::Result<()> {
+    while !marker.try_exists()? {
+        thread::sleep(Duration::from_millis(10));
+    }
     Ok(())
 }
 

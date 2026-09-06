@@ -287,19 +287,17 @@ fn legitimately_quiet_child_can_continue_waiting_and_exit_normally() {
     assert!(harness.console_text().contains("quiet-exit"));
 }
 
-#[cfg(windows)]
 #[test]
 fn output_after_attention_rearms_the_silence_watchdog() {
     let threshold = Duration::from_millis(100);
-    let mut harness = Harness::start_program(
-        PathBuf::from("powershell.exe"),
+    let gates = TempDir::new().unwrap();
+    let resume_marker = gates.path().join("resume-output");
+    let exit_marker = gates.path().join("exit-child");
+    let mut harness = Harness::start(
+        "gated-output",
         [
-            OsString::from("-NoProfile"),
-            OsString::from("-NonInteractive"),
-            OsString::from("-Command"),
-            OsString::from(
-                "Start-Sleep -Milliseconds 175; [Console]::Out.WriteLine('resumed-output'); Start-Sleep -Milliseconds 250",
-            ),
+            resume_marker.as_os_str().to_owned(),
+            exit_marker.as_os_str().to_owned(),
         ],
         vec![],
         threshold,
@@ -308,12 +306,24 @@ fn output_after_attention_rearms_the_silence_watchdog() {
     harness.wait_for_event(Duration::from_secs(3), |event| {
         matches!(event, EngineEvent::AttentionRequired { .. })
     });
+    // Release output only after observing attention; fixed child sleeps race process startup
+    // and event delivery. The child cannot exit before the second silence interval is observed.
+    fs::write(&resume_marker, b"resume").unwrap();
     harness.wait_for_event(Duration::from_secs(3), |event| {
         matches!(event, EngineEvent::ConsoleLine { line, .. } if line.contains("resumed-output"))
     });
-    harness.wait_for_event(Duration::from_secs(3), |event| {
+    let attention = harness.wait_for_event(Duration::from_secs(3), |event| {
         matches!(event, EngineEvent::AttentionRequired { .. })
     });
+    assert!(matches!(
+        attention,
+        EngineEvent::AttentionRequired { last_output, .. } if last_output.contains("resumed-output")
+    ));
+    assert!(matches!(
+        harness.outcomes.try_recv(),
+        Err(crossbeam_channel::TryRecvError::Empty)
+    ));
+    fs::write(&exit_marker, b"exit").unwrap();
 
     assert_eq!(
         harness.wait_outcome(Duration::from_secs(5)),

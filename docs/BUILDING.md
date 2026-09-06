@@ -96,7 +96,9 @@ After Cargo and npm have populated their caches, check that the bundled notices 
 the locked packages and pinned supplementary license texts:
 
 ```powershell
-$cebgNpmCache = (npm.cmd --prefix app config get cache).Trim()
+Push-Location app
+$cebgNpmCache = (npm.cmd config get cache).Trim()
+Pop-Location
 python tools/generate-third-party-notices.py --check --npm-cache $cebgNpmCache
 ```
 
@@ -106,6 +108,9 @@ texts. The generator verifies archive checksums, reads licenses in memory, and p
 no downloads or builds. `LICENSES/supplemental.json` records sources and checksums for
 upstream packages that omit notices and for embedded components. Git preserves those
 supplemental files' bytes so Windows checkout does not invalidate the hashes.
+Resolve npm's cache from the same working directory as `npm ci`; changing `--prefix`
+can also change npm's global configuration lookup. CI records and reuses the cache
+selected by the actual install step.
 
 ## Release identity and signing
 
@@ -113,6 +118,8 @@ Current alpha.14 source is `5610783590ad49b24101d5d3a6a85b018abadb7e`, including
 notices regenerated for its lockfiles. Its production code and recipe are retained by
 the publication merge; consult [alpha.14 acceptance](patch-acceptance-alpha14-2026-09-07.md)
 for the separately maintained package and installation evidence.
+Later build-readiness commits fix test setup and include a behavior-preserving
+launcher consistency-summary lint cleanup; they do not replace that released binary.
 
 The earlier alpha.13 release provenance remains:
 

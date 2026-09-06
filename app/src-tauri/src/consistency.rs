@@ -108,18 +108,17 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
             entries
                 .iter()
                 .zip(consumed)
-                .filter_map(|(actual, consumed)| {
-                    (!consumed).then(|| {
-                        let (title, version) = display_annotation(actual.annotation.as_deref());
-                        InstalledComponentSummary {
-                            target: target.to_owned(),
-                            tp2: actual.tp2.clone(),
-                            component: actual.component,
-                            title,
-                            version,
-                            status: "extra".to_owned(),
-                        }
-                    })
+                .filter(|(_, consumed)| !*consumed)
+                .map(|(actual, _)| {
+                    let (title, version) = display_annotation(actual.annotation.as_deref());
+                    InstalledComponentSummary {
+                        target: target.to_owned(),
+                        tp2: actual.tp2.clone(),
+                        component: actual.component,
+                        title,
+                        version,
+                        status: "extra".to_owned(),
+                    }
                 }),
         );
     }
