@@ -173,7 +173,7 @@ approved an upfront download-or-skip exception and supplied official Windows
 private aggregate; explicit RAR SFX extraction never executes the downloaded EXE.
 The early UI gate and native readiness checks are implemented and focused tests
 pass; final payload comparison/package integration are underway. See the
-[current checkpoint and unsent G3 request](handoffs/2026-09-06-evandra-public-acquisition.md).
+[Evandra public acquisition checkpoint](handoffs/2026-09-06-evandra-public-acquisition.md).
 Do not bypass the challenge, mirror the mod, or publish the older private contract.
 
 **Latest instruction (2026-09-06 KST): [targeted r5 recovery](targeted-recovery-2026-09-06.md).**

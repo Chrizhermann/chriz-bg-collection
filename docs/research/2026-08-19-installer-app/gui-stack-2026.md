@@ -2,6 +2,12 @@
 
 ## Cross-cutting: code signing & notarization (applies to all four)
 
+**Signing assumption superseded, 2026-09-07:** the historical recommendation below
+predates CEBG's linked UnRAR dependency. Source publication does not establish
+SignPath eligibility; its OSI-license requirement conflicts with the current UnRAR
+terms. No sponsorship has been granted. Use the [current signing review](../../audits/2026-09-07-signing-dependency-review.md)
+for requirements and alternatives; historical prices/eligibility below are not a current offer.
+
 - **Windows**: Unsigned EXEs hit the SmartScreen "unrecognized app" wall; per-file-hash reputation resets every release, which is fatal for an auto-updating hobby installer. Two realistic 2026 paths:
   - **Azure Trusted/Artifact Signing** — GA as of early 2026: $9.99/mo Basic (5,000 sigs), certs issued from Microsoft's own CA and renewed daily, builds SmartScreen reputation fast. Eligibility now: US/Canada/EU/UK **businesses incl. self-employed** (individual-developer signup still US/Canada only) — relevant for a German self-employed consultant: the business route should work ([devclass](https://www.devclass.com/security/2026/01/14/code-signing-windows-apps-may-be-easier-and-more-secure-with-new-azure-artifact-service/4079554), [Rick Strahl setup war story](https://weblog.west-wind.com/posts/2025/Jul/20/Fighting-through-Setting-up-Microsoft-Trusted-Signing), [melatonin.dev guide](https://melatonin.dev/blog/code-signing-on-windows-with-azure-trusted-signing/)).
   - **SignPath Foundation** — free code-signing for qualifying OSS projects (Sectigo-issued; identity verified against the repo, not you personally; CI-integrated). Best-fit for a hobby OSS installer ([overview](https://comparecheapssl.com/free-code-signing-certificate-and-how-to-get-it/)).

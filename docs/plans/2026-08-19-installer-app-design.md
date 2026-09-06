@@ -14,6 +14,11 @@ the recommended setup, small curated customization on top. Not a general mod man
 
 ## Decisions (all user-approved)
 
+The signing-provider assumptions in this historical design are superseded by the
+[2026-09-07 signing audit](../audits/2026-09-07-signing-dependency-review.md).
+MIT source publication and SignPath Foundation acceptance are separate decisions;
+the current linked UnRAR dependency prevents assuming OSI-only eligibility.
+
 | Decision | Choice | Key rationale |
 |---|---|---|
 | Audience | Public community release | Sets quality bar; downloads only from official author sources (never rehost — BWS/Roxanne blacklisting precedent) |

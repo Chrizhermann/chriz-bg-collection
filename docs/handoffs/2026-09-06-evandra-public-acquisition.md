@@ -79,19 +79,9 @@ Christopher subsequently approved the interim manual official download and suppl
 the Windows package; the current checkpoint above supersedes this decision gate.
 Do not ask public users for the private aggregate and do not drop Evandra silently.
 
-Suggested message, not sent:
-
-> Hi! I'm building Chriz Easy BG, an alpha installer that downloads mods from
-> their official hosts rather than bundling them. We'd like to include Evandra
-> 2.2, but G3's download page returns a Cloudflare browser challenge to the
-> installer's HTTP client. Is there a supported stable ZIP download URL or an
-> official GitHub release we should use? We'll credit/link the mod, verify the
-> package checksum, and won't rehost anything without permission. Thanks!
-
-Once an authorized route and package exist: verify exact bytes and safe layout,
-compare the Evandra payload with the accepted source, update the authoring map and
-generator under a new recipe version, then run one empty-cache acquisition and
-extraction check. No full game installation is required for acquisition proof.
+The approved manual Windows download/skip route above remains available. A stable,
+author/host-supported automatic endpoint is still a future improvement. No request
+was sent and no hosting or redistribution permission is implied.
 
 ## Bounded code-seam handoff
 
