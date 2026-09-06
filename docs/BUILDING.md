@@ -51,7 +51,7 @@ Return to the repository root for native and tooling checks:
 ```powershell
 Set-Location ..
 cargo fmt --all -- --check
-cargo test --locked --workspace
+cargo test --locked --workspace --no-fail-fast
 cargo clippy --locked --workspace --all-targets -- -D warnings
 python -m unittest discover -s tools/tests
 ```
@@ -61,6 +61,11 @@ inputs such as a real WeiDU executable, external download/cache, game-source pro
 signed setup. Do not run all ignored tests as part of a routine source build. A passing
 normal suite does not establish full installation, gameplay, save/reload, or native updater
 apply/restart acceptance.
+
+The app's development dependencies enable Tauri's mock runtime, and `build.rs` embeds
+the Common Controls v6 manifest into Windows MSVC integration-test executables. No
+external `.exe.manifest` or ad hoc linker flags are needed for a fresh checkout.
+These settings leave the production dependency graph and app manifest unchanged.
 
 ## Optional local NSIS package without updater signing
 
@@ -165,6 +170,10 @@ using the local updater-artifact override. It does not launch the setup or the a
 game installation, publish a release, or edit the live updater feed. These are configured
 checks; consult the actual [Actions run](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml)
 for a passed or failed result.
+
+Native tests collect all failing targets before returning an error. Clippy, Python tests
+and notice verification still run after a native-test failure to collect useful evidence;
+the failed check continues to fail the job and prevents packaging.
 
 Runs retain the evidence collected before completion or failure for 14 days: checked-out
 commit, app/recipe versions, runner/Visual Studio/SDK/tool versions, source-input hashes,

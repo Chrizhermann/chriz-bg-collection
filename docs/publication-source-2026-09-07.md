@@ -90,6 +90,18 @@ bump. Its application, recovery and feed changes are separate from this publicat
   [test build example](https://github.com/tauri-apps/tauri/blob/dev/examples/api/src-tauri/build.rs)
   supplies a Windows manifest to address this failure; CEBG's test binaries receive
   the equivalent common-controls manifest through test-only linker arguments.
+  The diagnosis was verified without recompiling: a temporary copy of a previously
+  failed harness exited `0xc0000139` with `--list`; embedding this manifest changed
+  the result to exit 0 and one enumerated test. The original executable's SHA-256
+  stayed unchanged. The historically passing harness had an external manifest;
+  the failing ones did not. This explains why comparing their imports alone was
+  inconclusive. No updater test body, setup or GUI was executed by this proof.
+  The [next hosted run](https://github.com/Chrizhermann/chriz-bg-collection/actions/runs/34063350174)
+  confirmed fresh updater-harness startup, then exposed three CLI fixture path
+  comparisons affected by Windows temporary-directory spelling. CLI fixtures now
+  canonicalize their existing temporary parent before creating child paths. Full
+  path, error-code and no-write assertions are retained, including checks for
+  nonexistent paths. Native CI collects all target failures before returning an error.
   Current CI status is available in
   [Windows source checks](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml).
 

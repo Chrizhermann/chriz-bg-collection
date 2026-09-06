@@ -105,16 +105,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run native workspace tests
+        id: native_tests
         run: |
-          cargo test --locked --workspace 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-test.log
+          cargo test --locked --workspace --no-fail-fast 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-test.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # Keep collecting independent checks after a test failure; the job still fails.
       - name: Check native code with Clippy
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
           cargo clippy --locked --workspace --all-targets -- -D warnings 2>&1 | Tee-Object -FilePath target/ci-evidence/clippy.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test authoring and packaging tools
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
           python -m unittest discover -s tools/tests 2>&1 | Tee-Object -FilePath target/ci-evidence/python-tests.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -122,6 +126,7 @@ jobs:
       # The generated notice file is already a production bundle resource.
       # Check its locked inputs before packaging it into the development setup.
       - name: Verify locked dependency notices
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |
           $cebgNpmCache = (npm.cmd --prefix app config get cache).Trim()
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

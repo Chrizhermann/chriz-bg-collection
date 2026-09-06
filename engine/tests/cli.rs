@@ -154,6 +154,13 @@ fn fixture_recipe() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join(FIXTURE_RECIPE)
 }
 
+fn fixture_tempdir() -> TempDir {
+    // CLI errors report canonical paths. Resolve the existing parent first so
+    // temporary-path aliases and separators also agree for not-yet-created children.
+    let parent = fs::canonicalize(std::env::temp_dir()).expect("canonicalize CLI temp parent");
+    tempfile::tempdir_in(parent).expect("create CLI fixture root")
+}
+
 fn copy_tree(source: &Path, destination: &Path) {
     fs::create_dir_all(destination).expect("create copied directory");
     let mut entries = fs::read_dir(source)
@@ -369,7 +376,7 @@ fn display_name_cli_default_is_exact_and_custom_name_reaches_the_registry() {
 }
 
 fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, PathBuf) {
-    let temp = tempfile::tempdir().expect("create CLI fixture root");
+    let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
     let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
     let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
@@ -396,7 +403,7 @@ struct ExecutableFixture {
 }
 
 fn executable_fixture() -> ExecutableFixture {
-    let temp = tempfile::tempdir().expect("create executable CLI fixture root");
+    let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
     let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
     let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
@@ -645,7 +652,7 @@ fn validate_has_deterministic_human_and_json_output() {
 
 #[test]
 fn validation_errors_exit_one_and_include_the_recipe_path() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = fixture_tempdir();
     let recipe = temp.path().join("broken-recipe");
     copy_tree(&fixture_recipe(), &recipe);
     let collection = recipe.join("collection.toml");
@@ -680,7 +687,7 @@ fn validation_errors_exit_one_and_include_the_recipe_path() {
 
 #[test]
 fn plan_has_deterministic_human_and_json_output() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = fixture_tempdir();
     let recipe = recipe_with_selected_runs(&temp);
     let recipe = recipe.to_str().unwrap();
     let args = ["plan", recipe, "--preset", "recommended"];
@@ -719,7 +726,7 @@ fn unknown_feature_and_input_overrides_are_rejected_by_semantic_id() {
 
 #[test]
 fn path_errors_and_modified_games_fail_closed() {
-    let temp = tempfile::tempdir().unwrap();
+    let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
     let missing = temp.path().join("not-a-game");
     let inspect = run(&[
