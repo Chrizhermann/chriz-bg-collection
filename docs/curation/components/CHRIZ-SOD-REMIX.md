@@ -1,7 +1,7 @@
 # CHRIZ-SOD-REMIX — components
 
-Target public release **v0.6.7** (commit
-`a6826ca1452cbe500c5e111f117b56a983a55d0d`) from
+Target public release **v0.6.8** (commit
+`6c308f5facb6837b78f7e161613bb972c08b201b`) from
 `Chrizhermann/chriz-sod-rebalance`. It has 34 component declarations; the recommended
 EET setup installs 32 of them. Component `901` is the unselected alternative to `900`,
 and component `291` is a repair-only tail for existing `290` installations.
@@ -22,7 +22,10 @@ and component `291` is a repair-only tail for existing `290` installations.
 
 ## Source/version and follow-up checks
 
-- Pin the public `v0.6.7` release. It retains component `210` before dependent component
+- Pin the public `v0.6.8` release. Component `900` now preserves existing camp-chest
+  item records rather than rejecting anything except one sword; this fixes the reported
+  three-item chest install failure. Component `910` is unchanged from v0.6.7.
+  The release retains component `210` before dependent component
   `197`, and declares the fresh-install victory ending `290`, repair-only `291`, treasure
   alternatives `900`/`901`, then final native declaration `910`.
 - Include `290`; never select `291` in a fresh recipe. The release records native EET guard,

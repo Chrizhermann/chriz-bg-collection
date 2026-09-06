@@ -1,0 +1,21 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.12"
+published_at = "2026-09-06T14:42:30Z"
+minimum_app_version = "0.1.0-alpha.11"
+
+[[changes]]
+id = "sod-remix-treasure-compatibility"
+title = "SoD Remix treasure-chest installation fix"
+summary = "Uses the corrected SoD Remix treasure component so compatible existing chest contents do not stop installation before BuffBot. Existing failed copies need diagnostic assessment for targeted repair; this update does not automatically repair them."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["mod:chriz-sod-remix"]
+
+[[changes]]
+id = "clearer-customization"
+title = "Clearer customization and grouped alternatives"
+summary = "Shows mod and option-group context, explains ambiguous choices, and groups mutually exclusive alternatives without changing the recommended component selection. Requires the updated application."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = ["release:customization-presentation"]

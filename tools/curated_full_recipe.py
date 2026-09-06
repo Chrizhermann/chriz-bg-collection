@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.11"
+RECIPE_VERSION = "0.1.0-alpha.12"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
 
@@ -717,6 +717,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         "chriz-sod-remix-0.6.4",
         "chriz-sod-remix-0.6.5",
         "chriz-sod-remix-0.6.6",
+        "chriz-sod-remix-0.6.7",
         "chriz-bg-modpack-0.2.0-alpha.1",
         "bardicwonders-v2.9c-balance.2",
         "creator-full-private-extras-20260902",

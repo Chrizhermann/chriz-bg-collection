@@ -348,6 +348,95 @@ fn redacts_serde_escaped_windows_paths_in_json_evidence() {
 }
 
 #[test]
+fn structured_evidence_stays_parseable_while_nested_secrets_are_redacted() {
+    let fixture = fixture(false);
+    let receipt_path = fixture
+        .managed
+        .join(".chriz/attempts/attempt-001/receipt.json");
+    let original = serde_json::to_vec_pretty(&serde_json::json!({
+        "evidence_attempt_id": "attempt-001",
+        "download": {
+            "resolved_url": "https://example.invalid/archive.zip?token=invented-query-secret",
+            "clientSecret": "invented-client-secret",
+            "nested": [
+                fixture.home.join("Games/CEBG"),
+                {"Authorization": "Bearer invented-bearer-secret"}
+            ]
+        },
+        "path_map": { fixture.home.to_string_lossy().to_string(): "private keyed entry" },
+        "safe": "visible diagnostic value"
+    }))
+    .unwrap();
+    std::fs::write(&receipt_path, &original).unwrap();
+    let jsonl_path = fixture.managed.join(
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/prompt-results.jsonl",
+    );
+    let original_jsonl = b"{\"url\":\"https://example.invalid/prompt?token=invented-jsonl-secret\",\"safe\":\"first\"}\n{\"nested\":[{\"password\":\"invented-jsonl-password\"}]}\n";
+    std::fs::write(&jsonl_path, original_jsonl).unwrap();
+
+    let result = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+
+    assert_eq!(std::fs::read(receipt_path).unwrap(), original);
+    assert_eq!(std::fs::read(jsonl_path).unwrap(), original_jsonl);
+    let entries = zip_entries(&result.path);
+    for (name, bytes) in &entries {
+        if name.ends_with(".json") {
+            serde_json::from_slice::<serde_json::Value>(bytes)
+                .unwrap_or_else(|error| panic!("{name} is not valid JSON: {error}"));
+        } else if name.ends_with(".jsonl") {
+            for (index, line) in bytes.split(|byte| *byte == b'\n').enumerate() {
+                if !line.is_empty() {
+                    serde_json::from_slice::<serde_json::Value>(line).unwrap_or_else(|error| {
+                        panic!("{name} line {} is not valid JSON: {error}", index + 1)
+                    });
+                }
+            }
+        }
+    }
+    let receipt = entries
+        .iter()
+        .find(|(name, _)| name == "receipt/attempt-receipt.json")
+        .unwrap();
+    let sanitized: serde_json::Value = serde_json::from_slice(&receipt.1).unwrap();
+    let serialized = serde_json::to_string(&sanitized).unwrap();
+    let searchable = entries
+        .iter()
+        .filter(|(name, _)| !name.ends_with("payload.zip"))
+        .flat_map(|(_, bytes)| bytes.iter().copied())
+        .collect::<Vec<_>>();
+    let searchable = String::from_utf8(searchable).unwrap();
+    for secret in [
+        "invented-query-secret",
+        "invented-client-secret",
+        "invented-bearer-secret",
+        "invented-jsonl-secret",
+        "invented-jsonl-password",
+    ] {
+        assert!(!searchable.contains(secret), "leaked {secret}");
+    }
+    assert!(
+        !serialized.contains("Users"),
+        "leaked private path: {serialized}"
+    );
+    assert_eq!(sanitized["safe"], "visible diagnostic value");
+    assert_eq!(sanitized["path_map"], "<redacted-sensitive-object>");
+    assert_eq!(
+        sanitized["download"]["clientSecret"],
+        "<redacted-sensitive-value>"
+    );
+    assert_eq!(
+        sanitized["download"]["nested"][1]["Authorization"],
+        "<redacted-sensitive-value>"
+    );
+}
+
+#[test]
 fn exports_only_fixed_evidence_names_at_the_task13_attempt_depth() {
     let fixture = fixture(false);
     let valid_root = ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001";

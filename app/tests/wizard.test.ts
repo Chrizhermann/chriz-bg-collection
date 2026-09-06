@@ -1052,7 +1052,7 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByRole(root, "heading", { level: 1, name: "My installs" })).toBeTruthy();
   });
 
-  it("requires a new installation for a fresh-copy-sealed terminal receipt", async () => {
+  it("preserves a fresh-copy-sealed installation for diagnostics and possible supervised repair", async () => {
     class FreshCopyRequiredBackend extends FixtureBackend {
       diagnosticInstalls: string[] = [];
 
@@ -1099,11 +1099,11 @@ describe("Chriz Easy BG application flow", () => {
     const backend = new FreshCopyRequiredBackend();
     await mountApp(root, backend);
     await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
-    await waitFor(() => expect(getByText(root, "A new installation is needed")).toBeTruthy());
+    await waitFor(() => expect(getByText(root, "This installation needs attention")).toBeTruthy());
 
-    expect(getByText(root, "This copy cannot be resumed safely. Its failure evidence has been preserved.")).toBeTruthy();
+    expect(getByText(root, "CEBG cannot automatically resume this copy safely. Its failure evidence has been preserved.")).toBeTruthy();
     expect(getByText(root, "Components 170, 192 were not recorded as installed; the selected mod run completed only partially.")).toBeTruthy();
-    expect(getByText(root, "Resolve the reported problem before starting a new installation in a new empty folder.")).toBeTruthy();
+    expect(getByText(root, "Keep this installation folder unchanged and export diagnostics. A supervised targeted repair may be possible after the reported problem is fixed; otherwise, start a new installation in a new empty folder.")).toBeTruthy();
     expect(queryByText(root, "Retry failed step")).toBeNull();
     expect(getByRole(root, "button", { name: "Start new installation" })).toBeTruthy();
 

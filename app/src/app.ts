@@ -832,9 +832,9 @@ class AppController implements AppHandle {
           failureReason,
           ...(freshCopyRequired ? {
             state: "failed" as const,
-            headline: "A new installation is needed",
-            detail: "This copy cannot be resumed safely. Its failure evidence has been preserved.",
-            recoveryAction: "Resolve the reported problem before starting a new installation in a new empty folder.",
+            headline: "This installation needs attention",
+            detail: "CEBG cannot automatically resume this copy safely. Its failure evidence has been preserved.",
+            recoveryAction: "Keep this installation folder unchanged and export diagnostics. A supervised targeted repair may be possible after the reported problem is fixed; otherwise, start a new installation in a new empty folder.",
             manualArchiveName: null,
             freshCopyRequired: true,
           } : current.state === "waiting-manual" || snapshot.error === null ? {} : {

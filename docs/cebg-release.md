@@ -1,6 +1,6 @@
 # CEBG Windows releases
 
-The proposed public distribution repository is `Chrizhermann/chriz-easy-bg`. It is
+The public distribution repository is `Chrizhermann/chriz-easy-bg`. It is
 for the installer, release notes, signatures and update metadata. It should not
 contain the private collection source or third-party mod archives. CEBG downloads
 mod sources from their own publishers; a packaged recipe is not a mod bundle.
@@ -31,7 +31,7 @@ key before applying an update. Do not substitute a signature from another build.
 For an approved release, the `v<version>` GitHub release receives the original
 setup, its `.sig`, `latest.json`, and `SHA256SUMS`. The feed uses Tauri's
 `platforms.windows-x86_64` shape and points to that version's setup asset, with
-spaces in the filename URL-encoded. It also includes `recipe_version`, release
+the portable dotted asset filename GitHub publishes. It also includes `recipe_version`, release
 notes, and a UTC publication timestamp.
 
 The configured alpha channel reads `releases/download/alpha/latest.json`. After

@@ -231,26 +231,27 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.7")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.8")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.7.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.8.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.7")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.7")
+            self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.7.toml").exists())
+            self.assertEqual(sod_artifact["version"], "0.6.8")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.8")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.7.zip",
+                "chriz-sod-remix-v0.6.8.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 1509999)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 1513381)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "d82213b29e1d24cbd14562bbd57c9dab8d165e4ca80cb4d2f6f25bd590fb9155",
+                "29eb10537ebf759608da93b8764acfc678cd301bcef24e14cc860db01b33efbb",
             )
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
@@ -383,7 +384,10 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("chriz-bg-modpack-bg2"), order.index("cdtweaks-spell-save-penalties-bg2"))
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.11")
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.12")
+            ledger = tomllib.loads((output / "releases/v0.1.0-alpha.12/ledger.toml").read_text())
+            self.assertEqual(ledger["version"], "0.1.0-alpha.12")
+            self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.11")
             self.assertFalse((output / "reference").exists())
 
     def test_common_customization_routes_preserve_dependency_collateral(self) -> None:

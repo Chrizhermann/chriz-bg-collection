@@ -470,9 +470,9 @@ fn write_bundle(
                     source,
                 })?;
         } else {
-            let sanitized = sanitize_text(&String::from_utf8_lossy(&bytes), redactions);
+            let sanitized = sanitize_evidence(&entry.archive_name, &bytes, redactions);
             writer
-                .write_all(sanitized.as_bytes())
+                .write_all(&sanitized)
                 .map_err(|source| DiagnosticsError::Io {
                     path: temporary.to_path_buf(),
                     source,
@@ -562,6 +562,117 @@ ledger/ retains durable step transitions. logs/steps/ contains invocation.json, 
 receipt/install-receipt.json is included when present. An older failure receipt may coexist with a later successful installation; inspect the attempt IDs and timestamps.\n\
 Diagnostics remain local until you share them. Personal paths and common secrets are redacted, but review the ZIP before sharing.\n");
     summary
+}
+
+fn sanitize_evidence(archive_name: &str, bytes: &[u8], redactions: &[String]) -> Vec<u8> {
+    if archive_name.ends_with(".json") {
+        if let Ok(mut value) = serde_json::from_slice::<serde_json::Value>(bytes) {
+            redact_json_value(&mut value, redactions);
+            let mut sanitized = serde_json::to_vec_pretty(&value)
+                .expect("serializing an in-memory JSON value cannot fail");
+            sanitized.push(b'\n');
+            return sanitized;
+        }
+    } else if archive_name.ends_with(".jsonl") {
+        if let Some(sanitized) = sanitize_json_lines(bytes, redactions) {
+            return sanitized;
+        }
+    }
+    sanitize_text(&String::from_utf8_lossy(bytes), redactions).into_bytes()
+}
+
+fn sanitize_json_lines(bytes: &[u8], redactions: &[String]) -> Option<Vec<u8>> {
+    let mut values = Vec::new();
+    for line in bytes.split(|byte| *byte == b'\n') {
+        if line.iter().all(u8::is_ascii_whitespace) {
+            continue;
+        }
+        let mut value = serde_json::from_slice::<serde_json::Value>(line).ok()?;
+        redact_json_value(&mut value, redactions);
+        values.push(value);
+    }
+    let mut sanitized = Vec::new();
+    for value in values {
+        serde_json::to_writer(&mut sanitized, &value)
+            .expect("serializing an in-memory JSON value cannot fail");
+        sanitized.push(b'\n');
+    }
+    Some(sanitized)
+}
+
+fn redact_json_value(value: &mut serde_json::Value, redactions: &[String]) {
+    match value {
+        serde_json::Value::String(text) => {
+            *text = sanitize_json_string(text, redactions);
+        }
+        serde_json::Value::Array(values) => {
+            for value in values {
+                redact_json_value(value, redactions);
+            }
+        }
+        serde_json::Value::Object(values)
+            if values.keys().any(|key| {
+                redactions.iter().any(|root| {
+                    replace_ascii_case_insensitive(key, root, "<redacted-home>") != *key
+                }) || (!is_sensitive_json_key(key) && sanitize_json_string(key, redactions) != *key)
+            }) =>
+        {
+            // Paths and secrets can also occur in map keys. Redact the object rather
+            // than risk leaking a key or merging two keys after redaction.
+            *value = serde_json::Value::String("<redacted-sensitive-object>".to_owned());
+        }
+        serde_json::Value::Object(values) => {
+            for (key, value) in values {
+                if is_sensitive_json_key(key) {
+                    *value = serde_json::Value::String("<redacted-sensitive-value>".to_owned());
+                } else {
+                    redact_json_value(value, redactions);
+                }
+            }
+        }
+        serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {}
+    }
+}
+
+fn sanitize_json_string(value: &str, redactions: &[String]) -> String {
+    let mut redacted = value.to_owned();
+    for root in redactions {
+        redacted = replace_ascii_case_insensitive(&redacted, root, "<redacted-home>");
+    }
+    let lowercase = redacted.to_ascii_lowercase();
+    if contains_sensitive_marker(&redacted)
+        || (lowercase.contains("-----begin ") && lowercase.contains("private key-----"))
+    {
+        "<redacted-sensitive-value>".to_owned()
+    } else {
+        redacted
+    }
+}
+
+fn is_sensitive_json_key(key: &str) -> bool {
+    let normalized = key
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect::<String>();
+    [
+        "authorization",
+        "password",
+        "passwd",
+        "apikey",
+        "clientsecret",
+        "privatekey",
+        "secrettoken",
+        "accesstoken",
+        "refreshtoken",
+        "cookie",
+        "xamzsignature",
+    ]
+    .iter()
+    .any(|marker| normalized.contains(marker))
+        || normalized == "token"
+        || normalized.ends_with("token")
+        || matches!(normalized.as_str(), "signature" | "sig")
 }
 
 fn sanitize_text(text: &str, redactions: &[String]) -> String {

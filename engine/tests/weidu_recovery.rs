@@ -67,6 +67,47 @@ fn plans_real_fourteen_of_sixteen_as_top_tail_rollback() {
 }
 
 #[test]
+fn plans_sod_thirty_one_of_thirty_two_with_component_900_gap_as_top_tail_rollback() {
+    let install = ExpectedInstall {
+        tp2: "chriz-sod-remix/setup-chriz-sod-remix.tp2".to_owned(),
+        language: 0,
+        components: vec![
+            100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210,
+            197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290,
+            900, 910,
+        ],
+    };
+    let installed = install
+        .components
+        .iter()
+        .copied()
+        .filter(|component| *component != 900)
+        .collect::<Vec<_>>();
+    let after = format!(
+        "{PREFIX}{}",
+        installed
+            .iter()
+            .map(|component| format!(
+                "~CHRIZ-SOD-REMIX/SETUP-CHRIZ-SOD-REMIX.TP2~ #0 #{component} // component {component}\n"
+            ))
+            .collect::<String>()
+    );
+
+    let plan =
+        plan_partial_tail_recovery(PREFIX, &after, &statuses(&installed, &install), &install)
+            .expect("the ordered subset around the component 900 gap is recoverable");
+
+    assert_eq!(
+        plan.action,
+        RecoveryAction::RollbackAndReinstall {
+            installed_to_uninstall: installed.iter().rev().copied().collect(),
+            reinstall: install.components.clone(),
+        }
+    );
+    verify_rollback(&plan, PREFIX).expect("the unrelated historical prefix is preserved");
+}
+
+#[test]
 fn prefix_only_completion_uses_normal_remaining_suffix() {
     let install = expected();
     let installed = install.components[..3].to_vec();

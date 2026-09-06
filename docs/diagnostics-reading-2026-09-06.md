@@ -2,8 +2,9 @@
 
 Christopher will run a normal UI installation himself. No additional full test install
 was started for this investigation, and no game folders or BuffBot files were changed.
-The community report remains unresolved; a successful local run would not establish
-what happened on the tester's PC.
+The supplied community diagnostics now establish that SoD Remix 900 failed before
+the BuffBot run was reached. See the [confirmed cause and recovery assessment](issues/sod900-community-recovery-2026-09-06.md).
+A successful local run alone would not have established what happened on the tester's PC.
 
 ## What an empty BuffBot attempts list establishes
 
@@ -46,9 +47,11 @@ on failure, including `.chriz`, and capture evidence before manually installing 
 or cleaning up. Missing files may locate where evidence stopped but cannot by
 themselves distinguish an OS crash, power loss, or forced termination.
 
-The published app already writes the underlying evidence. The summary and preceding
-clarity/support changes are source-only, not yet packaged or published. No install
-needs to be repeated merely to gain this summary.
+The prior published app already writes the underlying evidence. The summary and
+preceding clarity/support changes are included in app alpha.11; release verification
+is tracked in [patch acceptance](patch-acceptance-alpha11-2026-09-06.md). No install
+needs to be repeated merely to gain this summary. JSON/JSONL exports now redact
+structured values without breaking JSON syntax; original evidence is unchanged.
 
 Verification: the two new summary regressions failed before implementation and passed
 after it; all 9 diagnostics tests and 10 receipt tests passed from PowerShell. Tests

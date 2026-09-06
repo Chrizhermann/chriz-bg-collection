@@ -2,12 +2,32 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## Post-alpha clarity/support patch — 2026-09-06 (unshipped)
+## Community SoD 900 fix — 2026-09-06 (release candidate)
+
+The supplied diagnostics confirm an overly strict SoD Remix v0.6.7 chest guard,
+not a Steam-version defect or user error. Component 900 rejected three existing
+items, rolled back zero files, and WeiDU then installed 910. Earlier 310 active
+components remain unchanged; BuffBot was not reached. Preserve the failed folder.
+See [recovery assessment](issues/sod900-community-recovery-2026-09-06.md) and
+[patch acceptance](patch-acceptance-alpha11-2026-09-06.md).
+
+SoD Remix v0.6.8 is publicly released and freshly verified; CEBG now pins it without
+changing the approved 434-component recommended selection. App alpha.11 / recipe
+alpha.12 signed package is built and passed signature/download/tamper checks.
+Versioned public publication, alpha-feed replacement and website handoff follow.
+This patch includes the clarity/support work below and syntax-safe JSON diagnostic
+redaction. It replaces misleading mandatory-restart wording but does not add an
+unsafe Continue button: automatic targeted recovery is still private issue 3.
+A supervised repair can target the SoD run and six remaining runs, without replaying
+the historical 310 components, once the unchanged local evidence is available.
+No game/save was modified and no full installation was restarted.
+
+## Post-alpha clarity/support patch — 2026-09-06 (included in alpha.11)
 
 Christopher approved a lightweight clarity/dependency pass, grouped alternatives,
 installed-mod visibility, diagnostics from completed installs and first-play help.
 Source implementation is in the `installer-v0-real-alpha` worktree; public app
-alpha.10 / recipe alpha.11 and all game installations remain untouched.
+alpha.10 / recipe alpha.11 is superseded by the release candidate above; all game installations remain untouched.
 See [the section-by-section audit](clarity-audit-2026-09-06.md).
 
 - All 26 categories / 499 choices retain source/group context; ambiguous identification,
@@ -28,16 +48,16 @@ See [the section-by-section audit](clarity-audit-2026-09-06.md).
   resume history must be checked. A crash before the first terminal receipt still
   prevents ZIP export; preserve the install folder and its `.chriz` evidence.
   See [diagnostic interpretation and verification](diagnostics-reading-2026-09-06.md).
-- Christopher will run the install himself to check BuffBot. Keep the community report
-  unresolved until that result; do not run another install, patch BuffBot, or modify r5/
-  the stream installation on the strength of the report alone.
+- Christopher will run the install himself to check BuffBot. The community cause is
+  established by its diagnostics above; do not run another full install or modify r5/
+  the stream installation merely to reproduce this already confirmed failure.
 
-Release follow-up: these additive presentation fields require the next app binary;
-old alpha.10 strictly rejects them. Before publishing, bump app/recipe versions together
-and set the recipe ledger/channel minimum app version to the new app version. Do not
+Release integration: these additive presentation fields require the alpha.11 app binary;
+old alpha.10 strictly rejects them. App/recipe versions are bumped together and the
+new recipe ledger requires app alpha.11. Do not
 publish this as a recipe-only update to alpha.10 or overwrite its immutable artifacts.
 Native updater apply/restart and pause-close acceptance remain the previously recorded
-follow-ups, not completed by this source-only patch.
+follow-ups, not completed by the automated/package checks.
 
 ## Public alpha publication checkpoint — 2026-09-06
 

@@ -1,15 +1,15 @@
-id = "chriz-sod-remix-0.6.7"
+id = "chriz-sod-remix-0.6.8"
 name = "CHRIZ-SOD-REMIX"
-version = "0.6.7"
+version = "0.6.8"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.7/chriz-sod-remix-v0.6.7.zip"
-reference = "v0.6.7"
-expected_filename = "chriz-sod-remix-v0.6.7.zip"
-expected_length = 1509999
-sha256 = "d82213b29e1d24cbd14562bbd57c9dab8d165e4ca80cb4d2f6f25bd590fb9155"
+url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.8/chriz-sod-remix-v0.6.8.zip"
+reference = "v0.6.8"
+expected_filename = "chriz-sod-remix-v0.6.8.zip"
+expected_length = 1513381
+sha256 = "29eb10537ebf759608da93b8764acfc678cd301bcef24e14cc860db01b33efbb"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -28,5 +28,5 @@ max_compression_ratio = 100
 [provenance]
 homepage = "https://github.com/Chrizhermann/chriz-sod-rebalance"
 license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/tag/v0.6.7"
+url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/tag/v0.6.8"
 reviewed_on = "2026-09-06"

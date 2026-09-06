@@ -269,12 +269,13 @@ total_uncompressed_bytes = 5144713
 max_compression_ratio = 7
 
 [[artifacts]]
-artifact_id = "chriz-sod-remix-0.6.7"
-immutable_source_url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.7/chriz-sod-remix-v0.6.7.zip"
-source_reference = "v0.6.7"
+# Refreshed independently on 2026-09-06 with the same author verifier in a new cache.
+artifact_id = "chriz-sod-remix-0.6.8"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.8/chriz-sod-remix-v0.6.8.zip"
+source_reference = "v0.6.8"
 observed_final_host = "release-assets.githubusercontent.com"
-actual_length = 1509999
-actual_sha256 = "d82213b29e1d24cbd14562bbd57c9dab8d165e4ca80cb4d2f6f25bd590fb9155"
+actual_length = 1513381
+actual_sha256 = "29eb10537ebf759608da93b8764acfc678cd301bcef24e14cc860db01b33efbb"
 wrapper_kind = "direct"
 materialized_publish_roots = ["chriz-sod-remix", "setup-chriz-sod-remix.tp2"]
 declared_tp2_paths = ["chriz-sod-remix/setup-chriz-sod-remix.tp2", "setup-chriz-sod-remix.tp2"]
@@ -290,9 +291,9 @@ max_compression_ratio = 100
 
 [artifacts.observed_shape]
 max_depth = 4
-entry_count = 121
+entry_count = 122
 max_entry_uncompressed_bytes = 1364992
-total_uncompressed_bytes = 2000641
+total_uncompressed_bytes = 2008240
 max_compression_ratio = 7
 
 [[artifacts]]

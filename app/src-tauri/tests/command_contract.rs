@@ -1213,7 +1213,8 @@ fn restart_keeps_stale_and_fresh_copy_campaigns_visible_but_not_resumable() {
         .any(|card| card.id == "install-stale-start" && card.status.contains("unavailable")));
     assert!(cards
         .iter()
-        .any(|card| card.id == "install-sealed" && card.status.contains("Fresh copy")));
+        .any(|card| card.id == "install-sealed"
+            && card.status == "Needs attention — automatic resume unavailable"));
     assert_eq!(
         bridge
             .resume_build("install-stale-start", |_| {})
@@ -1221,12 +1222,15 @@ fn restart_keeps_stale_and_fresh_copy_campaigns_visible_but_not_resumable() {
             .code,
         "managed_campaign_stale"
     );
+    let sealed_error = bridge.resume_build("install-sealed", |_| {}).unwrap_err();
+    assert_eq!(sealed_error.code, "managed_campaign_fresh_copy_required");
     assert_eq!(
-        bridge
-            .resume_build("install-sealed", |_| {})
-            .unwrap_err()
-            .code,
-        "managed_campaign_fresh_copy_required"
+        sealed_error.message,
+        "That installation needs attention; automatic resume is unavailable."
+    );
+    assert_eq!(
+        sealed_error.recovery_action,
+        "Keep this folder unchanged and export diagnostics. A supervised targeted repair may be possible after the underlying problem is assessed and fixed."
     );
 }
 

@@ -1796,8 +1796,8 @@ impl NativeBridge {
             CampaignAvailability::Resumable => Ok(card.record.managed_root),
             CampaignAvailability::FreshCopyRequired => Err(CommandError::new(
                 "managed_campaign_fresh_copy_required",
-                "That interrupted campaign cannot be changed safely.",
-                "Build a fresh managed campaign copy and keep this folder for diagnostics.",
+                "That installation needs attention; automatic resume is unavailable.",
+                "Keep this folder unchanged and export diagnostics. A supervised targeted repair may be possible after the underlying problem is assessed and fixed.",
                 format!("managed campaign {install_id:?} has a fresh-copy seal"),
             )),
             CampaignAvailability::Stale => Err(CommandError::new(
@@ -2906,7 +2906,9 @@ fn project_managed_campaign(
     let path = display_windows_path(&card.record.managed_root)?;
     let (status, resumable) = match card.availability {
         CampaignAvailability::Resumable => ("Build interrupted — ready to resume", true),
-        CampaignAvailability::FreshCopyRequired => ("Fresh copy required", false),
+        CampaignAvailability::FreshCopyRequired => {
+            ("Needs attention — automatic resume unavailable", false)
+        }
         CampaignAvailability::Stale => ("Build unavailable — folder moved or changed", false),
     };
     Ok(ManagedInstallationResponse {
