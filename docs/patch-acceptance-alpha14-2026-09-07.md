@@ -81,7 +81,10 @@ the independent generator check and all 42 Python tests passed.
   installation. This is not evidence of a Windows installer permission defect.
 
 The website owner received the versioned URL/hash/notes and normal scoped deployment
-handoff. The public-source audit owner received the exact build commit and release
+handoff and verified deployment: twitch-setup-chriz PR 9, merge
+`a47e11d6a170ad09a6b95cf28cddc5ea64bc3025`, 76/76 tests locally and hosted, deployment
+dry-run, and live `/collection`/JSON identity and security-header checks. The
+public-source audit owner received the exact build commit and release
 identity. No Discord/forum/email post or source-visibility change was performed by
 this task. Overnight follow-up is scheduled on the existing heartbeat, every 20
 minutes, quiet on ordinary progress; it must pause after final acceptance/failure

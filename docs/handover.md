@@ -27,7 +27,9 @@ Live entry point for anyone (user, future agent) picking up work on this repo.
   the successful copy and pause the heartbeat. On failure preserve evidence and use
   bounded diagnosis/safe recovery. Cleanup/restart of this exact test is authorized
   only as a fallback; stream games, source games, saves and shared cache are protected.
-- Website owner has the verified release handoff; deployment is pending its reply.
+- Website alpha.14 deployment is verified live at `/collection`: PR 9, merge
+  `a47e11d6a170ad09a6b95cf28cddc5ea64bc3025`, all 76 site tests and public
+  version/hash/download checks passed. No Discord/email was posted.
   The separate source audit task reports the source repository is now public and
   `origin/main` includes build source `5610783` plus audited docs/CI. Do not override
   its work or force-push. Remaining cleanup UI is documented, deferred, not implemented.
