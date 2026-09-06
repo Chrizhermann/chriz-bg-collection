@@ -83,7 +83,14 @@ bump. Its application, recovery and feed changes are separate from this publicat
   acceptance integration test could not compile without Tauri's `test` feature.
   This feature is enabled only through a development dependency; the release's
   runtime code, dependency locks and bundled resource inputs remain unchanged.
-  Current full-suite and unsigned-package results are available in
+  The [follow-up run](https://github.com/Chrizhermann/chriz-bg-collection/actions/runs/34062790645)
+  compiled successfully and passed the app library, command and package tests, then
+  reproduced the previously tracked updater mock-harness startup failure
+  ([issue 2](https://github.com/Chrizhermann/chriz-bg-collection/issues/2)). Tauri's
+  [test build example](https://github.com/tauri-apps/tauri/blob/dev/examples/api/src-tauri/build.rs)
+  supplies a Windows manifest to address this failure; CEBG's test binaries receive
+  the equivalent common-controls manifest through test-only linker arguments.
+  Current CI status is available in
   [Windows source checks](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml).
 
 No local application build, full game installation, updater apply/restart or native

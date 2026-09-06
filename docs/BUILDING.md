@@ -166,9 +166,10 @@ game installation, publish a release, or edit the live updater feed. These are c
 checks; consult the actual [Actions run](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml)
 for a passed or failed result.
 
-Each run retains source-check evidence for 14 days: checked-out commit, app/recipe versions,
-runner/Visual Studio/SDK/tool versions, source-input hashes, command logs, production Rust
-dependency graph, and direct npm dependency versions. A successful run also retains the
+Runs retain the evidence collected before completion or failure for 14 days: checked-out
+commit, app/recipe versions, runner/Visual Studio/SDK/tool versions, source-input hashes,
+and command logs. Successful packaging adds the production Rust dependency graph and
+direct npm dependency versions. A successful run also retains the
 setup with an explicit `UNSIGNED-CI` filename, provenance, and SHA-256 for seven days. For
 pull requests, the checked-out source may be GitHub's test merge commit; the provenance
 records that exact commit. Workflow artifacts are development outputs, not official

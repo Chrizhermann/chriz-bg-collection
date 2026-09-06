@@ -55,8 +55,8 @@ downloads and updater URLs remain the supported player entry points.
 The finalized alpha.14 release-source line is commit
 `5610783590ad49b24101d5d3a6a85b018abadb7e`, including its versioned notices.
 The earlier alpha.13 implementation is `9f89830be760338c74a2f0839a25e2cd1980faad`.
-[BUILDING.md](docs/BUILDING.md) explains local Windows builds, signing boundaries, and the
-remaining source-to-binary CI work.
+[BUILDING.md](docs/BUILDING.md) explains local Windows builds, hosted CI evidence,
+and release signing.
 
 ## Repository principle
 
