@@ -82,7 +82,7 @@ jobs:
             }
           }
           $cebgRecord | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $cebgEvidence 'provenance.json') -Encoding utf8
-          foreach ($cebgFile in @('rust-toolchain.toml', 'Cargo.lock', 'app/package-lock.json', 'app/src-tauri/tauri.conf.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md')) {
+          foreach ($cebgFile in @('rust-toolchain.toml', 'Cargo.lock', 'app/package-lock.json', 'app/src-tauri/tauri.conf.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'LICENSES/supplemental.json', 'tools/generate-third-party-notices.py')) {
             $cebgHash = (Get-FileHash -LiteralPath $cebgFile -Algorithm SHA256).Hash.ToLowerInvariant()
             "$cebgHash  $cebgFile" | Add-Content -LiteralPath (Join-Path $cebgEvidence 'SOURCE-SHA256SUMS') -Encoding utf8
           }
@@ -117,6 +117,15 @@ jobs:
       - name: Test authoring and packaging tools
         run: |
           python -m unittest discover -s tools/tests 2>&1 | Tee-Object -FilePath target/ci-evidence/python-tests.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # The generated notice file is already a production bundle resource.
+      # Check its locked inputs before packaging it into the development setup.
+      - name: Verify locked dependency notices
+        run: |
+          $cebgNpmCache = (npm.cmd config get cache).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/generate-third-party-notices.py --check --npm-cache $cebgNpmCache 2>&1 | Tee-Object -FilePath target/ci-evidence/dependency-notices.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build an unsigned NSIS development package

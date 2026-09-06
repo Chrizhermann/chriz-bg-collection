@@ -44,8 +44,10 @@ See [docs/handover.md](docs/handover.md) for the maintained development status.
 This repository contains CEBG's installer/engine source and recipe authoring data. The
 separate [chriz-easy-bg repository](https://github.com/Chrizhermann/chriz-easy-bg) hosts public
 binary releases and the updater feed; its release downloads are not a source checkout.
-At this checkpoint, the collection source repository remains private pending its publication
-audit. Publication of source does not require moving or replacing existing download URLs.
+CEBG's own source and recipe tooling are available under MIT. Third-party dependencies
+retain their terms, collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The source and binary distribution repositories have separate roles; existing release
+downloads and updater URLs remain the supported player entry points.
 
 App alpha.13's implementation is commit `9f89830be760338c74a2f0839a25e2cd1980faad`.
 Commit `bdb040e0d0ab7c63eac260497f3b828116fcb6aa` adds publication evidence only.

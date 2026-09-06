@@ -1,5 +1,9 @@
 # Current-tree payload and provenance review
 
+Historical audit record: Christopher subsequently authorized source publication.
+See [the publication record](../publication-source-2026-09-07.md) for current status
+and completed attribution, notice and build preparation.
+
 Audit date: 2026-09-07. Baseline: `bdb040e0d0ab7c63eac260497f3b828116fcb6aa`.
 This is the bounded current-tree part of the public-source audit, not clearance of
 all Git history, remote repository surfaces, dependency licenses, or the application

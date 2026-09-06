@@ -1,5 +1,9 @@
 # CEBG signing and dependency review — 2026-09-07
 
+Historical audit record: Christopher subsequently authorized source publication.
+See [the publication record](../publication-source-2026-09-07.md) for current status
+and completed attribution, notice and build preparation.
+
 Audit base: `bdb040e0d0ab7c63eac260497f3b828116fcb6aa` on the separate
 `codex/public-source-signing-audit-20260907` worktree. This review covers dependency
 licenses, configured bundle resources and build/signing provenance. The companion

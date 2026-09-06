@@ -1,8 +1,8 @@
 # chriz-bg-collection
 
 Umbrella/orchestrator repo: manifest + install order + presets + install driver for a
-heavily-modded EET stack. **Bundle the recipe, not the mods** — never redistribute
-third-party mods (private archiving of dead-link zips allowed while the repo is private).
+heavily-modded EET stack. **Bundle the recipe, not the mods** — this is a public
+source repository. Do not add third-party mod/game archives or private diagnostic data.
 
 Read `docs/handover.md` first — it is the live entry point (status, guardrails, work queue).
 

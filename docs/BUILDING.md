@@ -87,6 +87,21 @@ creator-only recipes and authoring reference/evidence inventories. Mods are acqu
 their declared sources during installation. Linked dependencies retain their own licenses;
 see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), including the UnRAR restriction.
 
+After Cargo and npm have populated their caches, check that the bundled notices match
+the locked packages and pinned supplementary license texts:
+
+```powershell
+$cebgNpmCache = (npm.cmd config get cache).Trim()
+python tools/generate-third-party-notices.py --check --npm-cache $cebgNpmCache
+```
+
+Run this command from the repository root. To regenerate after an intentional dependency
+update, omit `--check`, then review the resulting notice changes and any missing upstream
+texts. The generator verifies archive checksums, reads licenses in memory, and performs
+no downloads or builds. `LICENSES/supplemental.json` records sources and checksums for
+upstream packages that omit notices and for embedded components. Git preserves those
+supplemental files' bytes so Windows checkout does not invalidate the hashes.
+
 ## Release identity and signing
 
 The recorded alpha.13 release provenance is:
@@ -140,7 +155,7 @@ toolchain. Official GitHub actions are pinned to immutable commit IDs; the workf
 read-only repository permissions and does not receive production signing keys.
 
 The workflow installs the locked frontend dependencies, runs the frontend check, Rust
-format/tests/Clippy, and Python tooling tests above, then builds an unsigned NSIS package
+format/tests/Clippy, Python tooling tests and locked-notice verification, then builds an unsigned NSIS package
 using the local updater-artifact override. It does not launch the setup or the app, run a
 game installation, publish a release, or edit the live updater feed. These are configured
 checks; consult the actual [Actions run](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml)

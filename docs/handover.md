@@ -2,6 +2,24 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Public source and release preparation — 2026-09-07
+
+Christopher authorized publishing the existing source repository under MIT for
+CEBG-owned code. The publication line retains the audited app alpha.13 implementation
+and recipe alpha.12 / 434 recommended components. Current source/build instructions
+are in [BUILDING.md](BUILDING.md); the [publication record](publication-source-2026-09-07.md)
+tracks the public ref, hosted Windows checks and preserved binary/update URLs.
+
+The original source audit is historical. EET excerpt attribution is recorded in
+[the attribution review](audits/2026-09-07-eet-attribution.md), with upstream rights
+preserved. The dependency notices cover separately licensed dependencies; MIT is
+not a relicensing of those components. No third-party game/mod archive belongs here.
+
+The installer task's subsequent shortcut/preferences/recovery work is independent
+of this publication line. Do not replace its dirty worktree or the running alpha.13
+installation. Publishing source does not publish a new app version or alter the
+existing `chriz-easy-bg` downloads/updater. Authenticode enrollment remains separate.
+
 ## EET Documents-path and quiet-install fixes — 2026-09-07 (app alpha.13)
 
 The community EET failure is an upstream Windows path parser truncating a spaced

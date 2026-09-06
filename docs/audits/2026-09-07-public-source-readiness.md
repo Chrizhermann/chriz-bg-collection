@@ -1,5 +1,9 @@
 # CEBG public-source readiness audit
 
+Historical audit record: Christopher subsequently authorized source publication.
+See [the publication record](../publication-source-2026-09-07.md) for current status
+and completed attribution, notice and build preparation.
+
 Date: 2026-09-07 KST. Source audited: `bdb040e0d0ab7c63eac260497f3b828116fcb6aa`,
 the verified tip of `codex/installer-v0-real-alpha`. Audit/cleanup branch:
 `codex/public-source-signing-audit-20260907`, in its own worktree.
