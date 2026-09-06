@@ -2,6 +2,23 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Launcher friction patch + current EET recovery incident — 2026-09-07
+
+Source-only launcher patch: separate Play shortcut names with safe collision handling,
+unfinished setup preferences restored with fresh checks, and visible native error
+details. Windows shortcut tests 7, native command contracts 39, frontend tests 139,
+TypeScript and Vite build pass. Public app/recipe remain alpha.13/alpha.12; no release
+or change to game installs. See [scope/acceptance](plans/2026-09-07-launcher-friction-patch.md).
+
+Christopher's live alpha.13 test stopped before invoking EET: the process check saw
+`game/EET/bin/win32/x86_64/weidu.exe`. The five preceding mod runs succeeded. That
+process was absent during inspection; EET has only a before-log, identical to current
+WeiDU.log. Recovery currently mishandles this never-spawned evidence shape, so he was
+asked to preserve the folder and hold off on Retry. Process-liveness and pre-spawn
+recovery fixes are in progress, using small fixtures only. Do not restart the entire
+installation or claim other agents caused the process match without evidence.
+See [incident/evidence](issues/alpha13-eet-pre-spawn-2026-09-07.md).
+
 ## EET Documents-path and quiet-install fixes — 2026-09-07 (app alpha.13)
 
 The community EET failure is an upstream Windows path parser truncating a spaced

@@ -13,6 +13,12 @@ function candidateSelect(
   label.htmlFor = id;
   const select = element("select");
   select.id = id;
+  if (!candidates.some(candidate => candidate.id === selectedId)) {
+    const placeholder = element("option", undefined, "Choose source");
+    placeholder.value = "";
+    placeholder.selected = true;
+    select.append(placeholder);
+  }
   candidates.forEach((candidate) => {
     const option = element("option", undefined, candidate.label);
     option.value = candidate.id;
@@ -25,7 +31,7 @@ function candidateSelect(
   browseButton.setAttribute("aria-label", `Browse for ${labelText}`);
   wrapper.append(label, select, browseButton, path, finding);
   const refresh = (): void => {
-    const candidate = candidates.find((entry) => entry.id === select.value) ?? candidates[0];
+    const candidate = candidates.find((entry) => entry.id === select.value);
     path.textContent = candidate?.path ?? "";
     finding.replaceChildren();
     candidate?.findings.forEach((message) => finding.append(element("p", candidate.eligible ? "finding ok" : "finding warning", message)));

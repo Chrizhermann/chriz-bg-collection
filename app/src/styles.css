@@ -1362,9 +1362,27 @@ input[type="search"] {
   background: rgba(117, 186, 180, 0.08);
 }
 
-.shortcut-feedback.danger {
-  border-color: var(--ember);
-  background: rgba(228, 123, 103, 0.08);
+.shortcut-feedback.warning {
+  border-color: var(--brass);
+  background: rgba(194, 154, 79, 0.08);
+}
+
+.error-details {
+  min-width: 0;
+  margin-block: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.error-details summary {
+  cursor: pointer;
+}
+
+.error-details pre {
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
 }
 
 .shortcut-feedback .path {

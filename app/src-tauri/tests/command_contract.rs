@@ -690,10 +690,10 @@ fn desktop_shortcut_startup_hint_accepts_only_one_exact_nonempty_argument() {
 fn desktop_shortcut_filename_is_unicode_safe_and_windows_compatible() {
     assert_eq!(
         shortcut_file_name(" Ordinary — 이름<>:\"/\\|?*... "),
-        "Ordinary — 이름.lnk"
+        "Play Ordinary — 이름.lnk"
     );
-    assert_eq!(shortcut_file_name("CON"), "CEBG - CON.lnk");
-    assert_eq!(shortcut_file_name(" ... "), "Chriz Easy BG.lnk");
+    assert_eq!(shortcut_file_name("CON"), "Play CEBG - CON.lnk");
+    assert_eq!(shortcut_file_name(" ... "), "Play Chriz Easy BG.lnk");
     let long = shortcut_file_name(&"이".repeat(200));
     assert!(long.ends_with(".lnk"));
     assert!(long.encode_utf16().count() <= 124);
