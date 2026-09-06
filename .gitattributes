@@ -1,2 +1,5 @@
 # Game fixture payloads model byte-exact binary resources; never rewrite their line endings.
 engine/tests/fixtures/games/content/** binary
+
+# Supplemental license SHA-256 values identify the original upstream bytes.
+LICENSES/supplemental/** -text
