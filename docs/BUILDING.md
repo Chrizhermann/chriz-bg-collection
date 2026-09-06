@@ -91,7 +91,7 @@ After Cargo and npm have populated their caches, check that the bundled notices 
 the locked packages and pinned supplementary license texts:
 
 ```powershell
-$cebgNpmCache = (npm.cmd config get cache).Trim()
+$cebgNpmCache = (npm.cmd --prefix app config get cache).Trim()
 python tools/generate-third-party-notices.py --check --npm-cache $cebgNpmCache
 ```
 
@@ -128,8 +128,8 @@ The source repository is `Chrizhermann/chriz-bg-collection`. Binary distribution
 separate `Chrizhermann/chriz-easy-bg` repository.
 Preserve these existing public locations:
 
-- [Versioned alpha.13 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.13)
-- [Versioned alpha.13 setup](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/v0.1.0-alpha.13/Chriz.Easy.BG_0.1.0-alpha.13_x64-setup.exe)
+- [Versioned alpha.14 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.14)
+- [Versioned alpha.14 setup](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/v0.1.0-alpha.14/Chriz.Easy.BG_0.1.0-alpha.14_x64-setup.exe)
 - [Alpha update feed](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/alpha/latest.json)
 
 The production build enables Tauri updater artifacts. An authorized release builder supplies
@@ -140,11 +140,11 @@ verification key in `tauri.conf.json` is deliberately public. It is not a privat
 Three signing concerns are separate:
 
 - **Tauri updater signing** authenticates the final setup bytes to CEBG's updater. It does
-  not give Windows a trusted publisher identity. Alpha.13 has this signature.
+  not give Windows a trusted publisher identity. Alpha.14 has this signature.
 - **Recipe signing** uses `tools/package-recipe.ps1`, Minisign, and an external private key
   with its matching `.pub` file. This signs a recipe envelope and verifies it immediately;
   it is separate from app packaging and unnecessary for building the bundled recipe.
-- **Windows Authenticode** identifies a Windows publisher. Alpha.13 has no Authenticode
+- **Windows Authenticode** identifies a Windows publisher. Alpha.14 has no Authenticode
   signature. Publishing source alone neither signs a binary nor establishes acceptance
   by a certificate provider or signing sponsorship program.
 
@@ -172,7 +172,7 @@ dependency graph, and direct npm dependency versions. A successful run also reta
 setup with an explicit `UNSIGNED-CI` filename, provenance, and SHA-256 for seven days. For
 pull requests, the checked-out source may be GitHub's test merge commit; the provenance
 records that exact commit. Workflow artifacts are development outputs, not official
-releases or signatures, and do not establish byte-for-byte reproduction of alpha.13.
+releases or signatures, and do not establish byte-for-byte reproduction of alpha.14.
 
 Production release automation still needs an approved Authenticode integration and durable
 source-to-release evidence tied to the final public artifact. Sign CEBG-owned executable(s),

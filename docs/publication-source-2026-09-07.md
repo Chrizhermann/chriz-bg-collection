@@ -6,7 +6,11 @@ release, retaining MIT for CEBG's own source. This follows the
 
 ## Publication scope
 
-The source repository is [Chrizhermann/chriz-bg-collection](https://github.com/Chrizhermann/chriz-bg-collection).
+The existing source repository is now **public** at
+[Chrizhermann/chriz-bg-collection](https://github.com/Chrizhermann/chriz-bg-collection).
+GitHub recognizes its MIT license. A clean source snapshot was unnecessary: the
+bounded audit found no secret or unlicensed game/mod payload requiring history removal.
+The default branch was advanced normally, preserving the existing history.
 The publication line integrates finalized app **0.1.0-alpha.14** source at
 `5610783590ad49b24101d5d3a6a85b018abadb7e`, recipe **0.1.0-alpha.12** and the same
 **434 recommended components**. The original audited alpha.13 implementation was
@@ -39,18 +43,25 @@ work and runtime installation remain outside this source-publication task.
 
 ## Existing distribution
 
-The [public alpha.13 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.13)
-and its [setup](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/v0.1.0-alpha.13/Chriz.Easy.BG_0.1.0-alpha.13_x64-setup.exe)
-remain the official downloads. Setup SHA-256:
-`cd6002efcc0c4b1e38a946be75f0fce014a5f1f183c30cdec9f100776bab5d51`.
+The installer task published the [alpha.14 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.14)
+and its [setup](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/v0.1.0-alpha.14/Chriz.Easy.BG_0.1.0-alpha.14_x64-setup.exe)
+from source `5610783590ad49b24101d5d3a6a85b018abadb7e`, including the expanded notices.
+This task independently downloaded the public setup without running it: **5,447,242 bytes**,
+SHA-256 `c36058d92165ff4e2e3d993c5eaedee95e05c1de95f388668f61b4d7571c1a3b`.
 The [alpha updater feed](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/alpha/latest.json)
-offered alpha.13 at the start of publication, with SHA-256
-`56e5ecc70d0c16464f72ef69dc1621f95ed73cd11a53515c9e4e501575f1e7ef`.
+was separately advanced to alpha.14 by the installer task and verified here.
+
+The earlier [alpha.13 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.13)
+remains available. Its asset IDs, sizes, hashes and URLs were compared before and after
+the source-link documentation edits and are unchanged. Its setup SHA-256 remains
+`cd6002efcc0c4b1e38a946be75f0fce014a5f1f183c30cdec9f100776bab5d51`.
+The distribution README now links this public source and its build instructions;
+both release descriptions link their immutable build source.
 
 No released setup, updater signature, asset or feed is replaced by this source work.
 CI packages have no Tauri updater signature or Authenticode signature and are not
-official releases. The next official app release must carry the expanded notices
-and follow the normal versioning, signing and exact-public-byte verification flow.
+official releases. Subsequent official releases must retain complete notices and
+follow the normal versioning, signing and exact-public-byte verification flow.
 
 ## Verification record
 
@@ -60,9 +71,21 @@ notice/attribution commit `90cf4eeb31681012924f414f71c0dc06488164c6` for cherry-
 before packaging, with instructions to regenerate the notice header after its version
 bump. Its application, recovery and feed changes are separate from this publication.
 
-Publication and hosted CI results are recorded here after their completion. The
-initial audit's tree/history checks are evidence for that captured baseline; the
-publication turn also checks its new source, notices, workflow and remote refs.
+- Before visibility changed, the refreshed remote history passed Gitleaks 8.30.1
+  with redacted output (240 nonempty commits inspected), as did the publication tree.
+  The earlier audit records the complete ref/blob and fixture inventory; the refreshed
+  tree has 692 tracked files and no additional binary payload beyond the existing icon.
+- Anonymous reads of the published README, MIT license, Cargo lockfile and complete
+  notices at `c452a8ab6a3df256bfdc1346a49107e27faef1cd` match the committed bytes.
+  A fresh Windows checkout also verified the pinned raw supplemental license bytes.
+- The [initial hosted run](https://github.com/Chrizhermann/chriz-bg-collection/actions/runs/34062197102)
+  passed frontend checks and Rust formatting, then found that the ignored updater
+  acceptance integration test could not compile without Tauri's `test` feature.
+  This feature is enabled only through a development dependency; the release's
+  runtime code, dependency locks and bundled resource inputs remain unchanged.
+  Current full-suite and unsigned-package results are available in
+  [Windows source checks](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml).
+
 No local application build, full game installation, updater apply/restart or native
 window interaction is performed. Hosted build/test evidence does not imply fresh
 gameplay, save/reload or installation acceptance.
