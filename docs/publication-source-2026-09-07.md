@@ -68,6 +68,32 @@ follow the normal versioning, signing and exact-public-byte verification flow.
 
 ## Verification record
 
+**Completed:** [Windows CI run 34064618951](https://github.com/Chrizhermann/chriz-bg-collection/actions/runs/34064618951)
+passed on source commit `36b59971107fe6ef02f1ed312fb904fe4f82fc93` from a fresh hosted
+Windows checkout, including the unsigned NSIS package. This record's subsequent
+documentation update does not change the tested source or build inputs.
+
+| Check | Verified result |
+| --- | --- |
+| Frontend | TypeScript check, 139 tests, production Vite build passed. |
+| Native | Rust formatting, 620 normal tests across 61 reported target/doc-test results, and workspace/all-targets Clippy with warnings denied passed. Ten opt-in acceptance tests remain ignored by design. |
+| Authoring/package tools | All 42 Python tests passed. |
+| Dependency notices | Locked archives and complete license texts verified; 321 Rust packages, two npm entries, 197 license texts. |
+| Packaging | Windows x64 release build and unsigned NSIS setup passed; source checkout remained unchanged. |
+
+The retained setup is `CEBG-UNSIGNED-CI-36b59971107f-x64-setup.exe`, **5,500,789 bytes**,
+SHA-256 `aa77a54006f839b9f645dd1f0c0eee075e33c1077cc761c623405cfe77a5c9d8`.
+Downloading the retained artifact independently reproduced its size/hash and Windows
+`NotSigned` status. Its provenance identifies the exact source commit, Rust 1.97.1,
+Node 22.23.2, npm 10.9.8, Python 3.11.9, Visual Studio/SDK versions and runner image.
+Evidence is retained by Actions for 14 days, the development package for seven days.
+This setup was not executed or added to the production release/update channel.
+
+The fresh-harness startup failure tracked in issue 2 is fixed and closed. The
+successful full run also verifies the CLI fixture, recipe assertion and watchdog
+test corrections described below. The existing alpha.14 release remains tied to
+its original build source and independently verified public bytes above.
+
 During this work Christopher separately authorized the installer task to prepare
 alpha.14 and continue his failed test installation. That task received the independent
 notice/attribution commit `90cf4eeb31681012924f414f71c0dc06488164c6` for cherry-pick

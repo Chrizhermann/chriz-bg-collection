@@ -10,6 +10,14 @@ and retains recipe alpha.12 / 434 recommended components. Current source/build i
 are in [BUILDING.md](BUILDING.md); the [publication record](publication-source-2026-09-07.md)
 tracks the public ref, hosted Windows checks and preserved binary/update URLs.
 
+Public source preparation is complete. [Windows CI run 34064618951](https://github.com/Chrizhermann/chriz-bg-collection/actions/runs/34064618951)
+passed at `36b59971107fe6ef02f1ed312fb904fe4f82fc93`: 620 normal native tests,
+139 frontend tests, 42 Python tests, formatting/Clippy/notices and an unsigned NSIS
+build. The downloaded CI setup's checksum and unsigned status were verified.
+Issue 2's fresh updater-harness startup failure is fixed by test-only manifest
+linkage. Build-readiness fixes preserve the recipe/pins and released alpha.14 bytes;
+they include test corrections and one equivalent launcher consistency lint cleanup.
+
 The original source audit is historical. EET excerpt attribution is recorded in
 [the attribution review](audits/2026-09-07-eet-attribution.md), with upstream rights
 preserved. The dependency notices cover separately licensed dependencies; MIT is
