@@ -71,6 +71,11 @@ pub(crate) fn prepare(
     }))
 }
 
+// Upstream match text: EET/lib/macros.tph at 74e91d72bca5d073fa11c1d088b90d7ff0c7105d.
+// GET_USER_DIRECTORY was contributed by Argent77 in upstream commit 38db44c2 (2024).
+// See THIRD_PARTY_NOTICES.md and docs/audits/2026-09-07-eet-attribution.md for provenance
+// and the upstream GPLv3 statement. CEBG's MIT license does not relicense this excerpt.
+// CORRECTED_BATCH records CEBG's 2026-09-07 correction to the Windows path handling.
 const ORIGINAL_BATCH: &str = r#"@echo off
 for /f "tokens=3,*" %%a in ('reg query "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" /v Personal') do set DOC_DIR=%%a
 for /f "delims=" %%a in ('echo %DOC_DIR%') do echo %%a>"${temp_directory}\documents_path.txt""#;
