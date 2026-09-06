@@ -1458,12 +1458,65 @@ fn claim_new_root(root: &Path) -> Result<(), OrchestratorError> {
             path: root.to_path_buf(),
             reason: "managed root has no parent".to_owned(),
         })?;
-    let metadata =
+    let mut existing = parent;
+    let mut missing = Vec::new();
+    loop {
+        match fs::symlink_metadata(existing) {
+            Ok(metadata) => {
+                ensure_direct_directory(existing, &metadata)?;
+                ensure_direct_ancestors(existing)?;
+                break;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                missing.push(existing.to_path_buf());
+                existing = existing
+                    .parent()
+                    .ok_or_else(|| OrchestratorError::UnsafeTarget {
+                        path: root.to_path_buf(),
+                        reason: "managed root has no existing directory ancestor".to_owned(),
+                    })?;
+            }
+            Err(source) => {
+                return Err(OrchestratorError::UnsafeTarget {
+                    path: existing.to_path_buf(),
+                    reason: format!("could not inspect managed root ancestor: {source}"),
+                })
+            }
+        }
+    }
+
+    for directory in missing.into_iter().rev() {
+        let parent = directory
+            .parent()
+            .ok_or_else(|| OrchestratorError::UnsafeTarget {
+                path: directory.clone(),
+                reason: "managed root ancestor has no parent".to_owned(),
+            })?;
+        let parent_metadata =
+            fs::symlink_metadata(parent).map_err(|source| OrchestratorError::UnsafeTarget {
+                path: parent.to_path_buf(),
+                reason: format!("could not recheck managed root ancestor: {source}"),
+            })?;
+        ensure_direct_directory(parent, &parent_metadata)?;
+        ensure_direct_ancestors(parent)?;
+        fs::create_dir(&directory).map_err(|source| OrchestratorError::UnsafeTarget {
+            path: directory.clone(),
+            reason: format!("could not create managed root ancestor: {source}"),
+        })?;
+        let metadata =
+            fs::symlink_metadata(&directory).map_err(|source| OrchestratorError::UnsafeTarget {
+                path: directory.clone(),
+                reason: format!("could not inspect created managed root path: {source}"),
+            })?;
+        ensure_direct_directory(&directory, &metadata)?;
+    }
+
+    let parent_metadata =
         fs::symlink_metadata(parent).map_err(|source| OrchestratorError::UnsafeTarget {
             path: parent.to_path_buf(),
-            reason: format!("managed root parent must already exist: {source}"),
+            reason: format!("could not recheck managed root parent: {source}"),
         })?;
-    ensure_direct_directory(parent, &metadata)?;
+    ensure_direct_directory(parent, &parent_metadata)?;
     ensure_direct_ancestors(parent)?;
     fs::create_dir(root).map_err(|source| OrchestratorError::UnsafeTarget {
         path: root.to_path_buf(),

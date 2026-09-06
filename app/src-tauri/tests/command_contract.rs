@@ -1281,12 +1281,14 @@ fn destination_checks_use_registered_candidates_and_never_create_the_target() {
     let engine = Arc::new(FakeBridgeEngine::new(bg1.clone(), bg2));
     let bridge = NativeBridge::with_engine(recipe, "recommended", &cache, engine);
     let discovery = bridge.discover_games().expect("register discovered games");
-    let untouched = cache.parent().unwrap().join("never-created");
+    let missing_parent = cache.parent().unwrap().join("missing-games-parent");
+    let untouched = missing_parent.join("never-created");
 
     let unknown =
         bridge.inspect_destination(&untouched, "unregistered-bg1", &discovery.selected_bg2_id);
     assert_eq!(unknown.unwrap_err().code, "game_candidate_unknown");
     assert!(!untouched.exists());
+    assert!(!missing_parent.exists());
 
     let overlap = bridge.inspect_destination(
         &bg1.join("managed-copy"),
@@ -1306,6 +1308,18 @@ fn destination_checks_use_registered_candidates_and_never_create_the_target() {
         &discovery.selected_bg2_id,
     );
     assert_eq!(occupied_error.unwrap_err().code, "destination_unsafe");
+
+    let inspected = bridge
+        .inspect_destination(
+            &untouched,
+            &discovery.selected_bg1_id,
+            &discovery.selected_bg2_id,
+        )
+        .expect("inspect nested missing destination");
+    assert!(inspected.safe);
+    assert_eq!(inspected.title, "Ready to install");
+    assert!(inspected.detail.contains("will create this folder"));
+    assert!(!missing_parent.exists());
 }
 
 #[test]

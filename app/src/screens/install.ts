@@ -198,9 +198,13 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   name.wrapper.append(nameHelp);
   name.input.addEventListener("change", () => void actions.changeName(name.input.value));
   const locationControls = element("div", "location-controls");
-  const changeLocation = actionButton("Change", actions.browseLocation, "quiet");
+  const changeLocation = actionButton("Browse…", actions.browseLocation, "quiet");
   changeLocation.setAttribute("aria-label", "Change install location");
   changeLocation.disabled = model.starting;
+  const locationHelp = element("p", "field-help", "Enter a new folder path or browse. CEBG creates missing folders when you install.");
+  locationHelp.id = "install-location-help";
+  location.input.setAttribute("aria-describedby", locationHelp.id);
+  location.wrapper.append(locationHelp);
   if (!model.destination.safe) {
     const locationFinding = element("div", "location-finding");
     locationFinding.id = "install-location-finding";
@@ -209,7 +213,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
       element("strong", undefined, model.destination.title),
       element("p", undefined, model.destination.detail),
     );
-    location.input.setAttribute("aria-describedby", locationFinding.id);
+    location.input.setAttribute("aria-describedby", `${locationHelp.id} ${locationFinding.id}`);
     location.wrapper.append(locationFinding);
   }
   locationControls.append(location.wrapper, changeLocation);

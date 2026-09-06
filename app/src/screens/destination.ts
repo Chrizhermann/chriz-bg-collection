@@ -24,7 +24,10 @@ export function destinationScreen(
   const space = evaluation.requiredSpace !== undefined && evaluation.availableSpace !== undefined
     ? element("p", "path", `Requires ${evaluation.requiredSpace}; ${evaluation.availableSpace} available.`)
     : element("p", "path", "CEBG will check the available space before installing.");
-  field.append(label, input, browseButton, space);
+  const help = element("p", "field-help", "Enter a new folder path or browse. CEBG creates missing folders when you install.");
+  help.id = "destination-path-help";
+  input.setAttribute("aria-describedby", help.id);
+  field.append(label, input, browseButton, help, space);
   const continueButton = actionButton("Continue", next);
   continueButton.disabled = !evaluation.safe;
   page.append(field, statusCard(evaluation.title, evaluation.detail, evaluation.safe ? "ok" : "danger"), screenActions(back, continueButton));

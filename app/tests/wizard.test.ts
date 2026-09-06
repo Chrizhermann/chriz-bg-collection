@@ -675,6 +675,36 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByText(root, "2 choices included")).toBeTruthy();
   });
 
+  it("explains automatic folder creation and keeps a rejected location editable", async () => {
+    class NewFolderBackend extends FixtureBackend {
+      override inspectDestination(path: string, bg1: string, bg2: string) {
+        if (path.includes("Users")) {
+          return Promise.resolve({ path, safe: false, title: "Choose another location", detail: "This location cannot be used." });
+        }
+        return super.inspectDestination(path, bg1, bg2);
+      }
+    }
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, new NewFolderBackend());
+
+    const path = getByLabelText(root, "Install location") as HTMLInputElement;
+    expect(path.disabled).toBe(false);
+    expect((getByRole(root, "button", { name: "Change install location" }) as HTMLButtonElement).disabled).toBe(false);
+    expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(getByText(root, "Enter a new folder path or browse. CEBG creates missing folders when you install.")).toBeTruthy();
+    expect(path.getAttribute("aria-describedby")).toContain("install-location-help");
+
+    await user.clear(path);
+    await user.type(path, "D:\\New Games\\New Collection\\Chriz Easy BG");
+    await user.tab();
+
+    await waitFor(() => expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false));
+    expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("D:\\New Games\\New Collection\\Chriz Easy BG");
+    expect(getByText(root, "Enter a new folder path or browse. CEBG creates missing folders when you install.")).toBeTruthy();
+  });
+
   it("uses native folder choices and immediately shows their validated results", async () => {
     class FolderChoiceBackend extends FixtureBackend {
       override chooseGameFolder(role: GameRole): Promise<GameCandidate | null> {

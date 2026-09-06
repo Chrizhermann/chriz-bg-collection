@@ -2296,14 +2296,15 @@ fn inspect_destination_path(
             ));
         }
     }
-    if normalized.try_exists().map_err(|error| {
+    let destination_exists = normalized.try_exists().map_err(|error| {
         path_error(
             "destination_unavailable",
             "The destination could not be inspected safely.",
             &normalized,
             error,
         )
-    })? {
+    })?;
+    if destination_exists {
         let metadata = fs::symlink_metadata(&normalized).map_err(|error| {
             path_error(
                 "destination_unavailable",
@@ -2348,8 +2349,14 @@ fn inspect_destination_path(
     Ok(DestinationEvaluationResponse {
         path: path_to_string(&normalized)?,
         safe: true,
-        title: "Ready for an isolated managed copy".to_owned(),
-        detail: "The engine will repeat authoritative path, lock, source, and disk checks when the build starts.".to_owned(),
+        title: "Ready to install".to_owned(),
+        detail: if destination_exists {
+            "CEBG will use this empty folder and repeat its safety checks when installation starts."
+                .to_owned()
+        } else {
+            "CEBG will create this folder when installation starts, then repeat its safety checks."
+                .to_owned()
+        },
     })
 }
 

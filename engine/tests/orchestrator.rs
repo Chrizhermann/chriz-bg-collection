@@ -22,6 +22,16 @@ use bg_engine::session::{
 };
 use bg_engine::weidu::runner::RunnerControlHandle;
 
+#[cfg(unix)]
+fn create_directory_link(source: &Path, destination: &Path) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(source, destination)
+}
+
+#[cfg(windows)]
+fn create_directory_link(source: &Path, destination: &Path) -> std::io::Result<()> {
+    std::os::windows::fs::symlink_dir(source, destination)
+}
+
 const RECIPE_PAYLOAD: &[u8] = b"PK\x03\x04signed alpha recipe";
 const RECIPE_ENVELOPE: &[u8] = br#"{"recipe_id":"alpha","version":"0.1.0"}"#;
 const LEGACY_EMPTY_POSTCONDITION_PLAN_JSON: &str = concat!(
@@ -441,6 +451,34 @@ fn campaign_index_is_published_after_record_zero_and_before_preflight() {
     assert_eq!(
         deps.trace.iter().position(|entry| entry == "preflight"),
         Some(0)
+    );
+}
+
+#[test]
+fn a_new_campaign_creates_missing_destination_ancestors_before_claiming_its_root() {
+    let mut fixture = Fixture::new();
+    let temp_root = std::fs::canonicalize(fixture._temp.path()).unwrap();
+    fixture.request.created.managed_root = temp_root
+        .join("Games")
+        .join("NewCollection")
+        .join("managed-alpha");
+    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert_eq!(outcome, CampaignOutcome::Complete);
+    assert!(fixture.request.created.managed_root.is_dir());
+    assert_eq!(
+        SessionStore::open(&fixture.request.created.managed_root)
+            .unwrap()
+            .replay()
+            .unwrap()
+            .created()
+            .managed_root,
+        fixture.request.created.managed_root
     );
 }
 
@@ -1188,6 +1226,51 @@ fn a_nonempty_unclaimed_root_is_rejected_before_any_campaign_service_runs() {
     assert!(error.to_string().contains("not empty"), "{error}");
     assert!(deps.trace.is_empty());
     assert!(!fixture.request.created.managed_root.join(".chriz").exists());
+}
+
+#[test]
+fn a_file_in_the_missing_destination_chain_is_rejected_without_creating_below_it() {
+    let mut fixture = Fixture::new();
+    let blocking_parent = fixture._temp.path().join("Games");
+    std::fs::write(&blocking_parent, b"not a directory").unwrap();
+    fixture.request.created.managed_root = blocking_parent.join("managed-alpha");
+    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+
+    let error = run_campaign(&fixture.request, &mut deps, &sink).unwrap_err();
+
+    assert!(
+        error.to_string().contains("direct non-reparse directory"),
+        "{error}"
+    );
+    assert!(blocking_parent.is_file());
+    assert!(!fixture.request.created.managed_root.exists());
+    assert!(deps.trace.is_empty());
+}
+
+#[test]
+fn a_link_in_the_missing_destination_chain_is_rejected_without_creating_below_it() {
+    let mut fixture = Fixture::new();
+    let actual_parent = fixture._temp.path().join("actual-parent");
+    let linked_parent = fixture._temp.path().join("linked-parent");
+    std::fs::create_dir(&actual_parent).unwrap();
+    create_directory_link(&actual_parent, &linked_parent).expect("create linked parent fixture");
+    fixture.request.created.managed_root = linked_parent.join("managed-alpha");
+    fixture.request.created.staged_bg1 = fixture.request.created.managed_root.join("bg1");
+    fixture.request.created.staged_bg2 = fixture.request.created.managed_root.join("game");
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps::default();
+
+    let error = run_campaign(&fixture.request, &mut deps, &sink).unwrap_err();
+
+    assert!(
+        error.to_string().contains("direct non-reparse directory"),
+        "{error}"
+    );
+    assert!(!actual_parent.join("managed-alpha").exists());
+    assert!(deps.trace.is_empty());
 }
 
 #[test]

@@ -2,6 +2,23 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Installation-folder hotfix — 2026-09-07 (app alpha.12)
+
+A community user had to manually create the default user Games directory. The exact
+engine bug was reproduced: startup required the immediate install parent to exist,
+although read-only path inspection accepted a new nested path. Startup now creates
+missing ordinary ancestors and exclusively claims the final root, retaining reparse,
+occupied-folder and other safety checks. Both location views explain automatic folder
+creation, and the main Browse control remains available after a rejected location.
+
+App alpha.12 is built and signature/download/tamper-checked, with all 110 frontend,
+27 orchestrator, 19 preflight, 39 native command-contract, 3 package and 35 Python
+checks passing. The recipe is unchanged at alpha.12: the same434 recommended
+components/source pins. No game install or native-window control was used.
+See [folder-hotfix acceptance](patch-acceptance-alpha12-2026-09-07.md) and
+[release notes](releases/0.1.0-alpha.12.md). Publication/channel verification follows;
+the website owner is holding a single combined app-alpha.12 page update.
+
 ## Community SoD 900 fix — 2026-09-06 (published alpha.11)
 
 The supplied diagnostics confirm an overly strict SoD Remix v0.6.7 chest guard,
