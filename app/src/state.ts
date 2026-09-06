@@ -34,6 +34,7 @@ export type AppAction =
   | { readonly type: "set-feature"; readonly id: string; readonly selected: boolean }
   | { readonly type: "set-features"; readonly changes: Readonly<Record<string, boolean>> }
   | { readonly type: "reset-selection" }
+  | { readonly type: "restore-selection"; readonly selection: NormalizedSelection }
   | { readonly type: "evaluation-requested"; readonly revision: number }
   | { readonly type: "evaluation-resolved"; readonly revision: number; readonly evaluation: SelectionEvaluation }
   | { readonly type: "review-frozen"; readonly review: FrozenReview }
@@ -82,6 +83,8 @@ export function reduce(state: AppState, action: AppAction): AppState {
       return { ...state, frozenReview: null, selection: { ...state.selection, features: { ...state.selection.features, ...action.changes } } };
     case "reset-selection":
       return { ...state, selection: { platform: state.selection.platform, features: {}, inputs: {} }, frozenReview: null };
+    case "restore-selection":
+      return { ...state, selection: action.selection, frozenReview: null };
     case "evaluation-requested":
       return { ...state, evaluationRevision: action.revision, evaluationPending: true };
     case "evaluation-resolved":

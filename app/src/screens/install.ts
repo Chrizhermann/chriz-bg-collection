@@ -105,7 +105,7 @@ function manualDownloadPanel(model: InstallScreenModel, actions: InstallScreenAc
 }
 
 function selectedCandidate(candidates: readonly GameCandidate[], selectedId: string): GameCandidate | undefined {
-  return candidates.find((candidate) => candidate.id === selectedId) ?? candidates[0];
+  return candidates.find((candidate) => candidate.id === selectedId);
 }
 
 function sourceCard(
@@ -125,11 +125,17 @@ function sourceCard(
   const status = element("span", `source-status ${candidate?.eligible === true ? "ok" : "warning"}`, candidate?.eligible === true ? "Ready" : "Needs attention");
   card.append(copy, status);
 
-  if (candidates.length > 1) {
+  if (candidates.length > 1 || (candidate === undefined && candidates.length > 0)) {
     const label = element("label", "visually-hidden", game === "bg1" ? "Baldur's Gate source" : "Baldur's Gate II source");
     const select = element("select");
     select.id = `source-${game}`;
     label.htmlFor = select.id;
+    if (candidate === undefined) {
+      const placeholder = element("option", undefined, "Choose source");
+      placeholder.value = "";
+      placeholder.selected = true;
+      select.append(placeholder);
+    }
     for (const optionCandidate of candidates) {
       const option = element("option", undefined, optionCandidate.label);
       option.value = optionCandidate.id;

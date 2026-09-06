@@ -48,7 +48,10 @@ pub(crate) fn prepare(
         || input.mod_id != "eet"
         || input.target != GameRoot::Bg2
         || !input.components.contains(&0)
-        || input.tp2.replace('\\', "/").to_ascii_lowercase() != "eet/eet.tp2"
+        || !input
+            .tp2
+            .replace('\\', "/")
+            .eq_ignore_ascii_case("eet/eet.tp2")
         || input.artifact_id != ARTIFACT_ID
         || !input.artifact_sha256.eq_ignore_ascii_case(ARCHIVE_SHA256)
     {

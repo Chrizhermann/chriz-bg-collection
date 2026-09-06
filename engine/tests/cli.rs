@@ -1393,6 +1393,245 @@ fn completed_mock_weidu_without_process_result_is_proven_on_resume_without_rerun
 }
 
 #[cfg(windows)]
+fn blocked_before_spawn_fixture(kind: &str) -> (ExecutableFixture, PathBuf) {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            format!("{kind}:install:eefixpack-bg2"),
+        )
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ));
+    let output = install
+        .output()
+        .expect("block synthetic guard before spawn");
+    assert_eq!(output.status.code(), Some(1), "{}", stdout(&output));
+    let response = json_stdout(&output);
+    assert_eq!(response["status"]["step_id"], "install:eefixpack-bg2");
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let step_key = &sha256_bytes(b"install:eefixpack-bg2")[..16];
+    let step = fs::read_dir(
+        fixture
+            .managed
+            .join(".chriz/attempts")
+            .join(&replay.created().attempt_id)
+            .join("steps"),
+    )
+    .unwrap()
+    .filter_map(Result::ok)
+    .find(|entry| entry.file_name().to_string_lossy().ends_with(step_key))
+    .unwrap();
+    let attempt = step.path().join("attempt-0001");
+    assert!(attempt.join("before.log").is_file());
+    assert!(!attempt.join("process-result.json").exists());
+    assert!(!attempt.join("stdout.log").exists());
+    assert!(!fixture.managed.join("game/WeiDU.log").exists());
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/WeiDU.log"))
+            .unwrap()
+            .lines()
+            .count(),
+        2
+    );
+    (fixture, attempt)
+}
+
+#[cfg(windows)]
+fn use_legacy_pre_spawn_evidence(fixture: &ExecutableFixture, attempt: &Path) {
+    let marker_path = attempt.join("pre-spawn-failure.json");
+    let marker: Value = serde_json::from_slice(&fs::read(&marker_path).unwrap()).unwrap();
+    fs::remove_file(marker_path).unwrap();
+    // This disposable fixture models alpha.13's original terminal detail and files.
+    // The terminal record has no successor, so its previous-record hash stays valid.
+    let ledger = fs::read_dir(fixture.managed.join(".chriz/ledger"))
+        .unwrap()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .max()
+        .unwrap();
+    let mut record: Value = serde_json::from_slice(&fs::read(&ledger).unwrap()).unwrap();
+    record["event"]["data"]["detail"] = marker["failure"].clone();
+    fs::write(ledger, serde_json::to_vec_pretty(&record).unwrap()).unwrap();
+}
+
+#[cfg(windows)]
+#[test]
+fn pre_spawn_guard_failures_resume_only_the_unstarted_run() {
+    for (kind, legacy) in [
+        ("invocation-build", false),
+        ("process-spawn", false),
+        ("invocation-build", true),
+    ] {
+        let (fixture, attempt) = blocked_before_spawn_fixture(kind);
+        if legacy {
+            use_legacy_pre_spawn_evidence(&fixture, &attempt);
+        }
+        let prior_log = fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+        let mut resume = executable_command(&fixture);
+        resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+        let output = resume.output().expect("resume never-spawned synthetic run");
+        assert!(
+            output.status.success(),
+            "{kind} legacy={legacy}: {}\n{}",
+            stdout(&output),
+            stderr(&output)
+        );
+        assert_eq!(
+            fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap(),
+            prior_log
+        );
+        let receipt: InstallReceipt = serde_json::from_slice(
+            &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(receipt.runs[0].attempts.len(), 1);
+        assert_eq!(receipt.runs[0].attempts[0].attempt, 1);
+        assert_eq!(receipt.runs[1].attempts.len(), 1);
+        assert_eq!(receipt.runs[1].attempts[0].attempt, 2);
+        assert_eq!(receipt.runs[1].attempts[0].components, vec![0]);
+        assert!(!attempt.join("stdout.log").exists());
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn pre_spawn_recovery_rejects_missing_changed_and_execution_evidence() {
+    for change in [
+        "missing-before",
+        "changed-before",
+        "changed-current",
+        "unexpected-output",
+        "changed-marker",
+        "missing-marker",
+        "missing-invocation",
+        "changed-invocation",
+        "nonempty-debug",
+        "legacy-output",
+        "unresolved-ledger",
+    ] {
+        let kind = if matches!(
+            change,
+            "missing-invocation" | "changed-invocation" | "nonempty-debug"
+        ) {
+            "process-spawn"
+        } else {
+            "invocation-build"
+        };
+        let (fixture, attempt) = blocked_before_spawn_fixture(kind);
+        match change {
+            "missing-before" => fs::remove_file(attempt.join("before.log")).unwrap(),
+            "changed-before" => fs::write(attempt.join("before.log"), b"changed\n").unwrap(),
+            "changed-current" => {
+                fs::write(fixture.managed.join("game/WeiDU.log"), b"changed\n").unwrap()
+            }
+            "unexpected-output" => fs::write(attempt.join("stdout.log"), b"").unwrap(),
+            "changed-marker" => {
+                let path = attempt.join("pre-spawn-failure.json");
+                let mut marker: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+                marker["attempt"] = Value::from(2);
+                fs::write(path, serde_json::to_vec(&marker).unwrap()).unwrap();
+            }
+            "missing-invocation" => fs::remove_file(attempt.join("invocation.json")).unwrap(),
+            "missing-marker" => fs::remove_file(attempt.join("pre-spawn-failure.json")).unwrap(),
+            "changed-invocation" => fs::write(attempt.join("invocation.json"), b"{}\n").unwrap(),
+            "nonempty-debug" => {
+                fs::write(attempt.join("weidu.debug.log"), b"some execution\n").unwrap()
+            }
+            "legacy-output" => {
+                use_legacy_pre_spawn_evidence(&fixture, &attempt);
+                fs::write(attempt.join("stdout.log"), b"").unwrap();
+            }
+            "unresolved-ledger" => {
+                let terminal = fs::read_dir(fixture.managed.join(".chriz/ledger"))
+                    .unwrap()
+                    .filter_map(Result::ok)
+                    .map(|entry| entry.path())
+                    .max()
+                    .unwrap();
+                fs::remove_file(terminal).unwrap();
+            }
+            _ => unreachable!(),
+        }
+        let mut resume = executable_command(&fixture);
+        resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+        let output = resume
+            .output()
+            .expect("reject compromised pre-spawn evidence");
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{change}: {}",
+            stdout(&output)
+        );
+        assert_eq!(
+            json_stdout(&output)["status"]["status"],
+            "fresh_copy_required",
+            "{change}: {}",
+            stdout(&output)
+        );
+        assert!(!attempt.parent().unwrap().join("attempt-0002").exists());
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn launched_run_with_missing_invocation_is_never_classified_as_unstarted() {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ));
+    let output = install.output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let attempt = fs::read_dir(
+        fixture
+            .managed
+            .join(".chriz/attempts")
+            .join(&replay.created().attempt_id)
+            .join("steps"),
+    )
+    .unwrap()
+    .filter_map(Result::ok)
+    .map(|entry| entry.path().join("attempt-0001"))
+    .find(|path| path.join("invocation.json").exists())
+    .unwrap();
+    fs::remove_file(attempt.join("invocation.json")).unwrap();
+    let log = fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap();
+    let mut resume = executable_command(&fixture);
+    resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+    let output = resume.output().unwrap();
+    assert_eq!(
+        json_stdout(&output)["status"]["status"],
+        "fresh_copy_required",
+        "{}",
+        stdout(&output)
+    );
+    assert_eq!(
+        fs::read(fixture.managed.join("bg1/WeiDU.log")).unwrap(),
+        log
+    );
+}
+
+#[cfg(windows)]
 #[test]
 fn explicit_relative_tp2_stays_unavailable_without_signed_recipe_evidence() {
     let fixture = executable_fixture();

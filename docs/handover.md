@@ -5,8 +5,8 @@ Live entry point for anyone (user, future agent) picking up work on this repo.
 ## Public source and release preparation — 2026-09-07
 
 Christopher authorized publishing the existing source repository under MIT for
-CEBG-owned code. The publication line retains the audited app alpha.13 implementation
-and recipe alpha.12 / 434 recommended components. Current source/build instructions
+CEBG-owned code. The publication line integrates the finalized app alpha.14 source
+and retains recipe alpha.12 / 434 recommended components. Current source/build instructions
 are in [BUILDING.md](BUILDING.md); the [publication record](publication-source-2026-09-07.md)
 tracks the public ref, hosted Windows checks and preserved binary/update URLs.
 
@@ -19,6 +19,32 @@ The installer task's subsequent shortcut/preferences/recovery work is independen
 of this publication line. Do not replace its dirty worktree or the running alpha.13
 installation. Publishing source does not publish a new app version or alter the
 existing `chriz-easy-bg` downloads/updater. Authenticode enrollment remains separate.
+
+## Launcher friction patch + current EET recovery incident — 2026-09-07
+
+**Overnight update:** the pre-spawn recovery/process fixes pass focused tests and
+Christopher's exact `CEBG-Tests/Alpha13-20260907` copy resumed at EET attempt 2,
+ledger 155, at 06:37 KST. Five previous mod runs were retained. Background worker
+PID at launch is 40540; logs: `target/cebg-overnight/alpha14-resume-20260907/`.
+Do not launch another worker or restart the stack. App alpha.14 is being packaged;
+recipe alpha.12 is unchanged. Full install completion is not yet established.
+Christopher authorized releasing a fix and only using cleanup/restart if recovery
+cannot safely work. Cleanup UI is deferred: [roadmap](plans/2026-09-07-managed-install-cleanup.md).
+
+Source-only launcher patch: separate Play shortcut names with safe collision handling,
+unfinished setup preferences restored with fresh checks, and visible native error
+details. Windows shortcut tests 7, native command contracts 39, frontend tests 139,
+TypeScript and Vite build pass. Public app/recipe remain alpha.13/alpha.12; no release
+or change to game installs. See [scope/acceptance](plans/2026-09-07-launcher-friction-patch.md).
+
+Christopher's live alpha.13 test stopped before invoking EET: the process check saw
+`game/EET/bin/win32/x86_64/weidu.exe`. The five preceding mod runs succeeded. That
+process was absent during inspection; EET has only a before-log, identical to current
+WeiDU.log. Alpha.13 mishandles this never-spawned evidence shape, so he was
+asked to preserve the folder and hold off on Retry in that old app. Process-liveness
+and pre-spawn recovery fixes are complete in the alpha.14 source. Do not restart the entire
+installation or claim other agents caused the process match without evidence.
+See [incident/evidence](issues/alpha13-eet-pre-spawn-2026-09-07.md).
 
 ## EET Documents-path and quiet-install fixes — 2026-09-07 (app alpha.13)
 

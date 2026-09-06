@@ -36,8 +36,8 @@ use crate::orchestrator::{
     run_campaign_controlled, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
     CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest,
     InstallLogVerifier, InstallReconciliation, InvocationBuilder, MaterializationOutcome,
-    MaterializationTask, MutationCheck, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter,
-    StagingService, StepAttempt, StepFailure,
+    MaterializationTask, MutationCheck, MutationKind, ProcessResult, ProcessRunner, ReceiptDraft,
+    ReceiptWriter, StagingService, StepAttempt, StepFailure,
 };
 use crate::preflight::{
     initial_preflight, recheck_staging_target_before_mutation, recheck_target_before_mutation,
@@ -53,7 +53,8 @@ use crate::recipe_view::{evaluate, SelectionEvaluation};
 use crate::registry::ManagedInstallRegistry;
 use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::session::{
-    CampaignCreated, FrozenIdentity, SessionReplay, SessionStore, SourceGameFingerprints,
+    CampaignCreated, FrozenIdentity, SessionEvent, SessionReplay, SessionStore,
+    SourceGameFingerprints,
 };
 use crate::stage::{
     finalize_game_identity, read_engine_name, reserve_save_identity, stage_bgee_sod,
@@ -93,6 +94,7 @@ const EVIDENCE_DIRECTORY: &str = "evidence";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
 const INVOCATION_FILE: &str = "invocation.json";
+const PRE_SPAWN_FAILURE_FILE: &str = "pre-spawn-failure.json";
 const PROCESS_RESULT_FILE: &str = "process-result.json";
 const PROCESS_OUTPUT_FILE: &str = "process-output.log";
 const STDOUT_FILE: &str = "stdout.log";
@@ -1797,6 +1799,17 @@ struct PreparedInvocationEvidence {
     prepared_at_millis: u64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PreSpawnFailureEvidence {
+    run_id: String,
+    attempt: u32,
+    components: Vec<u32>,
+    guard: String,
+    failure: String,
+    files_sha256: BTreeMap<String, String>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum ProcessTerminal {
@@ -2295,6 +2308,18 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
     }
 
     fn recheck_before_mutation(&mut self, check: &MutationCheck) -> Result<(), StepFailure> {
+        #[cfg(debug_assertions)]
+        if std::env::var("CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK")
+            .ok()
+            .as_deref()
+            == Some(format!("{}:{}", check.kind.as_str(), check.step_id).as_str())
+        {
+            return Err(step_error(
+                crate::preflight::PreflightError::TargetProcessRunning {
+                    executable: self.target_root(check.target).join("Baldur.exe"),
+                },
+            ));
+        }
         if matches!(check.kind, crate::orchestrator::MutationKind::Stage) {
             let bg1 = inspect_frozen_source(&self.frozen.profiles, &self.frozen.bg1)
                 .map_err(step_error)?;
@@ -2590,6 +2615,120 @@ impl<S: EventSink + Sync> ProcessRunner<Invocation> for GuardedCliDependencies<'
 }
 
 impl<S: EventSink> GuardedCliDependencies<'_, S> {
+    fn recover_before_spawn(
+        &self,
+        run: &PlannedRun,
+        attempt: &StepAttempt,
+    ) -> Result<Option<InstallReconciliation>, StepFailure> {
+        let marker_path = attempt.evidence_root.join(PRE_SPAWN_FAILURE_FILE);
+        let marker: Option<PreSpawnFailureEvidence> = read_optional_json(&marker_path)?;
+        if marker.is_none()
+            && fs::symlink_metadata(attempt.evidence_root.join(INVOCATION_FILE)).is_ok()
+        {
+            // A prepared invocation without an explicit guard record follows the existing
+            // strict process/rollback reconciliation, even when execution files are missing.
+            return Ok(None);
+        }
+        let replay = SessionStore::open(&self.created.managed_root)
+            .and_then(|store| store.replay())
+            .map_err(step_error)?;
+        let detail = match replay.records.last().map(|record| &record.event) {
+            Some(SessionEvent::StepFailed {
+                step_id,
+                attempt: failed_attempt,
+                detail,
+            }) if step_id == &attempt.step_id
+                && *failed_attempt == attempt.attempt
+                && attempt.step_id == format!("install:{}", run.run_id) =>
+            {
+                detail
+            }
+            _ => {
+                return Err(StepFailure::new(
+                    "unstarted-run recovery requires its matching terminal ledger failure",
+                ))
+            }
+        };
+
+        let components = if let Some(marker) = marker {
+            if marker.run_id != run.run_id
+                || marker.attempt != attempt.attempt
+                || marker.components.is_empty()
+                || !run.components.ends_with(&marker.components)
+                || detail
+                    != &format!(
+                        "{}\nPre-spawn evidence SHA-256: {}",
+                        marker.failure,
+                        sha256_bytes(&read_direct_file(&marker_path)?)
+                    )
+            {
+                return Err(StepFailure::new(
+                    "pre-spawn failure evidence differs from the terminal ledger or frozen run",
+                ));
+            }
+            let kind = match marker.guard.as_str() {
+                "invocation-build" => MutationKind::InvocationBuild,
+                "process-spawn" => MutationKind::ProcessSpawn,
+                _ => return Err(StepFailure::new("unknown pre-spawn safety guard")),
+            };
+            if pre_spawn_file_digests(attempt, kind, true)? != marker.files_sha256 {
+                return Err(StepFailure::new(
+                    "pre-spawn attempt files differ from the durable guard evidence",
+                ));
+            }
+            if kind == MutationKind::ProcessSpawn {
+                let prepared: PreparedInvocationEvidence =
+                    read_required_json(&attempt.evidence_root.join(INVOCATION_FILE))?;
+                if prepared.run_id != run.run_id
+                    || prepared.attempt != attempt.attempt
+                    || prepared.components != marker.components
+                {
+                    return Err(StepFailure::new(
+                        "pre-spawn invocation differs from its guarded remaining suffix",
+                    ));
+                }
+            }
+            marker.components
+        } else {
+            // Alpha.13 predates the structured guard record. Its synchronized invocation
+            // file is a mandatory write barrier before runner entry. Accept only its first
+            // attempt, before.log alone, and the exact terminal target-process diagnostic.
+            // Missing evidence after launch, arbitrary build errors and interrupted starts
+            // must never enter this compatibility path.
+            let executable = detail
+                .strip_prefix("a process executable under the managed target is active: ")
+                .filter(|_| attempt.attempt == 1)
+                .ok_or_else(|| {
+                    StepFailure::new("missing invocation is not proof that WeiDU never started")
+                })?;
+            let executable = Path::new(executable);
+            if !executable.is_absolute()
+                || !path_is_within(
+                    &executable.canonicalize().map_err(step_error)?,
+                    &self
+                        .target_root(run.target)
+                        .canonicalize()
+                        .map_err(step_error)?,
+                )
+            {
+                return Err(StepFailure::new(
+                    "legacy pre-spawn process diagnostic does not identify this target",
+                ));
+            }
+            pre_spawn_file_digests(attempt, MutationKind::InvocationBuild, false)?;
+            run.components.clone()
+        };
+        let before = read_direct_file(&attempt.evidence_root.join(BEFORE_LOG_FILE))?;
+        if before != read_optional_weidu_log(self.target_root(run.target))? {
+            return Err(StepFailure::new(
+                "WeiDU.log changed after the pre-spawn safety guard failed",
+            ));
+        }
+        Ok(Some(InstallReconciliation::Retry {
+            remaining: components,
+        }))
+    }
+
     fn reconcile_install_attempt(
         &self,
         run: &PlannedRun,
@@ -2851,7 +2990,10 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
         run: &PlannedRun,
         attempt: &StepAttempt,
     ) -> Result<InstallReconciliation, StepFailure> {
-        self.reconcile_install_attempt(run, attempt, None)
+        match self.recover_before_spawn(run, attempt)? {
+            Some(reconciliation) => Ok(reconciliation),
+            None => self.reconcile_install_attempt(run, attempt, None),
+        }
     }
 
     fn snapshot_before(
@@ -2862,6 +3004,27 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
         ensure_directories(&attempt.evidence_root)?;
         let before = read_optional_weidu_log(self.target_root(run.target))?;
         write_bytes_once(&attempt.evidence_root.join(BEFORE_LOG_FILE), &before)
+    }
+
+    fn record_pre_spawn_failure(
+        &mut self,
+        run: &PlannedRun,
+        components: &[u32],
+        attempt: &StepAttempt,
+        kind: MutationKind,
+        failure: &StepFailure,
+    ) -> Result<String, StepFailure> {
+        let evidence = PreSpawnFailureEvidence {
+            run_id: run.run_id.clone(),
+            attempt: attempt.attempt,
+            components: components.to_vec(),
+            guard: kind.as_str().to_owned(),
+            failure: failure.to_string(),
+            files_sha256: pre_spawn_file_digests(attempt, kind, false)?,
+        };
+        let path = attempt.evidence_root.join(PRE_SPAWN_FAILURE_FILE);
+        write_json_once(&path, &evidence)?;
+        Ok(sha256_bytes(&read_direct_file(&path)?))
     }
 
     fn record_invocation(
@@ -3075,6 +3238,74 @@ fn ensure_directories(path: &Path) -> Result<(), StepFailure> {
         }
     }
     Ok(())
+}
+
+fn pre_spawn_file_digests(
+    attempt: &StepAttempt,
+    kind: MutationKind,
+    has_marker: bool,
+) -> Result<BTreeMap<String, String>, StepFailure> {
+    for directory in attempt.evidence_root.ancestors() {
+        let metadata = fs::symlink_metadata(directory).map_err(step_error)?;
+        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir()
+        {
+            return Err(StepFailure::new(format!(
+                "pre-spawn evidence directory is not direct: {}",
+                directory.display()
+            )));
+        }
+    }
+    let prepared = match kind {
+        MutationKind::InvocationBuild => false,
+        MutationKind::ProcessSpawn => true,
+        _ => {
+            return Err(StepFailure::new(
+                "cannot record a non-install guard as pre-spawn evidence",
+            ))
+        }
+    };
+    let mut files = BTreeMap::new();
+    let mut marker_found = false;
+    for entry in fs::read_dir(&attempt.evidence_root).map_err(step_error)? {
+        let entry = entry.map_err(step_error)?;
+        let name = entry
+            .file_name()
+            .into_string()
+            .map_err(|_| StepFailure::new("pre-spawn evidence filename is not Unicode"))?;
+        if name == PRE_SPAWN_FAILURE_FILE && has_marker {
+            read_direct_file(&entry.path())?;
+            marker_found = true;
+            continue;
+        }
+        if name != BEFORE_LOG_FILE
+            && !(prepared
+                && matches!(
+                    name.as_str(),
+                    INVOCATION_FILE | DEBUG_LOG_FILE | "eet-compatibility.json"
+                ))
+        {
+            return Err(StepFailure::new(format!(
+                "unexpected evidence in an unstarted WeiDU attempt: {name}"
+            )));
+        }
+        let bytes = read_direct_file(&entry.path())?;
+        if name == DEBUG_LOG_FILE && !bytes.is_empty() {
+            return Err(StepFailure::new(
+                "pre-spawn debug evidence contains possible WeiDU output",
+            ));
+        }
+        files.insert(name, sha256_bytes(&bytes));
+    }
+    if !files.contains_key(BEFORE_LOG_FILE)
+        || (prepared
+            && (!files.contains_key(INVOCATION_FILE) || !files.contains_key(DEBUG_LOG_FILE)))
+        || has_marker != marker_found
+    {
+        return Err(StepFailure::new(
+            "required pre-spawn attempt evidence is missing",
+        ));
+    }
+    Ok(files)
 }
 
 fn write_json_once<T: Serialize>(path: &Path, value: &T) -> Result<(), StepFailure> {

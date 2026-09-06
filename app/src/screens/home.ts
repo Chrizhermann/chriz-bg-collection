@@ -1,5 +1,6 @@
 import type { ManagedInstallation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
+import { errorDetails } from "../components/error-details";
 
 export interface HomeActions {
   readonly begin: () => void | Promise<void>;
@@ -15,6 +16,7 @@ export interface ShortcutFeedback {
   readonly installId: string;
   readonly state: "created" | "failed";
   readonly path?: string;
+  readonly technicalDetail?: string;
 }
 
 export interface AddonFeedback {
@@ -187,10 +189,14 @@ export function homeScreen(
       actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
     );
     if (currentFeedback !== null) {
-      feedback = element("div", `shortcut-feedback ${currentFeedback.state === "created" ? "ok" : "danger"}`);
+      feedback = element("div", `shortcut-feedback ${currentFeedback.state === "created" ? "ok" : "warning"}`);
       feedback.setAttribute("role", "status");
       feedback.append(element("strong", undefined, currentFeedback.state === "created" ? "Shortcut created on your desktop." : "The desktop shortcut wasn't created."));
       if (currentFeedback.path !== undefined) feedback.append(element("p", "path", currentFeedback.path));
+      if (currentFeedback.state === "failed") {
+        feedback.append(element("p", undefined, "Your game is ready to play. Only the optional desktop shortcut failed."));
+        if (currentFeedback.technicalDetail) feedback.append(errorDetails(currentFeedback.technicalDetail));
+      }
     }
   } else if (selected.resumable) {
     controls.append(

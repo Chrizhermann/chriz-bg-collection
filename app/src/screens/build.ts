@@ -1,6 +1,7 @@
 import type { BuildSnapshot } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
 import { campaignLedger } from "../components/campaign-ledger";
+import { errorDetails } from "../components/error-details";
 import { statusCard } from "../components/status-card";
 import { technicalLog, type TechnicalLogState } from "../components/technical-log";
 
@@ -28,6 +29,9 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
   if (snapshot.failureReason) stateCard.insertBefore(element("p", "failure-reason", snapshot.failureReason), stateCard.children[1] ?? null);
   const controls = element("div", "inline-actions");
   if (snapshot.recoveryAction) stateCard.append(element("p", "recovery-action", snapshot.recoveryAction));
+  if (snapshot.state === "failed" && snapshot.commandError?.technical_detail) {
+    stateCard.append(errorDetails(snapshot.commandError.technical_detail, snapshot.commandError.code === "unsafe_target"));
+  }
   if (snapshot.state === "waiting-manual") {
     stateCard.append(element("p", "path", snapshot.manualArchiveName ?? ""));
     controls.append(actionButton("Open download page", actions.openManualSource, "quiet"));

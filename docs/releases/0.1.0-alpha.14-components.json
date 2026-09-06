@@ -1,0 +1,2249 @@
+{
+  "schemaVersion": 1,
+  "applicationVersion": "0.1.0-alpha.14",
+  "recipeVersion": "0.1.0-alpha.12",
+  "presetId": "chris-recommended",
+  "creditScope": "Official project/source links only; author credits are published separately.",
+  "componentCount": 434,
+  "mods": [
+    {
+      "id": "dlcmerger",
+      "name": "DLC Merger",
+      "version": "2.1",
+      "homepage": "https://github.com/Argent77/A7-DlcMerger",
+      "runs": [
+        {
+          "id": "dlcmerger-bg1",
+          "components": [
+            {
+              "id": 1,
+              "name": "Merge Siege of Dragonspear DLC"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eefixpack",
+      "name": "Enhanced Edition Fixpack",
+      "version": "Beta 2",
+      "homepage": "https://www.gibberlings3.net/mods/fixes/eefp/",
+      "runs": [
+        {
+          "id": "eefixpack-bg1",
+          "components": [
+            {
+              "id": 0,
+              "name": "Core Fixes"
+            },
+            {
+              "id": 2,
+              "name": "Game Text Update"
+            }
+          ]
+        },
+        {
+          "id": "eefixpack-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Core Fixes"
+            },
+            {
+              "id": 2,
+              "name": "Game Text Update"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bg1ub",
+      "name": "BG1 Unfinished Business",
+      "version": "17.1",
+      "homepage": "https://www.pocketplane.net/bg1-unfinished-business/",
+      "runs": [
+        {
+          "id": "bg1ub-bg1",
+          "components": [
+            {
+              "id": 0,
+              "name": "Ice Island Level Two Restoration"
+            },
+            {
+              "id": 11,
+              "name": "Scar and the Sashenstar's Daughter"
+            },
+            {
+              "id": 12,
+              "name": "Quoningar, the Cleric"
+            },
+            {
+              "id": 13,
+              "name": "Shilo Chen and the Ogre-Magi"
+            },
+            {
+              "id": 14,
+              "name": "Edie, the Merchant League Applicant"
+            },
+            {
+              "id": 16,
+              "name": "Creature Corrections"
+            },
+            {
+              "id": 17,
+              "name": "Creature Restorations"
+            },
+            {
+              "id": 18,
+              "name": "Creature Name Restorations"
+            },
+            {
+              "id": 19,
+              "name": "Minor Dialogue Restorations"
+            },
+            {
+              "id": 21,
+              "name": "Store, Tavern and Inn Fixes and Restorations"
+            },
+            {
+              "id": 22,
+              "name": "Item Corrections and Restorations"
+            },
+            {
+              "id": 29,
+              "name": "Duke Eltan in the Harbor Master's Building"
+            },
+            {
+              "id": 30,
+              "name": "Nim Furlwing Encounter"
+            },
+            {
+              "id": 32,
+              "name": "Svlast, the Fallen Paladin Encounter"
+            },
+            {
+              "id": 33,
+              "name": "Mal-Kalen, the Ulcaster Ghost"
+            },
+            {
+              "id": 34,
+              "name": "Chapter 6 Dialogue Restorations"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bg1npc",
+      "name": "The BG1 NPC Project",
+      "version": "32",
+      "homepage": "https://www.gibberlings3.net/mods/npcs/bg1npc/",
+      "runs": [
+        {
+          "id": "bg1npc-bg1",
+          "components": [
+            {
+              "id": 0,
+              "name": "Required Modifications"
+            },
+            {
+              "id": 10,
+              "name": "Banters, Quests, and Interjections"
+            },
+            {
+              "id": 90,
+              "name": "NPCs can be sent to wait in an inn"
+            },
+            {
+              "id": 111,
+              "name": "Fast BGEE Banter Timing"
+            },
+            {
+              "id": 120,
+              "name": "Bardic Reputation Adjustment"
+            },
+            {
+              "id": 130,
+              "name": "SixofSpades Extended Sarevok's Diary"
+            },
+            {
+              "id": 240,
+              "name": "Kivan uses spears"
+            },
+            {
+              "id": 200,
+              "name": "Player-Initiated Dialogues"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eet",
+      "name": "Enhanced Edition Trilogy",
+      "version": "74e91d72bca5d073fa11c1d088b90d7ff0c7105d",
+      "homepage": "https://github.com/Gibberlings3/EET",
+      "runs": [
+        {
+          "id": "eet-initialize-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "EET core (resource importation)"
+            },
+            {
+              "id": 100,
+              "name": "Create desktop shortcut"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eeex",
+      "name": "EEex",
+      "version": "1.2.0",
+      "homepage": "https://github.com/Bubb13/EEex",
+      "runs": [
+        {
+          "id": "eeex-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Quick Menu Core"
+            },
+            {
+              "id": 1,
+              "name": "EEex"
+            },
+            {
+              "id": 2,
+              "name": "Enable effect menu module"
+            },
+            {
+              "id": 3,
+              "name": "Enable empty container module"
+            },
+            {
+              "id": 4,
+              "name": "Enable hotkey module"
+            },
+            {
+              "id": 5,
+              "name": "Enable scale module"
+            },
+            {
+              "id": 6,
+              "name": "Enable time step module"
+            },
+            {
+              "id": 7,
+              "name": "Enable timer module"
+            },
+            {
+              "id": 8,
+              "name": "Experimental - Use LuaJIT"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bubb-spell-menu",
+      "name": "Bubb's Spell Menu Extended",
+      "version": "5.2",
+      "homepage": "https://github.com/Bubb13/Bubbs-Spell-Menu-Extended",
+      "runs": [
+        {
+          "id": "bubb-spell-menu-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Bubb's Spell Menu Extended"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bggo",
+      "name": "Baldur's Gate Graphical Overhaul",
+      "version": "3.6",
+      "homepage": "https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul",
+      "runs": [
+        {
+          "id": "bggo-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Baldurs Gate Graphical Overhaul Core"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rr",
+      "name": "Rogue Rebalancing",
+      "version": "4.92",
+      "homepage": "https://github.com/Spellhold-Studios/Rogue-Rebalancing",
+      "runs": [
+        {
+          "id": "rr-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Proper dual-wielding implementation for Thieves and Bards"
+            },
+            {
+              "id": 3,
+              "name": "Proper racial adjustments for thieving skills"
+            },
+            {
+              "id": 7,
+              "name": "Additional equipment for Thieves and Bards"
+            },
+            {
+              "id": 8,
+              "name": "Upgradeable Equipment"
+            },
+            {
+              "id": 11,
+              "name": "Chosen of Cyric encounter"
+            },
+            {
+              "id": 12,
+              "name": "Shadow Thief Improvements"
+            },
+            {
+              "id": 999,
+              "name": "BG2-style icons for RR content"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fade",
+      "name": "Fade NPC",
+      "version": "5.6",
+      "homepage": "https://github.com/Spellhold-Studios/Fade-NPC",
+      "runs": [
+        {
+          "id": "fade-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Fade: An NPC for Baldur's Gate II: SoA and ToB"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "paina",
+      "name": "Pai'Na NPC for BG2:EE",
+      "version": "1.9",
+      "homepage": "https://github.com/TheArtisanBG/Pai-Na-NPC-mod-for-BG2-EE",
+      "runs": [
+        {
+          "id": "paina-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Pai'Na NPC for BG2:EE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sarahtob",
+      "name": "Sarah NPC Romance Mod for BG2:ToB",
+      "version": "8",
+      "homepage": "https://github.com/Gibberlings3/Sarah",
+      "runs": [
+        {
+          "id": "sarahtob-bg2",
+          "components": [
+            {
+              "id": 1,
+              "name": "Use revised audio from HalmyLyseas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ub",
+      "name": "Unfinished Business for BG2",
+      "version": "28",
+      "homepage": "https://github.com/Pocket-Plane-Group/UnfinishedBusiness",
+      "runs": [
+        {
+          "id": "ub-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "The Kidnapping of Boo by Cliffette"
+            },
+            {
+              "id": 1,
+              "name": "The Suna Seni/Valygar Relationship"
+            },
+            {
+              "id": 2,
+              "name": "Kalah and What He Was Promised"
+            },
+            {
+              "id": 4,
+              "name": "Gorje Hilldark and the Extended Illithium Quest"
+            },
+            {
+              "id": 5,
+              "name": "The Pai'Na/Spider's Bane Quest"
+            },
+            {
+              "id": 6,
+              "name": "Restored Crooked Crane Inn"
+            },
+            {
+              "id": 7,
+              "name": "Restored Encounters"
+            },
+            {
+              "id": 8,
+              "name": "Artemis Entreri in Bodhi's Lair"
+            },
+            {
+              "id": 9,
+              "name": "Corrected Xzar's Creations"
+            },
+            {
+              "id": 10,
+              "name": "Restored Hell Minions, by SimDing0"
+            },
+            {
+              "id": 12,
+              "name": "Item Restorations"
+            },
+            {
+              "id": 13,
+              "name": "Yoshimo's Original Portrait"
+            },
+            {
+              "id": 14,
+              "name": "Anomen's Original Portrait"
+            },
+            {
+              "id": 15,
+              "name": "NPC Portrait Restorations"
+            },
+            {
+              "id": 17,
+              "name": "Corrected Character Names and Biographies"
+            },
+            {
+              "id": 18,
+              "name": "Restored Minor Dialogs"
+            },
+            {
+              "id": 20,
+              "name": "Extended ToB Item Descriptions"
+            },
+            {
+              "id": 21,
+              "name": "Throne of Bhaal Minor Restorations"
+            },
+            {
+              "id": 25,
+              "name": "The Murder of Acton Balthis, by Kulyok"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "evandra",
+      "name": "Evandra NPC",
+      "version": "2.2",
+      "homepage": "https://www.gibberlings3.net/mods/npcs/evandra/",
+      "runs": [
+        {
+          "id": "evandra-core-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Evandra NPC"
+            }
+          ]
+        },
+        {
+          "id": "evandra-crossmod-bg2",
+          "components": [
+            {
+              "id": 1,
+              "name": "Crossmod Content"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "xan",
+      "name": "Xan NPC for Baldur's Gate II",
+      "version": "19",
+      "homepage": "https://github.com/Pocket-Plane-Group/Xan_for_BGII",
+      "runs": [
+        {
+          "id": "xan-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Xan NPC MOD for Baldur's Gate II"
+            },
+            {
+              "id": 1,
+              "name": "Change Xan's class to Fighter/Mage"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yeslicknpc",
+      "name": "Yeslick NPC for BGII",
+      "version": "5.0",
+      "homepage": "https://github.com/Spellhold-Studios/Yeslick-NPC",
+      "runs": [
+        {
+          "id": "yeslicknpc-bg2",
+          "components": [
+            {
+              "id": 1,
+              "name": "Yeslick is a Fighter-Alaghor of Clangeddin"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sirene-bg2",
+      "name": "Sirene NPC for BG2:EE",
+      "version": "00beda909a4a791a35016069b4ebb77f27279723",
+      "homepage": "https://github.com/TheArtisanBG/Sirene-NPC-for-BG2-EE",
+      "runs": [
+        {
+          "id": "sirene-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Sirene NPC for BG2:EE"
+            },
+            {
+              "id": 2,
+              "name": "Alternate portrait: Sirick, Light Armor"
+            },
+            {
+              "id": 5,
+              "name": "True Paladin"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ascension",
+      "name": "Ascension",
+      "version": "2.1.0",
+      "homepage": "https://github.com/Gibberlings3/Ascension",
+      "runs": [
+        {
+          "id": "ascension-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Rewritten Final Chapter of Throne of Bhaal"
+            },
+            {
+              "id": 10,
+              "name": "Balthazar can be redeemed"
+            },
+            {
+              "id": 20,
+              "name": "Improved Sarevok-Player Interactions"
+            },
+            {
+              "id": 30,
+              "name": "Improved Imoen-Player Interactions in Throne of Bhaal"
+            },
+            {
+              "id": 50,
+              "name": "Improved Slayer Transformation"
+            },
+            {
+              "id": 60,
+              "name": "David Gaider's expanded epilogues for Bioware NPCs"
+            },
+            {
+              "id": 1000,
+              "name": "Tougher Abazigal"
+            },
+            {
+              "id": 1100,
+              "name": "Tougher Balthazar"
+            },
+            {
+              "id": 1200,
+              "name": "Tougher Demogorgon"
+            },
+            {
+              "id": 1300,
+              "name": "Tougher Gromnir"
+            },
+            {
+              "id": 1400,
+              "name": "Tougher Illasera"
+            },
+            {
+              "id": 1500,
+              "name": "Tougher Yaga-Shura"
+            },
+            {
+              "id": 2000,
+              "name": "Full-body portrait for Bodhi"
+            },
+            {
+              "id": 2100,
+              "name": "Alternate Balthazar portrait, by Cuv"
+            },
+            {
+              "id": 2300,
+              "name": "Sharper portraits of Abazigal and Gromnir for the Enhanced Edition"
+            },
+            {
+              "id": 2400,
+              "name": "Slightly improved cutscenes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spell-rev",
+      "name": "Spell Revisions",
+      "version": "4.21-chriz.3",
+      "homepage": "https://github.com/Chrizhermann/chriz-spell-revisions-patch",
+      "runs": [
+        {
+          "id": "spell-rev-core-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Spell Revisions"
+            },
+            {
+              "id": 10,
+              "name": "Deva and Planetar Animations"
+            },
+            {
+              "id": 20,
+              "name": "Mirror Image Fix"
+            },
+            {
+              "id": 30,
+              "name": "Dispel Magic Fix"
+            },
+            {
+              "id": 55,
+              "name": "Spell Deflection blocks AoE spells"
+            },
+            {
+              "id": 65,
+              "name": "Revised Warrior HLAs"
+            }
+          ]
+        },
+        {
+          "id": "spell-rev-npc-spellbooks-bg2",
+          "components": [
+            {
+              "id": 60,
+              "name": "Update Spellbooks of Joinable NPCs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bardicwonders",
+      "name": "Bardic Wonders",
+      "version": "2.9c-balance.3",
+      "homepage": "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch",
+      "runs": [
+        {
+          "id": "bardicwonders-bg2",
+          "components": [
+            {
+              "id": 1001,
+              "name": "Bardic Wonders: Blade Overhaul"
+            },
+            {
+              "id": 1002,
+              "name": "Bardic Wonders: Jester Overhaul"
+            },
+            {
+              "id": 1003,
+              "name": "Bardic Wonders: Skald Overhaul"
+            },
+            {
+              "id": 1004,
+              "name": "Bardic Wonders: Abettor of Mask Kit"
+            },
+            {
+              "id": 1005,
+              "name": "Bardic Wonders: Dancer Kit"
+            },
+            {
+              "id": 1007,
+              "name": "Bardic Wonders: Storm Drummer Kit"
+            },
+            {
+              "id": 1009,
+              "name": "Bardic Wonders: Deathsinger Kit"
+            },
+            {
+              "id": 1010,
+              "name": "Bardic Wonders: Strategist Kit"
+            },
+            {
+              "id": 1011,
+              "name": "Bardic Wonders: Kapellmeister Kit"
+            },
+            {
+              "id": 2002,
+              "name": "Bardic Wonders: Inspirations"
+            },
+            {
+              "id": 2007,
+              "name": "Bardic Wonders: High Level Abilities"
+            },
+            {
+              "id": 2008,
+              "name": "Bardic Wonders: New Bard Spells"
+            },
+            {
+              "id": 2003,
+              "name": "Bardic Wonders: Armored Casting for Bards"
+            },
+            {
+              "id": 2004,
+              "name": "Bardic Wonders: Bard Song Mechanics Tweak"
+            },
+            {
+              "id": 2005,
+              "name": "Bardic Wonders: Item Restriction Tweaks—Bards may use mage items and priest scrolls"
+            },
+            {
+              "id": 2006,
+              "name": "Bardic Wonders: Bard Song Overhead Visual Effect"
+            }
+          ]
+        },
+        {
+          "id": "bardicwonders-garrick-bg2",
+          "components": [
+            {
+              "id": 1008,
+              "name": "Bardic Wonders: Troubadour Kit"
+            }
+          ]
+        },
+        {
+          "id": "bardicwonders-dialogue-patch-bg2",
+          "components": [
+            {
+              "id": 1012,
+              "name": "Bardic Wonders: Gallant Paladin Kit"
+            },
+            {
+              "id": 3001,
+              "name": "Bardic Wonders: Patch Dialogue Class Checks for: Gallant, Mage/Bard and Fighter/Mage/Bard (install late)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "artisanskitpack",
+      "name": "The Artisan's Kitpack",
+      "version": "chriz-v1.3.1",
+      "homepage": "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch",
+      "runs": [
+        {
+          "id": "artisanskitpack-main-bg2",
+          "components": [
+            {
+              "id": 1,
+              "name": "Enable All Classes for All Races"
+            },
+            {
+              "id": 2,
+              "name": "Enable Multi-Classes for All Races"
+            },
+            {
+              "id": 20000,
+              "name": "Eldritch Knight (Fighter / Mage Kit)"
+            },
+            {
+              "id": 20001,
+              "name": "Arcane Trickster (Mage / Thief Kit)"
+            },
+            {
+              "id": 8001,
+              "name": "Pale Master Sorcerer Kit"
+            },
+            {
+              "id": 8002,
+              "name": "3e-accurate Dragon Disciple: Original Stat Bonuses"
+            },
+            {
+              "id": 8004,
+              "name": "Arcane Trickster Sorcerer Kit"
+            },
+            {
+              "id": 10001,
+              "name": "Monk Revisions"
+            },
+            {
+              "id": 10002,
+              "name": "Brawler Kit"
+            },
+            {
+              "id": 10003,
+              "name": "Sacred Fist and Enlightened Fist Kits"
+            },
+            {
+              "id": 10004,
+              "name": "Ninja Class"
+            },
+            {
+              "id": 1100,
+              "name": "Fighter Overhaul"
+            },
+            {
+              "id": 1003,
+              "name": "Berserker Overhaul"
+            },
+            {
+              "id": 1006,
+              "name": "Wizard Slayer Overhaul"
+            },
+            {
+              "id": 1004,
+              "name": "Kensai Overhaul"
+            },
+            {
+              "id": 1005,
+              "name": "Barbarian Overhaul"
+            },
+            {
+              "id": 1007,
+              "name": "Dwarven Defender Overhaul and Vanguard Fighter Kit"
+            },
+            {
+              "id": 1000,
+              "name": "Arcane Archer Fighter Kit"
+            },
+            {
+              "id": 1001,
+              "name": "Arcane Archer Fighter/Mage"
+            },
+            {
+              "id": 1008,
+              "name": "Siegemaster Fighter Kit"
+            },
+            {
+              "id": 1009,
+              "name": "Dreadnought Fighter Kit"
+            },
+            {
+              "id": 2000,
+              "name": "Ranger Overhaul"
+            },
+            {
+              "id": 2010,
+              "name": "Archer Overhaul"
+            },
+            {
+              "id": 2011,
+              "name": "Stalker Overhaul"
+            },
+            {
+              "id": 2012,
+              "name": "Beast Master Overhaul"
+            },
+            {
+              "id": 2002,
+              "name": "Dark Hunter Ranger Kit"
+            },
+            {
+              "id": 3000,
+              "name": "Paladin Overhaul"
+            },
+            {
+              "id": 3010,
+              "name": "Cavalier Overhaul"
+            },
+            {
+              "id": 3003,
+              "name": "Inquisitor Overhaul"
+            },
+            {
+              "id": 3011,
+              "name": "Undead Hunter Overhaul"
+            },
+            {
+              "id": 3004,
+              "name": "Blackguard Overhaul"
+            },
+            {
+              "id": 3001,
+              "name": "Divine Champion Paladin Kit"
+            },
+            {
+              "id": 3002,
+              "name": "Mystic Fire Paladin Kit"
+            },
+            {
+              "id": 3005,
+              "name": "Martyr Paladin Kit"
+            },
+            {
+              "id": 5100,
+              "name": "Shapeshifter Overhaul"
+            },
+            {
+              "id": 5110,
+              "name": "Custom Werewolf Sprite: Shapeshifter Form Only"
+            },
+            {
+              "id": 5001,
+              "name": "Elementalist Druid Kit"
+            },
+            {
+              "id": 5002,
+              "name": "Hivemaster Druid Kit"
+            },
+            {
+              "id": 7004,
+              "name": "Assassin Overhaul"
+            },
+            {
+              "id": 7006,
+              "name": "Swashbuckler Overhaul"
+            },
+            {
+              "id": 7001,
+              "name": "Rogue Archer Thief Kit"
+            },
+            {
+              "id": 7002,
+              "name": "Magekiller Thief Kit"
+            },
+            {
+              "id": 7003,
+              "name": "Trickster Thief Kit"
+            },
+            {
+              "id": 7005,
+              "name": "Invisible Blade Thief Kit"
+            },
+            {
+              "id": 9001,
+              "name": "Warhorn Shaman Kit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "artisanskitpack-npc",
+      "name": "The Artisan's Kitpack — NPC Assignments",
+      "version": "chriz-v1.3.1",
+      "homepage": "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch",
+      "runs": [
+        {
+          "id": "artisanskitpack-npc-bg2",
+          "components": [
+            {
+              "id": 1101,
+              "name": "Give Khalid the Vanguard Kit"
+            },
+            {
+              "id": 2001,
+              "name": "Rashemi Berserker Ranger Kit for Minsc"
+            },
+            {
+              "id": 3101,
+              "name": "Give Ajantis the Divine Champion Kit"
+            },
+            {
+              "id": 3102,
+              "name": "Make Mazzy a Divine Champion"
+            },
+            {
+              "id": 7102,
+              "name": "Make Imoen a Trickster"
+            },
+            {
+              "id": 21001,
+              "name": "Give Jan the Arcane Trickster Kit"
+            },
+            {
+              "id": 9101,
+              "name": "Give M'khiin the Warhorn Shaman Kit"
+            },
+            {
+              "id": 20002,
+              "name": "Make Xan an Eldritch Knight"
+            },
+            {
+              "id": 99001,
+              "name": "Give Garrick the Troubadour Kit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "iepbanters",
+      "name": "IEP Extended Banters",
+      "version": "5.9",
+      "homepage": "https://github.com/Spellhold-Studios/IEP-Extended-Banters",
+      "runs": [
+        {
+          "id": "iepbanters-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Extended NPC-NPC Interaction SoA"
+            },
+            {
+              "id": 1,
+              "name": "Extended Minsc/Aerie Interaction ToB"
+            },
+            {
+              "id": 2,
+              "name": "Imoen Retrospection dialogue for BGII: ToB"
+            },
+            {
+              "id": 3,
+              "name": "Wake-Up dialogue for Anomen Romance"
+            },
+            {
+              "id": 4,
+              "name": "NPC Conflict Revisions"
+            },
+            {
+              "id": 5,
+              "name": "Restored Aerie/Jaheira/Anomen interjection in Underdark"
+            },
+            {
+              "id": 8,
+              "name": "Banter Accelerator: 20 Minutes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "crossmodbg2",
+      "name": "Crossmod Banter Pack for Baldur's Gate II",
+      "version": "30",
+      "homepage": "https://www.gibberlings3.net/mods/npcs/crossmod/",
+      "runs": [
+        {
+          "id": "crossmodbg2-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Crossmod Banter Pack for Shadows of Amn Content"
+            },
+            {
+              "id": 1,
+              "name": "Crossmod Banter Pack for Throne of Bhaal Content"
+            },
+            {
+              "id": 2,
+              "name": "Crossmod Romance Conflicts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "artisanskitpack-tweak",
+      "name": "The Artisan's Kitpack — Late Tweaks",
+      "version": "chriz-v1.3.1",
+      "homepage": "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch",
+      "runs": [
+        {
+          "id": "artisanskitpack-tweak-early-bg2",
+          "components": [
+            {
+              "id": 20101,
+              "name": "Archer: Apply Manyshot to mod-added items"
+            },
+            {
+              "id": 1209,
+              "name": "Dreadnought and Siegemaster: Set to 1 APR"
+            },
+            {
+              "id": 7203,
+              "name": "Trickster: Mimic Mod Kit Abilities"
+            }
+          ]
+        },
+        {
+          "id": "artisanskitpack-tweak-late-bg2",
+          "components": [
+            {
+              "id": 12012,
+              "name": "Beastmaster: Modify Restrictions for Mod Items"
+            },
+            {
+              "id": 3202,
+              "name": "Mystic Fire: Allow Wands and Mage Scrolls"
+            },
+            {
+              "id": 3302,
+              "name": "Mystic Fire: Add HLA spells directly to spellbook"
+            },
+            {
+              "id": 8204,
+              "name": "Arcane Trickster Sorcerer: Enable Thief Equipment"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hq-soundclips-bg2ee",
+      "name": "HQ SoundClips BG2EE",
+      "version": "1.3",
+      "homepage": "https://github.com/Argent77/HQ-SoundClips-BG2EE",
+      "runs": [
+        {
+          "id": "hq-soundclips-bg2ee-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Install high quality soundclips for new BG2EE content"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "iwdification",
+      "name": "IWDification",
+      "version": "11",
+      "homepage": "https://github.com/Gibberlings3/iwdification",
+      "runs": [
+        {
+          "id": "iwdification-bg2",
+          "components": [
+            {
+              "id": 10,
+              "name": "Icewind Dale Casting Graphics (Andyr)"
+            },
+            {
+              "id": 60,
+              "name": "Two-Handed Axe Item Pack"
+            },
+            {
+              "id": 130,
+              "name": "Use IWD Damage Animations"
+            },
+            {
+              "id": 140,
+              "name": "Add High Quality Items"
+            },
+            {
+              "id": 190,
+              "name": "Increase Spear Damage"
+            },
+            {
+              "id": 30,
+              "name": "IWD Arcane Spell Pack"
+            },
+            {
+              "id": 40,
+              "name": "IWD Divine Spell Pack"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cdtweaks",
+      "name": "The Tweaks Anthology",
+      "version": "18",
+      "homepage": "https://github.com/Gibberlings3/Tweaks-Anthology",
+      "runs": [
+        {
+          "id": "cdtweaks-bg2",
+          "components": [
+            {
+              "id": 40,
+              "name": "Change Viconia's Skin Color to Dark Blue"
+            },
+            {
+              "id": 60,
+              "name": "Weapon Animation Tweaks"
+            },
+            {
+              "id": 110,
+              "name": "Icon Improvements"
+            },
+            {
+              "id": 130,
+              "name": "Force All Dialogue to Pause Game"
+            },
+            {
+              "id": 170,
+              "name": "Only replace icons that aren't already unique"
+            },
+            {
+              "id": 180,
+              "name": "Fixes only"
+            },
+            {
+              "id": 2010,
+              "name": "Separate Resist Fire/Cold Icon into Separate Icons [Angel]"
+            },
+            {
+              "id": 1010,
+              "name": "More Interjections"
+            },
+            {
+              "id": 1020,
+              "name": "Alter HP Triggers for NPC Wounded Dialogues"
+            },
+            {
+              "id": 1040,
+              "name": "Improved Athkatlan City Guard"
+            },
+            {
+              "id": 1080,
+              "name": "Add Bags of Holding"
+            },
+            {
+              "id": 1120,
+              "name": "Stores Sell Higher Stacks of Items"
+            },
+            {
+              "id": 1142,
+              "name": "Just potions"
+            },
+            {
+              "id": 1161,
+              "name": "Keep class restrictions"
+            },
+            {
+              "id": 1180,
+              "name": "Female Edwina [Davide Carte, Wendy Yung, Weimer]"
+            },
+            {
+              "id": 1220,
+              "name": "Allow Cromwell to Upgrade Watcher's Keep Items"
+            },
+            {
+              "id": 1227,
+              "name": "Full 24 hours (BG2EE default, includes sleep)"
+            },
+            {
+              "id": 1230,
+              "name": "Allow Cespenar to Use Cromwell Recipes"
+            },
+            {
+              "id": 1257,
+              "name": "Move NPCs to Convenient Locations: Alora, Eldoth, Quayle, Shar-Teel, Tiax, and Viconia"
+            },
+            {
+              "id": 2020,
+              "name": "Two-Handed Bastard Swords"
+            },
+            {
+              "id": 2030,
+              "name": "Two-Handed Katanas"
+            },
+            {
+              "id": 2035,
+              "name": "Two-Handed Axes"
+            },
+            {
+              "id": 2090,
+              "name": "Remove experience cap"
+            },
+            {
+              "id": 2720,
+              "name": "Yoshimo to Imoen Experience Transfer [dark0dave]"
+            },
+            {
+              "id": 2152,
+              "name": "Allow armor plus one protection item [Angel]"
+            },
+            {
+              "id": 2170,
+              "name": "Cast Spells from Scrolls (and Other Items) at Character Level"
+            },
+            {
+              "id": 2192,
+              "name": "Hybrid of both methods"
+            },
+            {
+              "id": 2210,
+              "name": "True grandmastery [Baldurdash]"
+            },
+            {
+              "id": 2250,
+              "name": "Un-Nerfed Sorcerer Spell Progression Table"
+            },
+            {
+              "id": 2260,
+              "name": "Un-nerfed table [Blucher]"
+            },
+            {
+              "id": 2270,
+              "name": "Un-nerfed table [Blucher]"
+            },
+            {
+              "id": 2280,
+              "name": "Un-nerfed table [Blucher]"
+            },
+            {
+              "id": 2292,
+              "name": "Use cleric level progression changes with normal druid spell table"
+            },
+            {
+              "id": 2391,
+              "name": "BG2-Style Progression (Up To Level Six Spells) [TotoR]"
+            },
+            {
+              "id": 2400,
+              "name": "Rangers Use Icewind Dale-Heart of Winter Spell Tables [grogerson]"
+            },
+            {
+              "id": 2410,
+              "name": "Druids Use 3E Alignment Restrictions"
+            },
+            {
+              "id": 2500,
+              "name": "Exceptional Strength Weight Limit Changes [sarevok57]"
+            },
+            {
+              "id": 2520,
+              "name": "Allow Mages to Use Bucklers and Thieves to Use Small Shields [Angel]"
+            },
+            {
+              "id": 2540,
+              "name": "Speed Up de'Arnise Keep Stronghold Quests"
+            },
+            {
+              "id": 2590,
+              "name": "Thieves Can Backstab With More Weapons With \"Use Any Item\" or as Dual- and Multi-Classes"
+            },
+            {
+              "id": 2999,
+              "name": "Max HP at Level One"
+            },
+            {
+              "id": 3000,
+              "name": "Maximum"
+            },
+            {
+              "id": 3010,
+              "name": "For all creatures in game"
+            },
+            {
+              "id": 3040,
+              "name": "Make Bags of Holding Bottomless"
+            },
+            {
+              "id": 3080,
+              "name": "Unlimited ammo stacking"
+            },
+            {
+              "id": 3090,
+              "name": "Unlimited jewelry, gem, and miscellaneous item stacking"
+            },
+            {
+              "id": 3100,
+              "name": "Unlimited potion stacking"
+            },
+            {
+              "id": 3110,
+              "name": "Unlimited scroll stacking"
+            },
+            {
+              "id": 3121,
+              "name": "NPCs can be angry about reputation but never leave [Salk]"
+            },
+            {
+              "id": 3290,
+              "name": "Use scheme: 000000000-Protagonist-Save-Name"
+            },
+            {
+              "id": 3300,
+              "name": "Death Cam"
+            },
+            {
+              "id": 3310,
+              "name": "Start New Games with Party AI Turned Off"
+            },
+            {
+              "id": 3354,
+              "name": "Every 15 minutes (cycle through four saves)"
+            },
+            {
+              "id": 4031,
+              "name": "Use BG2 values"
+            },
+            {
+              "id": 4041,
+              "name": "Use BG2 values"
+            },
+            {
+              "id": 4050,
+              "name": "Change Jaheira to Neutral Good Alignment"
+            },
+            {
+              "id": 4061,
+              "name": "Use BG2 values"
+            },
+            {
+              "id": 4071,
+              "name": "Use BG2 values"
+            }
+          ]
+        },
+        {
+          "id": "cdtweaks-spell-save-penalties-bg2",
+          "components": [
+            {
+              "id": 2312,
+              "name": "Arcane and divine magic"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stratagems",
+      "name": "Sword Coast Stratagems",
+      "version": "35.21",
+      "homepage": "https://github.com/Gibberlings3/SwordCoastStratagems",
+      "runs": [
+        {
+          "id": "stratagems-bg2",
+          "components": [
+            {
+              "id": 2000,
+              "name": "Install all spell tweaks"
+            },
+            {
+              "id": 2500,
+              "name": "Add 9 new arcane spells"
+            },
+            {
+              "id": 2510,
+              "name": "Add 6 new divine spells"
+            },
+            {
+              "id": 3041,
+              "name": "Stores sell a maximum of 5 Arrows of Dispelling"
+            },
+            {
+              "id": 3505,
+              "name": "Wider selection of random scrolls"
+            },
+            {
+              "id": 3540,
+              "name": "Inquisitors dispel at 1.5 x their level"
+            },
+            {
+              "id": 4000,
+              "name": "More Appropriate-Speed Bears"
+            },
+            {
+              "id": 4115,
+              "name": "Thieves assign skill points in multiples of five"
+            },
+            {
+              "id": 4215,
+              "name": "Remove unrealistically helpful items from certain areas"
+            },
+            {
+              "id": 4218,
+              "name": "Remove all ammo from random containers"
+            },
+            {
+              "id": 4250,
+              "name": "Make spell sequencers and contingencies into innate abilities"
+            },
+            {
+              "id": 5900,
+              "name": "Initialise AI components"
+            },
+            {
+              "id": 6000,
+              "name": "Smarter general AI"
+            },
+            {
+              "id": 6010,
+              "name": "Better calls for help"
+            },
+            {
+              "id": 6030,
+              "name": "Smarter Mages"
+            },
+            {
+              "id": 6040,
+              "name": "Smarter Priests"
+            },
+            {
+              "id": 6100,
+              "name": "Potions for NPCs"
+            },
+            {
+              "id": 6200,
+              "name": "Improved Spiders"
+            },
+            {
+              "id": 6300,
+              "name": "Smarter sirines and dryads"
+            },
+            {
+              "id": 6310,
+              "name": "Slightly smarter carrion crawlers"
+            },
+            {
+              "id": 6320,
+              "name": "Smarter basilisks"
+            },
+            {
+              "id": 6500,
+              "name": "Improved golems"
+            },
+            {
+              "id": 6510,
+              "name": "Improved fiends and celestials"
+            },
+            {
+              "id": 6520,
+              "name": "Smarter genies"
+            },
+            {
+              "id": 6540,
+              "name": "Smarter dragons"
+            },
+            {
+              "id": 6550,
+              "name": "Smarter beholders"
+            },
+            {
+              "id": 6560,
+              "name": "Smarter mind flayers"
+            },
+            {
+              "id": 6570,
+              "name": "Smarter githyanki"
+            },
+            {
+              "id": 6580,
+              "name": "Improved Vampires"
+            },
+            {
+              "id": 6590,
+              "name": "Smarter Throne of Bhaal final villain"
+            },
+            {
+              "id": 6800,
+              "name": "Smarter Illasera"
+            },
+            {
+              "id": 6810,
+              "name": "Smarter Gromnir"
+            },
+            {
+              "id": 6820,
+              "name": "Smarter Yaga-Shura"
+            },
+            {
+              "id": 6830,
+              "name": "Smarter Abazigal"
+            },
+            {
+              "id": 6840,
+              "name": "Ascension versions of Irenicus and Sendai use SCS abilities and AI"
+            },
+            {
+              "id": 6850,
+              "name": "Ascension demons use SCS abilities and AI"
+            },
+            {
+              "id": 7000,
+              "name": "Improved doppelgangers"
+            },
+            {
+              "id": 7010,
+              "name": "Tougher Black Talons and Iron Throne guards"
+            },
+            {
+              "id": 7020,
+              "name": "Improved deployment for parties of assassins"
+            },
+            {
+              "id": 7030,
+              "name": "Improved kobolds"
+            },
+            {
+              "id": 7040,
+              "name": "Relocated bounty hunters"
+            },
+            {
+              "id": 7050,
+              "name": "Improved Ulcaster"
+            },
+            {
+              "id": 7060,
+              "name": "Improved Balduran's Isle"
+            },
+            {
+              "id": 7070,
+              "name": "Improved Durlag's Tower"
+            },
+            {
+              "id": 7080,
+              "name": "Improved Demon Cultists"
+            },
+            {
+              "id": 7090,
+              "name": "Improved Cloakwood Druids"
+            },
+            {
+              "id": 7100,
+              "name": "Improved Bassilus"
+            },
+            {
+              "id": 7110,
+              "name": "Improved Drasus party"
+            },
+            {
+              "id": 7130,
+              "name": "Improved Red Wizards"
+            },
+            {
+              "id": 7140,
+              "name": "Improved Undercity assassins"
+            },
+            {
+              "id": 7150,
+              "name": "Improved Carsa/Kahrk interaction"
+            },
+            {
+              "id": 7200,
+              "name": "Tougher chapter-two end battle"
+            },
+            {
+              "id": 7210,
+              "name": "Tougher chapter-three end battle"
+            },
+            {
+              "id": 7220,
+              "name": "Tougher chapter-four end battle"
+            },
+            {
+              "id": 7230,
+              "name": "Tougher chapter-five end battle"
+            },
+            {
+              "id": 7250,
+              "name": "Improved final battle"
+            },
+            {
+              "id": 7900,
+              "name": "Improved minor encounters"
+            },
+            {
+              "id": 8010,
+              "name": "Improved Shade Lord"
+            },
+            {
+              "id": 8020,
+              "name": "Spellcasting Demiliches"
+            },
+            {
+              "id": 8040,
+              "name": "Tie difficulty of level-dependent monster groupings to the difficulty slider"
+            },
+            {
+              "id": 8050,
+              "name": "Improved Random Encounters"
+            },
+            {
+              "id": 8060,
+              "name": "Improved de'Arnise Keep (Tactics Remix)"
+            },
+            {
+              "id": 8070,
+              "name": "Improved Unseeing Eye"
+            },
+            {
+              "id": 8080,
+              "name": "Improved Bodhi"
+            },
+            {
+              "id": 8085,
+              "name": "Ascension version of Bodhi uses Improved-Bodhi abilities"
+            },
+            {
+              "id": 8100,
+              "name": "Improved battle with Irenicus in Spellhold"
+            },
+            {
+              "id": 8110,
+              "name": "Improved Sahuagin"
+            },
+            {
+              "id": 8120,
+              "name": "Improved Beholder hive"
+            },
+            {
+              "id": 8130,
+              "name": "Rebalanced troll regeneration"
+            },
+            {
+              "id": 8140,
+              "name": "Improved Drow"
+            },
+            {
+              "id": 8150,
+              "name": "Improved Watcher's Keep"
+            },
+            {
+              "id": 8160,
+              "name": "Improved Fire Giant temple"
+            },
+            {
+              "id": 8170,
+              "name": "Improved Sendai's Enclave"
+            },
+            {
+              "id": 8180,
+              "name": "Improved Abazigal's Lair"
+            },
+            {
+              "id": 8190,
+              "name": "Improved Minor Encounters"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "randomiser",
+      "name": "Item Randomiser",
+      "version": "8.1.1",
+      "homepage": "https://github.com/Chrizhermann/chriz-item-randomiser",
+      "runs": [
+        {
+          "id": "randomiser-bg2",
+          "components": [
+            {
+              "id": 500,
+              "name": "Randomly replace the WIS tome normally found in TotSC with one of the 6 available types"
+            },
+            {
+              "id": 530,
+              "name": "Randomise scrolls"
+            },
+            {
+              "id": 540,
+              "name": "Randomise the heads of the Flail of Ages"
+            },
+            {
+              "id": 560,
+              "name": "More Spell Shield scrolls"
+            },
+            {
+              "id": 570,
+              "name": "Randomise the appearance of cursed items"
+            },
+            {
+              "id": 1100,
+              "name": "Mode 1: Randomise with in-game scripts. No items are lost"
+            },
+            {
+              "id": 9000,
+              "name": "Cespenar can forge SoA items"
+            },
+            {
+              "id": 10200,
+              "name": "All scrolls from 9 out of 10 stores"
+            },
+            {
+              "id": 10210,
+              "name": "Duergar merchants"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eet-end",
+      "name": "Enhanced Edition Trilogy finalization",
+      "version": "74e91d72bca5d073fa11c1d088b90d7ff0c7105d",
+      "homepage": "https://github.com/Gibberlings3/EET",
+      "runs": [
+        {
+          "id": "eet-end-bg2",
+          "components": [
+            {
+              "id": 0,
+              "name": "Standard installation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chriz-sod-remix",
+      "name": "CHRIZ-SOD-REMIX",
+      "version": "0.6.8",
+      "homepage": "https://github.com/Chrizhermann/chriz-sod-rebalance",
+      "runs": [
+        {
+          "id": "chriz-sod-remix-bg2",
+          "components": [
+            {
+              "id": 100,
+              "name": "SoD remix: rest-ambush chance reduced 5x (felt rate)"
+            },
+            {
+              "id": 110,
+              "name": "SoD remix: keep all companions at SoD start"
+            },
+            {
+              "id": 120,
+              "name": "SoD remix: remove the hooded man from the mid-campaign"
+            },
+            {
+              "id": 130,
+              "name": "SoD remix: skip the four chapter rest-dreams"
+            },
+            {
+              "id": 140,
+              "name": "SoD remix: prologue - skip the Korlasz dungeon"
+            },
+            {
+              "id": 150,
+              "name": "SoD remix: prologue - no assassination night, crusade council"
+            },
+            {
+              "id": 145,
+              "name": "SoD remix: prologue - no auto-granted starting party (new/imported SoD)"
+            },
+            {
+              "id": 160,
+              "name": "SoD remix: prologue - Imoen stays and is recruitable"
+            },
+            {
+              "id": 170,
+              "name": "SoD remix: prologue - the Korlasz jailbreak"
+            },
+            {
+              "id": 180,
+              "name": "SoD remix: prologue - celebration and Caelar's proclamation"
+            },
+            {
+              "id": 175,
+              "name": "SoD remix: prologue - the XP ledger: Liia's reward after the jailbreak"
+            },
+            {
+              "id": 185,
+              "name": "SoD remix: prologue - Entar Silvershield removed (stays dead)"
+            },
+            {
+              "id": 190,
+              "name": "SoD remix: prologue - Skie's second-night bedroom visit removed"
+            },
+            {
+              "id": 195,
+              "name": "SoD remix: prologue - assassination and poison references scrubbed"
+            },
+            {
+              "id": 210,
+              "name": "SoD remix: Coast Way Forest removed - Rasaad recruits at the camp"
+            },
+            {
+              "id": 197,
+              "name": "SoD remix: prologue - Skie: talk-to-join recruit at the palace, SoD plot removed"
+            },
+            {
+              "id": 187,
+              "name": "SoD remix: prologue - the assassination night-set never spawns"
+            },
+            {
+              "id": 200,
+              "name": "SoD remix: Coast Way Crossing - fewer spiders, fairer bridge fight"
+            },
+            {
+              "id": 215,
+              "name": "SoD remix: the XP ledger - Coast Way Forest removal compensated"
+            },
+            {
+              "id": 220,
+              "name": "SoD remix: the dwarven dig site re-garrisoned"
+            },
+            {
+              "id": 225,
+              "name": "SoD remix: one text-only Caelar omen at the scrying pool"
+            },
+            {
+              "id": 245,
+              "name": "SoD remix: Coast Way bridge - the wall stays gone when the cutscene is skipped"
+            },
+            {
+              "id": 230,
+              "name": "SoD remix: the road north - fewer, cleaner enemy camps"
+            },
+            {
+              "id": 240,
+              "name": "SoD remix: Forest of Wyrms - bugbear cave removed, temple behind the dragon"
+            },
+            {
+              "id": 250,
+              "name": "SoD remix: Morentherene - a real dragon on Hard and Insane"
+            },
+            {
+              "id": 255,
+              "name": "SoD remix: Boareskyr battle - durable explosive barrels"
+            },
+            {
+              "id": 260,
+              "name": "SoD remix: coalition camp arc - fewer, cleaner enemies on the scouting maps"
+            },
+            {
+              "id": 270,
+              "name": "SoD remix: Kanaglym - fewer undead"
+            },
+            {
+              "id": 280,
+              "name": "SoD remix: no party dispel at the basement reveal"
+            },
+            {
+              "id": 290,
+              "name": "SoD remix: end after the playable victory celebration"
+            },
+            {
+              "id": 900,
+              "name": "Collected in the camp chest at the Coast Way crossing"
+            },
+            {
+              "id": 910,
+              "name": "Offer to skip SoD at palace arrival (EET, experimental)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hidden-gameplay-options",
+      "name": "Hidden Gameplay Options",
+      "version": "5.2",
+      "homepage": "https://github.com/Argent77/A7-HiddenGameplayOptions",
+      "runs": [
+        {
+          "id": "hiddengameplayoptions-bg2",
+          "components": [
+            {
+              "id": 10,
+              "name": "Add in-game option Enable Debug Mode"
+            },
+            {
+              "id": 11,
+              "name": "Add in-game option Enable UI Edit Mode"
+            },
+            {
+              "id": 12,
+              "name": "Add in-game option Show Strrefs"
+            },
+            {
+              "id": 13,
+              "name": "Add in-game option Hotkeys On Tooltips"
+            },
+            {
+              "id": 14,
+              "name": "Add in-game option Show trigger icons on tab"
+            },
+            {
+              "id": 16,
+              "name": "Add in-game option Limit druidic spells for Cleric/Ranger"
+            },
+            {
+              "id": 18,
+              "name": "Add in-game option Critical Hit Screen Shake"
+            },
+            {
+              "id": 19,
+              "name": "Add in-game option Show extra combat info"
+            },
+            {
+              "id": 20,
+              "name": "Add in-game option Show Game Date and Time on Pause"
+            },
+            {
+              "id": 22,
+              "name": "Add in-game option Reverse Mouse Wheel Zoom"
+            },
+            {
+              "id": 23,
+              "name": "Add in-game option Pause Game on Map Screen"
+            },
+            {
+              "id": 24,
+              "name": "Add in-game option Enable Fog"
+            },
+            {
+              "id": 25,
+              "name": "Add in-game option Disable Movies"
+            },
+            {
+              "id": 27,
+              "name": "Add in-game option XP Bonus in Nightmare Mode"
+            },
+            {
+              "id": 28,
+              "name": "Add in-game option Trigger Bored Sounds"
+            },
+            {
+              "id": 29,
+              "name": "Add in-game option Frame Rate (experimental)"
+            },
+            {
+              "id": 30,
+              "name": "Add in-game option Action Feedback"
+            },
+            {
+              "id": 32,
+              "name": "Add in-game option Show Area of Effect Range"
+            },
+            {
+              "id": 33,
+              "name": "Add in-game option Enhanced Path Search"
+            },
+            {
+              "id": 34,
+              "name": "Add in-game option Expire Trap Highlights"
+            },
+            {
+              "id": 35,
+              "name": "Add in-game option Show Learnable Spells"
+            },
+            {
+              "id": 36,
+              "name": "Add in-game option Render Search Map"
+            },
+            {
+              "id": 37,
+              "name": "Add in-game option Render Dynamic Search Map"
+            },
+            {
+              "id": 39,
+              "name": "Add in-game option Force Dialog Pause"
+            },
+            {
+              "id": 300,
+              "name": "Improved Death Screen options"
+            },
+            {
+              "id": 301,
+              "name": "Improved Quit Game options"
+            },
+            {
+              "id": 103,
+              "name": "Update key bindings for priest and mage spells"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chriz-bg-rebalance",
+      "name": "CHRIZ-BG-REBALANCE",
+      "version": "0.3.1",
+      "homepage": "https://github.com/Chrizhermann/chriz-bg-rebalance",
+      "runs": [
+        {
+          "id": "chriz-bg-rebalance-bg2",
+          "components": [
+            {
+              "id": 100,
+              "name": "SCS: Telekinetic Storm save-for-half repair"
+            },
+            {
+              "id": 101,
+              "name": "SCS: restore Freedom scrolls to the Adventurer's Mart"
+            },
+            {
+              "id": 120,
+              "name": "SCS + Spell Revisions weapon-protection semantics repair"
+            },
+            {
+              "id": 121,
+              "name": "EEex + SCS ambient caster readiness"
+            },
+            {
+              "id": 400,
+              "name": "Cleric of Tempus weapon training"
+            },
+            {
+              "id": 401,
+              "name": "Cleric of Tempus Holy Power automatic compatibility"
+            },
+            {
+              "id": 404,
+              "name": "Cleric of Tempus Chaos of Battle"
+            },
+            {
+              "id": 405,
+              "name": "Cleric of Tempus Divination toll"
+            },
+            {
+              "id": 407,
+              "name": "Cleric of Tempus EEex specialization APR variant"
+            },
+            {
+              "id": 408,
+              "name": "Cleric of Tempus updated descriptions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chriz-bg-modpack",
+      "name": "chriz-bg-modpack",
+      "version": "0.2.0-alpha.5",
+      "homepage": "https://github.com/Chrizhermann/chriz-bg-modpack",
+      "runs": [
+        {
+          "id": "chriz-bg-modpack-bg2",
+          "components": [
+            {
+              "id": 110,
+              "name": "Fade: complete Fighter/Thief conversion, proficiencies, and amulet usability"
+            },
+            {
+              "id": 130,
+              "name": "BG1NPC Kivan sea-elf quest: SCS dialogue-phase guard"
+            },
+            {
+              "id": 140,
+              "name": "Mazzy: move the fifth Short Bow pip to Short Sword"
+            },
+            {
+              "id": 170,
+              "name": "Xan Eldritch Knight: reconcile the EET XAN4/XAN6/TTXAN variants"
+            },
+            {
+              "id": 190,
+              "name": "Sarah: Archer conversion and exact proficiencies"
+            },
+            {
+              "id": 192,
+              "name": "Viconia: permanent Cleric/Thief conversion"
+            },
+            {
+              "id": 193,
+              "name": "Shar-Teel: Wizard Slayer kit"
+            },
+            {
+              "id": 194,
+              "name": "Kagain: Dwarven Defender kit"
+            },
+            {
+              "id": 195,
+              "name": "Skie: Swashbuckler kit and compatible thief skills"
+            },
+            {
+              "id": 196,
+              "name": "Faldorn: Avenger kit"
+            },
+            {
+              "id": 197,
+              "name": "Dynaheir: learn the installed Haste spell"
+            },
+            {
+              "id": 198,
+              "name": "Kivan: Archer kit"
+            },
+            {
+              "id": 220,
+              "name": "Yoshimo: Swashbuckler"
+            },
+            {
+              "id": 221,
+              "name": "Hexxat: Shadowdancer"
+            },
+            {
+              "id": 410,
+              "name": "Yeslick and Keldorn Dispel Magic: hostile-only, correctly scaled dispels"
+            },
+            {
+              "id": 430,
+              "name": "Use Any Item: fair fixed caster level for non-caster scroll use"
+            },
+            {
+              "id": 440,
+              "name": "Ascension Improved Slayer Transformation: repair EE Fixpack subspell links"
+            },
+            {
+              "id": 450,
+              "name": "SCS shapechange spells: repair the EE Fixpack interaction"
+            },
+            {
+              "id": 610,
+              "name": "Progressive utility XP for locks, traps, and learning spells"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "buffbot",
+      "name": "BuffBot",
+      "version": "1.8.3-alpha",
+      "homepage": "https://github.com/Chrizhermann/bg-eeex-buffbot",
+      "runs": [
+        {
+          "id": "buffbot-bg2",
+          "components": [
+            {
+              "id": 1,
+              "name": "BuffBot: EEex LuaJIT Support (auto-detected)"
+            },
+            {
+              "id": 0,
+              "name": "BuffBot: In-Game Buff Automation"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

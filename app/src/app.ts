@@ -21,6 +21,8 @@ import {
   type AppState,
 } from "./state";
 import { statusCard } from "./components/status-card";
+import { errorDetails } from "./components/error-details";
+import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from "./setup-draft";
 
 export interface AppHandle {
   navigate(route: Route): Promise<void>;
@@ -79,6 +81,10 @@ class AppController implements AppHandle {
   #defaultInstallationPath = "";
   #installations: readonly ManagedInstallation[] = [];
   #installPreparation: Promise<void> | null = null;
+  #draftReady = false;
+  #savedSourcePaths: { bg1: string | null; bg2: string | null } = { bg1: null, bg2: null };
+  #sourceRestoreNotices: Partial<Record<"bg1" | "bg2", string>> = {};
+  #setupNotices: string[] = [];
   #updates: UpdateSummary = {
     checkedAt: null,
     networkState: "unconfigured",
@@ -140,6 +146,21 @@ class AppController implements AppHandle {
     if (this.#discovery !== null && this.#state.evaluation !== null) return;
     if (this.#installPreparation === null) {
       this.#installPreparation = (async () => {
+        const loaded = this.#status.mode === "native" ? loadSetupDraft(this.#status) : { draft: null, notice: null };
+        let draft = loaded.draft;
+        this.#setupNotices = loaded.notice === null ? [] : [loaded.notice];
+        if (draft !== null && draft.profileId !== null && draft.profileId !== (this.#status.selectedProfile ?? null)) {
+          try {
+            this.#status = await this.backend.selectProfile(draft.profileId);
+            if (this.#status.selectedProfile !== draft.profileId || this.#status.recipeVersion !== draft.recipeVersion) {
+              throw new Error("Saved profile recipe changed");
+            }
+          } catch {
+            clearSetupDraft();
+            draft = null;
+            this.#setupNotices.push("Your saved setup belongs to a different collection version or an unavailable mod setup. Check the current recommended choices before installing.");
+          }
+        }
         const [discovery, defaults] = await Promise.all([
           this.backend.discoverGames(),
           this.backend.getInstallationDefaults(),
@@ -149,10 +170,28 @@ class AppController implements AppHandle {
         this.#dispatch({ type: "select-game", game: "bg1", id: discovery.selectedBg1Id });
         this.#dispatch({ type: "select-game", game: "bg2", id: discovery.selectedBg2Id });
         this.#dispatch({ type: "set-installation-defaults", name: defaults.name, path: defaults.path });
+        if (draft !== null) {
+          this.#dispatch({ type: "set-installation-name", name: draft.installationName });
+          this.#dispatch({ type: "set-destination", path: draft.destinationPath, automatic: draft.destinationAutomatic });
+          this.#dispatch({ type: "restore-selection", selection: draft.selection });
+          this.#createDesktopShortcutAfterInstall = draft.createDesktopShortcut;
+          this.#savedSourcePaths = { ...draft.sourcePaths };
+          await Promise.all([
+            this.#restoreSource("bg1", draft.sourcePaths.bg1),
+            this.#restoreSource("bg2", draft.sourcePaths.bg2),
+          ]);
+        }
         await Promise.all([
-          this.#inspectDestination(defaults.path, true, false),
-          this.#evaluate(false),
+          this.#inspectDestination(this.#state.destinationPath, this.#state.destinationAutomatic, false),
+          this.#evaluate(false).catch(async (error: unknown) => {
+            if (draft === null) throw error;
+            this.#dispatch({ type: "reset-selection" });
+            this.#setupNotices.push("Your saved choices could not be checked. Review the current recommended choices before installing.");
+            await this.#evaluate(false);
+          }),
         ]);
+        this.#draftReady = true;
+        if (draft !== null) this.#saveDraft();
       })();
     }
     try {
@@ -161,6 +200,37 @@ class AppController implements AppHandle {
       this.#installPreparation = null;
       throw error;
     }
+  }
+
+  async #restoreSource(game: "bg1" | "bg2", path: string | null): Promise<void> {
+    if (path === null || this.#discovery === null) return;
+    try {
+      const candidate = await this.backend.inspectGamePath(game === "bg1" ? "bgee_sod" : "bg2ee", path);
+      const key = game === "bg1" ? "bg1Candidates" : "bg2Candidates";
+      this.#discovery = { ...this.#discovery, [key]: [
+        ...this.#discovery[key].filter(entry => entry.id !== candidate.id), candidate,
+      ] };
+      this.#dispatch({ type: "select-game", game, id: candidate.id });
+    } catch {
+      this.#dispatch({ type: "select-game", game, id: "" });
+      this.#sourceRestoreNotices[game] = `The saved ${game === "bg1" ? "Baldur's Gate" : "Baldur's Gate II"} source at ${path} could not be checked. Choose that source again before installing.`;
+    }
+  }
+
+  #saveDraft(): void {
+    if (!this.#draftReady || this.#status.mode !== "native" || this.#status.recipeVersion === null) return;
+    const bg1 = this.#discovery?.bg1Candidates.find(candidate => candidate.id === this.#state.selectedBg1Id);
+    const bg2 = this.#discovery?.bg2Candidates.find(candidate => candidate.id === this.#state.selectedBg2Id);
+    this.#savedSourcePaths = {
+      bg1: bg1?.path ?? this.#savedSourcePaths.bg1,
+      bg2: bg2?.path ?? this.#savedSourcePaths.bg2,
+    };
+    saveSetupDraft({
+      version: 1, recipeVersion: this.#status.recipeVersion, profileId: this.#status.selectedProfile ?? null,
+      installationName: this.#state.installationName, destinationPath: this.#state.destinationPath,
+      destinationAutomatic: this.#state.destinationAutomatic, sourcePaths: this.#savedSourcePaths,
+      selection: this.#state.selection, createDesktopShortcut: this.#createDesktopShortcutAfterInstall,
+    });
   }
 
   async navigate(route: Route): Promise<void> {
@@ -189,6 +259,10 @@ class AppController implements AppHandle {
 
   #dispatch(action: AppAction): void {
     this.#state = reduce(this.#state, action);
+    if (action.type === "select-game" && action.id !== "") delete this.#sourceRestoreNotices[action.game];
+    if (["select-game", "set-installation-name", "set-destination", "set-feature", "set-features", "reset-selection", "evaluation-resolved"].includes(action.type)) {
+      this.#saveDraft();
+    }
   }
 
   #back(): void {
@@ -577,6 +651,7 @@ class AppController implements AppHandle {
 
   async #startInstallation(): Promise<void> {
     if (!this.#canInstall()) return;
+    this.#saveDraft();
     const identityRevision = this.#identityRevision;
     this.#starting = true;
     this.#render();
@@ -779,6 +854,7 @@ class AppController implements AppHandle {
       const installations = await this.backend.listManagedInstallations();
       this.#installations = installations;
       const completed = installations.find((installation) => installation.id === installId);
+      if (completed?.available === true) clearSetupDraft(completed.path);
       const selected = completed ?? preferredInstallation(installations, null, readRememberedInstallId());
       this.#installId = selected?.id ?? null;
       if (selected !== null) rememberInstallId(selected.id);
@@ -837,6 +913,7 @@ class AppController implements AppHandle {
         this.#dispatch({ type: "build-updated", build: {
           ...current,
           failureReason,
+          commandError: snapshot.error ?? undefined,
           ...(freshCopyRequired ? {
             state: "failed" as const,
             headline: "This installation needs attention",
@@ -885,8 +962,10 @@ class AppController implements AppHandle {
     try {
       const result = await this.backend.createDesktopShortcut(installId);
       this.#shortcutFeedback = { installId, state: "created", path: result.path };
-    } catch {
-      this.#shortcutFeedback = { installId, state: "failed" };
+    } catch (error: unknown) {
+      const technicalDetail = error instanceof BackendCommandError ? error.technicalDetail
+        : error instanceof Error ? error.message : String(error);
+      this.#shortcutFeedback = { installId, state: "failed", technicalDetail };
     }
     this.#render();
   }
@@ -1030,7 +1109,10 @@ class AppController implements AppHandle {
           chooseManualArchive: (artifactId) => safely(() => this.#chooseUpfrontManualArchive(artifactId)),
           skipManualDownload: (requirement) => safely(() => this.#skipManualDownload(requirement)),
           changeDesktopShortcut: (selected) => {
-            if (!this.#starting) this.#createDesktopShortcutAfterInstall = selected;
+            if (!this.#starting) {
+              this.#createDesktopShortcutAfterInstall = selected;
+              this.#saveDraft();
+            }
           },
         });
         break;
@@ -1097,10 +1179,20 @@ class AppController implements AppHandle {
         break;
       }
     }
+    if (["welcome", "games", "destination", "setup", "review"].includes(this.#state.route)) {
+      for (const notice of [...this.#setupNotices, ...Object.values(this.#sourceRestoreNotices)]) {
+        const card = statusCard("Review your saved setup", notice, "warning");
+        card.setAttribute("role", "status");
+        content.prepend(card);
+      }
+    }
     if (this.#commandError !== null) {
       const alert = statusCard(this.#commandError.message, this.#commandError.recoveryAction, "danger");
       alert.setAttribute("role", "alert");
-      content.append(alert);
+      if (this.#commandError.technicalDetail.trim().length > 0) {
+        alert.append(errorDetails(this.#commandError.technicalDetail, this.#commandError.code === "unsafe_target"));
+      }
+      content.prepend(alert);
     }
     this.root.replaceChildren(createAppShell(
       this.#state.route,

@@ -235,6 +235,7 @@ export interface BuildSnapshot {
   readonly manualArchiveName: string | null;
   readonly recoveryAction?: string;
   readonly failureReason?: string;
+  readonly commandError?: CommandErrorPayload;
   readonly freshCopyRequired?: boolean;
 }
 
