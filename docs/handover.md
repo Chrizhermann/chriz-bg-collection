@@ -2,7 +2,7 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## Community SoD 900 fix — 2026-09-06 (release candidate)
+## Community SoD 900 fix — 2026-09-06 (published alpha.11)
 
 The supplied diagnostics confirm an overly strict SoD Remix v0.6.7 chest guard,
 not a Steam-version defect or user error. Component 900 rejected three existing
@@ -13,8 +13,10 @@ See [recovery assessment](issues/sod900-community-recovery-2026-09-06.md) and
 
 SoD Remix v0.6.8 is publicly released and freshly verified; CEBG now pins it without
 changing the approved 434-component recommended selection. App alpha.11 / recipe
-alpha.12 signed package is built and passed signature/download/tamper checks.
-Versioned public publication, alpha-feed replacement and website handoff follow.
+alpha.12 signed package is published and passed signature/download/tamper checks,
+including a fresh anonymous public download. The mutable alpha feed now offers it.
+[Public release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.11)
+and local Downloads copy are ready; the website owner is deploying the page update.
 This patch includes the clarity/support work below and syntax-safe JSON diagnostic
 redaction. It replaces misleading mandatory-restart wording but does not add an
 unsafe Continue button: automatic targeted recovery is still private issue 3.
@@ -27,7 +29,7 @@ No game/save was modified and no full installation was restarted.
 Christopher approved a lightweight clarity/dependency pass, grouped alternatives,
 installed-mod visibility, diagnostics from completed installs and first-play help.
 Source implementation is in the `installer-v0-real-alpha` worktree; public app
-alpha.10 / recipe alpha.11 is superseded by the release candidate above; all game installations remain untouched.
+alpha.10 / recipe alpha.11 is superseded by the published patch above; all game installations remain untouched.
 See [the section-by-section audit](clarity-audit-2026-09-06.md).
 
 - All 26 categories / 499 choices retain source/group context; ambiguous identification,

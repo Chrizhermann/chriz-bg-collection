@@ -75,5 +75,22 @@ installation are not claimed by the automated/package checks. The user's own tes
 actual app update remain the next live acceptance. Existing failed installations are
 not retroactively marked successful by installing the app patch.
 
-Publication: local package accepted; versioned public assets, mutable alpha feed,
-website refresh and anonymous download checks are the remaining release actions.
+## Public publication
+
+Source integration commit `30b15e5` was pushed to the private collection branch
+`codex/installer-v0-real-alpha`. Source repository visibility was rechecked as private.
+The public [alpha.11 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.11)
+is published (not draft, explicitly prerelease) with setup, signature, feed, SHA256SUMS,
+434-component inventory, license and third-party notices. No third-party mod archives
+or tester data were uploaded.
+
+The publicly downloaded setup matches the exact length/hash above. Its adjacent
+signature and versioned feed match, and the real updater harness passed again on the
+publicly downloaded bytes, including tamper rejection. The mutable
+[alpha feed](https://github.com/Chrizhermann/chriz-easy-bg/releases/download/alpha/latest.json)
+was replaced only after versioned assets passed; anonymous retrieval confirms app
+alpha.11 / recipe alpha.12 and the exact correct setup URL/signature. Old versioned
+assets remain unchanged. A verified copy is available in Christopher's Downloads.
+
+Website owner `Build interactive BG run page` received the verified public URL/hash,
+inventory and bounded release notes. Deployment confirmation is pending.
