@@ -2,6 +2,27 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Overnight installation succeeded and retained — 2026-09-07, 07:57 KST
+
+`C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` completed successfully:
+43 actual WeiDU runs, all 434 frozen components, BG1 27 / BG2 407 exact final log
+rows and hashes verified. SoD Remix's 32 components and BuffBot 1/0 are installed.
+No restart/deletion or repetition of the five completed pre-EET runs occurred.
+Worker 40540 has exited; final ledger is 236. Do not resume/reinstall this completed
+copy. It is retained for Christopher's in-game check; gameplay has not been tested.
+
+The launcher is `game/InfinityLoader.exe`. BG Radar Overlay 2.5.0.0 was also installed
+through the existing verified add-on helper and its executable receipt hash checked;
+mod logs stayed unchanged. Overnight heartbeat is paused. Desktop app itself still
+needs the alpha.14 update from Downloads because unattended setup was blocked.
+Do not confuse the receipt's frozen original app alpha.13 label with its unchanged
+current collection alpha.12 or the alpha.14 engine used to recover it.
+
+Nonblocking installed-with-warning findings are preserved for later compatibility
+work, notably Bardic Wonders 2004 skipping Symphony of the Dark Children because
+its finite Abettor controller was unrecognized. Do not silently fix the completed
+copy. Exact evidence and acceptance limits: [completion report](overnight-install-complete-2026-09-07.md).
+
 ## Alpha.14 published; overnight test continued without restart — 2026-09-07
 
 - App **0.1.0-alpha.14** is [published](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.14).

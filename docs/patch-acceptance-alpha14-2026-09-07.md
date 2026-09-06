@@ -47,7 +47,11 @@ no cleanup/redownload/new installation was performed. This is the same engine us
 by native Resume, invoked in the background; it is not a GUI-click-through claim.
 
 EET subsequently completed (ledger 156, components 0/100 recorded), and the worker
-continued into the main mods. Full-stack completion and gameplay remain pending.
+continued into the main mods. The full installation completed at 07:57:05 KST:
+43 runs / 434 components, exact final logs, SoD Remix and BuffBot confirmed; see
+[completion evidence and warning follow-up](overnight-install-complete-2026-09-07.md).
+Radar 2.5.0.0 was subsequently verified/installed through the normal add-on path.
+The successful copy is retained; gameplay acceptance remains pending.
 
 ## Signed package and publication
 
