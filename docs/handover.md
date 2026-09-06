@@ -13,8 +13,11 @@ Focused tests and a real verified WeiDU249 `--nogame` macro test pass.
 The separate quiet-install notice now waits five minutes, clears on resumed output/
 next successful step, truthfully says the process is still running and offers
 **Keep waiting**. Frontend 111, Python 35 and focused native/engine checks pass.
-App alpha.13 packaging/publication is in progress; recipe alpha.12 and all 434
-recommended choices/pins remain unchanged. See [acceptance](patch-acceptance-alpha13-2026-09-07.md)
+App alpha.13 is publicly published, with signed package/public-download verification
+and the live alpha Updates feed checked. Recipe alpha.12 and all 434 recommended
+choices/pins remain unchanged. The website owner has the verified download and is
+updating `/collection`; website deployment is not yet confirmed here.
+See [acceptance](patch-acceptance-alpha13-2026-09-07.md)
 and [release notes](releases/0.1.0-alpha.13.md).
 
 Christopher chose that the affected tester can **start new with the fixed version**.

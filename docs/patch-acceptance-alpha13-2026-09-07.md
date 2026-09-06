@@ -95,4 +95,23 @@ remains applicable; this is not a native updater apply/restart claim.
 
 Windows Defender custom scan of the exact setup, with remediation disabled,
 reported no threats. This is not a guarantee or an Authenticode signature.
-Public publication/download and website evidence will be recorded below.
+
+## Published artifacts and follow-through
+
+Source commit `9f89830` is pushed to the private collection branch. The public
+[alpha.13 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.13)
+is published as a Windows alpha/prerelease with setup, signature, feed, SHA256SUMS,
+component inventory and notices. Old versioned releases were not modified.
+
+An anonymous download through the versioned public feed matched the exact size/hash
+above; its signature matched the feed and passed verification against the bundled
+public key. The mutable `alpha/latest.json` channel was then updated and anonymously
+checked: app alpha.13, recipe alpha.12, exact versioned setup URL/signature.
+The previously tested updater harness also passed download/tamper acceptance on the
+same setup bytes before publication. A hash-verified public copy is available at
+`C:\Users\chris\Downloads\Chriz Easy BG_0.1.0-alpha.13_x64-setup.exe`.
+
+The existing **Build interactive BG run page** task received the verified URL/hash,
+versions, unchanged component inventory and precise fix/acceptance limits, with the
+normal scoped `/collection` deployment request. Website deployment remains pending
+its own confirmation. No Discord/forum/email was posted by this task.
