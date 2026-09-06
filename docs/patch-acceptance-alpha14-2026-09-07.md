@@ -46,4 +46,43 @@ EET attempt 2 and EET imported resources. No completed mod run was repeated and
 no cleanup/redownload/new installation was performed. This is the same engine used
 by native Resume, invoked in the background; it is not a GUI-click-through claim.
 
-Full-stack completion, gameplay and the alpha.14 package publication remain pending.
+EET subsequently completed (ledger 156, components 0/100 recorded), and the worker
+continued into the main mods. Full-stack completion and gameplay remain pending.
+
+## Signed package and publication
+
+The signed Windows x64 NSIS package built successfully from source commit
+`5610783590ad49b24101d5d3a6a85b018abadb7e`. It includes the audited dependency
+notices supplied by the parallel public-source task. Regenerating notices for the
+alpha.14 version-only lockfile changes altered only their two header digests;
+the independent generator check and all 42 Python tests passed.
+
+- Setup size: **5,447,242 bytes**.
+- SHA256: `c36058d92165ff4e2e3d993c5eaedee95e05c1de95f388668f61b4d7571c1a3b`.
+- Actual setup signature passed the freshly compiled package contract. The existing
+  compiled headless real-Tauri harness downloaded/verified the exact setup and
+  rejected tampering, offering alpha.14 over alpha.13. It uses the unchanged updater
+  dependency/public key; no fresh mock-harness rebuild or native GUI apply is claimed.
+- Windows Defender custom scan, remediation disabled, reported no threats in that
+  setup. This is neither an Authenticode signature nor a security guarantee.
+- The public versioned release contains setup/signature/feed/checksums, component
+  inventory, LICENSE and notices. Anonymous download matched exact size/hash;
+  its signature matched the public feed and passed against the bundled public key.
+- The mutable `alpha/latest.json` channel was updated only after versioned download
+  verification. One immediate request hit a stale GitHub CDN redirect (`BlobNotFound`);
+  a fresh query and then the normal configured URL with no-cache headers returned
+  alpha.14/recipe alpha.12 with the correct versioned setup and signature. No old
+  versioned release was overwritten.
+- A verified public copy is at
+  `C:\Users\chris\Downloads\Chriz Easy BG_0.1.0-alpha.14_x64-setup.exe`.
+  Attempted unattended app-setup execution was rejected by the tool environment
+  before execution; it was not retried through another route. Host app remains
+  alpha.13, closed, while the separately rebuilt patched engine continues the game
+  installation. This is not evidence of a Windows installer permission defect.
+
+The website owner received the versioned URL/hash/notes and normal scoped deployment
+handoff. The public-source audit owner received the exact build commit and release
+identity. No Discord/forum/email post or source-visibility change was performed by
+this task. Overnight follow-up is scheduled on the existing heartbeat, every 20
+minutes, quiet on ordinary progress; it must pause after final acceptance/failure
+handoff. Successful game copies are retained for Christopher, not cleaned up.
