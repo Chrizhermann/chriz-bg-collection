@@ -11,13 +11,14 @@ missing ordinary ancestors and exclusively claims the final root, retaining repa
 occupied-folder and other safety checks. Both location views explain automatic folder
 creation, and the main Browse control remains available after a rejected location.
 
-App alpha.12 is built and signature/download/tamper-checked, with all 110 frontend,
+App alpha.12 is published and signature/download/tamper-checked, with all 110 frontend,
 27 orchestrator, 19 preflight, 39 native command-contract, 3 package and 35 Python
-checks passing. The recipe is unchanged at alpha.12: the same434 recommended
+checks passing. The recipe is unchanged at alpha.12: the same 434 recommended
 components/source pins. No game install or native-window control was used.
 See [folder-hotfix acceptance](patch-acceptance-alpha12-2026-09-07.md) and
-[release notes](releases/0.1.0-alpha.12.md). Publication/channel verification follows;
-the website owner is holding a single combined app-alpha.12 page update.
+[release notes](releases/0.1.0-alpha.12.md). The [public release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.12)
+and mutable alpha updater feed passed anonymous URL/hash/signature checks. A verified
+setup is in Downloads. The website owner is deploying the combined alpha.12 page update.
 
 ## Community SoD 900 fix — 2026-09-06 (published alpha.11)
 

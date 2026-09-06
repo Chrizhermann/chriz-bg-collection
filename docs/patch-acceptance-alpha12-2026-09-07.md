@@ -51,5 +51,17 @@ root creation. Existing updater harness issue 2 and targeted-recovery issue 3 re
 separate follow-ups. The website owner is holding one combined publication update
 until the verified alpha.12 binary is available.
 
-Public publication, anonymous download verification and channel replacement are the
-remaining release steps; immutable alpha.11 assets will not be overwritten.
+## Publication
+
+Source commit `ce3c290` is pushed to the private collection branch. The public
+[alpha.12 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.12)
+is published (not draft, explicitly prerelease), including setup, matching signature,
+feed, checksums, component inventory and notices. Anonymous public setup download
+matches the length/hash above, its signature matches the versioned feed, and the
+real updater download/tamper test passed again on those public bytes.
+
+The mutable alpha feed now offers app alpha.12 / recipe alpha.12 with the correct
+versioned URL/signature, confirmed anonymously. Immutable alpha.11 assets remain
+untouched. A verified alpha.12 setup copy is in Christopher's Downloads folder.
+The website owner has the verified URL/hash and is proceeding with the combined page
+update; its final deployment evidence is a separate pending handoff.
