@@ -1825,14 +1825,19 @@ fn stale_managed_install_is_listed_but_cannot_be_launched_or_opened() {
 fn diagnostics_and_manual_page_use_native_choices_plus_trusted_recipe_identity() {
     let (_temp, recipe) = recipe_with_profiles();
     add_manual_artifact(&recipe, "manual-fixture", "manual-fixture.zip", b"fixture");
-    let root = recipe.parent().unwrap();
+    let root = recipe.parent().unwrap().to_path_buf();
     let cache = root.join("cache");
     let app_data = root.join("app-data");
     let managed = root.join("managed-campaign");
+    let incomplete = root.join("incomplete-campaign");
     let output = root.join("exports/task23-diagnostics.zip");
+    let incomplete_output = root.join("exports/incomplete-diagnostics.zip");
+    let stale_output = root.join("exports/stale-diagnostics.zip");
     fs::create_dir(&cache).unwrap();
     fs::create_dir_all(output.parent().unwrap()).unwrap();
     publish_managed_install(&app_data, &managed, "install-task23");
+    publish_started_campaign(&app_data, &incomplete, &cache, "install-incomplete-diagnostics");
+    let canonical_managed = managed.canonicalize().unwrap();
     let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
     let system = Arc::new(RecordingBridgeSystem::default());
     let bridge = NativeBridge::with_engine_and_system(
@@ -1855,9 +1860,32 @@ fn diagnostics_and_manual_page_use_native_choices_plus_trusted_recipe_identity()
         .unwrap()
         .unwrap();
     assert_eq!(PathBuf::from(exported.path), output);
+    bridge
+        .export_diagnostics(
+            "install-incomplete-diagnostics",
+            Some(incomplete_output.clone()),
+        )
+        .unwrap()
+        .unwrap();
+    fs::remove_dir_all(&managed).unwrap();
+    bridge
+        .export_diagnostics("install-task23", Some(stale_output.clone()))
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        bridge
+            .export_diagnostics("unknown-install", Some(root.join("exports/unknown.zip")))
+            .unwrap_err()
+            .code,
+        "managed_install_unknown"
+    );
     assert_eq!(
         system.diagnostics.lock().unwrap().as_slice(),
-        &[(managed.canonicalize().unwrap(), output)]
+        &[
+            (canonical_managed.clone(), output),
+            (incomplete.canonicalize().unwrap(), incomplete_output),
+            (canonical_managed, stale_output),
+        ]
     );
 
     bridge.open_manual_source("manual-fixture").unwrap();

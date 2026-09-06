@@ -99,6 +99,10 @@ export interface FeatureControl {
   readonly title: string;
   readonly description: string;
   readonly category: string;
+  readonly sourceLabel?: string | null;
+  readonly groupLabel?: string | null;
+  readonly choiceGroup?: string | null;
+  readonly choiceAvailable?: boolean | null;
   readonly decision: FeatureDecision;
   readonly readiness: "ready" | "experimental" | "blocked";
   readonly parent: string | null;
@@ -251,7 +255,17 @@ export interface ManagedInstallation {
     readonly detail: string;
     readonly componentCount: number;
     readonly modCount: number;
+    readonly components?: readonly InstalledComponent[];
   };
+}
+
+export interface InstalledComponent {
+  readonly target: "BG1" | "BG2";
+  readonly tp2: string;
+  readonly component: number;
+  readonly title: string | null;
+  readonly version: string | null;
+  readonly status: "installed" | "missing" | "extra";
 }
 
 export type AppUpdateState = "up-to-date" | "available" | "offline" | "invalid" | "unavailable";

@@ -8,6 +8,7 @@ export interface HomeActions {
   readonly resume: (installId: string) => void | Promise<void>;
   readonly select: (installId: string) => void | Promise<void>;
   readonly createShortcut: (installId: string) => void | Promise<void>;
+  readonly diagnostics: (installId: string) => void | Promise<void>;
 }
 
 export interface ShortcutFeedback {
@@ -57,6 +58,74 @@ function installationDetails(installation: ManagedInstallation): HTMLDetailsElem
   appendRow("Mod check", installation.consistency?.detail ?? null);
   details.append(rows);
   return details;
+}
+
+function componentLabel(tp2: string): string {
+  const file = tp2.replaceAll("\\", "/").split("/").at(-1) ?? tp2;
+  return file.replace(/^setup-/i, "").replace(/\.tp2$/i, "") || tp2;
+}
+
+function installedMods(installation: ManagedInstallation): HTMLDetailsElement | null {
+  const consistency = installation.consistency;
+  const components = consistency?.components;
+  if (consistency === undefined || components === undefined || components.length === 0) return null;
+  const details = element("details", "installation-details installed-mods");
+  details.append(element("summary", undefined, `Installed mods (${consistency.modCount} mods, ${consistency.componentCount} components)`));
+  const explanation = consistency.state === "matches"
+    ? "The current WeiDU logs match the completed installation record. Titles and versions below are reported by those logs."
+    : "Compared with the completed installation record. Missing and extra rows are called out below; changed order is reported by the mod check above. Titles and versions are reported by the current logs.";
+  details.append(element("p", "muted", explanation));
+  const searchLabel = element("label", "installed-mod-search", "Find an installed mod");
+  const search = element("input") as HTMLInputElement;
+  search.type = "search";
+  search.placeholder = "Name, version, component, or TP2";
+  searchLabel.append(search);
+  details.append(searchLabel);
+  const list = element("ul", "installed-mod-list");
+  for (const component of components) {
+    const item = element("li", `installed-mod ${component.status}`);
+    item.append(element("strong", undefined, component.title ?? componentLabel(component.tp2)));
+    const facts = [
+      component.version,
+      `Component ${component.component}`,
+      component.target,
+      component.status === "installed" ? "Recorded and present" : component.status === "missing" ? "Recorded but missing" : "Present but not recorded",
+      component.tp2,
+    ].filter((value): value is string => value !== null);
+    item.append(element("span", "installation-component-meta", facts.join(" · ")));
+    item.dataset.search = `${component.title ?? ""} ${facts.join(" ")}`.toLocaleLowerCase();
+    list.append(item);
+  }
+  search.addEventListener("input", () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    for (const item of list.querySelectorAll<HTMLElement>(".installed-mod")) {
+      item.hidden = query.length > 0 && !(item.dataset.search ?? "").includes(query);
+    }
+  });
+  details.append(list);
+  return details;
+}
+
+export function firstPlayGuide(installation: ManagedInstallation): HTMLDetailsElement {
+  const guide = element("details", "installation-details first-play-guide");
+  guide.append(element("summary", undefined, "First-play tips"));
+  const steps = element("ol");
+  steps.append(element("li", undefined, "Start the game with Play Chriz Easy BG, then begin or load your adventure normally."));
+  const buffBotInstalled = installation.consistency?.components?.some((component) =>
+    component.status === "installed"
+      && component.target === "BG2"
+      && component.component === 0
+      && component.tp2.replaceAll("\\", "/").toLowerCase().includes("buffbot/"));
+  if (buffBotInstalled) {
+    steps.append(element("li", undefined, "In game, press F11 to open BuffBot and choose the buffs you want automated."));
+  }
+  if (installation.radarVersion) {
+    steps.append(element("li", undefined, `BG Radar Overlay ${installation.radarVersion} is installed. Play Chriz Easy BG starts it with the game; its executable is also in the BG Radar Overlay folder inside the game folder.`));
+  } else {
+    steps.append(element("li", undefined, "BG Radar Overlay is optional. You can add it from Updates after setup."));
+  }
+  guide.append(steps);
+  return guide;
 }
 
 export function homeScreen(
@@ -115,6 +184,7 @@ export function homeScreen(
         () => actions.createShortcut(selected.id),
         "quiet",
       ),
+      actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
     );
     if (currentFeedback !== null) {
       feedback = element("div", `shortcut-feedback ${currentFeedback.state === "created" ? "ok" : "danger"}`);
@@ -123,9 +193,15 @@ export function homeScreen(
       if (currentFeedback.path !== undefined) feedback.append(element("p", "path", currentFeedback.path));
     }
   } else if (selected.resumable) {
-    controls.append(actionButton("Continue installation", () => actions.resume(selected.id)));
+    controls.append(
+      actionButton("Continue installation", () => actions.resume(selected.id)),
+      actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
+    );
+  } else {
+    controls.append(actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"));
   }
   card.append(controls);
+  card.append(element("p", "muted", "Diagnostics stay local; review the ZIP before sharing."));
   if (addonFeedback?.installId === selected.id) {
     const note = element("p", "addon-feedback", addonFeedback.state === "installing"
       ? "Adding BG Radar Overlay… Your game is ready to play."
@@ -135,6 +211,10 @@ export function homeScreen(
   }
   if (feedback !== null) card.append(feedback);
   card.append(installationDetails(selected));
-  page.append(card, screenActions(null, actionButton("New installation", actions.begin, "quiet")));
+  const mods = installedMods(selected);
+  if (mods !== null) card.append(mods);
+  if (selected.available) card.append(firstPlayGuide(selected));
+  page.append(card);
+  page.append(screenActions(null, actionButton("New installation", actions.begin, "quiet")));
   return page;
 }

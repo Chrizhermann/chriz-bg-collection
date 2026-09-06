@@ -1,6 +1,6 @@
 import type { SelectionEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
-import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles } from "../customization";
+import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, type ExclusiveChoiceGroup } from "../customization";
 
 export interface SetupViewState {
   search: string;
@@ -16,6 +16,15 @@ export interface SetupBatchActions {
 }
 
 const decisionLabels = { mandatory: "Always included", default: "Recommended", optional: "Optional", excluded: "Not included" } as const;
+
+function choiceGroupControlId(group: ExclusiveChoiceGroup): string {
+  return `choice-group-${group.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function choiceOptionLabel(group: ExclusiveChoiceGroup, title: string): string {
+  const prefix = `${group.label}: `;
+  return title.startsWith(prefix) ? title.slice(prefix.length) : title;
+}
 
 export function setupScreen(
   evaluation: SelectionEvaluation,
@@ -105,6 +114,8 @@ export function setupScreen(
   advanced.append(filters);
   const groups = element("div", "setup-groups");
   const filterable: { group: HTMLElement; category: string; rows: { element: HTMLElement; text: string }[] }[] = [];
+  const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
+  const exclusiveByControl = new Map(exclusiveGroups.flatMap(group => group.controls.map(control => [control.id, group] as const)));
   evaluation.view.categories.forEach((category) => {
     const fieldset = element("fieldset", "choice-group card");
     fieldset.append(element("legend", undefined, category));
@@ -121,14 +132,72 @@ export function setupScreen(
       fieldset.append(buttons, element("p", "category-hint", "Required fixes stay included. Unavailable choices and conflicting alternatives are left out."));
     }
     const rows: { element: HTMLElement; text: string }[] = [];
+    const renderedExclusiveGroups = new Set<string>();
     evaluation.view.controls.filter((control) => control.category === category).forEach((control) => {
+      const exclusive = exclusiveByControl.get(control.id);
+      if (exclusive) {
+        if (renderedExclusiveGroups.has(exclusive.id)) return;
+        renderedExclusiveGroups.add(exclusive.id);
+        const row = element("div", "exclusive-choice-row");
+        const selectId = choiceGroupControlId(exclusive);
+        const label = element("label", "exclusive-choice-label", exclusive.label);
+        label.htmlFor = selectId;
+        const select = element("select", "exclusive-choice-select");
+        select.id = selectId;
+        const selectedControl = exclusive.controls.find(option => option.selected);
+        if (exclusive.allowNone) {
+          const none = element("option", undefined, "None / unchanged");
+          none.value = "";
+          select.append(none);
+        } else if (!selectedControl) {
+          const placeholder = element("option", undefined, "Choose an option");
+          placeholder.value = "";
+          placeholder.disabled = true;
+          select.append(placeholder);
+        }
+        for (const optionControl of exclusive.controls) {
+          const available = optionControl.selected || optionControl.choiceAvailable === true;
+          const optionLabel = `${choiceOptionLabel(exclusive, optionControl.title)}${optionControl.decision === "default" ? " (Recommended)" : ""}`;
+          const option = element("option", undefined, `${optionLabel}${available ? "" : " (Unavailable)"}`);
+          option.value = optionControl.id;
+          option.disabled = !available;
+          select.append(option);
+        }
+        select.value = selectedControl?.id ?? "";
+        const detail = element("p", "exclusive-choice-description", selectedControl?.description ?? "No option selected.");
+        const sources = [...new Set(exclusive.controls.map(option => option.sourceLabel).filter((source): source is string => Boolean(source)))];
+        const source = element("p", "exclusive-choice-source", `${sources.length === 1 ? "Source" : "Sources"}: ${sources.join(", ")}`);
+        source.hidden = sources.length === 0;
+        const unavailable = exclusive.controls.filter(option => !option.selected && option.choiceAvailable !== true && option.unavailableReason);
+        const reasons = element("ul", "exclusive-choice-reasons");
+        for (const option of unavailable) reasons.append(element("li", undefined, `${option.title}: ${option.unavailableReason}`));
+        reasons.hidden = unavailable.length === 0;
+        select.setAttribute("aria-describedby", `${selectId}-description${unavailable.length ? ` ${selectId}-reasons` : ""}`);
+        detail.id = `${selectId}-description`;
+        reasons.id = `${selectId}-reasons`;
+        select.addEventListener("change", () => {
+          const selected = exclusive.controls.find(option => option.id === select.value);
+          detail.textContent = selected?.description ?? "No option selected.";
+          if (select.value === "" && !exclusive.allowNone) return;
+          void batch!.change(exclusiveChoiceChanges(exclusive, select.value), select.id);
+        });
+        row.append(label, select, detail, source, reasons);
+        fieldset.append(row);
+        rows.push({
+          element: row,
+          text: [exclusive.label, ...exclusive.controls.flatMap(option => [option.title, option.description, option.sourceLabel ?? ""])].join(" ").toLocaleLowerCase(),
+        });
+        return;
+      }
       const row = element("div", `control-row ${control.interactive ? "" : "is-unavailable"}`.trim());
       const input = element("input");
       input.type = "checkbox";
       input.id = `feature-${control.id}`;
       input.checked = control.selected;
       const descriptionId = `${control.id}-description`;
-      input.setAttribute("aria-describedby", control.unavailableReason ? `${descriptionId} ${control.id}-reason` : descriptionId);
+      const hasDistinctDescription = control.description.trim().toLocaleLowerCase() !== control.title.trim().toLocaleLowerCase();
+      const describedBy = [hasDistinctDescription ? descriptionId : "", control.unavailableReason ? `${control.id}-reason` : ""].filter(Boolean).join(" ");
+      if (describedBy) input.setAttribute("aria-describedby", describedBy);
       if (!control.interactive) input.setAttribute("aria-disabled", "true");
       input.addEventListener("click", (event) => {
         if (!control.interactive) {
@@ -146,7 +215,7 @@ export function setupScreen(
       description.id = descriptionId;
       copy.append(label, badge);
       if (control.readiness !== "ready") copy.append(element("span", `badge ${control.readiness}`, control.readiness === "blocked" ? "Unavailable" : "Experimental"));
-      copy.append(description);
+      if (hasDistinctDescription) copy.append(description);
       if (control.unavailableReason) {
         const reason = element("p", "unavailable-reason", control.unavailableReason);
         reason.id = `${control.id}-reason`;
@@ -155,7 +224,10 @@ export function setupScreen(
       }
       row.append(input, copy);
       fieldset.append(row);
-      rows.push({ element: row, text: `${control.title} ${control.description}`.toLocaleLowerCase() });
+      if (control.sourceLabel || control.groupLabel) {
+        copy.append(element("p", "control-source", [control.groupLabel ? `Group: ${control.groupLabel}` : "", control.sourceLabel ? `Source: ${control.sourceLabel}` : ""].filter(Boolean).join(". ")));
+      }
+      rows.push({ element: row, text: `${control.title} ${control.description} ${control.sourceLabel ?? ""} ${control.groupLabel ?? ""}`.toLocaleLowerCase() });
     });
     groups.append(fieldset);
     filterable.push({ group: fieldset, category, rows });

@@ -35,6 +35,18 @@ pub struct FeatureControl {
     pub description: String,
     /// Player-facing category id.
     pub category: String,
+    /// Source mod name for context and searching.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_label: Option<String>,
+    /// Shared player-facing context for these options.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group_label: Option<String>,
+    /// Explicit same-purpose alternative group, when authored.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choice_group: Option<String>,
+    /// Whether replacing only this group's siblings would select this option.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choice_available: Option<bool>,
     /// Curated decision.
     pub decision: Decision,
     /// Release readiness.
@@ -255,6 +267,7 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
         let reason = unavailable_reason(feature, &features, &base_effective, &effective);
         let selected = effective.get(&feature.id).copied().unwrap_or(false);
         let interactive = feature.decision != Decision::Mandatory && reason.is_none();
+        let choice_preview = preview_choice(manifest, feature, &features, &desired);
         let feature_inputs = inputs.get(&feature.id);
         let input_controls = feature
             .inputs
@@ -302,6 +315,10 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
             title: feature.title.clone(),
             description: feature.description.clone(),
             category: feature.category.clone(),
+            source_label: feature.source_label.clone(),
+            group_label: feature.group_label.clone(),
+            choice_group: feature.choice_group.clone(),
+            choice_available: choice_preview.as_ref().map(|(available, _)| *available),
             decision: feature.decision,
             readiness: feature.readiness,
             parent: feature.parent.clone(),
@@ -313,7 +330,7 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
                 .collect(),
             selected,
             interactive,
-            unavailable_reason: reason,
+            unavailable_reason: choice_preview.map_or(reason, |(_, reason)| reason),
             inputs: input_controls,
         });
     }
@@ -345,6 +362,57 @@ pub fn render_prompt_script(
     let base_effective = base_effective_features(manifest, &selection.features);
     let effective = effective_features(manifest, &base_effective);
     render_prompt_script_for_effective(manifest, component_ref, selection, &effective)
+}
+
+/// Preview an atomic switch with the ordinary evaluator. Metadata alone must
+/// never waive a prerequisite or a conflict with another mod.
+fn preview_choice(
+    manifest: &Manifest,
+    feature: &Feature,
+    features: &BTreeMap<&str, &Feature>,
+    desired: &BTreeMap<String, bool>,
+) -> Option<(bool, Option<String>)> {
+    let group = feature
+        .choice_group
+        .as_deref()
+        .filter(|id| !id.trim().is_empty())?;
+    feature
+        .group_label
+        .as_deref()
+        .filter(|label| !label.trim().is_empty())?;
+    let peers = manifest
+        .collection
+        .features
+        .iter()
+        .filter(|peer| peer.choice_group.as_deref() == Some(group))
+        .collect::<Vec<_>>();
+    if peers.len() < 2
+        || peers.iter().any(|peer| {
+            matches!(peer.decision, Decision::Excluded | Decision::Mandatory)
+                || peer.category != feature.category
+                || peer.parent != feature.parent
+                || peer.group_label != feature.group_label
+                || peers.iter().any(|other| {
+                    peer.id != other.id
+                        && !peer
+                            .conflicts
+                            .iter()
+                            .any(|conflict| conflict.feature_id == other.id)
+                })
+        })
+    {
+        return None;
+    }
+    let mut candidate = desired.clone();
+    for peer in peers {
+        candidate.insert(peer.id.clone(), peer.id == feature.id);
+    }
+    let base = base_effective_features(manifest, &candidate);
+    let effective = effective_features(manifest, &base);
+    Some((
+        effective.get(&feature.id).copied().unwrap_or(false),
+        unavailable_reason(feature, features, &base, &effective),
+    ))
 }
 
 fn render_prompt_script_for_effective(

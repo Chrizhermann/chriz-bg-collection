@@ -8,11 +8,22 @@ use serde::Serialize;
 use std::{collections::BTreeSet, fs, path::Path};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct InstalledComponentSummary {
+    pub target: String,
+    pub tp2: String,
+    pub component: u32,
+    pub title: Option<String>,
+    pub version: Option<String>,
+    pub status: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ConsistencySummary {
     pub state: String,
     pub detail: String,
     pub component_count: usize,
     pub mod_count: usize,
+    pub components: Vec<InstalledComponentSummary>,
 }
 
 pub fn inspect(managed_root: &Path) -> ConsistencySummary {
@@ -23,6 +34,7 @@ pub fn inspect(managed_root: &Path) -> ConsistencySummary {
         detail: "The installed mod list could not be checked.".to_owned(),
         component_count: 0,
         mod_count: 0,
+        components: Vec::new(),
     })
 }
 
@@ -33,10 +45,11 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
     let mut count = 0;
     let mut mods = BTreeSet::new();
     let mut changed = false;
+    let mut components = Vec::new();
     for expected in logs {
-        let folder = match expected.target {
-            GameRoot::Bg1 => "bg1",
-            GameRoot::Bg2 => "game",
+        let (folder, target) = match expected.target {
+            GameRoot::Bg1 => ("bg1", "BG1"),
+            GameRoot::Bg2 => ("game", "BG2"),
         };
         let path = root.join(folder).join("WeiDU.log");
         let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
@@ -60,6 +73,50 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
                         || actual.language != recorded.language
                         || actual.component != recorded.component
                 });
+        let mut consumed = vec![false; entries.len()];
+        for recorded in &expected.components {
+            let match_index = entries.iter().enumerate().position(|(index, actual)| {
+                !consumed[index]
+                    && actual.tp2_key == recorded.tp2
+                    && actual.language == recorded.language
+                    && actual.component == recorded.component
+            });
+            if let Some(index) = match_index {
+                consumed[index] = true;
+                let actual = &entries[index];
+                let (title, version) = display_annotation(actual.annotation.as_deref());
+                components.push(InstalledComponentSummary {
+                    target: target.to_owned(),
+                    tp2: actual.tp2.clone(),
+                    component: actual.component,
+                    title,
+                    version,
+                    status: "installed".to_owned(),
+                });
+            } else {
+                components.push(InstalledComponentSummary {
+                    target: target.to_owned(),
+                    tp2: recorded.tp2.clone(),
+                    component: recorded.component,
+                    title: None,
+                    version: None,
+                    status: "missing".to_owned(),
+                });
+            }
+        }
+        components.extend(entries.iter().zip(consumed).filter_map(|(actual, consumed)| {
+            (!consumed).then(|| {
+                let (title, version) = display_annotation(actual.annotation.as_deref());
+                InstalledComponentSummary {
+                    target: target.to_owned(),
+                    tp2: actual.tp2.clone(),
+                    component: actual.component,
+                    title,
+                    version,
+                    status: "extra".to_owned(),
+                }
+            })
+        }));
     }
     Ok(ConsistencySummary {
         state: if changed { "changed" } else { "matches" }.to_owned(),
@@ -71,7 +128,21 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
         .to_owned(),
         component_count: count,
         mod_count: mods.len(),
+        components,
     })
+}
+
+fn display_annotation(annotation: Option<&str>) -> (Option<String>, Option<String>) {
+    let Some(annotation) = annotation.map(str::trim).filter(|value| !value.is_empty()) else {
+        return (None, None);
+    };
+    match annotation.rsplit_once(": ") {
+        Some((title, version)) if !title.trim().is_empty() && !version.trim().is_empty() => (
+            Some(title.trim().to_owned()),
+            Some(version.trim().to_owned()),
+        ),
+        _ => (Some(annotation.to_owned()), None),
+    }
 }
 
 #[cfg(test)]
@@ -192,8 +263,16 @@ mod tests {
         let checked = check_logs(temp.path(), &logs).unwrap();
         assert_eq!(checked.state, "matches");
         assert_eq!((checked.mod_count, checked.component_count), (1, 1));
+        assert_eq!(checked.components[0].title.as_deref(), Some("Description"));
+        assert_eq!(checked.components[0].version.as_deref(), Some("v1"));
+        assert_eq!(checked.components[0].status, "installed");
         fs::write(&path, "~mod/setup.tp2~ #0 #11 // Changed selection\n").unwrap();
-        assert_eq!(check_logs(temp.path(), &logs).unwrap().state, "changed");
+        let changed = check_logs(temp.path(), &logs).unwrap();
+        assert_eq!(changed.state, "changed");
+        assert_eq!(changed.components[0].status, "missing");
+        assert_eq!(changed.components[1].status, "extra");
+        fs::write(&path, "~mod/setup.tp2 #0 #10 // damaged row\n").unwrap();
+        assert!(check_logs(temp.path(), &logs).is_err());
         fs::remove_file(path).unwrap();
         assert!(check_logs(temp.path(), &logs).is_err());
     }

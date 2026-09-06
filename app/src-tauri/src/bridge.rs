@@ -1833,10 +1833,21 @@ impl NativeBridge {
         if let Some(root) = self.runtime_lock().known_installs.get(install_id).cloned() {
             return Ok(root);
         }
-        Ok(self
-            .available_managed_install(install_id)?
-            .record
-            .managed_root)
+        if let Some(card) = self
+            .registry_cards()?
+            .into_iter()
+            .find(|card| card.record.install_id == install_id)
+        {
+            return Ok(card.record.managed_root);
+        }
+        if let Some(card) = self
+            .campaign_cards()?
+            .into_iter()
+            .find(|card| card.record.install_id == install_id)
+        {
+            return Ok(card.record.managed_root);
+        }
+        Err(unknown_managed_install(install_id))
     }
 
     fn runtime_lock(&self) -> std::sync::MutexGuard<'_, BridgeRuntime> {

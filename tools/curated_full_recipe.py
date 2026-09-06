@@ -20,6 +20,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_map
+from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
 RECIPE_VERSION = "0.1.0-alpha.11"
@@ -452,6 +453,38 @@ def _feature_blocks(root: Path, collection: dict) -> str:
     return "\n\n".join(blocks).rstrip() + "\n"
 
 
+def _align_legacy_bg1npc_choices(collection: str) -> str:
+    """Complete three explicit choice groups split across old/new feature blocks."""
+
+    groups = {
+        "BGEE banter timing": [110, 111, 112, 113, 114],
+        "Kivan proficiency": [240, 241],
+        "Sarevok diary adjustment": [130, 131],
+    }
+    for label, components in groups.items():
+        feature_ids = [f"feature:bg1npc:component-{component}" for component in components]
+        for feature_id in feature_ids:
+            conflicts = [
+                (other, f"Choose at most one option for {label}.")
+                for other in feature_ids
+                if other != feature_id
+            ]
+            conflicts_toml = "[" + ", ".join(
+                f"{{ feature_id = {_q(other)}, reason = {_q(reason)} }}"
+                for other, reason in conflicts
+            ) + "]"
+            collection = _replace_feature(
+                collection,
+                feature_id,
+                {
+                    "category": _q("bg1-npcs"),
+                    "parent": _q("mod:bg1npc"),
+                    "conflicts": conflicts_toml,
+                },
+            )
+    return collection
+
+
 def _catalog_component_ids(root: Path, catalog: str) -> list[int]:
     curation_map = load_curation_map(root / "manifest/curation-map.toml")
     return [
@@ -775,6 +808,10 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         ['requires = ["feature:cdtweaks:component-2170"]'],
     )
     base_collection = base_collection.rstrip() + "\n\n" + _feature_blocks(root, base)
+    base_collection = _align_legacy_bg1npc_choices(base_collection)
+    parsed_collection = tomllib.loads(base_collection)
+    presentations = build_feature_presentations(parsed_collection, rows, curation_map)
+    base_collection = apply_feature_presentations(base_collection, presentations)
     (destination / "collection.toml").write_text(base_collection, encoding="utf-8", newline="\n")
 
     _write_mods(root, destination)

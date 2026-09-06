@@ -60,6 +60,9 @@ fn feature(id: &str, decision: Decision, components: Vec<ComponentRef>) -> Featu
         title: id.to_owned(),
         description: format!("Description for {id}"),
         category: "rules-abilities".to_owned(),
+        source_label: None,
+        group_label: None,
+        choice_group: None,
         decision,
         readiness: Readiness::Ready,
         unavailable_reason: None,
@@ -79,6 +82,105 @@ fn component_refs(run_id: &str, components: &[u32]) -> Vec<ComponentRef> {
             component: *component,
         })
         .collect()
+}
+
+fn grouped_manifest() -> Manifest {
+    let mut manifest = fixture();
+    manifest.collection.runs.clear();
+    add_run(&mut manifest, "stacking", &[1, 2]);
+    let mut options = vec![
+        feature(
+            "unlimited",
+            Decision::Default,
+            component_refs("stacking", &[1]),
+        ),
+        feature(
+            "forty",
+            Decision::Optional,
+            component_refs("stacking", &[2]),
+        ),
+    ];
+    for (index, option) in options.iter_mut().enumerate() {
+        option.source_label = Some("Tweaks Anthology".to_owned());
+        option.group_label = Some("Potion stacking".to_owned());
+        option.choice_group = Some("potion-stacking".to_owned());
+        option.conflicts.push(Conflict {
+            feature_id: if index == 0 { "forty" } else { "unlimited" }.to_owned(),
+            reason: "Choose one stack size.".to_owned(),
+        });
+    }
+    manifest.collection.features = options;
+    manifest
+}
+
+#[test]
+fn choice_projection_previews_replacement_without_changing_defaults() {
+    let manifest = grouped_manifest();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let alternate = evaluation.view.control("forty").unwrap();
+    assert_eq!(alternate.source_label.as_deref(), Some("Tweaks Anthology"));
+    assert_eq!(alternate.group_label.as_deref(), Some("Potion stacking"));
+    assert_eq!(alternate.choice_available, Some(true));
+    assert!(alternate.unavailable_reason.is_none());
+    assert!(!alternate.selected);
+    assert!(evaluation.normalized_selection.features["unlimited"]);
+    assert!(!evaluation.normalized_selection.features["forty"]);
+    assert_eq!(evaluation.plan.runs[0].components, vec![1]);
+
+    let mut switched = evaluation.normalized_selection.to_selection();
+    switched.set_feature("unlimited", false);
+    switched.set_feature("forty", true);
+    let result = evaluate(&manifest, &switched).unwrap();
+    assert_eq!(result.plan.runs[0].components, vec![2]);
+}
+
+#[test]
+fn choice_replacement_keeps_external_conflicts_and_dependencies() {
+    let mut manifest = grouped_manifest();
+    manifest
+        .collection
+        .features
+        .push(feature("spell-revisions", Decision::Default, vec![]));
+    manifest.collection.features[1].conflicts.push(Conflict {
+        feature_id: "spell-revisions".to_owned(),
+        reason: "Unavailable with Spell Revisions.".to_owned(),
+    });
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let alternate = evaluation.view.control("forty").unwrap();
+    assert_eq!(alternate.choice_available, Some(false));
+    assert_eq!(
+        alternate.unavailable_reason.as_deref(),
+        Some("Unavailable with Spell Revisions.")
+    );
+    assert!(evaluation.normalized_selection.features["spell-revisions"]);
+
+    manifest.collection.features[1].conflicts.pop();
+    manifest.collection.features[1]
+        .requires
+        .push("unlimited".to_owned());
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    assert_eq!(
+        evaluation.view.control("forty").unwrap().choice_available,
+        Some(false)
+    );
+}
+
+#[test]
+fn malformed_or_mandatory_choice_groups_never_relax_controls() {
+    let mut manifest = grouped_manifest();
+    manifest.collection.features[1].conflicts.clear();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    assert_eq!(
+        evaluation.view.control("forty").unwrap().choice_available,
+        None
+    );
+    let mut manifest = grouped_manifest();
+    manifest.collection.features[0].decision = Decision::Mandatory;
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    assert_eq!(
+        evaluation.view.control("forty").unwrap().choice_available,
+        None
+    );
 }
 
 fn semantic_manifest() -> Manifest {

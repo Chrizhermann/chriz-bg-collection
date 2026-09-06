@@ -494,6 +494,15 @@ pub struct Feature {
     pub description: String,
     /// Player-facing category id; first occurrence defines category order.
     pub category: String,
+    /// Optional source name retained from the curation catalog.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_label: Option<String>,
+    /// Context shared by related options, such as potion stacking.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group_label: Option<String>,
+    /// Authored same-purpose choice identity; not a general conflict group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choice_group: Option<String>,
     /// Curated visibility/default decision.
     pub decision: Decision,
     /// Release readiness.

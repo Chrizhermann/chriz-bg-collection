@@ -1,5 +1,15 @@
 import type { FeatureControl, SelectionEvaluation } from "./contracts";
 
+export type ChoiceControl = FeatureControl;
+
+export interface ExclusiveChoiceGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly category: string;
+  readonly controls: readonly ChoiceControl[];
+  readonly allowNone: boolean;
+}
+
 export interface CommonBundle {
   readonly id: string;
   readonly title: string;
@@ -23,7 +33,7 @@ export function commonBundles(evaluation: SelectionEvaluation): CommonBundle[] {
     { id: "artisan", title: "Artisan’s Kitpack", description: "Class and kit overhauls, companion kit assignments, and associated tweaks. All three parts switch together.", ids: ["mod:artisanskitpack", "mod:artisanskitpack-npc", "mod:artisanskitpack-tweak"] },
     { id: "bardic", title: "Artisan’s Bardic Wonders", description: "Bard kits, abilities and related patches. Dependent companion choices follow automatically.", ids: existing.has("mod:bardicwonders") ? ["mod:bardicwonders"] : controls.filter(c => c.id.startsWith("feature:bardicwonders:")).map(c => c.id) },
     { id: "spell-revisions", title: "Spell Revisions", description: "Revised spells and their compatibility fixes. Turning this off can make previously incompatible choices available.", ids: ["mod:spell-rev"] },
-    { id: "sod-remix", title: "SoD Remix", description: "Include or exclude the curated SoD Remix bundle. This does not skip the SoD story.", ids: ["mod:chriz-sod-remix"] },
+    { id: "sod-remix", title: "SoD Remix", description: "Include or exclude the curated SoD Remix bundle. The bundle includes an optional in-game prompt to skip the SoD story; this switch does not skip it automatically.", ids: ["mod:chriz-sod-remix"] },
   ];
   return bundles.map(b => ({ ...b, ids: b.ids.filter(id => existing.has(id)) })).filter(b => b.ids.length > 0);
 }
@@ -53,6 +63,53 @@ export function bundleChanges(e: SelectionEvaluation, bundle: CommonBundle, sele
 
 function conflictsWith(a: FeatureControl, b: FeatureControl): boolean {
   return Boolean(a.conflicts?.includes(b.id) || b.conflicts?.includes(a.id));
+}
+
+function hasSymmetricConflict(a: FeatureControl, b: FeatureControl): boolean {
+  return Boolean(a.conflicts?.includes(b.id) && b.conflicts?.includes(a.id));
+}
+
+/** Treat authored choice metadata as a display hint, not as authority. */
+export function exclusiveChoiceGroups(e: SelectionEvaluation): ExclusiveChoiceGroup[] {
+  const candidates = new Map<string, ChoiceControl[]>();
+  for (const control of e.view.controls as readonly ChoiceControl[]) {
+    if (!control.choiceGroup || !control.groupLabel) continue;
+    const controls = candidates.get(control.choiceGroup) ?? [];
+    controls.push(control);
+    candidates.set(control.choiceGroup, controls);
+  }
+
+  const groups: ExclusiveChoiceGroup[] = [];
+  for (const [id, controls] of candidates) {
+    const first = controls[0]!;
+    const hasMandatory = controls.some(control => control.decision === "mandatory");
+    const availabilityKnown = controls.every(control => typeof control.choiceAvailable === "boolean");
+    const sameScope = controls.every(control =>
+      control.category === first.category
+      && control.parent === first.parent
+      && control.groupLabel === first.groupLabel
+    );
+    const pairwiseAlternatives = controls.every((control, index) =>
+      controls.slice(index + 1).every(peer => hasSymmetricConflict(control, peer))
+    );
+    if (controls.length < 2 || hasMandatory || !availabilityKnown || !sameScope || !pairwiseAlternatives) continue;
+    groups.push({
+      id,
+      label: first.groupLabel!,
+      category: first.category,
+      controls,
+      allowNone: true,
+    });
+  }
+  return groups;
+}
+
+export function exclusiveChoiceChanges(group: ExclusiveChoiceGroup, selectedId: string): Record<string, boolean> {
+  const changes: Record<string, boolean> = {};
+  for (const control of group.controls) {
+    if (control.decision !== "mandatory") changes[control.id] = control.id === selectedId;
+  }
+  return changes;
 }
 
 export function bulkCategoryChanges(e: SelectionEvaluation, category: string, selected: boolean): Record<string, boolean> {

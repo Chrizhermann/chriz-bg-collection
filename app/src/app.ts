@@ -853,9 +853,9 @@ class AppController implements AppHandle {
     }
   }
 
-  async #exportDiagnostics(): Promise<void> {
-    if (this.#installId === null) return;
-    const result = await this.backend.exportDiagnostics(this.#installId);
+  async #exportDiagnostics(installId: string | null = this.#installId): Promise<void> {
+    if (installId === null) return;
+    const result = await this.backend.exportDiagnostics(installId);
     if (result === null) return;
     const announcement = document.createElement("p");
     announcement.className = "diagnostics-result";
@@ -968,6 +968,7 @@ class AppController implements AppHandle {
         resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
         select: (installId) => this.#selectManagedInstallation(installId),
         createShortcut: (installId) => this.#createDesktopShortcut(installId),
+        diagnostics: (installId) => safely(() => this.#exportDiagnostics(installId)),
       },
       this.#shortcutFeedback,
       this.#addonFeedback,

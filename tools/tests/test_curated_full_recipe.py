@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import tempfile
+import hashlib
 import json
+import tempfile
 import tomllib
 import unittest
 from pathlib import Path
@@ -69,6 +70,145 @@ class CuratedFullRecipeTests(unittest.TestCase):
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
             runs = {run["run_id"]: run for run in collection["runs"]}
             features = {feature["id"]: feature for feature in collection["features"]}
+
+            semantic_recipe = {
+                "runs": [
+                    (
+                        run["run_id"],
+                        run["mod_id"],
+                        run["phase"],
+                        run["components"],
+                        run.get("args", []),
+                    )
+                    for run in collection["runs"]
+                ],
+                "features": [
+                    (
+                        feature["id"],
+                        feature["decision"],
+                        feature["readiness"],
+                        None
+                        if feature["id"]
+                        in {
+                            "feature:bg1npc:component-110",
+                            "feature:bg1npc:component-112",
+                            "feature:bg1npc:component-113",
+                            "feature:bg1npc:component-114",
+                            "feature:bg1npc:component-131",
+                            "feature:bg1npc:component-241",
+                        }
+                        else feature.get("parent"),
+                        feature.get("requires", []),
+                        []
+                        if feature["id"]
+                        in {
+                            "feature:bg1npc:component-111",
+                            "feature:bg1npc:component-130",
+                            "feature:bg1npc:component-240",
+                        }
+                        else feature.get("conflicts", []),
+                        feature.get("components", []),
+                    )
+                    for feature in collection["features"]
+                ],
+                "preset": preset["selections"],
+            }
+            semantic_digest = hashlib.sha256(
+                json.dumps(semantic_recipe, sort_keys=True).encode()
+            ).hexdigest()
+            self.assertEqual(
+                semantic_digest,
+                "4320bd5a5a766e1acc1667d8979e1c33816baa0f0e110a1dabdc4a53d5cc8415",
+            )
+
+            legacy_bg1npc_groups = {
+                (110, 111, 112, 113, 114): 111,
+                (240, 241): 240,
+                (130, 131): 130,
+            }
+            baseline = preset["selections"]
+            baseline_effective = _effective_features(collection, baseline)
+            for components, default_component in legacy_bg1npc_groups.items():
+                ids = [f"feature:bg1npc:component-{component}" for component in components]
+                self.assertTrue(all(features[feature_id]["parent"] == "mod:bg1npc" for feature_id in ids))
+                self.assertTrue(all(features[feature_id]["category"] == "bg1-npcs" for feature_id in ids))
+                for feature_id in ids:
+                    others = set(ids) - {feature_id}
+                    self.assertEqual(
+                        {conflict["feature_id"] for conflict in features[feature_id]["conflicts"]},
+                        others,
+                    )
+                default_id = f"feature:bg1npc:component-{default_component}"
+                self.assertTrue(baseline_effective[default_id])
+                alternate_id = next(feature_id for feature_id in ids if feature_id != default_id)
+                switched = {**baseline, default_id: "off", alternate_id: "on"}
+                switched_effective = _effective_features(collection, switched)
+                changed = {
+                    feature_id
+                    for feature_id in baseline_effective
+                    if baseline_effective[feature_id] != switched_effective[feature_id]
+                }
+                self.assertEqual(changed, {default_id, alternate_id})
+                self.assertFalse(switched_effective[default_id])
+                self.assertTrue(switched_effective[alternate_id])
+                baseline_components = {
+                    (component["run_id"], component["component"])
+                    for feature_id, selected in baseline_effective.items()
+                    if selected
+                    for component in features[feature_id].get("components", [])
+                }
+                switched_components = {
+                    (component["run_id"], component["component"])
+                    for feature_id, selected in switched_effective.items()
+                    if selected
+                    for component in features[feature_id].get("components", [])
+                }
+                alternate_component = int(alternate_id.rsplit("-", 1)[1])
+                self.assertEqual(
+                    baseline_components ^ switched_components,
+                    {
+                        ("bg1npc-bg1", default_component),
+                        ("bg1npc-bg1", alternate_component),
+                    },
+                )
+
+            self.assertTrue(all(feature.get("source_label") for feature in features.values()))
+            self.assertTrue(all(feature.get("group_label") for feature in features.values()))
+            potions = features["feature:cdtweaks:component-1142"]
+            self.assertEqual(potions["title"], "Potions require identification")
+            self.assertEqual(
+                potions["description"],
+                "Potions need identification; gems are unchanged.",
+            )
+            self.assertEqual(potions["source_label"], "The Tweaks Anthology")
+            self.assertEqual(potions["group_label"], "Gems and Potions Require Identification")
+            self.assertNotIn("choice_group", potions)
+            strongholds = features["feature:cdtweaks:component-1160"]
+            self.assertEqual(strongholds["title"], "No restrictions")
+            self.assertEqual(
+                strongholds["description"],
+                "Allows multiple strongholds without class restrictions.",
+            )
+            self.assertEqual(
+                strongholds["choice_group"],
+                "choice:cdtweaks:multiple-strongholds-sabre-baldurdash-weimer",
+            )
+            potion_stacks = [
+                features[f"feature:cdtweaks:component-{component}"]
+                for component in range(3100, 3104)
+            ]
+            self.assertEqual(
+                {feature["choice_group"] for feature in potion_stacks},
+                {"choice:cdtweaks:increase-potion-stacking"},
+            )
+            self.assertTrue(
+                all(feature["group_label"] == "Increase Potion Stacking" for feature in potion_stacks)
+            )
+            self.assertEqual(
+                potion_stacks[2]["description"],
+                "Allows up to 80 potions per inventory slot.",
+            )
+            self.assertNotIn("choice_group", features["feature:cdtweaks:component-2090"])
 
             self.assertEqual(
                 {"bristlelick", "wings", "ajantisbg2", "bg2ee-eet-fixpack", "eet-tweaks"} & mods,

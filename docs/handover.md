@@ -2,6 +2,37 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Post-alpha clarity/support patch — 2026-09-06 (unshipped)
+
+Christopher approved a lightweight clarity/dependency pass, grouped alternatives,
+installed-mod visibility, diagnostics from completed installs and first-play help.
+Source implementation is in the `installer-v0-real-alpha` worktree; public app
+alpha.10 / recipe alpha.11 and all game installations remain untouched.
+See [the section-by-section audit](clarity-audit-2026-09-06.md).
+
+- All 26 categories / 499 choices retain source/group context; ambiguous identification,
+  stronghold and stacking options have concrete explanations. Repeated description text
+  is suppressed, not expanded into boilerplate. Existing charcoal/brass styling stays.
+- 33 explicit alternative groups use compact selectors with None/unchanged. Defaults
+  remain optional, initially checked. Atomic switching only replaces group siblings;
+  ordinary readiness, parent, dependency and external-conflict checks still apply.
+  Three legacy BG1 NPC groups had inconsistent parents/conflicts; the authored curation
+  establishes their exclusivity and those constraints are now consistent.
+- My installs has a searchable receipt/current-WeiDU list, reported versions and
+  missing/extra entries; it does not claim resource-byte or in-game activation checks.
+  Diagnostics can be exported after restart for completed/incomplete/stale known installs.
+  Exports stay local and warn about paths/logs before sharing. First-play tips collapse.
+- Christopher will run the install himself to check BuffBot. Keep the community report
+  unresolved until that result; do not run another install, patch BuffBot, or modify r5/
+  the stream installation on the strength of the report alone.
+
+Release follow-up: these additive presentation fields require the next app binary;
+old alpha.10 strictly rejects them. Before publishing, bump app/recipe versions together
+and set the recipe ledger/channel minimum app version to the new app version. Do not
+publish this as a recipe-only update to alpha.10 or overwrite its immutable artifacts.
+Native updater apply/restart and pause-close acceptance remain the previously recorded
+follow-ups, not completed by this source-only patch.
+
 ## Public alpha publication checkpoint — 2026-09-06
 
 **Published and complete:** https://bg.chrizfader.org/collection now serves the

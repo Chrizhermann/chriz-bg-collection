@@ -5,10 +5,12 @@ import userEvent from "@testing-library/user-event";
 import type { FeatureControl, SelectionEvaluation, NormalizedSelection } from "../src/contracts";
 import { mountApp } from "../src/app";
 import { FixtureBackend } from "../src/backend";
-import { bulkCategoryChanges, commonBundles, bundleChanges, bundleSelected } from "../src/customization";
+import { bulkCategoryChanges, commonBundles, bundleChanges, bundleSelected, exclusiveChoiceChanges, exclusiveChoiceGroups } from "../src/customization";
 import { setupScreen } from "../src/screens/setup";
 
-function control(id: string, extra: Partial<FeatureControl> = {}): FeatureControl {
+type ChoiceMetadata = { sourceLabel?: string; groupLabel?: string; choiceGroup?: string; choiceAvailable?: boolean | null };
+
+function control(id: string, extra: Partial<FeatureControl & ChoiceMetadata> = {}): FeatureControl & ChoiceMetadata {
   return { id, title: id, description: "Test choice", category: "kits", decision: "default", readiness: "ready", parent: null, selected: true, interactive: true, unavailableReason: null, inputs: [], ...extra };
 }
 function evaluation(controls: FeatureControl[]): SelectionEvaluation {
@@ -70,6 +72,75 @@ describe("common customization bundles", () => {
     const e = evaluation([control("core", { decision: "mandatory", interactive: false }), control("blocked", { readiness: "blocked", interactive: false }), control("a", { selected: false, conflicts: ["b"] }), control("b", { selected: false, conflicts: ["a"] })]);
     expect(bulkCategoryChanges(e, "kits", true)).toEqual({ a: true });
     expect(bulkCategoryChanges(e, "kits", false)).toEqual({ a: false, b: false });
+  });
+
+  it("groups only structurally safe, fully symmetric explicit alternatives", () => {
+    const valid = evaluation([
+      control("a", { selected: true, decision: "default", parent: "mod", choiceGroup: "route", groupLabel: "Class route", conflicts: ["b"], choiceAvailable: true }),
+      control("b", { selected: false, decision: "optional", parent: "mod", choiceGroup: "route", groupLabel: "Class route", conflicts: ["a"], choiceAvailable: true }),
+    ]);
+    const group = exclusiveChoiceGroups(valid)[0]!;
+    expect(group.label).toBe("Class route");
+    expect(group.allowNone).toBe(true);
+    expect(exclusiveChoiceChanges(group, "b")).toEqual({ a: false, b: true });
+    expect(exclusiveChoiceChanges(group, "")).toEqual({ a: false, b: false });
+
+    const required = { ...group, controls: [control("required", { decision: "mandatory" }), ...group.controls], allowNone: false };
+    expect(exclusiveChoiceChanges(required, "b")).toEqual({ a: false, b: true });
+
+    for (const controls of [
+      [control("a", { choiceGroup: "route", groupLabel: "Route", conflicts: ["b"], choiceAvailable: true }), control("b", { selected: false, choiceGroup: "route", groupLabel: "Route", choiceAvailable: true })],
+      [control("a", { parent: "one", choiceGroup: "route", groupLabel: "Route", conflicts: ["b"], choiceAvailable: true }), control("b", { selected: false, parent: "two", choiceGroup: "route", groupLabel: "Route", conflicts: ["a"], choiceAvailable: true })],
+      [control("a", { choiceGroup: "route", groupLabel: "Route", conflicts: ["b"], choiceAvailable: true }), control("b", { selected: false, category: "rules", choiceGroup: "route", groupLabel: "Route", conflicts: ["a"], choiceAvailable: true })],
+      [control("a", { choiceGroup: "route", groupLabel: "Route", conflicts: ["b"] }), control("b", { selected: false, choiceGroup: "route", groupLabel: "Route", conflicts: ["a"] })],
+      [control("a", { decision: "mandatory", choiceGroup: "route", groupLabel: "Route", conflicts: ["b"], choiceAvailable: true }), control("b", { selected: false, choiceGroup: "route", groupLabel: "Route", conflicts: ["a"], choiceAvailable: true })],
+    ]) expect(exclusiveChoiceGroups(evaluation(controls))).toEqual([]);
+  });
+
+  it("switches an explicit choice atomically, offers none for optional groups, and explains blocked options", async () => {
+    const e = evaluation([
+      control("fighter", { title: "NPC class: Fighter", description: "Keep the original class.", selected: true, decision: "default", parent: "npc", sourceLabel: "Base game", choiceGroup: "npc-class", groupLabel: "NPC class", conflicts: ["cleric", "mage"], choiceAvailable: true }),
+      control("cleric", { title: "Cleric", description: "Use the authored conversion.", selected: false, decision: "optional", parent: "npc", sourceLabel: "Modpack", choiceGroup: "npc-class", groupLabel: "NPC class", conflicts: ["fighter", "mage"], interactive: false, choiceAvailable: true }),
+      control("mage", { title: "Mage", description: "Requires another mod.", selected: false, decision: "optional", parent: "npc", sourceLabel: "Expansion", choiceGroup: "npc-class", groupLabel: "NPC class", conflicts: ["fighter", "cleric"], interactive: false, choiceAvailable: false, unavailableReason: "Requires Spell Revisions" }),
+    ]);
+    const batches: Record<string, boolean>[] = [];
+    const view = setupScreen(e, () => {}, () => {}, () => {}, { search: "", category: "", advancedOpen: true }, { change: (patch) => { batches.push(patch); }, reset: () => {} });
+    document.body.append(view);
+    const select = getByRole(view, "combobox", { name: "NPC class" });
+    expect((select as HTMLSelectElement).value).toBe("fighter");
+    expect(within(select).getByRole("option", { name: "Fighter (Recommended)" })).toBeTruthy();
+    expect((within(select).getByRole("option", { name: "Mage (Unavailable)" }) as HTMLOptionElement).disabled).toBe(true);
+    expect(view.textContent).toContain("Mage: Requires Spell Revisions");
+    expect(view.textContent).toContain("Sources: Base game, Modpack, Expansion");
+    await userEvent.setup().selectOptions(select, "cleric");
+    expect(batches).toEqual([{ fighter: false, cleric: true, mage: false }]);
+    await userEvent.setup().selectOptions(select, "");
+    expect(batches.at(-1)).toEqual({ fighter: false, cleric: false, mage: false });
+    view.remove();
+  });
+
+  it("keeps legacy checkboxes and searches discreet source and group labels", async () => {
+    const e = evaluation([
+      control("legacy", { title: "Legacy default", sourceLabel: "Hidden author", groupLabel: "Legacy route" }),
+      control("other", { title: "Other choice", selected: false, category: "rules" }),
+      control("duplicate", { title: "Same text", description: "Same text", selected: false, category: "rules" }),
+    ]);
+    const view = setupScreen(e, () => {}, () => {}, () => {}, { search: "", category: "", advancedOpen: true }, { change: () => {}, reset: () => {} });
+    document.body.append(view);
+    expect((getByRole(view, "checkbox", { name: "Legacy default" }) as HTMLInputElement).checked).toBe(true);
+    const duplicateRow = view.querySelector("#feature-duplicate")!.closest(".control-row") as HTMLElement;
+    expect(within(duplicateRow).queryByText("Same text", { selector: "p" })).toBeNull();
+    const search = getByRole(view, "searchbox", { name: "Find a mod or option" });
+    await userEvent.setup().type(search, "hidden author");
+    expect(view.querySelector("#feature-legacy")?.closest(".control-row")?.hasAttribute("hidden")).toBe(false);
+    expect(view.textContent).toContain("Group: Legacy route. Source: Hidden author");
+    view.remove();
+  });
+
+  it("describes the SoD prompt without claiming that the bundle toggle skips the story", () => {
+    const bundle = commonBundles(evaluation([control("mod:chriz-sod-remix")])).find(item => item.id === "sod-remix")!;
+    expect(bundle.description).toContain("optional in-game prompt");
+    expect(bundle.description).toContain("does not skip it automatically");
   });
 
   it("shows common changes ahead of collapsed category controls and submits one batch", () => {

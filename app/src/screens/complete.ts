@@ -1,6 +1,7 @@
-import type { FrozenReview } from "../contracts";
+import type { FrozenReview, ManagedInstallation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { statusCard } from "../components/status-card";
+import { firstPlayGuide } from "./home";
 
 export interface CompleteActions {
   readonly home: () => void | Promise<void>;
@@ -8,7 +9,7 @@ export interface CompleteActions {
   readonly openFolder: (() => void | Promise<void>) | null;
 }
 
-export function completeScreen(review: FrozenReview | null, actions: CompleteActions): HTMLElement {
+export function completeScreen(review: FrozenReview | null, actions: CompleteActions, installation: ManagedInstallation | null = null): HTMLElement {
   const page = element("div", "screen-stack");
   page.append(screenIntro("Installation verified", "Chriz Easy BG is ready", "Your game and its installation record are ready."));
   page.append(statusCard("Installation record saved", review ? `Review ${review.digest} is bound to ${review.destination}.` : "The installation record is available in the game folder." , "ok"));
@@ -19,6 +20,8 @@ export function completeScreen(review: FrozenReview | null, actions: CompleteAct
       actionButton("Open game folder", actions.openFolder, "quiet"),
     );
   }
-  page.append(installActions, screenActions(null, actionButton("My installs", actions.home)));
+  page.append(installActions);
+  if (installation !== null) page.append(firstPlayGuide(installation));
+  page.append(screenActions(null, actionButton("My installs", actions.home)));
   return page;
 }
