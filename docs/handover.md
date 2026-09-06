@@ -20,8 +20,14 @@ See [the section-by-section audit](clarity-audit-2026-09-06.md).
   establishes their exclusivity and those constraints are now consistent.
 - My installs has a searchable receipt/current-WeiDU list, reported versions and
   missing/extra entries; it does not claim resource-byte or in-game activation checks.
-  Diagnostics can be exported after restart for completed/incomplete/stale known installs.
+  Diagnostics can be exported after restart for known installs with a terminal receipt.
   Exports stay local and warn about paths/logs before sharing. First-play tips collapse.
+- Diagnostic ZIPs now start with a readable outcome/version/run-evidence summary.
+  Empty BuffBot `attempts` means no finalized run record in that receipt, not proof
+  that WeiDU never started or that the tester made a mistake. Raw evidence and later
+  resume history must be checked. A crash before the first terminal receipt still
+  prevents ZIP export; preserve the install folder and its `.chriz` evidence.
+  See [diagnostic interpretation and verification](diagnostics-reading-2026-09-06.md).
 - Christopher will run the install himself to check BuffBot. Keep the community report
   unresolved until that result; do not run another install, patch BuffBot, or modify r5/
   the stream installation on the strength of the report alone.

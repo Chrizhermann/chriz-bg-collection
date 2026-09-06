@@ -126,6 +126,77 @@ fn fixture(include_success: bool) -> Fixture {
 }
 
 #[test]
+fn summary_explains_empty_attempts_without_claiming_the_process_never_started() {
+    let fixture = fixture(false);
+    write(&fixture.managed, ".chriz/attempts/attempt-001/receipt.json", &serde_json::to_vec(&serde_json::json!({
+        "install_id": "my-install", "attempt_id": "attempt-001", "evidence_attempt_id": "attempt-001",
+        "versions": {"application": "alpha.10", "engine": "0.1.0", "recipe": "alpha.11"},
+        "outcome": {"status": "failed", "step_id": "install:earlier-mod", "detail": "An earlier run failed"},
+        "runs": [{"run_id": "buffbot-bg2", "target": "bg2", "components": [1, 0], "attempts": []}]
+    })).unwrap());
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    assert!(bundle.entries.contains(&"START-HERE.txt".to_owned()));
+    let summary = String::from_utf8(
+        entries
+            .iter()
+            .find(|(name, _)| name == "START-HERE.txt")
+            .unwrap()
+            .1
+            .clone(),
+    )
+    .unwrap();
+    assert!(summary.contains("Outcome: failed"));
+    assert!(summary.contains("Stopped at: install:earlier-mod"));
+    assert!(summary.contains("Application: alpha.10"));
+    assert!(
+        summary.contains("buffbot-bg2 [bg2]: 2 planned components; no finalized attempt recorded")
+    );
+    assert!(summary.contains("does not prove that the process never started"));
+    assert!(summary.contains("Later resumes"));
+}
+
+#[test]
+fn summary_keeps_partial_log_additions_and_redacts_private_failure_details() {
+    let fixture = fixture(false);
+    write(&fixture.managed, ".chriz/attempts/attempt-001/receipt.json", &serde_json::to_vec(&serde_json::json!({
+        "outcome": {"status": "failed", "step_id": "install:buffbot", "detail": format!("Failed under {}", fixture.home.display())},
+        "runs": [{"run_id": "buffbot-bg2", "target": "bg2", "components": [1, 0], "attempts": [{
+            "exit_code": 0, "log_diff": {"added": [{"component": 1}], "removed": []}
+        }]}]
+    })).unwrap());
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".to_owned(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home.clone()],
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    let summary = String::from_utf8(
+        entries
+            .iter()
+            .find(|(name, _)| name == "START-HERE.txt")
+            .unwrap()
+            .1
+            .clone(),
+    )
+    .unwrap();
+    assert!(
+        summary.contains("1 finalized attempt(s); 1/2 log additions recorded; last exit code 0")
+    );
+    assert!(!summary.contains(&*fixture.home.to_string_lossy()));
+    assert!(summary.contains("<redacted-home>"));
+    assert!(!summary.contains("BuffBot installed successfully"));
+}
+
+#[test]
 fn success_bundle_uses_an_explicit_allowlist_and_redacts_personal_or_secret_text() {
     let fixture = fixture(true);
     let result = export_diagnostics(&DiagnosticsRequest {

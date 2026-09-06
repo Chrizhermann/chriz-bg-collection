@@ -125,10 +125,8 @@ pub fn export_diagnostics(
 
     let output_path = resolve_new_output(&request.output_path, &managed_root)?;
     let selected = select_entries(&state_root, &request.attempt_id)?;
-    let archive_names = selected
-        .iter()
-        .map(|entry| entry.archive_name.clone())
-        .collect::<Vec<_>>();
+    let mut archive_names = vec!["START-HERE.txt".to_owned()];
+    archive_names.extend(selected.iter().map(|entry| entry.archive_name.clone()));
     let redactions = collect_redactions(&request.redact_roots);
     let temporary = temporary_sibling(&output_path)?;
 
@@ -424,6 +422,35 @@ fn write_bundle(
         })?;
     let mut writer = ZipWriter::new(file);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+    // Explain the selected immutable receipt without changing it or claiming
+    // that missing finalized evidence proves a process was never launched.
+    let receipt = selected
+        .iter()
+        .find(|entry| entry.archive_name == "receipt/attempt-receipt.json")
+        .ok_or_else(|| DiagnosticsError::MissingEvidence {
+            path: temporary.to_path_buf(),
+        })?;
+    let bytes = fs::read(&receipt.source).map_err(|source| DiagnosticsError::Io {
+        path: receipt.source.clone(),
+        source,
+    })?;
+    let value: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|source| DiagnosticsError::ReceiptJson {
+            path: receipt.source.clone(),
+            message: source.to_string(),
+        })?;
+    writer
+        .start_file("START-HERE.txt", options)
+        .map_err(|source| DiagnosticsError::Zip {
+            path: temporary.to_path_buf(),
+            message: source.to_string(),
+        })?;
+    writer
+        .write_all(sanitize_text(&receipt_summary(&value), redactions).as_bytes())
+        .map_err(|source| DiagnosticsError::Io {
+            path: temporary.to_path_buf(),
+            source,
+        })?;
     for entry in selected {
         writer
             .start_file(&entry.archive_name, options)
@@ -460,6 +487,81 @@ fn write_bundle(
         path: temporary.to_path_buf(),
         source,
     })
+}
+
+fn receipt_summary(receipt: &serde_json::Value) -> String {
+    use std::fmt::Write as _;
+    let text = |value: &serde_json::Value| value.as_str().unwrap_or("not recorded").to_owned();
+    let mut summary = String::from("CEBG installation diagnostics\n\n");
+    for (label, value) in [
+        ("Install", &receipt["install_id"]),
+        ("Receipt attempt", &receipt["attempt_id"]),
+        ("Step evidence attempt", &receipt["evidence_attempt_id"]),
+        ("Application", &receipt["versions"]["application"]),
+        ("Engine", &receipt["versions"]["engine"]),
+        ("Recipe", &receipt["versions"]["recipe"]),
+    ] {
+        let _ = writeln!(summary, "{label}: {}", text(value));
+    }
+    let outcome = &receipt["outcome"];
+    let _ = writeln!(
+        summary,
+        "Outcome: {}",
+        text(if outcome.is_string() {
+            outcome
+        } else {
+            &outcome["status"]
+        })
+    );
+    if let Some(step) = outcome["step_id"].as_str() {
+        let _ = writeln!(summary, "Stopped at: {step}");
+    }
+    if let Some(detail) = outcome["detail"].as_str() {
+        let _ = writeln!(summary, "Recorded reason: {detail}");
+    }
+    if let Some(timestamp) = receipt["completed_at_millis"].as_u64() {
+        let _ = writeln!(summary, "Receipt time (Unix milliseconds): {timestamp}");
+    }
+    summary.push_str("\nPlanned mod runs in installation order\n");
+    if let Some(runs) = receipt["runs"].as_array() {
+        for run in runs {
+            let count = run["components"].as_array().map_or(0, Vec::len);
+            let _ = write!(
+                summary,
+                "- {} [{}]: {count} planned components; ",
+                text(&run["run_id"]),
+                text(&run["target"])
+            );
+            match run["attempts"].as_array() {
+                Some(attempts) if attempts.is_empty() => {
+                    summary.push_str("no finalized attempt recorded\n")
+                }
+                Some(attempts) => {
+                    let added: usize = attempts
+                        .iter()
+                        .map(|attempt| attempt["log_diff"]["added"].as_array().map_or(0, Vec::len))
+                        .sum();
+                    let exit = attempts
+                        .last()
+                        .and_then(|attempt| attempt["exit_code"].as_i64())
+                        .map_or_else(|| "not recorded".to_owned(), |code| code.to_string());
+                    let _ = writeln!(summary, "{} finalized attempt(s); {added}/{count} log additions recorded; last exit code {exit}", attempts.len());
+                }
+                None => summary.push_str("attempt records unavailable\n"),
+            }
+        }
+    } else {
+        summary.push_str("No per-run records in this receipt.\n");
+    }
+    summary.push_str("\nHow to read this bundle\n\
+This is a snapshot of the selected terminal receipt, not a live progress screen. Later resumes may have newer progress in ledger/.\n\
+An empty attempts list does not prove that the process never started: it can also mean a failure or interruption before a finalized run record was written. Check the stopped step and raw evidence.\n\
+A zero exit code or copied mod folder alone does not prove installation or in-game activation.\n\
+receipt/attempt-receipt.json contains the full outcome, versions, selected options, plan, downloads/cache identities and per-run records.\n\
+ledger/ retains durable step transitions. logs/steps/ contains invocation.json, process-result.json, captured output and before/after WeiDU logs where available. Missing files may identify the point where evidence stopped; they do not establish the operating-system cause.\n\
+receipt/install-receipt.json is included when present. An older failure receipt may coexist with a later successful installation; inspect the attempt IDs and timestamps.\n\
+Diagnostics remain local until you share them. Personal paths and common secrets are redacted, but review the ZIP before sharing.\n");
+    summary
 }
 
 fn sanitize_text(text: &str, redactions: &[String]) -> String {
