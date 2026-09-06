@@ -18,7 +18,10 @@ components/source pins. No game install or native-window control was used.
 See [folder-hotfix acceptance](patch-acceptance-alpha12-2026-09-07.md) and
 [release notes](releases/0.1.0-alpha.12.md). The [public release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.12)
 and mutable alpha updater feed passed anonymous URL/hash/signature checks. A verified
-setup is in Downloads. The website owner is deploying the combined alpha.12 page update.
+setup is in Downloads. The [website](https://bg.chrizfader.org/collection) update is
+deployed: site PR 5, merge `2f13d9196a0efb47f5c84fe97a227c2f15adbd85`. Owner confirmed
+75 passing site tests, builds/CI, live content and an independent public setup hash
+match. Full website handoff evidence is in the acceptance note above.
 
 ## Community SoD 900 fix — 2026-09-06 (published alpha.11)
 

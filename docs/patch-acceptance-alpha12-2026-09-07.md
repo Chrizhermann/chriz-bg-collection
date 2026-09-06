@@ -48,8 +48,8 @@ path and native validation/startup behavior have automated coverage.
 Documentation/release notes are updated in the repo, not generated memory. Security
 review focuses on directory input/creation, direct-ancestor checks and exclusive final
 root creation. Existing updater harness issue 2 and targeted-recovery issue 3 remain
-separate follow-ups. The website owner is holding one combined publication update
-until the verified alpha.12 binary is available.
+separate follow-ups. The website owner combined the alpha.11/alpha.12 page changes
+into one publication after the final verified binary became available.
 
 ## Publication
 
@@ -63,5 +63,13 @@ real updater download/tamper test passed again on those public bytes.
 The mutable alpha feed now offers app alpha.12 / recipe alpha.12 with the correct
 versioned URL/signature, confirmed anonymously. Immutable alpha.11 assets remain
 untouched. A verified alpha.12 setup copy is in Christopher's Downloads folder.
-The website owner has the verified URL/hash and is proceeding with the combined page
-update; its final deployment evidence is a separate pending handoff.
+Website owner confirmed deployment of the combined update at
+https://bg.chrizfader.org/collection via
+[PR 5](https://github.com/Chrizhermann/twitch-setup-chriz/pull/5), content commit
+`7d46b70`, merged commit `2f13d9196a0efb47f5c84fe97a227c2f15adbd85`.
+Owner verification: 75 site tests, production site build, diff check, Wrangler
+4.129.0 dry run, both PR CI runs and merged-master push CI passed. Live page versions,
+setup URL/size/hash, folder protections, SoD v0.6.8, 434-component inventory/BuffBot
+tail, alpha boundaries and security headers were checked. The owner independently
+downloaded the setup anonymously and matched its hash and public SHA256SUMS.
+No Discord message was posted. The website handoff is complete.
