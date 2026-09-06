@@ -104,8 +104,8 @@ the published package and records anonymous download/signature checks. A local r
 not claimed to reproduce identical setup bytes: SDK, packaging-tool versions, environment,
 and signing metadata need their own captured provenance.
 
-The source repository is `Chrizhermann/chriz-bg-collection`; it remains private at this audit
-checkpoint. Binary distribution uses the separate `Chrizhermann/chriz-easy-bg` repository.
+The source repository is `Chrizhermann/chriz-bg-collection`. Binary distribution uses the
+separate `Chrizhermann/chriz-easy-bg` repository.
 Preserve these existing public locations:
 
 - [Versioned alpha.13 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.13)
@@ -132,23 +132,34 @@ Three signing concerns are separate:
 `latest.json` and `SHA256SUMS`. It does not build, sign, cryptographically verify the signature,
 or publish anything. Its release URLs intentionally target the existing distribution repo.
 
-## Remaining release automation
+## Windows CI and remaining release automation
 
-This audited tree contains no `.github/workflows/` pipeline. The recorded local release
-checks are evidence, not an independently verifiable CI source-to-binary attestation. Before
-claiming that provenance, a future release pipeline needs to:
+[Windows source checks](../.github/workflows/ci.yml) runs on pushes, pull requests, and manual
+dispatch. It uses a Windows 2022 runner, Node 22, Python 3.11, and the repository's Rust
+toolchain. Official GitHub actions are pinned to immutable commit IDs; the workflow grants
+read-only repository permissions and does not receive production signing keys.
 
-1. Build an explicitly identified source commit with committed lockfiles on a clean Windows
-   runner, record the toolchain/SDK/build-tool versions, and retain build/test logs and a
-   production dependency/license inventory.
-2. Package the declared resources and retain a record connecting the source commit, app and
-   recipe versions, and artifact hashes. If a clean public source snapshot is chosen, record
-   its private source origin and every publication-only change without implying shared history.
-3. Integrate any approved Authenticode provider with protected signing credentials or service
-   access. Sign CEBG-owned executable(s), package and Authenticode-sign the final setup, then
-   create the Tauri updater signature and checksums over those final unchanged setup bytes.
-4. Verify the exact published bytes and preserve the versioned release assets and updater
-   URLs. Native updater apply/restart and full game acceptance remain separate checks.
+The workflow installs the locked frontend dependencies, runs the frontend check, Rust
+format/tests/Clippy, and Python tooling tests above, then builds an unsigned NSIS package
+using the local updater-artifact override. It does not launch the setup or the app, run a
+game installation, publish a release, or edit the live updater feed. These are configured
+checks; consult the actual [Actions run](https://github.com/Chrizhermann/chriz-bg-collection/actions/workflows/ci.yml)
+for a passed or failed result.
+
+Each run retains source-check evidence for 14 days: checked-out commit, app/recipe versions,
+runner/Visual Studio/SDK/tool versions, source-input hashes, command logs, production Rust
+dependency graph, and direct npm dependency versions. A successful run also retains the
+setup with an explicit `UNSIGNED-CI` filename, provenance, and SHA-256 for seven days. For
+pull requests, the checked-out source may be GitHub's test merge commit; the provenance
+records that exact commit. Workflow artifacts are development outputs, not official
+releases or signatures, and do not establish byte-for-byte reproduction of alpha.13.
+
+Production release automation still needs an approved Authenticode integration and durable
+source-to-release evidence tied to the final public artifact. Sign CEBG-owned executable(s),
+package and Authenticode-sign the final setup, then create the Tauri updater signature and
+checksums over those final unchanged setup bytes. Verify the exact published bytes while
+preserving existing versioned release assets and updater URLs. Native updater apply/restart
+and full game acceptance remain separate checks.
 
 No release, signing enrollment, key rotation, or live feed change is performed by the build
 instructions above.

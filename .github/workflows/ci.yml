@@ -1,0 +1,170 @@
+name: Windows source checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows x64 checks and unsigned package
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: '0'
+      RUST_BACKTRACE: '1'
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install the repository's Rust toolchain
+        run: |
+          $cebgToolchain = python -c "import tomllib; print(tomllib.load(open('rust-toolchain.toml', 'rb'))['toolchain']['channel'])"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup toolchain install $cebgToolchain --profile minimal --component clippy --component rustfmt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          rustup target add --toolchain $cebgToolchain x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Record source and build environment
+        run: |
+          $cebgEvidence = Join-Path $env:GITHUB_WORKSPACE 'target/ci-evidence'
+          New-Item -ItemType Directory -Path $cebgEvidence -Force | Out-Null
+          $cebgVswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $cebgVisualStudio = & $cebgVswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format json | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $cebgSdkRoot = Join-Path ${env:ProgramFiles(x86)} 'Windows Kits/10/Include'
+          $cebgRecord = [ordered]@{
+            artifact_role = 'Unsigned CI development package; not an official release'
+            source_commit = (git rev-parse HEAD).Trim()
+            repository = $env:GITHUB_REPOSITORY
+            run_url = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            run_attempt = $env:GITHUB_RUN_ATTEMPT
+            app_version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+            recipe_version = (Get-Content recipes/curated-full-current/release.json -Raw | ConvertFrom-Json).version
+            runner_image = $env:ImageOS
+            runner_image_version = $env:ImageVersion
+            visual_studio = @($cebgVisualStudio | Select-Object displayName, installationVersion)
+            windows_sdks = @(Get-ChildItem -LiteralPath $cebgSdkRoot -Directory | Select-Object -ExpandProperty Name)
+            tools = [ordered]@{
+              rustc = (rustc --version).Trim()
+              cargo = (cargo --version).Trim()
+              node = (node --version).Trim()
+              npm = (npm.cmd --version).Trim()
+              python = (python --version).Trim()
+              powershell = $PSVersionTable.PSVersion.ToString()
+            }
+          }
+          $cebgRecord | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $cebgEvidence 'provenance.json') -Encoding utf8
+          foreach ($cebgFile in @('rust-toolchain.toml', 'Cargo.lock', 'app/package-lock.json', 'app/src-tauri/tauri.conf.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md')) {
+            $cebgHash = (Get-FileHash -LiteralPath $cebgFile -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$cebgHash  $cebgFile" | Add-Content -LiteralPath (Join-Path $cebgEvidence 'SOURCE-SHA256SUMS') -Encoding utf8
+          }
+
+      - name: Install locked frontend dependencies
+        working-directory: app
+        run: |
+          npm.cmd ci 2>&1 | Tee-Object -FilePath ../target/ci-evidence/npm-ci.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Typecheck, test, and build the frontend
+        working-directory: app
+        run: |
+          npm.cmd run check 2>&1 | Tee-Object -FilePath ../target/ci-evidence/frontend.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check Rust formatting
+        run: |
+          cargo fmt --all -- --check 2>&1 | Tee-Object -FilePath target/ci-evidence/rustfmt.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run native workspace tests
+        run: |
+          cargo test --locked --workspace 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-test.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check native code with Clippy
+        run: |
+          cargo clippy --locked --workspace --all-targets -- -D warnings 2>&1 | Tee-Object -FilePath target/ci-evidence/clippy.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test authoring and packaging tools
+        run: |
+          python -m unittest discover -s tools/tests 2>&1 | Tee-Object -FilePath target/ci-evidence/python-tests.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build an unsigned NSIS development package
+        working-directory: app
+        run: |
+          $cebgLocalConfig = Join-Path $env:RUNNER_TEMP 'cebg-unsigned-ci.json'
+          '{"bundle":{"createUpdaterArtifacts":false}}' | Set-Content -LiteralPath $cebgLocalConfig -Encoding utf8
+          npm.cmd run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis --config $cebgLocalConfig -- --locked 2>&1 | Tee-Object -FilePath ../target/ci-evidence/unsigned-package.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Record the unsigned artifact and dependency graph
+        run: |
+          $cebgBundle = Join-Path $env:GITHUB_WORKSPACE 'target/x86_64-pc-windows-msvc/release/bundle/nsis'
+          $cebgSetups = @(Get-ChildItem -LiteralPath $cebgBundle -Filter '*.exe' -File)
+          if ($cebgSetups.Count -ne 1) { throw 'Expected exactly one built NSIS setup.' }
+          if (@(Get-ChildItem -LiteralPath $cebgBundle -Filter '*.sig' -File).Count -ne 0) { throw 'CI must not produce production updater signatures.' }
+          $cebgSignature = Get-AuthenticodeSignature -LiteralPath $cebgSetups[0].FullName
+          if ($cebgSignature.Status -ne 'NotSigned') { throw 'Expected an unsigned development setup.' }
+          $cebgOutput = Join-Path $env:GITHUB_WORKSPACE 'target/ci-unsigned-package'
+          New-Item -ItemType Directory -Path $cebgOutput -Force | Out-Null
+          $cebgCommit = (git rev-parse --short=12 HEAD).Trim()
+          $cebgName = "CEBG-UNSIGNED-CI-$cebgCommit-x64-setup.exe"
+          Copy-Item -LiteralPath $cebgSetups[0].FullName -Destination (Join-Path $cebgOutput $cebgName)
+          $cebgHash = (Get-FileHash -LiteralPath $cebgSetups[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$cebgHash  $cebgName" | Set-Content -LiteralPath (Join-Path $cebgOutput 'SHA256SUMS') -Encoding utf8
+          'UNSIGNED CI DEVELOPMENT PACKAGE. No Authenticode or Tauri updater signature. No installer, game, or updater acceptance is implied. This is not an official CEBG release.' | Set-Content -LiteralPath (Join-Path $cebgOutput 'README.txt') -Encoding utf8
+          Copy-Item -LiteralPath target/ci-evidence/provenance.json -Destination $cebgOutput
+          [ordered]@{ file = $cebgName; bytes = $cebgSetups[0].Length; sha256 = $cebgHash; authenticode = $cebgSignature.Status.ToString() } | ConvertTo-Json | Set-Content -LiteralPath target/ci-evidence/unsigned-artifact.json -Encoding utf8
+          cargo tree --locked --target x86_64-pc-windows-msvc --edges normal,build 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-production-tree.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm.cmd --prefix app ls --depth=0 --json | Set-Content -LiteralPath target/ci-evidence/npm-direct-dependencies.json -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git diff --exit-code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Retain source-check evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cebg-windows-source-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/ci-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Retain the unsigned development package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cebg-UNSIGNED-CI-windows-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: target/ci-unsigned-package/
+          if-no-files-found: error
+          retention-days: 7
