@@ -10,13 +10,15 @@ separate installation, verifies the result, and reopens later as a simple launch
 
 ## Current status (2026-09-07)
 
-Windows app **0.1.0-alpha.13** is publicly released with recipe **0.1.0-alpha.12** and
-434 recommended components. It fixes EET's handling of Windows Documents paths containing
-spaces and clarifies notices during quiet installations. The recipe choices and source
-pins are unchanged by this app release.
+The current source is Windows app **0.1.0-alpha.14**, with recipe **0.1.0-alpha.12**
+and 434 recommended components. It adds guarded recovery for stops before WeiDU starts,
+safer shortcut handling, restored setup preferences and clearer errors. The recipe
+choices and source pins are unchanged.
 
 Get the installer and guide from [the collection page](https://bg.chrizfader.org/collection),
-or the [versioned alpha.13 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.13).
+or [public releases](https://github.com/Chrizhermann/chriz-easy-bg/releases).
+Each release records its package, tested scope and known limitations; source changes
+do not by themselves establish that a new binary has been published.
 Supported source games are clean English Steam BG:EE + SoD and BGII:EE 2.7.3 installations.
 
 CEBG currently provides:
@@ -33,9 +35,10 @@ CEBG currently provides:
   WeiDU surgery.
 
 The public alpha updater channel is active. Packages carry Tauri updater signatures;
-alpha.13 is **not Windows Authenticode-signed**, so Windows may show an unknown publisher.
-Focused automated checks and package/download/signature verification are recorded in
-[the alpha.13 acceptance note](docs/patch-acceptance-alpha13-2026-09-07.md). Those checks do
+the current signing setup does **not provide Windows Authenticode**, so Windows may show
+an unknown publisher. Follow the
+[alpha.14 acceptance note](docs/patch-acceptance-alpha14-2026-09-07.md) for source, package
+and installation evidence. Those checks do
 not establish a new full game-install acceptance or native updater apply/restart acceptance.
 See [docs/handover.md](docs/handover.md) for the maintained development status.
 
@@ -49,8 +52,9 @@ retain their terms, collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md
 The source and binary distribution repositories have separate roles; existing release
 downloads and updater URLs remain the supported player entry points.
 
-App alpha.13's implementation is commit `9f89830be760338c74a2f0839a25e2cd1980faad`.
-Commit `bdb040e0d0ab7c63eac260497f3b828116fcb6aa` adds publication evidence only.
+The finalized alpha.14 release-source line is commit
+`5610783590ad49b24101d5d3a6a85b018abadb7e`, including its versioned notices.
+The earlier alpha.13 implementation is `9f89830be760338c74a2f0839a25e2cd1980faad`.
 [BUILDING.md](docs/BUILDING.md) explains local Windows builds, signing boundaries, and the
 remaining source-to-binary CI work.
 

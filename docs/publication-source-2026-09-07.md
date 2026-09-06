@@ -7,17 +7,19 @@ release, retaining MIT for CEBG's own source. This follows the
 ## Publication scope
 
 The source repository is [Chrizhermann/chriz-bg-collection](https://github.com/Chrizhermann/chriz-bg-collection).
-The publication line contains app **0.1.0-alpha.13**, recipe **0.1.0-alpha.12** and
-the same **434 recommended components**. The implementation underlying the existing
-binary is `9f89830be760338c74a2f0839a25e2cd1980faad`; `bdb040e` added release evidence.
-Subsequent publication changes add documentation, attribution, generated dependency
-notices and hosted build verification. They do not change the installer logic,
-runtime compatibility strings, recipe choices or pins.
+The publication line integrates finalized app **0.1.0-alpha.14** source at
+`5610783590ad49b24101d5d3a6a85b018abadb7e`, recipe **0.1.0-alpha.12** and the same
+**434 recommended components**. The original audited alpha.13 implementation was
+`9f89830be760338c74a2f0839a25e2cd1980faad`; `bdb040e` added release evidence.
+The owning installer task completed alpha.14 while source publication was being
+prepared. Only its finalized committed source was imported, without altering its
+production code, recipe, lockfiles or generated notices. Publication-specific work
+adds documentation, attribution, dependency notices and hosted build verification.
 
 The old default branch's curation documents precede the integrated approved source
 snapshot. Publication preserves current curation and both histories, bringing forward
-the older research note that exists only on `main`. The installer task's newer local
-commits and uncommitted work are outside this source-publication baseline.
+the older research note that exists only on `main`. The installer task's uncommitted
+work and runtime installation remain outside this source-publication task.
 
 ## Licensing and build readiness
 

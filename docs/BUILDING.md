@@ -1,7 +1,7 @@
 # Building CEBG on Windows
 
-This guide describes the source audited at `bdb040e0d0ab7c63eac260497f3b828116fcb6aa`
-and its documentation cleanup. The supported packaging target is Windows x64 MSVC with
+This guide describes the public source, including the finalized alpha.14 release line
+`5610783590ad49b24101d5d3a6a85b018abadb7e`. The supported packaging target is Windows x64 MSVC with
 NSIS. Building the app does not require installed games, mod archives, creator reference
 directories, or production signing credentials. Running a game installation is a separate
 acceptance activity requiring supported game sources and its own disposable destination.
@@ -104,7 +104,12 @@ supplemental files' bytes so Windows checkout does not invalidate the hashes.
 
 ## Release identity and signing
 
-The recorded alpha.13 release provenance is:
+Current alpha.14 source is `5610783590ad49b24101d5d3a6a85b018abadb7e`, including the
+notices regenerated for its lockfiles. Its production code and recipe are retained by
+the publication merge; consult [alpha.14 acceptance](patch-acceptance-alpha14-2026-09-07.md)
+for the separately maintained package and installation evidence.
+
+The earlier alpha.13 release provenance remains:
 
 | Item | Recorded identity |
 | --- | --- |

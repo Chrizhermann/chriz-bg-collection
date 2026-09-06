@@ -123,7 +123,7 @@ jobs:
       # Check its locked inputs before packaging it into the development setup.
       - name: Verify locked dependency notices
         run: |
-          $cebgNpmCache = (npm.cmd config get cache).Trim()
+          $cebgNpmCache = (npm.cmd --prefix app config get cache).Trim()
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/generate-third-party-notices.py --check --npm-cache $cebgNpmCache 2>&1 | Tee-Object -FilePath target/ci-evidence/dependency-notices.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
