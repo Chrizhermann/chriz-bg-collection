@@ -1,15 +1,15 @@
-id = "chriz-bg-rebalance-0.3.1"
+id = "chriz-bg-rebalance-0.3.2"
 name = "CHRIZ-BG-REBALANCE"
-version = "0.3.1"
+version = "0.3.2"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.1/chriz-bg-rebalance-v0.3.1.zip"
-reference = "v0.3.1"
-expected_filename = "chriz-bg-rebalance-v0.3.1.zip"
-expected_length = 1364012
-sha256 = "729be99e91f9fa2c9044783bf300998b987011a390f407e8cd0b6d4e9dc507bb"
+url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.2/chriz-bg-rebalance-v0.3.2.zip"
+reference = "v0.3.2"
+expected_filename = "chriz-bg-rebalance-v0.3.2.zip"
+expected_length = 1369825
+sha256 = "25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -28,5 +28,5 @@ max_compression_ratio = 100
 [provenance]
 homepage = "https://github.com/Chrizhermann/chriz-bg-rebalance"
 license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.3.1"
-reviewed_on = "2026-09-04"
+url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.3.2"
+reviewed_on = "2026-09-07"

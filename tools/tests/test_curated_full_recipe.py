@@ -384,10 +384,23 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("chriz-bg-modpack-bg2"), order.index("cdtweaks-spell-save-penalties-bg2"))
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.12")
-            ledger = tomllib.loads((output / "releases/v0.1.0-alpha.12/ledger.toml").read_text())
-            self.assertEqual(ledger["version"], "0.1.0-alpha.12")
-            self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.11")
+            bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.3.2")
+            bg_artifact = tomllib.loads(
+                (output / "artifacts/chriz-bg-rebalance-0.3.2.toml").read_text(encoding="utf-8")
+            )
+            self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
+            self.assertEqual(bg_artifact["version"], "0.3.2")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.3.2")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1369825)
+            self.assertEqual(
+                bg_artifact["source"]["sha256"],
+                "25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4",
+            )
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.13")
+            ledger = tomllib.loads((output / "releases/v0.1.0-alpha.13/ledger.toml").read_text())
+            self.assertEqual(ledger["version"], "0.1.0-alpha.13")
+            self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.15")
             self.assertFalse((output / "reference").exists())
 
     def test_common_customization_routes_preserve_dependency_collateral(self) -> None:

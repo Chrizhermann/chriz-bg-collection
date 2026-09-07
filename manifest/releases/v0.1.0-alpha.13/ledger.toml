@@ -1,0 +1,13 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.13"
+published_at = "2026-09-07T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.15"
+
+[[changes]]
+id = "bg-rebalance-compatibility"
+title = "Fix Tempus installation without Spell Revisions"
+summary = "BG Rebalance v0.3.2 fixes Holy Power detection with SCS and base-game Improved Haste. Component choices are unchanged; existing games and saves are not modified."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["mod:chriz-bg-rebalance"]

@@ -461,12 +461,13 @@ total_uncompressed_bytes = 1581319
 max_compression_ratio = 6
 
 [[artifacts]]
-artifact_id = "chriz-bg-rebalance-0.3.1"
-immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.1/chriz-bg-rebalance-v0.3.1.zip"
-source_reference = "v0.3.1"
+# Refreshed independently on 2026-09-07 from the owner's verified public release.
+artifact_id = "chriz-bg-rebalance-0.3.2"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.2/chriz-bg-rebalance-v0.3.2.zip"
+source_reference = "v0.3.2"
 observed_final_host = "release-assets.githubusercontent.com"
-actual_length = 1364012
-actual_sha256 = "729be99e91f9fa2c9044783bf300998b987011a390f407e8cd0b6d4e9dc507bb"
+actual_length = 1369825
+actual_sha256 = "25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4"
 wrapper_kind = "direct"
 materialized_publish_roots = ["chriz-bg-rebalance", "setup-chriz-bg-rebalance.tp2"]
 declared_tp2_paths = ["setup-chriz-bg-rebalance.tp2"]
@@ -482,9 +483,9 @@ max_compression_ratio = 100
 
 [artifacts.observed_shape]
 max_depth = 4
-entry_count = 17
+entry_count = 19
 max_entry_uncompressed_bytes = 1364992
-total_uncompressed_bytes = 1840953
+total_uncompressed_bytes = 1860050
 max_compression_ratio = 7
 
 [[artifacts]]

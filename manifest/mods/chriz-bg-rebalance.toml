@@ -1,5 +1,5 @@
 id = "chriz-bg-rebalance"
-artifact_id = "chriz-bg-rebalance-0.3.1"
+artifact_id = "chriz-bg-rebalance-0.3.2"
 name = "CHRIZ-BG-REBALANCE"
 tp2 = "setup-chriz-bg-rebalance.tp2"
 language = 0

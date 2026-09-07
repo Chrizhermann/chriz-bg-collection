@@ -2,6 +2,26 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## No-SR installation recovered; app patch packaging — 2026-09-07
+
+Christopher approved publishing BG Rebalance v0.3.2, updating the collection pin,
+and recovering `C:\Users\chris\Games\ChrizEasyBG-No-SR-Test` without a full restart.
+The original alpha.12 recipe failed only Rebalance 401; its seven successful
+siblings form the exact top tail after 372 BG2 components. Use the existing
+supervised recovery lineage, not a rewritten ledger or an unsafe Resume bypass.
+BG Rebalance v0.3.2 is published and independently verified. The existing no-SR
+copy now has all 429 components (BG1 27 / BG2 402), including 401 and BuffBot,
+with no full restart or repetition of the earlier 372 BG2 components. Its separate
+supervised recovery receipt is published; the historical failure evidence is
+unchanged. Launch `game/InfinityLoader.exe`; gameplay acceptance remains pending.
+Do not run the recovery stages again. Collection alpha.13/app alpha.15 packaging
+is in progress. See [scope and evidence](issues/no-sr-tempus401-2026-09-07.md).
+
+The earlier Alpha13 test completed and Christopher subsequently reported that its
+quick gameplay smoke test looked good. Bardic Wonders' agent captured the needed
+compatibility evidence separately. Its separate fix is not included in this patch.
+The no-SR two-hour follow-up is paused because its failure was inspected already.
+
 ## Overnight installation succeeded and retained — 2026-09-07, 07:57 KST
 
 `C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` completed successfully:
