@@ -31,11 +31,16 @@ $replacementVersion = '0.3.2'
 $replacementReference = 'v0.3.2'
 $replacementUrl = 'https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.2/chriz-bg-rebalance-v0.3.2.zip'
 $replacementFilename = 'chriz-bg-rebalance-v0.3.2.zip'
+$approvedReplacementSha256 = '25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4'
+$approvedReplacementLength = 1369825L
 if ([string]::IsNullOrWhiteSpace($ReplacementArchive)) {
     $ReplacementArchive = Join-Path $PSScriptRoot '..\target\alpha15-source-verification\chriz-bg-rebalance-v0.3.2.zip'
 }
 $ReplacementArchive = [IO.Path]::GetFullPath($ReplacementArchive)
 $ReplacementSha256 = $ReplacementSha256.ToLowerInvariant()
+if ($ReplacementSha256 -cne $approvedReplacementSha256 -or $ReplacementLength -ne $approvedReplacementLength) {
+    throw 'Replacement identity is not the approved public v0.3.2 release'
+}
 $toolHash = 'ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a'
 $toolPath = Join-Path $gameRoot 'Setup-chriz-bg-rebalance.exe'
 $requested = @(101,121,400,401,404,405,407,408)

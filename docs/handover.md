@@ -2,7 +2,7 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## No-SR installation recovered; app patch packaging — 2026-09-07
+## Alpha.15 published; no-SR installation recovered — 2026-09-07
 
 Christopher approved publishing BG Rebalance v0.3.2, updating the collection pin,
 and recovering `C:\Users\chris\Games\ChrizEasyBG-No-SR-Test` without a full restart.
@@ -14,8 +14,12 @@ copy now has all 429 components (BG1 27 / BG2 402), including 401 and BuffBot,
 with no full restart or repetition of the earlier 372 BG2 components. Its separate
 supervised recovery receipt is published; the historical failure evidence is
 unchanged. Launch `game/InfinityLoader.exe`; gameplay acceptance remains pending.
-Do not run the recovery stages again. Collection alpha.13/app alpha.15 packaging
-is in progress. See [scope and evidence](issues/no-sr-tempus401-2026-09-07.md).
+Do not run the recovery stages again. BG Radar Overlay 2.5.0.0 is installed and
+verified too; final WeiDU logs remain unchanged. Collection alpha.13/app alpha.15
+are published, the public updater feed is verified, and the website task has the
+release tuple for deployment. Public setup is also in Downloads. See
+[scope and evidence](issues/no-sr-tempus401-2026-09-07.md) and
+[package acceptance](patch-acceptance-alpha15-2026-09-07.md).
 
 The earlier Alpha13 test completed and Christopher subsequently reported that its
 quick gameplay smoke test looked good. Bardic Wonders' agent captured the needed

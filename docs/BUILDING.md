@@ -1,7 +1,7 @@
 # Building CEBG on Windows
 
-This guide describes the public source, including the finalized alpha.14 release line
-`5610783590ad49b24101d5d3a6a85b018abadb7e`. The supported packaging target is Windows x64 MSVC with
+This guide describes the public source, including the alpha.15 release build
+`255be75aa232f3af5ad1e1969ccba313fffcccce`. The supported packaging target is Windows x64 MSVC with
 NSIS. Building the app does not require installed games, mod archives, creator reference
 directories, or production signing credentials. Running a game installation is a separate
 acceptance activity requiring supported game sources and its own disposable destination.
@@ -114,7 +114,12 @@ selected by the actual install step.
 
 ## Release identity and signing
 
-Current alpha.14 source is `5610783590ad49b24101d5d3a6a85b018abadb7e`, including the
+Current alpha.15 build source is `255be75aa232f3af5ad1e1969ccba313fffcccce`, with
+collection alpha.13 and the corrected BG Rebalance v0.3.2 pin. See
+[alpha.15 acceptance](patch-acceptance-alpha15-2026-09-07.md) for package and targeted
+no-SR recovery evidence. Earlier versioned releases below remain unchanged.
+
+Historical alpha.14 source is `5610783590ad49b24101d5d3a6a85b018abadb7e`, including the
 notices regenerated for its lockfiles. Its production code and recipe are retained by
 the publication merge; consult [alpha.14 acceptance](patch-acceptance-alpha14-2026-09-07.md)
 for the separately maintained package and installation evidence.

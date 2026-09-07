@@ -25,3 +25,7 @@ redistributing them. Evandra still requires the verified manual-download step.
 
 CEBG updates are authenticated with the app's updater signature. The Windows setup
 does not yet have an Authenticode publisher signature, so Windows may still warn.
+
+Build source: [255be75](https://github.com/Chrizhermann/chriz-bg-collection/commit/255be75aa232f3af5ad1e1969ccba313fffcccce).
+The signed setup passed real-Tauri download/signature verification and tamper
+rejection. Windows Defender's scan reported no threats; that is not a guarantee.
