@@ -23,6 +23,32 @@ work, notably Bardic Wonders 2004 skipping Symphony of the Dark Children because
 its finite Abettor controller was unrecognized. Do not silently fix the completed
 copy. Exact evidence and acceptance limits: [completion report](overnight-install-complete-2026-09-07.md).
 
+## Public source and release preparation — 2026-09-07
+
+Christopher authorized publishing the existing source repository under MIT for
+CEBG-owned code. The publication line integrates the finalized app alpha.14 source
+and retains recipe alpha.12 / 434 recommended components. Current source/build instructions
+are in [BUILDING.md](BUILDING.md); the [publication record](publication-source-2026-09-07.md)
+tracks the public ref, hosted Windows checks and preserved binary/update URLs.
+
+Public source preparation is complete. [Windows CI run 34064618951](https://github.com/Chrizhermann/chriz-bg-collection/actions/runs/34064618951)
+passed at `36b59971107fe6ef02f1ed312fb904fe4f82fc93`: 620 normal native tests,
+139 frontend tests, 42 Python tests, formatting/Clippy/notices and an unsigned NSIS
+build. The downloaded CI setup's checksum and unsigned status were verified.
+Issue 2's fresh updater-harness startup failure is fixed by test-only manifest
+linkage. Build-readiness fixes preserve the recipe/pins and released alpha.14 bytes;
+they include test corrections and one equivalent launcher consistency lint cleanup.
+
+The original source audit is historical. EET excerpt attribution is recorded in
+[the attribution review](audits/2026-09-07-eet-attribution.md), with upstream rights
+preserved. The dependency notices cover separately licensed dependencies; MIT is
+not a relicensing of those components. No third-party game/mod archive belongs here.
+
+The installer task's subsequent shortcut/preferences/recovery work is independent
+of this publication line. Do not replace its dirty worktree or the running alpha.13
+installation. Publishing source does not publish a new app version or alter the
+existing `chriz-easy-bg` downloads/updater. Authenticode enrollment remains separate.
+
 ## Alpha.14 published; overnight test continued without restart — 2026-09-07
 
 - App **0.1.0-alpha.14** is [published](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.14).
@@ -256,7 +282,7 @@ approved an upfront download-or-skip exception and supplied official Windows
 private aggregate; explicit RAR SFX extraction never executes the downloaded EXE.
 The early UI gate and native readiness checks are implemented and focused tests
 pass; final payload comparison/package integration are underway. See the
-[current checkpoint and unsent G3 request](handoffs/2026-09-06-evandra-public-acquisition.md).
+[Evandra public acquisition checkpoint](handoffs/2026-09-06-evandra-public-acquisition.md).
 Do not bypass the challenge, mirror the mod, or publish the older private contract.
 
 **Latest instruction (2026-09-06 KST): [targeted r5 recovery](targeted-recovery-2026-09-06.md).**

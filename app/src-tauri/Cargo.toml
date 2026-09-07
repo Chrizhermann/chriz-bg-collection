@@ -29,4 +29,6 @@ windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_Storage_
 [dev-dependencies]
 base64 = "0.22"
 minisign = "0.9.1"
+# The opt-in updater acceptance test uses Tauri's mock runtime.
+tauri = { version = "=2.11.5", features = ["test"] }
 tempfile = "3"

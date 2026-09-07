@@ -1,5 +1,10 @@
 # EET_MODDING_GUIDE.md + Mod Archive Summary
 
+Historical research snapshot from 2026-08-19. Counts, ordering statements and
+local-only acquisition assumptions below describe that source material and are
+superseded where the current handover and curated recipe differ. Start with
+[the current handover](../../handover.md) for supported installation/build work.
+
 Source files: `C:\Games\Baldur's Gate II Enhanced Edition modded\EET_MODDING_GUIDE.md` (read), archive root `C:\Games\Baldurs Gate 1 and 2 mods\` (listed). Note: `README.md` in the game dir is a leftover SCS repo readme, not a download doc.
 
 ## 1. Install procedure / order philosophy

@@ -172,6 +172,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         ["feature:eeex:mandatory-components", "mod:eet-end"]
     );
 
+    // The base manifest includes the approved SoD skip (910) added after alpha.10.
+    // Its plan is distinct from the 434-component curated runtime recipe.
     assert_eq!(
         evaluation
             .plan
@@ -179,7 +181,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        344
+        345
     );
 }
 

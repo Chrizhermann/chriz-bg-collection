@@ -1,5 +1,9 @@
 # CEBG overnight implementation / acceptance
 
+Historical acceptance record. Release versions and publication status below describe
+2026-09-05; consult the [current handover](handover.md) and [build guide](BUILDING.md)
+for the released app, public update channel and signing requirements.
+
 **Superseded selection:** the user identified that `creator-full-current` ignored curation.
 Do not resume it, repair Bristlelick, or call it the approved full setup. Follow
 [the curation reconciliation plan](plans/2026-09-05-curation-reconciliation.md).
@@ -163,8 +167,7 @@ Radar installation, full receipt/log acceptance, and game smoke checks remain pe
 ## Release boundary
 
 App version is `0.1.0-alpha.3`; the bundled recipe remains `0.1.0-alpha.2`.
-Signing private key lives outside the repository at
-`%LOCALAPPDATA%\Chriz Easy BG Developer\signing\cebg-updater.key`; never print/commit it.
+The signing private key is kept in external secret storage; never print or commit it.
 The proposed public distribution-only repository is `Chrizhermann/chriz-easy-bg`.
 It has **not** been created/published, so the configured public update endpoint is not
 live yet. The existing collection repository remains private. Public publication needs

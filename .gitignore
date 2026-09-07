@@ -4,3 +4,5 @@
 /app/src-tauri/gen
 /app/src-tauri/icons/*
 !/app/src-tauri/icons/icon.ico
+__pycache__/
+*.py[cod]
