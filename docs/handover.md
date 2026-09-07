@@ -2,6 +2,15 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Visible startup while detecting games — 2026-09-08 (source only)
+
+The blank window during slow first-launch checks is fixed in source: early HTML
+fallback, staged loading text/spinner and retryable startup errors. The recommended
+recipe and installed games are unchanged. Frontend checks and a delayed browser
+preview pass; include this in the next app patch, not a collection recipe update.
+Published app remains alpha.15 / collection alpha.13. See
+[cause and acceptance](issues/startup-black-window-2026-09-08.md).
+
 ## Alpha.15 published; no-SR installation recovered — 2026-09-07
 
 Christopher approved publishing BG Rebalance v0.3.2, updating the collection pin,

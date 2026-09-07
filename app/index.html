@@ -8,10 +8,23 @@
       content="Install and launch Chriz Easy BG."
     />
     <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/src/styles.css" />
     <title>Chriz Easy BG</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main class="startup-screen">
+        <div class="brand startup-brand">
+          <span class="brand-mark" aria-hidden="true">C</span>
+          <h1>Chriz Easy BG</h1>
+        </div>
+        <section class="startup-status" role="status" aria-live="polite" aria-atomic="true">
+          <span class="loading-spinner" aria-hidden="true"></span>
+          <h2>Getting Chriz Easy BG ready…</h2>
+          <p>Checking your setup and saved installations.</p>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

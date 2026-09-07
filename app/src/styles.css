@@ -80,6 +80,58 @@ h1[tabindex="-1"]:focus-visible {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+.startup-screen {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: 2.5rem;
+  padding: 2rem 1.25rem;
+  overflow: auto;
+  text-align: center;
+}
+
+.startup-brand h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+}
+
+.startup-status {
+  width: min(100%, 36rem);
+}
+
+.startup-status h2 {
+  margin: 1.25rem 0 0.65rem;
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+  line-height: 1.3;
+}
+
+.startup-status p {
+  margin: 0.65rem 0;
+  color: var(--vellum-dim);
+  line-height: 1.55;
+}
+
+.startup-status .button {
+  margin-top: 1rem;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid var(--slate);
+  border-top-color: var(--brass);
+  border-radius: 50%;
+  animation: loading-spin 1s linear infinite;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 .app-header {
   display: flex;
   min-height: 4.25rem;

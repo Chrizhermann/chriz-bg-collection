@@ -8,6 +8,7 @@ import { gamesScreen } from "./screens/games";
 import { homeScreen, type AddonFeedback, type ShortcutFeedback } from "./screens/home";
 import { reviewScreen } from "./screens/review";
 import { installScreen } from "./screens/install";
+import { loadingScreen, startupFailureScreen } from "./screens/loading";
 import { setupScreen, type SetupViewState } from "./screens/setup";
 import { updatesScreen } from "./screens/updates";
 import { updateUpdatesControl } from "./components/update-notification";
@@ -119,6 +120,7 @@ class AppController implements AppHandle {
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
   async initialize(): Promise<void> {
+    this.root.replaceChildren(loadingScreen("startup"));
     const [status, installations] = await Promise.all([
       this.backend.getStatus(),
       this.backend.listManagedInstallations(),
@@ -145,6 +147,7 @@ class AppController implements AppHandle {
   async #prepareInstallFlow(): Promise<void> {
     if (this.#discovery !== null && this.#state.evaluation !== null) return;
     if (this.#installPreparation === null) {
+      this.root.replaceChildren(loadingScreen("games"));
       this.#installPreparation = (async () => {
         const loaded = this.#status.mode === "native" ? loadSetupDraft(this.#status) : { draft: null, notice: null };
         let draft = loaded.draft;
@@ -166,6 +169,7 @@ class AppController implements AppHandle {
           this.backend.getInstallationDefaults(),
         ]);
         this.#discovery = discovery;
+        this.root.replaceChildren(loadingScreen("setup"));
         this.#defaultInstallationPath = defaults.path;
         this.#dispatch({ type: "select-game", game: "bg1", id: discovery.selectedBg1Id });
         this.#dispatch({ type: "select-game", game: "bg2", id: discovery.selectedBg2Id });
@@ -1213,6 +1217,14 @@ class AppController implements AppHandle {
 
 export async function mountApp(root: HTMLElement, backend: Backend): Promise<AppHandle> {
   const controller = new AppController(root, backend);
-  await controller.initialize();
+  try {
+    await controller.initialize();
+  } catch (error) {
+    root.replaceChildren(startupFailureScreen(error, () => {
+      // Each failure renders its own recovery controls; no unhandled retry rejection.
+      void mountApp(root, backend).catch(() => {});
+    }));
+    throw error;
+  }
   return controller;
 }
