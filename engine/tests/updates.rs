@@ -224,6 +224,31 @@ fn no_later_releases_is_up_to_date() {
 }
 
 #[test]
+fn draft_alpha14_ledger_covers_armor_and_bardic_update_addresses() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let ledger = load_release(
+        &root.join("recipes/curated-full-current/releases/v0.1.0-alpha.14/ledger.toml"),
+    )
+    .unwrap();
+    // Artifact replacement reports both the removed and added identities. The
+    // feature diff prefixes the authored ID, which itself starts with feature:.
+    let differences = [
+        "artifact:klatu-tweaks-1.7.4",
+        "run:klatu-armor-thieving-bg2",
+        "feature:feature:klatu:component-2150",
+        "artifact:bardicwonders-v2.9c-balance.3",
+        "artifact:bardicwonders-v2.9c-balance.4",
+    ]
+    .into_iter()
+    .map(|subject| RecipeDifference {
+        subject: subject.to_owned(),
+        cosmetic_only: false,
+    })
+    .collect::<Vec<_>>();
+    ensure_change_coverage(&differences, &ledger).unwrap();
+}
+
+#[test]
 fn coverage_error_names_uncovered_subject() {
     let differences = vec![RecipeDifference {
         subject: "run:missing".to_owned(),

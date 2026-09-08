@@ -5,6 +5,13 @@ GitHub releases/default branches, local unfinished work and the owning tasks.
 This is a quick coordination pass, not another code audit or blanket gameplay
 acceptance. Do not change curation simply because an upstream version exists.
 
+Follow-up: the [combined-playtest plan](2026-09-08-combined-playtest-and-alpha16.md)
+records exact assembly constraints. Crucially, snapshot continuity **190 conflicts
+with released Sarah 190** and must be ported/renumbered (proposed 199); never replace
+the current modpack with that old snapshot. SoD PR21 filler-removal code at
+`6c155d8` is also available for experimental testing; bridge issue 14 remains design-only.
+These are source-preparation requirements, not a demand for public releases before testing.
+
 ## Released versus unfinished
 
 | Repository | Current CEBG pin | New work / next action |

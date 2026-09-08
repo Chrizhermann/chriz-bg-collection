@@ -1,7 +1,7 @@
 # BARDICWONDERS — components
 
 Listed at reference version **—**; refreshed for Chris's fork release
-**v2.9c-balance.2** (`db0cf81504fd3f84e4e74eb8ab30e65499135512`).
+**v2.9c-balance.4** (`37d3e5ab13d3b3520afb3246fa02de125a970b72`).
 26 entries, 21 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
@@ -14,8 +14,10 @@ Listed at reference version **—**; refreshed for Chris's fork release
 - Component `1008` stays selected for the Troubadour kit, but its interactive Garrick
   assignment must be scripted as **No**; Artisan NPC `99001` is the single deterministic
   Garrick assignment.
-- The released fork does not yet contain the later local Abettor finite-HLA rebalance.
-  Keep that work separate until it is integrated, tested, and released.
+- The released fork now includes the selected Skald, Dancer, Jester, Abettor, and
+  shared HLA corrections described in its release README. The complete release has
+  not been validated in live combat; Symphony's intended one-round party
+  invisibility remains a known issue.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|

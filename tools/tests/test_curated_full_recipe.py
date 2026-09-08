@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from tools.curated_full_recipe import _effective_features, _preserve_native_run_orders, build_recipe
+from tools.public_component_credits import build_public_component_credits
 
 
 class CuratedFullRecipeTests(unittest.TestCase):
@@ -258,32 +259,36 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.3")
+            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.4")
             bardic_artifact = tomllib.loads(
-                (output / "artifacts/bardicwonders-v2.9c-balance.3.toml").read_text(
+                (output / "artifacts/bardicwonders-v2.9c-balance.4.toml").read_text(
                     encoding="utf-8"
                 )
             )
             self.assertFalse(
                 (output / "artifacts/bardicwonders-v2.9c-balance.2.toml").exists()
             )
-            self.assertEqual(bardic_artifact["version"], "2.9c-balance.3")
-            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.3")
+            self.assertFalse(
+                (output / "artifacts/bardicwonders-v2.9c-balance.3.toml").exists()
+            )
+            self.assertEqual(bardic_artifact["version"], "2.9c-balance.4")
+            self.assertEqual(bardic_artifact["source"]["kind"], "github-release")
+            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.4")
             self.assertEqual(
                 bardic_artifact["source"]["url"],
-                "https://codeload.github.com/Chrizhermann/"
-                "Bardic-Wonders-Chriz-Balance-Patch/zip/refs/tags/v2.9c-balance.3",
+                "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/"
+                "releases/download/v2.9c-balance.4/Bardic-Wonders-v2.9c-balance.4.zip",
             )
             self.assertEqual(
                 bardic_artifact["source"]["expected_filename"],
-                "Bardic-Wonders-Chriz-Balance-Patch-2.9c-balance.3.zip",
+                "Bardic-Wonders-v2.9c-balance.4.zip",
             )
-            self.assertEqual(bardic_artifact["source"]["expected_length"], 5282818)
+            self.assertEqual(bardic_artifact["source"]["expected_length"], 5177696)
             self.assertEqual(
                 bardic_artifact["source"]["sha256"],
-                "3cee2244562e048c1f1b466520ed0f34da4078f6e78fe42ebf8a562c8d063cb0",
+                "ca7bb2b70ad50b5b6c0fa59a051e53b90c42d3cc9f98fd187a5c1ed40fc1efa7",
             )
-            self.assertEqual(bardic_artifact["archive"]["root_rule"], "single-wrapper")
+            self.assertEqual(bardic_artifact["archive"]["root_rule"], "direct")
             self.assertEqual(bardic_artifact["archive"]["publish_roots"], ["BardicWonders"])
             self.assertEqual(
                 bardic_artifact["archive"]["tp2_paths"],
@@ -301,6 +306,24 @@ class CuratedFullRecipeTests(unittest.TestCase):
             bardic_main = runs["bardicwonders-bg2"]["components"]
             self.assertLess(bardic_main.index(1004), bardic_main.index(2007))
             self.assertLess(bardic_main.index(2007), bardic_main.index(2004))
+            credits = build_public_component_credits(
+                output, self.root / "app/package.json"
+            )
+            bardic_credit = next(
+                mod for mod in credits["mods"] if mod["id"] == "bardicwonders"
+            )
+            self.assertEqual(bardic_credit["version"], "2.9c-balance.4")
+            self.assertEqual(
+                bardic_credit["homepage"],
+                "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch",
+            )
+            darkbloom = features["feature:bardicwonders:component-1006"]
+            self.assertEqual(darkbloom["decision"], "default")
+            self.assertEqual(
+                [conflict["feature_id"] for conflict in darkbloom["conflicts"]],
+                ["feature:spell-rev:mandatory-components"],
+            )
+            self.assertFalse(baseline_effective["feature:bardicwonders:component-1006"])
             evandra_artifact = tomllib.loads(
                 (output / "artifacts/evandra-2.2-windows.toml").read_text(encoding="utf-8")
             )

@@ -97,23 +97,23 @@ CATEGORY_BY_GROUP = {
 
 
 ARTIFACTS = {
-    "bardicwonders-v2.9c-balance.3.toml": """id = "bardicwonders-v2.9c-balance.3"
+    "bardicwonders-v2.9c-balance.4.toml": """id = "bardicwonders-v2.9c-balance.4"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.3"
+version = "2.9c-balance.4"
 acquisition = "fetch-only"
 
 [source]
-kind = "github-tag-archive"
-url = "https://codeload.github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/zip/refs/tags/v2.9c-balance.3"
-reference = "v2.9c-balance.3"
-expected_filename = "Bardic-Wonders-Chriz-Balance-Patch-2.9c-balance.3.zip"
-expected_length = 5282818
-sha256 = "3cee2244562e048c1f1b466520ed0f34da4078f6e78fe42ebf8a562c8d063cb0"
-redirect_hosts = []
+kind = "github-release"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.4/Bardic-Wonders-v2.9c-balance.4.zip"
+reference = "v2.9c-balance.4"
+expected_filename = "Bardic-Wonders-v2.9c-balance.4.zip"
+expected_length = 5177696
+sha256 = "ca7bb2b70ad50b5b6c0fa59a051e53b90c42d3cc9f98fd187a5c1ed40fc1efa7"
+redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
 kind = "zip"
-root_rule = "single-wrapper"
+root_rule = "direct"
 publish_roots = ["BardicWonders"]
 tp2_paths = ["BardicWonders/Setup-BardicWonders.tp2"]
 
@@ -127,8 +127,8 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.3"
-reviewed_on = "2026-09-06"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.4"
+reviewed_on = "2026-09-08"
 """,
     "branwen-8.toml": """id = "branwen-8"
 name = "Branwen for BGII"
@@ -266,7 +266,7 @@ reviewed_on = "2026-09-08"
 
 
 MOD_SPECS = {
-    "bardicwonders": ("bardicwonders-v2.9c-balance.3", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
+    "bardicwonders": ("bardicwonders-v2.9c-balance.4", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
@@ -684,7 +684,15 @@ title = "Use thief skills in armor"
 summary = "Adds the default-checked optional Klatu Tweaks 2150 component for ordinary thieving and stealth in armor with no added skill penalties. Equipment permissions, spellcasting restrictions, unrelated kit abilities, and Find Traps armor restrictions remain unchanged."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["feature:klatu:component-2150"]
+covers = ["feature:feature:klatu:component-2150", "run:klatu-armor-thieving-bg2", "artifact:klatu-tweaks-1.7.4"]
+
+[[changes]]
+id = "bardic-wonders-balance-4"
+title = "Update Bardic Wonders balance fixes"
+summary = "Updates the existing selected Bardic Wonders balance fork to v2.9c-balance.4 for Skald, Dancer, Jester, and shared high-level ability corrections. Component choices and the Darkbloom / Spell Revisions exclusion are unchanged."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["mod:bardicwonders", "artifact:bardicwonders-v2.9c-balance.3", "artifact:bardicwonders-v2.9c-balance.4"]
 """,
         encoding="utf-8",
         newline="\n",
@@ -813,6 +821,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         "chriz-bg-rebalance-0.3.1",
         "chriz-bg-modpack-0.2.0-alpha.1",
         "bardicwonders-v2.9c-balance.2",
+        "bardicwonders-v2.9c-balance.3",
         "creator-full-private-extras-20260902",
     ]:
         (destination / "artifacts" / f"{obsolete}.toml").unlink(missing_ok=True)

@@ -11,4 +11,12 @@ title = "Use thief skills in armor"
 summary = "Adds the default-checked optional Klatu Tweaks 2150 component for ordinary thieving and stealth in armor with no added skill penalties. Equipment permissions, spellcasting restrictions, unrelated kit abilities, and Find Traps armor restrictions remain unchanged."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["feature:klatu:component-2150"]
+covers = ["feature:feature:klatu:component-2150", "run:klatu-armor-thieving-bg2", "artifact:klatu-tweaks-1.7.4"]
+
+[[changes]]
+id = "bardic-wonders-balance-4"
+title = "Update Bardic Wonders balance fixes"
+summary = "Updates the existing selected Bardic Wonders balance fork to v2.9c-balance.4 for Skald, Dancer, Jester, and shared high-level ability corrections. Component choices and the Darkbloom / Spell Revisions exclusion are unchanged."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["mod:bardicwonders", "artifact:bardicwonders-v2.9c-balance.3", "artifact:bardicwonders-v2.9c-balance.4"]

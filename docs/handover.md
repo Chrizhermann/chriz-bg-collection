@@ -2,6 +2,35 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Alpha.16 source prepared; combined playtest mapped — 2026-09-08
+
+Proposed release is app alpha.16 / collection alpha.14: existing startup loading
+feedback, default-optional Klatu armor QoL, and released Bardic `v2.9c-balance.4`.
+435 recommended components / 44 runs; no other curation/pin changes. App version
+markers and notices agree. The Bardic ZIP was fetched from its official release
+and independently checked (5,177,696 bytes, SHA256
+`ca7bb2b70ad50b5b6c0fa59a051e53b90c42d3cc9f98fd187a5c1ed40fc1efa7`).
+Draft [release notes](release-notes-alpha16.md) are ready. Public remains app
+alpha.15 / collection alpha.13: no new setup package, upload or feed update yet.
+
+Checks: frontend typecheck + 146 tests + production build; 30 Python recipe/credits/
+updater tests; 16 native curated/release tests, 8 update-ledger tests and 3 package
+contract tests. Rust formatting passes. The package signature test remains unrun
+until a new signed setup exists. No fresh game install or new live acceptance.
+The draft ledger now covers the actual artifact/run/feature update addresses;
+the focused regression reproduced the missing coverage before correction.
+
+The [combined-playtest plan](plans/2026-09-08-combined-playtest-and-alpha16.md) shows
+how most implemented gated work can share one fresh SR-on EET install with several
+disposable saves. Do not bulldoze a stream clone. Important assembly fix: the old
+modpack continuity snapshot reuses Sarah's published component 190 and lacks the
+newer 192–198 conversions. Port it onto current modpack, preserve those IDs and
+allocate a new continuity ID (199 proposed), integrating 620 deliberately. Split
+its required pre-EET_end work from the existing late repairs. Keep SCS and SoD in
+their current curated phases. SoD PR21 filler changes have code; bridge issue 14
+does not. Mutually exclusive Lightning variants and no-SR Darkbloom are not all
+simultaneously testable. No mod repo, stream files or saves changed here.
+
 ## Armor-thieving QoL — 2026-09-08 (integrated, not published)
 
 Approved: default-checked optional thief skills in armor, **no added penalties**.
@@ -15,7 +44,7 @@ Published app remains alpha.15 / collection alpha.13; alpha.14 release metadata 
 draft, including its provisional timestamp. No live game or save was modified.
 
 The requested quick [mod-repo and patch-candidate audit](plans/2026-09-08-mod-repo-readiness.md)
-is complete. Bardic balance.4 is released but not yet pinned; SR/RR's released tail
+is complete. Bardic balance.4 is now pinned in draft alpha.14; SR/RR's released tail
 patch remains subject to the earlier collection deferral. Artisan's merged work is
 not release-approved. Armor QoL and the separate kit-description repair are the
 first existing-game patch candidates, not already applied patches.
