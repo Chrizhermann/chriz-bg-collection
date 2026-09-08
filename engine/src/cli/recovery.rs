@@ -7,8 +7,8 @@
 
 use super::*;
 use crate::recovery_receipt::{
-    self, ArtifactReplacement, EvidenceFile, RecoveryKind, RecoveryReceipt,
-    RECOVERY_RECEIPT_SCHEMA_VERSION,
+    self, AppendMissingComponentAuthorization, ArtifactReplacement, EvidenceFile, RecoveryKind,
+    RecoveryReceipt, RECOVERY_RECEIPT_SCHEMA_VERSION,
 };
 use crate::registry::{ManagedInstallRecord, REGISTRY_SCHEMA_VERSION};
 use crate::weidu::recovery::{
@@ -32,6 +32,10 @@ pub struct SupervisedRecoveryRequest {
     /// Each stem has .intent.json, .process.json, .after.log, .stdout.log,
     /// .stderr.log and .debug.log sidecars from the supervised worker.
     pub operation_stems: Vec<PathBuf>,
+    /// Explicit opt-in for the single-component append path. Absent means the
+    /// established rollback-and-reinstall procedure.
+    #[serde(default)]
+    pub append_missing_component: Option<AppendMissingComponentAuthorization>,
     /// Explicit hashes covering all supplied evidence, backup and protected history.
     pub evidence: Vec<EvidenceFile>,
 }
@@ -93,6 +97,34 @@ struct OperationResult {
     at: String,
 }
 
+#[derive(Deserialize)]
+struct AppendSourceEvidence {
+    fixed_commit: String,
+    runtime_delta_count: u32,
+    runtime_delta: Vec<AppendRuntimeDelta>,
+    all_old_members_match_old_commit: bool,
+    all_new_members_match_fixed_commit: bool,
+}
+
+#[derive(Deserialize)]
+struct AppendRuntimeDelta {
+    new_sha256: String,
+}
+
+#[derive(Deserialize)]
+struct AppendCompatibilityEvidence {
+    exit_code: i32,
+    original_row_count: u32,
+    result_row_count: u32,
+    original_rows_preserved: bool,
+    single_appended_component256: bool,
+    exact_resource_write_set: bool,
+    uninstall_attempts: Vec<serde_json::Value>,
+    added_outputs: serde_json::Map<String, serde_json::Value>,
+    changed_outputs: serde_json::Map<String, serde_json::Value>,
+    removed_outputs: Vec<serde_json::Value>,
+}
+
 fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
     validate_cli_identifier(&request.recovery_id, "recovery id").map_err(error)?;
     let root = canonical_direct_directory(&request.managed_root, "recovery target")?;
@@ -123,9 +155,14 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
             "supervised acceptance currently supports only a prompt-free BG2 tail",
         ));
     }
-    if request.operation_stems.len() != tail.len() + 1 {
+    let expected_operations = if request.append_missing_component.is_some() {
+        tail.len()
+    } else {
+        tail.len() + 1
+    };
+    if request.operation_stems.len() != expected_operations {
         return Err(error(
-            "operation evidence must cover rollback and the entire remaining tail",
+            "operation evidence does not cover the authorized repair and entire remaining tail",
         ));
     }
     let old = created
@@ -218,13 +255,40 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
             "evidence does not describe a bounded rollback-and-reinstall repair",
         ));
     };
+    if let Some(authorization) = &request.append_missing_component {
+        verify_append_authorization(
+            request,
+            authorization,
+            failed,
+            installed_to_uninstall,
+            &partial,
+        )?;
+    }
     let mut previous = partial;
     for (operation, stem) in request.operation_stems.iter().enumerate() {
-        let run = if operation == 0 {
-            failed
-        } else {
-            &tail[operation - 1]
-        };
+        let (run, components, uninstall) =
+            if let Some(authorization) = &request.append_missing_component {
+                if operation == 0 {
+                    (failed, vec![authorization.component], false)
+                } else {
+                    (&tail[operation], tail[operation].components.clone(), false)
+                }
+            } else {
+                let run = if operation == 0 {
+                    failed
+                } else {
+                    &tail[operation - 1]
+                };
+                (
+                    run,
+                    if operation == 0 {
+                        installed_to_uninstall.clone()
+                    } else {
+                        run.components.clone()
+                    },
+                    operation == 0,
+                )
+            };
         let mod_file = &frozen.mods[&run.mod_id];
         let tool = created
             .tool_identities
@@ -267,15 +331,11 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
         verify_arguments(
             &intent.arguments,
             mod_file.language,
-            if operation == 0 {
-                installed_to_uninstall
-            } else {
-                &run.components
-            },
-            operation == 0,
+            &components,
+            uninstall,
             &root.join(sidecar(stem, "debug.log")),
         )?;
-        if operation == 0 {
+        if uninstall {
             verify_rollback(&plan, &String::from_utf8_lossy(&after)).map_err(error)?;
         } else {
             let result = reconcile_weidu(
@@ -285,7 +345,7 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
                 &ExpectedRun {
                     tp2: mod_file.tp2.clone(),
                     language: mod_file.language,
-                    components: run.components.clone(),
+                    components,
                     exit_code: process.exit_code,
                 },
             );
@@ -313,7 +373,7 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
             "current game log differs from the completed recovery chain",
         ));
     }
-    let logs = final_logs(&root, &frozen)?;
+    let logs = final_logs(&root, &frozen, request.append_missing_component.as_ref())?;
     let launch_path = verified_launch_path(&frozen.plan, &root.join("game")).map_err(error)?;
     Ok(Inspected {
         root,
@@ -322,6 +382,100 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
         logs,
         launch_path,
     })
+}
+
+fn verify_append_authorization(
+    request: &SupervisedRecoveryRequest,
+    authorization: &AppendMissingComponentAuthorization,
+    failed: &crate::resolve::PlannedRun,
+    installed_to_uninstall: &[u32],
+    partial: &[u8],
+) -> Result<(), CliError> {
+    if authorization.run_id != failed.run_id
+        || authorization.run_id != request.replacement.run_id
+        || authorization.installed_components
+            != installed_to_uninstall
+                .iter()
+                .rev()
+                .copied()
+                .collect::<Vec<_>>()
+    {
+        return Err(error(
+            "append-missing authorization differs from the sealed partial run",
+        ));
+    }
+    let expected_installed = failed
+        .components
+        .iter()
+        .copied()
+        .filter(|component| *component != authorization.component)
+        .collect::<Vec<_>>();
+    let mut expected_final = expected_installed.clone();
+    expected_final.push(authorization.component);
+    let active_rows = parse_active_entries(&String::from_utf8_lossy(partial)).map_err(error)?;
+    if expected_installed.len() + 1 != failed.components.len()
+        || authorization.installed_components != expected_installed
+        || authorization.final_components != expected_final
+        || authorization.preserved_active_rows as usize != active_rows.len()
+        || authorization.source_commit.len() != 40
+        || !authorization
+            .source_commit
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+        || authorization.removed_files != 0
+        || authorization.later_sibling_write_overlaps != 0
+        || authorization
+            .new_files
+            .saturating_add(authorization.edited_files)
+            == 0
+    {
+        return Err(error(
+            "append-missing authorization is not preservation-safe",
+        ));
+    }
+    for path in [
+        &authorization.source_evidence,
+        &authorization.compatibility_evidence,
+    ] {
+        if evidence_bytes(request, path)?.is_empty() {
+            return Err(error("append-missing provenance evidence is empty"));
+        }
+    }
+    let source: AppendSourceEvidence =
+        serde_json::from_slice(&evidence_bytes(request, &authorization.source_evidence)?)
+            .map_err(error)?;
+    let compatibility: AppendCompatibilityEvidence = serde_json::from_slice(&evidence_bytes(
+        request,
+        &authorization.compatibility_evidence,
+    )?)
+    .map_err(error)?;
+    if source.fixed_commit != authorization.source_commit
+        || source.runtime_delta_count != 1
+        || source.runtime_delta.len() != 1
+        || source.runtime_delta[0].new_sha256.len() != 64
+        || !source.runtime_delta[0]
+            .new_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+        || !source.all_old_members_match_old_commit
+        || !source.all_new_members_match_fixed_commit
+        || authorization.component != 256
+        || compatibility.exit_code != 0
+        || compatibility.original_row_count != authorization.preserved_active_rows
+        || compatibility.result_row_count != authorization.preserved_active_rows + 1
+        || !compatibility.original_rows_preserved
+        || !compatibility.single_appended_component256
+        || !compatibility.exact_resource_write_set
+        || !compatibility.uninstall_attempts.is_empty()
+        || compatibility.added_outputs.len() != authorization.new_files as usize
+        || compatibility.changed_outputs.len() != authorization.edited_files as usize
+        || !compatibility.removed_outputs.is_empty()
+    {
+        return Err(error(
+            "append-missing source or full-stack rehearsal evidence contradicts authorization",
+        ));
+    }
+    Ok(())
 }
 
 fn verify_arguments(
@@ -367,7 +521,11 @@ fn verify_arguments(
     Ok(())
 }
 
-fn final_logs(root: &Path, frozen: &FrozenCliRecipe) -> Result<Vec<FinalLogReceipt>, CliError> {
+fn final_logs(
+    root: &Path,
+    frozen: &FrozenCliRecipe,
+    append: Option<&AppendMissingComponentAuthorization>,
+) -> Result<Vec<FinalLogReceipt>, CliError> {
     [GameRoot::Bg1, GameRoot::Bg2]
         .into_iter()
         .map(|target| {
@@ -382,8 +540,7 @@ fn final_logs(root: &Path, frozen: &FrozenCliRecipe) -> Result<Vec<FinalLogRecei
             }
             let bytes = fs::read(path).map_err(error)?;
             let actual = parse_active_entries(&String::from_utf8_lossy(&bytes)).map_err(error)?;
-            let expected =
-                expected_log_components(&frozen.plan, &frozen.mods, target).map_err(error)?;
+            let expected = expected_recovery_log_components(frozen, target, append)?;
             let components: Vec<_> = actual.iter().map(log_component_receipt).collect();
             if components != expected {
                 return Err(error(
@@ -397,6 +554,45 @@ fn final_logs(root: &Path, frozen: &FrozenCliRecipe) -> Result<Vec<FinalLogRecei
             })
         })
         .collect()
+}
+
+fn expected_recovery_log_components(
+    frozen: &FrozenCliRecipe,
+    target: GameRoot,
+    append: Option<&AppendMissingComponentAuthorization>,
+) -> Result<Vec<LogComponentReceipt>, CliError> {
+    let mut expected =
+        expected_log_components(&frozen.plan, &frozen.mods, target).map_err(error)?;
+    let Some(authorization) = append.filter(|_| target == GameRoot::Bg2) else {
+        return Ok(expected);
+    };
+    let mut offset = 0;
+    let run = frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| run.target == target)
+        .find(|run| {
+            if run.run_id == authorization.run_id {
+                true
+            } else {
+                offset += run.components.len();
+                false
+            }
+        })
+        .ok_or_else(|| error("append-missing run is absent from frozen plan"))?;
+    let mod_file = &frozen.mods[&run.mod_id];
+    let reordered = authorization
+        .final_components
+        .iter()
+        .map(|component| LogComponentReceipt {
+            tp2: mod_file.tp2.replace('\\', "/").to_ascii_lowercase(),
+            language: mod_file.language,
+            component: *component,
+        })
+        .collect::<Vec<_>>();
+    expected.splice(offset..offset + run.components.len(), reordered);
+    Ok(expected)
 }
 
 /// Finish only save isolation and metadata publication for a verified supervised repair.
@@ -416,6 +612,12 @@ pub fn accept_supervised_recovery(
             serde_json::from_slice(&fs::read(&install_receipt).map_err(error)?).map_err(error)?;
         if existing.recovery_id != request.recovery_id
             || existing.replacements != vec![request.replacement.clone()]
+            || existing.append_missing_components
+                != request
+                    .append_missing_component
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>()
             || existing.evidence != request.evidence
         {
             return Err(error(
@@ -459,10 +661,15 @@ pub fn accept_supervised_recovery(
         base_recipe_version: checked.base.versions.recipe.clone(),
         base_recipe_payload_sha256: checked.base.recipe_payload_sha256.clone(),
         base_plan_sha256: checked.base.plan_sha256.clone(), replacements: vec![request.replacement.clone()],
+        append_missing_components: request.append_missing_component.iter().cloned().collect(),
         evidence: request.evidence.clone(), completed_at_millis: SystemTime::now().duration_since(UNIX_EPOCH).map_err(error)?.as_millis() as u64,
         final_state: FinalReceiptState { logs: checked.logs, bg1_engine_name, bg2_engine_name,
             managed_save_root: identity.save_root, launch_path: checked.launch_path,
-            verification_summary: "Exact original selection/order verified after supervised tail repair; earlier mod versions retained. Gameplay smoke test remains separate.".to_owned() },
+            verification_summary: if request.append_missing_component.is_some() {
+                "Exact original selection verified after an explicitly authorized, rehearsal-proven missing-component append; all earlier active rows retained. Gameplay smoke test remains separate."
+            } else {
+                "Exact original selection/order verified after supervised tail repair; earlier mod versions retained. Gameplay smoke test remains separate."
+            }.to_owned() },
     };
     let path = recovery_receipt::publish(root, &receipt).map_err(error)?;
     publish_registry(&app_data, &checked.frozen, &receipt, &path)?;
@@ -517,10 +724,17 @@ pub(super) fn report_recovery(
     let receipt: RecoveryReceipt = serde_json::from_slice(&bytes).map_err(error)?;
     receipt.validate(base).map_err(error)?;
     recovery_receipt::read_completed_state(root).map_err(error)?;
+    let append = match receipt.append_missing_components.as_slice() {
+        [] => None,
+        [authorization] => Some(authorization),
+        _ => {
+            return Err(error(
+                "recovery receipt has multiple physical-order adjustments",
+            ))
+        }
+    };
     for log in &receipt.final_state.logs {
-        if log.components
-            != expected_log_components(&frozen.plan, &frozen.mods, log.target).map_err(error)?
-        {
+        if log.components != expected_recovery_log_components(frozen, log.target, append)? {
             return Err(error(
                 "recovered receipt changes the original selected component plan",
             ));

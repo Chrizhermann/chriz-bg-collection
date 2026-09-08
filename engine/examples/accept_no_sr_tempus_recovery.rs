@@ -136,6 +136,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]
         .map(|name| relative_recovery.join(name))
         .to_vec(),
+        append_missing_component: None,
         evidence: evidence
             .into_iter()
             .map(|(path, sha256)| EvidenceFile {

@@ -53,6 +53,25 @@ pub struct ArtifactReplacement {
     pub replacement: FrozenIdentity,
 }
 
+/// Explicit provenance for one reviewed component that is safe to append after its
+/// successfully installed siblings from the same sealed run.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AppendMissingComponentAuthorization {
+    pub run_id: String,
+    pub component: u32,
+    pub installed_components: Vec<u32>,
+    pub final_components: Vec<u32>,
+    pub source_commit: String,
+    pub preserved_active_rows: u32,
+    pub new_files: u32,
+    pub edited_files: u32,
+    pub removed_files: u32,
+    pub later_sibling_write_overlaps: u32,
+    pub source_evidence: PathBuf,
+    pub compatibility_evidence: PathBuf,
+}
+
 /// Distinct provenance kind accepted at the stable completed-install receipt path.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -87,6 +106,10 @@ pub struct RecoveryReceipt {
     pub base_plan_sha256: String,
     /// Changed payload identities, linked to exact frozen plan runs.
     pub replacements: Vec<ArtifactReplacement>,
+    /// Narrow, explicitly evidenced physical-order adjustments. Empty for the
+    /// ordinary rollback-and-reinstall recovery path and older schema-1 receipts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub append_missing_components: Vec<AppendMissingComponentAuthorization>,
     /// Nonempty manifest of immutable recovery evidence below the managed root.
     pub evidence: Vec<EvidenceFile>,
     /// Recovery completion time in Unix epoch milliseconds.
@@ -167,6 +190,7 @@ impl RecoveryReceipt {
         }
 
         self.validate_replacements(base)?;
+        self.validate_append_missing_components(base)?;
         validate_evidence_manifest(&self.evidence)?;
         validate_final_state(&self.managed_root, &self.final_state)
     }
@@ -232,6 +256,91 @@ impl RecoveryReceipt {
         }
         Ok(())
     }
+
+    fn validate_append_missing_components(&self, base: &InstallReceipt) -> Result<(), String> {
+        if self.append_missing_components.len() > 1 {
+            return Err("recovery supports at most one append-missing authorization".to_owned());
+        }
+        let mut seen_runs = BTreeSet::new();
+        for authorization in &self.append_missing_components {
+            validate_identifier(&authorization.run_id, "append-missing run id")?;
+            if !seen_runs.insert(authorization.run_id.as_str()) {
+                return Err("append-missing authorization duplicates a run".to_owned());
+            }
+            let run = base
+                .plan
+                .runs
+                .iter()
+                .find(|run| run.run_id == authorization.run_id)
+                .ok_or_else(|| {
+                    "append-missing authorization references an unknown run".to_owned()
+                })?;
+            if !self
+                .replacements
+                .iter()
+                .any(|replacement| replacement.run_id == authorization.run_id)
+            {
+                return Err("append-missing authorization has no replacement artifact".to_owned());
+            }
+            validate_append_authorization(authorization, &run.components, &self.evidence)?;
+        }
+        Ok(())
+    }
+}
+
+fn validate_append_authorization(
+    authorization: &AppendMissingComponentAuthorization,
+    planned: &[u32],
+    evidence: &[EvidenceFile],
+) -> Result<(), String> {
+    if authorization.source_commit.len() != 40
+        || !authorization
+            .source_commit
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err("append-missing source commit is not a full hexadecimal commit".to_owned());
+    }
+    let expected_installed = planned
+        .iter()
+        .copied()
+        .filter(|component| *component != authorization.component)
+        .collect::<Vec<_>>();
+    if expected_installed.len() + 1 != planned.len()
+        || authorization.installed_components != expected_installed
+    {
+        return Err(
+            "append-missing installed component order is not the single-hole frozen run".to_owned(),
+        );
+    }
+    let mut expected_final = expected_installed;
+    expected_final.push(authorization.component);
+    if authorization.final_components != expected_final {
+        return Err("append-missing final component order is not the authorized append".to_owned());
+    }
+    if authorization.preserved_active_rows == 0
+        || authorization.removed_files != 0
+        || authorization.later_sibling_write_overlaps != 0
+        || authorization
+            .new_files
+            .saturating_add(authorization.edited_files)
+            == 0
+    {
+        return Err("append-missing compatibility verdict is not preservation-safe".to_owned());
+    }
+    for path in [
+        &authorization.source_evidence,
+        &authorization.compatibility_evidence,
+    ] {
+        evidence_path(path)?;
+        if !evidence.iter().any(|item| item.path == *path) {
+            return Err(format!(
+                "append-missing provenance is absent from evidence: {}",
+                path.display()
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Verifies every recorded evidence file below a direct, non-reparse managed root.

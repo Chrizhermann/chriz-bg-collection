@@ -9,8 +9,9 @@ use bg_engine::receipt::{
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::recovery_receipt::{
-    publish, read_completed_state, verify_evidence, ArtifactReplacement, EvidenceFile,
-    RecoveryKind, RecoveryReceipt, RECOVERY_RECEIPT_SCHEMA_VERSION,
+    publish, read_completed_state, verify_evidence, AppendMissingComponentAuthorization,
+    ArtifactReplacement, EvidenceFile, RecoveryKind, RecoveryReceipt,
+    RECOVERY_RECEIPT_SCHEMA_VERSION,
 };
 use bg_engine::resolve::{InstallPlan, PlannedRun};
 use bg_engine::session::FrozenIdentity;
@@ -201,6 +202,7 @@ fn fixture() -> Fixture {
             original: original_changed,
             replacement: frozen("changed-artifact", "alpha.5", "66", 606),
         }],
+        append_missing_components: Vec::new(),
         evidence: vec![
             EvidenceFile {
                 path: bg1_path,
@@ -236,6 +238,63 @@ fn valid_recovery_links_failed_base_and_reports_truthful_effective_version() {
         serde_json::to_value(&fixture.recovery).unwrap()["kind"],
         "supervised_recovery"
     );
+}
+
+fn append_authorization() -> AppendMissingComponentAuthorization {
+    AppendMissingComponentAuthorization {
+        run_id: "changed-run".to_owned(),
+        component: 10,
+        installed_components: vec![20],
+        final_components: vec![20, 10],
+        source_commit: "ab".repeat(20),
+        preserved_active_rows: 364,
+        new_files: 21,
+        edited_files: 6,
+        removed_files: 0,
+        later_sibling_write_overlaps: 0,
+        source_evidence: PathBuf::from("recovery/source-provenance.json"),
+        compatibility_evidence: PathBuf::from("recovery/compatibility.json"),
+    }
+}
+
+#[test]
+fn receipt_accepts_only_the_single_hole_append_permutation_with_hashed_provenance() {
+    let fixture = fixture();
+    let mut recovery = fixture.recovery;
+    recovery.append_missing_components = vec![append_authorization()];
+    recovery.evidence.extend([
+        EvidenceFile {
+            path: PathBuf::from("recovery/source-provenance.json"),
+            sha256: "77".repeat(32),
+        },
+        EvidenceFile {
+            path: PathBuf::from("recovery/compatibility.json"),
+            sha256: "88".repeat(32),
+        },
+    ]);
+    recovery.validate(&fixture.base).unwrap();
+
+    recovery.append_missing_components[0].final_components = vec![10, 20];
+    assert!(recovery.validate(&fixture.base).is_err());
+}
+
+#[test]
+fn receipt_rejects_unsafe_or_unbound_append_verdicts() {
+    let fixture = fixture();
+    let mut recovery = fixture.recovery;
+    recovery.append_missing_components = vec![append_authorization()];
+    recovery.evidence.push(EvidenceFile {
+        path: PathBuf::from("recovery/source-provenance.json"),
+        sha256: "77".repeat(32),
+    });
+    assert!(recovery.validate(&fixture.base).is_err());
+
+    recovery.evidence.push(EvidenceFile {
+        path: PathBuf::from("recovery/compatibility.json"),
+        sha256: "88".repeat(32),
+    });
+    recovery.append_missing_components[0].later_sibling_write_overlaps = 1;
+    assert!(recovery.validate(&fixture.base).is_err());
 }
 
 #[test]
