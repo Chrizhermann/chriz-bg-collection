@@ -11,6 +11,7 @@ use crate::recovery_receipt::{
     RecoveryReceipt, RECOVERY_RECEIPT_SCHEMA_VERSION,
 };
 use crate::registry::{ManagedInstallRecord, REGISTRY_SCHEMA_VERSION};
+use crate::weidu::invocation::setup_executable_name;
 use crate::weidu::recovery::{
     plan_partial_tail_recovery, verify_rollback, ExpectedInstall, RecoveryAction,
 };
@@ -317,10 +318,7 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
                 stem.display()
             )));
         }
-        let setup = Path::new(&mod_file.tp2)
-            .file_stem()
-            .ok_or_else(|| error("frozen TP2 has no setup filename"))?;
-        let program = root.join("game").join(setup).with_extension("exe");
+        let program = recovery_setup_program(&root, &mod_file.tp2)?;
         if !direct_regular_file(&program)
             || fs::canonicalize(&intent.program).map_err(error)?
                 != fs::canonicalize(&program).map_err(error)?
@@ -382,6 +380,12 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
         logs,
         launch_path,
     })
+}
+
+fn recovery_setup_program(root: &Path, tp2: &str) -> Result<PathBuf, CliError> {
+    Ok(root
+        .join("game")
+        .join(setup_executable_name(tp2).map_err(error)?))
 }
 
 fn verify_append_authorization(
@@ -782,5 +786,13 @@ mod tests {
         assert!(verify_arguments(&args, 0, &[20, 10], false, &debug).is_err());
         args.insert(7, "--skip-at-now".to_owned());
         assert!(verify_arguments(&args, 0, &[10, 20], false, &debug).is_err());
+    }
+
+    #[test]
+    fn recovery_uses_production_setup_name_for_bare_tp2() {
+        assert_eq!(
+            recovery_setup_program(Path::new(r"C:\managed"), "HiddenGameplayOptions.tp2").unwrap(),
+            PathBuf::from(r"C:\managed\game\Setup-hiddengameplayoptions.exe")
+        );
     }
 }
