@@ -2,6 +2,45 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Combined playtest launched — 2026-09-08
+
+Christopher confirmed modpack completion and asked us to continue. Bridge/filler
+source is ready at `3b34eaee19dcb9043f3b72c77bf5b92adbed05ca`; clean modpack
+integration is `85cbc42551ca256b167cfdb1ffc4bd3c22df85e4`. Preserve Sarah 190 and
+existing companions; use Safana **189** (191 is reserved), continuity 199 and Imoen
+620. The bridge hold and modpack source-integration blocker below are resolved.
+
+The separate ignored `target/combined-playtest-20260908/recipe` is assembled from
+seven frozen local sources. It preserves all 435 current recommended components
+and adds exactly 11 experimental components, with no duplicates: **446 / 50 runs**.
+Authoring validation has zero findings. Focused source/recipe tests pass; generated
+archives are deterministic. Public recipe/feed and stream remain unchanged.
+
+One hidden CLI installation started at **2026-09-08 22:54:18 +09:00**, PID **60364**,
+managed root `C:\Users\chris\CEBG-Tests\Combined-20260908`, preset
+`chris-recommended`, unique name/save profile `CEBG Combined Playtest 2026-09-08`.
+It reuses `C:\CEBG-creator-full-cache`; seven local ZIPs and Evandra's existing
+official EXE use the normal verified manual intake. CDTweaks/IWDification archives
+were reused from the app cache. Initial source checks passed; the engine created
+its managed ledger/frozen recipe and is acquiring/verifying the selected artifacts
+at this checkpoint. Completion/native playtest are not yet claimed. **Do not start
+another copy or edit this recipe during the run.**
+
+Worker and full stdout/stderr are retained under ignored
+`target/combined-playtest-20260908/run/`. Frozen worker SHA256:
+`1e251c6af996bd64d039fa0a25ce65b02baae87353629e7756c9f70e7b937318`.
+The first launch guard stopped before creating a game because the shared debug
+binary had been rebuilt during recipe checks; the final copied binary was
+revalidated and then launched. This was not a game-install restart.
+
+Safana core v0.5 is added only as prerequisite for 189, addressing the inventory
+gate documented in her curation. No Safana Bard/Abettor preset. Continuity 199
+follows companion conversions immediately before EET_end; Safana/189/620 stay
+late. SR/RR compatibility is after both core mods and before SCS; SR60's scans
+target joinable NPCs, not those hostile RR actors. Lightning80 is after SR60 and
+the other spell modifiers, then Klatu and BuffBot last. See the
+[updated plan](plans/2026-09-08-combined-playtest-and-alpha16.md) for playtest saves.
+
 ## Combined test on hold for SoD bridge — 2026-09-08
 
 Christopher wants to wait for the SoD bridge implementation (issue 14), then test
