@@ -2,6 +2,52 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Combined playtest stopped; targeted recovery assessed — 2026-09-09
+
+The 446-component local test stopped at **01:49 +09:00** in SoD Remix 256. No
+installer process remains. Preserve `C:\Users\chris\CEBG-Tests\Combined-20260908`;
+**do not delete it or start another full installation**. Current active rows:
+27 BG1 + 364 BG2 = **391**. EET, SCS, modpack continuity and EET_end completed;
+the ten later runs (including dragons, Safana/Imoen, Lightning, Klatu and BuffBot)
+have not started. Public recipe and stream were not changed.
+
+Cause: `BDOLONEI.CRE` contains Artisan MonkRevision-Mystic's opcode 326 delivery
+`C0PR#MO1`; `comp256_creatures.tpa` omitted it from its reviewed donor-effect list.
+The failure occurred during preflight and WeiDU reports zero component-256 files
+to roll back. Other 34/35 SoD components completed. Root error is around line 10907
+of the game's `SETUP-CHRIZ-SOD-REMIX.DEBUG`; retain that and the immutable terminal
+receipt `.chriz/attempts/terminal-0000000234-19d855a4d1b269e8/receipt.json`.
+
+Christopher asked whether the installation can be salvaged and to send the problem
+to its owner.
+The SoD task **Find next roadmap item** (`01a071d8-870a-7b02-bbde-e33d0f0b051f`)
+received the exact logs, source commit, cause, focused regression request and
+read-only-install boundary. It is working on the source fix; no public release or
+game mutation was requested from that task.
+
+Read-only recovery evidence: the SoD before-log matches the previous successful
+run's after-hash. Its 330 BG2 active rows are retained exactly; the current log adds
+only the 34 successful SoD siblings in relative authored order. The existing
+supervised recovery mechanism can retain **all 27 BG1 + 330 pre-SoD BG2 components**
+and redo only the SoD run plus the untouched tail. It requires reverse rollback of
+those 34 SoD siblings, verification of the original prefix, a corrected 35-component
+SoD run, complete tail evidence, and a separate recovery receipt. The existing
+operator scripts are incident-specific, so this case still needs its own small
+operator adapter; it is not a generic CLI recovery command. Ordinary Resume is
+not valid, and no repair has been performed or accepted yet.
+
+A smaller append-only 256 repair is potentially possible but not currently
+supported by the recovery verifier. The owner must confirm compatibility after
+the already-installed 260–910 siblings, not merely after 255; otherwise do not
+invent an out-of-order success receipt or disable exact-order verification. The
+owner was asked to clarify its 'never uninstall 255' note for both approaches.
+
+Hourly check-only follow-up `cebg-overnight-install-follow-up` is now ACTIVE for
+this fix/test (the old no-SR one-time follow-up had been paused). Stay quiet on this
+already-reported failure; notify a ready fix, new failure, required decision or
+verified completion. Pause when awaiting user direction or completed; reactivate
+the same follow-up whenever an authorized recovery worker is launched.
+
 ## Combined playtest launched — 2026-09-08
 
 Christopher confirmed modpack completion and asked us to continue. Bridge/filler
