@@ -17,7 +17,7 @@ fn recipe() -> Manifest {
 fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     let manifest = recipe();
     let result = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
-    assert_eq!(result.plan.runs.len(), 43);
+    assert_eq!(result.plan.runs.len(), 44);
     assert_eq!(
         result
             .plan
@@ -25,7 +25,7 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        434
+        435
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");
@@ -40,6 +40,30 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         .control("feature:cdtweaks:component-1142")
         .unwrap();
     assert_eq!(potion.title, "Potions require identification");
+}
+
+#[test]
+fn armor_qol_is_optional_and_keeps_the_original_install_when_disabled() {
+    let manifest = recipe();
+    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let control = baseline
+        .view
+        .control("feature:klatu:component-2150")
+        .expect("armor QoL has its own visible control");
+    assert!(control.selected);
+    assert_eq!(control.title, "Use thief skills in armor");
+    let mut selection = baseline.normalized_selection.to_selection();
+    selection.set_feature("feature:klatu:component-2150", false);
+    let changed = evaluate(&manifest, &selection).unwrap();
+    let mut expected = baseline.plan.runs;
+    let klatu = expected.remove(expected.len() - 2);
+    assert_eq!(klatu.run_id, "klatu-armor-thieving-bg2");
+    assert_eq!(klatu.components, vec![2150]);
+    assert_eq!(changed.plan.runs, expected);
+    assert_eq!(changed.plan.runs.last().unwrap().mod_id, "buffbot");
+
+    let findings = bg_engine::release_validate::validate_public_alpha(&manifest).unwrap();
+    assert!(findings.is_empty(), "{findings:#?}");
 }
 
 #[test]

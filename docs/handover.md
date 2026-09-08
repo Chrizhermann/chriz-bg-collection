@@ -2,6 +2,24 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Armor-thieving QoL — 2026-09-08 (integrated, not published)
+
+Approved: default-checked optional thief skills in armor, **no added penalties**.
+CDTweaks 2100 stays excluded. Klatu 2150 is integrated in draft collection alpha.14,
+after armor/kit changes and immediately before BuffBot (still last): 435 recommended
+components across 44 runs. No other Klatu component or unrelated mod update was added.
+The real WeiDU synthetic install/uninstall fixture passed, as did 28 Python tests,
+16 native curation/release tests and Rust formatting. No full reinstall was needed.
+Exact scope and limits are [recorded here](plans/2026-09-08-armor-thieving-qol.md).
+Published app remains alpha.15 / collection alpha.13; alpha.14 release metadata is
+draft, including its provisional timestamp. No live game or save was modified.
+
+The requested quick [mod-repo and patch-candidate audit](plans/2026-09-08-mod-repo-readiness.md)
+is complete. Bardic balance.4 is released but not yet pinned; SR/RR's released tail
+patch remains subject to the earlier collection deferral. Artisan's merged work is
+not release-approved. Armor QoL and the separate kit-description repair are the
+first existing-game patch candidates, not already applied patches.
+
 ## Visible startup while detecting games — 2026-09-08 (source only)
 
 The blank window during slow first-launch checks is fixed in source: early HTML

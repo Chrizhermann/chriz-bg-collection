@@ -1,0 +1,32 @@
+id = "klatu-tweaks-1.7.4"
+name = "Klatu Tweaks and Fixes"
+version = "1.7.4"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/The-Gate-Project/klatu-tweaks-and-fixes/releases/download/Version-1.7.4/klatu-tweaks-and-fixes-1.7.4.iemod"
+reference = "Version-1.7.4"
+expected_filename = "klatu-tweaks-and-fixes-1.7.4.iemod"
+expected_length = 2461213
+sha256 = "7393116098ee549d9b53fdd0600d56a779ccc7feb0046667162fd10118856daa"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["klatu"]
+tp2_paths = ["klatu/setup-klatu.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 64
+
+[provenance]
+homepage = "https://github.com/The-Gate-Project/klatu-tweaks-and-fixes"
+license = "Fetch-only third-party release; the collection does not redistribute it"
+url = "https://github.com/The-Gate-Project/klatu-tweaks-and-fixes/releases/tag/Version-1.7.4"
+reviewed_on = "2026-09-08"

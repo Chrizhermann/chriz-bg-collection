@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1189
+expected_rows = 1190
 expected_choice_groups = 61
 expected_optional_none_groups = 13
 expected_fixed_groups = 10
@@ -179,6 +179,10 @@ excluded = []
 [[catalogs]]
 id = "IWDIFICATION"
 excluded = [20, 141, 50, 180, 150, 70, 71, 100, 160, 110, 111, 170, 121, 80]
+
+[[catalogs]]
+id = "KLATU"
+excluded = []
 
 [[catalogs]]
 id = "PAINA"
@@ -2194,6 +2198,11 @@ rows = ["HIDDENGAMEPLAYOPTIONS:103"]
 id = "feature:hq-soundclips-bg2ee:component-0"
 kind = "feature"
 rows = ["HQ_SOUNDCLIPS_BG2EE:0"]
+
+[[targets]]
+id = "feature:klatu:component-2150"
+kind = "feature"
+rows = ["KLATU:2150"]
 
 [[targets]]
 id = "feature:iepbanters:component-0"

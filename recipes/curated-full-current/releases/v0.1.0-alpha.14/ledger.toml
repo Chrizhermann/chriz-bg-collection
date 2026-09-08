@@ -1,0 +1,14 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.14"
+published_at = "2026-09-08T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.15"
+supersedes = "0.1.0-alpha.13"
+
+[[changes]]
+id = "armor-thieving-qol"
+title = "Use thief skills in armor"
+summary = "Adds the default-checked optional Klatu Tweaks 2150 component for ordinary thieving and stealth in armor with no added skill penalties. Equipment permissions, spellcasting restrictions, unrelated kit abilities, and Find Traps armor restrictions remain unchanged."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["feature:klatu:component-2150"]

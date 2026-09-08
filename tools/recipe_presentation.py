@@ -24,12 +24,17 @@ CATEGORY_LABELS = {
 # missing noun.  Use the same authored meaning in a standalone feature title.
 TITLE_OVERRIDES = {
     RowKey("CDTWEAKS", 1142): "Potions require identification",
+    RowKey("KLATU", 2150): "Use thief skills in armor",
 }
 
 DESCRIPTION_OVERRIDES = {
     RowKey("CDTWEAKS", 1142): "Potions need identification; gems are unchanged.",
     RowKey("CDTWEAKS", 1160): "Allows multiple strongholds without class restrictions.",
     RowKey("CDTWEAKS", 1161): "Allows multiple strongholds while retaining class restrictions.",
+    RowKey("KLATU", 2150): (
+        "No added skill penalties. Allows ordinary thieving and stealth in armor while "
+        "preserving equipment permissions, spellcasting restrictions, and other kit abilities."
+    ),
 }
 
 for _component, _kind, _size in (
@@ -67,6 +72,7 @@ SOURCE_LABELS = {
     "HQ_SOUNDCLIPS_BG2EE": "HQ SoundClips for BG2EE",
     "IEPBANTERS": "IEP Extended Banters",
     "IWDIFICATION": "IWDification",
+    "KLATU": "Klatu Tweaks and Fixes",
     "RR": "Rogue Rebalancing",
     "SIRENE_BG2": "Sirene for BG2",
     "UB": "Unfinished Business",

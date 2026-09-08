@@ -5,6 +5,9 @@ Listed at installed version **v18**.
 
 ## UI/dependency notes
 
+- `2100` remains excluded: Christopher explicitly rejected its PnP penalties on
+  2026-09-08. The approved default is a separate no-penalty armor-thieving QoL
+  option, not this component; see [scope and candidate](../../plans/2026-09-08-armor-thieving-qol.md).
 - Every non-empty `Subgroup` is an at-most-one choice. The `default` row is initially
   selected; `optional` alternatives remain visible and choosing none remains valid unless
   the parent feature says otherwise.

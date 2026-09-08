@@ -324,6 +324,13 @@ components = [60]
 args = []
 
 [[runs]]
+run_id = "klatu-armor-thieving-bg2"
+mod_id = "klatu"
+phase = "post-eet-end"
+components = [2150]
+args = []
+
+[[runs]]
 run_id = "buffbot-bg2"
 mod_id = "buffbot"
 phase = "post-eet-end"
@@ -6542,6 +6549,17 @@ readiness = "ready"
 parent = "mod:evandra"
 requires = ["feature:evandra:mandatory-components"]
 components = [{ run_id = "evandra-crossmod-bg2", component = 1 }]
+
+[[features]]
+id = "feature:klatu:component-2150"
+title = "Use thief skills in armor"
+description = "No added skill penalties. Allows ordinary thieving and stealth in armor while preserving equipment permissions, spellcasting restrictions, and other kit abilities."
+category = "convenience"
+source_label = "Klatu Tweaks and Fixes"
+group_label = "Convenience Tweaks/Cheats"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "klatu-armor-thieving-bg2", component = 2150 }]
 
 [[features]]
 id = "feature:iwdification:component-10"

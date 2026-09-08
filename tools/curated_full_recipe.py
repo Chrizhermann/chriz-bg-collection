@@ -23,9 +23,17 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.13"
+RECIPE_VERSION = "0.1.0-alpha.14"
 RECIPE_LABEL = "CEBG curated full setup"
-ADDED_CATALOGS = {"BARDICWONDERS", "BG1NPC", "BRANWEN", "CDTWEAKS", "EVANDRA", "IWDIFICATION"}
+ADDED_CATALOGS = {
+    "BARDICWONDERS",
+    "BG1NPC",
+    "BRANWEN",
+    "CDTWEAKS",
+    "EVANDRA",
+    "IWDIFICATION",
+    "KLATU",
+}
 
 # bg1npc v32 bg1npc.tp2: DESIGNATED declaration order (not numeric ID order).
 # --force-install-list selects components but WeiDU still visits the TP2 in this order.
@@ -70,6 +78,7 @@ CATALOG_RUNS = {
     "BG1NPC": "bg1npc-bg1",
     "BRANWEN": "branwen-bg2",
     "IWDIFICATION": "iwdification-bg2",
+    "KLATU": "klatu-armor-thieving-bg2",
 }
 
 CATEGORY_BY_GROUP = {
@@ -220,6 +229,39 @@ license = "Fetch-only third-party release; the collection does not redistribute 
 url = "https://github.com/Gibberlings3/iwdification/releases/tag/v11"
 reviewed_on = "2026-09-05"
 """,
+    "klatu-tweaks-1.7.4.toml": """id = "klatu-tweaks-1.7.4"
+name = "Klatu Tweaks and Fixes"
+version = "1.7.4"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/The-Gate-Project/klatu-tweaks-and-fixes/releases/download/Version-1.7.4/klatu-tweaks-and-fixes-1.7.4.iemod"
+reference = "Version-1.7.4"
+expected_filename = "klatu-tweaks-and-fixes-1.7.4.iemod"
+expected_length = 2461213
+sha256 = "7393116098ee549d9b53fdd0600d56a779ccc7feb0046667162fd10118856daa"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["klatu"]
+tp2_paths = ["klatu/setup-klatu.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 64
+
+[provenance]
+homepage = "https://github.com/The-Gate-Project/klatu-tweaks-and-fixes"
+license = "Fetch-only third-party release; the collection does not redistribute it"
+url = "https://github.com/The-Gate-Project/klatu-tweaks-and-fixes/releases/tag/Version-1.7.4"
+reviewed_on = "2026-09-08"
+""",
 }
 
 
@@ -229,6 +271,7 @@ MOD_SPECS = {
     "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
     "iwdification": ("iwdification-11", "IWDification", "iwdification/setup-iwdification.tp2", "IWDIFICATION"),
+    "klatu": ("klatu-tweaks-1.7.4", "Klatu Tweaks and Fixes", "klatu/setup-klatu.tp2", "KLATU"),
 }
 
 
@@ -301,6 +344,14 @@ run_id = "bardicwonders-dialogue-patch-bg2"
 mod_id = "bardicwonders"
 phase = "post-eet-end"
 components = [1012, 3001]
+args = []
+
+""",
+    "before-buffbot": """[[runs]]
+run_id = "klatu-armor-thieving-bg2"
+mod_id = "klatu"
+phase = "post-eet-end"
+components = [2150]
 args = []
 
 """,
@@ -556,6 +607,10 @@ def _update_release_records(destination: Path, commit: str) -> None:
         '  "cdtweaks-spell-save-penalties-bg2",\n  "spell-rev-npc-spellbooks-bg2",',
     )
     limitations = limitations.replace(
+        '  "buffbot-bg2",',
+        '  "klatu-armor-thieving-bg2",\n  "buffbot-bg2",',
+    )
+    limitations = limitations.replace(
         'reason = "The Branwen Spiritual Hammer repair is not enabled in the frozen alpha recipe."\n'
         'user_facing_limitation = "Branwen\'s Spell Revisions Spiritual Hammer repair is unavailable in this alpha."',
         'reason = "The maintained repair is selected conditionally and stays inactive unless the optional Branwen component is selected."\n'
@@ -596,7 +651,44 @@ date = "2026-09-05"
 status = "accepted"
 scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
 """
+    acceptance += f"""
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "klatu-armor-thieving-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = {_q(commit)}
+test_artifact = "tools/tests/test_klatu_armor_recipe.py"
+date = "2026-09-08"
+status = "accepted"
+scope = "Focused static source pin, component, optional-selection, credits, and late-order assertions only; not live game acceptance."
+"""
     acceptance_path.write_text(acceptance + "\n", encoding="utf-8", newline="\n")
+
+
+def _write_draft_release_ledger(destination: Path) -> None:
+    release_dir = destination / "releases/v0.1.0-alpha.14"
+    release_dir.mkdir(parents=True, exist_ok=True)
+    (release_dir / "ledger.toml").write_text(
+        """schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.14"
+published_at = "2026-09-08T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.15"
+supersedes = "0.1.0-alpha.13"
+
+[[changes]]
+id = "armor-thieving-qol"
+title = "Use thief skills in armor"
+summary = "Adds the default-checked optional Klatu Tweaks 2150 component for ordinary thieving and stealth in armor with no added skill penalties. Equipment permissions, spellcasting restrictions, unrelated kit abilities, and Find Traps armor restrictions remain unchanged."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["feature:klatu:component-2150"]
+""",
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def _effective_features(collection: dict, preset: dict) -> dict[str, bool]:
@@ -757,6 +849,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         ('[[runs]]\nrun_id = "randomiser-bg2"', run_blocks["before-randomiser"]),
         ('[[runs]]\nrun_id = "chriz-sod-remix-bg2"', run_blocks["after-eet-end"]),
         ('[[runs]]\nrun_id = "spell-rev-npc-spellbooks-bg2"', run_blocks["late-spell-scan"]),
+        ('[[runs]]\nrun_id = "buffbot-bg2"', run_blocks["before-buffbot"]),
     ]
     for marker, block in insertions:
         if base_collection.count(marker) != 1:
@@ -831,6 +924,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         newline="\n",
     )
     _update_release_records(destination, commit)
+    _write_draft_release_ledger(destination)
     _write_reconciliation(root, destination)
 
 

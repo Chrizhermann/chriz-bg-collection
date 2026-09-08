@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 444 default/mandatory rows — conditional inactive: 6, deferred: 6, selected for installation: 432.
+Engine-equivalent resolved-selection summary: 445 default/mandatory rows — conditional inactive: 6, deferred: 6, selected for installation: 433.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -323,6 +323,7 @@ Engine-equivalent resolved-selection summary: 444 default/mandatory rows — con
 | `IWDIFICATION:120` | default | `omission:iwdification-arcane-trickster-evasion` | deferred | No executable source selected | The required Arcane Trickster level-7 Evasion tail patch has not yet been implemented and fixture-tested. |
 | `IWDIFICATION:30` | mandatory | `feature:iwdification:mandatory-components` | selected for installation | iwdification → iwdification-11 11 (v11), component 30 |  |
 | `IWDIFICATION:40` | mandatory | `feature:iwdification:mandatory-components` | selected for installation | iwdification → iwdification-11 11 (v11), component 40 |  |
+| `KLATU:2150` | default | `feature:klatu:component-2150` | selected for installation | klatu → klatu-tweaks-1.7.4 1.7.4 (Version-1.7.4), component 2150 |  |
 | `PAINA:0` | mandatory | `feature:paina:mandatory-components` | selected for installation | paina → paina-1.9 1.9 (v1.9), component 0 |  |
 | `RANDOMISER:500` | default | `feature:randomiser:component-500` | selected for installation | randomiser → randomiser-8.1.1 8.1.1 (v8.1.1), component 500 |  |
 | `RANDOMISER:530` | default | `feature:randomiser:component-530` | selected for installation | randomiser → randomiser-8.1.1 8.1.1 (v8.1.1), component 530 |  |

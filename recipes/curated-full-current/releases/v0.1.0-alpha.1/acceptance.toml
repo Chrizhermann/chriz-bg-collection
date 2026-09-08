@@ -412,6 +412,17 @@ date = "2026-09-05"
 status = "accepted"
 scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
 
+[[evidence]]
+subject_kind = "run"
+subject_id = "klatu-armor-thieving-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "93acf4f2bbfbefba5736cab7451aa89c59467771"
+test_artifact = "tools/tests/test_klatu_armor_recipe.py"
+date = "2026-09-08"
+status = "accepted"
+scope = "Focused static source pin, component, optional-selection, credits, and late-order assertions only; not live game acceptance."
+
 
 [[evidence]]
 subject_kind = "run"
@@ -495,4 +506,3 @@ test_artifact = "tools/tests/test_curated_full_recipe.py"
 date = "2026-09-05"
 status = "accepted"
 scope = "Focused static curation, source, component, prompt, and order assertions only; not live game acceptance."
-

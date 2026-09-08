@@ -1,0 +1,11 @@
+id = "klatu"
+artifact_id = "klatu-tweaks-1.7.4"
+name = "Klatu Tweaks and Fixes"
+tp2 = "klatu/setup-klatu.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 2150
+name = "Allow Thievery in Armor"

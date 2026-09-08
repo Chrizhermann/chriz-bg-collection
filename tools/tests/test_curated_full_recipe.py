@@ -118,7 +118,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "4320bd5a5a766e1acc1667d8979e1c33816baa0f0e110a1dabdc4a53d5cc8415",
+                "8f48e6e98ce073fddd8a28522c1cc0832f45ce124112e7aad7e4246894d011e0",
             )
 
             legacy_bg1npc_groups = {
@@ -397,10 +397,21 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bg_artifact["source"]["sha256"],
                 "25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.13")
-            ledger = tomllib.loads((output / "releases/v0.1.0-alpha.13/ledger.toml").read_text())
-            self.assertEqual(ledger["version"], "0.1.0-alpha.13")
-            self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.15")
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.14")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13"):
+                generated_ledger = output / f"releases/v{version}/ledger.toml"
+                authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
+                self.assertEqual(
+                    generated_ledger.read_bytes(),
+                    authored_ledger.read_bytes(),
+                    f"historical ledger {version} changed during generation",
+                )
+            draft_ledger = tomllib.loads(
+                (output / "releases/v0.1.0-alpha.14/ledger.toml").read_text()
+            )
+            self.assertEqual(draft_ledger["version"], "0.1.0-alpha.14")
+            self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.15")
+            self.assertEqual(draft_ledger["supersedes"], "0.1.0-alpha.13")
             self.assertFalse((output / "reference").exists())
 
     def test_common_customization_routes_preserve_dependency_collateral(self) -> None:
@@ -499,7 +510,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             report = (output / "RECONCILIATION.md").read_text(encoding="utf-8")
             self.assertIn("Engine-equivalent resolved-selection summary", report)
-            self.assertIn("444 default/mandatory rows", report)
+            self.assertIn("445 default/mandatory rows", report)
+            self.assertIn("`KLATU:2150` | default", report)
             self.assertIn("`IWDIFICATION:120` | default", report)
             self.assertIn("`BARDICWONDERS:1006` | default", report)
             self.assertIn("`CHRIZ-BG-MODPACK:400` | mandatory", report)
