@@ -2,6 +2,16 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Combined test on hold for SoD bridge — 2026-09-08
+
+Christopher wants to wait for the SoD bridge implementation (issue 14), then test
+it together with the other SoD changes in one combined installation. Do not start
+that installation until the bridge has a testable source snapshot. Refresh its
+commit/component requirements before assembly; this is not a requirement to
+publish the mod first. The prepared alpha.16 source remains saved, with no change
+to public releases or the stream installation. See the
+[combined playtest plan](plans/2026-09-08-combined-playtest-and-alpha16.md).
+
 ## Alpha.16 source prepared; combined playtest mapped — 2026-09-08
 
 Proposed release is app alpha.16 / collection alpha.14: existing startup loading

@@ -3,6 +3,14 @@
 Status: feasibility/source preparation, 2026-09-08. No new game installation,
 stream patch, public upload or updater-feed change has started.
 
+**User-approved hold (2026-09-08):** wait for the SoD bridge work (issue 14)
+to have an implemented test source before starting the combined installation.
+Include it with the implemented filler-removal changes in one frozen SoD test
+input. A public release or prior live acceptance is not required to test that
+snapshot. Once ready, refresh the exact commits and component requirements, then
+assemble the combined build once. Preserve the prepared alpha.16 source and the
+other assembly tasks below; do not start an incomplete combined install meanwhile.
+
 ## Decision
 
 Use **one fresh SR-enabled EET installation with several disposable test saves**
