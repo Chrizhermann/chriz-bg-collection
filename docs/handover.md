@@ -2,6 +2,22 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Combined playtest completion authorized — 2026-09-09
+
+Christopher explicitly requested: **"then finish the installation."** Retain
+`C:\Users\chris\CEBG-Tests\Combined-20260908` and all 391 completed components.
+Apply only the verified SoD 256 source fix below, append that missing component,
+then execute the ten untouched frozen runs through BuffBot (446 total). Do not
+rollback/replay the 34 successful SoD siblings or start a new installation.
+
+Preparation is underway in `installer-v0-real-alpha`: an incident-specific worker
+and a narrowly authorized append-order recovery verifier. The original failure
+receipt, ledger and recipe remain immutable; successful completion must publish
+a separate recovery receipt with replacement-source and physical-order evidence.
+The follow-up `cebg-overnight-install-follow-up` is ACTIVE and read-only; the
+coordinator owns execution, so never launch a concurrent worker from the monitor.
+No game mutation or worker launch had occurred when this entry was written.
+
 ## SoD 256 fix ready; minimal recovery rehearsal passed — 2026-09-09
 
 The owning SoD task delivered commit `29e123a79b9f03334ab88ce93e28c300b287a8e0`
