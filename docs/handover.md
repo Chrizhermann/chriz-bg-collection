@@ -2,6 +2,38 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## SoD 256 fix ready; minimal recovery rehearsal passed — 2026-09-09
+
+The owning SoD task delivered commit `29e123a79b9f03334ab88ce93e28c300b287a8e0`
+on `codex/issue-14-bridge-finale` / draft PR22. It fixes the missing review of
+Artisan's MO1 equipment-policy pair, preserving the pair after validating its
+delivery shape and SPLPROT semantics. It does not disable unknown-effect rejection
+or require a Kitpack source change. Only runtime source changed:
+`chriz-sod-remix/lib/comp256_creatures.tpa` (worktree SHA256
+`6740293f96cb2d3d1c510b29984fc23106609eb3bd2f108f6099ccd9346b6387`;
+committed LF blob `b730bae065bc1d47fcadd117eb5eefe1438afb02831c94a6eac38a9a8340eeca`).
+The owner reports all 63 focused tests and exact-commit CI green.
+
+Final disposable `fixed-complete` rehearsal with WeiDU249 succeeded: it preserved
+all 364 original BG2 canonical log rows in order and appended only 256 as row365;
+21 new assets, six intended existing-resource edits, zero removals/uninstalls.
+The later installed SoD siblings have no conflicting recorded resource writes.
+All 472 protected files and 129 read resources from the retained source were
+verified unchanged. The source report and handoff are under the bridge worktree's
+`research/data/issue14-fullstack-20260909/`; report SHA256
+`b13efb10c573df8d6234b8c26f65d3d4a8d8236d670dd21def130cfd52ff09fd` was checked here.
+
+This supports preserving **all 391 completed components** with a component-only
+repair. It is not yet an accepted recovery of the retained installation: the
+collection still needs narrow missing-component/source/order reconciliation and
+evidence before continuing the untouched tail. Do not use blind Resume or alter
+the original failed receipt. Its hash remains
+`710311d47ccab96da032787f3e0ace6281e7f0a30400f0a9d2084f45b5c86938` (rechecked here).
+No retained game write, public release, new installation or native playtest was
+performed by this handoff. The ready-fix notification has been delivered; the
+check-only follow-up is paused pending the recovery decision, and must be
+reactivated when a recovery worker starts.
+
 ## Combined playtest stopped; targeted recovery assessed — 2026-09-09
 
 The 446-component local test stopped at **01:49 +09:00** in SoD Remix 256. No
