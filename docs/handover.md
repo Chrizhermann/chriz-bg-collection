@@ -2,7 +2,44 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## Combined playtest completion authorized — 2026-09-09
+## Combined playtest completed and retained — 2026-09-09
+
+**Installation accepted: 446/446 components (27 BG1 + 419 BG2).** All 391
+previously completed components were preserved; no full reinstall or sibling
+uninstall/replay was needed. Corrected SoD 256 and all ten remaining frozen runs
+completed, including dragons, Safana 189, Imoen 620, SR 60/80, Klatu 2150 and
+BuffBot 1/0. BG Radar Overlay **2.5.2.0** is also installed from official Latest.
+
+Keep `C:\Users\chris\CEBG-Tests\Combined-20260908` for Christopher's testing.
+Launch `game\InfinityLoader.exe`; Radar is
+`game\BG Radar Overlay\BG Radar Overlay.exe`. The isolated save folder is
+`C:\Users\chris\OneDrive\Documents\CEBG Combined Playtest 2026-09-08 - c2a832a75741`.
+**Native launch/gameplay acceptance is still pending.** This is a local experimental
+snapshot, not a public recipe release or a stream-install update. The source and
+stream games remain untouched. No installation worker remains active.
+
+Fresh CLI `report <root> --json` returns `ok: true`. The separately published
+`.chriz/install-receipt.json` records recovery `sod-256-append-20260909`, version
+`local-40712587d45b (repaired)`, exact final component order, source provenance and
+attempt evidence. Receipt SHA256:
+`51d670ab9fab44ca4fd6d282c4530fb352b1ebe49a6f6e2975585426ce7edcbd`.
+The original failed receipt/ledger/frozen recipe were not rewritten; the original
+terminal receipt SHA256 remains
+`710311d47ccab96da032787f3e0ace6281e7f0a30400f0a9d2084f45b5c86938`.
+Keep `.chriz/recoveries/sod-256-append-20260909/` immutable: it is hash-bound evidence.
+Do not rerun either installation worker or repair mode. The read-only follow-up
+`cebg-overnight-install-follow-up` is now **PAUSED** after verified completion.
+
+Focused recovery tests and example/CLI builds passed, followed by actual retained
+installation, acceptance and fresh report verification. The acceptance example
+uses canonical forward-slash evidence paths on Windows. Current CLI understands
+the additive append-recovery receipt; public GUI compatibility with this local
+recovery metadata has not been tested. The SoD owner received the successful 256
+installation evidence; native bridge playtest and separate release approval remain
+outstanding. Next: use the disposable checkpoints in
+`docs/plans/2026-09-08-combined-playtest-and-alpha16.md`.
+
+## Combined playtest completion authorization and execution history — 2026-09-09
 
 Christopher explicitly requested: **"then finish the installation."** Retain
 `C:\Users\chris\CEBG-Tests\Combined-20260908` and all 391 completed components.
@@ -10,13 +47,19 @@ Apply only the verified SoD 256 source fix below, append that missing component,
 then execute the ten untouched frozen runs through BuffBot (446 total). Do not
 rollback/replay the 34 successful SoD siblings or start a new installation.
 
-Preparation is underway in `installer-v0-real-alpha`: an incident-specific worker
+Recovery executed in `installer-v0-real-alpha`: an incident-specific worker
 and a narrowly authorized append-order recovery verifier. The original failure
 receipt, ledger and recipe remain immutable; successful completion must publish
 a separate recovery receipt with replacement-source and physical-order evidence.
-The follow-up `cebg-overnight-install-follow-up` is ACTIVE and read-only; the
-coordinator owns execution, so never launch a concurrent worker from the monitor.
-No game mutation or worker launch had occurred when this entry was written.
+The follow-up was active and read-only during execution; it is now paused.
+
+**04:31 +09:00:** corrected 256 installed successfully, preserving all 364 old BG2
+rows byte-for-byte (392 total including BG1). Evidence/backup is under the retained
+root's `.chriz/recoveries/sod-256-append-20260909/`. `tools/recover-combined-bridge.ps1`
+continues the frozen tail. A helper-only HGO executable-naming no-op was detected
+with unchanged before/after logs; its evidence is retained, and the real HGO
+operation uses stem `hiddengameplayoptions-bg2-attempt2`. Do not replay 256 or HGO.
+The remaining runs and final recovery acceptance subsequently completed (see above).
 
 ## SoD 256 fix ready; minimal recovery rehearsal passed — 2026-09-09
 

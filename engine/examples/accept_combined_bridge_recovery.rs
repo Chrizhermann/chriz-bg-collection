@@ -124,8 +124,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         edited_files: 6,
         removed_files: 0,
         later_sibling_write_overlaps: 0,
-        source_evidence: relative_recovery.join("source-provenance.json"),
-        compatibility_evidence: relative_recovery.join("compatibility-evidence.json"),
+        // Receipt evidence paths use canonical forward slashes on Windows too.
+        source_evidence: PathBuf::from(
+            ".chriz/recoveries/sod-256-append-20260909/source-provenance.json",
+        ),
+        compatibility_evidence: PathBuf::from(
+            ".chriz/recoveries/sod-256-append-20260909/compatibility-evidence.json",
+        ),
     };
     let operation_stems = [
         "chriz-sod-remix-256",

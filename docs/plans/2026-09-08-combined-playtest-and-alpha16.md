@@ -1,6 +1,6 @@
 # One combined playtest and the next CEBG release
 
-Status: local combined installation launched, 2026-09-08 22:54 +09:00.
+Status: local combined installation completed and accepted, 2026-09-09.
 No stream patch, public upload or updater-feed change has started.
 
 **Hold resolved (2026-09-08):** the bridge and filler changes now share SoD commit
@@ -16,7 +16,16 @@ intake; existing official downloads are reused. Run location:
 `C:\Users\chris\CEBG-Tests\Combined-20260908`. Source lock, frozen development
 recipe and worker logs are under ignored `target/combined-playtest-20260908/`.
 The receipt uses a local recipe digest, not a public release identity. Installation
-completion and native gameplay acceptance remain pending.
+is complete: **446/446 (27 BG1 + 419 BG2)**, including BuffBot; BG Radar Overlay
+2.5.2.0 is installed too. Native launch and gameplay acceptance remain pending.
+
+SoD 256 initially failed its donor-effect preflight. A supervised recovery used
+source fix `29e123a79b9f03334ab88ce93e28c300b287a8e0`, preserved all 391 completed
+components, appended only corrected 256, then finished the ten untouched frozen
+runs. No full reinstall or sibling replay occurred. The separate recovery receipt
+passes a fresh CLI report; original failure evidence and frozen recipe remain
+immutable. See the top of `docs/handover.md` for exact evidence and launch paths.
+Keep this successful installation for the checkpoints below; do not restart it.
 
 ## Decision
 
