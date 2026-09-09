@@ -3023,7 +3023,6 @@ group_label = "Npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:artisanskitpack-npc"
-conflicts = [{ feature_id = "feature:spell-rev:mandatory-components", reason = "Unavailable with Spell Revisions." }]
 components = [{ run_id = "artisanskitpack-npc-bg2", component = 5102 }]
 
 [[features]]

@@ -28,13 +28,6 @@ reason = "This component is incompatible with the selected Spell Revisions setup
 user_facing_limitation = "Revised Stormlord is unavailable when Spell Revisions is selected."
 
 [[omissions]]
-feature_id = "feature:artisanskitpack-npc:component-5102"
-approved_by = "Christopher"
-approved_on = "2026-09-04"
-reason = "This component is incompatible with the selected Spell Revisions setup."
-user_facing_limitation = "Red Wizard Edwin is unavailable when Spell Revisions is selected."
-
-[[omissions]]
 feature_id = "feature:artisanskitpack-npc:component-10004"
 approved_by = "Christopher"
 approved_on = "2026-09-04"

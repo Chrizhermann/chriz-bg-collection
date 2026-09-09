@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 445 default/mandatory rows — conditional inactive: 6, deferred: 6, selected for installation: 433.
+Engine-equivalent resolved-selection summary: 445 default/mandatory rows — conditional inactive: 5, deferred: 6, selected for installation: 434.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -57,7 +57,7 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `ARTISANSKITPACK_NPC:2001` | default | `feature:artisanskitpack-npc:component-2001` | selected for installation | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 2001 |  |
 | `ARTISANSKITPACK_NPC:3101` | default | `feature:artisanskitpack-npc:component-3101` | selected for installation | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 3101 |  |
 | `ARTISANSKITPACK_NPC:3102` | default | `feature:artisanskitpack-npc:component-3102` | selected for installation | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 3102 |  |
-| `ARTISANSKITPACK_NPC:5102` | default | `feature:artisanskitpack-npc:component-5102` | conditional inactive | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 5102 | Conflicts with feature:spell-rev:mandatory-components. |
+| `ARTISANSKITPACK_NPC:5102` | default | `feature:artisanskitpack-npc:component-5102` | selected for installation | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 5102 |  |
 | `ARTISANSKITPACK_NPC:7102` | default | `feature:artisanskitpack-npc:component-7102` | selected for installation | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 7102 |  |
 | `ARTISANSKITPACK_NPC:21001` | default | `feature:artisanskitpack-npc:component-21001` | selected for installation | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 21001 |  |
 | `ARTISANSKITPACK_NPC:9101` | default | `feature:artisanskitpack-npc:component-9101` | selected for installation | artisanskitpack-npc → artisans-kitpack-chriz-v1.3.1 chriz-v1.3.1 (ac718614991e34b4f720807bec5edc96266c6c5e), component 9101 |  |

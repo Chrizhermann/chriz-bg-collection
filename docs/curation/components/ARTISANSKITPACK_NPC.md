@@ -14,7 +14,11 @@ Refreshed for the selected Artisan fork release **chriz-v1.3.1**
   `3101/3102→3001`, `5101→5001`, `7101→7001`, `7102→7003`,
   `7104→7005`, `21001→20001`, `9101→SoD+9001`, `10004→10003`,
   `20002→20000`, `200010→8004` plus tweak `8204`, and `99001→Bardic Wonders 1008`.
-- `5102` and `10004` are unavailable with Spell Revisions.
+- Red Wizard Edwin `5102` is default-checked with or without Spell Revisions and
+  remains optional. The unsupported SR conflict was removed on 2026-09-10 after
+  independent source review; see `../../handoffs/2026-09-10-red-wizard-sr-default.md`
+  for bounded evidence and narrower spellbook follow-ups. NPC `10004` retains its
+  separate existing SR gate; this review does not establish that gate's rationale.
 - Garrick uses `99001` exactly once. Script the embedded Bardic Wonders `1008`
   Garrick prompt as **No** so the same assignment is not also performed there.
 

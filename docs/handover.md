@@ -2,6 +2,27 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Red Wizard default restored after independent review — 2026-09-10
+
+Christopher asked another agent to investigate the Red Wizard/SR exclusion and
+restore the kit as default unless a substantiated blocker was found. The review
+found no basis for a blanket ban. Artisan NPC **5102** is now default-checked with
+or without Spell Revisions, still optional. Other exclusions and source pins are
+unchanged. Draft alpha.16 / collection alpha.14 has **436 components / 44 runs**.
+This correction is not yet packaged or published.
+Verification: 27 focused tests pass, public-alpha recipe validation has no findings,
+and CLI plans confirm 436 components with Red Wizard / 435 without, retaining SR.
+
+Evidence, original rule history and actionable mod-repo follow-ups are in
+`docs/handoffs/2026-09-10-red-wizard-sr-default.md`. There are narrower starting-spell
+and custom-kit spellbook-cleanup imperfections, plus an EET Edwin variant gap;
+do not misrepresent them as a demonstrated universal SR incompatibility. Do not
+silently enable the old Edwin amulet/slot patches.
+
+Neither the stream nor Combined-20260908 has been modified: both still lack 5102.
+The 446-component combined acceptance below does not cover Red Wizard. Focused
+native Edwin testing and any existing-save migration remain separate work.
+
 ## Kivan quest fix default reconfirmed; already installed — 2026-09-09
 
 Christopher requested default inclusion through the owning task **Fix Kivan Sahaguin

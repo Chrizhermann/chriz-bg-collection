@@ -85,8 +85,14 @@ remains unavailable or excluded.
   detection blocks rather than trusting its incomplete Project Infinity `After=` list.
 - [x] Install [Spell Revisions](SPELL_REV.md) `60` after every NPC/class assignment and
   migrate `SR_SUBSPELL_FIX` into maintained code. SCS `4240` is enforced now.
-- [x] Enforce the three remaining conflict edges for Artisan `8101` and Artisan NPC
-  `5102`/`10004`. Keep SR/RR compatibility deferred rather than blocking either mod.
+- [x] Retain the existing conflict edges for Artisan `8101` and Artisan NPC `10004`.
+  The unsupported Edwin `5102` edge was removed on 2026-09-10 after independent
+  source review; Edwin is default-checked with SR again. Keep SR/RR compatibility
+  deferred rather than blocking either mod.
+- [ ] Red Wizard source follow-up: replace vanilla-resref spell removal with effective
+  prohibited-school checks; investigate SR60 custom-kit school cleanup and EET
+  `EDWIN7_` coverage. These are not a reinstated blanket SR ban. Details:
+  `../../handoffs/2026-09-10-red-wizard-sr-default.md`.
 - [ ] Validate [Randomiser](RANDOMISER.md) v8.1.1 `1100` after `500`–`570` and after SCS
   on a clean rebuilt collection and new game. Include the Tarnesh loot smoke, EEex-v1.2
   legacy-BCS fallback, numeric input for `510`, the `570` conflict, and disabling `10300`
@@ -98,7 +104,7 @@ remains unavailable or excluded.
   against final tracking-area scripts; and package the `3347` custom configuration
   (`125` percent movement, casting-speed increase off, portrait icon on).
 - [ ] Keep Artisan `30001` and its tweak `300010` unavailable until priest delivery is
-  redesigned. Gate `8101/8102`, NPC `5102/10004`, and the documented Bardic/SR conflicts;
+  redesigned. Retain the existing gates for `8101/8102`, NPC `10004`, and the documented Bardic/SR conflicts;
   enforce all refreshed main/NPC/tweak prerequisites and late-pass ordering. Add hidden,
   predicate-driven activation for tweak `1110` (`1010+EEex`) and `1010000`
   (`C0PR#CL.SPL` present); neither is globally mandatory.

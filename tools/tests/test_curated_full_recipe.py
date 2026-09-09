@@ -119,7 +119,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "c12df2b3c7ab7acbd1730c813bc1dfd97f0ae4f89c53c0549983c635c03df3db",
+                "b3b50b23d810026ee45f2198c3ff1fd6d5776ded12f3ef6346a3a096bd94c991",
             )
 
             legacy_bg1npc_groups = {
@@ -526,6 +526,39 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertTrue(effective["feature:chriz-bg-modpack:component-197"])
             for component in (130, 430, 440, 450):
                 self.assertTrue(effective[f"feature:chriz-bg-modpack:component-{component}"])
+
+    def test_red_wizard_defaults_with_sr_but_remains_optional(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            baseline = tomllib.loads(
+                (output / "presets/chris-recommended.toml").read_text(encoding="utf-8")
+            )["selections"]
+            red_wizard_id = "feature:artisanskitpack-npc:component-5102"
+            features = {feature["id"]: feature for feature in collection["features"]}
+            self.assertEqual(features[red_wizard_id]["decision"], "default")
+            self.assertEqual(features[red_wizard_id]["readiness"], "ready")
+            effective = _effective_features(collection, baseline)
+            self.assertTrue(effective["feature:spell-rev:mandatory-components"])
+            self.assertTrue(effective[red_wizard_id])
+            self.assertTrue(_effective_features(
+                collection, {**baseline, "mod:spell-rev": "off"}
+            )[red_wizard_id])
+            for disabled in (red_wizard_id, "mod:artisanskitpack-npc"):
+                with self.subTest(disabled=disabled):
+                    self.assertFalse(_effective_features(
+                        collection, {**baseline, disabled: "off"}
+                    )[red_wizard_id])
+            # Only Edwin's unsupported conflict is removed; other gates are separate.
+            self.assertFalse(effective["feature:artisanskitpack-npc:component-10004"])
+            run_ids = [run["run_id"] for run in collection["runs"]]
+            self.assertLess(run_ids.index("artisanskitpack-npc-bg2"),
+                            run_ids.index("spell-rev-npc-spellbooks-bg2"))
+            limitations = tomllib.loads(
+                (output / "releases/v0.1.0-alpha.1/known-limitations.toml").read_text(encoding="utf-8")
+            )
+            self.assertNotIn(red_wizard_id, {item["feature_id"] for item in limitations["omissions"]})
 
     def test_kivan_quest_guard_is_automatic_conditional_and_installed_once(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

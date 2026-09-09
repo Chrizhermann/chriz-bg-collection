@@ -593,7 +593,12 @@ def _write_mods(root: Path, destination: Path) -> None:
 def _update_release_records(destination: Path, commit: str) -> None:
     limitations_path = destination / "releases/v0.1.0-alpha.1/known-limitations.toml"
     limitations = limitations_path.read_text(encoding="utf-8")
-    for feature_id in ["mod:evandra", "feature:artisanskitpack-npc:component-99001", "feature:chriz-bg-modpack:component-430"]:
+    for feature_id in [
+        "mod:evandra",
+        "feature:artisanskitpack-npc:component-99001",
+        "feature:chriz-bg-modpack:component-430",
+        "feature:artisanskitpack-npc:component-5102",
+    ]:
         pattern = re.compile(rf'(?ms)^\[\[omissions\]\]\nfeature_id = {re.escape(_q(feature_id))}\n.*?(?=^\[\[omissions\]\]|\Z)')
         limitations, count = pattern.subn("", limitations)
         if count != 1:
@@ -693,6 +698,14 @@ summary = "Updates the existing selected Bardic Wonders balance fork to v2.9c-ba
 save_applicability = "new-game-only"
 urgency = "recommended"
 covers = ["mod:bardicwonders", "artifact:bardicwonders-v2.9c-balance.3", "artifact:bardicwonders-v2.9c-balance.4"]
+
+[[changes]]
+id = "restore-red-wizard-default"
+title = "Restore Edwin's Red Wizard default"
+summary = "Restores Artisan's Red Wizard kit as a default-checked optional Edwin choice with Spell Revisions. Removes the unsupported collection exclusion; mod source versions are unchanged. Existing games and saves are not modified."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["feature:feature:artisanskitpack-npc:component-5102", "run:artisanskitpack-npc-bg2"]
 """,
         encoding="utf-8",
         newline="\n",

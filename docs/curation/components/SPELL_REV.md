@@ -14,8 +14,10 @@ contains the reviewed protection-refresh and hidden-subspell repairs.
 - SCS component `4240` is unavailable while Spell Revisions is selected; that rule is
   recorded in the SCS catalog.
 - While Spell Revisions is selected, Artisan's Kitpack `8101` and Artisan's Kitpack NPC
-  `5102`/`10004` are unavailable. The conflict edges are applied with the Artisan recipe
-  slice; this isolated pin predates those feature definitions.
+  `10004` retain their existing exclusions. The unsupported Red Wizard Edwin `5102`
+  exclusion was removed on 2026-09-10: it is default-checked with SR. Independent
+  source review found spellbook cleanup imperfections, not a reason to block the kit;
+  see `../../handoffs/2026-09-10-red-wizard-sr-default.md`.
 - The former standalone `SR_SUBSPELL_FIX` is retired: its maintained implementation is
   part of component `60`, so no legacy tail run is authored.
 - Spell Revisions/Rogue Rebalancing compatibility remains deferred and does not block

@@ -20,3 +20,11 @@ summary = "Updates the existing selected Bardic Wonders balance fork to v2.9c-ba
 save_applicability = "new-game-only"
 urgency = "recommended"
 covers = ["mod:bardicwonders", "artifact:bardicwonders-v2.9c-balance.3", "artifact:bardicwonders-v2.9c-balance.4"]
+
+[[changes]]
+id = "restore-red-wizard-default"
+title = "Restore Edwin's Red Wizard default"
+summary = "Restores Artisan's Red Wizard kit as a default-checked optional Edwin choice with Spell Revisions. Removes the unsupported collection exclusion; mod source versions are unchanged. Existing games and saves are not modified."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["feature:feature:artisanskitpack-npc:component-5102", "run:artisanskitpack-npc-bg2"]

@@ -12,8 +12,11 @@ Not published. Proposed bundle: app alpha.16 / collection alpha.14.
 - Updates the existing Bardic Wonders balance fork to `v2.9c-balance.4`, including
   its Skald, Dancer, Jester and shared high-level ability corrections. Existing
   component choices and the Darkbloom / Spell Revisions exclusion are preserved.
+- **Edwin's Red Wizard kit** is default-checked again, including with Spell
+  Revisions. It remains optional. An unsupported collection exclusion was removed;
+  this does not install the kit into existing games or alter saved Edwin characters.
 
-The recommended recipe has 435 components across 44 runs. Other mod versions and
+The recommended recipe has 436 components across 44 runs. Other mod versions and
 choices are unchanged. Unreleased experiments are not part of this public recipe.
 
 ## Existing installations
