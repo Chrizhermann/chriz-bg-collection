@@ -15,6 +15,10 @@ The four ✓ marks record the old reference install, not the new default recipe.
   skill repair is invoked atomically by the default Skie component `195`.
 - Components `400` and `430` remain visible but conditionally inactive unless their Branwen /
   Spell Revisions or Tweaks Anthology prerequisites are selected.
+- Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
+  and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's
+  Archer choice `198`; never add standalone `KIVAN_QUEST_FIX` alongside it. Its
+  default inclusion was explicitly reconfirmed on 2026-09-09.
 - Yoshimo `220` is a default companion conversion. Hexxat `221` (Shadowdancer) is the
   default; `222` and `223` are unchecked alternatives, mutually exclusive with each other
   and with Artisan's Invisible Blade component `7104`.

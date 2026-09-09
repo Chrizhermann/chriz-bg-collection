@@ -2,6 +2,35 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Kivan quest fix default reconfirmed; already installed — 2026-09-09
+
+Christopher requested default inclusion through the owning task **Fix Kivan Sahaguin
+quest** (`01a08666-0eff-77e0-a178-bda4a232ff78`). This is already provided by the
+normal hash-pinned `chriz-bg-modpack v0.2.0-alpha.5` dependency, component **130**;
+do not add a duplicate standalone installer or select a stale checkout's stub.
+The recipe keeps it `mandatory` when BG1NPC quest component **10** and SCS general
+AI **6000** are selected, after EET import and SCS (public recipe: post-EET_end).
+It is independent of Kivan's Archer choice. The dependency was tightened from
+mere BG1NPC mod presence to component 10 after a regression test demonstrated that
+turning quests off previously left the guard selected. The default component set
+is unchanged; this authored/generated recipe correction is not yet published.
+
+Read-only proof: Combined-20260908 `game/WeiDU.log:408` records modpack 130 once;
+no standalone fix entry. Both `override/X#SAHA01.BCS` and `X#SAHA02.BCS` are 225 bytes,
+SHA256 `f63e741a2b3c39eab66e34f18b3fa8830022465e2bf54c762b73267c282a45e7`, matching
+the handoff's standalone verification exactly. No completed-install files, receipts,
+saves, frozen recipes or source games were changed. The stale migration/stub
+documentation has been corrected in `COLLECTION_TAIL_FIXES.md`.
+
+Reference-only handoff package:
+`C:\Users\chris\Documents\Codex\2026-09-09\kivan-quest-fix\KIVAN_QUEST_FIX-v1.0-verified.zip`,
+verified SHA256 `7fc3769c0c18e32305c1ceefb9727b27a5331edb1165f04c786bb1c0eb035d23`.
+Its `verification.json` records four passing installer cases, not new native
+playtest acceptance. Do not use this local ZIP as a public dependency.
+Test the quest from before the encounter: dialogue should finish before lower SCS
+combat AI takes over. This prevents the interruption; it does not resurrect dead
+quest actors or repair an already failed saved encounter. No new release authorized.
+
 ## Combined playtest completed and retained — 2026-09-09
 
 **Installation accepted: 446/446 components (27 BG1 + 419 BG2).** All 391

@@ -3253,7 +3253,7 @@ category = "fixes"
 decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-requires = ["mod:bg1npc", "feature:stratagems:mandatory-components"]
+requires = ["feature:bg1npc:component-10", "feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 130 }]
 
 [[features]]

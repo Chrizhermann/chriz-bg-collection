@@ -119,7 +119,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "8f48e6e98ce073fddd8a28522c1cc0832f45ce124112e7aad7e4246894d011e0",
+                "c12df2b3c7ab7acbd1730c813bc1dfd97f0ae4f89c53c0549983c635c03df3db",
             )
 
             legacy_bg1npc_groups = {
@@ -526,6 +526,42 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertTrue(effective["feature:chriz-bg-modpack:component-197"])
             for component in (130, 430, 440, 450):
                 self.assertTrue(effective[f"feature:chriz-bg-modpack:component-{component}"])
+
+    def test_kivan_quest_guard_is_automatic_conditional_and_installed_once(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            baseline = tomllib.loads(
+                (output / "presets/chris-recommended.toml").read_text(encoding="utf-8")
+            )["selections"]
+            guard_id = "feature:chriz-bg-modpack:component-130"
+            guard = next(feature for feature in collection["features"] if feature["id"] == guard_id)
+            self.assertEqual(guard["decision"], "mandatory")
+            self.assertEqual(guard["readiness"], "ready")
+            self.assertEqual(guard["requires"], [
+                "feature:bg1npc:component-10", "feature:stratagems:mandatory-components"
+            ])
+            self.assertTrue(_effective_features(collection, baseline)[guard_id])
+            for prerequisite in ("mod:bg1npc", "feature:bg1npc:component-10", "mod:stratagems"):
+                with self.subTest(prerequisite=prerequisite):
+                    effective = _effective_features(collection, {**baseline, prerequisite: "off"})
+                    self.assertFalse(effective[guard_id])
+            # Kivan's class choice is unrelated to his quest dialogue guard.
+            self.assertTrue(_effective_features(
+                collection, {**baseline, "feature:chriz-bg-modpack:component-198": "off"}
+            )[guard_id])
+            runs = collection["runs"]
+            guard_runs = [run for run in runs if run["mod_id"] == "chriz-bg-modpack" and 130 in run["components"]]
+            self.assertEqual(len(guard_runs), 1)
+            self.assertEqual(guard_runs[0]["components"].count(130), 1)
+            self.assertEqual(guard_runs[0]["phase"], "post-eet-end")
+            run_ids = [run["run_id"] for run in runs]
+            for predecessor in ("bg1npc-bg1", "stratagems-bg2", "eet-end-bg2"):
+                self.assertLess(run_ids.index(predecessor), run_ids.index(guard_runs[0]["run_id"]))
+            for mod_path in (output / "mods").glob("*.toml"):
+                mod = tomllib.loads(mod_path.read_text(encoding="utf-8"))
+                self.assertNotIn("kivan_quest_fix", mod["tp2"].casefold())
 
     def test_reconciliation_covers_every_default_and_mandatory_row(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -10,7 +10,11 @@ or balance layer. A `mandatory` plan below means **automatic only when its activ
 conditions are true**, with no standalone user toggle. `default` remains an optional
 preference enabled by default.
 
-## Current migration inventory
+## Historical migration inventory (2026-09-01; later corrections noted)
+
+Some migration-status cells below predate the public modpack releases. Use the
+implementation status in `CHRIZ-BG-MODPACK.md` and the pinned source as the current
+authority; do not infer that a maintained release still contains a legacy stub.
 
 | Legacy installer | Intended home | Fresh-stack status | Planned behavior |
 |---|---|---|---|
@@ -24,7 +28,7 @@ preference enabled by default.
 | `AK_MULTICLASS_PROFS_FIX` | `chriz-bg-modpack` `200` | Likely obsolete: the target Artisan source now enumerates the six formerly missing multiclasses dynamically. Current component is a FAIL stub. | Retire after a fresh-install verification; do not duplicate the upstream fix. |
 | `XAN_EK_FIX` | Artisan NPC `20002`; legacy destination `chriz-bg-modpack` `170` | Partly superseded: target Artisan code now covers `XAN_` but still misses `XAN4`, `XAN6`, and `TTXAN`. | Absorb the remaining EET variants into Artisan `20002`; then make the repair mandatory when Xan Fighter/Mage + Eldritch Knight are selected. |
 | `EDWIN_AMULET_FIX` | `chriz-bg-modpack` `310` | FAIL stub; a personal balance choice tied to Red Wizard Edwin, which is itself unavailable under the current SR policy. | Exclude for now. |
-| `KIVAN_QUEST_FIX` | `chriz-bg-modpack` `130` | FAIL stub. | `mandatory` when the BG1NPC Kivan sea-elf quest and SCS smarter general AI `6000` are both present. |
+| `KIVAN_QUEST_FIX` | `chriz-bg-modpack` `130` | Implemented in pinned `v0.2.0-alpha.5`; verified in Combined-20260908 on 2026-09-09. Both installed guards match the verified standalone fix byte-for-byte. | `mandatory` when BG1NPC quests `10` and SCS smarter general AI `6000` are selected; after EET import and SCS. Never also install the legacy standalone fix. |
 | `SR_SUBSPELL_FIX` | Spell Revisions `v4.21-chriz.3` component `60`; legacy modpack `180` retired | Migrated into the maintained successor release. | Installed automatically with the default late NPC-spellbook pass; no standalone tail component. |
 | `AURA_BALANCE_PATCH` | `Aura_BG1_BG2_EET-Chriz-Balance-Patch` | Its crossbow rebalance is integrated in the maintained Aura balance patch; complete legacy parity still needs verification. | Retire after verifying all six legacy item changes on a fresh target build. |
 | `BEARSKIN_MAIL_FIX` | `chriz-bg-modpack` `300` | Likely obsolete: target Artisan source no longer carries the bad usability byte. Current component is a FAIL stub. | Retire after fresh-install verification. |
@@ -39,12 +43,13 @@ preference enabled by default.
 
 ## Maintained modpack status
 
-The current `chriz-bg-modpack` source implements components `430`, `440`, `450`, and
-`600`. Components `100`–`420`, `500`, and `510`–`514` are explicit FAIL stubs and must
-remain unavailable even where this inventory records a future decision. Component `500`
-must be retired rather than implemented with its current monolithic meaning. The catalog in
-`CHRIZ-BG-MODPACK.md` is the actual component selection surface; this file records how
-the historical tail installers map into it.
+The original Phase-0 snapshot implemented only `430`, `440`, `450`, and `600`, with
+explicit FAIL stubs for many other numbers. That is **not** the current public
+release state: consult `CHRIZ-BG-MODPACK.md` and the pinned artifact. In particular,
+`130` is implemented, conditionally automatic and already present in the combined
+test installation. Never enable an actual stub or duplicate a migrated component.
+Component `500` remains retired rather than a monolithic NPC assignment route.
+This file records the historical tail mappings, not a substitute source catalog.
 
 ## NPC assignment reconciliation
 

@@ -105,6 +105,10 @@ One installed game can host these independent disposable save checkpoints:
 3. **Continuity:** a new BG1 campaign, real recruitments, recognizable permanent
    progression, then BG1-to-SoD-to-SoA transitions and save/reload. Safana before
    her first SoA arrival; ensure later earned BG2 gear is not repeatedly cleared.
+   Companion regression: Kivan's sea-elf encounter dialogue must complete before
+   SCS combat starts. Use a pre-encounter save; modpack 130 is already installed
+   and its two guards match the verified standalone fix. Do not add a second fix
+   or treat it as a repair for dead actors in a previously failed encounter.
 4. **SoD:** saves before the ambush, Liia payment, and first visits to affected
    areas; check removal, compensation and retained quest/loot behavior. Use the
    original transition rather than only teleporting to a late area. For the bridge,
