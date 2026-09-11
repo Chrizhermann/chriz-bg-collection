@@ -16,8 +16,9 @@ Listed at reference version **6.0**; refreshed for the selected fork release
 - `30001` is unavailable for every recommended collection route. Its global priest
   delivery is based on a stale snapshot and remains unsafe even without Spell Revisions.
 - `1` genuinely broadens ordinary class/race availability, but deliberately does not
-  remove every kit, dual-class, or gnome Mage restriction. No currently selected
-  Tweaks Anthology component duplicates `1/2`; future overlapping `2350/2351/2353/2357/2358`
+  remove every kit, dual-class, or gnome Mage restriction. Default Tweaks Anthology
+  `2380` complements it by expanding playable kit eligibility, including elf mage
+  specialists; it does not replace `1/2`. Future overlapping `2350/2351/2353/2357/2358`
   and `2550`–`2552` choices must be mutually exclusive in the UI.
 
 | # | Component | Group | Subgroup | ✓ | Decision |

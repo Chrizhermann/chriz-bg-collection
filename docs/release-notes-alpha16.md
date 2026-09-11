@@ -15,6 +15,9 @@ Not published. Proposed bundle: app alpha.16 / collection alpha.14.
 - **Edwin's Red Wizard kit** is default-checked again, including with Spell
   Revisions. It remains optional. An unsupported collection exclusion was removed;
   this does not install the kit into existing games or alter saved Edwin characters.
+- **Choose kits regardless of race** is default-checked and optional. Complements
+  the existing class unlock so elves can choose the missing mage specialists too.
+  Internal/NPC-only kits and the separate gnome mage rules remain unchanged.
 - Three new **unchecked SCS options**: provisions for wilderness/dungeon rests,
   more expensive inns with rest bonuses, and revised death/petrification/imprisonment
   rules. All three are visibly **Not recommended / experimental** because of
@@ -28,8 +31,9 @@ Not published. Proposed bundle: app alpha.16 / collection alpha.14.
   This batch has source-level compatibility screening, not gameplay acceptance of
   every combination.
 
-The recommended recipe still has 436 components across 44 runs. Source versions
-and recommended selections are unchanged by these additional customization options.
+The recommended recipe has 437 components across 44 runs. The racial kit unlock
+adds one default; the unchecked customization batch changes no other selections.
+No source-version change is needed for the existing Tweaks Anthology v18 component.
 Unreleased mod-repository experiments are not part of this public recipe.
 
 ## Existing installations

@@ -50,6 +50,36 @@ class CuratedFullRecipeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires a component-order audit"):
             _preserve_native_run_orders(collection)
 
+    def test_racial_kit_unlock_is_default_optional_and_follows_kit_additions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text())["selections"]
+            features = {feature["id"]: feature for feature in collection["features"]}
+            feature_id = "feature:cdtweaks:component-2380"
+            self.assertTrue(feature_id in features, f"Missing default: {feature_id}")
+            feature = features[feature_id]
+            self.assertEqual(feature["decision"], "default")
+            self.assertEqual(feature["readiness"], "ready")
+            self.assertEqual(feature["components"], [{"run_id": "cdtweaks-bg2", "component": 2380}])
+            self.assertIn("gnome", feature["description"].lower())
+            defaults = _effective_features(collection, preset)
+            self.assertTrue(defaults[feature_id])
+            disabled = _effective_features(collection, {**preset, feature_id: "off"})
+            self.assertEqual({key for key in defaults if defaults[key] != disabled[key]}, {feature_id})
+            for other in ("mod:artisanskitpack", "mod:spell-rev", "mod:bardicwonders"):
+                self.assertTrue(_effective_features(collection, {**preset, other: "off"})[feature_id])
+            runs = collection["runs"]
+            positions = {run["run_id"]: index for index, run in enumerate(runs)}
+            # Later Bardic 1012 supplies Gallant with all-race availability already.
+            for run_id in ("artisanskitpack-main-bg2", "artisanskitpack-npc-bg2",
+                           "bardicwonders-bg2", "bardicwonders-garrick-bg2"):
+                self.assertLess(positions[run_id], positions["cdtweaks-bg2"])
+            self.assertEqual(sum(run["components"].count(2380) for run in runs if run["mod_id"] == "cdtweaks"), 1)
+            for component in (2550, 2551, 2552):
+                self.assertNotIn(f"feature:cdtweaks:component-{component}", features)
+
     def test_screened_optional_batch_has_real_exclusivity_and_keeps_defaults(self) -> None:
         additions = {
             "stratagems": [3015, 4020, 4050, 4051, 4052, 4093, 4145, 4150,
@@ -190,7 +220,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "34aaa78987025a6340ea4ab351479401fc53ba91688ed423103b97725c0025f6",
+                "5ebaa477ee6cb5673e62b29074da13653e6e0cd435893126e17dbbda879ea496",
             )
 
             legacy_bg1npc_groups = {
@@ -711,7 +741,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             report = (output / "RECONCILIATION.md").read_text(encoding="utf-8")
             self.assertIn("Engine-equivalent resolved-selection summary", report)
-            self.assertIn("445 default/mandatory rows", report)
+            self.assertTrue("446 default/mandatory rows" in report)
+            self.assertTrue("`CDTWEAKS:2380` | default" in report)
             self.assertIn("`KLATU:2150` | default", report)
             self.assertIn("`IWDIFICATION:120` | default", report)
             self.assertIn("`BARDICWONDERS:1006` | default", report)

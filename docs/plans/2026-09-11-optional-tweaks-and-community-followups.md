@@ -87,20 +87,52 @@ the stream reference and Combined-20260908 explain that exact result:
   availability and only the base-Mage row of the specialist racial table. It does
   not populate the missing elf specialist choices. Its name promises all classes,
   not all kits. This is distinct from the earlier Red Wizard/SR exclusion.
-- **CDTweaks 2380**, Remove Racial Restrictions for Kits, is currently excluded.
+- **CDTweaks 2380**, Remove Racial Restrictions for Kits, was missing from the recipe.
   Pinned v18 `lib/comp_2380.tpa:49–58,76–159` updates specialist racial flags and
   adds already-playable kits to race selection tables, explicitly covering elves.
   It preserves internal/NPC-only kits and intentionally skips gnome mage choices.
   [Official documentation](https://gibberlings3.github.io/Documentation/readmes/readme-cdtweaks.html)
   describes the separate class/kit and gnome policies.
 
-Candidate remedy: verify 2380 after the relevant kit additions on a disposable
-installation, through completed elf character creation, not only list visibility.
-Check mod-kit ability minima against racial maxima before enabling every race/kit
-combination. No native Artisan conflict is declared by 2380, but that alone is not
-full gameplay acceptance. Gnome policy is a separate choice, not part of this elf
-case. No recipe, game or save was changed; implementation/default approval remains
-separate from this read-only diagnosis.
+Christopher approved default inclusion on 2026-09-12. The draft alpha.16 /
+collection alpha.14 now includes 2380 as a default-checked optional choice in the
+existing main CDTweaks run, after the relevant Artisan and Bardic kit additions.
+It has no artificial dependency on Artisan, Bardic Wonders or Spell Revisions.
+The actual installer plan is 437 components / 44 runs; switching this option off
+returns 436, with exactly `cdtweaks-bg2/2380` removed and nothing else changed.
+36 focused recipe/curation tests pass and public-alpha validation has no findings.
+
+Compatibility evidence (2026-09-12):
+
+- Native WeiDU 249 ran the exact pinned v18 `comp_2380.tpa` against disposable
+  fixtures built from copied stream and Combined effective tables. The source
+  component SHA-256 is `6c6768dd5c19f3430f2d8aa6ea53fd6de780a94229e6b499f0053a68f37b89bb`.
+- Both fixtures change elf Mage choices from four to ten: Mage, all eight normal
+  specialists, and Wild Mage. Gnome Mage tables remain byte-exact unchanged, their
+  specialist flags stay unchanged, and all four internal-only kits remain hidden.
+- Each snapshot gains 66 effective kit/race choices: 60 selection-table additions
+  and six Dwarven Defender eligibility-gate unlocks. All pass effective class/kit
+  minima versus racial maxima checks (`ABCLASRQ`, `ABCLSMOD`, `ABRACERQ`,
+  `ABRACEAD`); no unsupported rows or residual class/school gate blocks were found.
+- Uninstall restores override tables byte-for-byte. KEY, BIF and both fixture
+  TLKs stay unchanged through install/uninstall; original source-table hashes
+  also remain unchanged. No full game copy or full installation was needed.
+- Later Bardic 1012 does add the playable Gallant kit, but already makes it
+  available in all seven paladin/race tables with class flags enabled. Thus it
+  does not require moving 2380 past that late run. Other inspected late Artisan
+  components modify existing kits/NPCs, not playable-kit eligibility.
+- Local evidence: `Temp/cdtweaks2380-audit-b8da24e554604bdfa1e75e119c898064/`
+  (`summary.json`, gate audit and native attempt logs). This is a native component
+  harness, not a complete public CDTweaks TP2 run or an in-engine character test.
+
+Separate pre-existing follow-up: Combined already exposes **dwarf Gallant** before
+2380, with CHA minimum 18 versus effective dwarf maximum 17. Verify that case in
+character creation with the Bardic Wonders owner; do not claim an observed freeze,
+silently lower its stats, or attribute it to 2380. It was not changed here.
+
+Completed in-engine elf character creation remains a separate quick live check;
+fixtures are not full gameplay acceptance. Gnome policy is separate. No user game
+or save has been changed, and this draft has not been packaged or published.
 
 ## Website differences from vanilla — after the next release
 

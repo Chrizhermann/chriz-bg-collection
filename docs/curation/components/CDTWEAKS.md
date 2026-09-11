@@ -5,6 +5,11 @@ Listed at installed version **v18**.
 
 ## UI/dependency notes
 
+- `2380` is approved as **default-checked, optional** for the next patch
+  (2026-09-12). It complements Artisan's base-class unlock by broadening playable
+  kit choices, including elf mage specialists. Keep it after the main kit additions;
+  it does not expose internal/NPC-only kits or change gnome mage policy. See the
+  [compatibility follow-up](../../plans/2026-09-11-optional-tweaks-and-community-followups.md).
 - `2100` remains excluded: Christopher explicitly rejected its PnP penalties on
   2026-09-08. The approved default is a separate no-penalty armor-thieving QoL
   option, not this component; see [scope and candidate](../../plans/2026-09-08-armor-thieving-qol.md).
@@ -45,7 +50,8 @@ Listed at installed version **v18**.
   improvements. `3070–3073` change how reputation affects shopping prices, not how
   reputation is earned. `3191/3194–3198` change rest encounters, not SCS provisions.
   `2310/2311` are arcane-only/divine-only alternatives to default `2312`, not additions.
-- Still deferred: class/kit/proficiency and priest-progression rewrites; EEex combat
+- Apart from the separately approved `2380` kit-eligibility unlock, still deferred:
+  class/kit/proficiency and priest-progression rewrites; EEex combat
   feats and spell overhauls; NPC/romance/SoD-to-BG2 continuity changes; random-drop
   rewrites; custom-input choices without installer support; non-EET components.
   Keep `2680` (useful infravision) excluded alongside the known `260` problem.
@@ -237,7 +243,7 @@ Listed at installed version **v18**.
 | 2339 | Remove Summoning Cap for Regular Summons | Rule Changes |  |  | |
 | 2340 | Remove Summoning Cap for Celestials [Ardanis/GeN1e] | Rule Changes |  |  | |
 | 2360 | Remove Racial Restrictions for Single-Classes | Rule Changes |  |  | |
-| 2380 | Remove Racial Restrictions for Kits | Rule Changes |  |  | |
+| 2380 | Remove Racial Restrictions for Kits | Rule Changes |  |  | default |
 | 2371 | Allow non-humans to dual-class | Rule Changes | Alter Dual-Class Restrictions |  | |
 | 2370 | Humans can no longer dual-class | Rule Changes | Alter Dual-Class Restrictions |  | |
 | 2372 | Both options: *only* non-humans can dual-class | Rule Changes | Alter Dual-Class Restrictions |  | |

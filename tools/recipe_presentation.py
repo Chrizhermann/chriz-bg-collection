@@ -35,6 +35,7 @@ TITLE_OVERRIDES = {
     RowKey("CDTWEAKS", 2151): "Unrestricted magical protection item stacking",
     RowKey("CDTWEAKS", 2310): "High-level save penalties: arcane spells only",
     RowKey("CDTWEAKS", 2311): "High-level save penalties: divine spells only",
+    RowKey("CDTWEAKS", 2380): "Choose kits regardless of race",
     RowKey("CDTWEAKS", 3030): "Guaranteed scroll learning",
     RowKey("CDTWEAKS", 3031): "Guaranteed scroll learning, no spellbook limits",
     RowKey("CDTWEAKS", 3070): "Store discounts for low reputation",
@@ -56,6 +57,10 @@ TITLE_OVERRIDES = {
 }
 
 DESCRIPTION_OVERRIDES = {
+    RowKey("CDTWEAKS", 2380): (
+        "Allows races that can use a class to choose its playable kits, including elf mage specialists. "
+        "Does not unlock NPC-only kits or change gnome mage rules."
+    ),
     RowKey("CDTWEAKS", 70): (
         "Uses Icewind Dale's casting visuals. Choose this or IWDification's equivalent, not both."
     ),

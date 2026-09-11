@@ -339,6 +339,10 @@ id = 2312
 name = "Arcane and divine magic"
 
 [[components]]
+id = 2380
+name = "Remove Racial Restrictions for Kits"
+
+[[components]]
 id = 2391
 name = "BG2-Style Progression (Up To Level Six Spells) [TotoR]"
 

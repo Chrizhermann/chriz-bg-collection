@@ -716,6 +716,14 @@ urgency = "recommended"
 covers = ["feature:feature:artisanskitpack-npc:component-5102", "run:artisanskitpack-npc-bg2"]
 
 [[changes]]
+id = "racial-kit-unlock"
+title = "Choose kits regardless of race"
+summary = "Adds default-checked optional Tweaks Anthology 2380 after kit additions, complementing the existing class unlock. This includes missing elf mage specialists. NPC-only kits and gnome mage rules are preserved. Existing games and saves are not modified."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["feature:feature:cdtweaks:component-2380", "run:cdtweaks-bg2"]
+
+[[changes]]
 id = "scs-optional-immersion"
 title = "Optional SCS resting, inns and death rules"
 summary = "Adds three unchecked, not-recommended experimental choices: provisions for resting, more expensive inns with rest bonuses, and revised death effects. Community reports of problems are unconfirmed in CEBG. SCS's native Spell Revisions exclusion is enforced for death effects. Recommended selections and mod versions are unchanged."

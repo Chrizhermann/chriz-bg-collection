@@ -2,6 +2,20 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Racial kit unlock default approved — 2026-09-12
+
+Draft alpha.16 / collection alpha.14 now includes **CDTweaks 2380**, default-checked
+and optional, after the main Artisan/Bardic kit additions. It fills the elf mage
+specialist availability gap; internal/NPC-only kits and gnome mage policy stay
+unchanged. Recommended plan: **437 components / 44 runs**. Switching it off removes
+only `cdtweaks-bg2/2380` and returns 436. 36 focused tests pass; public-alpha
+validation has no findings. Native WeiDU 249 fixtures using copied stream and
+Combined tables pass install/uninstall with exact restoration; all 66 newly
+eligible kit/race choices pass the ability-minimum checks. Completed in-engine
+character creation is not yet tested. The pre-existing dwarf/Gallant CHA mismatch
+is tracked separately in the community follow-up plan below. No user game/save
+changes, packaging or publication.
+
 ## Optional choices and community follow-ups — 2026-09-11
 
 Draft alpha.16 / collection alpha.14 now offers **24 additional SCS and 44
@@ -33,10 +47,10 @@ unreviewed exhaustive claim now.
 Also recorded there: Christopher's **elf Mage character-creation screenshot** shows
 only Mage, Diviner, Enchanter and Wild Mage. Read-only checks of stream/combined
 `K_M_E.2DA` and `mgsrcreq.2da` confirm exactly that list. Selected Artisan 1 unlocks
-base classes, not the missing specialist choices. Excluded **CDTweaks 2380** is the
-kit-unlock counterpart and a source-supported candidate remedy; disposable
-character-creation testing and default approval are still pending. Gnome policy
-is separate. No game changes; not the earlier Red Wizard/SR issue.
+base classes, not the missing specialist choices. **CDTweaks 2380** is the
+kit-unlock counterpart; default inclusion was subsequently approved and implemented
+as recorded above. Gnome policy is separate. No game changes; not the earlier
+Red Wizard/SR issue.
 
 ## Red Wizard default restored after independent review — 2026-09-10
 

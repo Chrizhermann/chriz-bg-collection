@@ -128,9 +128,9 @@ class CatalogParserTests(unittest.TestCase):
         self.assertEqual(
             decision_totals(rows),
             {
-                Decision.EXCLUDED: 516,
+                Decision.EXCLUDED: 515,
                 Decision.OPTIONAL: 229,
-                Decision.DEFAULT: 302,
+                Decision.DEFAULT: 303,
                 Decision.MANDATORY: 143,
             },
         )
@@ -354,8 +354,8 @@ default = "none"
         result = audit_curation_map(rows, curation_map)
 
         self.assertEqual(result.mapped_rows, 1_190)
-        self.assertEqual(result.excluded_rows, 516)
-        self.assertEqual(result.feature_rows + result.omission_rows, 674)
+        self.assertEqual(result.excluded_rows, 515)
+        self.assertEqual(result.feature_rows + result.omission_rows, 675)
         self.assertEqual(result.choice_groups, 71)
         self.assertEqual(result.optional_none_groups, 23)
         self.assertEqual(result.fixed_groups, 10)

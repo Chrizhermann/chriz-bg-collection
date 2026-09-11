@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 445 default/mandatory rows — conditional inactive: 5, deferred: 6, selected for installation: 434.
+Engine-equivalent resolved-selection summary: 446 default/mandatory rows — conditional inactive: 5, deferred: 6, selected for installation: 435.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -172,6 +172,7 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `CDTWEAKS:2280` | default | `feature:cdtweaks:component-2280` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 2280 |  |
 | `CDTWEAKS:2292` | default | `feature:cdtweaks:component-2292` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 2292 |  |
 | `CDTWEAKS:2312` | default | `feature:cdtweaks:component-2312` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 2312 |  |
+| `CDTWEAKS:2380` | default | `feature:cdtweaks:component-2380` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 2380 |  |
 | `CDTWEAKS:2391` | default | `feature:cdtweaks:component-2391` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 2391 |  |
 | `CDTWEAKS:2400` | default | `feature:cdtweaks:component-2400` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 2400 |  |
 | `CDTWEAKS:2410` | default | `feature:cdtweaks:component-2410` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 2410 |  |
