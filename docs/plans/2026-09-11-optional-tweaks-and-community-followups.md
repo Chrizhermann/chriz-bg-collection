@@ -73,6 +73,23 @@ Separately requested: automatically use memorized regeneration spells on rest.
 See [the owning-mod handoff](../handoffs/2026-09-11-regeneration-on-rest.md).
 Feasibility research is complete; implementation and live testing remain pending.
 
+## Mage kit availability despite relaxed restrictions — reported, unverified
+
+Christopher reports that some mage kits are still not available to everyone,
+despite the recommended setup relaxing class/kit restrictions. Record this as a
+possible coverage gap; the affected kits, races and installation version have
+not yet been identified. This note does not establish a cause or authorize a
+blanket removal of additional restrictions.
+
+For a later focused check, capture the kit name, character race, installation
+version and where the choice is missing/disabled (for example character creation
+versus an editor). Verify the installed restriction-removal component's scope and
+whether mod-added kits or later changes retain separate eligibility rules. Do not
+assume this is the earlier Red Wizard/SR issue. Route any confirmed fix to its
+owning mod, or correct the recipe if the wrong component was selected.
+
+No investigation, recipe change or game modification was made for this report.
+
 ## Website differences from vanilla — after the next release
 
 Prepare a gamer-readable comparison **after** releasing the next version. Discuss

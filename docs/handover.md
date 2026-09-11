@@ -30,6 +30,11 @@ deferred **website differences-from-vanilla comparison** are tracked in
 must be discussed with Christopher/Twitch task after release, not published as an
 unreviewed exhaustive claim now.
 
+Also recorded there: Christopher reports that some **mage kits remain restricted**
+despite the default class/kit restriction relaxation. Exact kit/race/version and
+the affected selection screen are pending; cause unverified. This is a follow-up,
+not a confirmed recurrence of the Red Wizard/SR issue or a new blanket exclusion.
+
 ## Red Wizard default restored after independent review — 2026-09-10
 
 Christopher asked another agent to investigate the Red Wizard/SR exclusion and
