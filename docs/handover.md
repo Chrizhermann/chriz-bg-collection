@@ -2,6 +2,34 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Optional choices and community follow-ups — 2026-09-11
+
+Draft alpha.16 / collection alpha.14 now offers **24 additional SCS and 44
+CDTweaks choices**, all unchecked. Recommended selections remain exactly unchanged:
+**436 components / 44 runs**. Alternative groups have real mutual conflicts;
+CDTweaks 2310/2311 remain alongside default 2312 in the late spell-scan run.
+SCS 4130/4135/4140 have visible **Not recommended / experimental** cautions after
+community feedback. 4130 also explains and enforces SCS's native SR exclusion.
+Do not infer that source screening proves every combination works in-game.
+
+35 focused Python tests and 12 Customize UI tests passed; public-alpha validation
+has no findings; eight CLI planning cases and pinned SCS/CDTweaks native order were
+checked. No game was modified, no installer test was started, and nothing was
+packaged/published. Historical release acceptance records were preserved.
+
+Christopher deferred the unresolved **Kivan/Jozzi** viewer case until he can
+reproduce it; the existing component 130 guard was already shipped, not a promised
+new fix for that case. Druid instant-cure availability is a future SR/BG Rebalance
+balance discussion. **Automatic regeneration on rest** is a separate requested
+QoL feature, researched but not implemented; owning-mod prototype scope is in
+`docs/handoffs/2026-09-11-regeneration-on-rest.md`.
+
+Next-release scope, source-screening caveats, Kivan follow-up, and the explicitly
+deferred **website differences-from-vanilla comparison** are tracked in
+`docs/plans/2026-09-11-optional-tweaks-and-community-followups.md`. The website list
+must be discussed with Christopher/Twitch task after release, not published as an
+unreviewed exhaustive claim now.
+
 ## Red Wizard default restored after independent review — 2026-09-10
 
 Christopher asked another agent to investigate the Red Wizard/SR exclusion and

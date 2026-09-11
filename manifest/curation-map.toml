@@ -2,8 +2,8 @@
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
 expected_rows = 1190
-expected_choice_groups = 61
-expected_optional_none_groups = 13
+expected_choice_groups = 71
+expected_optional_none_groups = 23
 expected_fixed_groups = 10
 
 parents = [
@@ -110,7 +110,7 @@ excluded = []
 
 [[catalogs]]
 id = "CDTWEAKS"
-excluded = [0, 70, 72, 80, 82, 90, 140, 150, 160, 171, 3150, 3151, 220, 230, 240, 241, 250, 251, 252, 253, 254, 255, 260, 270, 271, 1030, 1035, 1036, 1050, 1060, 1061, 1062, 1070, 1075, 1085, 1100, 1101, 1110, 1130, 1140, 1141, 1150, 1170, 1190, 1200, 1210, 1240, 1251, 1252, 1253, 1254, 1255, 1256, 1260, 1270, 1280, 1290, 1300, 1310, 1330, 1350, 1351, 1352, 1353, 1354, 1360, 1361, 1370, 2040, 2060, 2080, 2091, 2092, 2100, 2120, 2140, 2150, 2151, 2160, 2161, 2162, 2163, 2164, 2190, 2191, 2200, 2211, 2220, 2230, 2240, 2261, 2271, 2281, 2288, 2289, 2290, 2291, 2293, 2294, 2295, 2296, 2730, 2731, 2732, 2733, 2734, 2735, 2736, 2737, 2738, 2739, 2297, 2580, 2581, 2300, 2310, 2311, 2320, 2330, 2339, 2340, 2360, 2380, 2371, 2370, 2372, 2350, 2351, 2353, 2357, 2358, 2550, 2551, 2552, 2390, 2401, 2431, 2440, 2450, 2510, 2530, 2560, 2561, 2562, 2620, 2630, 2640, 2650, 2660, 2670, 2680, 2690, 2691, 2692, 2693, 2700, 2710, 2740, 3020, 3030, 3031, 3050, 3060, 3070, 3071, 3072, 3073, 3131, 3132, 3140, 3141, 3160, 3170, 3175, 3176, 3183, 3190, 3191, 3194, 3195, 3196, 3197, 3198, 3200, 3205, 3210, 3220, 3230, 3240, 3241, 3242, 3250, 3260, 3261, 3262, 3263, 3264, 3265, 3266, 3267, 3270, 3271, 3272, 3273, 3274, 3275, 3276, 3277, 3280, 3320, 3330, 3358, 3360, 3370, 3380, 3400, 3410, 3411, 3412, 3490, 3491, 3492, 3493, 3494, 3495, 3496, 3497, 3420, 3430, 3450, 3460, 3470, 3480, 4000, 4010, 4020, 4025, 4030, 4040, 4060, 4070, 4080, 4090, 4100, 4110, 4120, 4130, 4131, 4132, 4133, 4150, 4160, 4170, 4140, 4180, 4200, 4210, 4211, 4212, 4213, 4220, 4221, 4230, 6000, 6010, 6020, 6030, 6040, 6050, 6060, 6070, 6080, 6090, 6100, 6110, 6120, 6130, 6140, 6150, 6160, 6170, 6180, 6190, 6200, 6210, 6220, 6230, 6240, 6250, 6260, 6270, 6280, 6290, 6300, 6310, 6320, 6330, 6340, 6350]
+excluded = [0, 72, 80, 82, 230, 250, 251, 252, 253, 254, 255, 260, 270, 271, 1050, 1060, 1061, 1062, 1070, 1075, 1085, 1110, 1130, 1150, 1170, 1190, 1200, 1210, 1240, 1251, 1252, 1253, 1254, 1255, 1256, 1260, 1270, 1280, 1290, 1300, 1310, 1330, 1350, 1351, 1352, 1353, 1354, 1360, 1361, 1370, 2040, 2060, 2080, 2091, 2092, 2100, 2120, 2140, 2150, 2160, 2161, 2162, 2163, 2164, 2200, 2211, 2230, 2240, 2261, 2271, 2281, 2288, 2289, 2290, 2291, 2293, 2294, 2295, 2296, 2730, 2731, 2732, 2733, 2734, 2735, 2736, 2737, 2738, 2739, 2297, 2580, 2581, 2300, 2320, 2330, 2339, 2340, 2360, 2380, 2371, 2370, 2372, 2350, 2351, 2353, 2357, 2358, 2550, 2551, 2552, 2390, 2401, 2431, 2440, 2450, 2510, 2530, 2560, 2561, 2562, 2620, 2630, 2640, 2650, 2660, 2670, 2680, 2690, 2691, 2692, 2693, 2700, 2710, 2740, 3020, 3050, 3140, 3141, 3160, 3170, 3175, 3176, 3183, 3190, 3210, 3220, 3240, 3241, 3242, 3250, 3260, 3261, 3262, 3263, 3264, 3265, 3266, 3267, 3270, 3271, 3272, 3273, 3274, 3275, 3276, 3277, 3280, 3330, 3358, 3360, 3370, 3380, 3400, 3410, 3411, 3412, 3490, 3491, 3492, 3493, 3494, 3495, 3496, 3497, 3420, 3430, 3450, 3460, 3470, 3480, 4000, 4010, 4020, 4025, 4030, 4040, 4060, 4070, 4080, 4090, 4100, 4110, 4120, 4130, 4131, 4132, 4133, 4150, 4160, 4170, 4180, 4200, 4210, 4211, 4212, 4213, 4220, 4221, 4230, 6000, 6010, 6020, 6030, 6040, 6050, 6060, 6070, 6080, 6090, 6100, 6110, 6120, 6130, 6140, 6150, 6160, 6170, 6180, 6190, 6200, 6210, 6220, 6230, 6240, 6250, 6260, 6270, 6280, 6290, 6300, 6310, 6320, 6330, 6340, 6350]
 
 [[catalogs]]
 id = "CHRIZ-BG-MODPACK"
@@ -214,7 +214,7 @@ excluded = [70]
 
 [[catalogs]]
 id = "STRATAGEMS"
-excluded = [100, 1500, 1510, 1520, 1600, 1610, 2010, 2020, 2030, 2040, 2050, 2060, 2070, 2080, 2520, 2900, 3010, 3015, 3017, 3020, 3021, 3022, 3500, 3501, 3510, 3551, 3552, 4020, 4030, 4050, 4051, 4052, 4093, 4099, 4100, 4130, 4135, 4140, 4145, 4146, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173, 4174, 4190, 4216, 4217, 4230, 5070, 5080, 6020, 6700]
+excluded = [100, 1500, 1510, 1520, 1600, 1610, 2010, 2020, 2030, 2040, 2050, 2060, 2070, 2080, 2520, 2900, 3010, 3017, 3020, 3021, 3022, 3500, 3501, 3510, 3551, 3552, 4030, 4099, 4100, 4146, 4190, 5070, 5080, 6020, 6700]
 
 [[catalogs]]
 id = "UB"
@@ -2506,6 +2506,21 @@ kind = "feature"
 rows = ["STRATAGEMS:4115"]
 
 [[targets]]
+id = "feature:stratagems:component-4130"
+kind = "feature"
+rows = ["STRATAGEMS:4130"]
+
+[[targets]]
+id = "feature:stratagems:component-4135"
+kind = "feature"
+rows = ["STRATAGEMS:4135"]
+
+[[targets]]
+id = "feature:stratagems:component-4140"
+kind = "feature"
+rows = ["STRATAGEMS:4140"]
+
+[[targets]]
 id = "feature:stratagems:component-4210"
 kind = "feature"
 rows = ["STRATAGEMS:4210"]
@@ -2685,6 +2700,401 @@ id = "feature:yeslicknpc:component-1"
 kind = "feature"
 rows = ["YESLICKNPC:1"]
 
+[[targets]]
+id = "feature:cdtweaks:component-70"
+kind = "feature"
+rows = ["CDTWEAKS:70"]
+
+[[targets]]
+id = "feature:cdtweaks:component-90"
+kind = "feature"
+rows = ["CDTWEAKS:90"]
+
+[[targets]]
+id = "feature:cdtweaks:component-140"
+kind = "feature"
+rows = ["CDTWEAKS:140"]
+
+[[targets]]
+id = "feature:cdtweaks:component-150"
+kind = "feature"
+rows = ["CDTWEAKS:150"]
+
+[[targets]]
+id = "feature:cdtweaks:component-160"
+kind = "feature"
+rows = ["CDTWEAKS:160"]
+
+[[targets]]
+id = "feature:cdtweaks:component-171"
+kind = "feature"
+rows = ["CDTWEAKS:171"]
+
+[[targets]]
+id = "feature:cdtweaks:component-220"
+kind = "feature"
+rows = ["CDTWEAKS:220"]
+
+[[targets]]
+id = "feature:cdtweaks:component-240"
+kind = "feature"
+rows = ["CDTWEAKS:240"]
+
+[[targets]]
+id = "feature:cdtweaks:component-241"
+kind = "feature"
+rows = ["CDTWEAKS:241"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1030"
+kind = "feature"
+rows = ["CDTWEAKS:1030"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1035"
+kind = "feature"
+rows = ["CDTWEAKS:1035"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1036"
+kind = "feature"
+rows = ["CDTWEAKS:1036"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1100"
+kind = "feature"
+rows = ["CDTWEAKS:1100"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1101"
+kind = "feature"
+rows = ["CDTWEAKS:1101"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1140"
+kind = "feature"
+rows = ["CDTWEAKS:1140"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1141"
+kind = "feature"
+rows = ["CDTWEAKS:1141"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2151"
+kind = "feature"
+rows = ["CDTWEAKS:2151"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2190"
+kind = "feature"
+rows = ["CDTWEAKS:2190"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2191"
+kind = "feature"
+rows = ["CDTWEAKS:2191"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2220"
+kind = "feature"
+rows = ["CDTWEAKS:2220"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2310"
+kind = "feature"
+rows = ["CDTWEAKS:2310"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2311"
+kind = "feature"
+rows = ["CDTWEAKS:2311"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3030"
+kind = "feature"
+rows = ["CDTWEAKS:3030"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3031"
+kind = "feature"
+rows = ["CDTWEAKS:3031"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3060"
+kind = "feature"
+rows = ["CDTWEAKS:3060"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3070"
+kind = "feature"
+rows = ["CDTWEAKS:3070"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3071"
+kind = "feature"
+rows = ["CDTWEAKS:3071"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3072"
+kind = "feature"
+rows = ["CDTWEAKS:3072"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3073"
+kind = "feature"
+rows = ["CDTWEAKS:3073"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3131"
+kind = "feature"
+rows = ["CDTWEAKS:3131"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3132"
+kind = "feature"
+rows = ["CDTWEAKS:3132"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3150"
+kind = "feature"
+rows = ["CDTWEAKS:3150"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3151"
+kind = "feature"
+rows = ["CDTWEAKS:3151"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3191"
+kind = "feature"
+rows = ["CDTWEAKS:3191"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3194"
+kind = "feature"
+rows = ["CDTWEAKS:3194"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3195"
+kind = "feature"
+rows = ["CDTWEAKS:3195"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3196"
+kind = "feature"
+rows = ["CDTWEAKS:3196"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3197"
+kind = "feature"
+rows = ["CDTWEAKS:3197"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3198"
+kind = "feature"
+rows = ["CDTWEAKS:3198"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3200"
+kind = "feature"
+rows = ["CDTWEAKS:3200"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3205"
+kind = "feature"
+rows = ["CDTWEAKS:3205"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3230"
+kind = "feature"
+rows = ["CDTWEAKS:3230"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3320"
+kind = "feature"
+rows = ["CDTWEAKS:3320"]
+
+[[targets]]
+id = "feature:cdtweaks:component-4140"
+kind = "feature"
+rows = ["CDTWEAKS:4140"]
+
+[[targets]]
+id = "feature:stratagems:component-3015"
+kind = "feature"
+rows = ["STRATAGEMS:3015"]
+
+[[targets]]
+id = "feature:stratagems:component-4020"
+kind = "feature"
+rows = ["STRATAGEMS:4020"]
+
+[[targets]]
+id = "feature:stratagems:component-4050"
+kind = "feature"
+rows = ["STRATAGEMS:4050"]
+
+[[targets]]
+id = "feature:stratagems:component-4051"
+kind = "feature"
+rows = ["STRATAGEMS:4051"]
+
+[[targets]]
+id = "feature:stratagems:component-4052"
+kind = "feature"
+rows = ["STRATAGEMS:4052"]
+
+[[targets]]
+id = "feature:stratagems:component-4093"
+kind = "feature"
+rows = ["STRATAGEMS:4093"]
+
+[[targets]]
+id = "feature:stratagems:component-4145"
+kind = "feature"
+rows = ["STRATAGEMS:4145"]
+
+[[targets]]
+id = "feature:stratagems:component-4150"
+kind = "feature"
+rows = ["STRATAGEMS:4150"]
+
+[[targets]]
+id = "feature:stratagems:component-4160"
+kind = "feature"
+rows = ["STRATAGEMS:4160"]
+
+[[targets]]
+id = "feature:stratagems:component-4161"
+kind = "feature"
+rows = ["STRATAGEMS:4161"]
+
+[[targets]]
+id = "feature:stratagems:component-4162"
+kind = "feature"
+rows = ["STRATAGEMS:4162"]
+
+[[targets]]
+id = "feature:stratagems:component-4163"
+kind = "feature"
+rows = ["STRATAGEMS:4163"]
+
+[[targets]]
+id = "feature:stratagems:component-4164"
+kind = "feature"
+rows = ["STRATAGEMS:4164"]
+
+[[targets]]
+id = "feature:stratagems:component-4170"
+kind = "feature"
+rows = ["STRATAGEMS:4170"]
+
+[[targets]]
+id = "feature:stratagems:component-4171"
+kind = "feature"
+rows = ["STRATAGEMS:4171"]
+
+[[targets]]
+id = "feature:stratagems:component-4172"
+kind = "feature"
+rows = ["STRATAGEMS:4172"]
+
+[[targets]]
+id = "feature:stratagems:component-4173"
+kind = "feature"
+rows = ["STRATAGEMS:4173"]
+
+[[targets]]
+id = "feature:stratagems:component-4174"
+kind = "feature"
+rows = ["STRATAGEMS:4174"]
+
+[[targets]]
+id = "feature:stratagems:component-4216"
+kind = "feature"
+rows = ["STRATAGEMS:4216"]
+
+[[targets]]
+id = "feature:stratagems:component-4217"
+kind = "feature"
+rows = ["STRATAGEMS:4217"]
+
+[[targets]]
+id = "feature:stratagems:component-4230"
+kind = "feature"
+rows = ["STRATAGEMS:4230"]
+
+[[choice_groups]]
+id = "choice:cdtweaks:outline-white-spell-icons-for-accessibility"
+catalog = "CDTWEAKS"
+subgroup = "Outline White Spell Icons for Accessibility"
+options = ["CDTWEAKS:240", "CDTWEAKS:241"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:make-cloakwood-areas-available-before-completing-the-bandit-camp"
+catalog = "CDTWEAKS"
+subgroup = "Make Cloakwood Areas Available Before Completing the Bandit Camp"
+options = ["CDTWEAKS:1035", "CDTWEAKS:1036"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:city-map-exploration"
+catalog = "CDTWEAKS"
+subgroup = "City Map Exploration"
+options = ["CDTWEAKS:1100", "CDTWEAKS:1101"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:easy-spell-learning"
+catalog = "CDTWEAKS"
+subgroup = "Easy Spell Learning"
+options = ["CDTWEAKS:3030", "CDTWEAKS:3031"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:change-effect-of-reputation-on-store-prices"
+catalog = "CDTWEAKS"
+subgroup = "Change Effect of Reputation on Store Prices"
+options = ["CDTWEAKS:3070", "CDTWEAKS:3071", "CDTWEAKS:3072", "CDTWEAKS:3073"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:alter-hostile-rest-spawns"
+catalog = "CDTWEAKS"
+subgroup = "Alter Hostile Rest Spawns"
+options = ["CDTWEAKS:3194", "CDTWEAKS:3195", "CDTWEAKS:3196", "CDTWEAKS:3197", "CDTWEAKS:3198"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:decrease-the-rate-at-which-reputation-improves"
+catalog = "STRATAGEMS"
+subgroup = "Decrease the rate at which reputation improves"
+options = ["STRATAGEMS:4050", "STRATAGEMS:4051", "STRATAGEMS:4052", "STRATAGEMS:4093"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:increase-the-price-of-a-license-to-practise-magic-in-athkatla"
+catalog = "STRATAGEMS"
+subgroup = "Increase the price of a license to practise magic in Athkatla"
+options = ["STRATAGEMS:4160", "STRATAGEMS:4161", "STRATAGEMS:4162", "STRATAGEMS:4163", "STRATAGEMS:4164"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:increase-the-price-asked-by-gaelan-bayle"
+catalog = "STRATAGEMS"
+subgroup = "Increase the price asked by Gaelan Bayle"
+options = ["STRATAGEMS:4170", "STRATAGEMS:4171", "STRATAGEMS:4172", "STRATAGEMS:4173", "STRATAGEMS:4174"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:skip-the-candlekeep-tutorial-sections"
+catalog = "STRATAGEMS"
+subgroup = "Skip the Candlekeep tutorial sections"
+options = ["STRATAGEMS:4145"]
+default = "none"
+
 [[choice_groups]]
 id = "choice:artisanskitpack-npc:artisan-s-kitpack-make-imoen-a"
 catalog = "ARTISANSKITPACK_NPC"
@@ -2787,7 +3197,7 @@ default = "none"
 id = "choice:cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
 catalog = "CDTWEAKS"
 subgroup = "Add Save Penalties for Spells Cast by High-Level Casters"
-options = ["CDTWEAKS:2312"]
+options = ["CDTWEAKS:2310", "CDTWEAKS:2311", "CDTWEAKS:2312"]
 default = "CDTWEAKS:2312"
 
 [[choice_groups]]
@@ -2906,7 +3316,7 @@ default = "CDTWEAKS:3354"
 id = "choice:cdtweaks:gems-and-potions-require-identification"
 catalog = "CDTWEAKS"
 subgroup = "Gems and Potions Require Identification"
-options = ["CDTWEAKS:1142"]
+options = ["CDTWEAKS:1140", "CDTWEAKS:1141", "CDTWEAKS:1142"]
 default = "CDTWEAKS:1142"
 
 [[choice_groups]]
@@ -2962,7 +3372,7 @@ default = "CDTWEAKS:3110"
 id = "choice:cdtweaks:limit-ability-of-storekeepers-to-identify-items"
 catalog = "CDTWEAKS"
 subgroup = "Limit Ability of Storekeepers to Identify Items"
-options = ["CDTWEAKS:2192"]
+options = ["CDTWEAKS:2190", "CDTWEAKS:2191", "CDTWEAKS:2192"]
 default = "CDTWEAKS:2192"
 
 [[choice_groups]]
@@ -2983,7 +3393,7 @@ default = "CDTWEAKS:1161"
 id = "choice:cdtweaks:no-traps-or-locks-weimer-argent77"
 catalog = "CDTWEAKS"
 subgroup = "No Traps or Locks [Weimer, argent77]"
-options = ["CDTWEAKS:3130"]
+options = ["CDTWEAKS:3130", "CDTWEAKS:3131", "CDTWEAKS:3132"]
 default = "none"
 
 [[choice_groups]]
@@ -2997,7 +3407,7 @@ default = "CDTWEAKS:3290"
 id = "choice:cdtweaks:remove-annoying-visual-effects-from-equipped-items"
 catalog = "CDTWEAKS"
 subgroup = "Remove Annoying Visual Effects from Equipped Items"
-options = ["CDTWEAKS:200"]
+options = ["CDTWEAKS:200", "CDTWEAKS:3150", "CDTWEAKS:3151"]
 default = "none"
 
 [[choice_groups]]
@@ -3011,7 +3421,7 @@ default = "CDTWEAKS:180"
 id = "choice:cdtweaks:unique-icons-lava"
 catalog = "CDTWEAKS"
 subgroup = "Unique Icons [Lava]"
-options = ["CDTWEAKS:170"]
+options = ["CDTWEAKS:170", "CDTWEAKS:171"]
 default = "CDTWEAKS:170"
 
 [[choice_groups]]
@@ -3025,7 +3435,7 @@ default = "none"
 id = "choice:cdtweaks:wear-multiple-protection-items"
 catalog = "CDTWEAKS"
 subgroup = "Wear Multiple Protection Items"
-options = ["CDTWEAKS:2152"]
+options = ["CDTWEAKS:2151", "CDTWEAKS:2152"]
 default = "CDTWEAKS:2152"
 
 [[choice_groups]]
@@ -3095,7 +3505,7 @@ default = "STRATAGEMS:3540"
 id = "choice:stratagems:remove-unrealistically-convenient-ammunition-from-the-game"
 catalog = "STRATAGEMS"
 subgroup = "Remove unrealistically convenient ammunition from the game"
-options = ["STRATAGEMS:4218"]
+options = ["STRATAGEMS:4216", "STRATAGEMS:4217", "STRATAGEMS:4218"]
 default = "STRATAGEMS:4218"
 
 [[choice_groups]]

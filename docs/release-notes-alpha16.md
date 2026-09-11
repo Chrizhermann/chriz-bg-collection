@@ -15,9 +15,22 @@ Not published. Proposed bundle: app alpha.16 / collection alpha.14.
 - **Edwin's Red Wizard kit** is default-checked again, including with Spell
   Revisions. It remains optional. An unsupported collection exclusion was removed;
   this does not install the kit into existing games or alter saved Edwin characters.
+- Three new **unchecked SCS options**: provisions for wilderness/dungeon rests,
+  more expensive inns with rest bonuses, and revised death/petrification/imprisonment
+  rules. All three are visibly **Not recommended / experimental** because of
+  community reports of problems, not yet independently reproduced in CEBG.
+  Death effects explains and enforces SCS's own incompatibility with Spell
+  Revisions. Provisions are not required in SoD.
+- **21 further SCS and 44 Tweaks Anthology choices**, all unchecked, with clearer
+  descriptions and enforced alternative groups. Includes reputation/price options,
+  rest encounters, cosmetic tweaks and identification alternatives. Riskier class,
+  spell, proficiency and story changes remain excluded pending targeted review.
+  This batch has source-level compatibility screening, not gameplay acceptance of
+  every combination.
 
-The recommended recipe has 436 components across 44 runs. Other mod versions and
-choices are unchanged. Unreleased experiments are not part of this public recipe.
+The recommended recipe still has 436 components across 44 runs. Source versions
+and recommended selections are unchanged by these additional customization options.
+Unreleased mod-repository experiments are not part of this public recipe.
 
 ## Existing installations
 

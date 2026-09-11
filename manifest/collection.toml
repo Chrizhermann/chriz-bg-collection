@@ -194,7 +194,7 @@ args = []
 run_id = "stratagems-bg2"
 mod_id = "stratagems"
 phase = "main"
-components = [2000, 2500, 2510, 3040, 3041, 3505, 3540, 3541, 4000, 4115, 4210, 4215, 4218, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
+components = [2000, 2500, 2510, 3015, 3040, 3041, 3505, 3540, 3541, 4000, 4020, 4050, 4051, 4052, 4093, 4115, 4130, 4135, 4140, 4145, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173, 4174, 4210, 4215, 4216, 4217, 4218, 4230, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
 args = []
 
 [[runs]]
@@ -2854,6 +2854,16 @@ components = [
 ]
 
 [[features]]
+id = "feature:stratagems:component-3015"
+title = "More extra-healing potions in BG1 shops"
+description = "Adds a small stock of Potions of Extra Healing to four BG1 temple shops."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 3015 }]
+
+[[features]]
 id = "feature:stratagems:component-3040"
 title = "Remove Arrows of Dispelling from stores"
 description = "Optional stricter alternative to the curated five-arrow limit."
@@ -2898,6 +2908,60 @@ conflicts = [{ feature_id = "feature:stratagems:component-3540", reason = "Choos
 components = [{ run_id = "stratagems-bg2", component = 3541 }]
 
 [[features]]
+id = "feature:stratagems:component-4020"
+title = "More natural wolves and wild dogs"
+description = "Wild animals are not always hostile and may avoid or flee your party. Dangerous encounter wolves stay dangerous."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4020 }]
+
+[[features]]
+id = "feature:stratagems:component-4050"
+title = "Reputation gains at about two-thirds the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4050 }]
+
+[[features]]
+id = "feature:stratagems:component-4051"
+title = "Reputation gains at about one-half the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4051 }]
+
+[[features]]
+id = "feature:stratagems:component-4052"
+title = "Reputation gains at about one-third the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4052 }]
+
+[[features]]
+id = "feature:stratagems:component-4093"
+title = "Reputation gains at about one-quarter the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4093 }]
+
+[[features]]
 id = "feature:stratagems:component-4115"
 title = "Thief skills in multiples of five"
 description = "Assign thief skill points in multiples of five."
@@ -2906,6 +2970,167 @@ decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 4115 }]
+
+[[features]]
+id = "feature:stratagems:component-4130"
+title = "Not recommended: revised death, petrification and imprisonment"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Changes companion permanent death and the handling of petrification and imprisonment; changes Resurrection costs and restrictions. Unavailable with Spell Revisions."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:spell-rev:mandatory-components", reason = "SCS 35.21 explicitly forbids this component with Spell Revisions. Turn off Spell Revisions to select it." }]
+components = [{ run_id = "stratagems-bg2", component = 4130 }]
+
+[[features]]
+id = "feature:stratagems:component-4135"
+title = "Not recommended: rests use provisions"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Wilderness and dungeon rests use supplies; inns refill them and druids or rangers can forage outdoors. Supplies are not required during SoD or selected campaign finales."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4135 }]
+
+[[features]]
+id = "feature:stratagems:component-4140"
+title = "Not recommended: more expensive inns with bonuses"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Inn rooms cost more; better rooms grant stronger, longer-lasting rest bonuses. Works with or without the provisions option."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4140 }]
+
+[[features]]
+id = "feature:stratagems:component-4145"
+title = "Remove Candlekeep tutorial NPCs"
+description = "Removes tutorial guides and introductory training reminders, while keeping Candlekeep itself."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4145 }]
+
+[[features]]
+id = "feature:stratagems:component-4150"
+title = "Cowled Wizards also police indoor spellcasting"
+description = "Using unlicensed magic in many above-ground Athkatla interiors can attract the Cowled Wizards."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4150 }]
+
+[[features]]
+id = "feature:stratagems:component-4160"
+title = "Athkatla magic license: 10,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 10,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4160 }]
+
+[[features]]
+id = "feature:stratagems:component-4161"
+title = "Athkatla magic license: 15,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 15,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4161 }]
+
+[[features]]
+id = "feature:stratagems:component-4162"
+title = "Athkatla magic license: 20,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 20,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4162 }]
+
+[[features]]
+id = "feature:stratagems:component-4163"
+title = "Athkatla magic license: 30,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 30,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4163 }]
+
+[[features]]
+id = "feature:stratagems:component-4164"
+title = "Athkatla magic license: 50,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 50,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4164 }]
+
+[[features]]
+id = "feature:stratagems:component-4170"
+title = "Gaelan's initial asking price: 40,000 gp"
+description = "Raises the initial price for help reaching Imoen to 40,000 gold; the eventual discounted payment is 30,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4170 }]
+
+[[features]]
+id = "feature:stratagems:component-4171"
+title = "Gaelan's initial asking price: 60,000 gp"
+description = "Raises the initial price for help reaching Imoen to 60,000 gold; the eventual discounted payment is 45,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4171 }]
+
+[[features]]
+id = "feature:stratagems:component-4172"
+title = "Gaelan's initial asking price: 80,000 gp"
+description = "Raises the initial price for help reaching Imoen to 80,000 gold; the eventual discounted payment is 60,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4172 }]
+
+[[features]]
+id = "feature:stratagems:component-4173"
+title = "Gaelan's initial asking price: 100,000 gp"
+description = "Raises the initial price for help reaching Imoen to 100,000 gold; the eventual discounted payment is 75,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4173 }]
+
+[[features]]
+id = "feature:stratagems:component-4174"
+title = "Gaelan's initial asking price: 120,000 gp"
+description = "Raises the initial price for help reaching Imoen to 120,000 gold; the eventual discounted payment is 90,000 gold."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4174 }]
 
 [[features]]
 id = "feature:stratagems:component-4210"
@@ -2928,14 +3153,47 @@ parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 4215 }]
 
 [[features]]
+id = "feature:stratagems:component-4216"
+title = "Remove only nonmagical ammunition from containers"
+description = "Removes ordinary ammunition from random area containers. Shop stock and enemies' equipment are not affected."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4217", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4218", reason = "Choose one ammunition removal option." }]
+components = [{ run_id = "stratagems-bg2", component = 4216 }]
+
+[[features]]
+id = "feature:stratagems:component-4217"
+title = "Remove ammunition up to +2 from containers"
+description = "Removes ordinary ammunition and SCS's listed ammunition up to +2 from random area containers. Shop stock and enemies' equipment are not affected."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4216", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4218", reason = "Choose one ammunition removal option." }]
+components = [{ run_id = "stratagems-bg2", component = 4217 }]
+
+[[features]]
 id = "feature:stratagems:component-4218"
 title = "Remove ammunition from random containers"
-description = "Remove all ammunition from random containers."
+description = "Removes all ammunition covered by SCS's removal list from random area containers. Shop stock and enemies' equipment are not affected."
 category = "gameplay"
 decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4216", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4217", reason = "Choose one ammunition removal option." }]
 components = [{ run_id = "stratagems-bg2", component = 4218 }]
+
+[[features]]
+id = "feature:stratagems:component-4230"
+title = "Delay the bonus-item merchants"
+description = "Joluv and Deidre arrive later as you complete major BG2 quests and advance the story."
+category = "gameplay"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4230 }]
 
 [[features]]
 id = "feature:stratagems:component-4240"

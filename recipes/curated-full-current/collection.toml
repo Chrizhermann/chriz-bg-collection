@@ -229,14 +229,14 @@ args = []
 run_id = "cdtweaks-bg2"
 mod_id = "cdtweaks"
 phase = "main"
-components = [10, 20, 30, 40, 50, 60, 100, 110, 130, 170, 180, 181, 182, 190, 191, 192, 193, 194, 195, 200, 2010, 1010, 1020, 1040, 1080, 1120, 1142, 1160, 1161, 1340, 1341, 1342, 1343, 1344, 1345, 1346, 1347, 1180, 1220, 1225, 1226, 1227, 1230, 1257, 2020, 2030, 2035, 2090, 2720, 2152, 2170, 2192, 2210, 2250, 2260, 2270, 2280, 2292, 2391, 2400, 2410, 2420, 2430, 2500, 2520, 2540, 2590, 2999, 3000, 3001, 3002, 3008, 3010, 3011, 3012, 3040, 3080, 3081, 3082, 3083, 3090, 3091, 3092, 3093, 3100, 3101, 3102, 3103, 3110, 3111, 3112, 3113, 3120, 3121, 3122, 3123, 3124, 3125, 3130, 3290, 3291, 3292, 3293, 3294, 3295, 3300, 3310, 3340, 3341, 3342, 3343, 3344, 3345, 3346, 3347, 3350, 3351, 3352, 3353, 3354, 3355, 3356, 3357, 3390, 4031, 4041, 4050, 4061, 4071]
+components = [10, 20, 30, 40, 50, 60, 70, 90, 100, 110, 130, 140, 150, 160, 170, 171, 180, 181, 182, 190, 191, 192, 193, 194, 195, 200, 3150, 3151, 2010, 220, 240, 241, 1010, 1020, 1030, 1035, 1036, 1040, 1080, 1100, 1101, 1120, 1140, 1141, 1142, 1160, 1161, 1340, 1341, 1342, 1343, 1344, 1345, 1346, 1347, 1180, 1220, 1225, 1226, 1227, 1230, 1257, 2020, 2030, 2035, 2090, 2720, 2151, 2152, 2170, 2190, 2191, 2192, 2210, 2220, 2250, 2260, 2270, 2280, 2292, 2391, 2400, 2410, 2420, 2430, 2500, 2520, 2540, 2590, 2999, 3000, 3001, 3002, 3008, 3010, 3011, 3012, 3030, 3031, 3040, 3060, 3070, 3071, 3072, 3073, 3080, 3081, 3082, 3083, 3090, 3091, 3092, 3093, 3100, 3101, 3102, 3103, 3110, 3111, 3112, 3113, 3120, 3121, 3122, 3123, 3124, 3125, 3130, 3131, 3132, 3191, 3194, 3195, 3196, 3197, 3198, 3200, 3205, 3230, 3290, 3291, 3292, 3293, 3294, 3295, 3300, 3310, 3320, 3340, 3341, 3342, 3343, 3344, 3345, 3346, 3347, 3350, 3351, 3352, 3353, 3354, 3355, 3356, 3357, 3390, 4031, 4041, 4050, 4061, 4071, 4140]
 args = []
 
 [[runs]]
 run_id = "stratagems-bg2"
 mod_id = "stratagems"
 phase = "main"
-components = [2000, 2500, 2510, 3040, 3041, 3505, 3540, 3541, 4000, 4115, 4210, 4215, 4218, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
+components = [2000, 2500, 2510, 3015, 3040, 3041, 3505, 3540, 3541, 4000, 4020, 4050, 4051, 4052, 4093, 4115, 4130, 4135, 4140, 4145, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173, 4174, 4210, 4215, 4216, 4217, 4218, 4230, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
 args = []
 
 [[runs]]
@@ -313,7 +313,7 @@ args = []
 run_id = "cdtweaks-spell-save-penalties-bg2"
 mod_id = "cdtweaks"
 phase = "post-eet-end"
-components = [2312]
+components = [2310, 2311, 2312]
 args = []
 
 [[runs]]
@@ -3440,6 +3440,18 @@ components = [
 ]
 
 [[features]]
+id = "feature:stratagems:component-3015"
+title = "More extra-healing potions in BG1 shops"
+description = "Adds a small stock of Potions of Extra Healing to four BG1 temple shops."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 3015 }]
+
+[[features]]
 id = "feature:stratagems:component-3040"
 title = "Remove Arrows of Dispelling from stores"
 description = "Optional stricter alternative to the curated five-arrow limit."
@@ -3496,6 +3508,74 @@ conflicts = [{ feature_id = "feature:stratagems:component-3540", reason = "Choos
 components = [{ run_id = "stratagems-bg2", component = 3541 }]
 
 [[features]]
+id = "feature:stratagems:component-4020"
+title = "More natural wolves and wild dogs"
+description = "Wild animals are not always hostile and may avoid or flee your party. Dangerous encounter wolves stay dangerous."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4020 }]
+
+[[features]]
+id = "feature:stratagems:component-4050"
+title = "Reputation gains at about two-thirds the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Decrease the rate at which reputation improves"
+choice_group = "choice:stratagems:decrease-the-rate-at-which-reputation-improves"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4050 }]
+
+[[features]]
+id = "feature:stratagems:component-4051"
+title = "Reputation gains at about one-half the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Decrease the rate at which reputation improves"
+choice_group = "choice:stratagems:decrease-the-rate-at-which-reputation-improves"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4051 }]
+
+[[features]]
+id = "feature:stratagems:component-4052"
+title = "Reputation gains at about one-third the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Decrease the rate at which reputation improves"
+choice_group = "choice:stratagems:decrease-the-rate-at-which-reputation-improves"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4093", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4052 }]
+
+[[features]]
+id = "feature:stratagems:component-4093"
+title = "Reputation gains at about one-quarter the normal rate"
+description = "Good deeds raise reputation less often. Store discounts and companions' tolerance of your reputation are separate settings. Leave this group off to keep the current gain rate."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Decrease the rate at which reputation improves"
+choice_group = "choice:stratagems:decrease-the-rate-at-which-reputation-improves"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4050", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4051", reason = "Choose one reputation gain rate." }, { feature_id = "feature:stratagems:component-4052", reason = "Choose one reputation gain rate." }]
+components = [{ run_id = "stratagems-bg2", component = 4093 }]
+
+[[features]]
 id = "feature:stratagems:component-4115"
 title = "Thief skills in multiples of five"
 description = "Assign thief skill points in multiples of five."
@@ -3506,6 +3586,207 @@ decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 4115 }]
+
+[[features]]
+id = "feature:stratagems:component-4130"
+title = "Not recommended: revised death, petrification and imprisonment"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Changes companion permanent death and the handling of petrification and imprisonment; changes Resurrection costs and restrictions. Unavailable with Spell Revisions."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:spell-rev:mandatory-components", reason = "SCS 35.21 explicitly forbids this component with Spell Revisions. Turn off Spell Revisions to select it." }]
+components = [{ run_id = "stratagems-bg2", component = 4130 }]
+
+[[features]]
+id = "feature:stratagems:component-4135"
+title = "Not recommended: rests use provisions"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Wilderness and dungeon rests use supplies; inns refill them and druids or rangers can forage outdoors. Supplies are not required during SoD or selected campaign finales."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4135 }]
+
+[[features]]
+id = "feature:stratagems:component-4140"
+title = "Not recommended: more expensive inns with bonuses"
+description = "Experimental opt-in: players have reported problems; not independently reproduced in CEBG. Inn rooms cost more; better rooms grant stronger, longer-lasting rest bonuses. Works with or without the provisions option."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4140 }]
+
+[[features]]
+id = "feature:stratagems:component-4145"
+title = "Remove Candlekeep tutorial NPCs"
+description = "Removes tutorial guides and introductory training reminders, while keeping Candlekeep itself."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Skip the Candlekeep tutorial sections"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4145 }]
+
+[[features]]
+id = "feature:stratagems:component-4150"
+title = "Cowled Wizards also police indoor spellcasting"
+description = "Using unlicensed magic in many above-ground Athkatla interiors can attract the Cowled Wizards."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4150 }]
+
+[[features]]
+id = "feature:stratagems:component-4160"
+title = "Athkatla magic license: 10,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 10,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price of a license to practise magic in Athkatla"
+choice_group = "choice:stratagems:increase-the-price-of-a-license-to-practise-magic-in-athkatla"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4160 }]
+
+[[features]]
+id = "feature:stratagems:component-4161"
+title = "Athkatla magic license: 15,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 15,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price of a license to practise magic in Athkatla"
+choice_group = "choice:stratagems:increase-the-price-of-a-license-to-practise-magic-in-athkatla"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4161 }]
+
+[[features]]
+id = "feature:stratagems:component-4162"
+title = "Athkatla magic license: 20,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 20,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price of a license to practise magic in Athkatla"
+choice_group = "choice:stratagems:increase-the-price-of-a-license-to-practise-magic-in-athkatla"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4162 }]
+
+[[features]]
+id = "feature:stratagems:component-4163"
+title = "Athkatla magic license: 30,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 30,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price of a license to practise magic in Athkatla"
+choice_group = "choice:stratagems:increase-the-price-of-a-license-to-practise-magic-in-athkatla"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4164", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4163 }]
+
+[[features]]
+id = "feature:stratagems:component-4164"
+title = "Athkatla magic license: 50,000 gp"
+description = "Raises the price of permission to cast magic in Athkatla to 50,000 gold. Does not require indoor spellcasting enforcement."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price of a license to practise magic in Athkatla"
+choice_group = "choice:stratagems:increase-the-price-of-a-license-to-practise-magic-in-athkatla"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4160", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4161", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4162", reason = "Choose one price for the Athkatla magic license." }, { feature_id = "feature:stratagems:component-4163", reason = "Choose one price for the Athkatla magic license." }]
+components = [{ run_id = "stratagems-bg2", component = 4164 }]
+
+[[features]]
+id = "feature:stratagems:component-4170"
+title = "Gaelan's initial asking price: 40,000 gp"
+description = "Raises the initial price for help reaching Imoen to 40,000 gold; the eventual discounted payment is 30,000 gold."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price asked by Gaelan Bayle"
+choice_group = "choice:stratagems:increase-the-price-asked-by-gaelan-bayle"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4170 }]
+
+[[features]]
+id = "feature:stratagems:component-4171"
+title = "Gaelan's initial asking price: 60,000 gp"
+description = "Raises the initial price for help reaching Imoen to 60,000 gold; the eventual discounted payment is 45,000 gold."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price asked by Gaelan Bayle"
+choice_group = "choice:stratagems:increase-the-price-asked-by-gaelan-bayle"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4171 }]
+
+[[features]]
+id = "feature:stratagems:component-4172"
+title = "Gaelan's initial asking price: 80,000 gp"
+description = "Raises the initial price for help reaching Imoen to 80,000 gold; the eventual discounted payment is 60,000 gold."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price asked by Gaelan Bayle"
+choice_group = "choice:stratagems:increase-the-price-asked-by-gaelan-bayle"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4172 }]
+
+[[features]]
+id = "feature:stratagems:component-4173"
+title = "Gaelan's initial asking price: 100,000 gp"
+description = "Raises the initial price for help reaching Imoen to 100,000 gold; the eventual discounted payment is 75,000 gold."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price asked by Gaelan Bayle"
+choice_group = "choice:stratagems:increase-the-price-asked-by-gaelan-bayle"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4174", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4173 }]
+
+[[features]]
+id = "feature:stratagems:component-4174"
+title = "Gaelan's initial asking price: 120,000 gp"
+description = "Raises the initial price for help reaching Imoen to 120,000 gold; the eventual discounted payment is 90,000 gold."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Increase the price asked by Gaelan Bayle"
+choice_group = "choice:stratagems:increase-the-price-asked-by-gaelan-bayle"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4170", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4171", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4172", reason = "Choose one Spellhold rescue price." }, { feature_id = "feature:stratagems:component-4173", reason = "Choose one Spellhold rescue price." }]
+components = [{ run_id = "stratagems-bg2", component = 4174 }]
 
 [[features]]
 id = "feature:stratagems:component-4210"
@@ -3532,16 +3813,58 @@ parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 4215 }]
 
 [[features]]
-id = "feature:stratagems:component-4218"
-title = "Remove ammunition from random containers"
-description = "Remove all ammunition from random containers."
+id = "feature:stratagems:component-4216"
+title = "Remove only nonmagical ammunition from containers"
+description = "Removes ordinary ammunition from random area containers. Shop stock and enemies' equipment are not affected."
 category = "gameplay"
 source_label = "Sword Coast Stratagems"
 group_label = "Remove unrealistically convenient ammunition from the game"
+choice_group = "choice:stratagems:remove-unrealistically-convenient-ammunition-from-the-game"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4217", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4218", reason = "Choose one ammunition removal option." }]
+components = [{ run_id = "stratagems-bg2", component = 4216 }]
+
+[[features]]
+id = "feature:stratagems:component-4217"
+title = "Remove ammunition up to +2 from containers"
+description = "Removes ordinary ammunition and SCS's listed ammunition up to +2 from random area containers. Shop stock and enemies' equipment are not affected."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Remove unrealistically convenient ammunition from the game"
+choice_group = "choice:stratagems:remove-unrealistically-convenient-ammunition-from-the-game"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4216", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4218", reason = "Choose one ammunition removal option." }]
+components = [{ run_id = "stratagems-bg2", component = 4217 }]
+
+[[features]]
+id = "feature:stratagems:component-4218"
+title = "Remove ammunition from random containers"
+description = "Removes all ammunition covered by SCS's removal list from random area containers. Shop stock and enemies' equipment are not affected."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Remove unrealistically convenient ammunition from the game"
+choice_group = "choice:stratagems:remove-unrealistically-convenient-ammunition-from-the-game"
 decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
+conflicts = [{ feature_id = "feature:stratagems:component-4216", reason = "Choose one ammunition removal option." }, { feature_id = "feature:stratagems:component-4217", reason = "Choose one ammunition removal option." }]
 components = [{ run_id = "stratagems-bg2", component = 4218 }]
+
+[[features]]
+id = "feature:stratagems:component-4230"
+title = "Delay the bonus-item merchants"
+description = "Joluv and Deidre arrive later as you complete major BG2 quests and advance the story."
+category = "gameplay"
+source_label = "Sword Coast Stratagems"
+group_label = "Gameplay tweaks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 4230 }]
 
 [[features]]
 id = "feature:stratagems:component-4240"
@@ -5090,8 +5413,10 @@ description = "Only replace icons that aren't already unique"
 category = "cosmetics"
 source_label = "The Tweaks Anthology"
 group_label = "Unique Icons [Lava]"
+choice_group = "choice:cdtweaks:unique-icons-lava"
 decision = "default"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-171", reason = "Choose at most one option for Unique Icons [Lava]." }]
 components = [{ run_id = "cdtweaks-bg2", component = 170 }]
 
 [[features]]
@@ -5218,8 +5543,10 @@ description = "Remove blur effect"
 category = "cosmetics"
 source_label = "The Tweaks Anthology"
 group_label = "Remove Annoying Visual Effects from Equipped Items"
+choice_group = "choice:cdtweaks:remove-annoying-visual-effects-from-equipped-items"
 decision = "optional"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3150", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." }, { feature_id = "feature:cdtweaks:component-3151", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." }]
 components = [{ run_id = "cdtweaks-bg2", component = 200 }]
 
 [[features]]
@@ -5295,8 +5622,10 @@ description = "Potions need identification; gems are unchanged."
 category = "content"
 source_label = "The Tweaks Anthology"
 group_label = "Gems and Potions Require Identification"
+choice_group = "choice:cdtweaks:gems-and-potions-require-identification"
 decision = "default"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-1140", reason = "Choose at most one option for Gems and Potions Require Identification." }, { feature_id = "feature:cdtweaks:component-1141", reason = "Choose at most one option for Gems and Potions Require Identification." }]
 components = [{ run_id = "cdtweaks-bg2", component = 1142 }]
 
 [[features]]
@@ -5558,8 +5887,10 @@ description = "Allow armor plus one protection item [Angel]"
 category = "rules"
 source_label = "The Tweaks Anthology"
 group_label = "Wear Multiple Protection Items"
+choice_group = "choice:cdtweaks:wear-multiple-protection-items"
 decision = "default"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2151", reason = "Choose at most one option for Wear Multiple Protection Items." }]
 components = [{ run_id = "cdtweaks-bg2", component = 2152 }]
 
 [[features]]
@@ -5580,8 +5911,10 @@ description = "Hybrid of both methods"
 category = "rules"
 source_label = "The Tweaks Anthology"
 group_label = "Limit Ability of Storekeepers to Identify Items"
+choice_group = "choice:cdtweaks:limit-ability-of-storekeepers-to-identify-items"
 decision = "default"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2190", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." }, { feature_id = "feature:cdtweaks:component-2191", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." }]
 components = [{ run_id = "cdtweaks-bg2", component = 2192 }]
 
 [[features]]
@@ -5657,8 +5990,10 @@ description = "Arcane and divine magic"
 category = "rules"
 source_label = "The Tweaks Anthology"
 group_label = "Add Save Penalties for Spells Cast by High-Level Casters"
+choice_group = "choice:cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
 decision = "default"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2310", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." }, { feature_id = "feature:cdtweaks:component-2311", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." }]
 components = [{ run_id = "cdtweaks-spell-save-penalties-bg2", component = 2312 }]
 
 [[features]]
@@ -6158,8 +6493,10 @@ description = "Remove traps completely"
 category = "convenience"
 source_label = "The Tweaks Anthology"
 group_label = "No Traps or Locks [Weimer, argent77]"
+choice_group = "choice:cdtweaks:no-traps-or-locks-weimer-argent77"
 decision = "optional"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3131", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." }, { feature_id = "feature:cdtweaks:component-3132", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." }]
 components = [{ run_id = "cdtweaks-bg2", component = 3130 }]
 
 [[features]]
@@ -6569,6 +6906,7 @@ source_label = "IWDification"
 group_label = "Miscellaneous Changes"
 decision = "default"
 readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-70", reason = "Choose one source for IWD casting graphics: IWDification or Tweaks Anthology." }]
 components = [{ run_id = "iwdification-bg2", component = 10 }]
 
 [[features]]
@@ -6625,3 +6963,546 @@ group_label = "Miscellaneous Changes"
 decision = "default"
 readiness = "ready"
 components = [{ run_id = "iwdification-bg2", component = 190 }]
+
+[[features]]
+id = "feature:cdtweaks:component-70"
+title = "Icewind Dale Casting Graphics [Andyr]"
+description = "Uses Icewind Dale's casting visuals. Choose this or IWDification's equivalent, not both."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Cosmetic Changes"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:iwdification:component-10", reason = "Choose one source for IWD casting graphics: IWDification or Tweaks Anthology." }]
+components = [{ run_id = "cdtweaks-bg2", component = 70 }]
+
+[[features]]
+id = "feature:cdtweaks:component-90"
+title = "Hide item-granted portrait icons"
+description = "Hides portrait status icons added directly by equipped items; their bonuses remain active."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Cosmetic Changes"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 90 }]
+
+[[features]]
+id = "feature:cdtweaks:component-140"
+title = "Fix Boo's Squeak"
+description = "Replaces Boo's squeak with a less grating sound."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Cosmetic Changes"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 140 }]
+
+[[features]]
+id = "feature:cdtweaks:component-150"
+title = "Remove \"+x\" From Unique Item Names"
+description = "Removes labels such as '+1' from named unique items without changing their enchantment."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Cosmetic Changes"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 150 }]
+
+[[features]]
+id = "feature:cdtweaks:component-160"
+title = "Make Magic Shields Glow [plainab/grogerson]"
+description = "Adds a glow to magical shields; their combat bonuses are unchanged."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Cosmetic Changes"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 160 }]
+
+[[features]]
+id = "feature:cdtweaks:component-171"
+title = "Replace existing unique item icons too"
+description = "Uses Lava's icon replacements even for items that already have a distinct icon."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Unique Icons [Lava]"
+choice_group = "choice:cdtweaks:unique-icons-lava"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-170", reason = "Choose at most one option for Unique Icons [Lava]." }]
+components = [{ run_id = "cdtweaks-bg2", component = 171 }]
+
+[[features]]
+id = "feature:cdtweaks:component-220"
+title = "Enhanced Overlays for Colorblind Players [Fouinto]"
+description = "Makes inventory overlays for unusable items, unidentified items and learnable scrolls easier to distinguish."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Cosmetic Changes"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 220 }]
+
+[[features]]
+id = "feature:cdtweaks:component-240"
+title = "Black outlines for white spell icons"
+description = "Adds black outlines to supported white spell icons for easier reading."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Outline White Spell Icons for Accessibility"
+choice_group = "choice:cdtweaks:outline-white-spell-icons-for-accessibility"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-241", reason = "Choose at most one option for Outline White Spell Icons for Accessibility." }]
+components = [{ run_id = "cdtweaks-bg2", component = 240 }]
+
+[[features]]
+id = "feature:cdtweaks:component-241"
+title = "Gray outlines for white spell icons"
+description = "Adds gray outlines to supported white spell icons for easier reading."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Outline White Spell Icons for Accessibility"
+choice_group = "choice:cdtweaks:outline-white-spell-icons-for-accessibility"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-240", reason = "Choose at most one option for Outline White Spell Icons for Accessibility." }]
+components = [{ run_id = "cdtweaks-bg2", component = 241 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1030"
+title = "Reveal Wilderness Areas Before Chapter Six"
+description = "Opens the Small Teeth Pass, North Forest and Forest of Tethir on the BG2 world map before Chapter 6."
+category = "content"
+source_label = "The Tweaks Anthology"
+group_label = "Content Changes"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 1030 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1035"
+title = "Open the first Cloakwood area early"
+description = "Lets you visit the first Cloakwood area before finishing the Bandit Camp."
+category = "content"
+source_label = "The Tweaks Anthology"
+group_label = "Make Cloakwood Areas Available Before Completing the Bandit Camp"
+choice_group = "choice:cdtweaks:make-cloakwood-areas-available-before-completing-the-bandit-camp"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-1036", reason = "Choose at most one option for Make Cloakwood Areas Available Before Completing the Bandit Camp." }]
+components = [{ run_id = "cdtweaks-bg2", component = 1035 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1036"
+title = "Open Cloakwood early, except the mines"
+description = "Lets you visit Cloakwood before finishing the Bandit Camp, but keeps the mines locked until later."
+category = "content"
+source_label = "The Tweaks Anthology"
+group_label = "Make Cloakwood Areas Available Before Completing the Bandit Camp"
+choice_group = "choice:cdtweaks:make-cloakwood-areas-available-before-completing-the-bandit-camp"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-1035", reason = "Choose at most one option for Make Cloakwood Areas Available Before Completing the Bandit Camp." }]
+components = [{ run_id = "cdtweaks-bg2", component = 1036 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1100"
+title = "Reveal City Maps When Entering Area"
+description = "Reveals supported town maps on arrival instead of requiring street-by-street exploration."
+category = "content"
+source_label = "The Tweaks Anthology"
+group_label = "City Map Exploration"
+choice_group = "choice:cdtweaks:city-map-exploration"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-1101", reason = "Choose at most one option for City Map Exploration." }]
+components = [{ run_id = "cdtweaks-bg2", component = 1100 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1101"
+title = "Do Not Reveal City Maps When Entering Area"
+description = "Keeps supported town maps unexplored on arrival so you discover them as you walk."
+category = "content"
+source_label = "The Tweaks Anthology"
+group_label = "City Map Exploration"
+choice_group = "choice:cdtweaks:city-map-exploration"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-1100", reason = "Choose at most one option for City Map Exploration." }]
+components = [{ run_id = "cdtweaks-bg2", component = 1101 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1140"
+title = "Gems and potions require identification"
+description = "Both gems and potions need identification before their identity is revealed."
+category = "content"
+source_label = "The Tweaks Anthology"
+group_label = "Gems and Potions Require Identification"
+choice_group = "choice:cdtweaks:gems-and-potions-require-identification"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-1141", reason = "Choose at most one option for Gems and Potions Require Identification." }, { feature_id = "feature:cdtweaks:component-1142", reason = "Choose at most one option for Gems and Potions Require Identification." }]
+components = [{ run_id = "cdtweaks-bg2", component = 1140 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1141"
+title = "Gems require identification"
+description = "Gems need identification; potions are unchanged."
+category = "content"
+source_label = "The Tweaks Anthology"
+group_label = "Gems and Potions Require Identification"
+choice_group = "choice:cdtweaks:gems-and-potions-require-identification"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-1140", reason = "Choose at most one option for Gems and Potions Require Identification." }, { feature_id = "feature:cdtweaks:component-1142", reason = "Choose at most one option for Gems and Potions Require Identification." }]
+components = [{ run_id = "cdtweaks-bg2", component = 1141 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2151"
+title = "Unrestricted magical protection item stacking"
+description = "Allows magical armor, rings, cloaks and other protection items together without the usual stacking restriction."
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Wear Multiple Protection Items"
+choice_group = "choice:cdtweaks:wear-multiple-protection-items"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2152", reason = "Choose at most one option for Wear Multiple Protection Items." }]
+components = [{ run_id = "cdtweaks-bg2", component = 2151 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2190"
+title = "Only mage and bard storekeepers can identify items"
+description = "Only mage and bard shopkeepers offer item identification."
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Limit Ability of Storekeepers to Identify Items"
+choice_group = "choice:cdtweaks:limit-ability-of-storekeepers-to-identify-items"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2191", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." }, { feature_id = "feature:cdtweaks:component-2192", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." }]
+components = [{ run_id = "cdtweaks-bg2", component = 2190 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2191"
+title = "Identification ability is based on storekeeper's lore"
+description = "Shopkeepers can identify items only when their lore is high enough."
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Limit Ability of Storekeepers to Identify Items"
+choice_group = "choice:cdtweaks:limit-ability-of-storekeepers-to-identify-items"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2190", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." }, { feature_id = "feature:cdtweaks:component-2192", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." }]
+components = [{ run_id = "cdtweaks-bg2", component = 2191 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2220"
+title = "Change Magically Created Weapons to Zero Weight"
+description = "Magically created weapons no longer add weight to the wielder's inventory."
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Rule Changes"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 2220 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2310"
+title = "High-level save penalties: arcane spells only"
+description = "Higher-level casters impose stronger saving-throw penalties with arcane spells only. Replaces the recommended arcane-and-divine option."
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Add Save Penalties for Spells Cast by High-Level Casters"
+choice_group = "choice:cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2311", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." }, { feature_id = "feature:cdtweaks:component-2312", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." }]
+components = [{ run_id = "cdtweaks-spell-save-penalties-bg2", component = 2310 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2311"
+title = "High-level save penalties: divine spells only"
+description = "Higher-level casters impose stronger saving-throw penalties with divine spells only. Replaces the recommended arcane-and-divine option."
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Add Save Penalties for Spells Cast by High-Level Casters"
+choice_group = "choice:cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-2310", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." }, { feature_id = "feature:cdtweaks:component-2312", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." }]
+components = [{ run_id = "cdtweaks-spell-save-penalties-bg2", component = 2311 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3030"
+title = "Guaranteed scroll learning"
+description = "Prevents random failures when learning scrolls. Intelligence-based spellbook limits and kit restrictions remain."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Easy Spell Learning"
+choice_group = "choice:cdtweaks:easy-spell-learning"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3031", reason = "Choose at most one option for Easy Spell Learning." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3030 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3031"
+title = "Guaranteed scroll learning, no spellbook limits"
+description = "Prevents random scroll-learning failures and lifts intelligence-based spellbook limits. It does not grant spell slots or bypass opposed-school kit restrictions."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Easy Spell Learning"
+choice_group = "choice:cdtweaks:easy-spell-learning"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3030", reason = "Choose at most one option for Easy Spell Learning." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3031 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3060"
+title = "Remove \"You Must Gather Your Party...\" Sound [Weimer]"
+description = "Silences the gather-your-party voice line; you still need the party together to travel."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Convenience Tweaks/Cheats"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 3060 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3070"
+title = "Store discounts for low reputation"
+description = "Low reputation can earn shopping discounts too. Changes prices, not how reputation is gained."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "choice:cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3071", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3072", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3073", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3070 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3071"
+title = "Ignore reputation: normal store prices"
+description = "Reputation no longer changes shopping prices; its price multiplier stays at 100%."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "choice:cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3070", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3072", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3073", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3071 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3072"
+title = "Ignore reputation: 80% store prices"
+description = "Reputation no longer changes shopping prices; its price multiplier stays at 80%."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "choice:cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3070", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3071", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3073", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3072 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3073"
+title = "Ignore reputation: 60% store prices"
+description = "Reputation no longer changes shopping prices; its price multiplier stays at 60%."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "choice:cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3070", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3071", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }, { feature_id = "feature:cdtweaks:component-3072", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3073 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3131"
+title = "Harmless traps and no ordinary locks"
+description = "Cheat: removes harmful trap effects, ordinary locks and secret-door concealment. Alarm summons remain; story-locked doors can still require keys."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "No Traps or Locks [Weimer, argent77]"
+choice_group = "choice:cdtweaks:no-traps-or-locks-weimer-argent77"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3130", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." }, { feature_id = "feature:cdtweaks:component-3132", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3131 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3132"
+title = "Harmless traps, no alarms or ordinary locks"
+description = "Cheat: removes harmful trap effects, alarm summons, ordinary locks and secret-door concealment. Story-locked doors can still require keys."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "No Traps or Locks [Weimer, argent77]"
+choice_group = "choice:cdtweaks:no-traps-or-locks-weimer-argent77"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3130", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." }, { feature_id = "feature:cdtweaks:component-3131", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3132 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3150"
+title = "Hide equipment spell-trap and reflection visuals"
+description = "Hides spell-trap and reflection visuals from equipped items, without removing the protections themselves."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Remove Annoying Visual Effects from Equipped Items"
+choice_group = "choice:cdtweaks:remove-annoying-visual-effects-from-equipped-items"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-200", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." }, { feature_id = "feature:cdtweaks:component-3151", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3150 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3151"
+title = "Hide equipment blur, spell-trap and reflection visuals"
+description = "Hides equipment blur, spell-trap and reflection visuals, without removing their separate combat bonuses."
+category = "cosmetics"
+source_label = "The Tweaks Anthology"
+group_label = "Remove Annoying Visual Effects from Equipped Items"
+choice_group = "choice:cdtweaks:remove-annoying-visual-effects-from-equipped-items"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-200", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." }, { feature_id = "feature:cdtweaks:component-3150", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3151 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3191"
+title = "Disable nonhostile rest encounters"
+description = "Disables nonhostile area rest encounters. Hostile ambushes and SCS provision requirements are unchanged."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Convenience Tweaks/Cheats"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 3191 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3194"
+title = "Disable hostile rest encounters"
+description = "Disables hostile area rest encounters. SCS provision requirements and scripted story interruptions are unchanged."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "choice:cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3194 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3195"
+title = "Half as many hostile rest encounters"
+description = "Halves the chance of hostile area rest encounters. Does not change SCS provision requirements."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "choice:cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3195 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3196"
+title = "50% more hostile rest encounters"
+description = "Multiplies hostile area rest-encounter chances by 1.5, up to the tweak's cap. Does not change SCS provision requirements."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "choice:cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3196 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3197"
+title = "Twice as many hostile rest encounters"
+description = "Doubles hostile area rest-encounter chances, up to the tweak's cap. Does not change SCS provision requirements."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "choice:cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3197 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3198"
+title = "Four times as many hostile rest encounters"
+description = "Quadruples hostile area rest-encounter chances, up to the tweak's cap. Does not change SCS provision requirements."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "choice:cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." }, { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." }]
+components = [{ run_id = "cdtweaks-bg2", component = 3198 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3200"
+title = "Sellable Items [icelus]"
+description = "Gives selected zero-price items a sale value and lets arrow-buying shops buy bolts too."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Convenience Tweaks/Cheats"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 3200 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3205"
+title = "Stores Purchase All Item Types"
+description = "Lets eligible shops buy more item categories, so you need fewer different merchants to sell your loot."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Convenience Tweaks/Cheats"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 3205 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3230"
+title = "Taerom Makes Additional Ankheg Armor [Icendoan/grogerson]"
+description = "Lets Taerom make more ankheg armor after completing the first set."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Convenience Tweaks/Cheats"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 3230 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3320"
+title = "Keep resale prices from falling with shop stock"
+description = "Stores no longer lower their resale offers just because they already stock more copies of an item."
+category = "convenience"
+source_label = "The Tweaks Anthology"
+group_label = "Convenience Tweaks/Cheats"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 3320 }]
+
+[[features]]
+id = "feature:cdtweaks:component-4140"
+title = "Don't Auto-Assign Advanced AI Scripting to Party"
+description = "Stops automatic assignment of Beamdog's Advanced AI scripts to party members. You can still assign scripts yourself; enemy AI is unchanged."
+category = "npcs"
+source_label = "The Tweaks Anthology"
+group_label = "NPC Tweaks"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "cdtweaks-bg2", component = 4140 }]

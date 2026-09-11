@@ -7,8 +7,9 @@ Listed at installed version **35.21**.
 
 - Component `4240` is unavailable while Spell Revisions is selected. Keep it visible but
   disabled, with the UI note: **Unavailable with Spell Revisions.**
-- Components `2520` and `4130` are also incompatible with Spell Revisions, but both are
-  excluded; they need the same rule only if they are exposed later.
+- Component `4130` has the same visible restriction: its pinned installer explicitly
+  forbids Spell Revisions component 0. Component `2520` also conflicts with SR but
+  remains excluded.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
@@ -32,7 +33,7 @@ Listed at installed version **35.21**.
 | 2520 | Revised elementals and elemental summoning | Spell system revisions and new spells |  |  | |
 | 2900 | Move or modify some overpowered magic items | Gameplay tweaks |  |  | |
 | 3010 | Replace +1 arrows and other projectiles with nonmagical "fine" ones | Gameplay tweaks |  |  | |
-| 3015 | Re-introduce potions of extra-healing | Gameplay tweaks |  |  | |
+| 3015 | Re-introduce potions of extra-healing | Gameplay tweaks |  |  | optional |
 | 3017 | Make elemental arrows like BG2 | Gameplay tweaks |  |  | |
 | 3020 | Replace many +1 magic weapons with nonmagical "fine" ones | Gameplay tweaks |  |  | |
 | 3021 | Fine weapons are immune to the iron crisis | Gameplay tweaks | Replace many +1 magic weapons with nonmagical "fine" ones |  | |
@@ -48,38 +49,38 @@ Listed at installed version **35.21**.
 | 3551 | Spells heal or inflict the maximum amount of damage in this range | Gameplay tweaks | Increase the power of Cure Wounds and Cause Wounds spells to the level found in 3rd Edition D&D |  | |
 | 3552 | Spells heal or inflict about the average amount of damage in this range | Gameplay tweaks | Increase the power of Cure Wounds and Cause Wounds spells to the level found in 3rd Edition D&D |  | |
 | 4000 | More Appropriate-Speed Bears | Gameplay tweaks |  | ✓ | mandatory |
-| 4020 | More realistic wolves and wild dogs | Gameplay tweaks |  |  | |
+| 4020 | More realistic wolves and wild dogs | Gameplay tweaks |  |  | optional |
 | 4030 | Improved shapeshifting | Gameplay tweaks |  |  | |
-| 4050 | Reputation increases at about 2/3 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | |
-| 4051 | Reputation increases at about 1/2 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | |
-| 4052 | Reputation increases at about 1/3 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | |
-| 4093 | Reputation increases at about 1/4 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | |
+| 4050 | Reputation increases at about 2/3 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | optional |
+| 4051 | Reputation increases at about 1/2 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | optional |
+| 4052 | Reputation increases at about 1/3 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | optional |
+| 4093 | Reputation increases at about 1/4 the normal rate | Gameplay tweaks | Decrease the rate at which reputation improves |  | optional |
 | 4099 | Allow player to choose NPC proficiencies and skills | Gameplay tweaks |  |  | |
 | 4100 | Improved NPC customization and management | Gameplay tweaks |  |  | |
 | 4115 | Thieves assign skill points in multiples of five | Gameplay tweaks |  | ✓ | default |
-| 4130 | Revised handling of death effects like disintegration, petrification and imprisonment (party members who are disintegrated etc can be resurrected; imprisoned or petrified characters rejoin the party automatically; the game doesn't end if the main character is petrified or imprisoned) | Gameplay tweaks |  |  | |
-| 4135 | Revised resting: resting in the wild uses up provisions | Gameplay tweaks |  |  | |
-| 4140 | Revised inn rooms: more expensive, more benefits | Gameplay tweaks |  |  | |
-| 4145 | Remove the tutorial NPCs from Candlekeep | Gameplay tweaks | Skip the Candlekeep tutorial sections |  | |
+| 4130 | Revised handling of death effects like disintegration, petrification and imprisonment (party members who are disintegrated etc can be resurrected; imprisoned or petrified characters rejoin the party automatically; the game doesn't end if the main character is petrified or imprisoned) | Gameplay tweaks |  |  | optional |
+| 4135 | Revised resting: resting in the wild uses up provisions | Gameplay tweaks |  |  | optional |
+| 4140 | Revised inn rooms: more expensive, more benefits | Gameplay tweaks |  |  | optional |
+| 4145 | Remove the tutorial NPCs from Candlekeep | Gameplay tweaks | Skip the Candlekeep tutorial sections |  | optional |
 | 4146 | Skip Candlekeep altogether (warning: breaks the 4th wall!) | Gameplay tweaks | Skip the Candlekeep tutorial sections |  | |
-| 4150 | Allow the Cowled Wizards to detect spellcasting in most indoor, above-ground areas in Athkatla | Gameplay tweaks |  |  | |
-| 4160 | License costs 10,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | |
-| 4161 | License costs 15,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | |
-| 4162 | License costs 20,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | |
-| 4163 | License costs 30,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | |
-| 4164 | License costs 50,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | |
-| 4170 | Gaelan wants 40,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | |
-| 4171 | Gaelan wants 60,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | |
-| 4172 | Gaelan wants 80,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | |
-| 4173 | Gaelan wants 100,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | |
-| 4174 | Gaelan wants 120,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | |
+| 4150 | Allow the Cowled Wizards to detect spellcasting in most indoor, above-ground areas in Athkatla | Gameplay tweaks |  |  | optional |
+| 4160 | License costs 10,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | optional |
+| 4161 | License costs 15,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | optional |
+| 4162 | License costs 20,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | optional |
+| 4163 | License costs 30,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | optional |
+| 4164 | License costs 50,000 gp | Gameplay tweaks | Increase the price of a license to practise magic in Athkatla |  | optional |
+| 4170 | Gaelan wants 40,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | optional |
+| 4171 | Gaelan wants 60,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | optional |
+| 4172 | Gaelan wants 80,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | optional |
+| 4173 | Gaelan wants 100,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | optional |
+| 4174 | Gaelan wants 120,000 gold pieces | Gameplay tweaks | Increase the price asked by Gaelan Bayle |  | optional |
 | 4190 | Make Watchers' Keep accessible between SoA and ToB (warning: this will make it inaccessible until the end of SoA) | Gameplay tweaks |  |  | |
 | 4210 | Randomize the maze in Watcher's Keep | Gameplay tweaks |  | ✓ | optional |
 | 4215 | Remove unrealistically helpful items from certain areas | Gameplay tweaks |  | ✓ | default |
-| 4216 | Only remove nonmagical ammo from random containers | Gameplay tweaks | Remove unrealistically convenient ammunition from the game |  | |
-| 4217 | Remove ammo up to the +2 level from random containers | Gameplay tweaks | Remove unrealistically convenient ammunition from the game |  | |
+| 4216 | Only remove nonmagical ammo from random containers | Gameplay tweaks | Remove unrealistically convenient ammunition from the game |  | optional |
+| 4217 | Remove ammo up to the +2 level from random containers | Gameplay tweaks | Remove unrealistically convenient ammunition from the game |  | optional |
 | 4218 | Remove all ammo from random containers | Gameplay tweaks | Remove unrealistically convenient ammunition from the game | ✓ | default |
-| 4230 | Delay the arrival of the "bonus merchants" in the Adventurers' Mart and the Copper Coronet | Gameplay tweaks |  |  | |
+| 4230 | Delay the arrival of the "bonus merchants" in the Adventurers' Mart and the Copper Coronet | Gameplay tweaks |  |  | optional |
 | 4240 | Treat mages' and priests' High-Level Abilities as innate abilities rather than memorisable spells (each may be taken only once) | Gameplay tweaks |  |  | optional |
 | 4250 | Make spell sequencers and contingencies into innate abilities | Gameplay tweaks |  | ✓ | default |
 | 5000 | Ease-of-use party AI | Gameplay tweaks |  |  | optional |
@@ -153,6 +154,67 @@ Listed at installed version **35.21**.
 | 8170 | Improved Sendai's Enclave | Tactical Challenges |  | ✓ | mandatory |
 | 8180 | Improved Abazigal's Lair | Tactical Challenges |  | ✓ | mandatory |
 | 8190 | Improved Minor Encounters | Tactical Challenges |  | ✓ | mandatory |
+
+## Screened additional choices — 2026-09-11
+
+Christopher approved these **21 additional options**, all unchecked and optional:
+`3015, 4020, 4050, 4051, 4052, 4093, 4145, 4150, 4160–4164,
+4170–4174, 4216, 4217, 4230`. The recommended selection is unchanged.
+Reputation rate, magic-license price, Spellhold price and ammunition removal are
+mutually exclusive choice families. The last family includes the existing
+default `4218`; choosing `4216` or `4217` replaces that option rather than
+installing both. License prices do not require indoor spellcasting enforcement.
+
+This was a bounded source/dependency screen against pinned SCS 35.21, not new
+native installation or gameplay acceptance. The source supports EET for this
+batch and no Spell Revisions exclusion was found for it.
+
+Keep the following excluded rather than exposing misleading controls:
+
+- `100`: installer batch-mode plumbing, not gameplay.
+- `1600, 1610, 2020, 3510, 6700`: IWD-only.
+- `3017, 3020, 3500, 4099, 5070`: incompatible game/engine predicates
+  for the collection's EET target.
+- `2010, 2030–2080`: conflict with mandatory SCS `2000`; `6020`
+  duplicates the mandatory `6000/6010` route.
+- `3551, 3552`: empty component bodies in this pinned source, with no
+  implementation references found in its TPA/TPH/INI/2DA files.
+
+The remaining `1500, 1510, 1520, 2520, 2900, 3010, 3021, 3022, 3501,
+4030, 4100, 4146, 4190, 5080` need a focused compatibility check before exposure:
+alternate IWD spell providers; bard/shapeshift or companion-build changes;
+item/scroll randomisation; full tutorial skip; campaign transitions; or game UI.
+This is a deferred review list, not a claim that every one is incompatible.
+`2520` has a real SR gate. `4100` conflicts with SCS `4115` and
+CDTweaks `2370/2372`. If CDTweaks `3420` is exposed later, check its
+Cowled Wizard behavior together with SCS `4150`.
+
+Source: `setup-stratagems.tp2:401–999` and the corresponding SCS
+`gameplay` implementation files. These choices are installed in native
+component order within the existing SCS run.
+
+## Community-requested immersion options — 2026-09-11
+
+Christopher approved offering 4130, 4135 and 4140 after JORA's request. All are
+optional and unchecked; the recommended setup stays unchanged.
+
+Following further community feedback, all three also carry a visible
+**Not recommended:** title prefix and this caution: **Experimental opt-in:
+players have reported problems; not independently reproduced in CEBG.**
+This records reported experience without claiming a confirmed upstream defect.
+
+- **4130:** experimental by SCS's own description. SCS 35.21's TP2 explicitly
+  forbids Spell Revisions component 0 (lines 716–721); preserve that real gate and
+  show the reason in Customize. This is not an inferred collection exclusion.
+- **4135:** provisions apply to wilderness/dungeon rests in BG1/BG2/ToB, not SoD
+  or selected finale areas. Inn stays refill supplies; druids/rangers may forage.
+- **4140:** dearer rooms grant resting bonuses. Independent of 4135; no invented
+  requirement to choose both. Both options edit game UI and need testing with
+  any future selectable UI overhaul.
+
+Source: pinned SCS 35.21 `setup-stratagems.tp2:716–741` and the
+[SCS readme](https://gibberlings3.github.io/Documentation/readmes/readme-stratagems.html).
+Selection/recipe checks are not native gameplay acceptance of these new choices.
 
 ## Related collection layers
 

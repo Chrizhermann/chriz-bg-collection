@@ -335,7 +335,7 @@ args = []
 run_id = "cdtweaks-spell-save-penalties-bg2"
 mod_id = "cdtweaks"
 phase = "post-eet-end"
-components = [2312]
+components = [2310, 2311, 2312]
 args = []
 
 """,
@@ -374,7 +374,7 @@ def _run_for(row: RowKey) -> str:
             return "bardicwonders-dialogue-patch-bg2"
         return "bardicwonders-bg2"
     if row.catalog == "CDTWEAKS":
-        return "cdtweaks-spell-save-penalties-bg2" if row.component_id == 2312 else "cdtweaks-bg2"
+        return "cdtweaks-spell-save-penalties-bg2" if row.component_id in {2310, 2311, 2312} else "cdtweaks-bg2"
     if row.catalog == "EVANDRA":
         return "evandra-core-bg2" if row.component_id == 0 else "evandra-crossmod-bg2"
     return CATALOG_RUNS[row.catalog]
@@ -426,6 +426,14 @@ def _feature_blocks(root: Path, collection: dict) -> str:
                     conflicts.setdefault(feature_id, []).append(
                         (other, f"Choose at most one option for {group.subgroup}.")
                     )
+
+    # Both components supply the same IWD casting graphics. Do not offer an
+    # apparently independent toggle whose native installer will skip it.
+    casting_graphics = ("feature:cdtweaks:component-70", "feature:iwdification:component-10")
+    for feature_id, other in (casting_graphics, casting_graphics[::-1]):
+        conflicts.setdefault(feature_id, []).append(
+            (other, "Choose one source for IWD casting graphics: IWDification or Tweaks Anthology.")
+        )
 
     blocks = [
         "[[features]]\n"
@@ -706,6 +714,22 @@ summary = "Restores Artisan's Red Wizard kit as a default-checked optional Edwin
 save_applicability = "new-game-only"
 urgency = "recommended"
 covers = ["feature:feature:artisanskitpack-npc:component-5102", "run:artisanskitpack-npc-bg2"]
+
+[[changes]]
+id = "scs-optional-immersion"
+title = "Optional SCS resting, inns and death rules"
+summary = "Adds three unchecked, not-recommended experimental choices: provisions for resting, more expensive inns with rest bonuses, and revised death effects. Community reports of problems are unconfirmed in CEBG. SCS's native Spell Revisions exclusion is enforced for death effects. Recommended selections and mod versions are unchanged."
+save_applicability = "new-game-only"
+urgency = "optional"
+covers = ["feature:feature:stratagems:component-4130", "feature:feature:stratagems:component-4135", "feature:feature:stratagems:component-4140", "run:stratagems-bg2"]
+
+[[changes]]
+id = "screened-optional-scs-tweaks"
+title = "More optional SCS and Tweaks Anthology choices"
+summary = "Offers 21 additional SCS and 44 Tweaks Anthology choices, all unchecked. Alternatives use enforced choice groups, duplicate IWD casting graphics are blocked, and spell-save-penalty alternatives retain their late installation position. Riskier kit, proficiency, spell and story overhauls remain excluded. Source-screened, not live-tested in every combination; the recommended setup is unchanged."
+save_applicability = "new-game-only"
+urgency = "optional"
+covers = ["run:stratagems-bg2", "run:cdtweaks-bg2", "run:cdtweaks-spell-save-penalties-bg2", "run:iwdification-bg2"]
 """,
         encoding="utf-8",
         newline="\n",
@@ -859,7 +883,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         base_collection,
         count=1,
     )
-    cdt_components = [row.component_id for row in rows if row.catalog == "CDTWEAKS" and RowKey(row.catalog, row.component_id) in target_rows and row.component_id != 2312]
+    cdt_components = [row.component_id for row in rows if row.catalog == "CDTWEAKS" and RowKey(row.catalog, row.component_id) in target_rows and row.component_id not in {2310, 2311, 2312}]
     run_blocks = dict(RUN_BLOCKS)
     run_blocks["before-randomiser"] = run_blocks["before-randomiser"].replace("components = []", f"components = [{', '.join(map(str, cdt_components))}]")
     insertions = [

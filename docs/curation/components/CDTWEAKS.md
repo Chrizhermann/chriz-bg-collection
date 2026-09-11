@@ -33,6 +33,26 @@ Listed at installed version **v18**.
   threshold need a separate one-time save repair.
 - Keep `260` unavailable with SCS; the combination has a known invisible-hostile/save
   failure path and is not part of this preset.
+- **Optional expansion screened 2026-09-11:** 44 additional choices are exposed
+  unchecked after a bounded review of the pinned v18 installer. Recommended
+  selections are unchanged; this is not live acceptance of every combination.
+  `70` conflicts with IWDification `10`. Upstream also blocks `1035/1036` when
+  legacy BG1NPC `29` is installed; that component is not offered by this recipe,
+  so it needs no dangling collection feature dependency.
+  `1100/1101` share the authored **City Map Exploration** choice group because their
+  EET map-script changes overlap, although upstream lists them independently.
+- `3131/3132` are cheats that also unlock doors and containers, not just trap-warning
+  improvements. `3070–3073` change how reputation affects shopping prices, not how
+  reputation is earned. `3191/3194–3198` change rest encounters, not SCS provisions.
+  `2310/2311` are arcane-only/divine-only alternatives to default `2312`, not additions.
+- Still deferred: class/kit/proficiency and priest-progression rewrites; EEex combat
+  feats and spell overhauls; NPC/romance/SoD-to-BG2 continuity changes; random-drop
+  rewrites; custom-input choices without installer support; non-EET components.
+  Keep `2680` (useful infravision) excluded alongside the known `260` problem.
+  `2150` builds alternate protection items and needs its own compatibility check;
+  `3280` has an old EEex-component check and runtime hook to verify; `3020` bypasses
+  identification mechanics and potentially mod quests. Their absence is deliberate,
+  not an assertion that every deferred component is broken.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
@@ -43,19 +63,19 @@ Listed at installed version **v18**.
 | 40 | Change Viconia's Skin Color to Dark Blue | Cosmetic Changes |  | ✓ | default |
 | 50 | Avatar Morphing Script | Cosmetic Changes |  |  | optional |
 | 60 | Weapon Animation Tweaks | Cosmetic Changes |  | ✓ | default |
-| 70 | Icewind Dale Casting Graphics [Andyr] | Cosmetic Changes |  |  | |
+| 70 | Icewind Dale Casting Graphics [Andyr] | Cosmetic Changes |  |  | optional |
 | 72 | Baldur's Gate Casting Graphics [Andyr] | Cosmetic Changes |  |  | |
 | 80 | Restore SoA Load Screen Logo | Cosmetic Changes |  |  | |
 | 82 | Restore IWD Loading Screens [icelus] | Cosmetic Changes |  |  | |
-| 90 | Disable Portrait Icons Added by Equipped Items | Cosmetic Changes |  |  | |
+| 90 | Disable Portrait Icons Added by Equipped Items | Cosmetic Changes |  |  | optional |
 | 100 | Commoners Use Drab Colors | Cosmetic Changes |  |  | optional |
 | 110 | Icon Improvements | Cosmetic Changes |  | ✓ | default |
 | 130 | Force All Dialogue to Pause Game | Cosmetic Changes |  | ✓ | default |
-| 140 | Fix Boo's Squeak | Cosmetic Changes |  |  | |
-| 150 | Remove "+x" From Unique Item Names | Cosmetic Changes |  |  | |
-| 160 | Make Magic Shields Glow [plainab/grogerson] | Cosmetic Changes |  |  | |
+| 140 | Fix Boo's Squeak | Cosmetic Changes |  |  | optional |
+| 150 | Remove "+x" From Unique Item Names | Cosmetic Changes |  |  | optional |
+| 160 | Make Magic Shields Glow [plainab/grogerson] | Cosmetic Changes |  |  | optional |
 | 170 | Only replace icons that aren't already unique | Cosmetic Changes | Unique Icons [Lava] | ✓ | default |
-| 171 | Replace all icons | Cosmetic Changes | Unique Icons [Lava] |  | |
+| 171 | Replace all icons | Cosmetic Changes | Unique Icons [Lava] |  | optional |
 | 180 | Fixes only | Cosmetic Changes | Unique Containers [Miloch] | ✓ | default |
 | 181 | Unique icons only | Cosmetic Changes | Unique Containers [Miloch] |  | optional |
 | 182 | Unique icons and names | Cosmetic Changes | Unique Containers [Miloch] |  | optional |
@@ -66,13 +86,13 @@ Listed at installed version **v18**.
 | 194 | For all shields | Cosmetic Changes | Use Character Colors Instead of Item Colors |  | optional |
 | 195 | For non-magical shields | Cosmetic Changes | Use Character Colors Instead of Item Colors |  | optional |
 | 200 | Remove blur effect | Cosmetic Changes | Remove Annoying Visual Effects from Equipped Items |  | optional |
-| 3150 | Remove spell trap and reflection effects | Cosmetic Changes | Remove Annoying Visual Effects from Equipped Items |  | |
-| 3151 | Remove all of the above | Cosmetic Changes | Remove Annoying Visual Effects from Equipped Items |  | |
+| 3150 | Remove spell trap and reflection effects | Cosmetic Changes | Remove Annoying Visual Effects from Equipped Items |  | optional |
+| 3151 | Remove all of the above | Cosmetic Changes | Remove Annoying Visual Effects from Equipped Items |  | optional |
 | 2010 | Separate Resist Fire/Cold Icon into Separate Icons [Angel] | Cosmetic Changes |  | ✓ | default |
-| 220 | Enhanced Overlays for Colorblind Players [Fouinto] | Cosmetic Changes |  |  | |
+| 220 | Enhanced Overlays for Colorblind Players [Fouinto] | Cosmetic Changes |  |  | optional |
 | 230 | Restore IWD Tooltips | Cosmetic Changes |  |  | |
-| 240 | Add Black Outline | Cosmetic Changes | Outline White Spell Icons for Accessibility |  | |
-| 241 | Add Gray Outline | Cosmetic Changes | Outline White Spell Icons for Accessibility |  | |
+| 240 | Add Black Outline | Cosmetic Changes | Outline White Spell Icons for Accessibility |  | optional |
+| 241 | Add Gray Outline | Cosmetic Changes | Outline White Spell Icons for Accessibility |  | optional |
 | 250 | Normal brightness | Cosmetic Changes | Colorize NPC Names and Tooltips |  | |
 | 251 | Slightly increased brightness | Cosmetic Changes | Colorize NPC Names and Tooltips |  | |
 | 252 | Moderately increased brightness | Cosmetic Changes | Colorize NPC Names and Tooltips |  | |
@@ -84,9 +104,9 @@ Listed at installed version **v18**.
 | 271 | Don't visualize health and status changes | Cosmetic Changes | Static PsT Character Portraits |  | |
 | 1010 | More Interjections | Content Changes |  | ✓ | default |
 | 1020 | Alter HP Triggers for NPC Wounded Dialogues | Content Changes |  | ✓ | default |
-| 1030 | Reveal Wilderness Areas Before Chapter Six | Content Changes |  |  | |
-| 1035 | First area only | Content Changes | Make Cloakwood Areas Available Before Completing the Bandit Camp |  | |
-| 1036 | All of Cloakwood except the mines | Content Changes | Make Cloakwood Areas Available Before Completing the Bandit Camp |  | |
+| 1030 | Reveal Wilderness Areas Before Chapter Six | Content Changes |  |  | optional |
+| 1035 | First area only | Content Changes | Make Cloakwood Areas Available Before Completing the Bandit Camp |  | optional |
+| 1036 | All of Cloakwood except the mines | Content Changes | Make Cloakwood Areas Available Before Completing the Bandit Camp |  | optional |
 | 1040 | Improved Athkatlan City Guard | Content Changes |  | ✓ | default |
 | 1050 | Gradual Drow Item Disintegration | Content Changes |  |  | |
 | 1060 | Breakable Iron Non-Magical Shields, Helms, and Armor | Content Changes | Breakable Iron Non-Magical Shields, Helms, and Armor |  | |
@@ -96,13 +116,13 @@ Listed at installed version **v18**.
 | 1075 | Send BioWare NPCs to an Inn [DavidW/Zed Nocear] | Content Changes |  |  | |
 | 1080 | Add Bags of Holding | Content Changes |  | ✓ | default |
 | 1085 | Portable Containers [Zed Nocear] | Content Changes |  |  | |
-| 1100 | Reveal City Maps When Entering Area | Content Changes |  |  | |
-| 1101 | Do Not Reveal City Maps When Entering Area | Content Changes |  |  | |
+| 1100 | Reveal City Maps When Entering Area | Content Changes | City Map Exploration |  | optional |
+| 1101 | Do Not Reveal City Maps When Entering Area | Content Changes | City Map Exploration |  | optional |
 | 1110 | Add Map Notes | Content Changes |  |  | |
 | 1120 | Stores Sell Higher Stacks of Items | Content Changes |  | ✓ | default |
 | 1130 | Reputation Resets in BG2 | Content Changes |  |  | |
-| 1140 | Gems and potions | Content Changes | Gems and Potions Require Identification |  | |
-| 1141 | Just gems | Content Changes | Gems and Potions Require Identification |  | |
+| 1140 | Gems and potions | Content Changes | Gems and Potions Require Identification |  | optional |
+| 1141 | Just gems | Content Changes | Gems and Potions Require Identification |  | optional |
 | 1142 | Just potions | Content Changes | Gems and Potions Require Identification | ✓ | default |
 | 1150 | Shapeshifter Rebalancing [Weimer] | Content Changes |  |  | |
 | 1160 | No restrictions | Content Changes | Multiple Strongholds [Sabre, Baldurdash, Weimer] |  | optional |
@@ -162,7 +182,7 @@ Listed at installed version **v18**.
 | 2120 | Allow Arcane Spellcasting in Heavy Armor | Rule Changes |  |  | |
 | 2140 | Expanded Dual-Class Options | Rule Changes |  |  | |
 | 2150 | PnP restrictions | Rule Changes | Wear Multiple Protection Items |  | |
-| 2151 | No restrictions | Rule Changes | Wear Multiple Protection Items |  | |
+| 2151 | No restrictions | Rule Changes | Wear Multiple Protection Items |  | optional |
 | 2152 | Allow armor plus one protection item [Angel] | Rule Changes | Wear Multiple Protection Items | ✓ | default |
 | 2160 | Rebalanced weapon proficiencies | Rule Changes | Alter Weapon Proficiency System |  | |
 | 2161 | BG-style weapon proficiencies, with weapon styles [the bigg] | Rule Changes | Alter Weapon Proficiency System |  | |
@@ -170,13 +190,13 @@ Listed at installed version **v18**.
 | 2163 | IWD-style proficiencies with weapon styles | Rule Changes | Alter Weapon Proficiency System |  | |
 | 2164 | IWD-style proficiencies without weapon styles | Rule Changes | Alter Weapon Proficiency System |  | |
 | 2170 | Cast Spells from Scrolls (and Other Items) at Character Level | Rule Changes |  | ✓ | default |
-| 2190 | Only mage and bard storekeepers can identify items | Rule Changes | Limit Ability of Storekeepers to Identify Items |  | |
-| 2191 | Identification ability is based on storekeeper's lore | Rule Changes | Limit Ability of Storekeepers to Identify Items |  | |
+| 2190 | Only mage and bard storekeepers can identify items | Rule Changes | Limit Ability of Storekeepers to Identify Items |  | optional |
+| 2191 | Identification ability is based on storekeeper's lore | Rule Changes | Limit Ability of Storekeepers to Identify Items |  | optional |
 | 2192 | Hybrid of both methods | Rule Changes | Limit Ability of Storekeepers to Identify Items | ✓ | default |
 | 2200 | Multi-Class Grandmastery [Weimer] | Rule Changes |  |  | |
 | 2210 | True grandmastery [Baldurdash] | Rule Changes | Change Grandmastery Bonuses | ✓ | default |
 | 2211 | BG2 grandmastery rules | Rule Changes | Change Grandmastery Bonuses |  | |
-| 2220 | Change Magically Created Weapons to Zero Weight | Rule Changes |  |  | |
+| 2220 | Change Magically Created Weapons to Zero Weight | Rule Changes |  |  | optional |
 | 2230 | Make +x/+y Weapons Consistent | Rule Changes |  |  | |
 | 2240 | Un-Nerfed THAC0 Table | Rule Changes |  |  | |
 | 2250 | Un-Nerfed Sorcerer Spell Progression Table | Rule Changes |  | ✓ | default |
@@ -209,8 +229,8 @@ Listed at installed version **v18**.
 | 2580 | Use PnP/PsT Table | Rule Changes | Alter Wisdom-Based Divine Bonus Spell Table |  | |
 | 2581 | Use BG/BG2/IWD Table | Rule Changes | Alter Wisdom-Based Divine Bonus Spell Table |  | |
 | 2300 | Triple-Class HLA Tables | Rule Changes |  |  | |
-| 2310 | Arcane magic only | Rule Changes | Add Save Penalties for Spells Cast by High-Level Casters |  | |
-| 2311 | Divine magic only | Rule Changes | Add Save Penalties for Spells Cast by High-Level Casters |  | |
+| 2310 | Arcane magic only | Rule Changes | Add Save Penalties for Spells Cast by High-Level Casters |  | optional |
+| 2311 | Divine magic only | Rule Changes | Add Save Penalties for Spells Cast by High-Level Casters |  | optional |
 | 2312 | Arcane and divine magic | Rule Changes | Add Save Penalties for Spells Cast by High-Level Casters | ✓ | default |
 | 2320 | Trap Cap Removal [Ardanis/GeN1e] | Rule Changes |  |  | |
 | 2330 | Remove Delay for Magical Traps [Ardanis/GeN1e] | Rule Changes |  |  | |
@@ -271,15 +291,15 @@ Listed at installed version **v18**.
 | 3011 | For non-party-joinable NPCs only | Convenience Tweaks/Cheats | Maximum HP Creatures [the bigg] |  | optional |
 | 3012 | For party-joinable NPCs only | Convenience Tweaks/Cheats | Maximum HP Creatures [the bigg] |  | optional |
 | 3020 | Identify All Items | Convenience Tweaks/Cheats |  |  | |
-| 3030 | 100% learn spells | Convenience Tweaks/Cheats | Easy Spell Learning |  | |
-| 3031 | 100% learn spells and no maximum cap | Convenience Tweaks/Cheats | Easy Spell Learning |  | |
+| 3030 | 100% learn spells | Convenience Tweaks/Cheats | Easy Spell Learning |  | optional |
+| 3031 | 100% learn spells and no maximum cap | Convenience Tweaks/Cheats | Easy Spell Learning |  | optional |
 | 3040 | Make Bags of Holding Bottomless | Convenience Tweaks/Cheats |  | ✓ | default |
 | 3050 | Remove Fatigue from Restoration Spells | Convenience Tweaks/Cheats |  |  | |
-| 3060 | Remove "You Must Gather Your Party..." Sound [Weimer] | Convenience Tweaks/Cheats |  |  | |
-| 3070 | Low Reputation Store Discount [Sabre] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | |
-| 3071 | Reputation has no effect, stores price fixed at 100% [Luiz] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | |
-| 3072 | Reputation has no effect, stores price fixed at 80% [Luiz] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | |
-| 3073 | Reputation has no effect, stores price fixed at 60% [Luiz] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | |
+| 3060 | Remove "You Must Gather Your Party..." Sound [Weimer] | Convenience Tweaks/Cheats |  |  | optional |
+| 3070 | Low Reputation Store Discount [Sabre] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | optional |
+| 3071 | Reputation has no effect, stores price fixed at 100% [Luiz] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | optional |
+| 3072 | Reputation has no effect, stores price fixed at 80% [Luiz] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | optional |
+| 3073 | Reputation has no effect, stores price fixed at 60% [Luiz] | Convenience Tweaks/Cheats | Change Effect of Reputation on Store Prices |  | optional |
 | 3080 | Unlimited ammo stacking | Convenience Tweaks/Cheats | Increase Ammo Stack Size | ✓ | default |
 | 3081 | Stacks of 40 | Convenience Tweaks/Cheats | Increase Ammo Stack Size |  | optional |
 | 3082 | Stacks of 80 | Convenience Tweaks/Cheats | Increase Ammo Stack Size |  | optional |
@@ -303,8 +323,8 @@ Listed at installed version **v18**.
 | 3124 | Stop Haer'Dalis-Aerie Romance from Starting | Convenience Tweaks/Cheats |  |  | optional |
 | 3125 | Neutral Characters Make Happy Comments at Mid-Range Reputation [Luiz] | Convenience Tweaks/Cheats |  |  | optional |
 | 3130 | Remove traps completely | Convenience Tweaks/Cheats | No Traps or Locks [Weimer, argent77] |  | optional |
-| 3131 | Remove only harmful trap effects | Convenience Tweaks/Cheats | No Traps or Locks [Weimer, argent77] |  | |
-| 3132 | Remove harmful trap effects and creatures summoned by alarms | Convenience Tweaks/Cheats | No Traps or Locks [Weimer, argent77] |  | |
+| 3131 | Remove only harmful trap effects | Convenience Tweaks/Cheats | No Traps or Locks [Weimer, argent77] |  | optional |
+| 3132 | Remove harmful trap effects and creatures summoned by alarms | Convenience Tweaks/Cheats | No Traps or Locks [Weimer, argent77] |  | optional |
 | 3140 | Originals from Ease-of-Use mod [Karzak, Blucher, aVENGER, Weimer] | Convenience Tweaks/Cheats | Faster Chapter One and Two Cutscenes and Dreams |  | |
 | 3141 | Non-silly version | Convenience Tweaks/Cheats | Faster Chapter One and Two Cutscenes and Dreams |  | |
 | 3160 | Keep Drizzt's Loot, Disable Malchor Harpell [Weimer] | Convenience Tweaks/Cheats |  |  | |
@@ -313,17 +333,17 @@ Listed at installed version **v18**.
 | 3176 | Accelerate/Decelerate Romances | Convenience Tweaks/Cheats |  |  | |
 | 3183 | Romance Cheats [Sabre, Richardson, Weimer] | Convenience Tweaks/Cheats |  |  | |
 | 3190 | Rest Anywhere [japheth] | Convenience Tweaks/Cheats |  |  | |
-| 3191 | Disable Non-Hostile Rest Spawns | Convenience Tweaks/Cheats |  |  | |
-| 3194 | Disable completely | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | |
-| 3195 | Decrease frequency by 50% | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | |
-| 3196 | Increase frequency by 50% | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | |
-| 3197 | Double frequency | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | |
-| 3198 | Quadruple frequency | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | |
-| 3200 | Sellable Items [icelus] | Convenience Tweaks/Cheats |  |  | |
-| 3205 | Stores Purchase All Item Types | Convenience Tweaks/Cheats |  |  | |
+| 3191 | Disable Non-Hostile Rest Spawns | Convenience Tweaks/Cheats |  |  | optional |
+| 3194 | Disable completely | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | optional |
+| 3195 | Decrease frequency by 50% | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | optional |
+| 3196 | Increase frequency by 50% | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | optional |
+| 3197 | Double frequency | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | optional |
+| 3198 | Quadruple frequency | Convenience Tweaks/Cheats | Alter Hostile Rest Spawns |  | optional |
+| 3200 | Sellable Items [icelus] | Convenience Tweaks/Cheats |  |  | optional |
+| 3205 | Stores Purchase All Item Types | Convenience Tweaks/Cheats |  |  | optional |
 | 3210 | Minimum Stats Cheat | Convenience Tweaks/Cheats |  |  | |
 | 3220 | Sensible Entrance Points | Convenience Tweaks/Cheats |  |  | |
-| 3230 | Taerom Makes Additional Ankheg Armor [Icendoan/grogerson] | Convenience Tweaks/Cheats |  |  | |
+| 3230 | Taerom Makes Additional Ankheg Armor [Icendoan/grogerson] | Convenience Tweaks/Cheats |  |  | optional |
 | 3240 | Randomize on reload | Convenience Tweaks/Cheats | Friendly Random Drops |  | |
 | 3241 | Choose your drop | Convenience Tweaks/Cheats | Friendly Random Drops |  | |
 | 3242 | Exchange with merchants | Convenience Tweaks/Cheats | Friendly Random Drops |  | |
@@ -353,7 +373,7 @@ Listed at installed version **v18**.
 | 3295 | Use scheme: 000000000-[Protagonist] Save-Name | Convenience Tweaks/Cheats | Personalize Automatic Save Names |  | optional |
 | 3300 | Death Cam | Convenience Tweaks/Cheats |  | ✓ | default |
 | 3310 | Start New Games with Party AI Turned Off | Convenience Tweaks/Cheats |  | ✓ | default |
-| 3320 | No Depreciation in Stores | Convenience Tweaks/Cheats |  |  | |
+| 3320 | No Depreciation in Stores | Convenience Tweaks/Cheats |  |  | optional |
 | 3330 | Make Party Members Less Likely to Die Irreversibly | Convenience Tweaks/Cheats |  |  | |
 | 3340 | Movement speed by 50 percent | Convenience Tweaks/Cheats | Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] |  | optional |
 | 3341 | Movement speed by 100 percent | Convenience Tweaks/Cheats | Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] |  | optional |
@@ -419,7 +439,7 @@ Listed at installed version **v18**.
 | 4150 | Move Boo Into Minsc's Pack | NPC Tweaks |  |  | |
 | 4160 | Allow Yeslick to Use Axes | NPC Tweaks |  |  | |
 | 4170 | Ensure Shar-Teel Doesn't Die in the Original Challenge | NPC Tweaks |  |  | |
-| 4140 | Don't Auto-Assign Advanced AI Scripting to Party | NPC Tweaks |  |  | |
+| 4140 | Don't Auto-Assign Advanced AI Scripting to Party | NPC Tweaks |  |  | optional |
 | 4180 | Removable NPC Items | NPC Tweaks |  |  | |
 | 4200 | Make Rancor +1 a Bit More Reliable | NPC Tweaks |  |  | |
 | 4210 | To Thief level 5 | NPC Tweaks | Adjust Nalia's Thief Level |  | |

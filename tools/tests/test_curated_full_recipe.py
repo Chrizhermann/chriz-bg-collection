@@ -50,6 +50,77 @@ class CuratedFullRecipeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires a component-order audit"):
             _preserve_native_run_orders(collection)
 
+    def test_screened_optional_batch_has_real_exclusivity_and_keeps_defaults(self) -> None:
+        additions = {
+            "stratagems": [3015, 4020, 4050, 4051, 4052, 4093, 4145, 4150,
+                           4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172,
+                           4173, 4174, 4216, 4217, 4230],
+            "cdtweaks": [70, 90, 140, 150, 160, 171, 220, 240, 241, 1030,
+                         1035, 1036, 1100, 1101, 1140, 1141, 2151, 2190,
+                         2191, 2220, 2310, 2311, 3030, 3031, 3060, 3070,
+                         3071, 3072, 3073, 3131, 3132, 3150, 3151, 3191,
+                         3194, 3195, 3196, 3197, 3198, 3200, 3205, 3230,
+                         3320, 4140],
+        }
+        groups = {
+            "stratagems": [(4050, 4051, 4052, 4093), tuple(range(4160, 4165)),
+                           tuple(range(4170, 4175)), (4216, 4217, 4218)],
+            "cdtweaks": [(170, 171), (240, 241), (1035, 1036), (1100, 1101),
+                         (1140, 1141, 1142), (2151, 2152), (2190, 2191, 2192),
+                         (2310, 2311, 2312), (3030, 3031), tuple(range(3070, 3074)),
+                         (3130, 3131, 3132), (200, 3150, 3151), tuple(range(3194, 3199))],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text())["selections"]
+            features = {feature["id"]: feature for feature in collection["features"]}
+            effective = _effective_features(collection, preset)
+            runs = {run["run_id"]: run for run in collection["runs"]}
+            declared = {
+                mod: {entry["id"] for entry in tomllib.loads((output / f"mods/{mod}.toml").read_text(encoding="utf-8"))["components"]}
+                for mod in additions
+            }
+            for mod, components in additions.items():
+                for component in components:
+                    feature_id = f"feature:{mod}:component-{component}"
+                    self.assertTrue(feature_id in features, f"Missing offered option: {feature_id}")
+                    self.assertEqual(features[feature_id]["decision"], "optional")
+                    self.assertFalse(effective[feature_id], feature_id)
+                    for entry in features[feature_id]["components"]:
+                        self.assertIn(entry["component"], runs[entry["run_id"]]["components"], feature_id)
+                        self.assertIn(entry["component"], declared[mod], feature_id)
+            for mod, choices in groups.items():
+                for components in choices:
+                    ids = {f"feature:{mod}:component-{component}" for component in components}
+                    self.assertEqual(len({features[key]["choice_group"] for key in ids}), 1)
+                    self.assertEqual(len({(features[key]["category"], features[key].get("parent"),
+                                           features[key]["group_label"]) for key in ids}), 1)
+                    for key in ids:
+                        edges = {edge["feature_id"] for edge in features[key].get("conflicts", [])}
+                        self.assertTrue(ids - {key} <= edges, f"Incomplete exclusivity: {key}")
+                    # Every alternative can be selected after turning its siblings off.
+                    for chosen in ids:
+                        selection = {**preset, **{key: "off" for key in ids}, chosen: "on"}
+                        switched = _effective_features(collection, selection)
+                        self.assertEqual({key for key in ids if switched[key]}, {chosen})
+            graphics = "feature:cdtweaks:component-70"
+            iwd_graphics = "feature:iwdification:component-10"
+            self.assertIn(iwd_graphics, {edge["feature_id"] for edge in features[graphics]["conflicts"]})
+            self.assertFalse(_effective_features(collection, {**preset, graphics: "on"})[graphics])
+            self.assertTrue(_effective_features(collection, {**preset, graphics: "on", iwd_graphics: "off"})[graphics])
+            runs = {run["run_id"]: run for run in collection["runs"]}
+            self.assertEqual(runs["cdtweaks-spell-save-penalties-bg2"]["components"], [2310, 2311, 2312])
+            self.assertTrue({2310, 2311, 2312}.isdisjoint(runs["cdtweaks-bg2"]["components"]))
+            for component in (2310, 2311, 2312):
+                self.assertEqual(features[f"feature:cdtweaks:component-{component}"]["components"],
+                                 [{"run_id": "cdtweaks-spell-save-penalties-bg2", "component": component}])
+            for mod, excluded in {"stratagems": [3017, 3551, 3552, 4030, 4100],
+                                  "cdtweaks": [72, 2100, 2150, 260, 2680, 3280, 3420]}.items():
+                for component in excluded:
+                    self.assertNotIn(f"feature:{mod}:component-{component}", set(features))
+
     def test_build_is_curation_derived_and_preserves_required_regressions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "recipe"
@@ -119,7 +190,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "b3b50b23d810026ee45f2198c3ff1fd6d5776ded12f3ef6346a3a096bd94c991",
+                "34aaa78987025a6340ea4ab351479401fc53ba91688ed423103b97725c0025f6",
             )
 
             legacy_bg1npc_groups = {
@@ -183,7 +254,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             )
             self.assertEqual(potions["source_label"], "The Tweaks Anthology")
             self.assertEqual(potions["group_label"], "Gems and Potions Require Identification")
-            self.assertNotIn("choice_group", potions)
+            self.assertEqual(potions["choice_group"], "choice:cdtweaks:gems-and-potions-require-identification")
             strongholds = features["feature:cdtweaks:component-1160"]
             self.assertEqual(strongholds["title"], "No restrictions")
             self.assertEqual(
@@ -395,7 +466,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertNotIn(120, runs["iwdification-bg2"]["components"])
             self.assertIn(2720, runs["cdtweaks-bg2"]["components"])
             self.assertIn(3121, runs["cdtweaks-bg2"]["components"])
-            self.assertEqual(runs["cdtweaks-spell-save-penalties-bg2"]["components"], [2312])
+            self.assertEqual(runs["cdtweaks-spell-save-penalties-bg2"]["components"], [2310, 2311, 2312])
             order = list(runs)
             self.assertLess(order.index("stratagems-bg2"), order.index("randomiser-bg2"))
             self.assertLess(order.index("randomiser-bg2"), order.index("eet-end-bg2"))
@@ -526,6 +597,44 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertTrue(effective["feature:chriz-bg-modpack:component-197"])
             for component in (130, 430, 440, 450):
                 self.assertTrue(effective[f"feature:chriz-bg-modpack:component-{component}"])
+
+    def test_scs_immersion_options_are_opt_in_and_honor_native_sr_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            baseline = tomllib.loads(
+                (output / "presets/chris-recommended.toml").read_text(encoding="utf-8")
+            )["selections"]
+            features = {feature["id"]: feature for feature in collection["features"]}
+            ids = [f"feature:stratagems:component-{component}" for component in (4130, 4135, 4140)]
+            effective = _effective_features(collection, baseline)
+            for feature_id in ids:
+                self.assertTrue(feature_id in features, f"Missing offered option: {feature_id}")
+                self.assertEqual(features[feature_id]["decision"], "optional")
+                self.assertEqual(features[feature_id]["readiness"], "ready")
+                self.assertFalse(effective[feature_id])
+                self.assertEqual(features[feature_id]["parent"], "mod:stratagems")
+            requested = {**baseline, **{feature_id: "on" for feature_id in ids}}
+            with_sr = _effective_features(collection, requested)
+            self.assertFalse(with_sr[ids[0]])
+            self.assertTrue(all(with_sr[feature_id] for feature_id in ids[1:]))
+            without_sr = _effective_features(collection, {**requested, "mod:spell-rev": "off"})
+            self.assertTrue(all(without_sr[feature_id] for feature_id in ids))
+            self.assertIn("Spell Revisions", features[ids[0]]["description"])
+            self.assertIn("experimental", features[ids[0]]["description"].lower())
+            self.assertIn("SoD", features[ids[1]]["description"])
+            self.assertFalse(features[ids[1]].get("requires"))
+            self.assertFalse(features[ids[2]].get("requires"))
+            scs_run = next(run for run in collection["runs"] if run["run_id"] == "stratagems-bg2")
+            nearby = [c for c in scs_run["components"] if c in {4115, 4130, 4135, 4140, 4210}]
+            self.assertEqual(nearby, [4115, 4130, 4135, 4140, 4210])
+            declarations = {entry["id"] for entry in tomllib.loads((output / "mods/stratagems.toml").read_text())["components"]}
+            for feature_id in ids:
+                self.assertIn("Not recommended:", features[feature_id]["title"])
+                self.assertIn("not independently reproduced", features[feature_id]["description"])
+                for entry in features[feature_id]["components"]:
+                    self.assertIn(entry["component"], declarations)
 
     def test_red_wizard_defaults_with_sr_but_remains_optional(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

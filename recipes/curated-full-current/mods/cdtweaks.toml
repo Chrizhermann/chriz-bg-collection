@@ -31,6 +31,14 @@ id = 60
 name = "Weapon Animation Tweaks"
 
 [[components]]
+id = 70
+name = "Icewind Dale Casting Graphics [Andyr]"
+
+[[components]]
+id = 90
+name = "Disable Portrait Icons Added by Equipped Items"
+
+[[components]]
 id = 100
 name = "Commoners Use Drab Colors"
 
@@ -43,8 +51,24 @@ id = 130
 name = "Force All Dialogue to Pause Game"
 
 [[components]]
+id = 140
+name = "Fix Boo's Squeak"
+
+[[components]]
+id = 150
+name = "Remove \"+x\" From Unique Item Names"
+
+[[components]]
+id = 160
+name = "Make Magic Shields Glow [plainab/grogerson]"
+
+[[components]]
 id = 170
 name = "Only replace icons that aren't already unique"
+
+[[components]]
+id = 171
+name = "Replace all icons"
 
 [[components]]
 id = 180
@@ -87,8 +111,28 @@ id = 200
 name = "Remove blur effect"
 
 [[components]]
+id = 3150
+name = "Remove spell trap and reflection effects"
+
+[[components]]
+id = 3151
+name = "Remove all of the above"
+
+[[components]]
 id = 2010
 name = "Separate Resist Fire/Cold Icon into Separate Icons [Angel]"
+
+[[components]]
+id = 220
+name = "Enhanced Overlays for Colorblind Players [Fouinto]"
+
+[[components]]
+id = 240
+name = "Add Black Outline"
+
+[[components]]
+id = 241
+name = "Add Gray Outline"
 
 [[components]]
 id = 1010
@@ -99,6 +143,18 @@ id = 1020
 name = "Alter HP Triggers for NPC Wounded Dialogues"
 
 [[components]]
+id = 1030
+name = "Reveal Wilderness Areas Before Chapter Six"
+
+[[components]]
+id = 1035
+name = "First area only"
+
+[[components]]
+id = 1036
+name = "All of Cloakwood except the mines"
+
+[[components]]
 id = 1040
 name = "Improved Athkatlan City Guard"
 
@@ -107,8 +163,24 @@ id = 1080
 name = "Add Bags of Holding"
 
 [[components]]
+id = 1100
+name = "Reveal City Maps When Entering Area"
+
+[[components]]
+id = 1101
+name = "Do Not Reveal City Maps When Entering Area"
+
+[[components]]
 id = 1120
 name = "Stores Sell Higher Stacks of Items"
+
+[[components]]
+id = 1140
+name = "Gems and potions"
+
+[[components]]
+id = 1141
+name = "Just gems"
 
 [[components]]
 id = 1142
@@ -203,6 +275,10 @@ id = 2720
 name = "Yoshimo to Imoen Experience Transfer [dark0dave]"
 
 [[components]]
+id = 2151
+name = "No restrictions"
+
+[[components]]
 id = 2152
 name = "Allow armor plus one protection item [Angel]"
 
@@ -211,12 +287,24 @@ id = 2170
 name = "Cast Spells from Scrolls (and Other Items) at Character Level"
 
 [[components]]
+id = 2190
+name = "Only mage and bard storekeepers can identify items"
+
+[[components]]
+id = 2191
+name = "Identification ability is based on storekeeper's lore"
+
+[[components]]
 id = 2192
 name = "Hybrid of both methods"
 
 [[components]]
 id = 2210
 name = "True grandmastery [Baldurdash]"
+
+[[components]]
+id = 2220
+name = "Change Magically Created Weapons to Zero Weight"
 
 [[components]]
 id = 2250
@@ -237,6 +325,14 @@ name = "Un-nerfed table [Blucher]"
 [[components]]
 id = 2292
 name = "Use cleric level progression changes with normal druid spell table"
+
+[[components]]
+id = 2310
+name = "Arcane magic only"
+
+[[components]]
+id = 2311
+name = "Divine magic only"
 
 [[components]]
 id = 2312
@@ -311,8 +407,36 @@ id = 3012
 name = "For party-joinable NPCs only"
 
 [[components]]
+id = 3030
+name = "100% learn spells"
+
+[[components]]
+id = 3031
+name = "100% learn spells and no maximum cap"
+
+[[components]]
 id = 3040
 name = "Make Bags of Holding Bottomless"
+
+[[components]]
+id = 3060
+name = "Remove \"You Must Gather Your Party...\" Sound [Weimer]"
+
+[[components]]
+id = 3070
+name = "Low Reputation Store Discount [Sabre]"
+
+[[components]]
+id = 3071
+name = "Reputation has no effect, stores price fixed at 100% [Luiz]"
+
+[[components]]
+id = 3072
+name = "Reputation has no effect, stores price fixed at 80% [Luiz]"
+
+[[components]]
+id = 3073
+name = "Reputation has no effect, stores price fixed at 60% [Luiz]"
 
 [[components]]
 id = 3080
@@ -407,6 +531,50 @@ id = 3130
 name = "Remove traps completely"
 
 [[components]]
+id = 3131
+name = "Remove only harmful trap effects"
+
+[[components]]
+id = 3132
+name = "Remove harmful trap effects and creatures summoned by alarms"
+
+[[components]]
+id = 3191
+name = "Disable Non-Hostile Rest Spawns"
+
+[[components]]
+id = 3194
+name = "Disable completely"
+
+[[components]]
+id = 3195
+name = "Decrease frequency by 50%"
+
+[[components]]
+id = 3196
+name = "Increase frequency by 50%"
+
+[[components]]
+id = 3197
+name = "Double frequency"
+
+[[components]]
+id = 3198
+name = "Quadruple frequency"
+
+[[components]]
+id = 3200
+name = "Sellable Items [icelus]"
+
+[[components]]
+id = 3205
+name = "Stores Purchase All Item Types"
+
+[[components]]
+id = 3230
+name = "Taerom Makes Additional Ankheg Armor [Icendoan/grogerson]"
+
+[[components]]
 id = 3290
 name = "Use scheme: 000000000-Protagonist-Save-Name"
 
@@ -437,6 +605,10 @@ name = "Death Cam"
 [[components]]
 id = 3310
 name = "Start New Games with Party AI Turned Off"
+
+[[components]]
+id = 3320
+name = "No Depreciation in Stores"
 
 [[components]]
 id = 3340
@@ -525,3 +697,7 @@ name = "Use BG2 values"
 [[components]]
 id = 4071
 name = "Use BG2 values"
+
+[[components]]
+id = 4140
+name = "Don't Auto-Assign Advanced AI Scripting to Party"
