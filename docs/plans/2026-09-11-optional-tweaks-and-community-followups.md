@@ -73,22 +73,34 @@ Separately requested: automatically use memorized regeneration spells on rest.
 See [the owning-mod handoff](../handoffs/2026-09-11-regeneration-on-rest.md).
 Feasibility research is complete; implementation and live testing remain pending.
 
-## Mage kit availability despite relaxed restrictions — reported, unverified
+## Elf mage kit availability — restriction-removal coverage gap confirmed
 
-Christopher reports that some mage kits are still not available to everyone,
-despite the recommended setup relaxing class/kit restrictions. Record this as a
-possible coverage gap; the affected kits, races and installation version have
-not yet been identified. This note does not establish a cause or authorize a
-blanket removal of additional restrictions.
+Christopher supplied a character-creation screenshot: choosing elf, then Mage,
+offers only **Mage, Diviner, Enchanter and Wild Mage**. Read-only checks of both
+the stream reference and Combined-20260908 explain that exact result:
 
-For a later focused check, capture the kit name, character race, installation
-version and where the choice is missing/disabled (for example character creation
-versus an editor). Verify the installed restriction-removal component's scope and
-whether mod-added kits or later changes retain separate eligibility rules. Do not
-assume this is the earlier Red Wizard/SR issue. Route any confirmed fix to its
-owning mod, or correct the recipe if the wrong component was selected.
+- `K_M_E.2DA` contains only kit rows `0, 24, 25, 30`; `KITLIST.2DA` maps them to
+  those four names. The human table contains the other specialists as well.
+- `mgsrcreq.2da` still has the elf eligibility flags disabled for the missing
+  specialists. This is not merely an editor's naming/display issue.
+- Selected Artisan component **1**, `lib/unlock_classes.tpa`, changes base-class
+  availability and only the base-Mage row of the specialist racial table. It does
+  not populate the missing elf specialist choices. Its name promises all classes,
+  not all kits. This is distinct from the earlier Red Wizard/SR exclusion.
+- **CDTweaks 2380**, Remove Racial Restrictions for Kits, is currently excluded.
+  Pinned v18 `lib/comp_2380.tpa:49–58,76–159` updates specialist racial flags and
+  adds already-playable kits to race selection tables, explicitly covering elves.
+  It preserves internal/NPC-only kits and intentionally skips gnome mage choices.
+  [Official documentation](https://gibberlings3.github.io/Documentation/readmes/readme-cdtweaks.html)
+  describes the separate class/kit and gnome policies.
 
-No investigation, recipe change or game modification was made for this report.
+Candidate remedy: verify 2380 after the relevant kit additions on a disposable
+installation, through completed elf character creation, not only list visibility.
+Check mod-kit ability minima against racial maxima before enabling every race/kit
+combination. No native Artisan conflict is declared by 2380, but that alone is not
+full gameplay acceptance. Gnome policy is a separate choice, not part of this elf
+case. No recipe, game or save was changed; implementation/default approval remains
+separate from this read-only diagnosis.
 
 ## Website differences from vanilla — after the next release
 

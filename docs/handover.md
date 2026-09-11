@@ -30,10 +30,13 @@ deferred **website differences-from-vanilla comparison** are tracked in
 must be discussed with Christopher/Twitch task after release, not published as an
 unreviewed exhaustive claim now.
 
-Also recorded there: Christopher reports that some **mage kits remain restricted**
-despite the default class/kit restriction relaxation. Exact kit/race/version and
-the affected selection screen are pending; cause unverified. This is a follow-up,
-not a confirmed recurrence of the Red Wizard/SR issue or a new blanket exclusion.
+Also recorded there: Christopher's **elf Mage character-creation screenshot** shows
+only Mage, Diviner, Enchanter and Wild Mage. Read-only checks of stream/combined
+`K_M_E.2DA` and `mgsrcreq.2da` confirm exactly that list. Selected Artisan 1 unlocks
+base classes, not the missing specialist choices. Excluded **CDTweaks 2380** is the
+kit-unlock counterpart and a source-supported candidate remedy; disposable
+character-creation testing and default approval are still pending. Gnome policy
+is separate. No game changes; not the earlier Red Wizard/SR issue.
 
 ## Red Wizard default restored after independent review — 2026-09-10
 
