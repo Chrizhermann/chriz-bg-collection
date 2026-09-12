@@ -38,7 +38,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
             self.assertEqual(actual[run_id], [value for value in runs[run_id]["components"] if value in selected])
             self.assertEqual(len(actual[run_id]), len(set(actual[run_id])))
         self.assertEqual(self.result["componentCount"], sum(map(len, actual.values())))
-        self.assertEqual(self.result["componentCount"], 437)
+        self.assertEqual(self.result["componentCount"], 436)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         self.assertEqual(self.result["applicationVersion"], "0.1.0-alpha.16")

@@ -2,6 +2,18 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Acton Balthis no longer default — 2026-09-13
+
+At Christopher's request, BG2 Unfinished Business **25: The Murder of Acton
+Balthis** is now optional and unchecked in the draft alpha.16 / collection
+alpha.14. Catalog, base manifest/preset and generated recipe agree. No other
+component depends on it; all other selections and source pins remain unchanged.
+The recommended plan is now **436 components / 44 runs**, retaining CDTweaks 2380.
+37 focused tests pass; public-alpha validation has no findings. Opting into this
+quest adds exactly `ub-bg2/25`, with no collateral selection changes.
+Existing games, historical installation order and published release evidence were
+not changed. This remains an unpublished next-patch change.
+
 ## Racial kit unlock default approved — 2026-09-12
 
 Draft alpha.16 / collection alpha.14 now includes **CDTweaks 2380**, default-checked

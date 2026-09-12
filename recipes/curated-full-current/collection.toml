@@ -1772,11 +1772,11 @@ components = [{ run_id = "ub-bg2", component = 24 }]
 [[features]]
 id = "feature:ub:component-25"
 title = "The Murder of Acton Balthis"
-description = "Install the reviewed Kulyok quest."
+description = "Optional quest by Kulyok; not included in the recommended setup."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 25 }]
 

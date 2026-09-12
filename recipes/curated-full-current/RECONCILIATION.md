@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 446 default/mandatory rows — conditional inactive: 5, deferred: 6, selected for installation: 435.
+Engine-equivalent resolved-selection summary: 445 default/mandatory rows — conditional inactive: 5, deferred: 6, selected for installation: 434.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -449,7 +449,6 @@ Engine-equivalent resolved-selection summary: 446 default/mandatory rows — con
 | `UB:19` | default | `omission:restored-bhaalspawn-provider` | deferred | No executable source selected | Christopher has not yet selected the canonical restored-Bhaalspawn-powers provider; neither alternative may enter the alpha until that choice is recorded. |
 | `UB:20` | default | `feature:ub:component-20` | selected for installation | ub → ub-28 28 (v28), component 20 |  |
 | `UB:21` | default | `feature:ub:component-21` | selected for installation | ub → ub-28 28 (v28), component 21 |  |
-| `UB:25` | default | `feature:ub:component-25` | selected for installation | ub → ub-28 28 (v28), component 25 |  |
 | `XAN:0` | mandatory | `feature:xan:mandatory-components` | selected for installation | xan → xan-19 19 (v19), component 0 |  |
 | `XAN:1` | default | `feature:xan:component-1` | selected for installation | xan → xan-19 19 (v19), component 1 |  |
 | `YESLICKNPC:1` | default | `feature:yeslicknpc:component-1` | selected for installation | yeslicknpc → yeslicknpc-5.0 5.0 (v5.0), component 1 |  |

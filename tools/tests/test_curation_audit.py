@@ -129,8 +129,8 @@ class CatalogParserTests(unittest.TestCase):
             decision_totals(rows),
             {
                 Decision.EXCLUDED: 515,
-                Decision.OPTIONAL: 229,
-                Decision.DEFAULT: 303,
+                Decision.OPTIONAL: 230,
+                Decision.DEFAULT: 302,
                 Decision.MANDATORY: 143,
             },
         )

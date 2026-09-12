@@ -50,6 +50,25 @@ class CuratedFullRecipeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires a component-order audit"):
             _preserve_native_run_orders(collection)
 
+    def test_acton_balthis_is_unchecked_optional_without_collateral_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text())["selections"]
+            features = {feature["id"]: feature for feature in collection["features"]}
+            feature_id = "feature:ub:component-25"
+            feature = features[feature_id]
+            self.assertEqual(feature["decision"], "optional")
+            self.assertEqual(feature["readiness"], "ready")
+            self.assertEqual(feature["components"], [{"run_id": "ub-bg2", "component": 25}])
+            defaults = _effective_features(collection, preset)
+            self.assertFalse(defaults[feature_id])
+            enabled = _effective_features(collection, {**preset, feature_id: "on"})
+            self.assertEqual({key for key in defaults if defaults[key] != enabled[key]}, {feature_id})
+            self.assertTrue(defaults["feature:cdtweaks:component-2380"])
+            self.assertTrue(defaults["feature:ub:component-21"])
+
     def test_racial_kit_unlock_is_default_optional_and_follows_kit_additions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "recipe"
@@ -220,7 +239,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "5ebaa477ee6cb5673e62b29074da13653e6e0cd435893126e17dbbda879ea496",
+                "27f91688b3ce5132fc8ad76614e4d2d7a7ad76d2a58775c27b4ed0bb89e5cb59",
             )
 
             legacy_bg1npc_groups = {
@@ -741,7 +760,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             report = (output / "RECONCILIATION.md").read_text(encoding="utf-8")
             self.assertIn("Engine-equivalent resolved-selection summary", report)
-            self.assertTrue("446 default/mandatory rows" in report)
+            self.assertTrue("445 default/mandatory rows" in report)
             self.assertTrue("`CDTWEAKS:2380` | default" in report)
             self.assertIn("`KLATU:2150` | default", report)
             self.assertIn("`IWDIFICATION:120` | default", report)

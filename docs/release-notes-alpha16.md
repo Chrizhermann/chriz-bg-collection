@@ -18,6 +18,8 @@ Not published. Proposed bundle: app alpha.16 / collection alpha.14.
 - **Choose kits regardless of race** is default-checked and optional. Complements
   the existing class unlock so elves can choose the missing mage specialists too.
   Internal/NPC-only kits and the separate gnome mage rules remain unchanged.
+- **The Murder of Acton Balthis** (BG2 Unfinished Business) is now unchecked by
+  default. It remains available as an optional quest in Customize.
 - Three new **unchecked SCS options**: provisions for wilderness/dungeon rests,
   more expensive inns with rest bonuses, and revised death/petrification/imprisonment
   rules. All three are visibly **Not recommended / experimental** because of
@@ -31,8 +33,9 @@ Not published. Proposed bundle: app alpha.16 / collection alpha.14.
   This batch has source-level compatibility screening, not gameplay acceptance of
   every combination.
 
-The recommended recipe has 437 components across 44 runs. The racial kit unlock
-adds one default; the unchecked customization batch changes no other selections.
+The recommended recipe has 436 components across 44 runs. The racial kit unlock
+adds one default; Acton Balthis becomes opt-in. The unchecked customization batch
+changes no other selections.
 No source-version change is needed for the existing Tweaks Anthology v18 component.
 Unreleased mod-repository experiments are not part of this public recipe.
 

@@ -5,6 +5,9 @@ Listed at installed version **v28**.
 
 ## UI/dependency notes
 
+- Component `25`, **The Murder of Acton Balthis**, is optional and unchecked by
+  default at Christopher's request (2026-09-13). Keep it available for opt-in;
+  do not remove any other UB content or uninstall it from existing games.
 - Component `3` is deliberately excluded; maintained modpack component `600` removes its
   problematic Spellhold hunt behavior from reference installs, but a fresh stack should
   not install both.
@@ -42,4 +45,4 @@ Listed at installed version **v28**.
 | 22 | Justifier Kit |  |  | ✓ | optional |
 | 23 | Feralan Kit |  |  | ✓ | optional |
 | 24 | Sarevok's Remorse |  |  | ✓ | optional |
-| 25 | The Murder of Acton Balthis, by Kulyok |  |  | ✓ | default |
+| 25 | The Murder of Acton Balthis, by Kulyok |  |  | ✓ | optional |
