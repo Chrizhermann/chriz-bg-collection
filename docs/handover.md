@@ -2,6 +2,23 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Expanded next-release plan — 2026-09-13
+
+Christopher wants the next release within the next couple of days, including
+implemented mod work whose live tests or owner releases are still pending. The
+[next-release scope and acceptance plan](plans/2026-09-13-next-release-scope-and-acceptance.md)
+is the current planning entry point. It inventories Artisan kits/modals/descriptions,
+Bardic, both SoD work lines (bridge/filler plus Khalid 115), dragons, modpack
+continuity/Imoen/Safana, the retained SR Lightning implementation, BuffBot 1.8.4 and
+the current CEBG draft. Planned-only work is separated for discussion.
+
+This expands the older narrow release proposal, **not the recipe yet**. Current
+draft 436/44 and historical Combined 446/50 are not the final expanded count.
+Reuse Combined for applicable native tests; consolidate sources and do one final
+frozen packaged-candidate install, not a rebuild for every feature. The plan flags
+SR/RR's earlier deferral, Safana's public selection and Lightning's default for
+discussion. No game/source-pin changes or releases were made by this planning pass.
+
 ## Challenge Mode recorded for later — 2026-09-13
 
 Christopher requested future Challenge Mode components: SoD changes, stronger
@@ -10,8 +27,10 @@ enforcement of his run rules. The complete 16-rule screenshot inventory, new
 requests, SoD filler exceptions, owner routing and unresolved policy details are
 in [the Challenge Mode outlook](plans/2026-09-13-challenge-mode-outlook.md).
 Documentation/preparation only: do not start implementation, change defaults or
-delay the next patch on its account. One small SoD piece is user-reported done;
-map it with the owner later instead of guessing its identity or readiness.
+delay the next patch on its account. Subsequent source inventory identifies
+implemented optional SoD **257**, the Insane bridge sequencers, as an existing
+challenge piece. Its final split still needs native acceptance; it does not mean
+the full Challenge Mode rules are implemented.
 
 ## Acton Balthis no longer default — 2026-09-13
 

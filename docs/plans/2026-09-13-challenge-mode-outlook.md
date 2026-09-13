@@ -22,7 +22,7 @@ mode or build elaborate enforcement for low-value edge cases.
 
 | Source | Rule / requested change | Preparation and boundary for later work |
 |---|---|---|
-| New request | Challenge-oriented SoD changes | Reuse the SoD Remix work. Christopher reports a small part is already done; identify that exact component/release with its owner at intake, without guessing which one. |
+| New request | Challenge-oriented SoD changes | Source inventory on September 13 identifies implemented optional SoD 257: two Insane bridge sequencers, requiring regular bridge 256. The final split has offline installer checks but awaits native acceptance. Reuse it through the next-release intake; this is not implementation of the full rules below. |
 | New request | Stronger dragons | Reuse BG Rebalance's existing dragon work, not a second implementation. Check its then-current release and SCS/EEex prerequisites. |
 | 1 | No exploits | Keep as player guidance unless a specific exploit has a small, safe fix. No blanket detection project. |
 | 2 + new request | No using wands; original rule allows selling them. Requested enforcement: remove all wands and replace them with scrolls | Inventory the actual collection's sources and agree replacement spells/counts later. The new replacement approach changes the original selling allowance/economy; preserve this distinction instead of silently equating the two. Protect quest dependencies and scripted users. |
@@ -47,8 +47,10 @@ mode or build elaborate enforcement for low-value edge cases.
 1. Ask the existing SoD and BG Rebalance owners for current component/release
    mappings and acceptance evidence. Historical starting points are the
    [combined test plan](2026-09-08-combined-playtest-and-alpha16.md): SoD bridge/filler
-   work and BG Rebalance dragon 110/111. Those September 8 snapshots are not proof
-   of current release readiness or the identity of the newly mentioned SoD piece.
+   work and BG Rebalance dragon 110/111. The
+   [September 13 release inventory](2026-09-13-next-release-scope-and-acceptance.md)
+   identifies newer SoD 257 and the current candidate sources. Historical snapshots
+   are not proof of native acceptance for later revisions.
 2. Start with bounded content restrictions/replacements and existing encounter
    improvements. Suggested owner for shared gameplay-rule enforcement is
    `chriz-bg-rebalance`; route content replacements to `chriz-bg-modpack` if that

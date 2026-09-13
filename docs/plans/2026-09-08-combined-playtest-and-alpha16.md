@@ -3,6 +3,12 @@
 Status: local combined installation completed and accepted, 2026-09-09.
 No stream patch, public upload or updater-feed change has started.
 
+**Planning update, 2026-09-13:** the
+[expanded next-release plan](2026-09-13-next-release-scope-and-acceptance.md)
+supersedes this document's narrow public-release proposal. The source inventory
+and 446-row installation record below remain historical evidence, not coverage of
+every later change or the final public component count.
+
 **Hold resolved (2026-09-08):** the bridge and filler changes now share SoD commit
 `3b34eaee19dcb9043f3b72c77bf5b92adbed05ca`. Modpack integration is complete at
 `85cbc42551ca256b167cfdb1ffc4bd3c22df85e4`; Christopher asked us to continue.

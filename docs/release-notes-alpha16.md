@@ -2,6 +2,12 @@
 
 Not published. Proposed bundle: app alpha.16 / collection alpha.14.
 
+**Editorial status, September 13:** these notes describe the current narrower
+recipe draft. The [expanded release plan](plans/2026-09-13-next-release-scope-and-acceptance.md)
+now includes implemented mod candidates awaiting tests/integration. Finalize this
+changelog and its component count after source/selection freeze; do not publish
+the current text as the full expanded release description.
+
 ## Changes
 
 - A visible loading screen now appears immediately while CEBG finds your games.
