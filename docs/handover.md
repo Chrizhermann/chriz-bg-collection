@@ -2,6 +2,17 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Existing-install patch triage — 2026-09-14
+
+[Patch candidates and remaining tests](plans/2026-09-14-existing-install-update-triage.md)
+now complement the release plan. Separate component/resource compatibility from
+saved-state applicability; never infer either from WeiDU.log alone. Dedicated
+description, Lightning and Abettor tails exist, while full Artisan/Bardic saved-grant
+migration does not. Modpack 199 remains new-campaign/pre-EET_end work; 189/620 and
+SoD 115 have specific event boundaries. Local TLK appends are possible; copying
+another install's TLK/compiled string numbers is not the proposed approach.
+Source/planning checks only: no game changes or generic patch executor implemented.
+
 ## Expanded next-release plan — 2026-09-13
 
 Christopher wants the next release within the next couple of days, including

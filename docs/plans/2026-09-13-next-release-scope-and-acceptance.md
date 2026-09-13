@@ -6,6 +6,10 @@ candidates even when its live tests, merge or standalone release are outstanding
 Do not silently drop those candidates to preserve the older, smaller patch scope.
 Discuss additions that still require implementation instead of starting them now.
 
+**September 14 follow-up:** [existing-install update triage](2026-09-14-existing-install-update-triage.md)
+records the smaller remaining playtests and per-change patch candidates. It does
+not enable automatic hotpatching or relax the existing-save boundaries below.
+
 This supersedes the narrow public-release scope at the end of the
 [September 8 combined plan](2026-09-08-combined-playtest-and-alpha16.md), not that
 plan's historical installation evidence. No mod, game, source pin or selection was
@@ -129,7 +133,7 @@ stream game. Use fresh actors/appropriate pre-event saves for grants and area ed
 | **Fighter/bards/QoL** | Expertise AC by damage type and THAC0 tradeoff, Power Attack damage; representative changed bard song/HLA; armor thieving without added penalties; elf specialist creation and Red Wizard/SR starting spells. | Bardic/armor are in Combined. Racial kit unlock, restored Red Wizard and later modal changes are not covered by its original 446-row receipt. Klatu does not remove distinct Find Traps button-14 or indirect restrictions; report actual behavior, not “all restrictions removed.” |
 | **SoD** | Carried Khalid's fort briefing/quest; final regular versus challenge bridge behavior; Shadow Aspect Mislead only once; remaining assassin/quest/travel checks. | Bridge combat, Bence arrival, save/reload/crossing, Liia reward and selected loot fixes already have owner native evidence. Do not repeat the entire SoD playthrough. 115 and final 257/266 are newer than the original Combined install and need preparation with valid pre-event saves. Broader Shadow Aspect redesign is explicitly not a gate. |
 | **Companions/Spellhold** | Xan/Yeslick recognizable progression survives transitions/rejoin; Safana clears arrival gear only once; Imoen receives intended XP once, including player-dual route. | 199/189/620 are installed in Combined. Use real transition hooks and first-recruitment saves; teleporting to an already-cached area does not test capture/transfer. These are important progression/data checks, not cosmetic polish. |
-| **Dragons** | Intended difficulty gating, lethal-melee protections/delivery and longer buffet spacing, ordinary difficulty unaffected. | 110/111 already installed in Combined. Fresh encounter, disposable saves only. |
+| **Dragons** | Component 110: high-difficulty lethal-melee gating/protections, lower settings unaffected. Component 111: longer buffet spacing at all supported difficulties. | 110/111 already installed in Combined. Fresh encounter, disposable saves only. |
 | **Spells/utility** | Lightning direction/bounce/friendly fire, wands/trap distinction; BuffBot hides unidentified items and shows them after identification. RR fresh hostile casting only if promoted. | Lightning 80 is installed; 81 can use a separately restored checkpoint at its own tail. BuffBot 1.8.4 is newer. Do not replay EET/SCS solely to switch a final Lightning test. |
 
 Before applying any test delta, record installed versus candidate source and choose
