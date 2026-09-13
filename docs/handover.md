@@ -2,6 +2,17 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Challenge Mode recorded for later — 2026-09-13
+
+Christopher requested future Challenge Mode components: SoD changes, stronger
+dragons, wand-to-scroll replacements, selected-fight area locks and practical
+enforcement of his run rules. The complete 16-rule screenshot inventory, new
+requests, SoD filler exceptions, owner routing and unresolved policy details are
+in [the Challenge Mode outlook](plans/2026-09-13-challenge-mode-outlook.md).
+Documentation/preparation only: do not start implementation, change defaults or
+delay the next patch on its account. One small SoD piece is user-reported done;
+map it with the owner later instead of guessing its identity or readiness.
+
 ## Acton Balthis no longer default — 2026-09-13
 
 At Christopher's request, BG2 Unfinished Business **25: The Murder of Acton

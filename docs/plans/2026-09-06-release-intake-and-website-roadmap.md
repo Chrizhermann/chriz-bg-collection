@@ -3,6 +3,14 @@
 User decisions: 2026-09-06. Keep this task focused on releasing CEBG;
 owning mod tasks retain implementation and detailed design work.
 
+## Later roadmap addition — Challenge Mode (2026-09-13)
+
+Record as **Planned**, not shipped: [Challenge Mode scope and complete run-rule
+inventory](2026-09-13-challenge-mode-outlook.md). It combines owner-maintained SoD
+and dragon work with practical rule enforcement, including explicit encounter
+exceptions. No implementation, public website edit or current-release scope change
+was requested at this checkpoint; presentation stays with the website task.
+
 ## Approved next recipe
 
 - Progressive utility XP **610**: include in the recommended installation;
