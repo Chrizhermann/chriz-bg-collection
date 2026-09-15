@@ -1,0 +1,32 @@
+id = "chriz-bg-modpack-0.2.0-alpha.6"
+name = "chriz-bg-modpack"
+version = "0.2.0-alpha.6"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.6/chriz-bg-modpack-v0.2.0-alpha.6.zip"
+reference = "v0.2.0-alpha.6"
+expected_filename = "chriz-bg-modpack-v0.2.0-alpha.6.zip"
+expected_length = 1362731
+sha256 = "ca291c86b66d94ea32deed3850f4a561844077765c34293250905f6478d3b6da"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["chriz-bg-modpack", "setup-chriz-bg-modpack.tp2"]
+tp2_paths = ["setup-chriz-bg-modpack.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-modpack"
+license = "MIT"
+url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.6"
+reviewed_on = "2026-09-16"

@@ -2,6 +2,69 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Alpha.16 candidate assembled — 2026-09-16
+
+The [candidate record](alpha16-candidate-2026-09-16.md) supersedes the preparation
+states below. All owner releases are published and pinned, including modpack alpha.6
+with Yeslick188/continuity199/Safana189/Imoen620. Recommended selection is 448
+components / 50 runs; dragons remain opt-in. Public-alpha validation passes.
+Christopher performs the installation/playtest; do not start another agent-run game
+installation. See that record for package verification and publication state.
+
+## Full candidate release first; web docs staged — 2026-09-16
+
+Christopher's current decision is to include every **implemented** candidate in
+the next new-install release, subject only to exact source/artifact, selection and
+order validity before one full packaged-candidate install. Artisan and Bardic have
+the required user acceptance and are releasing through their owners now. SoD Khalid
+115 is released in v0.6.10 with bounded entry/briefing acceptance. SR/RR is included;
+Lightning 80 is default and 81 is the mutually exclusive optional alternative.
+Official Safana plus core 189 are included for Christopher's candidate test; unfinished
+Bard/Abettor conversion is not. Yeslick 188 is implemented but awaits its owner
+integration before 199/EET_end; it has no existing-save migration. Dragons 110/111
+remain opt-in Challenge components.
+
+**Latest wrap-up instruction:** Christopher will run the full installation and
+playtest himself. Finish exact package intake, necessary recipe/dependency checks
+and the installer build; do not start another automated full install, gameplay
+round or broad review. Hotpatch implementation follows the new-install release.
+
+Do not claim the provisional alpha.16/alpha.14 labels or historical 436/44 count as
+final, and do not claim that every source is pinned, built, shipped or integration-tested.
+The separate [full-candidate and web-docs handoff](handoffs/2026-09-16-full-candidate-and-web-docs.md)
+has the exact release-first sequence. The web task may prepare/publish accurate docs
+with upcoming changes clearly labelled, but the current download stays in place until
+the new release is verified. Existing-game changes come later as opt-in guarded
+patches—not generic override copying—and no game write/hotpatch work is authorized now.
+
+## Documents-folder handling requirement — 2026-09-16
+
+Christopher expects moved/OneDrive/missing Documents to be handled automatically
+where Windows permits. A viewer's `stage:bg1` / `os error 2` points to the CEBG save
+profile, not evidence that C:/D: separation is unsupported. Version/diagnostics are
+pending; cause is unconfirmed. Current code resolves redirected Documents and
+creates its own child but assumes the parent exists and returns generic I/O errors.
+The [bounded hardening handoff](handoffs/2026-09-16-documents-folder-robustness.md)
+records creation-at-install, clearer diagnostics, retry and ownership boundaries.
+No fix/reproduction/release yet; do not advise deleting caches or disabling OneDrive.
+
+## Yeslick kit gap and Dispel diagnosis — 2026-09-15
+
+Christopher requests both for the next patch. The [owning-mod handoff](handoffs/2026-09-15-yeslick-bg1-kit-and-dispel.md)
+records read-only source/save evidence: YeslickNPC 1 kits BG2 Yeslick only;
+the current BG1 saved actor is an unkitted Fighter/Cleric. Add BG1 Alaghor coverage
+in modpack before continuity 199/EET_end, respecting vanilla opt-out. Do not make
+continuity reset player builds. Existing saved actors need a separate repair.
+
+Dispel 410 is already in public modpack and the draft, but absent from the older
+stream install. Its SPIN112 still affects allies and bypasses the dispel-level
+contest; Combined's spell has the intended hostile-only 1.5x scaling at all 40
+headers. No game/save changes or native casting test in this pass.
+
+The extra final SoD bridge/Mislead 257/266 check is **waived as a release gate**
+by Christopher, not recorded as passed. TLK changes remain high-risk and require
+target-specific validation. Release and existing-install triage plans agree.
+
 ## Existing-install patch triage — 2026-09-14
 
 [Patch candidates and remaining tests](plans/2026-09-14-existing-install-update-triage.md)
@@ -26,9 +89,10 @@ the current CEBG draft. Planned-only work is separated for discussion.
 This expands the older narrow release proposal, **not the recipe yet**. Current
 draft 436/44 and historical Combined 446/50 are not the final expanded count.
 Reuse Combined for applicable native tests; consolidate sources and do one final
-frozen packaged-candidate install, not a rebuild for every feature. The plan flags
-SR/RR's earlier deferral, Safana's public selection and Lightning's default for
-discussion. No game/source-pin changes or releases were made by this planning pass.
+frozen packaged-candidate install, not a rebuild for every feature. September 16
+resolved the earlier SR/RR, Safana and Lightning choices; the current top-of-file
+handoff supersedes this historical discussion. No game/source-pin changes or
+collection release were made by this planning pass.
 
 ## Challenge Mode recorded for later — 2026-09-13
 
@@ -40,7 +104,8 @@ in [the Challenge Mode outlook](plans/2026-09-13-challenge-mode-outlook.md).
 Documentation/preparation only: do not start implementation, change defaults or
 delay the next patch on its account. Subsequent source inventory identifies
 implemented optional SoD **257**, the Insane bridge sequencers, as an existing
-challenge piece. Its final split still needs native acceptance; it does not mean
+challenge piece. Native acceptance of its final split is not recorded; Christopher
+waived the extra check as a next-release gate on September 15. It does not mean
 the full Challenge Mode rules are implemented.
 
 ## Acton Balthis no longer default — 2026-09-13

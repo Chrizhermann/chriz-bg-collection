@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.5"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.6"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -21,6 +21,14 @@ name = "Mazzy: move the fifth Short Bow pip to Short Sword"
 [[components]]
 id = 170
 name = "Xan Eldritch Knight: reconcile the EET XAN4/XAN6/TTXAN variants"
+
+[[components]]
+id = 188
+name = "Yeslick: extend the Alaghor kit to BG1 recruitment variants"
+
+[[components]]
+id = 189
+name = "Safana: one-time SoA arrival inventory cleanup"
 
 [[components]]
 id = 190
@@ -53,6 +61,10 @@ name = "Dynaheir: learn the installed Haste spell"
 [[components]]
 id = 198
 name = "Kivan: Archer kit"
+
+[[components]]
+id = 199
+name = "EET: preserve Xan and Yeslick's companion progression"
 
 [[components]]
 id = 220
@@ -93,3 +105,7 @@ name = "SCS shapechange spells: repair the EE Fixpack interaction"
 [[components]]
 id = 610
 name = "Progressive utility XP for locks, traps, and learning spells"
+
+[[components]]
+id = 620
+name = "Imoen: Spellhold party-average XP catch-up"

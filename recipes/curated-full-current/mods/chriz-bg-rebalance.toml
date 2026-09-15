@@ -1,5 +1,5 @@
 id = "chriz-bg-rebalance"
-artifact_id = "chriz-bg-rebalance-0.3.2"
+artifact_id = "chriz-bg-rebalance-0.4.0"
 name = "CHRIZ-BG-REBALANCE"
 tp2 = "setup-chriz-bg-rebalance.tp2"
 language = 0
@@ -13,6 +13,14 @@ name = "SCS: Telekinetic Storm save-for-half repair"
 [[components]]
 id = 101
 name = "SCS: restore Freedom scrolls to the Adventurer's Mart"
+
+[[components]]
+id = 110
+name = "SCS: dragon melee delivery and death-protection rebalance"
+
+[[components]]
+id = 111
+name = "SCS: dragon wing-buffet spacing rebalance"
 
 [[components]]
 id = 120

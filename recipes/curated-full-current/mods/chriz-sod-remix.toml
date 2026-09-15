@@ -1,5 +1,5 @@
 id = "chriz-sod-remix"
-artifact_id = "chriz-sod-remix-0.6.8"
+artifact_id = "chriz-sod-remix-0.6.10"
 name = "CHRIZ-SOD-REMIX"
 tp2 = "chriz-sod-remix/setup-chriz-sod-remix.tp2"
 language = 0
@@ -15,12 +15,20 @@ id = 110
 name = "SoD remix: keep all companions at SoD start"
 
 [[components]]
+id = 115
+name = "SoD remix: Khalid continuity at Bridgefort"
+
+[[components]]
 id = 120
 name = "SoD remix: remove the hooded man from the mid-campaign"
 
 [[components]]
 id = 130
 name = "SoD remix: skip the four chapter rest-dreams"
+
+[[components]]
+id = 135
+name = "SoD remix: assassin ambush without dead magic"
 
 [[components]]
 id = 140
@@ -111,8 +119,24 @@ id = 255
 name = "SoD remix: Boareskyr battle - durable explosive barrels"
 
 [[components]]
+id = 256
+name = "SoD remix: bridge elemental finale"
+
+[[components]]
+id = 257
+name = "SoD remix: optional Insane bridge sequencers"
+
+[[components]]
 id = 260
 name = "SoD remix: coalition camp arc - fewer, cleaner enemies on the scouting maps"
+
+[[components]]
+id = 265
+name = "SoD remix: Mizhena amulet, filler cuts, and XP corrections"
+
+[[components]]
+id = 266
+name = "SoD remix: finite Shadow Aspect Mislead"
 
 [[components]]
 id = 270

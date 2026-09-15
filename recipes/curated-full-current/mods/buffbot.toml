@@ -1,5 +1,5 @@
 id = "buffbot"
-artifact_id = "buffbot-1.8.3-alpha"
+artifact_id = "buffbot-1.8.4-alpha"
 name = "BuffBot"
 tp2 = "buffbot/setup-buffbot.tp2"
 language = 0

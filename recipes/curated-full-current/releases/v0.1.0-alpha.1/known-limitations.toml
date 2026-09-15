@@ -2,6 +2,9 @@ schema = 1
 release = "v0.1.0-alpha.1"
 preset = "chris-recommended"
 approved_tail_runs = [
+  "safana-bg2",
+  "chriz-bg-modpack-late-companions-bg2",
+  "spell-rev-lightning-bg2",
   "bardicwonders-dialogue-patch-bg2",
   "chriz-sod-remix-bg2",
   "hiddengameplayoptions-bg2",

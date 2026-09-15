@@ -7,14 +7,15 @@ Do not make a general hotpatch engine a prerequisite for the upcoming release.
 
 ## Remaining tests: small but meaningful
 
-- Artisan/Bardic: new characters, console XP, then **normal level-up/HLA selection**
-  and actual ability use. Giving abilities directly bypasses grant testing. Use a
-  target/ally where needed and one save/reload. New-character success does not prove
+- Artisan/Bardic: their owner/user acceptance is complete for the new-install
+  release. Any later new-character, normal level-up/HLA selection and ability-use
+  sample is regression evidence, not a release gate. It still does not prove
   migration of existing characters. Abettor's start/end party invisibility remains
-  a specifically documented unverified effect, not proof its entire kit is broken.
-- SoD: retain Christopher's substantial accepted playtesting. Khalid 115 needs its
-  focused fort route. Owner notes distinguish final 257/266 from earlier bridge
-  combat acceptance; a short final sanity check, not another campaign, is enough.
+  specifically unverified; that does not prove its entire kit is broken.
+- SoD: retain Christopher's substantial accepted playtesting. Released Khalid 115
+  has user-accepted entry/briefing evidence, not a complete fort/campaign claim.
+  Christopher explicitly waived the extra final bridge/Mislead 257/266 sanity check
+  as a release gate; do not relabel it as a pass.
 - Dragons: actual combat is pending. These belong to the optional challenge
   offering, not automatic difficulty changes for existing users. 110 gates lethal
   melee on high difficulty; 111 independently changes buffet timing at all supported
@@ -42,14 +43,15 @@ delivery**. Patch with the game closed and fully restart afterward.
 | Modpack Safana 189 | Append after Safana and the final arrival-script writer, before first SoA arrival. Deliberately does not strip gear from an already-arrived Safana. Do not automatically add the companion or unfinished conversion. |
 | Modpack Imoen 620 | Existing games before Spellhold recruitment, or Imoen already in the party but still in the maze. No effect beyond the maze. Requires EEex and supported final script. Uninstall does not reverse saved XP. |
 | Modpack continuity 199 | **New BG1 campaign, proper pre-EET_end order.** Changes actor identities/references and cannot rename actors embedded in saves. Reused EET mechanisms do not make this an existing-save patch. |
-| SoD Khalid 115 | Purpose-built append component requiring 110. Before first Bridgefort briefing, ideally before SoD starts; original-route fallback remains. Not a migration for contradictory scenes already played. Native acceptance pending. |
+| Yeslick Alaghor / Dispel 410 | September 15 diagnosis: BG1 kit coverage is missing; override conversion alone cannot repair saved Yeslick. Needs a separate guarded kit/grant migration. Dispel 410 already exists and is a targeted resource-patch candidate for the older stream installation, where it is absent; Combined's 40-header corrected spell is verified. See the [owner handoff](../handoffs/2026-09-15-yeslick-bg1-kit-and-dispel.md). No game was patched. |
+| SoD Khalid 115 | Released purpose-built append component requiring 110. Before first Bridgefort briefing, ideally before SoD starts; original-route fallback remains. Entry/briefing acceptance is verified, but it is not a migration for contradictory scenes already played or proof of a full fort playthrough. |
 | Other SoD changes | Individual assessment: 257 requires matching current 256 and pre-spawn state; 266 has a narrow script correction. Area/loot/actor changes can miss cached instances. Repair components 176/235/291 target specific older states, not a blanket repair set. |
 | Dragons 110/111 | Runtime scripts/additive resources make later installation plausible after supported SCS; 110 also needs EEex. Owner explicitly withholds saved-encounter/combat acceptance. Never inject optional challenge difficulty simply because SCS is installed. |
 | BuffBot / Radar | BuffBot 1.8.4 is a promising bounded upgrade after changed-runtime/generated-file and settings checks. Do not copy a whole override. Radar already has an independent update path; neither establishes generic mod-upgrade support. |
 
-SR/RR's earlier public-selection deferral remains. Fresh placement is after SR/RR
-and **before SCS**. A separate tail does not prove safety for every already-generated
-SCS script or saved enemy spellbook; no automatic retrofit approved here.
+SR/RR compatibility is included for fresh collection installs. Its fresh placement is
+after SR/RR and **before SCS**. That does not prove safety for every already-generated
+SCS script or saved enemy spellbook; no automatic retrofit is approved here.
 
 ## Why component detection is necessary but insufficient
 
@@ -62,9 +64,13 @@ Later mods, customization and manual edits can change the patch's inputs.
 Party actors are embedded in saves; visited areas/stores can also be cached.
 Replacing an override CRE/ARE/STO therefore does not generally update its saved
 instance. Future casts can use changed spells while old effects remain applied.
-File extension alone proves neither safety nor effectiveness.
+File extension alone proves neither safety nor effectiveness. Risk is not limited to
+an immediately unplayable save: stale quests, cached CRE/area instances, residual
+effects, installation-local TLK IDs and incompatible mod versions can fail silently.
 
-**TLK changes are not categorically forbidden.** Resolve/append text using the
+**TLK changes are higher-risk and require explicit, installation-specific care.**
+Christopher reaffirmed this on September 15; technical feasibility is not a safety
+claim. Exclude unvalidated TLK changes from an automatic patch batch. Resolve/append text using the
 target installation's WeiDU and repoint only intended consumers. Preserve existing
 string numbers, actual language and female TLK where applicable. Never copy another
 install's dialog.tlk or compiled files with its string numbers; do not rewrite a
@@ -78,7 +84,9 @@ installation-local text delivery, not native quest acceptance or universal safet
 
 1. Publish an authenticated, explicit patch list with supported component versions,
    prerequisites/conflicts, resource checks and save applicability. New optional
-   gameplay requires opt-in; never re-enable a user's exclusions.
+   gameplay requires opt-in; never re-enable a user's exclusions. Record patch state,
+   matching backups and rollback eligibility per installation; never use a generic
+   copy-override action as a substitute.
 2. Distinguish eligible, already fixed, not selected and unsupported/unknown.
    Unknown means no write and an explanation. A mod list cannot prove a quest has
    not happened: prefer audited runtime guards that safely do nothing outside the
@@ -102,10 +110,10 @@ CEBG already has applicability labels in `engine/src/updates.rs`, receipts, and
 separate app/Radar updates. `app/src/screens/updates.ts` still offers **Create updated
 installation** for collection changes. Labels are not a patch executor/save scanner.
 
-Recommendation: prepare a small named batch, starting with accepted table/resource
-fixes. Prove install, unsupported-input rejection, rollback and an existing-save
-restart smoke on an isolated copy. Keep saved-character migration and broad upgrades
-outside the first batch; do not hold up the new-install release for this capability.
+Recommendation: release the new-install candidate first. Then implement opt-in,
+named existing-game patching with the contract above; prove install, unsupported-input
+rejection, rollback and an existing-save restart smoke on an isolated copy. Keep
+saved-character migration and broad upgrades outside the first batch.
 
 ## Evidence pointers
 
@@ -117,5 +125,5 @@ outside the first batch; do not hold up the new-install release for this capabil
 - Bardic `37d3e5a`: `live-patch/abettor-hla/README.md` and installer.
 - SR `29538896`: `live-patch/SRCB_CLASSIC_LIGHTNING/README.md` and installer.
 - Modpack `85cbc425`: `docs/companion-continuity.md`, `docs/imoen-spellhold-xp.md`.
-- SoD `docs/plans/2026-09-10-khalid-continuity.md`, `docs/releases/v0.6.9.md`;
+- SoD `docs/plans/2026-09-10-khalid-continuity.md`, `docs/releases/v0.6.10.md`;
   BG Rebalance dragon worktree `a947` README 110/111.
