@@ -30,6 +30,18 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         return {(ref["run_id"], ref["component"]) for feature in self.collection["features"]
                 if state[feature["id"]] for ref in feature.get("components", [])}
 
+    def test_selected_runs_have_static_evidence_and_tail_approvals(self):
+        release = self.output / "releases/v0.1.0-alpha.1"
+        evidence = tomllib.loads((release / "acceptance.toml").read_text())["evidence"]
+        accepted = {item["subject_id"] for item in evidence
+                    if item["subject_kind"] == "run" and item["kind"] == "static-test"
+                    and item["status"] == "accepted"}
+        selected_runs = {run for run, _ in self.selected()}
+        self.assertFalse(selected_runs - accepted)
+        approved = set(tomllib.loads((release / "known-limitations.toml").read_text())["approved_tail_runs"])
+        selected_tail = {run for run in selected_runs if self.runs[run]["phase"] == "post-eet-end"}
+        self.assertFalse(selected_tail - approved)
+
     def test_classic_lightning_is_default_with_real_exclusive_nonbounce_alternative(self):
         classic, alternative = "feature:spell-rev:component-80", "feature:spell-rev:component-81"
         self.assertIn(("spell-rev-lightning-bg2", 80), self.selected())

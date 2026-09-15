@@ -624,6 +624,10 @@ def _update_release_records(destination: Path, commit: str) -> None:
         '  "klatu-armor-thieving-bg2",\n  "buffbot-bg2",',
     )
     limitations = limitations.replace(
+        'approved_tail_runs = [',
+        'approved_tail_runs = [\n  "safana-bg2",\n  "chriz-bg-modpack-late-companions-bg2",\n  "spell-rev-lightning-bg2",',
+    )
+    limitations = limitations.replace(
         'reason = "The Branwen Spiritual Hammer repair is not enabled in the frozen alpha recipe."\n'
         'user_facing_limitation = "Branwen\'s Spell Revisions Spiritual Hammer repair is unavailable in this alpha."',
         'reason = "The maintained repair is selected conditionally and stays inactive unless the optional Branwen component is selected."\n'
@@ -676,6 +680,27 @@ test_artifact = "tools/tests/test_klatu_armor_recipe.py"
 date = "2026-09-08"
 status = "accepted"
 scope = "Focused static source pin, component, optional-selection, credits, and late-order assertions only; not live game acceptance."
+"""
+    for run_id in [
+        "srcb-rr-compat-bg2",
+        "chriz-bg-modpack-pre-continuity-bg2",
+        "chriz-bg-modpack-continuity-bg2",
+        "safana-bg2",
+        "chriz-bg-modpack-late-companions-bg2",
+        "spell-rev-lightning-bg2",
+    ]:
+        acceptance += f"""
+
+[[evidence]]
+subject_kind = "run"
+subject_id = {_q(run_id)}
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = {_q(commit)}
+test_artifact = "tools/tests/test_expanded_release_recipe.py"
+date = "2026-09-16"
+status = "accepted"
+scope = "Passed focused selection, dependencies, native component ordering and source intake checks; Christopher performs the installation and gameplay acceptance separately."
 """
     acceptance_path.write_text(acceptance + "\n", encoding="utf-8", newline="\n")
 
