@@ -433,3 +433,58 @@ fn retries_transient_statuses_only_up_to_the_configured_limit() {
     ));
     assert_eq!(server.finish().len(), 3);
 }
+
+#[test]
+fn transient_failure_recovers_and_later_acquisition_uses_verified_cache() {
+    let bytes = b"archive recovered after temporary HTTP 500";
+    let server = TestServer::start(2, move |index, _| match index {
+        0 => Reply {
+            status: 500,
+            headers: Vec::new(),
+            body: Vec::new(),
+            advertised_length: Some(0),
+        },
+        1 => Reply::complete(bytes, "\"recovered-v1\""),
+        _ => unreachable!(),
+    });
+    let temp = TempDir::new().unwrap();
+    let cache = cache(&temp);
+    let (sink, events) = ChannelSink::unbounded();
+    let download = request("recovery", server.url("/archive"), bytes, 5);
+
+    let acquired = cache.acquire(&download, &sink).unwrap();
+    assert_eq!(acquired.disposition, CacheDisposition::Downloaded);
+    assert_eq!(std::fs::read(&acquired.archive_path).unwrap(), bytes);
+    assert!(events.try_iter().any(|event| matches!(event,
+        EngineEvent::ConsoleLine { line, .. } if line.contains("immediately") && line.contains("2/5")
+    )));
+    assert_eq!(server.finish().len(), 2);
+
+    // The server is gone. A subsequent resume must reuse the verified archive.
+    let cached = cache.acquire(&download, &sink).unwrap();
+    assert_eq!(cached.disposition, CacheDisposition::Hit);
+    assert_eq!(cached.archive_path, acquired.archive_path);
+    assert!(events
+        .try_iter()
+        .all(|event| matches!(event, EngineEvent::StepProgress { .. })));
+}
+
+#[test]
+fn permanent_status_is_not_retried_even_with_five_attempt_budget() {
+    let bytes = b"missing archive";
+    let server = TestServer::start(1, |_, _| Reply {
+        status: 404,
+        headers: Vec::new(),
+        body: Vec::new(),
+        advertised_length: Some(0),
+    });
+    let temp = TempDir::new().unwrap();
+    let (sink, events) = ChannelSink::unbounded();
+    let result = cache(&temp).acquire(&request("missing", server.url("/archive"), bytes, 5), &sink);
+    assert!(matches!(
+        result,
+        Err(AcquireError::HttpStatus { status: 404, .. })
+    ));
+    assert_eq!(server.finish().len(), 1);
+    assert!(events.try_iter().next().is_none());
+}

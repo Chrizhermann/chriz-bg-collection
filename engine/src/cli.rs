@@ -18,7 +18,7 @@ use thiserror::Error;
 use crate::acquire::{
     extract_archive, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
     ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, DownloadRequest,
-    ExtractedArtifact, MaterializationRequest,
+    ExtractedArtifact, MaterializationRequest, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
@@ -1980,7 +1980,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                                 expected_length,
                                 expected_sha256: artifact.source.sha256.clone(),
                                 redirect_hosts: artifact.source.redirect_hosts.clone(),
-                                max_attempts: 3,
+                                max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
                             },
                             self.sink,
                         )

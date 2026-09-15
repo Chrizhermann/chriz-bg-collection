@@ -64,6 +64,11 @@ No full campaign replay is required before the user starts using this candidate.
 
 ## Publication and next work
 
+**Post-build source change:** [incremental download retry](download-retry-acceptance-2026-09-16.md)
+now passes 47 focused checks. The setup/checksum recorded above predates that change
+and does **not** include it. Rebuild and re-verify the setup, updater payload/signature
+and release checksums before publication; do not relabel the existing binary.
+
 The website's simplified guide, differences overview and Upcoming section are live
 at https://bg.chrizfader.org/collection (website commit `e39c1638`).
 Current public download remains app alpha.15 / collection alpha.13 pending candidate

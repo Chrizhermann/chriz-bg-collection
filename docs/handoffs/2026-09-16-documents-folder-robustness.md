@@ -3,6 +3,28 @@
 Status: bounded source check and requested product behavior, 2026-09-16.
 No implementation, reproduction, user-file changes or release in this pass.
 
+## Second diagnostics received September 16
+
+The follow-up ZIP is app alpha.15 / recipe alpha.13, same managed installation
+and acquisition history. Xan succeeds on the third user-level attempt after two
+HTTP-500 failures. All 34 acquisition records are now available, both Steam source
+games identify as 2.7.3.0, and `stage:bg1` fails on its first recorded attempt
+after about 1.16 seconds. No mod invocation has started in this ledger.
+
+The reported path is again the generated Documents child, not the Documents parent.
+The source code checks the parent's existence before creating the child. A missing
+parent alone is therefore not established as this failure's cause. Current generic
+errors also cannot distinguish child creation, revalidation or an error masked by
+failed reservation cleanup. Do not promise that known-folder creation will fix it.
+
+Next evidence: Windows Security Protection History for a matching CEBG controlled-
+folder-access block (and any separate security product), plus whether the reported
+Documents location is available. Controlled folder access remains a hypothesis,
+not a diagnosis. If a matching block is confirmed and the user trusts the app,
+allow only that executable through the specific folder-access control, restart
+CEBG and retry the same installation; do not disable protection globally. Keep
+all cache/failed-install evidence. No need for another clean Steam installation.
+
 ## Report and what is actually known
 
 A viewer reports `stage:bg1: failed`, with `os error 2` naming

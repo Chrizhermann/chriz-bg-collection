@@ -1,13 +1,13 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use fs4::fs_std::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::events::{EngineEvent, EventSink};
+use crate::events::{EngineEvent, EventSink, Stream};
 
 use super::http::{validate_download_url, HttpClient, HttpResponse};
 use super::{AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest};
@@ -173,18 +173,12 @@ impl ArtifactCache {
         paths: &CachePaths,
         sink: &dyn EventSink,
     ) -> Result<TransferResult, AcquireError> {
-        let mut last_error = String::new();
-        for _attempt in 1..=request.max_attempts {
-            match self.transfer_once(request, paths, sink) {
-                Ok(result) => return Ok(result),
-                Err(AttemptFailure::Fatal(error)) => return Err(error),
-                Err(AttemptFailure::Retryable(error)) => last_error = error.to_string(),
-            }
-        }
-        Err(AcquireError::RetryExhausted {
-            attempts: request.max_attempts,
-            last_error,
-        })
+        retry_transfer(
+            request,
+            sink,
+            || self.transfer_once(request, paths, sink),
+            std::thread::sleep,
+        )
     }
 
     fn transfer_once(
@@ -228,6 +222,56 @@ impl ArtifactCache {
         }
         handle_fresh_response(response, request, paths, sink)
     }
+}
+
+// Inject the wait operation so schedule/termination tests do not sleep or download.
+// Success and fatal failures leave immediately; only transient failures use the budget.
+fn retry_transfer<T>(
+    request: &DownloadRequest,
+    sink: &dyn EventSink,
+    mut transfer: impl FnMut() -> Result<T, AttemptFailure>,
+    mut wait: impl FnMut(Duration),
+) -> Result<T, AcquireError> {
+    let mut last_error = String::new();
+    for attempt in 1..=request.max_attempts {
+        match transfer() {
+            Ok(result) => return Ok(result),
+            Err(AttemptFailure::Fatal(error)) => return Err(error),
+            Err(AttemptFailure::Retryable(error)) => last_error = error.to_string(),
+        }
+        if attempt == request.max_attempts {
+            break;
+        }
+
+        let seconds = match attempt {
+            1 => 0,
+            2 => 2,
+            3 => 10,
+            _ => 30,
+        };
+        let when = if seconds == 0 {
+            "immediately".to_owned()
+        } else {
+            format!("in {seconds} seconds")
+        };
+        sink.emit(EngineEvent::ConsoleLine {
+            step_id: format!("acquire:{}", request.request_id),
+            stream: Stream::Stdout,
+            line: format!(
+                "Download interrupted for {}. Retrying {when} (attempt {}/{}).",
+                request.request_id,
+                attempt + 1,
+                request.max_attempts,
+            ),
+        });
+        if seconds != 0 {
+            wait(Duration::from_secs(seconds));
+        }
+    }
+    Err(AcquireError::RetryExhausted {
+        attempts: request.max_attempts,
+        last_error,
+    })
 }
 
 fn validate_request(request: &DownloadRequest) -> Result<String, AcquireError> {
@@ -713,8 +757,153 @@ fn remove_if_exists(path: &Path) -> Result<(), AcquireError> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_request;
-    use crate::acquire::DownloadRequest;
+    use std::time::Duration;
+
+    use super::{retry_transfer, validate_request, AttemptFailure};
+    use crate::acquire::{AcquireError, DownloadRequest};
+    use crate::events::{ChannelSink, EngineEvent, Stream};
+
+    fn retry_request(max_attempts: u32) -> DownloadRequest {
+        DownloadRequest {
+            request_id: "xan-19".to_owned(),
+            url: "https://example.invalid/archive.zip".to_owned(),
+            expected_length: 1,
+            expected_sha256: "0".repeat(64),
+            redirect_hosts: Vec::new(),
+            max_attempts,
+        }
+    }
+
+    fn temporary_failure() -> AttemptFailure {
+        AttemptFailure::Retryable(AcquireError::HttpStatus {
+            url: "https://example.invalid/archive.zip".to_owned(),
+            status: 500,
+        })
+    }
+
+    #[test]
+    fn progressive_retries_wait_only_before_remaining_attempts_and_report_them() {
+        let request = retry_request(5);
+        let (sink, events) = ChannelSink::unbounded();
+        let mut calls = 0;
+        let mut waits = Vec::new();
+        let result: Result<(), _> = retry_transfer(
+            &request,
+            &sink,
+            || {
+                calls += 1;
+                Err(temporary_failure())
+            },
+            |delay| waits.push(delay.as_secs()),
+        );
+
+        assert_eq!(calls, 5);
+        assert_eq!(waits, [2, 10, 30]);
+        assert!(
+            matches!(result, Err(AcquireError::RetryExhausted { attempts: 5, last_error }) if last_error.contains("status 500"))
+        );
+        let lines = events
+            .try_iter()
+            .map(|event| match event {
+                EngineEvent::ConsoleLine {
+                    step_id,
+                    stream,
+                    line,
+                } => {
+                    assert_eq!(step_id, "acquire:xan-19");
+                    assert_eq!(stream, Stream::Stdout);
+                    line
+                }
+                other => panic!("Retry must not signal failure/attention: {other:?}"),
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(lines.len(), 4);
+        assert!(lines[0].contains("immediately") && lines[0].contains("2/5"));
+        for (line, delay) in lines[1..].iter().zip([2, 10, 30]) {
+            assert!(line.contains(&format!("in {delay} seconds")), "{line}");
+        }
+        assert!(lines[3].contains("5/5"));
+    }
+
+    #[test]
+    fn progressive_retries_stop_immediately_on_success_at_any_attempt() {
+        for succeed_on in 1..=5 {
+            let (sink, _) = ChannelSink::unbounded();
+            let mut calls = 0;
+            let mut waits = Vec::new();
+            let result = retry_transfer(
+                &retry_request(5),
+                &sink,
+                || {
+                    calls += 1;
+                    if calls == succeed_on {
+                        Ok(42)
+                    } else {
+                        Err(temporary_failure())
+                    }
+                },
+                |delay| waits.push(delay.as_secs()),
+            )
+            .unwrap();
+            assert_eq!(result, 42);
+            assert_eq!(calls, succeed_on);
+            let expected: Vec<_> = [2, 10, 30]
+                .into_iter()
+                .take((succeed_on as usize).saturating_sub(2))
+                .collect();
+            assert_eq!(waits, expected);
+        }
+    }
+
+    #[test]
+    fn progressive_retries_do_not_retry_a_permanent_failure() {
+        let (sink, events) = ChannelSink::unbounded();
+        let result: Result<(), _> = retry_transfer(
+            &retry_request(5),
+            &sink,
+            || {
+                Err(AttemptFailure::Fatal(AcquireError::HttpStatus {
+                    url: "https://example.invalid/archive.zip".to_owned(),
+                    status: 404,
+                }))
+            },
+            |_| panic!("Permanent errors must not wait"),
+        );
+        assert!(matches!(
+            result,
+            Err(AcquireError::HttpStatus { status: 404, .. })
+        ));
+        assert!(events.try_iter().next().is_none());
+    }
+
+    #[test]
+    fn progressive_retries_respect_smaller_limits_and_cap_longer_waits() {
+        for (limit, expected) in [
+            (1, vec![]),
+            (2, vec![]),
+            (3, vec![2]),
+            (6, vec![2, 10, 30, 30]),
+        ] {
+            let (sink, events) = ChannelSink::unbounded();
+            let mut calls = 0;
+            let mut waits = Vec::new();
+            let result: Result<(), _> = retry_transfer(
+                &retry_request(limit),
+                &sink,
+                || {
+                    calls += 1;
+                    Err(temporary_failure())
+                },
+                |delay: Duration| waits.push(delay.as_secs()),
+            );
+            assert!(
+                matches!(result, Err(AcquireError::RetryExhausted { attempts, .. }) if attempts == limit)
+            );
+            assert_eq!(calls, limit);
+            assert_eq!(waits, expected);
+            assert_eq!(events.try_iter().count(), (limit - 1) as usize);
+        }
+    }
 
     #[test]
     fn accepts_versioned_artifact_ids_with_dots() {

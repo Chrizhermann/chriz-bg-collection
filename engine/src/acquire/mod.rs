@@ -25,6 +25,9 @@ pub use materialize::{
     SignedCollisionRule,
 };
 
+/// Standard archive budget: initial attempt, then retries after 0, 2, 10 and 30 seconds.
+pub const DEFAULT_DOWNLOAD_ATTEMPTS: u32 = 5;
+
 /// One immutable HTTP artifact requested by a recipe.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DownloadRequest {
@@ -38,7 +41,8 @@ pub struct DownloadRequest {
     pub expected_sha256: String,
     /// Cross-host redirect destinations reviewed in the signed artifact contract.
     pub redirect_hosts: Vec<String>,
-    /// Maximum number of transient transport attempts. Must be at least one.
+    /// Maximum number of transient transport attempts, including the first request.
+    /// Must be at least one. Retries wait 0, 2, 10, then at most 30 seconds each.
     pub max_attempts: u32,
 }
 
