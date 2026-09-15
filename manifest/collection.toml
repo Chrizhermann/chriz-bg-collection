@@ -191,6 +191,13 @@ components = [500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100]
 args = []
 
 [[runs]]
+run_id = "srcb-rr-compat-bg2"
+mod_id = "srcb-rr-compat"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
 run_id = "stratagems-bg2"
 mod_id = "stratagems"
 phase = "main"
@@ -212,6 +219,20 @@ components = [200010]
 args = []
 
 [[runs]]
+run_id = "chriz-bg-modpack-pre-continuity-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-continuity-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [199]
+args = []
+
+[[runs]]
 run_id = "eet-end-bg2"
 mod_id = "eet-end"
 phase = "eet-finalization"
@@ -222,7 +243,7 @@ args = []
 run_id = "chriz-sod-remix-bg2"
 mod_id = "chriz-sod-remix"
 phase = "post-eet-end"
-components = [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910]
+components = [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910]
 args = []
 
 [[runs]]
@@ -236,7 +257,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 120, 121, 400, 401, 404, 405, 407, 408]
+components = [100, 101, 110, 111, 120, 121, 400, 401, 404, 405, 407, 408]
 args = []
 
 [[runs]]
@@ -250,7 +271,21 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 400, 410, 430, 440, 450, 610]
+components = [130, 400, 410, 430, 440, 450, 610]
+args = []
+
+[[runs]]
+run_id = "safana-bg2"
+mod_id = "safana"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-late-companions-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [189, 620]
 args = []
 
 [[runs]]
@@ -258,6 +293,13 @@ run_id = "spell-rev-npc-spellbooks-bg2"
 mod_id = "spell-rev"
 phase = "post-eet-end"
 components = [60]
+args = []
+
+[[runs]]
+run_id = "spell-rev-lightning-bg2"
+mod_id = "spell-rev"
+phase = "post-eet-end"
+components = [80, 81]
 args = []
 
 [[runs]]
@@ -3378,7 +3420,7 @@ requires = ["mod:eet-end"]
 [[features]]
 id = "feature:chriz-sod-remix:mandatory-components"
 title = "Complete CHRIZ-SOD-REMIX setup"
-description = "Install all 32 reviewed v0.6.7 fresh-install components as one indivisible bundle, including the accepted EET SoD skip, victory ending, and camp-chest treasure route."
+description = "Install the complete curated fresh-install remix, including the SoD skip, victory ending, companion continuity, revised bridge finale, filler and XP corrections, and finite Shadow Aspect Mislead. Extra Challenge remains a separate optional choice."
 category = "collection"
 decision = "mandatory"
 readiness = "ready"
@@ -3386,8 +3428,10 @@ parent = "mod:chriz-sod-remix"
 components = [
   { run_id = "chriz-sod-remix-bg2", component = 100 },
   { run_id = "chriz-sod-remix-bg2", component = 110 },
+  { run_id = "chriz-sod-remix-bg2", component = 115 },
   { run_id = "chriz-sod-remix-bg2", component = 120 },
   { run_id = "chriz-sod-remix-bg2", component = 130 },
+  { run_id = "chriz-sod-remix-bg2", component = 135 },
   { run_id = "chriz-sod-remix-bg2", component = 140 },
   { run_id = "chriz-sod-remix-bg2", component = 150 },
   { run_id = "chriz-sod-remix-bg2", component = 145 },
@@ -3410,7 +3454,10 @@ components = [
   { run_id = "chriz-sod-remix-bg2", component = 240 },
   { run_id = "chriz-sod-remix-bg2", component = 250 },
   { run_id = "chriz-sod-remix-bg2", component = 255 },
+  { run_id = "chriz-sod-remix-bg2", component = 256 },
   { run_id = "chriz-sod-remix-bg2", component = 260 },
+  { run_id = "chriz-sod-remix-bg2", component = 265 },
+  { run_id = "chriz-sod-remix-bg2", component = 266 },
   { run_id = "chriz-sod-remix-bg2", component = 270 },
   { run_id = "chriz-sod-remix-bg2", component = 280 },
   { run_id = "chriz-sod-remix-bg2", component = 290 },
@@ -3500,7 +3547,7 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["mod:fade"]
 conflicts = [{ feature_id = "feature:fade:component-2", reason = "Choose either Fade's Fighter/Thief conversion or her Shadowdancer kit." }]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 110 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 110 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-130"
@@ -3522,7 +3569,7 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:artisanskitpack-npc:component-3102"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 140 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 140 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-170"
@@ -3533,7 +3580,7 @@ decision = "mandatory"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-npc:component-20002"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 170 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 170 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-190"
@@ -3544,7 +3591,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["mod:sarahtob"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 190 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 190 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-192"
@@ -3554,7 +3601,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 192 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 192 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-193"
@@ -3564,7 +3611,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 193 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 193 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-194"
@@ -3574,7 +3621,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 194 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 194 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-195"
@@ -3584,7 +3631,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 195 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 195 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-196"
@@ -3594,7 +3641,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 196 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 196 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-197"
@@ -3604,7 +3651,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 197 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 197 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-198"
@@ -3614,7 +3661,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 198 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 198 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-220"
@@ -3624,7 +3671,7 @@ category = "npcs"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 220 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 220 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-221"
@@ -3639,7 +3686,7 @@ conflicts = [
   { feature_id = "feature:chriz-bg-modpack:component-223", reason = "Conflicts with Hexxat: Assassin (modpack component 223)." },
   { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
 ]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 221 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 221 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-222"
@@ -3654,7 +3701,7 @@ conflicts = [
   { feature_id = "feature:chriz-bg-modpack:component-223", reason = "Conflicts with Hexxat: Assassin (modpack component 223)." },
   { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
 ]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 222 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 222 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-223"
@@ -3669,7 +3716,7 @@ conflicts = [
   { feature_id = "feature:chriz-bg-modpack:component-222", reason = "Conflicts with Hexxat: Fighter/Thief (modpack component 222)." },
   { feature_id = "feature:artisanskitpack-npc:component-7104", reason = "Conflicts with Hexxat: Invisible Blade (Artisan component 7104)." },
 ]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 223 }]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 223 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-400"
@@ -3759,3 +3806,145 @@ components = [
   { run_id = "buffbot-bg2", component = 1 },
   { run_id = "buffbot-bg2", component = 0 },
 ]
+
+[[features]]
+id = "feature:spell-rev:component-80"
+title = "Classic bouncing Lightning Bolt"
+description = "Lightning Bolt bounces off walls and can hit allies, restoring its classic positioning risk. Select at most one Lightning Bolt variant."
+category = "spells"
+choice_group = "spell-rev-lightning-bolt"
+decision = "default"
+readiness = "ready"
+parent = "mod:spell-rev"
+requires = ["feature:spell-rev:mandatory-components"]
+conflicts = [{ feature_id = "feature:spell-rev:component-81", reason = "Choose either classic bouncing or non-bouncing Lightning Bolt." }]
+components = [{ run_id = "spell-rev-lightning-bg2", component = 80 }]
+
+[[features]]
+id = "feature:spell-rev:component-81"
+title = "Non-bouncing Lightning Bolt"
+description = "Lightning Bolt spells and wands do not bounce; lightning traps retain their bouncing behaviour. An alternative to the recommended classic bouncing version."
+category = "spells"
+choice_group = "spell-rev-lightning-bolt"
+decision = "optional"
+readiness = "ready"
+parent = "mod:spell-rev"
+requires = ["feature:spell-rev:mandatory-components"]
+conflicts = [{ feature_id = "feature:spell-rev:component-80", reason = "Choose either classic bouncing or non-bouncing Lightning Bolt." }]
+components = [{ run_id = "spell-rev-lightning-bg2", component = 81 }]
+
+[[features]]
+id = "mod:srcb-rr-compat"
+title = "Spell Revisions / Rogue Rebalancing compatibility"
+description = "Keep Rogue Rebalancing encounter spellbooks and scripts consistent with Spell Revisions' relocated spells. Automatically applies when either supported encounter is selected."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+requires = ["feature:spell-rev:mandatory-components"]
+requires_any = ["feature:rr:component-11", "feature:rr:component-12"]
+
+[[features]]
+id = "feature:srcb-rr-compat:component-0"
+title = "Correct Rogue Rebalancing's spell choices"
+description = "Repair Chaos spellbooks and scripts, plus the affected spell-protection checks, in Chosen of Cyric and Shadow Thief Improvements. Skipped when neither encounter or Spell Revisions is selected."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:srcb-rr-compat"
+components = [{ run_id = "srcb-rr-compat-bg2", component = 0 }]
+
+[[features]]
+id = "mod:safana"
+title = "Safana in Amn"
+description = "Bring Safana into Shadows of Amn with her existing character progression and a one-time arrival inventory cleanup. Her planned Bard/Abettor conversion is not included."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+requires = ["mod:eet-end", "mod:chriz-bg-modpack"]
+
+[[features]]
+id = "feature:safana:mandatory-components"
+title = "Safana in Amn"
+description = "Add Safana's official EET companion continuation. Her arrival cleanup is included automatically."
+category = "npcs"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:safana"
+components = [{ run_id = "safana-bg2", component = 0 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-188"
+title = "Apply Yeslick's Alaghor kit in BG1"
+description = "Extend the selected Fighter/Alaghor route to BG1 Yeslick's recruitment variants, using the installed kit and normal priest-level grants. Automatically omitted when keeping Yeslick's vanilla class."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:yeslicknpc:component-1"]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 188 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-189"
+title = "Clear Safana's carried-over arrival inventory once"
+description = "Clear Safana's inherited SoD inventory at her first SoA arrival, while preserving equipment acquired later. Does not change her class or kit."
+category = "fixes"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:safana:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 189 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-199"
+title = "Keep Xan and Yeslick's progression across EET"
+description = "Carry the supported companions' developed character builds into BG2 while retaining their BG2 presentation. Works with vanilla classes too; it does not force a kit during transitions. New installations only."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:eet"]
+components = [{ run_id = "chriz-bg-modpack-continuity-bg2", component = 199 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-620"
+title = "Bring Imoen up to party XP at Spellhold"
+description = "At first recruitment in Spellhold, raise Imoen's mage XP to the party average, capped at 3 million. Supports her normal and player-dual routes without repeating the award on rejoin."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 620 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-257"
+title = "Extra Challenge: Insane bridge sequencers"
+description = "Add the implemented harder sequencer behaviour to the revised SoD bridge encounter on Insane. Optional and unchecked; the normal revised bridge is already included. This is not the full planned Challenge Mode."
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components"]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 257 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-110"
+title = "Extra Challenge: lethal dragon melee"
+description = "Strengthen SCS dragon melee at the supported high difficulty settings, including the intended death-protection interactions. Requires Smarter Dragons and EEex. Optional; not part of the normal default setup."
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:stratagems:mandatory-components", "feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 110 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-111"
+title = "Dragon wing buffet: longer spacing"
+description = "Space SCS dragon wing buffets 18 seconds apart instead of 6 seconds. Requires Smarter Dragons; offered as an optional dragon-encounter adjustment."
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:stratagems:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 111 }]

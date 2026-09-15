@@ -265,11 +265,10 @@ rows = ["IWDIFICATION:120"]
 reason = "The required Arcane Trickster level-7 Evasion tail patch has not yet been implemented and fixture-tested."
 
 [[targets]]
-id = "omission:safana-inventory-cleanup"
-kind = "omission"
+id = "feature:safana:mandatory-components"
+kind = "feature"
 rows = ["SAFANA:0"]
 parent = "mod:safana"
-reason = "Safana is not fresh-stack ready until a semantic cleanup removes the SoD-only inventory carried into SoA."
 
 [[targets]]
 id = "feature:chriz-bg-rebalance:tempus-bundle"

@@ -519,6 +519,9 @@ pub struct Feature {
     /// Other features that must be effective first.
     #[serde(default)]
     pub requires: Vec<String>,
+    /// At least one of these features must be effective; empty means no OR gate.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requires_any: Vec<String>,
     /// Directional compatibility rules that disable this feature.
     #[serde(default)]
     pub conflicts: Vec<Conflict>,

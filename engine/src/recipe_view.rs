@@ -55,6 +55,9 @@ pub struct FeatureControl {
     pub parent: Option<String>,
     /// Semantic feature ids this feature requires.
     pub requires: Vec<String>,
+    /// Alternative prerequisites: at least one must be selected when non-empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requires_any: Vec<String>,
     /// Semantic feature ids this feature conflicts with, as authored.
     pub conflicts: Vec<String>,
     /// Effective selected state after readiness and compatibility evaluation.
@@ -323,6 +326,7 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
             readiness: feature.readiness,
             parent: feature.parent.clone(),
             requires: feature.requires.clone(),
+            requires_any: feature.requires_any.clone(),
             conflicts: feature
                 .conflicts
                 .iter()
@@ -599,12 +603,18 @@ fn base_effective_features(
                 .requires
                 .iter()
                 .all(|required| previous.get(required).copied().unwrap_or(false));
+            let any_requirement_selected = feature.requires_any.is_empty()
+                || feature
+                    .requires_any
+                    .iter()
+                    .any(|required| previous.get(required).copied().unwrap_or(false));
             selected.insert(
                 feature.id.clone(),
                 requested
                     && feature.readiness != Readiness::Blocked
                     && parent_selected
-                    && requirements_selected,
+                    && requirements_selected
+                    && any_requirement_selected,
             );
         }
         if selected == previous {
@@ -636,6 +646,11 @@ fn effective_features(
                     .requires
                     .iter()
                     .all(|required| previous.get(required).copied().unwrap_or(false));
+                selected &= feature.requires_any.is_empty()
+                    || feature
+                        .requires_any
+                        .iter()
+                        .any(|required| previous.get(required).copied().unwrap_or(false));
                 selected &= feature.conflicts.iter().all(|conflict| {
                     !base_effective
                         .get(&conflict.feature_id)
@@ -676,6 +691,23 @@ fn unavailable_reason(
                 .map_or(required.as_str(), |required| required.title.as_str());
             return Some(format!("Requires {title}."));
         }
+    }
+    if !feature.requires_any.is_empty()
+        && !feature
+            .requires_any
+            .iter()
+            .any(|required| effective.get(required).copied().unwrap_or(false))
+    {
+        let titles = feature
+            .requires_any
+            .iter()
+            .map(|required| {
+                features
+                    .get(required.as_str())
+                    .map_or(required.as_str(), |required| required.title.as_str())
+            })
+            .collect::<Vec<_>>();
+        return Some(format!("Requires at least one of: {}.", titles.join(", ")));
     }
     feature
         .conflicts

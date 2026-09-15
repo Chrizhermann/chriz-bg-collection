@@ -107,6 +107,7 @@ export interface FeatureControl {
   readonly readiness: "ready" | "experimental" | "blocked";
   readonly parent: string | null;
   readonly requires?: readonly string[];
+  readonly requiresAny?: readonly string[];
   readonly conflicts?: readonly string[];
   readonly selected: boolean;
   readonly interactive: boolean;

@@ -1226,6 +1226,12 @@ fn check_feature_references(manifest: &Manifest, findings: &mut Vec<Finding>) {
             )
             .chain(
                 feature
+                    .requires_any
+                    .iter()
+                    .map(|target| ("alternative requirement", target)),
+            )
+            .chain(
+                feature
                     .conflicts
                     .iter()
                     .map(|conflict| ("conflict", &conflict.feature_id)),
@@ -1270,6 +1276,7 @@ fn check_feature_cycles(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 .parent
                 .iter()
                 .chain(feature.requires.iter())
+                .chain(feature.requires_any.iter())
                 .map(String::as_str)
                 .collect::<Vec<_>>();
             (feature.id.as_str(), edges)

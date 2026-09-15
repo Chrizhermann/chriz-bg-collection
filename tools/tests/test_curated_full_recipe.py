@@ -185,7 +185,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.5")
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.6")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -239,7 +239,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "27f91688b3ce5132fc8ad76614e4d2d7a7ad76d2a58775c27b4ed0bb89e5cb59",
+                "b91ae4f49eb1dcaad6ae14269e5c1efcb1a4a953c217c2cce428bc15ac6b48d0",
             )
 
             legacy_bg1npc_groups = {
@@ -352,36 +352,36 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.8")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.10")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.8.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.10.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.7.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.8")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.8")
+            self.assertEqual(sod_artifact["version"], "0.6.10")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.10")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.8.zip",
+                "chriz-sod-remix-v0.6.10.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 1513381)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 2938418)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "29eb10537ebf759608da93b8764acfc678cd301bcef24e14cc860db01b33efbb",
+                "37c4002ebaa3d41009782e395eae2bc0472f486f4c27b04147949e32f798f2bb",
             )
-            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910])
+            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.4")
+            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.5")
             bardic_artifact = tomllib.loads(
-                (output / "artifacts/bardicwonders-v2.9c-balance.4.toml").read_text(
+                (output / "artifacts/bardicwonders-v2.9c-balance.5.toml").read_text(
                     encoding="utf-8"
                 )
             )
@@ -391,22 +391,22 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse(
                 (output / "artifacts/bardicwonders-v2.9c-balance.3.toml").exists()
             )
-            self.assertEqual(bardic_artifact["version"], "2.9c-balance.4")
+            self.assertEqual(bardic_artifact["version"], "2.9c-balance.5")
             self.assertEqual(bardic_artifact["source"]["kind"], "github-release")
-            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.4")
+            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.5")
             self.assertEqual(
                 bardic_artifact["source"]["url"],
                 "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/"
-                "releases/download/v2.9c-balance.4/Bardic-Wonders-v2.9c-balance.4.zip",
+                "releases/download/v2.9c-balance.5/Bardic-Wonders-v2.9c-balance.5.zip",
             )
             self.assertEqual(
                 bardic_artifact["source"]["expected_filename"],
-                "Bardic-Wonders-v2.9c-balance.4.zip",
+                "Bardic-Wonders-v2.9c-balance.5.zip",
             )
-            self.assertEqual(bardic_artifact["source"]["expected_length"], 5177696)
+            self.assertEqual(bardic_artifact["source"]["expected_length"], 5163697)
             self.assertEqual(
                 bardic_artifact["source"]["sha256"],
-                "ca7bb2b70ad50b5b6c0fa59a051e53b90c42d3cc9f98fd187a5c1ed40fc1efa7",
+                "d8ac7353348989d2ca5336792f79bacf41db466ecce47d06f0ae601b986d1eec",
             )
             self.assertEqual(bardic_artifact["archive"]["root_rule"], "direct")
             self.assertEqual(bardic_artifact["archive"]["publish_roots"], ["BardicWonders"])
@@ -432,7 +432,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             bardic_credit = next(
                 mod for mod in credits["mods"] if mod["id"] == "bardicwonders"
             )
-            self.assertEqual(bardic_credit["version"], "2.9c-balance.4")
+            self.assertEqual(bardic_credit["version"], "2.9c-balance.5")
             self.assertEqual(
                 bardic_credit["homepage"],
                 "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch",
@@ -528,17 +528,17 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.3.2")
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.4.0")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.3.2.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.4.0.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.3.2")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.3.2")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1369825)
+            self.assertEqual(bg_artifact["version"], "0.4.0")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.4.0")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1393406)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4",
+                "211b509e0fb2c101c1cc20f3238a2cc1dd0e272f997359751cf8f9e13cb16439",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.14")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13"):
@@ -553,7 +553,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 (output / "releases/v0.1.0-alpha.14/ledger.toml").read_text()
             )
             self.assertEqual(draft_ledger["version"], "0.1.0-alpha.14")
-            self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.15")
+            self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.16")
             self.assertEqual(draft_ledger["supersedes"], "0.1.0-alpha.13")
             self.assertFalse((output / "reference").exists())
 

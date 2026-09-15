@@ -69,6 +69,7 @@ fn feature(id: &str, decision: Decision, components: Vec<ComponentRef>) -> Featu
         parent: None,
         components,
         requires: Vec::new(),
+        requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
     }
@@ -111,6 +112,77 @@ fn grouped_manifest() -> Manifest {
     }
     manifest.collection.features = options;
     manifest
+}
+
+#[test]
+fn any_requirement_uses_either_encounter_and_respects_sr_and_cascades() {
+    let mut manifest = fixture();
+    manifest.collection.runs.clear();
+    add_run(&mut manifest, "compat", &[0]);
+    let mut compat_json = serde_json::to_value(feature(
+        "compat",
+        Decision::Mandatory,
+        component_refs("compat", &[0]),
+    ))
+    .unwrap();
+    compat_json["requires"] = serde_json::json!(["sr"]);
+    compat_json["requires_any"] = serde_json::json!(["rr11", "rr12"]);
+    let compat: Feature = serde_json::from_value(compat_json).unwrap();
+    let mut child = feature("dependent", Decision::Default, vec![]);
+    child.requires.push("compat".to_owned());
+    manifest.collection.features = vec![
+        feature("sr", Decision::Default, vec![]),
+        feature("rr11", Decision::Default, vec![]),
+        feature("rr12", Decision::Default, vec![]),
+        compat,
+        child,
+    ];
+    check(&manifest).unwrap();
+    for (sr, rr11, rr12, expected) in [
+        (true, true, true, true),
+        (true, true, false, true),
+        (true, false, true, true),
+        (true, false, false, false),
+        (false, true, true, false),
+    ] {
+        let mut selection = Selection::defaults("windows");
+        selection.set_feature("sr", sr);
+        selection.set_feature("rr11", rr11);
+        selection.set_feature("rr12", rr12);
+        let evaluation = evaluate(&manifest, &selection).unwrap();
+        assert_eq!(evaluation.plan.components_for("compat").is_some(), expected);
+        assert_eq!(
+            evaluation.view.control("compat").unwrap().selected,
+            expected
+        );
+        assert_eq!(
+            evaluation.view.control("dependent").unwrap().selected,
+            expected
+        );
+        if sr && !rr11 && !rr12 {
+            assert_eq!(
+                evaluation
+                    .view
+                    .control("compat")
+                    .unwrap()
+                    .unavailable_reason
+                    .as_deref(),
+                Some("Requires at least one of: rr11, rr12.")
+            );
+        }
+        // Disabled dependencies retain their preferences and reappear when available.
+        let mut retry = evaluation.normalized_selection.to_selection();
+        retry.set_feature("sr", true);
+        retry.set_feature("rr12", true);
+        assert!(
+            evaluate(&manifest, &retry)
+                .unwrap()
+                .view
+                .control("dependent")
+                .unwrap()
+                .selected
+        );
+    }
 }
 
 #[test]

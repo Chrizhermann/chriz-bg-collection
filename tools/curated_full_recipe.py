@@ -97,18 +97,18 @@ CATEGORY_BY_GROUP = {
 
 
 ARTIFACTS = {
-    "bardicwonders-v2.9c-balance.4.toml": """id = "bardicwonders-v2.9c-balance.4"
+    "bardicwonders-v2.9c-balance.5.toml": """id = "bardicwonders-v2.9c-balance.5"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.4"
+version = "2.9c-balance.5"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.4/Bardic-Wonders-v2.9c-balance.4.zip"
-reference = "v2.9c-balance.4"
-expected_filename = "Bardic-Wonders-v2.9c-balance.4.zip"
-expected_length = 5177696
-sha256 = "ca7bb2b70ad50b5b6c0fa59a051e53b90c42d3cc9f98fd187a5c1ed40fc1efa7"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.5/Bardic-Wonders-v2.9c-balance.5.zip"
+reference = "v2.9c-balance.5"
+expected_filename = "Bardic-Wonders-v2.9c-balance.5.zip"
+expected_length = 5163697
+sha256 = "d8ac7353348989d2ca5336792f79bacf41db466ecce47d06f0ae601b986d1eec"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -127,8 +127,8 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.4"
-reviewed_on = "2026-09-08"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.5"
+reviewed_on = "2026-09-16"
 """,
     "branwen-8.toml": """id = "branwen-8"
 name = "Branwen for BGII"
@@ -266,7 +266,7 @@ reviewed_on = "2026-09-08"
 
 
 MOD_SPECS = {
-    "bardicwonders": ("bardicwonders-v2.9c-balance.4", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
+    "bardicwonders": ("bardicwonders-v2.9c-balance.5", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
@@ -687,8 +687,8 @@ def _write_draft_release_ledger(destination: Path) -> None:
         """schema = 1
 recipe_id = "chriz-bg-collection"
 version = "0.1.0-alpha.14"
-published_at = "2026-09-08T00:00:00Z"
-minimum_app_version = "0.1.0-alpha.15"
+published_at = "2026-09-16T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.16"
 supersedes = "0.1.0-alpha.13"
 
 [[changes]]
@@ -700,17 +700,17 @@ urgency = "recommended"
 covers = ["feature:feature:klatu:component-2150", "run:klatu-armor-thieving-bg2", "artifact:klatu-tweaks-1.7.4"]
 
 [[changes]]
-id = "bardic-wonders-balance-4"
+id = "bardic-wonders-accepted-update"
 title = "Update Bardic Wonders balance fixes"
-summary = "Updates the existing selected Bardic Wonders balance fork to v2.9c-balance.4 for Skald, Dancer, Jester, and shared high-level ability corrections. Component choices and the Darkbloom / Spell Revisions exclusion are unchanged."
+summary = "Includes the user-tested Bardic Wonders owner release and its bard song, kit and high-level ability corrections. Existing component choices and the Darkbloom / Spell Revisions exclusion are preserved."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["mod:bardicwonders", "artifact:bardicwonders-v2.9c-balance.3", "artifact:bardicwonders-v2.9c-balance.4"]
+covers = ["mod:bardicwonders"]
 
 [[changes]]
 id = "restore-red-wizard-default"
 title = "Restore Edwin's Red Wizard default"
-summary = "Restores Artisan's Red Wizard kit as a default-checked optional Edwin choice with Spell Revisions. Removes the unsupported collection exclusion; mod source versions are unchanged. Existing games and saves are not modified."
+summary = "Restores Artisan's Red Wizard kit as a default-checked optional Edwin choice with Spell Revisions. Removes the unsupported collection exclusion. Existing games and saves are not modified."
 save_applicability = "new-game-only"
 urgency = "recommended"
 covers = ["feature:feature:artisanskitpack-npc:component-5102", "run:artisanskitpack-npc-bg2"]
@@ -746,6 +746,54 @@ summary = "Offers 21 additional SCS and 44 Tweaks Anthology choices, all uncheck
 save_applicability = "new-game-only"
 urgency = "optional"
 covers = ["run:stratagems-bg2", "run:cdtweaks-bg2", "run:cdtweaks-spell-save-penalties-bg2", "run:iwdification-bg2"]
+
+[[changes]]
+id = "artisan-accepted-update"
+title = "Updated Artisan kits and fighter abilities"
+summary = "Includes the user-tested Artisan release: Assassin, Magekiller, Hivemaster, Paladin, fighter modal and kit description improvements. Recommended companion choices and genuine compatibility restrictions remain in place."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["artifact:artisans-kitpack-chriz-v1.5.0"]
+
+[[changes]]
+id = "spell-revisions-lightning-and-rr"
+title = "Classic Lightning and Rogue Rebalancing compatibility"
+summary = "Classic bouncing Lightning Bolt is default, with a mutually exclusive non-bouncing alternative. The SR/RR fix automatically follows Spell Revisions and either selected Rogue Rebalancing encounter, before SCS. Turning Spell Revisions off removes these dependent changes."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["run:spell-rev-lightning-bg2", "mod:srcb-rr-compat", "artifact:spell-revisions-4.21-chriz.5"]
+
+[[changes]]
+id = "companion-continuity-and-arrival"
+title = "Companion progression, Yeslick and Safana"
+summary = "Adds BG1 Yeslick's Alaghor conversion when chosen, companion continuity through EET transitions, Spellhold Imoen XP catch-up, and official Safana with one-time arrival inventory cleanup. Vanilla kit choices are preserved; no saved characters are migrated by this installer update."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["mod:chriz-bg-modpack", "mod:safana"]
+
+[[changes]]
+id = "sod-accepted-update"
+title = "SoD Remix fixes and Khalid continuity"
+summary = "Includes the completed SoD Remix release and Bridgefort Khalid continuity correction. Keeps the full SoD skip and accepted bridge changes. Extra bridge sequencers remain optional; repair-only components are not selected on fresh installs."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["artifact:chriz-sod-remix-0.6.10"]
+
+[[changes]]
+id = "optional-dragon-challenge"
+title = "Optional stronger dragon encounters"
+summary = "Offers the implemented lethal-melee and buffet-timing dragon challenge components as unchecked choices. These are not part of the recommended default difficulty; native combat acceptance remains pending."
+save_applicability = "new-game-only"
+urgency = "optional"
+covers = ["mod:chriz-bg-rebalance"]
+
+[[changes]]
+id = "buffbot-identification-update"
+title = "BuffBot respects unidentified items"
+summary = "Updates BuffBot to 1.8.4-alpha so unidentified items are not offered for automatic use. BuffBot remains the final mod installation step."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["artifact:buffbot-1.8.4-alpha"]
 """,
         encoding="utf-8",
         newline="\n",
@@ -770,6 +818,7 @@ def _effective_features(collection: dict, preset: dict) -> dict[str, bool]:
                 and feature["readiness"] != "blocked"
                 and (parent is None or previous.get(parent, False))
                 and all(previous.get(required, False) for required in requirements)
+                and (not feature.get("requires_any") or any(previous.get(required, False) for required in feature["requires_any"]))
             )
         if selected == previous:
             break
@@ -783,6 +832,7 @@ def _effective_features(collection: dict, preset: dict) -> dict[str, bool]:
                 parent = feature.get("parent")
                 value = parent is None or previous.get(parent, False)
                 value = value and all(previous.get(required, False) for required in feature.get("requires", []))
+                value = value and (not feature.get("requires_any") or any(previous.get(required, False) for required in feature["requires_any"]))
                 value = value and all(not base.get(conflict["feature_id"], False) for conflict in feature.get("conflicts", []))
             effective[feature["id"]] = value
         if effective == previous:

@@ -40,6 +40,7 @@ fn feature(id: &str, decision: Decision) -> Feature {
         parent: None,
         components: Vec::new(),
         requires: Vec::new(),
+        requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
     }
@@ -701,6 +702,20 @@ fn feature_parent_and_requirement_cycles_are_rejected() {
     let findings = validate(&manifest);
 
     assert_has_error(&findings, "feature-cycles");
+}
+
+#[test]
+fn alternative_requirements_validate_references_and_cycles() {
+    let mut manifest = good();
+    let mut dependent = feature("dependent", Decision::Default);
+    dependent.requires_any.push("missing".to_owned());
+    manifest.collection.features = vec![dependent.clone()];
+    assert_has_error(&validate(&manifest), "feature-references");
+    dependent.requires_any = vec!["parent".to_owned()];
+    let mut parent = feature("parent", Decision::Default);
+    parent.requires.push("dependent".to_owned());
+    manifest.collection.features = vec![dependent, parent];
+    assert_has_error(&validate(&manifest), "feature-cycles");
 }
 
 #[test]

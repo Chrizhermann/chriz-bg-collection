@@ -1,0 +1,11 @@
+id = "srcb-rr-compat"
+artifact_id = "srcb-rr-compat-4.21-chriz.5"
+name = "Spell Revisions / Rogue Rebalancing compatibility"
+tp2 = "SRCB_RR_COMPAT/setup-SRCB_RR_COMPAT.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Rogue Rebalancing: corrected SR spellbooks, scripts, and protection checks"

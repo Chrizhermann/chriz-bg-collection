@@ -385,9 +385,12 @@ default = "none"
                 RowKey("DLCMERGER", 3),
                 RowKey("HIDDENGAMEPLAYOPTIONS", 40),
                 RowKey("IWDIFICATION", 120),
-                RowKey("SAFANA", 0),
                 RowKey("UB", 19),
             },
+        )
+        self.assertEqual(
+            targets["feature:safana:mandatory-components"].rows,
+            (RowKey("SAFANA", 0),),
         )
         self.assertEqual(
             targets["feature:artisanskitpack:component-5110"].rows,

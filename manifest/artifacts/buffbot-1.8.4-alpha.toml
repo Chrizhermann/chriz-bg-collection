@@ -1,0 +1,32 @@
+id = "buffbot-1.8.4-alpha"
+name = "BuffBot"
+version = "1.8.4-alpha"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.8.4-alpha/buffbot-v1.8.4-alpha.zip"
+reference = "v1.8.4-alpha"
+expected_filename = "buffbot-v1.8.4-alpha.zip"
+expected_length = 4241150
+sha256 = "1081abc59511263570603560059ef361f45dd3288933f7faa26166ce0e805ced"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["buffbot"]
+tp2_paths = ["buffbot/setup-buffbot.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/bg-eeex-buffbot"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.8.4-alpha"
+reviewed_on = "2026-09-16"

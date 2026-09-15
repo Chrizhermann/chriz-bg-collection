@@ -8,9 +8,10 @@ Listed at installed version **v0.5**.
 - Component `0` is the sole core route and is included automatically when Safana is
   selected. The upstream installer supports EET only; keep the parent unavailable on
   other game types.
-- Safana is not fresh-stack ready yet. The mod moves the live SoD Safana into SoA, which
-  also carries her SoD-only inventory forward. A semantic inventory cleanup must be
-  implemented and installed automatically with this mod.
+- September 16 approval: include the official core by default with modpack 189's
+  implemented one-time arrival inventory cleanup. The original SoD actor's progression
+  is retained; inherited inventory is cleared only on the first SoA arrival. Equipment
+  acquired later is preserved. Core and cleanup turn off together when Safana is omitted.
 
 ## Related Safana-Bard preset
 

@@ -104,12 +104,13 @@ type GameDiscoveryWire = {
   readonly selected_bg2_id: string;
 };
 
-type FeatureControlWire = Omit<FeatureControl, "unavailableReason" | "sourceLabel" | "groupLabel" | "choiceGroup" | "choiceAvailable"> & {
+type FeatureControlWire = Omit<FeatureControl, "unavailableReason" | "sourceLabel" | "groupLabel" | "choiceGroup" | "choiceAvailable" | "requiresAny"> & {
   readonly unavailable_reason: string | null;
   readonly source_label?: string | null;
   readonly group_label?: string | null;
   readonly choice_group?: string | null;
   readonly choice_available?: boolean | null;
+  readonly requires_any?: readonly string[];
 };
 
 type SelectionEvaluationWire = {
@@ -286,8 +287,8 @@ function projectEvaluation(evaluation: SelectionEvaluationWire): SelectionEvalua
       categories: evaluation.view.categories,
       controls: evaluation.view.controls.map((control) => {
         const { unavailable_reason: unavailableReason, source_label: sourceLabel, group_label: groupLabel,
-          choice_group: choiceGroup, choice_available: choiceAvailable, ...rest } = control;
-        return { ...rest, unavailableReason, sourceLabel, groupLabel, choiceGroup, choiceAvailable };
+          choice_group: choiceGroup, choice_available: choiceAvailable, requires_any: requiresAny, ...rest } = control;
+        return { ...rest, unavailableReason, sourceLabel, groupLabel, choiceGroup, choiceAvailable, requiresAny };
       }),
     },
     normalizedSelection: evaluation.normalized_selection,
