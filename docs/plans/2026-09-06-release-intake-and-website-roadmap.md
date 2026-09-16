@@ -11,6 +11,18 @@ names](2026-09-07-managed-install-cleanup.md#follow-up-roadmap-my-installs-clari
 for failed copies, numbered defaults and unambiguous selection/removal feedback.
 This records the requirement; it does not authorize a website deployment.
 
+### Background WeiDU launches — requested September 16
+
+Implemented in source after the alpha.17 package: WeiDU's normal runner and version
+probe (`engine/src/weidu/runner.rs` and `invocation.rs`) now set the Windows-only
+`CREATE_NO_WINDOW` flag before spawning. Captured output, prompt handling and process
+supervision remain unchanged. All 15 existing runner tests and 3 version-probe
+tests pass, including output, prompt responses and process-tree cancellation.
+No full install, packaged foreground-focus smoke or helper-window acceptance was
+run. Mod-spawned helpers may need separate handling; do not promise every descendant
+honors the parent launch settings. The existing alpha.17 EXE is unchanged; include
+this source change in the next build. Do not restart the user's running install.
+
 ## Later roadmap addition — Challenge Mode (2026-09-13)
 
 Record as **Planned**, not shipped: [Challenge Mode scope and complete run-rule

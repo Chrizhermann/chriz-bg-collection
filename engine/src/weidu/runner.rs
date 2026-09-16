@@ -328,6 +328,15 @@ pub fn run<S: EventSink>(
             Stdio::null()
         });
 
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
+
+        // Keep WeiDU in the background; its output and prompts still use our pipes.
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(error) => {
