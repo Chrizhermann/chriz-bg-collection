@@ -22,6 +22,38 @@ Christopher explicitly defers live deletion acceptance. Disk-space estimates,
 automatic diagnostic export and owned-shortcut cleanup remain later refinements;
 failed copies are never removed automatically.
 
+## Follow-up roadmap: My installs clarity and unique names — September 16
+
+**Planned, not implemented in alpha.17.** Christopher's screenshots show excessive
+spacing, repeated oversized headings/status text, and indistinguishable entries
+named `Chriz Easy BG — incomplete installation`. Record this as a focused follow-up;
+do not delay his current full-install test for another design/release cycle.
+
+- Make My installs a compact, coherent view: one page heading, a clear installation
+  selector/list, a concise status, and consistently grouped actions. Put diagnostics
+  and technical detail behind secondary disclosures; avoid repeated warning prose
+  and unnecessary scrolling at a normal desktop window size.
+- Keep the installation's chosen name separate from status. Preserve it throughout
+  preparation, failure, restart of the app and completion; failed copies must not
+  all fall back to the same generic title.
+- New installation names must be unique among registered copies, including failed,
+  incomplete and unavailable entries. Propose `Chriz Easy BG`, then
+  `Chriz Easy BG (2)`, `(3)`, etc. Use case-insensitive, trimmed comparison; validate
+  custom names inline and at creation in the backend, including competing requests.
+- Existing duplicate names must remain distinguishable with folder/date or a short
+  stable identifier until explicitly renamed. Renaming is display metadata only:
+  never move game folders or rename save profiles, and never replace stable IDs
+  with names as the identity used for launch/removal/recovery.
+- Show enough location/version context to choose the right copy. After deletion or
+  forgetting, name the entry removed and clearly identify whichever copy remains;
+  a generic success notice above another generic failure card is ambiguous.
+- Retain exact-path destructive confirmation and the current cleanup protections.
+
+When implemented, use small UI/backend fixtures covering duplicate custom names,
+automatic suffixes, failed-name persistence, legacy duplicates and removal of one
+of two similar copies, plus one desktop/small-window visual check. No full mod
+installation is needed to validate these presentation/naming changes.
+
 ## Original roadmap (historical)
 
 Christopher requested this on 2026-09-07 while authorizing recovery of the specific

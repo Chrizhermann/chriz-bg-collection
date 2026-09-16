@@ -3,6 +3,14 @@
 User decisions: 2026-09-06. Keep this task focused on releasing CEBG;
 owning mod tasks retain implementation and detailed design work.
 
+## Later installer UX follow-up (2026-09-16)
+
+Installer UX follow-up added 2026-09-16: [simpler My installs and unique installation
+names](2026-09-07-managed-install-cleanup.md#follow-up-roadmap-my-installs-clarity-and-unique-names--september-16).
+**Planned**, not included in alpha.17: compact presentation, persistent names even
+for failed copies, numbered defaults and unambiguous selection/removal feedback.
+This records the requirement; it does not authorize a website deployment.
+
 ## Later roadmap addition — Challenge Mode (2026-09-13)
 
 Record as **Planned**, not shipped: [Challenge Mode scope and complete run-rule
