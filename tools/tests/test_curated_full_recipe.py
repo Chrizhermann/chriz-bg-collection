@@ -352,27 +352,27 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.10")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.11")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.10.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.11.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.7.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.10")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.10")
+            self.assertEqual(sod_artifact["version"], "0.6.11")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.11")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.10.zip",
+                "chriz-sod-remix-v0.6.11.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 2938418)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 2946094)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "37c4002ebaa3d41009782e395eae2bc0472f486f4c27b04147949e32f798f2bb",
+                "b2537d41424e53aa4c1ddd4c5d96e8d761644339adc649645215dcda8f856599",
             )
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
@@ -540,8 +540,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bg_artifact["source"]["sha256"],
                 "211b509e0fb2c101c1cc20f3238a2cc1dd0e272f997359751cf8f9e13cb16439",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.14")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.15")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(
@@ -550,11 +550,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                     f"historical ledger {version} changed during generation",
                 )
             draft_ledger = tomllib.loads(
-                (output / "releases/v0.1.0-alpha.14/ledger.toml").read_text()
+                (output / "releases/v0.1.0-alpha.15/ledger.toml").read_text()
             )
-            self.assertEqual(draft_ledger["version"], "0.1.0-alpha.14")
-            self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.16")
-            self.assertEqual(draft_ledger["supersedes"], "0.1.0-alpha.13")
+            self.assertEqual(draft_ledger["version"], "0.1.0-alpha.15")
+            self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.17")
+            self.assertEqual(draft_ledger["supersedes"], "0.1.0-alpha.14")
+            self.assertIn("sod-skie-khalid-compatibility", {change["id"] for change in draft_ledger["changes"]})
             self.assertFalse((output / "reference").exists())
 
     def test_common_customization_routes_preserve_dependency_collateral(self) -> None:

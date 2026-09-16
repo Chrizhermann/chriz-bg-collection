@@ -1,11 +1,14 @@
 import type { SelectionEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
+import { persistDisclosure } from "../components/disclosure";
 import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, type ExclusiveChoiceGroup } from "../customization";
 
 export interface SetupViewState {
   search: string;
   category: string;
   advancedOpen?: boolean;
+  commonOpen?: boolean;
+  categoryOpen?: Record<string, boolean>;
   bundleMemory?: Record<string, Readonly<Record<string, boolean>>>;
   adjustedChoices?: readonly string[];
 }
@@ -16,6 +19,17 @@ export interface SetupBatchActions {
 }
 
 const decisionLabels = { mandatory: "Always included", default: "Recommended", optional: "Optional", excluded: "Not included" } as const;
+
+const categoryLabels: Readonly<Record<string, string>> = {
+  core: "Essential setup", "bg1-content": "Baldur’s Gate: content", "bg1-fixes": "Baldur’s Gate: fixes",
+  "bg1-npcs": "Baldur’s Gate: companions", npcs: "Companions", kits: "Classes and kits",
+  engine: "Engine and utilities", banters: "Companion conversations", convenience: "Quality of life",
+  difficulty: "Difficulty and challenges", endgame: "Endgame", collection: "Collection",
+};
+
+function displayCategory(category: string): string {
+  return categoryLabels[category] ?? category.replaceAll("-", " ").replace(/^./, (letter) => letter.toLocaleUpperCase());
+}
 
 function choiceGroupControlId(group: ExclusiveChoiceGroup): string {
   return `choice-group-${group.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
@@ -42,8 +56,10 @@ export function setupScreen(
   page.append(header);
   const bundles = batch ? commonBundles(evaluation) : [];
   if (batch && bundles.length > 0) {
-    const common = element("section", "common-choices");
-    const title = element("h2", undefined, "Common changes");
+    const common = element("details", "common-choices choice-group");
+    common.open = viewState.commonOpen ?? true;
+    const title = element("summary", "category-heading", "Common changes");
+    persistDisclosure(common, title, (open) => { viewState.commonOpen = open; });
     common.setAttribute("aria-label", "Common changes");
     const choices = element("div", "common-choice-grid");
     for (const bundle of bundles) {
@@ -70,7 +86,9 @@ export function setupScreen(
     }
     const reset = actionButton("Reset to Chriz’s setup", () => { viewState.bundleMemory = {}; void batch.reset(); }, "quiet");
     reset.classList.add("button-quiet");
-    common.append(title, choices, reset);
+    const body = element("div", "category-body");
+    body.append(choices, reset);
+    common.append(title, body);
     page.append(common);
   }
   if (viewState.adjustedChoices?.length) {
@@ -83,8 +101,9 @@ export function setupScreen(
   }
   const advanced = element("details", "setup-advanced");
   advanced.open = viewState.advancedOpen ?? bundles.length === 0;
-  advanced.addEventListener("toggle", () => { viewState.advancedOpen = advanced.open; });
-  advanced.append(element("summary", undefined, "Advanced options by category"));
+  const advancedHeading = element("summary", undefined, "Advanced options by category");
+  persistDisclosure(advanced, advancedHeading, (open) => { viewState.advancedOpen = open; });
+  advanced.append(advancedHeading);
   const filters = element("div", "setup-filters");
   const searchLabel = element("label", undefined, "Find a mod or option");
   const search = element("input");
@@ -102,7 +121,7 @@ export function setupScreen(
   allCategories.value = "";
   categorySelect.append(allCategories);
   evaluation.view.categories.forEach((category) => {
-    const option = element("option", undefined, category);
+    const option = element("option", undefined, displayCategory(category));
     option.value = category;
     categorySelect.append(option);
   });
@@ -117,8 +136,22 @@ export function setupScreen(
   const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
   const exclusiveByControl = new Map(exclusiveGroups.flatMap(group => group.controls.map(control => [control.id, group] as const)));
   evaluation.view.categories.forEach((category) => {
-    const fieldset = element("fieldset", "choice-group card");
-    fieldset.append(element("legend", undefined, category));
+    const section = element("details", "choice-group");
+    section.dataset.category = category;
+    section.open = viewState.categoryOpen?.[category] ?? true;
+    const heading = element("summary", "category-heading");
+    heading.append(element("span", "category-title", displayCategory(category)));
+    const count = element("span", "category-count");
+    const categoryControls = evaluation.view.controls.filter((control) => control.category === category);
+    count.textContent = `${categoryControls.filter((control) => control.selected).length} / ${categoryControls.length} included`;
+    heading.append(count);
+    persistDisclosure(section, heading, (open) => {
+      viewState.categoryOpen ??= {};
+      viewState.categoryOpen[category] = open;
+    });
+    section.append(heading);
+    const fieldset = element("div", "category-body");
+    section.append(fieldset);
     if (batch) {
       const buttons = element("div", "category-actions");
       for (const [selected, label] of [[true, "Include all compatible"], [false, "Exclude all optional"]] as const) {
@@ -229,8 +262,8 @@ export function setupScreen(
       }
       rows.push({ element: row, text: `${control.title} ${control.description} ${control.sourceLabel ?? ""} ${control.groupLabel ?? ""}`.toLocaleLowerCase() });
     });
-    groups.append(fieldset);
-    filterable.push({ group: fieldset, category, rows });
+    groups.append(section);
+    filterable.push({ group: section, category, rows });
   });
   const empty = element("p", "setup-empty", "No matching choices. Try another search or category.");
   const filter = (): void => {

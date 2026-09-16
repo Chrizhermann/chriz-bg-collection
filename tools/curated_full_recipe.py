@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.14"
+RECIPE_VERSION = "0.1.0-alpha.15"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -706,15 +706,23 @@ scope = "Passed focused selection, dependencies, native component ordering and s
 
 
 def _write_draft_release_ledger(destination: Path) -> None:
-    release_dir = destination / "releases/v0.1.0-alpha.14"
+    release_dir = destination / "releases/v0.1.0-alpha.15"
     release_dir.mkdir(parents=True, exist_ok=True)
     (release_dir / "ledger.toml").write_text(
         """schema = 1
 recipe_id = "chriz-bg-collection"
-version = "0.1.0-alpha.14"
+version = "0.1.0-alpha.15"
 published_at = "2026-09-16T00:00:00Z"
-minimum_app_version = "0.1.0-alpha.16"
-supersedes = "0.1.0-alpha.13"
+minimum_app_version = "0.1.0-alpha.17"
+supersedes = "0.1.0-alpha.14"
+
+[[changes]]
+id = "sod-skie-khalid-compatibility"
+title = "Fix SoD Skie recruitment installation"
+summary = "Updates SoD Remix to v0.6.11 so Skie recruitment installs alongside Khalid continuity and the bridge changes. Keeps all existing component choices and defaults."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["mod:chriz-sod-remix"]
 
 [[changes]]
 id = "armor-thieving-qol"
@@ -946,6 +954,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         "chriz-sod-remix-0.6.5",
         "chriz-sod-remix-0.6.6",
         "chriz-sod-remix-0.6.7",
+        "chriz-sod-remix-0.6.10",
         "chriz-bg-rebalance-0.3.1",
         "chriz-bg-modpack-0.2.0-alpha.1",
         "bardicwonders-v2.9c-balance.2",

@@ -1712,6 +1712,60 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
 }
 
 #[test]
+fn installation_removal_requires_native_confirmation_and_refuses_busy_or_changed_identity() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("remove-fixture");
+    fs::create_dir(&cache).unwrap();
+    publish_started_campaign(&app_data, &managed, &cache, "remove-one");
+    let moved = root.join("moved-fixture");
+    fs::rename(&managed, &moved).unwrap();
+    let system = Arc::new(RecordingBridgeSystem::default());
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data.clone(),
+        Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+        system.clone(),
+    );
+    assert!(bridge.preview_installation_removal("unknown-id").is_err());
+    assert!(bridge
+        .remove_installation("remove-one", "forged-token")
+        .is_err());
+    let preview = bridge.preview_installation_removal("remove-one").unwrap();
+    assert_eq!(serde_json::to_value(&preview).unwrap()["action"], "forget");
+    assert!(app_data.join("managed-campaigns/remove-one.json").exists()); // Cancel means no execute.
+    assert!(bridge
+        .remove_installation("different-install", &preview.confirmation_token)
+        .is_err());
+    let preview = bridge.preview_installation_removal("remove-one").unwrap();
+    let busy = bridge.begin_app_update().unwrap();
+    assert!(bridge
+        .remove_installation("remove-one", &preview.confirmation_token)
+        .is_err());
+    assert!(bridge.preview_installation_removal("remove-one").is_err());
+    assert!(bridge.launch_install("remove-one").is_err());
+    drop(busy);
+    fs::create_dir(&managed).unwrap();
+    assert!(bridge
+        .remove_installation("remove-one", &preview.confirmation_token)
+        .is_err());
+    fs::remove_dir(&managed).unwrap();
+    let confirmed = bridge.preview_installation_removal("remove-one").unwrap();
+    bridge
+        .remove_installation("remove-one", &confirmed.confirmation_token)
+        .unwrap();
+    assert!(bridge.list_managed_installations().unwrap().is_empty());
+    assert!(moved.join(".chriz/ledger/0000000000.json").is_file());
+    assert!(bridge
+        .remove_installation("remove-one", &confirmed.confirmation_token)
+        .is_err());
+}
+
+#[test]
 fn desktop_shortcut_uses_only_the_available_registry_identity_and_current_app() {
     let (_temp, recipe) = recipe_with_profiles();
     let root = recipe.parent().unwrap();

@@ -259,6 +259,8 @@ impl BridgeEngine for DiscovererBridgeEngine {
 #[derive(Default)]
 struct BridgeRuntime {
     app_update_active: bool,
+    removal_active: bool,
+    removal_previews: HashMap<String, (Instant, bg_engine::removal::RemovalPlan)>,
     candidates: HashMap<String, GameCandidate>,
     reviews: HashMap<String, ReviewSnapshot>,
     active_runs: HashMap<String, RunnerControlHandle>,
@@ -296,6 +298,28 @@ pub struct NativeBridge {
 }
 
 pub struct AppUpdateGuard(Arc<Mutex<BridgeRuntime>>);
+
+struct RemovalGuard(Arc<Mutex<BridgeRuntime>>);
+
+impl Drop for RemovalGuard {
+    fn drop(&mut self) {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .removal_active = false;
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallationRemovalPreview {
+    pub install_id: String,
+    pub display_name: String,
+    pub managed_root: String,
+    pub action: bg_engine::removal::RemovalAction,
+    pub preserved_save_path: Option<String>,
+    pub confirmation_token: String,
+}
 
 impl Drop for AppUpdateGuard {
     fn drop(&mut self) {
@@ -670,7 +694,7 @@ impl NativeBridge {
 
     pub fn select_profile(&self, id: &str) -> Result<Self, CommandError> {
         let mut runtime = self.runtime_lock();
-        if !runtime.active_runs.is_empty() || runtime.app_update_active {
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
             return Err(CommandError::new(
                 "build_active",
                 "Wait for the installation to finish.",
@@ -1243,7 +1267,9 @@ impl NativeBridge {
 
     /// Launches the exact verified InfinityLoader path owned by one available registry id.
     pub fn launch_install(&self, install_id: &str) -> Result<(), CommandError> {
-        if !self.runtime_lock().active_runs.is_empty() {
+        // Serialize launch with local removal from the check through process creation.
+        let runtime = self.runtime_lock();
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
             return Err(CommandError::new(
                 "build_active",
                 "The game cannot be launched while an installer build is running.",
@@ -1252,6 +1278,20 @@ impl NativeBridge {
             ));
         }
         let record = self.available_managed_install(install_id)?.record;
+        let app_data = self
+            .app_data
+            .as_ref()
+            .ok_or_else(|| removal_error("Application data is unavailable."))?;
+        let _target_lock =
+            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
+                .map_err(|error| {
+                    CommandError::new(
+                        "managed_install_busy",
+                        "This installation is in use.",
+                        "Wait for its installation or removal to finish before launching it.",
+                        error.to_string(),
+                    )
+                })?;
         let launch_name = record
             .launch_path
             .file_name()
@@ -1664,7 +1704,7 @@ impl NativeBridge {
 
     pub fn begin_app_update(&self) -> Result<AppUpdateGuard, CommandError> {
         let mut state = self.runtime_lock();
-        if !state.active_runs.is_empty() || state.app_update_active {
+        if !state.active_runs.is_empty() || state.app_update_active || state.removal_active {
             return Err(CommandError::new(
                 "update_busy",
                 "An installation or update is already running.",
@@ -1756,6 +1796,83 @@ impl NativeBridge {
 
     fn registry_cards(&self) -> Result<Vec<ManagedInstallCard>, CommandError> {
         self.registry()?.list().map_err(registry_error)
+    }
+
+    pub fn preview_installation_removal(
+        &self,
+        install_id: &str,
+    ) -> Result<InstallationRemovalPreview, CommandError> {
+        let mut runtime = self.runtime_lock();
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
+            return Err(removal_error(
+                "Wait for the active installation or update to finish.",
+            ));
+        }
+        let app_data = self
+            .app_data
+            .as_ref()
+            .ok_or_else(|| removal_error("Application data is unavailable."))?;
+        let plan = bg_engine::removal::preview(app_data, install_id).map_err(removal_error)?;
+        let token = sha256_bytes(
+            format!(
+                "remove\0{}\0{:?}\0{}\0{:?}",
+                install_id,
+                plan,
+                self.sequence.fetch_add(1, Ordering::Relaxed),
+                SystemTime::now()
+            )
+            .as_bytes(),
+        );
+        let response = InstallationRemovalPreview {
+            install_id: plan.install_id.clone(),
+            display_name: plan.display_name.clone(),
+            managed_root: display_windows_path(&plan.managed_root)?,
+            action: plan.action,
+            preserved_save_path: plan
+                .preserved_save_path
+                .as_ref()
+                .map(|path| display_windows_path(path))
+                .transpose()?,
+            confirmation_token: token.clone(),
+        };
+        runtime
+            .removal_previews
+            .retain(|_, (expires, _)| *expires > Instant::now());
+        runtime
+            .removal_previews
+            .insert(token, (Instant::now() + REVIEW_LIFETIME, plan));
+        Ok(response)
+    }
+
+    pub fn remove_installation(&self, install_id: &str, token: &str) -> Result<(), CommandError> {
+        let (plan, _guard) = {
+            let mut runtime = self.runtime_lock();
+            if !runtime.active_runs.is_empty()
+                || runtime.app_update_active
+                || runtime.removal_active
+            {
+                return Err(removal_error(
+                    "Wait for the active installation or update to finish.",
+                ));
+            }
+            let (expires, plan) = runtime.removal_previews.remove(token).ok_or_else(|| {
+                removal_error("Removal confirmation expired or is invalid. Review it again.")
+            })?;
+            if expires < Instant::now() || plan.install_id != install_id {
+                return Err(removal_error(
+                    "Removal confirmation does not match this installation.",
+                ));
+            }
+            runtime.removal_active = true;
+            (plan, RemovalGuard(Arc::clone(&self.runtime)))
+        };
+        let app_data = self
+            .app_data
+            .as_ref()
+            .ok_or_else(|| removal_error("Application data is unavailable."))?;
+        bg_engine::removal::execute(app_data, &plan).map_err(removal_error)?;
+        self.runtime_lock().known_installs.remove(install_id);
+        Ok(())
     }
 
     fn campaign_cards(&self) -> Result<Vec<ManagedCampaignCard>, CommandError> {
@@ -2049,7 +2166,7 @@ impl NativeBridge {
         );
         let controls = RunnerControlHandle::new();
         let mut runtime = self.runtime_lock();
-        if !runtime.active_runs.is_empty() || runtime.app_update_active {
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
             return Err(CommandError::new(
                 "build_already_running",
                 "Another installer build is already running.",
@@ -2771,6 +2888,11 @@ fn registry_error(error: bg_engine::registry::RegistryError) -> CommandError {
         "Keep the campaign folders unchanged and retain this error for diagnosis.",
         error.to_string(),
     )
+}
+
+fn removal_error(error: impl std::fmt::Display) -> CommandError {
+    CommandError::new("installation_removal_failed", "The installation could not be removed.",
+        "Close the game and other installer windows, then try again. Your installation stays listed if removal is incomplete.", error.to_string())
 }
 
 fn encode_input_value(value: &InputValue) -> String {

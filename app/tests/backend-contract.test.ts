@@ -9,6 +9,28 @@ import {
 } from "../src/backend";
 import type { RunEventEnvelope } from "../src/contracts";
 
+describe("explicit installation removal", () => {
+  it("uses only the registry id and confirmed token on the native command boundary", async () => {
+    const preview = { installId: "managed-one", displayName: "Test", managedRoot: "D:\\Test", action: "delete", preservedSavePath: null, confirmationToken: "bound-token" };
+    const invoke = vi.fn(async (command: string) => command === "preview_installation_removal" ? preview : undefined);
+    const backend = new NativeBackend(invoke);
+    await expect(backend.previewInstallationRemoval("managed-one")).resolves.toEqual(preview);
+    expect(invoke).toHaveBeenCalledTimes(1); // Closing confirmation requires no mutation call.
+    await backend.removeInstallation("managed-one", "bound-token");
+    expect(invoke).toHaveBeenLastCalledWith("remove_installation", { installId: "managed-one", confirmationToken: "bound-token" });
+  });
+  it("fixture rejects mismatched confirmation and only removes the confirmed entry", async () => {
+    const backend = new FixtureBackend({ managedInstallations: [{ id: "one", name: "One", path: "D:\\One", status: "Ready to play", receiptPath: null, launchPath: null, completedAtMillis: null, available: true, resumable: false }] });
+    const first = await backend.previewInstallationRemoval("one");
+    await expect(backend.removeInstallation("other", first.confirmationToken)).rejects.toThrow();
+    expect(await backend.listManagedInstallations()).toHaveLength(1);
+    const confirmed = await backend.previewInstallationRemoval("one");
+    await backend.removeInstallation("one", confirmed.confirmationToken);
+    expect(await backend.listManagedInstallations()).toHaveLength(0);
+    await expect(backend.removeInstallation("one", confirmed.confirmationToken)).rejects.toThrow();
+  });
+});
+
 describe("engine-shaped fixture backend", () => {
   it("suggests the safe CEBG installation defaults", async () => {
     await expect(new FixtureBackend().getInstallationDefaults()).resolves.toEqual({

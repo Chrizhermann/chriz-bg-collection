@@ -325,6 +325,7 @@ mod tests {
             base_recipe_payload_sha256: base.recipe_payload_sha256.clone(),
             base_plan_sha256: base.plan_sha256.clone(),
             replacements: Vec::new(),
+            append_missing_components: Vec::new(),
             evidence: vec![EvidenceFile {
                 path: ".chriz/recovery-evidence.txt".into(),
                 sha256: sha256_bytes(b"verified recovery"),

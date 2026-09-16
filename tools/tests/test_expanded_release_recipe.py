@@ -71,8 +71,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
             self.assertEqual(("srcb-rr-compat-bg2", 0) in selected, expected)
 
     def test_recipe_requires_app_with_alternative_dependency_support(self):
-        ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.14/ledger.toml").read_text())
-        self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.16")
+        ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.15/ledger.toml").read_text())
+        self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.17")
 
     def test_companions_are_prepared_before_continuity_and_eet_end(self):
         pre = "chriz-bg-modpack-pre-continuity-bg2"

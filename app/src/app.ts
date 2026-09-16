@@ -1,7 +1,7 @@
 import { BackendCommandError, type Backend } from "./backend";
 import { createAppShell } from "./components/app-shell";
 import type { TechnicalLogState } from "./components/technical-log";
-import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, ManagedInstallation, ManualDownloadRequirement, Route, RunEventEnvelope, UpdateSummary } from "./contracts";
+import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, InstallationRemovalPreview, ManagedInstallation, ManualDownloadRequirement, Route, RunEventEnvelope, UpdateSummary } from "./contracts";
 import { buildScreen } from "./screens/build";
 import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
@@ -24,6 +24,7 @@ import {
 import { statusCard } from "./components/status-card";
 import { errorDetails } from "./components/error-details";
 import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from "./setup-draft";
+import { installationRemovalDialog } from "./components/installation-removal";
 
 export interface AppHandle {
   navigate(route: Route): Promise<void>;
@@ -116,6 +117,10 @@ class AppController implements AppHandle {
   #radarAttempts = new Set<string>();
   #addonFeedback: AddonFeedback | null = null;
   #logRenderTimer: number | null = null;
+  #removalPreview: InstallationRemovalPreview | null = null;
+  #removalBusy = false;
+  #removalError: string | null = null;
+  #removalNotice: string | null = null;
 
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
@@ -1010,6 +1015,7 @@ class AppController implements AppHandle {
   }
 
   async #beginNewInstallation(): Promise<void> {
+    this.#removalNotice = null;
     this.#dispatch({ type: "review-cleared" });
     this.#dispatch({ type: "build-cleared" });
     this.#clearManualDownloadGate();
@@ -1037,6 +1043,83 @@ class AppController implements AppHandle {
     await this.#retryBuild();
   }
 
+  #installationActive(): boolean {
+    return this.#starting || (this.#state.build !== null && ["running", "attention", "waiting-manual"].includes(this.#state.build.state));
+  }
+
+  async #previewInstallationRemoval(installId: string): Promise<void> {
+    if (this.#removalBusy || this.#installationActive()) return;
+    this.#removalBusy = true;
+    this.#removalError = null;
+    this.#render();
+    try {
+      this.#removalPreview = await this.backend.previewInstallationRemoval(installId);
+    } finally {
+      this.#removalBusy = false;
+      this.#render();
+    }
+  }
+
+  async #confirmInstallationRemoval(): Promise<void> {
+    const preview = this.#removalPreview;
+    if (preview === null || this.#removalBusy || this.#installationActive()) return;
+    if (this.#removalError !== null) {
+      // Every execution consumes its token. Recheck and visibly confirm again, never retry
+      // destructive work using authority from before a failed or partial removal.
+      this.#removalBusy = true;
+      this.#render();
+      try {
+        this.#removalPreview = await this.backend.previewInstallationRemoval(preview.installId);
+        this.#removalError = null;
+      } catch (error: unknown) {
+        this.#removalError = error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}`
+          : error instanceof Error ? error.message : "The remaining installation could not be checked. Try again later.";
+      } finally {
+        this.#removalBusy = false;
+        this.#render();
+      }
+      return;
+    }
+    this.#removalBusy = true;
+    this.#removalError = null;
+    this.#render();
+    try {
+      await this.backend.removeInstallation(preview.installId, preview.confirmationToken);
+    } catch (error: unknown) {
+      this.#removalError = error instanceof BackendCommandError
+        ? `${error.message} ${error.recoveryAction}`
+        : error instanceof Error ? error.message : "The installation could not be removed. Close the game and try again.";
+      this.#removalBusy = false;
+      this.#render();
+      return;
+    }
+    this.#removalPreview = null;
+    this.#removalBusy = false;
+    this.#removalNotice = preview.action === "forget" ? "Installation entry removed. No files were deleted." : "Installation deleted. Saved games outside its folder were kept.";
+    this.#commandError = null;
+    this.#installations = this.#installations.filter((item) => item.id !== preview.installId);
+    this.#updates = { ...this.#updates, managedCopies: this.#updates.managedCopies.filter((item) => item.installId !== preview.installId) };
+    clearSetupDraft(preview.managedRoot);
+    this.#dispatch({ type: "build-cleared" });
+    this.#dispatch({ type: "review-cleared" });
+    this.#runId = null;
+    this.#retryAvailable = false;
+    this.#shortcutFeedback = null;
+    this.#addonFeedback = null;
+    this.#logState = { paused: false, open: false };
+    try {
+      this.#installations = await this.backend.listManagedInstallations();
+    } catch {
+      this.#removalNotice += " Reopen My installs if another installation is missing from the list.";
+    }
+    const selected = preferredInstallation(this.#installations, null, null);
+    this.#installId = selected?.id ?? null;
+    try { window.localStorage.removeItem(LAST_INSTALL_STORAGE_KEY); } catch { /* Optional preference. */ }
+    if (selected !== null) rememberInstallId(selected.id);
+    this.#state = { ...this.#state, route: "home", history: [] };
+    this.#render();
+  }
+
   #render(focusTargetId?: string): void {
     if (this.#logRenderTimer !== null) {
       window.clearTimeout(this.#logRenderTimer);
@@ -1045,6 +1128,8 @@ class AppController implements AppHandle {
     const previousRoute = this.root.querySelector<HTMLElement>(".app-shell")?.dataset.route;
     const sameRoute = previousRoute === this.#state.route;
     const scrollTop = sameRoute ? this.root.querySelector("main")?.scrollTop ?? 0 : 0;
+    const liveLog = this.root.querySelector<HTMLDetailsElement>(".technical-log");
+    if (sameRoute && liveLog) this.#logState = { ...this.#logState, open: liveLog.open };
     const evaluation = this.#state.evaluation;
     const navigate = (route: Route): Promise<void> => this.navigate(route);
     const safely = (operation: () => Promise<void>): void => this.#safely(operation);
@@ -1059,6 +1144,8 @@ class AppController implements AppHandle {
         select: (installId) => this.#selectManagedInstallation(installId),
         createShortcut: (installId) => this.#createDesktopShortcut(installId),
         diagnostics: (installId) => safely(() => this.#exportDiagnostics(installId)),
+        remove: (installId) => safely(() => this.#previewInstallationRemoval(installId)),
+        removalDisabled: this.#removalBusy || this.#installationActive(),
       },
       this.#shortcutFeedback,
       this.#addonFeedback,
@@ -1176,6 +1263,8 @@ class AppController implements AppHandle {
           retryAvailable: this.#status.mode === "fixture" || this.#retryAvailable,
           logState: this.#logState,
           updateLogState: (state) => { this.#logState = state; },
+          remove: this.#installId === null ? undefined : () => safely(() => this.#previewInstallationRemoval(this.#installId!)),
+          removalDisabled: this.#removalBusy || this.#installationActive(),
         });
         break;
       case "complete": {
@@ -1198,6 +1287,13 @@ class AppController implements AppHandle {
       }
       content.prepend(alert);
     }
+    if (this.#removalNotice !== null && this.#state.route === "home") {
+      const notice = document.createElement("p");
+      notice.className = "removal-notice";
+      notice.setAttribute("role", "status");
+      notice.textContent = this.#removalNotice;
+      content.prepend(notice);
+    }
     this.root.replaceChildren(createAppShell(
       this.#state.route,
       content,
@@ -1211,6 +1307,13 @@ class AppController implements AppHandle {
     if (main !== null) main.scrollTop = scrollTop;
     if (focusTargetId || !sameRoute) {
       (focusTargetId ? this.root.querySelector<HTMLElement>(`#${focusTargetId}`) : this.root.querySelector<HTMLElement>("h1"))?.focus({ preventScroll: true });
+    }
+    if (this.#removalPreview !== null) {
+      this.root.querySelector<HTMLElement>(".app-shell")!.inert = true;
+      this.root.append(installationRemovalDialog(this.#removalPreview, this.#removalBusy, this.#removalError,
+        () => { void this.#confirmInstallationRemoval(); },
+        () => { this.#removalPreview = null; this.#removalError = null; this.#render("remove-installation"); }));
+      this.root.querySelector<HTMLButtonElement>('[data-action="cancel-removal"]')?.focus({ preventScroll: true });
     }
   }
 }

@@ -46,6 +46,8 @@ pub fn run() -> tauri::Result<()> {
             commands::pause_run,
             commands::cancel_run,
             commands::list_managed_installations,
+            commands::preview_installation_removal,
+            commands::remove_installation,
             commands::export_diagnostics,
             commands::launch_install,
             commands::install_radar,

@@ -552,7 +552,7 @@ describe("Chriz Easy BG application flow", () => {
       resumable: false,
     })] }));
 
-    expect(getByRole(root, "heading", { level: 1, name: "Installation not found" })).toBeTruthy();
+    expect(getByRole(root, "heading", { level: 1, name: "Installation needs attention" })).toBeTruthy();
     expect(getByRole(root, "button", { name: "New installation" })).toBeTruthy();
   });
 

@@ -261,6 +261,15 @@ export interface ManagedInstallation {
   };
 }
 
+export interface InstallationRemovalPreview {
+  readonly installId: string;
+  readonly displayName: string;
+  readonly managedRoot: string;
+  readonly action: "delete" | "forget";
+  readonly preservedSavePath: string | null;
+  readonly confirmationToken: string;
+}
+
 export interface InstalledComponent {
   readonly target: "BG1" | "BG2";
   readonly tp2: string;

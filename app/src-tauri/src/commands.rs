@@ -295,6 +295,33 @@ pub async fn list_managed_installations(
 }
 
 #[tauri::command]
+pub async fn preview_installation_removal(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<crate::bridge::InstallationRemovalPreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.preview_installation_removal(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn remove_installation(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    confirmation_token: String,
+) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.remove_installation(&install_id, &confirmation_token)).await
+}
+
+#[tauri::command]
 pub async fn export_diagnostics(
     app: AppHandle,
     state: State<'_, BridgeState>,

@@ -157,6 +157,57 @@ pub struct ManagedInstallRegistry {
 }
 
 impl ManagedInstallRegistry {
+    /// Forget only an exact indexed identity whose folder is already absent.
+    /// Callers hold its target lock; no game files are removed by this operation.
+    pub fn forget_missing(&self, install_id: &str, root: &Path) -> Result<(), RegistryError> {
+        validate_identifier(install_id, "install id", root)?;
+        match fs::symlink_metadata(root) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            _ => {
+                return Err(unsafe_path(
+                    root,
+                    "installation folder must be absent before forgetting",
+                ))
+            }
+        }
+        let completed = self
+            .list()?
+            .into_iter()
+            .find(|card| card.record.install_id == install_id);
+        let campaign = self
+            .list_campaigns()?
+            .into_iter()
+            .find(|card| card.record.install_id == install_id);
+        if completed.is_none() && campaign.is_none() {
+            return Err(RegistryError::InvalidRecord(
+                "unknown installation".to_owned(),
+            ));
+        }
+        if completed
+            .as_ref()
+            .is_some_and(|card| card.record.managed_root != root)
+            || campaign
+                .as_ref()
+                .is_some_and(|card| card.record.managed_root != root)
+        {
+            return Err(unsafe_path(
+                root,
+                "registered installation identity changed",
+            ));
+        }
+        for (present, directory) in [
+            (completed.is_some(), &self.records_root),
+            (campaign.is_some(), &self.campaigns_root),
+        ] {
+            if present {
+                let path = directory.join(format!("{install_id}.json"));
+                validate_direct_file(&path)?;
+                fs::remove_file(&path).map_err(|source| RegistryError::Io { path, source })?;
+            }
+        }
+        Ok(())
+    }
+
     /// Open or create the dedicated `managed-installs` record directory.
     pub fn open_or_create(app_data_root: &Path) -> Result<Self, RegistryError> {
         if !app_data_root.is_absolute() {

@@ -212,6 +212,70 @@ h1[tabindex="-1"]:focus-visible {
   background: var(--charcoal);
 }
 
+.button.danger-quiet {
+  width: fit-content;
+  border-color: var(--slate-light);
+  color: var(--vellum-dim);
+  background: transparent;
+}
+
+.button.danger-quiet:hover:not(:disabled),
+.button.danger {
+  border-color: var(--ember);
+  color: var(--vellum);
+  background: #61372f;
+}
+
+.dialog-overlay {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.removal-dialog {
+  width: min(100%, 35rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 1.4rem;
+  border: 1px solid var(--brass-dark);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+}
+
+.removal-dialog h2 {
+  margin: 0 0 1rem;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.removal-dialog p {
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+
+.removal-dialog .path {
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.removal-path {
+  padding: 0.7rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--iron);
+}
+
+.removal-error {
+  color: var(--ember);
+}
+
+.removal-notice {
+  color: var(--teal);
+}
+
 .button.header-button {
   min-block-size: 40px;
   padding: 0.45rem 0.8rem;
@@ -235,7 +299,7 @@ h1[tabindex="-1"]:focus-visible {
 
 .screen {
   width: min(100%, 72rem);
-  height: 100%;
+  min-height: 0;
   margin-inline: auto;
   padding: clamp(1rem, 2.4vh, 1.5rem) clamp(1rem, 3vw, 2.5rem);
   overflow-y: auto;
@@ -243,6 +307,7 @@ h1[tabindex="-1"]:focus-visible {
 
 .screen-stack {
   display: grid;
+  align-content: start;
   gap: 1rem;
 }
 
@@ -1137,15 +1202,43 @@ input[type="search"] {
 }
 
 .choice-group {
-  display: grid;
-  gap: 0;
   margin: 0;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
 }
 
-.choice-group legend {
-  padding: 0 0.45rem;
+.category-heading {
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  color: var(--vellum);
+  cursor: pointer;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.category-heading:hover {
+  background: rgba(197, 154, 81, 0.07);
+}
+
+.choice-group[open] > .category-heading {
+  border-bottom: 1px solid var(--slate-light);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.category-count {
+  float: right;
+  margin: 0.15rem 0 0 0.5rem;
+  color: var(--vellum-dim);
+  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.category-body {
+  padding: 0.85rem 1rem;
 }
 
 .control-row {

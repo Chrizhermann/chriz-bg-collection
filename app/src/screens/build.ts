@@ -19,6 +19,8 @@ export interface BuildActions {
   readonly retryAvailable: boolean;
   readonly logState: TechnicalLogState;
   readonly updateLogState: (state: TechnicalLogState) => void;
+  readonly remove?: () => void | Promise<void>;
+  readonly removalDisabled?: boolean;
 }
 
 export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTMLElement {
@@ -51,6 +53,13 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
       ? actionButton("Finish fixture build", actions.advance)
       : actionButton("Pause after current mod", actions.pause));
     if (!actions.fixture) controls.append(actionButton("Stop now (may need repair)", actions.stopNow, "quiet"));
+  }
+  if (actions.remove) {
+    const removal = actionButton("Delete installation…", actions.remove, "danger-quiet");
+    removal.id = "remove-installation";
+    removal.disabled = actions.removalDisabled ?? ["running", "attention", "waiting-manual"].includes(snapshot.state);
+    if (removal.disabled) removal.title = "Pause or stop the installation before deleting it.";
+    controls.append(removal);
   }
   if (controls.childElementCount > 0) stateCard.append(controls);
   page.append(stateCard, campaignLedger(snapshot.phases, true), technicalLog(snapshot.logTail, actions.logState, actions.updateLogState));

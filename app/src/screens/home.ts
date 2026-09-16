@@ -10,6 +10,8 @@ export interface HomeActions {
   readonly select: (installId: string) => void | Promise<void>;
   readonly createShortcut: (installId: string) => void | Promise<void>;
   readonly diagnostics: (installId: string) => void | Promise<void>;
+  readonly remove?: (installId: string) => void | Promise<void>;
+  readonly removalDisabled?: boolean;
 }
 
 export interface ShortcutFeedback {
@@ -149,7 +151,7 @@ export function homeScreen(
   } else if (selected.resumable) {
     page.append(screenIntro("", "Continue your installation", "Your previous progress is saved and ready to resume."));
   } else {
-    page.append(screenIntro("", "Installation not found", "The game folder moved or is no longer available. Reconnect the drive if it is stored elsewhere."));
+    page.append(screenIntro("", "Installation needs attention", "This copy is incomplete or unavailable. Check its status below before starting again or removing it."));
   }
 
   const card = element("section", "card launcher-card");
@@ -207,6 +209,12 @@ export function homeScreen(
     controls.append(actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"));
   }
   card.append(controls);
+  if (actions.remove) {
+    const removal = actionButton("Delete / remove installation…", () => actions.remove!(selected.id), "danger-quiet");
+    removal.id = "remove-installation";
+    removal.disabled = actions.removalDisabled ?? false;
+    card.append(removal);
+  }
   card.append(element("p", "muted", "Diagnostics stay local; review the ZIP before sharing."));
   if (addonFeedback?.installId === selected.id) {
     const note = element("p", "addon-feedback", addonFeedback.state === "installing"

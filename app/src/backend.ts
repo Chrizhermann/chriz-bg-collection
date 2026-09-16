@@ -13,6 +13,7 @@ import type {
   GameDiscovery,
   GameRole,
   InstallationDefaults,
+  InstallationRemovalPreview,
   InstalledComponent,
   ManualArchiveSupply,
   ManualDownloadRequirement,
@@ -60,6 +61,8 @@ export interface Backend {
   retryBuild(): Promise<BuildSnapshot>;
   exportDiagnostics(installId: string): Promise<{ readonly path: string } | null>;
   listManagedInstallations(): Promise<ManagedInstallation[]>;
+  previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
+  removeInstallation(installId: string, confirmationToken: string): Promise<void>;
   launchInstall(installId: string): Promise<void>;
   openInstallFolder(installId: string): Promise<void>;
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
@@ -513,6 +516,14 @@ export class NativeBackend implements Backend {
     await this.#command("launch_install", { installId });
   }
 
+  previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {
+    return this.#command("preview_installation_removal", { installId });
+  }
+
+  async removeInstallation(installId: string, confirmationToken: string): Promise<void> {
+    await this.#command("remove_installation", { installId, confirmationToken });
+  }
+
   async openInstallFolder(installId: string): Promise<void> {
     await this.#command("open_install_folder", { installId });
   }
@@ -615,6 +626,8 @@ function wait(milliseconds: number): Promise<void> {
 }
 
 export class FixtureBackend implements Backend {
+  readonly #removedInstallations = new Set<string>();
+  readonly #removalTokens = new Map<string, string>();
   readonly #options: FixtureOptions;
   #evaluationCall = 0;
   #buildIndex = 0;
@@ -789,9 +802,9 @@ export class FixtureBackend implements Backend {
 
   listManagedInstallations(): Promise<ManagedInstallation[]> {
     if (this.#options.managedInstallations !== undefined) {
-      return Promise.resolve([...this.#options.managedInstallations]);
+      return Promise.resolve(this.#options.managedInstallations.filter((install) => !this.#removedInstallations.has(install.id)));
     }
-    if (this.#buildIndex < 4) return Promise.resolve([]);
+    if (this.#buildIndex < 4 || this.#removedInstallations.has("fixture-install")) return Promise.resolve([]);
     return Promise.resolve([{
       id: "fixture-install",
       name: this.#options.textOverrides?.campaignName ?? "Chriz Easy BG",
@@ -807,6 +820,23 @@ export class FixtureBackend implements Backend {
 
   launchInstall(_installId: string): Promise<void> {
     return Promise.resolve();
+  }
+
+  async previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {
+    const install = (await this.listManagedInstallations()).find((entry) => entry.id === installId);
+    if (!install) throw new Error("Unknown installation.");
+    const token = `fixture-remove-${install.id}-${this.#removalTokens.size}`;
+    this.#removalTokens.set(token, install.id);
+    return { installId, displayName: install.name, managedRoot: install.path,
+      action: install.status.toLowerCase().includes("folder moved") || install.status.toLowerCase().includes("not found") ? "forget" : "delete",
+      preservedSavePath: "C:\\Users\\Chris\\Documents\\Chriz Easy BG", confirmationToken: token };
+  }
+
+  async removeInstallation(installId: string, confirmationToken: string): Promise<void> {
+    const expected = this.#removalTokens.get(confirmationToken);
+    this.#removalTokens.delete(confirmationToken);
+    if (expected !== installId) throw new Error("Removal confirmation does not match.");
+    this.#removedInstallations.add(installId);
   }
 
   openInstallFolder(_installId: string): Promise<void> {
