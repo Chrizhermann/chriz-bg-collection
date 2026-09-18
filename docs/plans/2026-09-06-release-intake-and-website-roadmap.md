@@ -3,6 +3,13 @@
 User decisions: 2026-09-06. Keep this task focused on releasing CEBG;
 owning mod tasks retain implementation and detailed design work.
 
+## Next-release triage — Randomiser (2026-09-18)
+
+[Community compatibility report and feature ideas](2026-09-18-randomiser-next-release-triage.md)
+are queued for discussion: proficiency compatibility, editable RR/EE pools, cursed
+item variety, new-game randomisation and optional challenge reward placement.
+Recorded only; no investigation or commitment to ship all ideas in the next release.
+
 ## Later installer UX follow-up (2026-09-16)
 
 Installer UX follow-up added 2026-09-16: [simpler My installs and unique installation
