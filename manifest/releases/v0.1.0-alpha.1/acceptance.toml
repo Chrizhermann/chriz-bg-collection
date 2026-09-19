@@ -389,6 +389,72 @@ date = "2026-09-04"
 status = "accepted"
 scope = "Static recipe source, component, and order assertions only; not live game acceptance."
 
+[[evidence]]
+subject_kind = "run"
+subject_id = "srcb-rr-compat-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "303e62992b9179f35254a5a7cc6c2c1f130a4124"
+test_artifact = "engine/tests/production_recipe_expanded_release.rs"
+date = "2026-09-20"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-pre-continuity-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "303e62992b9179f35254a5a7cc6c2c1f130a4124"
+test_artifact = "engine/tests/production_recipe_expanded_release.rs"
+date = "2026-09-20"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-continuity-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "303e62992b9179f35254a5a7cc6c2c1f130a4124"
+test_artifact = "engine/tests/production_recipe_expanded_release.rs"
+date = "2026-09-20"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "safana-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "303e62992b9179f35254a5a7cc6c2c1f130a4124"
+test_artifact = "engine/tests/production_recipe_expanded_release.rs"
+date = "2026-09-20"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-late-companions-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "303e62992b9179f35254a5a7cc6c2c1f130a4124"
+test_artifact = "engine/tests/production_recipe_expanded_release.rs"
+date = "2026-09-20"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "spell-rev-lightning-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "303e62992b9179f35254a5a7cc6c2c1f130a4124"
+test_artifact = "engine/tests/production_recipe_expanded_release.rs"
+date = "2026-09-20"
+status = "accepted"
+scope = "Static recipe source, component, and order assertions only; not live game acceptance."
+
 # This remains intentionally pending. Static checks do not turn it into live acceptance.
 [[evidence]]
 subject_kind = "release"

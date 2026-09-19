@@ -598,6 +598,24 @@ def _write_mods(root: Path, destination: Path) -> None:
         (destination / "mods" / f"{mod_id}.toml").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
+def _replace_once(text: str, old: str, new: str) -> str:
+    count = text.count(old)
+    if count != 1:
+        raise ValueError(f"expected one release-record anchor {old!r}, found {count}")
+    return text.replace(old, new, 1)
+
+
+# Base (public-alpha) runs whose curated evidence cites the curated-output test instead.
+CURATED_SCOPED_BASE_RUNS = [
+    "srcb-rr-compat-bg2",
+    "chriz-bg-modpack-pre-continuity-bg2",
+    "chriz-bg-modpack-continuity-bg2",
+    "safana-bg2",
+    "chriz-bg-modpack-late-companions-bg2",
+    "spell-rev-lightning-bg2",
+]
+
+
 def _update_release_records(destination: Path, commit: str) -> None:
     limitations_path = destination / "releases/v0.1.0-alpha.1/known-limitations.toml"
     limitations = limitations_path.read_text(encoding="utf-8")
@@ -611,23 +629,30 @@ def _update_release_records(destination: Path, commit: str) -> None:
         limitations, count = pattern.subn("", limitations)
         if count != 1:
             raise ValueError(f"expected one stale limitation for {feature_id}, found {count}")
-    limitations = limitations.replace(
+    # Keep the curated tail list first and unique whether or not the base profile already
+    # records the same approvals for its identical post-EET runs.
+    curated_head = "approved_tail_runs = [" + "".join(
+        f'\n  "{run_id}",' for run_id in ("safana-bg2", "chriz-bg-modpack-late-companions-bg2", "spell-rev-lightning-bg2")
+    )
+    if curated_head not in limitations:
+        limitations = _replace_once(limitations, "approved_tail_runs = [", curated_head)
+    limitations = _replace_once(
+        limitations,
         '  "chriz-sod-remix-bg2",',
         '  "bardicwonders-dialogue-patch-bg2",\n  "chriz-sod-remix-bg2",',
     )
-    limitations = limitations.replace(
+    limitations = _replace_once(
+        limitations,
         '  "spell-rev-npc-spellbooks-bg2",',
         '  "cdtweaks-spell-save-penalties-bg2",\n  "spell-rev-npc-spellbooks-bg2",',
     )
-    limitations = limitations.replace(
+    limitations = _replace_once(
+        limitations,
         '  "buffbot-bg2",',
         '  "klatu-armor-thieving-bg2",\n  "buffbot-bg2",',
     )
-    limitations = limitations.replace(
-        'approved_tail_runs = [',
-        'approved_tail_runs = [\n  "safana-bg2",\n  "chriz-bg-modpack-late-companions-bg2",\n  "spell-rev-lightning-bg2",',
-    )
-    limitations = limitations.replace(
+    limitations = _replace_once(
+        limitations,
         'reason = "The Branwen Spiritual Hammer repair is not enabled in the frozen alpha recipe."\n'
         'user_facing_limitation = "Branwen\'s Spell Revisions Spiritual Hammer repair is unavailable in this alpha."',
         'reason = "The maintained repair is selected conditionally and stays inactive unless the optional Branwen component is selected."\n'
@@ -645,6 +670,16 @@ user_facing_limitation = "The Darkbloom kit is unavailable while Spell Revisions
 
     acceptance_path = destination / "releases/v0.1.0-alpha.1/acceptance.toml"
     acceptance = acceptance_path.read_text(encoding="utf-8").rstrip()
+    # The curated recipe keeps its own curated-output evidence for these identical runs.
+    # Match only the record's key lines so a following comment is never consumed.
+    for run_id in CURATED_SCOPED_BASE_RUNS:
+        pattern = re.compile(
+            rf'(?m)^\[\[evidence\]\]\nsubject_kind = "run"\nsubject_id = {re.escape(_q(run_id))}\nkind = "static-test"\n(?:[a-z_]+ = [^\n]*\n)*\n*'
+        )
+        acceptance, count = pattern.subn("", acceptance)
+        if count > 1:
+            raise ValueError(f"expected at most one base static evidence record for {run_id}, found {count}")
+        acceptance = acceptance.rstrip()
     for run_id in [
         "evandra-core-bg2",
         "evandra-crossmod-bg2",
@@ -681,14 +716,7 @@ date = "2026-09-08"
 status = "accepted"
 scope = "Focused static source pin, component, optional-selection, credits, and late-order assertions only; not live game acceptance."
 """
-    for run_id in [
-        "srcb-rr-compat-bg2",
-        "chriz-bg-modpack-pre-continuity-bg2",
-        "chriz-bg-modpack-continuity-bg2",
-        "safana-bg2",
-        "chriz-bg-modpack-late-companions-bg2",
-        "spell-rev-lightning-bg2",
-    ]:
+    for run_id in CURATED_SCOPED_BASE_RUNS:
         acceptance += f"""
 
 [[evidence]]

@@ -38,9 +38,14 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
                     and item["status"] == "accepted"}
         selected_runs = {run for run, _ in self.selected()}
         self.assertFalse(selected_runs - accepted)
-        approved = set(tomllib.loads((release / "known-limitations.toml").read_text())["approved_tail_runs"])
+        approved_list = tomllib.loads((release / "known-limitations.toml").read_text())["approved_tail_runs"]
+        approved = set(approved_list)
         selected_tail = {run for run in selected_runs if self.runs[run]["phase"] == "post-eet-end"}
         self.assertFalse(selected_tail - approved)
+        # Release validation rejects duplicate identities, which set checks above cannot see.
+        identities = [(item["subject_kind"], item["subject_id"], item["kind"]) for item in evidence]
+        self.assertEqual(len(identities), len(set(identities)))
+        self.assertEqual(len(approved_list), len(approved))
 
     def test_classic_lightning_is_default_with_real_exclusive_nonbounce_alternative(self):
         classic, alternative = "feature:spell-rev:component-80", "feature:spell-rev:component-81"
