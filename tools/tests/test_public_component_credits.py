@@ -38,11 +38,17 @@ class PublicComponentCreditsTests(unittest.TestCase):
             self.assertEqual(actual[run_id], [value for value in runs[run_id]["components"] if value in selected])
             self.assertEqual(len(actual[run_id]), len(set(actual[run_id])))
         self.assertEqual(self.result["componentCount"], sum(map(len, actual.values())))
-        self.assertEqual(self.result["componentCount"], 436)
+        # Published recommended selection since collection alpha.16 (448 components / 50 runs).
+        self.assertEqual(self.result["componentCount"], 448)
+        self.assertEqual(len(actual), 50)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
-        self.assertEqual(self.result["applicationVersion"], "0.1.0-alpha.16")
-        self.assertEqual(self.result["recipeVersion"], "0.1.0-alpha.14")
+        # The app and bundled collection are versioned independently; each field must come from its own source.
+        app_version = json.loads((self.root / "app/package.json").read_text(encoding="utf-8"))["version"]
+        recipe_version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
+        self.assertEqual(self.result["applicationVersion"], app_version)
+        self.assertEqual(self.result["recipeVersion"], recipe_version)
+        self.assertEqual(recipe_version, "0.1.0-alpha.16")
         encoded = json.dumps(self.result).lower()
         for forbidden in ("artifact_id", "source_reference", "expected_filename", ".zip", ".iemod", "c:\\\\", "creator-full"):
             self.assertNotIn(forbidden, encoded)
