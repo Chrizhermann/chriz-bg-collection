@@ -35,5 +35,29 @@ No native app/update execution, new managed-install deletion test, or live-game
 modification was performed. The setup has a Tauri updater signature, not a Windows
 Authenticode publisher certificate.
 
-Public asset/feed verification and website deployment are recorded below when
-completed. Versioned assets must remain immutable.
+## Publication
+
+- [Public alpha.18 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.18)
+  published as a prerelease, following the existing CEBG alpha convention.
+- Source packaging commit `64cb6e7f3ef25a764cd1c7906bf8354687d7eab8` was pushed to
+  `codex/installer-v0-real-alpha` before publication. The Windows source CI run
+  was still in progress; no hosted-CI success is claimed here.
+- All seven versioned public assets were anonymously downloaded and matched the
+  local release hashes: setup, signature, feed, checksums, component inventory,
+  application license and third-party notices.
+- The downloaded setup passed the bundled-public-key signature test.
+- Windows Defender's targeted setup scan completed and reported no threats.
+  This is a scan result, not a guarantee or publisher signing certificate.
+- The `alpha/latest.json` channel asset was replaced only after asset checks.
+  GitHub's stored digest and a cache-busted anonymous download match the new
+  feed's exact SHA-256. The first ordinary URL read returned cached alpha.15;
+  a subsequent anonymous ordinary-URL download returned alpha.18/recipe alpha.16
+  and matched the feed byte-for-byte. Notification visibility may briefly lag
+  across other CDN caches.
+- The verified alpha.18 setup was copied to the user's Downloads folder. No
+  older setup or game folder was deleted or overwritten.
+- The website owner task received the verified URLs, hashes and public inventory
+  with authorization to deploy; its final deployment result is recorded separately.
+
+Versioned assets must remain immutable. Native updater apply/restart remains a
+user acceptance check, not something proven by the download/signature tests.

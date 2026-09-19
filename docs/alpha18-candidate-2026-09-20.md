@@ -2,8 +2,9 @@
 
 Source candidate: app **0.1.0-alpha.18**, collection **0.1.0-alpha.16**.
 Christopher approved including the completed, reviewed Modpack fixes before the
-next website release. This record supersedes alpha.17 for the next package; it
-does not claim a new setup EXE, public release or update-feed publication.
+next website release. This record supersedes alpha.17. The Windows package and
+versioned release were published on September 20 (local time); see the
+[package/publication record](package-acceptance-alpha18-2026-09-20.md).
 
 ## Included changes
 
@@ -42,7 +43,7 @@ does not claim a new setup EXE, public release or update-feed publication.
 - Source integration commit: `5a5ed2b`; generated recipe evidence points to its
   full commit identity, not the earlier alpha.17 source.
 
-## Existing installation and remaining publication work
+## Existing installation and publication
 
 The user's alpha.17 / collection alpha.15 receipt was checked on September 19:
 it reports success and an exact frozen stack match across all 50 planned runs,
@@ -53,8 +54,9 @@ the new alpha.7 payload was installed or playtested there.
 Existing games and saves remain untouched. The collection ledger labels this
 update new-game-only; no automatic conversion of saved actors is implemented.
 
-Next: build the new Windows setup, verify its matching updater signature/feed and
-version markers, then follow `cebg-release.md` for authorized publication and the
-website handoff. The alpha.17 EXE in Downloads does **not** contain alpha.7 or the
-background-console fix and must not be relabelled. Update the website only after
-the new versioned assets and update feed have been verified.
+Published: [app alpha.18](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.18),
+including collection alpha.16. All seven public assets were downloaded anonymously
+and compared with the local release bytes; the public setup's updater signature
+passes. The alpha channel now hosts the matching feed, with initial CDN caching
+noted in the package record. The website task received the verified publication
+handoff. The alpha.18 setup is also in Downloads; older setups must not be relabelled.
