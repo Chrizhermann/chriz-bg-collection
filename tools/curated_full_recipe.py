@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.15"
+RECIPE_VERSION = "0.1.0-alpha.16"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -706,15 +706,23 @@ scope = "Passed focused selection, dependencies, native component ordering and s
 
 
 def _write_draft_release_ledger(destination: Path) -> None:
-    release_dir = destination / "releases/v0.1.0-alpha.15"
+    release_dir = destination / "releases/v0.1.0-alpha.16"
     release_dir.mkdir(parents=True, exist_ok=True)
     (release_dir / "ledger.toml").write_text(
         """schema = 1
 recipe_id = "chriz-bg-collection"
-version = "0.1.0-alpha.15"
-published_at = "2026-09-16T00:00:00Z"
-minimum_app_version = "0.1.0-alpha.17"
-supersedes = "0.1.0-alpha.14"
+version = "0.1.0-alpha.16"
+published_at = "2026-09-20T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.18"
+supersedes = "0.1.0-alpha.15"
+
+[[changes]]
+id = "modpack-compatible-presets"
+title = "More compatible companion builds and dispels"
+summary = "Updates Modpack to v0.2.0-alpha.7: selected companion builds tolerate different incoming stats and proficiency layouts, while Yeslick and Keldorn's dispel fix accepts valid effect layouts without losing casting hooks. Component choices and install order are unchanged. Existing games and saved actors are not modified."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["artifact:chriz-bg-modpack-0.2.0-alpha.7", "mod:chriz-bg-modpack"]
 
 [[changes]]
 id = "sod-skie-khalid-compatibility"
@@ -957,6 +965,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         "chriz-sod-remix-0.6.10",
         "chriz-bg-rebalance-0.3.1",
         "chriz-bg-modpack-0.2.0-alpha.1",
+        "chriz-bg-modpack-0.2.0-alpha.6",
         "bardicwonders-v2.9c-balance.2",
         "bardicwonders-v2.9c-balance.3",
         "creator-full-private-extras-20260902",

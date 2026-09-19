@@ -176,6 +176,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             (output / "artifacts").mkdir(parents=True)
             for stale in [
                 "chriz-bg-modpack-0.2.0-alpha.1",
+                "chriz-bg-modpack-0.2.0-alpha.6",
                 "bardicwonders-v2.9c-balance.2",
                 "chriz-sod-remix-0.6.5",
                 "chriz-sod-remix-0.6.6",
@@ -184,8 +185,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 (output / "artifacts" / f"{stale}.toml").write_text(f'id = "{stale}"\n', encoding="utf-8")
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
+            self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.6")
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.7")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -540,8 +542,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bg_artifact["source"]["sha256"],
                 "211b509e0fb2c101c1cc20f3238a2cc1dd0e272f997359751cf8f9e13cb16439",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.15")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.16")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(
@@ -550,11 +552,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                     f"historical ledger {version} changed during generation",
                 )
             draft_ledger = tomllib.loads(
-                (output / "releases/v0.1.0-alpha.15/ledger.toml").read_text()
+                (output / "releases/v0.1.0-alpha.16/ledger.toml").read_text()
             )
-            self.assertEqual(draft_ledger["version"], "0.1.0-alpha.15")
-            self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.17")
-            self.assertEqual(draft_ledger["supersedes"], "0.1.0-alpha.14")
+            self.assertEqual(draft_ledger["version"], "0.1.0-alpha.16")
+            self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.18")
+            self.assertEqual(draft_ledger["supersedes"], "0.1.0-alpha.15")
             self.assertIn("sod-skie-khalid-compatibility", {change["id"] for change in draft_ledger["changes"]})
             self.assertFalse((output / "reference").exists())
 

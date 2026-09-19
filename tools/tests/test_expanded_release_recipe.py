@@ -71,8 +71,26 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
             self.assertEqual(("srcb-rr-compat-bg2", 0) in selected, expected)
 
     def test_recipe_requires_app_with_alternative_dependency_support(self):
-        ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.15/ledger.toml").read_text())
-        self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.17")
+        ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.16/ledger.toml").read_text())
+        self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.18")
+
+    def test_reviewed_modpack_compatibility_release_preserves_selection(self):
+        mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.7")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.7.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.7")
+        self.assertEqual(artifact["source"]["expected_length"], 1367203)
+        self.assertEqual(artifact["source"]["sha256"], "f134085e8220a4222190981f173034653efe7aa92d47caa8430682a1352d1c19")
+        self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
+        self.assertEqual(len(self.selected()), 448)
+        self.assertEqual(len({run for run, _ in self.selected()}), 50)
+        for component in (140, 170):
+            self.assertIn(("chriz-bg-modpack-pre-continuity-bg2", component), self.selected())
+        self.assertIn(("chriz-bg-modpack-bg2", 410), self.selected())
+        ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.16/ledger.toml").read_text())
+        fix = next(change for change in ledger["changes"] if change["id"] == "modpack-compatible-presets")
+        self.assertEqual(fix["save_applicability"], "new-game-only")
+        self.assertIn("artifact:chriz-bg-modpack-0.2.0-alpha.7", fix["covers"])
 
     def test_companions_are_prepared_before_continuity_and_eet_end(self):
         pre = "chriz-bg-modpack-pre-continuity-bg2"
