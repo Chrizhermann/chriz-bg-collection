@@ -2,6 +2,19 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Reviewed Modpack fixes included for alpha.18 — 2026-09-20
+
+Christopher approved the completed compatibility release. The
+[alpha.18 source candidate](alpha18-candidate-2026-09-20.md) now pins Modpack
+v0.2.0-alpha.7, with app alpha.18 / collection alpha.16 identities. Recommended
+selection is unchanged at 448 components / 50 runs; the actual download/extraction
+and focused recipe checks pass. The user's preceding alpha.17 installation has a
+successful 50-run receipt; no repeat full install or live-game writes were made.
+The background WeiDU fix is also in source. Build/package and publication remain
+next; the existing Downloads alpha.17 EXE contains neither of these latest changes.
+Use [the draft release notes](release-notes-alpha18.md) for the website handoff.
+The wiki and newly proposed Baeloth work remain deferred, not release blockers.
+
 ## Alpha.16 candidate assembled — 2026-09-16
 
 The [candidate record](alpha16-candidate-2026-09-16.md) supersedes the preparation
