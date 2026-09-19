@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Build the frozen, local-only 2026-09-08 combined playtest recipe.
+"""Build the frozen, local-only combined playtest recipe.
 
 This intentionally starts from the public curated recipe and writes only to a
 separate destination. Development snapshots use the ordinary manual archive
 contract so the installer cache still verifies their exact length and SHA-256.
+
+Since the September 16 intake the public recipe already carries most of what
+this tool once added, so every step is additive and idempotent: mods are
+repointed at the frozen local archives, and runs, components, features and
+preset selections are only created where the base recipe lacks them. Content
+the base already defines is left exactly as curated.
 """
 
 from __future__ import annotations
@@ -36,6 +42,8 @@ SOURCE_MODS = {
     "artisans-kitpack": ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak"),
     "spell-rev-lightning": ("spell-rev",),
     "chriz-bg-rebalance": ("chriz-bg-rebalance",),
+    "srcb-rr-compat": ("srcb-rr-compat",),
+    "safana-in-amn": ("safana",),
 }
 
 PRE_CONTINUITY_COMPONENTS = (110, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223)
@@ -219,13 +227,16 @@ def _replace_scalar(text: str, key: str, value: str) -> str:
 
 
 def _append_components(mod_text: str, additions: list[tuple[int, str]]) -> str:
+    """Declare playtest components the base installer catalog does not list yet."""
     parsed = tomllib.loads(mod_text)
     ids = {component["id"] for component in parsed["components"]}
-    blocks = []
-    for component, name in additions:
-        if component in ids:
-            raise ValueError(f"component {component} already exists in mod {parsed['id']}")
-        blocks.append(f'[[components]]\nid = {component}\nname = {_quote(name)}\n')
+    blocks = [
+        f'[[components]]\nid = {component}\nname = {_quote(name)}\n'
+        for component, name in additions
+        if component not in ids
+    ]
+    if not blocks:
+        return mod_text
     return mod_text.rstrip() + "\n\n" + "\n".join(blocks)
 
 
@@ -241,13 +252,23 @@ args = []
 '''
 
 
-def _replace_run_components(collection: str, run_id: str, components: tuple[int, ...] | list[int]) -> str:
+def _run_components(collection: str, run_id: str) -> list[int] | None:
+    run = next((item for item in tomllib.loads(collection)["runs"] if item["run_id"] == run_id), None)
+    return None if run is None else list(run["components"])
+
+
+def _merge_run_components(collection: str, run_id: str, components: tuple[int, ...] | list[int]) -> str:
+    """Add missing playtest components to a run, keeping the curated order intact."""
     pattern = re.compile(rf'(?ms)^\[\[runs\]\]\nrun_id = "{re.escape(run_id)}"\n.*?(?=^\[\[runs\]\]|^\[\[features\]\])')
     match = pattern.search(collection)
     if match is None:
         raise ValueError(f"run {run_id!r} is missing")
+    present = _run_components(collection, run_id) or []
+    merged = present + [component for component in components if component not in present]
+    if merged == present:
+        return collection
     block = match.group(0)
-    values = ", ".join(str(value) for value in components)
+    values = ", ".join(str(value) for value in merged)
     changed, count = re.subn(r'(?m)^components = \[[^\]]*\]$', f"components = [{values}]", block, count=1)
     if count != 1:
         raise ValueError(f"run {run_id!r} components field is ambiguous")
@@ -255,10 +276,25 @@ def _replace_run_components(collection: str, run_id: str, components: tuple[int,
 
 
 def _insert_before_run(collection: str, marker_run_id: str, blocks: str) -> str:
+    """Insert runs the base recipe lacks; runs it already authors stay untouched."""
+    missing = "".join(
+        block + "\n\n"
+        for block in blocks.split("\n\n")
+        if block.strip() and _run_components(collection, _block_run_id(block)) is None
+    )
+    if not missing:
+        return collection
     marker = f'[[runs]]\nrun_id = "{marker_run_id}"'
     if collection.count(marker) != 1:
         raise ValueError(f"run insertion marker {marker_run_id!r} is ambiguous")
-    return collection.replace(marker, blocks + marker, 1)
+    return collection.replace(marker, missing + marker, 1)
+
+
+def _block_run_id(block: str) -> str:
+    match = re.search(r'(?m)^run_id = "([^"]+)"$', block)
+    if match is None:
+        raise ValueError("run block has no run_id")
+    return match.group(1)
 
 
 def _feature(title: str, feature_id: str, source_label: str, parent: str, run_id: str, component: int, requires: tuple[str, ...] = ()) -> str:
@@ -293,6 +329,15 @@ def _add_sod_components_to_mandatory_feature(collection: str, additions: tuple[i
     if end < 0:
         end = len(collection)
     block = collection[start:end]
+    declared = {
+        reference["component"]
+        for feature in tomllib.loads(collection)["features"]
+        if feature["id"] == "feature:chriz-sod-remix:mandatory-components"
+        for reference in feature.get("components", [])
+    }
+    additions = tuple(component for component in additions if component not in declared)
+    if not additions:
+        return collection
     marker = "components = [\n"
     if block.count(marker) != 1:
         raise ValueError("SoD mandatory feature component list is ambiguous")
@@ -320,6 +365,8 @@ def _write_mod_overrides(destination: Path, sources: dict[str, dict[str, object]
         path = destination / "mods" / f"{mod_id}.toml"
         path.write_text(_append_components(path.read_text(encoding="utf-8"), components), encoding="utf-8", newline="\n")
 
+    # Both mods are curated in the public base today; only their artifact pin is
+    # repointed above. The literals below remain for a base that predates them.
     compat = sources["srcb-rr-compat"]
     tp2_paths = compat["tp2_paths"]
     assert isinstance(tp2_paths, list)
@@ -335,7 +382,9 @@ invocation_mode = "setup-name"
 id = 0
 name = "Spell Revisions / Rogue Rebalancing compatibility"
 '''
-    (destination / "mods/srcb-rr-compat.toml").write_text(text, encoding="utf-8", newline="\n")
+    compat_path = destination / "mods/srcb-rr-compat.toml"
+    if not compat_path.exists():
+        compat_path.write_text(text, encoding="utf-8", newline="\n")
 
     safana = sources["safana-in-amn"]
     safana_tp2s = safana["tp2_paths"]
@@ -352,15 +401,16 @@ invocation_mode = "setup-name"
 id = 0
 name = "Safana in Amn: v0.5"
 '''
-    (destination / "mods/safana.toml").write_text(safana_text, encoding="utf-8", newline="\n")
+    safana_path = destination / "mods/safana.toml"
+    if not safana_path.exists():
+        safana_path.write_text(safana_text, encoding="utf-8", newline="\n")
 
 
 def _write_collection(destination: Path) -> None:
     path = destination / "collection.toml"
     collection = path.read_text(encoding="utf-8").replace("\r\n", "\n")
-    collection = _replace_run_components(collection, "chriz-sod-remix-bg2", [100, 110, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 260, 265, 270, 280, 290, 900, 910])
-    collection = _replace_run_components(collection, "chriz-bg-rebalance-bg2", [100, 101, 110, 111, 120, 121, 400, 401, 404, 405, 407, 408])
-    collection = _replace_run_components(collection, "chriz-bg-modpack-bg2", [130, 400, 410, 430, 440, 450, 610])
+    collection = _merge_run_components(collection, "chriz-sod-remix-bg2", [135, 256, 265])
+    collection = _merge_run_components(collection, "chriz-bg-rebalance-bg2", [110, 111])
 
     collection = _insert_before_run(collection, "stratagems-bg2", _run_block("srcb-rr-compat-bg2", "srcb-rr-compat", "main", [0]))
     pre_final = _run_block("chriz-bg-modpack-pre-continuity-bg2", "chriz-bg-modpack", "main", PRE_CONTINUITY_COMPONENTS) + _run_block("chriz-bg-modpack-continuity-bg2", "chriz-bg-modpack", "main", [199])
@@ -396,9 +446,19 @@ readiness = "ready"
         _feature("Dragon melee and death-protection rebalance", "feature:chriz-bg-rebalance:component-110", "BG Rebalance", "mod:chriz-bg-rebalance", "chriz-bg-rebalance-bg2", 110, ("mod:eeex", "feature:stratagems:mandatory-components")),
         _feature("Dragon wing-buffet spacing rebalance", "feature:chriz-bg-rebalance:component-111", "BG Rebalance", "mod:chriz-bg-rebalance", "chriz-bg-rebalance-bg2", 111, ("feature:stratagems:mandatory-components",)),
     ]
-    collection = collection.rstrip() + "\n\n" + "\n".join(features)
+    declared = {feature["id"] for feature in tomllib.loads(collection)["features"]}
+    missing = [feature for feature in features if _block_feature_id(feature) not in declared]
+    if missing:
+        collection = collection.rstrip() + "\n\n" + "\n".join(missing)
     tomllib.loads(collection)
     path.write_text(collection, encoding="utf-8", newline="\n")
+
+
+def _block_feature_id(block: str) -> str:
+    match = re.search(r'(?m)^id = "([^"]+)"$', block)
+    if match is None:
+        raise ValueError("feature block has no id")
+    return match.group(1)
 
 
 def _write_preset(destination: Path) -> None:
@@ -412,7 +472,11 @@ def _write_preset(destination: Path) -> None:
         "feature:chriz-bg-rebalance:component-111",
     ]
     for selection in selections:
-        text += f'\n{_quote(selection)} = "on"'
+        # The base preset already selects most of this content; force the playtest
+        # value in place rather than appending a second, invalid key.
+        pattern = rf'(?m)^{re.escape(_quote(selection))} = "[^"]*"$'
+        replaced, count = re.subn(pattern, f'{_quote(selection)} = "on"', text, count=1)
+        text = replaced if count else text + f'\n{_quote(selection)} = "on"'
     path.write_text(text + "\n", encoding="utf-8", newline="\n")
 
 

@@ -90,13 +90,29 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             base_collection = tomllib.loads((base / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
             runs = collection["runs"]
-            self.assertEqual(len(runs), len(base_collection["runs"]) + 6)
-            self.assertEqual(len(collection["features"]), len(base_collection["features"]) + 10)
+            # The public base absorbed this content in the September 16 intake, so the
+            # tool only repoints artifacts now. Nothing may be added twice.
+            base_runs = [run["run_id"] for run in base_collection["runs"]]
+            run_ids = [run["run_id"] for run in runs]
+            self.assertEqual(len(run_ids), len(set(run_ids)))
+            self.assertEqual(run_ids[: len(base_runs)], base_runs)
+            feature_ids = [feature["id"] for feature in collection["features"]]
+            self.assertEqual(len(feature_ids), len(set(feature_ids)))
+            for required in (
+                "srcb-rr-compat-bg2",
+                "chriz-bg-modpack-pre-continuity-bg2",
+                "chriz-bg-modpack-continuity-bg2",
+                "chriz-bg-modpack-late-companions-bg2",
+                "safana-bg2",
+                "spell-rev-lightning-bg2",
+            ):
+                self.assertIn(required, run_ids)
             by_run = {run["run_id"]: run for run in runs}
             order = {run["run_id"]: index for index, run in enumerate(runs)}
 
-            self.assertEqual(by_run["spell-rev-lightning-bg2"]["components"], [80])
-            self.assertNotIn(81, by_run["spell-rev-lightning-bg2"]["components"])
+            self.assertIn(80, by_run["spell-rev-lightning-bg2"]["components"])
+            self.assertEqual(preset.get("feature:spell-rev:component-80"), "on")
+            self.assertNotEqual(preset.get("feature:spell-rev:component-81"), "on")
             self.assertNotIn(2530, by_run["cdtweaks-bg2"]["components"])
             self.assertLess(order["srcb-rr-compat-bg2"], order["stratagems-bg2"])
             self.assertGreater(order["spell-rev-lightning-bg2"], order["spell-rev-npc-spellbooks-bg2"])
@@ -138,24 +154,22 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             self.assertIn("LOCAL", (output / "LOCAL-ONLY.md").read_text(encoding="utf-8"))
             self.assertFalse((output / "release.json").exists())
 
+            # Curated features are carried over untouched; the tool only adds what is missing.
             generated_features = {feature["id"]: feature for feature in collection["features"]}
             for original in base_collection["features"]:
-                generated = json.loads(json.dumps(generated_features[original["id"]]))
-                if original["id"].startswith("feature:chriz-bg-modpack:component-"):
-                    for component in generated.get("components", []):
-                        if component["run_id"] == "chriz-bg-modpack-pre-continuity-bg2":
-                            component["run_id"] = "chriz-bg-modpack-bg2"
-                if original["id"] == "feature:chriz-sod-remix:mandatory-components":
-                    generated["components"] = [
-                        component for component in generated["components"] if component["component"] not in {135, 256, 265}
-                    ]
-                self.assertEqual(original, generated, original["id"])
+                self.assertEqual(original, generated_features[original["id"]], original["id"])
 
             changed_mods = {
                 "artisanskitpack.toml", "artisanskitpack-npc.toml", "artisanskitpack-tweak.toml",
                 "spell-rev.toml", "chriz-sod-remix.toml", "chriz-bg-modpack.toml",
-                "chriz-bg-rebalance.toml", "srcb-rr-compat.toml",
+                "chriz-bg-rebalance.toml", "srcb-rr-compat.toml", "safana.toml",
             }
+            for name in changed_mods:
+                generated = tomllib.loads((output / "mods" / name).read_text(encoding="utf-8"))
+                self.assertTrue(
+                    generated["artifact_id"].startswith("local-playtest-"),
+                    f"{name} must point at a frozen local snapshot",
+                )
             for path in (base / "mods").glob("*.toml"):
                 if path.name not in changed_mods:
                     self.assertEqual(path.read_bytes(), (output / "mods" / path.name).read_bytes())
