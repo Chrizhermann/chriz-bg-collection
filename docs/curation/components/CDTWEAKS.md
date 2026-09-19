@@ -5,6 +5,14 @@ Listed at installed version **v18**.
 
 ## UI/dependency notes
 
+- `2270` is the currently captured global bard default. The intended replacement is
+  Rebalance `420` → `421` → Bardic Wonders `3010`, with kit-specific progression and
+  descriptions. When that feature enters the runnable recipe, stop automatically
+  selecting `2270` or `2271`. The new provider supplies its own named tables and leaves
+  `MXSPLBRD.2DA` intact, so it can be installed after an existing CDTweaks progression
+  selection without uninstalling it. Unregistered kits retain their native fallback.
+  See the [selected policy and release integration boundary](../../research/2026-09-19-bard-progression-policy.md).
+  The current table and runnable recipe have not been changed by this documentation update.
 - Every non-empty `Subgroup` is an at-most-one choice. The `default` row is initially
   selected; `optional` alternatives remain visible and choosing none remains valid unless
   the parent feature says otherwise.

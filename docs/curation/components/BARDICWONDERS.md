@@ -1,8 +1,32 @@
 # BARDICWONDERS — components
 
-Listed at reference version **—**; refreshed for Chris's fork release
+Baseline listed at reference version **—**; refreshed for Chris's fork release
 **v2.9c-balance.2** (`db0cf81504fd3f84e4e74eb8ab30e65499135512`).
 26 entries, 21 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
+
+## Bard progression release and intended default
+
+[Bardic Wonders v2.9c-balance.6](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.6)
+adds late adapter `3010`. It requires EEex and Rebalance provider `420`; base policy `421`
+is optional for standalone users. The intended collection order is `420` → `421` → `3010`,
+after the installed kits and other description changes.
+
+The adapter registers Dancer for BG progression through spell level 6, Kapellmeister
+and optional Darkbloom for IWD progression through level 8, and Abettor, Storm Drummer,
+Troubadour, Deathsinger and Strategist for IWD progression through level 7. Existing kit
+slot bonuses/penalties, Skald casting restrictions and caster-level changes remain.
+Kit descriptions receive matching progression advantages or disadvantages.
+
+Darkbloom is not required: absent kits are skipped. Installer fixtures passed with and
+without it, and with provider `420` alone. Its separate Spell Revisions copied-spell
+restriction remains; `3010` adds no SR restriction. Non-native bard casting systems and
+unrecognized kits keep their fallback behavior. Artisan's Garrick Troubadour assignment
+inherits the recognized Troubadour mapping.
+
+The BG2EE/EET user smoke test passed on 2026-09-20; IWDEE has binary and offline checks
+only. See the [selected policy and release integration boundary](../../research/2026-09-19-bard-progression-policy.md).
+`3010` is an intended default, not a component of the published collection recipe yet.
+The reference table below retains its captured provenance.
 
 ## UI/dependency notes
 

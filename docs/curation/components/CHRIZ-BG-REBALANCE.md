@@ -1,12 +1,31 @@
 # CHRIZ-BG-REBALANCE — components
 
-The 14-component target menu below is public release **v0.3.1**, tag commit
+The 14-component baseline menu below was captured from public release **v0.3.1**, tag commit
 `d31fda2c6723610c8ac1c6b712306446a9dbfd5b`. It includes the accepted component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
 14 entries, 10 current-alpha selections. ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
+
+## Bard progression release and intended default
+
+[Rebalance v0.5.0](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.5.0)
+adds the shared EEex provider `420` and base Bard policy `421`. The intended collection
+order is `420` → `421` → Bardic Wonders `3010`, after kit installation and competing
+description edits. Treat progression and its descriptions as one default-on feature.
+
+`421` gives Bard and Jester IWD progression through spell level 7, with Blade and Skald
+retaining BG progression through level 6. Provider `420` alone changes no kit policy;
+standalone Bardic users may select `420` → `3010` without `421`. The provider requires
+compatible EEex capabilities and a unique supported native signature, without a fixed
+EEex version or executable-offset requirement.
+
+Christopher reported "Works great" after the BG2EE/EET live smoke test on 2026-09-20.
+IWDEE 2.7.3 has binary and offline installer coverage, not live runtime acceptance.
+See the [selected policy and release integration boundary](../../research/2026-09-19-bard-progression-policy.md).
+These components are not yet selected by the published collection recipe; the table
+below retains its existing release-candidate provenance.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
