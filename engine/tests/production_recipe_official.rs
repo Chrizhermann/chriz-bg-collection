@@ -14,7 +14,7 @@ const UB_AUTHORED_COMPONENTS: &[u32] = &[
     0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 20, 21, 22, 23, 24, 25,
 ];
 const UB_DEFAULT_COMPONENTS: &[u32] = &[
-    0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 20, 21, 25,
+    0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 20, 21,
 ];
 const ASCENSION_COMPONENTS: &[u32] = &[
     0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2100, 2300, 2400,
@@ -401,20 +401,26 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "artisanskitpack-tweak-early-bg2",
             "hq-soundclips-bg2ee-bg2",
             "randomiser-bg2",
+            "srcb-rr-compat-bg2",
             "stratagems-bg2",
             "artisanskitpack-tweak-late-bg2",
             "artisanskitpack-npc-late-bg2",
+            "chriz-bg-modpack-pre-continuity-bg2",
+            "chriz-bg-modpack-continuity-bg2",
             "eet-end-bg2",
             "chriz-sod-remix-bg2",
             "hiddengameplayoptions-bg2",
             "chriz-bg-rebalance-bg2",
             "eeexremote-bg2",
             "chriz-bg-modpack-bg2",
+            "safana-bg2",
+            "chriz-bg-modpack-late-companions-bg2",
             "spell-rev-npc-spellbooks-bg2",
+            "spell-rev-lightning-bg2",
             "buffbot-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..29]
+    assert!(manifest.collection.runs[6..32]
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);

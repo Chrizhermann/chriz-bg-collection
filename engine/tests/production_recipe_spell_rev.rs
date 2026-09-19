@@ -7,9 +7,10 @@ use bg_engine::recipe_view::{evaluate, evaluate_preset};
 use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
-const SPELL_REV_MENU_COMPONENTS: &[u32] = &[0, 10, 20, 30, 55, 60, 65, 70];
+const SPELL_REV_MENU_COMPONENTS: &[u32] = &[0, 10, 20, 30, 55, 60, 65, 70, 80, 81];
 const SPELL_REV_EARLY_COMPONENTS: &[u32] = &[0, 10, 20, 30, 55, 65];
 const SPELL_REV_LATE_COMPONENTS: &[u32] = &[60];
+const SPELL_REV_LIGHTNING_COMPONENTS: &[u32] = &[80, 81];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -58,7 +59,7 @@ fn freezes_the_reviewed_spell_revisions_successor_release() {
 fn authors_the_exact_spell_revisions_menu_and_split_run_order() {
     let manifest = recipe();
     let installer = &manifest.mods["spell-rev"];
-    assert_eq!(installer.artifact_id, "spell-rev-4.21-chriz.3");
+    assert_eq!(installer.artifact_id, "spell-revisions-4.21-chriz.5");
     assert_eq!(installer.tp2, "spell_rev/setup-spell_rev.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -80,17 +81,25 @@ fn authors_the_exact_spell_revisions_menu_and_split_run_order() {
     let ascension = position("ascension-bg2");
     let early = position("spell-rev-core-bg2");
     let modpack = position("chriz-bg-modpack-bg2");
+    let safana = position("safana-bg2");
+    let late_companions = position("chriz-bg-modpack-late-companions-bg2");
     let late = position("spell-rev-npc-spellbooks-bg2");
+    let lightning = position("spell-rev-lightning-bg2");
     let buffbot = position("buffbot-bg2");
 
     assert_eq!(ascension + 1, early);
-    assert_eq!(modpack + 1, late);
-    assert_eq!(late + 1, buffbot);
+    assert_eq!(modpack + 1, safana);
+    assert_eq!(safana + 1, late_companions);
+    assert_eq!(late_companions + 1, late);
+    assert_eq!(late + 1, lightning);
+    assert_eq!(lightning + 1, buffbot);
     assert_eq!(buffbot, runs.len() - 1);
     assert_eq!(runs[early].phase, Phase::Main);
     assert_eq!(runs[early].components, SPELL_REV_EARLY_COMPONENTS);
     assert_eq!(runs[late].phase, Phase::PostEetEnd);
     assert_eq!(runs[late].components, SPELL_REV_LATE_COMPONENTS);
+    assert_eq!(runs[lightning].phase, Phase::PostEetEnd);
+    assert_eq!(runs[lightning].components, SPELL_REV_LIGHTNING_COMPONENTS);
     assert!(runs
         .iter()
         .filter(|run| run.mod_id == "spell-rev")
@@ -209,7 +218,6 @@ fn preserves_the_scs_conflict_without_blocking_deferred_rr_compatibility() {
 
     for feature_id in [
         "feature:artisanskitpack:component-8101",
-        "feature:artisanskitpack-npc:component-5102",
         "feature:artisanskitpack-npc:component-10004",
     ] {
         let feature = manifest
@@ -223,4 +231,18 @@ fn preserves_the_scs_conflict_without_blocking_deferred_rr_compatibility() {
                 && conflict.reason == "Unavailable with Spell Revisions."
         }));
     }
+
+    // c907b38: Red Wizard Edwin (Artisan NPC 5102) is default-checked with Spell
+    // Revisions; the unsupported SR exclusion was removed after source review.
+    let red_wizard = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:artisanskitpack-npc:component-5102")
+        .expect("Red Wizard Edwin feature");
+    assert_eq!(red_wizard.decision, Decision::Default);
+    assert!(red_wizard.conflicts.iter().all(|conflict| {
+        conflict.feature_id != "mod:spell-rev"
+            && !conflict.feature_id.starts_with("feature:spell-rev:")
+    }));
 }

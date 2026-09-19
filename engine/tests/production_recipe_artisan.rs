@@ -7,9 +7,9 @@ use bg_engine::recipe_view::{evaluate, evaluate_preset};
 use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
-const ARTIFACT_ID: &str = "artisans-kitpack-chriz-v1.3.1";
-const ARTIFACT_SHA256: &str = "a97bd3a83b8f120bd70a24ec26770b5ad5737669d0b6e548631827df1adda31f";
-const RELEASE_COMMIT: &str = "ac718614991e34b4f720807bec5edc96266c6c5e";
+const ARTIFACT_ID: &str = "artisans-kitpack-chriz-v1.5.0";
+const ARTIFACT_SHA256: &str = "bb9b461c89a922a1b9f8720f0cd590cc27fd5b3e6bde98a50fac1f12d16630f6";
+const RELEASE_TAG: &str = "chriz-v1.5.0";
 
 const MAIN_AUTHORED: &[u32] = &[
     1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005,
@@ -24,7 +24,7 @@ const MAIN_RECOMMENDED: &[u32] = &[
 const NPC_EARLY_AUTHORED: &[u32] = &[
     1101, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004, 20002, 99001,
 ];
-const NPC_RECOMMENDED: &[u32] = &[1101, 2001, 3101, 3102, 7102, 21001, 9101, 20002];
+const NPC_RECOMMENDED: &[u32] = &[1101, 2001, 3101, 3102, 5102, 7102, 21001, 9101, 20002];
 const TWEAK_EARLY: &[u32] = &[20101, 1209, 7203];
 const TWEAK_LATE: &[u32] = &[12012, 3202, 3302, 8204];
 
@@ -37,22 +37,22 @@ fn recipe() -> Manifest {
 }
 
 #[test]
-fn freezes_the_immutable_chriz_v1_3_1_archive_for_all_three_installers() {
+fn freezes_the_immutable_chriz_v1_5_0_release_asset_for_all_three_installers() {
     let manifest = recipe();
     let artifact = &manifest.artifacts[ARTIFACT_ID];
-    assert_eq!(artifact.version, "chriz-v1.3.1");
+    assert_eq!(artifact.version, RELEASE_TAG);
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
-    assert_eq!(artifact.source.kind, SourceKind::GithubCommitZip);
-    assert_eq!(artifact.source.reference, RELEASE_COMMIT);
+    assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
+    assert_eq!(artifact.source.reference, RELEASE_TAG);
     assert_eq!(
         artifact.source.url,
         format!(
-            "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/archive/{RELEASE_COMMIT}.zip"
+            "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-v1.5.0.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(90_042_157));
+    assert_eq!(artifact.source.expected_length, Some(89_599_465));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
-    assert_eq!(artifact.archive.root_rule, ArchiveRootRule::SingleWrapper);
+    assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
         artifact.archive.publish_roots,
         [
@@ -168,7 +168,6 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
 
     for id in [
         "feature:artisanskitpack:component-8101",
-        "feature:artisanskitpack-npc:component-5102",
         "feature:artisanskitpack-npc:component-10004",
     ] {
         let control = evaluation.view.control(id).expect("conflicting control");
@@ -181,6 +180,14 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
             "{id}"
         );
     }
+    let red_wizard = evaluation
+        .view
+        .control("feature:artisanskitpack-npc:component-5102")
+        .expect("Red Wizard control");
+    assert_eq!(red_wizard.readiness, Readiness::Ready);
+    assert!(red_wizard.selected);
+    assert!(red_wizard.interactive);
+    assert_eq!(red_wizard.unavailable_reason, None);
     let garrick = evaluation
         .view
         .control("feature:artisanskitpack-npc:component-99001")

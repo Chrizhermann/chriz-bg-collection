@@ -17,7 +17,7 @@ fn recipe() -> Manifest {
 fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     let manifest = recipe();
     let result = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
-    assert_eq!(result.plan.runs.len(), 44);
+    assert_eq!(result.plan.runs.len(), 50);
     assert_eq!(
         result
             .plan
@@ -25,7 +25,7 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        435
+        448
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");

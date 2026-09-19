@@ -8,13 +8,26 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
-    110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 400, 410, 430,
-    440, 450, 610,
+    110, 130, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223,
+    400, 410, 430, 440, 450, 610, 620,
 ];
 
-const RECOMMENDED_COMPONENTS: &[u32] = &[
-    110, 130, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 410, 440, 450, 610,
+/// The September 16 intake split the single post-EET modpack run into the
+/// companion preparation before continuity, the continuity run before EET_end,
+/// the unchanged post-EET slot and the late companions after Safana.
+const PRE_CONTINUITY_COMPONENTS: &[u32] = &[
+    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223,
 ];
+
+const CONTINUITY_COMPONENTS: &[u32] = &[199];
+
+const POST_EET_END_COMPONENTS: &[u32] = &[130, 400, 410, 430, 440, 450, 610];
+
+const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
+    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221,
+];
+
+const RECOMMENDED_COMPONENTS: &[u32] = &[130, 410, 440, 450, 610];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -69,19 +82,35 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     };
     let remote = position("eeexremote-bg2");
     let modpack = position("chriz-bg-modpack-bg2");
+    let safana = position("safana-bg2");
+    let late_companions = position("chriz-bg-modpack-late-companions-bg2");
     let spellbooks = position("spell-rev-npc-spellbooks-bg2");
+    let lightning = position("spell-rev-lightning-bg2");
     let buffbot = position("buffbot-bg2");
     assert_eq!(remote + 1, modpack);
-    assert_eq!(modpack + 1, spellbooks);
-    assert_eq!(spellbooks + 1, buffbot);
+    assert_eq!(modpack + 1, safana);
+    assert_eq!(safana + 1, late_companions);
+    assert_eq!(late_companions + 1, spellbooks);
+    assert_eq!(spellbooks + 1, lightning);
+    assert_eq!(lightning + 1, buffbot);
     assert_eq!(buffbot, runs.len() - 1);
 
     let run = &runs[modpack];
     assert_eq!(run.phase, Phase::PostEetEnd);
-    assert_eq!(run.components, MODPACK_COMPONENTS);
+    assert_eq!(run.components, POST_EET_END_COMPONENTS);
+
+    let pre_continuity = &runs[position("chriz-bg-modpack-pre-continuity-bg2")];
+    assert_eq!(pre_continuity.phase, Phase::Main);
+    assert_eq!(pre_continuity.components, PRE_CONTINUITY_COMPONENTS);
+    let continuity = &runs[position("chriz-bg-modpack-continuity-bg2")];
+    assert_eq!(continuity.phase, Phase::Main);
+    assert_eq!(continuity.components, CONTINUITY_COMPONENTS);
+    let late = &runs[late_companions];
+    assert_eq!(late.phase, Phase::PostEetEnd);
+    assert_eq!(late.components, [189, 620]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.5");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.7");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -103,6 +132,12 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
 fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_visible() {
     let manifest = recipe();
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    assert_eq!(
+        evaluation
+            .plan
+            .components_for("chriz-bg-modpack-pre-continuity-bg2"),
+        Some(RECOMMENDED_PRE_CONTINUITY_COMPONENTS)
+    );
     assert_eq!(
         evaluation.plan.components_for("chriz-bg-modpack-bg2"),
         Some(RECOMMENDED_COMPONENTS)
@@ -172,8 +207,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         ["feature:eeex:mandatory-components", "mod:eet-end"]
     );
 
-    // The base manifest includes the approved SoD skip (910) added after alpha.10.
-    // Its plan is distinct from the 434-component curated runtime recipe.
+    // The base manifest includes the approved SoD skip (910) added after alpha.10,
+    // Red Wizard 5102 (c907b38), the Acton Balthis 25 opt-out (9c66cee) and the
+    // September 16 intake (cb07eca). Its plan is distinct from the 448-component
+    // curated runtime recipe.
     assert_eq!(
         evaluation
             .plan
@@ -181,7 +218,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        345
+        357
     );
 }
 
@@ -242,8 +279,8 @@ fn hexxat_choices_are_mutually_exclusive_and_shadowdancer_is_the_default() {
     let evaluation = evaluate(&manifest, &fighter_thief).unwrap();
     let components = evaluation
         .plan
-        .components_for("chriz-bg-modpack-bg2")
-        .expect("modpack run");
+        .components_for("chriz-bg-modpack-pre-continuity-bg2")
+        .expect("modpack companion run");
     assert!(!components.contains(&221));
     assert!(components.contains(&222));
     assert!(!components.contains(&223));
@@ -263,8 +300,8 @@ fn hexxat_choices_are_mutually_exclusive_and_shadowdancer_is_the_default() {
     let shadowdancer_evaluation = evaluate(&manifest, &from_artisan).unwrap();
     assert!(shadowdancer_evaluation
         .plan
-        .components_for("chriz-bg-modpack-bg2")
-        .expect("modpack run")
+        .components_for("chriz-bg-modpack-pre-continuity-bg2")
+        .expect("modpack companion run")
         .contains(&221));
     assert!(!shadowdancer_evaluation
         .plan
@@ -277,7 +314,7 @@ fn hexxat_choices_are_mutually_exclusive_and_shadowdancer_is_the_default() {
     let no_artisan_evaluation = evaluate(&manifest, &no_artisan).unwrap();
     assert!(no_artisan_evaluation
         .plan
-        .components_for("chriz-bg-modpack-bg2")
+        .components_for("chriz-bg-modpack-pre-continuity-bg2")
         .expect("modpack run remains independent")
         .contains(&221));
 }

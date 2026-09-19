@@ -8,10 +8,16 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const SOD_REMIX_COMPONENTS: &[u32] = &[
-    100, 110, 120, 130, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215,
-    220, 225, 245, 230, 240, 250, 255, 260, 270, 280, 290, 900, 910,
+    100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187,
+    200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 260, 265, 266, 270, 280, 290, 900, 910,
+];
+const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
+    100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187,
+    200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910,
 ];
 const BG_REBALANCE_COMPONENTS: &[u32] = &[100, 101, 120, 121, 400, 401, 404, 405, 407, 408];
+const BG_REBALANCE_RUN_COMPONENTS: &[u32] =
+    &[100, 101, 110, 111, 120, 121, 400, 401, 404, 405, 407, 408];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
 fn recipe_root() -> PathBuf {
@@ -79,7 +85,7 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
     assert!(eet_end < sod && sod < buffbot);
     let run = &manifest.collection.runs[sod];
     assert_eq!(run.phase, Phase::PostEetEnd);
-    assert_eq!(run.components, SOD_REMIX_COMPONENTS);
+    assert_eq!(run.components, SOD_REMIX_RUN_COMPONENTS);
 
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     assert_eq!(
@@ -104,8 +110,18 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
             .filter(|feature| feature.id.starts_with("feature:chriz-sod-remix:"))
             .map(|feature| feature.id.as_str())
             .collect::<Vec<_>>(),
-        ["feature:chriz-sod-remix:mandatory-components"]
+        [
+            "feature:chriz-sod-remix:mandatory-components",
+            "feature:chriz-sod-remix:component-257"
+        ]
     );
+    let extra_challenge = evaluation
+        .view
+        .control("feature:chriz-sod-remix:component-257")
+        .expect("SoD Remix optional Extra Challenge");
+    assert_eq!(extra_challenge.decision, Decision::Optional);
+    assert_eq!(extra_challenge.readiness, Readiness::Ready);
+    assert!(!extra_challenge.selected);
 
     let bundle = manifest
         .collection
@@ -184,7 +200,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
     assert!(hgo < rebalance && rebalance < remote);
     let run = &manifest.collection.runs[rebalance];
     assert_eq!(run.phase, Phase::PostEetEnd);
-    assert_eq!(run.components, BG_REBALANCE_COMPONENTS);
+    assert_eq!(run.components, BG_REBALANCE_RUN_COMPONENTS);
 
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     assert_eq!(
@@ -236,6 +252,16 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 "feature:chriz-bg-rebalance:tempus-bundle",
                 Decision::Default,
                 6
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-110",
+                Decision::Optional,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-111",
+                Decision::Optional,
+                1
             ),
         ]
     );
