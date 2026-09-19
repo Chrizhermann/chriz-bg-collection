@@ -56,8 +56,15 @@ Authenticode publisher certificate.
   across other CDN caches.
 - The verified alpha.18 setup was copied to the user's Downloads folder. No
   older setup or game folder was deleted or overwritten.
-- The website owner task received the verified URLs, hashes and public inventory
-  with authorization to deploy; its final deployment result is recorded separately.
+- [The collection website](https://bg.chrizfader.org/collection) is deployed.
+  Website PR #17 merged as `8eb8cdd271081c252e98513a00871095813c01ae`
+  (content commit `ff085a963770610f31d2c5073ae7ba9106470e53`). The owner reports
+  all 86 tests/build and PR/push/master CI passed; desktop/mobile previews and
+  the final public page were checked. Public content matches the committed data.
+- The owner re-downloaded the live page's setup link after deployment: HTTP 200,
+  5,577,328 bytes and the exact setup SHA-256 above. The site shows app alpha.18 /
+  recipe alpha.16, preserves alpha/save/unsigned-publisher limitations, and adds
+  upstream Safana/Klatu credits while retaining existing creator credits.
 
 Versioned assets must remain immutable. Native updater apply/restart remains a
 user acceptance check, not something proven by the download/signature tests.
