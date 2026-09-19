@@ -1,6 +1,6 @@
-# Chriz Easy BG 0.1.0-alpha.18 — draft
+# Chriz Easy BG 0.1.0-alpha.18
 
-Not published. Collection **0.1.0-alpha.16**; recommended selection remains
+Collection **0.1.0-alpha.16**; recommended selection remains
 **448 components / 50 mod-install runs**.
 
 ## Installer improvements
@@ -45,5 +45,6 @@ Review and installer tests are complete for the new Modpack release; its native
 gameplay remains untested. This is still an alpha, not a guarantee that every
 optional combination has been playtested.
 
-Packaging and public publication are pending. See the
-[candidate record](alpha18-candidate-2026-09-20.md) for exact evidence and boundaries.
+The Windows package's updater signature and download are verified separately
+from gameplay. This is not an Authenticode-signed Windows application, so Windows
+may still show its unknown-publisher warning.

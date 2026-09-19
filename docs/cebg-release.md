@@ -2,7 +2,8 @@
 
 The public distribution repository is `Chrizhermann/chriz-easy-bg`. It is
 for the installer, release notes, signatures and update metadata. It should not
-contain the private collection source or third-party mod archives. CEBG downloads
+contain third-party mod archives. The public source lives separately in
+`Chrizhermann/chriz-bg-collection`. CEBG downloads
 mod sources from their own publishers; a packaged recipe is not a mod bundle.
 Repository creation and publication are separate release actions.
 
