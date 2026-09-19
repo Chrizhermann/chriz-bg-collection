@@ -2,6 +2,23 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## Existing-install patch pilot — 2026-09-20
+
+Christopher approved the pragmatic three-category design, full-backup recommendation
+and no automatic save editing. The requested Opus 5 xhigh design review completed.
+The [first pilot](hotpatch-pilot-acceptance-2026-09-20.md) applied the owner-maintained
+Artisan description-link adapter to the named old RC, verified six intended table
+cell changes/no TLK change, detected repeat application without invoking WeiDU, and
+rolled back to the original log/resource hashes. Full game and separate profile
+backups remain under the user's Games/CEBG-Backups directory. Twenty focused tests
+pass. The RC is now **rolled back**, not upgraded, and the stream game was untouched.
+
+Next: isolated native display verification, then production Updates integration
+against a separate signed patch catalog. The supervised pilot is not a public
+Apply/Undo feature, and no public version/feed was changed. No game was launched
+and no save was edited. See the [accepted plan](plans/2026-09-20-existing-install-patch-pilot.md)
+for exact scope and guardrails; do not restart a full installation for this work.
+
 ## Alpha.18 published with reviewed Modpack fixes — 2026-09-20
 
 Christopher approved the completed compatibility release. The
