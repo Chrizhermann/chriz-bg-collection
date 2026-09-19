@@ -112,9 +112,7 @@ fn dependency_and_opt_out_behaviour_is_bounded() {
     let base = selected(&recommended(&manifest));
 
     let no_sr = selected(&with(&manifest, &[("mod:spell-rev", false)]));
-    assert!(no_sr
-        .iter()
-        .all(|(run, _)| run != SRCB && run != LIGHTNING));
+    assert!(no_sr.iter().all(|(run, _)| run != SRCB && run != LIGHTNING));
 
     for (first, second, expected) in [
         (true, true, true),
@@ -153,7 +151,9 @@ fn dependency_and_opt_out_behaviour_is_bounded() {
 
     let no_safana = selected(&with(&manifest, &[("mod:safana", false)]));
     assert_eq!(
-        base.difference(&no_safana).cloned().collect::<BTreeSet<_>>(),
+        base.difference(&no_safana)
+            .cloned()
+            .collect::<BTreeSet<_>>(),
         BTreeSet::from([(SAFANA.to_owned(), 0), (LATE.to_owned(), 189)])
     );
 
