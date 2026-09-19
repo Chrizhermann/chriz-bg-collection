@@ -328,7 +328,7 @@ fn restore_footprint(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), 
             }
         }
     } else {
-        check_undeclared(ctx, &p)?;
+        check_undeclared(ctx, p)?;
     }
     Ok(())
 }

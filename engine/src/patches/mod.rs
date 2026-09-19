@@ -88,7 +88,7 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
     let completed = crate::recovery_receipt::read_completed_state(root)?;
     if completed.bg2_engine_name != ctx.record.engine_name
         || completed.managed_save_root != ctx.record.managed_save_root
-        || crate::stage::read_engine_name(&ctx.game()).map_err(err)? != ctx.record.engine_name
+        || crate::stage::read_engine_name(ctx.game()).map_err(err)? != ctx.record.engine_name
     {
         return Err("Installation profile no longer matches its completed record.".into());
     }
@@ -116,11 +116,10 @@ fn tables(game: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
 fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
     validate_context(ctx)?;
     let game = ctx.game();
-    if String::from_utf8(files::read(&game.join("weidu.conf"), 65536)?)
+    if !String::from_utf8(files::read(&game.join("weidu.conf"), 65536)?)
         .map_err(err)?
         .trim()
-        .to_ascii_lowercase()
-        != "lang_dir = en_us"
+        .eq_ignore_ascii_case("lang_dir = en_us")
     {
         return Err("This first patch supports English installations only.".into());
     }
