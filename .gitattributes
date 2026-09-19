@@ -3,3 +3,6 @@ engine/tests/fixtures/games/content/** binary
 
 # Supplemental license SHA-256 values identify the original upstream bytes.
 LICENSES/supplemental/** -text
+
+# Detached catalog signature authenticates exact bytes, independent of checkout EOLs.
+patches/** -text

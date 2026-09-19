@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -26,6 +26,16 @@ const STEP_EVIDENCE_FILES: [&str; 11] = [
     "pre-spawn-failure.json",
     "eet-compatibility.json",
 ];
+const PATCH_RECORD_FILES: [&str; 6] = [
+    "prepared.json",
+    "applied.json",
+    "restoring.json",
+    "restored.json",
+    "failure.json",
+    "invocation.json",
+];
+const PATCH_LOG_FILES: [&str; 2] = ["attempt.debug", "output.log"];
+const MAX_PATCH_EVIDENCE_BYTES: u64 = 64 * 1024 * 1024;
 static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Inputs for one create-once sanitized diagnostics export.
@@ -232,8 +242,72 @@ fn select_entries(
         validate_direct_directory(&steps_root)?;
         add_step_evidence(&mut selected, &steps_root)?;
     }
+    add_patch_evidence(&mut selected, state_root)?;
 
     Ok(selected.into_values().collect())
+}
+
+fn add_patch_evidence(
+    entries: &mut BTreeMap<String, SelectedEntry>,
+    state_root: &Path,
+) -> Result<(), DiagnosticsError> {
+    let patches = state_root.join("patches");
+    let transactions = patches.join("cebg-v1");
+    // Validate each parent explicitly; never discover other patch formats or backups.
+    for directory in [&patches, &transactions] {
+        match fs::symlink_metadata(directory) {
+            Ok(_) => validate_direct_directory(directory)?,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(source) => {
+                return Err(DiagnosticsError::Io {
+                    path: directory.clone(),
+                    source,
+                })
+            }
+        }
+    }
+    for transaction in read_directory(&transactions)? {
+        let id = transaction.file_name();
+        let Some(id) = id.to_str() else {
+            continue;
+        };
+        if id.is_empty() || id.len() > 39 || !id.bytes().all(|byte| byte.is_ascii_digit()) {
+            continue;
+        }
+        let directory = transaction.path();
+        validate_direct_directory(&directory)?;
+        let names = PATCH_RECORD_FILES
+            .iter()
+            .flat_map(|name| [(*name).to_owned(), name.replace(".json", ".pending")])
+            .chain(PATCH_LOG_FILES.iter().map(|name| (*name).to_owned()));
+        for name in names {
+            let source = directory.join(&name);
+            match fs::symlink_metadata(&source) {
+                Ok(metadata) => {
+                    if metadata.len() > MAX_PATCH_EVIDENCE_BYTES {
+                        return Err(unsafe_path(
+                            &source,
+                            "patch evidence exceeds its size limit",
+                        ));
+                    }
+                    add_required(
+                        entries,
+                        source,
+                        &format!("patches/cebg-v1/{id}/{name}"),
+                        false,
+                    )?;
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(source_error) => {
+                    return Err(DiagnosticsError::Io {
+                        path: source,
+                        source: source_error,
+                    })
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn receipt_evidence_attempt_id(
@@ -460,10 +534,7 @@ fn write_bundle(
                 path: temporary.to_path_buf(),
                 message: source.to_string(),
             })?;
-        let bytes = fs::read(&entry.source).map_err(|source| DiagnosticsError::Io {
-            path: entry.source.clone(),
-            source,
-        })?;
+        let bytes = read_selected_entry(entry)?;
         if entry.binary {
             writer
                 .write_all(&bytes)
@@ -489,6 +560,35 @@ fn write_bundle(
         path: temporary.to_path_buf(),
         source,
     })
+}
+
+fn read_selected_entry(entry: &SelectedEntry) -> Result<Vec<u8>, DiagnosticsError> {
+    // Recheck the selected file before opening; bound new patch evidence even if it grew
+    // after selection. Existing receipt/recipe/log behavior remains unchanged.
+    validate_direct_file(&entry.source)?;
+    if !entry.archive_name.starts_with("patches/cebg-v1/") {
+        return fs::read(&entry.source).map_err(|source| DiagnosticsError::Io {
+            path: entry.source.clone(),
+            source,
+        });
+    }
+    let mut bytes = Vec::new();
+    fs::File::open(&entry.source)
+        .and_then(|file| {
+            file.take(MAX_PATCH_EVIDENCE_BYTES + 1)
+                .read_to_end(&mut bytes)
+        })
+        .map_err(|source| DiagnosticsError::Io {
+            path: entry.source.clone(),
+            source,
+        })?;
+    if bytes.len() as u64 > MAX_PATCH_EVIDENCE_BYTES {
+        return Err(unsafe_path(
+            &entry.source,
+            "patch evidence exceeds its size limit",
+        ));
+    }
+    Ok(bytes)
 }
 
 fn receipt_summary(receipt: &serde_json::Value) -> String {
@@ -562,12 +662,15 @@ A zero exit code or copied mod folder alone does not prove installation or in-ga
 receipt/attempt-receipt.json contains the full outcome, versions, selected options, plan, downloads/cache identities and per-run records.\n\
 ledger/ retains durable step transitions. logs/steps/ contains invocation.json, process-result.json, captured output and before/after WeiDU logs where available. Missing files may identify the point where evidence stopped; they do not establish the operating-system cause.\n\
 receipt/install-receipt.json is included when present. An older failure receipt may coexist with a later successful installation; inspect the attempt IDs and timestamps.\n\
+patches/cebg-v1/ contains optional existing-install patch records and captured logs. The base receipt is unchanged by a patch; check these records separately. Backup contents, mod payloads, executables and saves are not included.\n\
 Diagnostics remain local until you share them. Personal paths and common secrets are redacted, but review the ZIP before sharing.\n");
     summary
 }
 
 fn sanitize_evidence(archive_name: &str, bytes: &[u8], redactions: &[String]) -> Vec<u8> {
-    if archive_name.ends_with(".json") {
+    if archive_name.ends_with(".json")
+        || (archive_name.starts_with("patches/cebg-v1/") && archive_name.ends_with(".pending"))
+    {
         if let Ok(mut value) = serde_json::from_slice::<serde_json::Value>(bytes) {
             redact_json_value(&mut value, redactions);
             let mut sanitized = serde_json::to_vec_pretty(&value)

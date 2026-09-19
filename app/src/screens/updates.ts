@@ -1,7 +1,8 @@
 import type { UpdateSummary } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
+import { installPatchesSection, type InstallPatchActions } from "../components/install-patches";
 
-export interface UpdateActions {
+export interface UpdateActions extends InstallPatchActions {
   readonly checkAgain: () => void | Promise<void>;
   readonly installApplication: (version: string) => void | Promise<void>;
   readonly buildUpdatedCopy: (version: string) => void | Promise<void>;
@@ -50,10 +51,11 @@ function versionRow(
 }
 
 export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, checking = false, installing = false): HTMLElement {
+  const operationBusy = installing || actions.patchBusy === true;
   const page = element("div", "screen-stack updates-screen");
   const heading = element("div", "updates-heading");
   const check = actionButton(checking ? "Checking…" : "Check for updates", actions.checkAgain, "quiet");
-  check.disabled = checking || installing;
+  check.disabled = checking || operationBusy;
   heading.append(screenIntro("", "Updates", ""), check);
   page.append(heading);
 
@@ -104,10 +106,13 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
       notes.append(element("p", "update-note", `Installs into ${actions.installationName}.`));
     }
   }
-  if (installing) {
+  if (operationBusy) {
     versions.querySelectorAll<HTMLButtonElement>("button").forEach((button) => { button.disabled = true; });
   }
   page.append(versions);
+  if (actions.onCheckPatches !== undefined) {
+    page.append(installPatchesSection(updates.managedCopies, actions, installing));
+  }
   if (updates.recipe.state === "available" && updates.recipe.disposition !== "deferred-for-next-playthrough") {
     page.append(element("p", "update-note", "Collection updates create a new installation. Open the changelog for save compatibility."));
   }

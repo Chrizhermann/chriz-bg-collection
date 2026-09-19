@@ -1,13 +1,24 @@
 # Existing-install patch pilot
 
-Status: supervised apply/no-op/rollback pilot completed, September 20; native
-verification and public integration remain pending. Christopher selected
-`C:\BG-EET-RC-20260903\game` as the old-RC test target and requested an eventual
-Opus 5 xhigh review. No automatic public patch delivery exists yet. This does not
-authorize writes to other installations, shared saves or `C:\Games`.
+Status: supervised apply/no-op/rollback pilot completed, then reapplied in a second
+transaction and **user live accepted**, September 20. Christopher confirmed the
+descriptions worked and a loaded existing save behaved normally. The public
+Updates/Rust/Tauri flow is now **implemented in source**, not packaged or released.
+The requested Opus 5 xhigh design review completed; it was not an implementation
+review. No automatic public patch delivery exists yet. This does not authorize
+writes to other installations, shared saves or `C:\Games`.
 
 See the [pilot acceptance record](../hotpatch-pilot-acceptance-2026-09-20.md).
-The old RC is restored to its pre-patch state; the full game/profile backup remains.
+The first RC cycle was restored; the second, accepted test cycle remains applied
+with its separate test-profile harness. Full game/profile backups remain. Do not
+mistake the first cycle's rollback record for the current RC state.
+
+The [production-flow acceptance record](../existing-install-patches-acceptance-2026-09-20.md)
+records 25 engine patch tests, 15 native-app tests, 176 frontend tests and passing
+frontend typecheck/build. Its real public-download/WeiDU apply-repeat-undo test
+used a synthetic game and preserved receipt/save bytes; it did not modify the RC
+or stream install. Public packaging and native packaged-UI interaction remain
+separate acceptance work. Alpha.18 app/recipe versions and feeds are unchanged.
 
 ## Accepted refinements and design review
 
@@ -66,7 +77,8 @@ The following resolutions apply to the implementation:
 - A later text adapter must preserve existing TLK entries. Automatic rollback
   cannot truncate appended strings that post-patch saves might reference.
 
-The pilot implementation is supervised tooling, not yet a public Updates action.
+The pilot remains supervised tooling. The separate production Updates integration
+now exists in source; it is not yet a shipped public action.
 
 ## Small scope
 
@@ -162,7 +174,11 @@ simple local-text patch is available, prefer delivering both together. The first
 pilot should avoid TLK writes; a later dedicated text adapter can demonstrate this
 path without widening every patch's permissions.
 
-## Pilot sequence and minimum evidence
+## Original pilot sequence and minimum evidence
+
+Historical checklist: apply/repeat/rollback evidence and the subsequent user live
+acceptance are recorded separately above. Christopher did not explicitly report
+the suggested new-slot save/reload sequence; do not promote it into a passed test.
 
 1. Read-only inventory of the named RC, process paths and profile linkage.
 2. Use the owner-maintained Artisan kit-description table repair (reuses existing
@@ -180,14 +196,14 @@ path without widening every patch's permissions.
    that specific tested patch. Broader NPC/save migrations and quest updates remain
    separate work, not prerequisites for useful first fixes.
 
-## Read-only intake result
+## Historical read-only intake result
 
-The named RC is a plain directory with BG2EE 2.7.3.0. No process was observed
-running from it at intake. It has a dedicated engine/profile identity, but that
-profile lives under redirected Documents and still needs explicit test-profile
-isolation before native acceptance. The legacy replay receipt records 386 rows;
-the current WeiDU.log has 394. Treat this as post-receipt changes, not corruption
-and not a reason to reject every local resource patch.
+At intake, the named RC was a plain directory with BG2EE 2.7.3.0. No process was
+observed running from it. Its dedicated profile lived under redirected Documents
+and required explicit test-profile isolation; that separate harness was completed
+before the subsequent accepted test. The legacy replay receipt recorded 386 rows
+and the observed pre-patch WeiDU.log had 394. Those were post-receipt changes, not
+corruption or a reason to reject every local resource patch.
 
 The first concrete candidate is the owning Artisan repo's committed
 `live-patch/AKCB_KIT_DESCRIPTIONS` component 0, version 1.0 (release-source commit
@@ -195,7 +211,8 @@ The first concrete candidate is the owning Artisan repo's committed
 and edits only campaign description-table links, not kit abilities or saves.
 Read-only inspection found relevant stale BG1/SoD table links for the RC's installed
 Assassin, Archer and Beast Master components; BG2's corresponding links already
-match. These findings establish relevance, not successful patching or live acceptance.
+matched. Those intake findings established relevance only; later application and
+live acceptance are evidenced in the linked records, not inferred from inspection.
 
 Before execution, verify all selected HELP references are valid against the actual
 TLK and that the resource tables have the expected fields; the adapter itself only

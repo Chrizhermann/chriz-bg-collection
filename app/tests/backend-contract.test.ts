@@ -9,6 +9,19 @@ import {
 } from "../src/backend";
 import type { RunEventEnvelope } from "../src/contracts";
 
+describe("managed patch recovery projection", () => {
+  it("maps recovery independently from the folder being available", async () => {
+    const backend = new NativeBackend(async () => [{
+      id: "recover", name: "My game", path: "D:\\CEBG", status: "Patch recovery needed",
+      receipt_path: null, launch_path: "D:\\CEBG\\game\\InfinityLoader.exe", completed_at_millis: 1,
+      available: true, resumable: false, patch_recovery_needed: true,
+    }]);
+    const [installation] = await backend.listManagedInstallations();
+    expect(installation).toMatchObject({ available: true, resumable: false, patchRecoveryNeeded: true });
+    expect(installation).not.toHaveProperty("patch_recovery_needed");
+  });
+});
+
 describe("explicit installation removal", () => {
   it("uses only the registry id and confirmed token on the native command boundary", async () => {
     const preview = { installId: "managed-one", displayName: "Test", managedRoot: "D:\\Test", action: "delete", preservedSavePath: null, confirmationToken: "bound-token" };

@@ -1,7 +1,7 @@
 import { BackendCommandError, type Backend } from "./backend";
 import { createAppShell } from "./components/app-shell";
 import type { TechnicalLogState } from "./components/technical-log";
-import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, InstallationRemovalPreview, ManagedInstallation, ManualDownloadRequirement, Route, RunEventEnvelope, UpdateSummary } from "./contracts";
+import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, InstallationRemovalPreview, ManagedInstallation, ManualDownloadRequirement, Route, RunEventEnvelope, UpdateSummary, PatchPreview } from "./contracts";
 import { buildScreen } from "./screens/build";
 import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
@@ -12,6 +12,7 @@ import { loadingScreen, startupFailureScreen } from "./screens/loading";
 import { setupScreen, type SetupViewState } from "./screens/setup";
 import { updatesScreen } from "./screens/updates";
 import { updateUpdatesControl } from "./components/update-notification";
+import { appendPatchAvailability } from "./components/install-patches";
 import {
   automaticInstallationPath,
   initialState,
@@ -121,6 +122,12 @@ class AppController implements AppHandle {
   #removalBusy = false;
   #removalError: string | null = null;
   #removalNotice: string | null = null;
+  #patchPreview: PatchPreview | null = null;
+  #patchInstallId = "";
+  #patchBusy = false;
+  #patchError: string | undefined;
+  // Session-only results of explicit checks, never a reason to scan games at startup.
+  readonly #checkedPatches = new Map<string, PatchPreview>();
 
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
@@ -348,9 +355,38 @@ class AppController implements AppHandle {
     }
   }
 
+  async #patchOperation(kind: "check" | "apply" | "undo" | "restore", installId = this.#patchInstallId, fullBackup = true, saveBackup = false): Promise<void> {
+    if (this.#patchBusy || this.#installingUpdate) return;
+    this.#patchInstallId = installId;
+    this.#patchBusy = true;
+    this.#patchError = undefined;
+    this.#render();
+    try {
+      if (kind === "check") this.#patchPreview = await this.backend.inspectInstallPatches!(installId);
+      else if (kind === "apply" && this.#patchPreview?.installId === installId && this.#patchPreview.reviewToken) {
+        this.#patchPreview = await this.backend.applyInstallPatch!(installId, this.#patchPreview.reviewToken, fullBackup, saveBackup);
+      } else if (kind === "undo") this.#patchPreview = await this.backend.undoInstallPatch!(installId);
+      else if (kind === "restore") this.#patchPreview = await this.backend.restoreInstallPatch!(installId);
+      this.#installations = await this.backend.listManagedInstallations();
+    } catch (error) {
+      this.#patchError = error instanceof BackendCommandError ? `${error.message} ${error.technicalDetail}` : String(error);
+      // A failed apply may have entered durable recovery. Never leave its old Apply button active.
+      this.#patchPreview = null;
+      try { this.#patchPreview = await this.backend.inspectInstallPatches!(installId); } catch { /* Keep the diagnostic and explicit Check action. */ }
+    } finally {
+      this.#patchBusy = false;
+      if (this.#patchPreview?.installId === installId) this.#checkedPatches.set(installId, this.#patchPreview);
+      else this.#checkedPatches.delete(installId);
+      this.#render();
+    }
+  }
+
   #updateBadge(): void {
     const button = this.root.querySelector<HTMLButtonElement>('[data-action="updates"]');
-    if (button) updateUpdatesControl(button, this.#updates);
+    if (button) {
+      updateUpdatesControl(button, this.#updates);
+      appendPatchAvailability(button, [...this.#checkedPatches.values()]);
+    }
   }
 
   async #backToSetup(): Promise<void> {
@@ -1096,6 +1132,8 @@ class AppController implements AppHandle {
     this.#removalPreview = null;
     this.#removalBusy = false;
     this.#removalNotice = preview.action === "forget" ? "Installation entry removed. No files were deleted." : "Installation deleted. Saved games outside its folder were kept.";
+    this.#checkedPatches.delete(preview.installId);
+    if (this.#patchPreview?.installId === preview.installId) this.#patchPreview = null;
     this.#commandError = null;
     this.#installations = this.#installations.filter((item) => item.id !== preview.installId);
     this.#updates = { ...this.#updates, managedCopies: this.#updates.managedCopies.filter((item) => item.installId !== preview.installId) };
@@ -1157,6 +1195,14 @@ class AppController implements AppHandle {
         break;
       case "updates":
         content = updatesScreen(this.#updates, {
+          patches: this.#patchPreview,
+          patchInstallId: this.#patchInstallId || undefined,
+          patchBusy: this.#patchBusy,
+          patchError: this.#patchError,
+          onCheckPatches: this.backend.inspectInstallPatches ? (id) => this.#patchOperation("check", id) : undefined,
+          onApplyPatch: this.backend.applyInstallPatch ? (full, saves) => this.#patchOperation("apply", this.#patchInstallId, full, saves) : undefined,
+          onUndoPatch: this.backend.undoInstallPatch ? () => this.#patchOperation("undo") : undefined,
+          onRestorePatch: this.backend.restoreInstallPatch ? () => this.#patchOperation("restore") : undefined,
           checkAgain: () => safely(() => this.#checkUpdates()),
           installApplication: (version) => safely(() => this.#installAppUpdate(version)),
           buildUpdatedCopy: (version) => safely(() => this.#buildUpdatedCopy(version)),

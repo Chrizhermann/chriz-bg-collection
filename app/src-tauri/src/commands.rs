@@ -29,6 +29,12 @@ pub struct BridgeState {
 }
 
 impl BridgeState {
+    pub(crate) fn file_update_active(&self) -> bool {
+        self.bridge
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .file_update_active()
+    }
     /// Creates state for one immutable bridge configuration.
     pub fn new(bridge: NativeBridge) -> Self {
         Self {
@@ -69,6 +75,61 @@ where
     tauri::async_runtime::spawn_blocking(operation)
         .await
         .map_err(CommandError::background_task)?
+}
+
+#[tauri::command]
+pub async fn inspect_install_patches(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.inspect_install_patches(&install_id)).await
+}
+#[tauri::command]
+pub async fn apply_install_patch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    review_token: String,
+    full_backup: bool,
+    save_backup: bool,
+) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.apply_install_patch(&install_id, &review_token, full_backup, save_backup)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn undo_install_patch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.restore_install_patch(&install_id, true)).await
+}
+#[tauri::command]
+pub async fn restore_install_patch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.restore_install_patch(&install_id, false)).await
 }
 
 fn local_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {

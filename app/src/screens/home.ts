@@ -146,7 +146,10 @@ export function homeScreen(
     return page;
   }
 
-  if (selected.available) {
+  const patchRecoveryNeeded = selected.patchRecoveryNeeded === true;
+  if (patchRecoveryNeeded) {
+    page.append(screenIntro("", "Installation needs recovery", "Open Updates to check this installation and restore its backup before playing."));
+  } else if (selected.available) {
     page.append(screenIntro("", "Ready to play", "Continue your adventure."));
   } else if (selected.resumable) {
     page.append(screenIntro("", "Continue your installation", "Your previous progress is saved and ready to resume."));
@@ -156,7 +159,7 @@ export function homeScreen(
 
   const card = element("section", "card launcher-card");
   card.append(
-    element("p", `badge ${selected.available ? "ok" : selected.resumable ? "warning" : "danger"}`, selected.status),
+    element("p", `badge ${patchRecoveryNeeded ? "danger" : selected.available ? "ok" : selected.resumable ? "warning" : "danger"}`, patchRecoveryNeeded ? "Patch recovery required" : selected.status),
     element("h2", undefined, selected.name),
   );
   const metadata = element("div", "installation-metadata");
@@ -176,8 +179,10 @@ export function homeScreen(
   let feedback: HTMLElement | null = null;
   if (selected.available) {
     const currentFeedback = shortcutFeedback?.installId === selected.id ? shortcutFeedback : null;
+    const play = actionButton("Play Chriz Easy BG", () => !patchRecoveryNeeded ? actions.launch(selected.id) : undefined);
+    play.disabled = patchRecoveryNeeded;
     controls.append(
-      actionButton("Play Chriz Easy BG", () => actions.launch(selected.id)),
+      play,
       actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"),
       actionButton(
         currentFeedback?.state === "created"
@@ -196,11 +201,13 @@ export function homeScreen(
       feedback.append(element("strong", undefined, currentFeedback.state === "created" ? "Shortcut created on your desktop." : "The desktop shortcut wasn't created."));
       if (currentFeedback.path !== undefined) feedback.append(element("p", "path", currentFeedback.path));
       if (currentFeedback.state === "failed") {
-        feedback.append(element("p", undefined, "Your game is ready to play. Only the optional desktop shortcut failed."));
+        feedback.append(element("p", undefined, patchRecoveryNeeded
+          ? "The optional shortcut can be retried after patch recovery."
+          : "Your game is ready to play. Only the optional desktop shortcut failed."));
         if (currentFeedback.technicalDetail) feedback.append(errorDetails(currentFeedback.technicalDetail));
       }
     }
-  } else if (selected.resumable) {
+  } else if (selected.resumable && !patchRecoveryNeeded) {
     controls.append(
       actionButton("Continue installation", () => actions.resume(selected.id)),
       actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
@@ -217,9 +224,11 @@ export function homeScreen(
   }
   card.append(element("p", "muted", "Diagnostics stay local; review the ZIP before sharing."));
   if (addonFeedback?.installId === selected.id) {
-    const note = element("p", "addon-feedback", addonFeedback.state === "installing"
-      ? "Adding BG Radar Overlay… Your game is ready to play."
-      : "BG Radar Overlay couldn't be added. Your game is ready; retry the overlay from Updates.");
+    const note = element("p", "addon-feedback", patchRecoveryNeeded
+      ? "Finish patch recovery in Updates before using the game or overlay."
+      : addonFeedback.state === "installing"
+        ? "Adding BG Radar Overlay… Your game is ready to play."
+        : "BG Radar Overlay couldn't be added. Your game is ready; retry the overlay from Updates.");
     note.setAttribute("role", "status");
     card.append(note);
   }
@@ -227,7 +236,7 @@ export function homeScreen(
   card.append(installationDetails(selected));
   const mods = installedMods(selected);
   if (mods !== null) card.append(mods);
-  if (selected.available) card.append(firstPlayGuide(selected));
+  if (selected.available && !patchRecoveryNeeded) card.append(firstPlayGuide(selected));
   page.append(card);
   page.append(screenActions(null, actionButton("New installation", actions.begin, "quiet")));
   return page;

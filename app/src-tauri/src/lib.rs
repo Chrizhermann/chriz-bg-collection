@@ -54,6 +54,10 @@ pub fn run() -> tauri::Result<()> {
             commands::open_install_folder,
             commands::create_desktop_shortcut,
             commands::check_updates,
+            commands::inspect_install_patches,
+            commands::apply_install_patch,
+            commands::undo_install_patch,
+            commands::restore_install_patch,
             commands::install_app_update,
             commands::activate_recipe_update,
         ])
@@ -67,6 +71,11 @@ pub fn run() -> tauri::Result<()> {
             return;
         };
         let state = app.state::<BridgeState>();
+        if state.file_update_active() {
+            api.prevent_close();
+            app.dialog().message("A file update or backup is still running. Keep CEBG open until it finishes.").title("Update in progress").show(|_| {});
+            return;
+        }
         let Some(run_id) = state.active_run_id() else {
             return;
         };

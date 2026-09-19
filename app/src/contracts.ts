@@ -250,6 +250,7 @@ export interface ManagedInstallation {
   readonly completedAtMillis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
+  readonly patchRecoveryNeeded?: boolean;
   readonly recipeVersion?: string | null;
   readonly radarVersion?: string | null;
   readonly consistency?: {
@@ -315,6 +316,25 @@ export interface ManagedCopyUpdate {
   readonly installedRecipeVersion: string | null;
   readonly state: ManagedCopyUpdateState;
   readonly detail: string;
+}
+
+/** One independently verified fix, not a whole-mod or collection upgrade. */
+export interface PatchPreview {
+  readonly installId: string;
+  readonly patchId: string;
+  readonly title: string;
+  readonly state: "available" | "already-fixed" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
+  readonly detail: string;
+  readonly baseRecipeVersion: string;
+  readonly appliedPatchIds: readonly string[];
+  readonly reviewToken: string | null;
+  readonly canUndo: boolean;
+  readonly canRestore: boolean;
+  /** Decimal byte counts remain strings across the native boundary. */
+  readonly fullBackupBytes: string;
+  readonly saveBackupBytes: string;
+  readonly availableBytes: string;
+  readonly backupPath: string;
 }
 
 export interface UpdateSummary {

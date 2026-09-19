@@ -2,14 +2,18 @@
 
 Result: the supervised Artisan description-link patch **applied, detected an
 already-fixed repeat without launching WeiDU, and rolled back successfully** on
-the explicitly selected old RC. This is installer/resource evidence, not native
-gameplay acceptance or a public hotpatch release.
+the explicitly selected old RC. It was then reapplied in a separate transaction,
+and **Christopher accepted the native test**: descriptions worked and a loaded
+existing save behaved as expected. This is acceptance of the six-link repair,
+not newer Assassin mechanics, every mod, or a public hotpatch release.
 
 ## Scope and backup
 
 - Target: `C:\BG-EET-RC-20260903\game`, BG2EE 2.7.3.0, English.
 - Current stream installation and `C:\Games` were not touched.
-- No game launch, profile selection change or save editing was performed.
+- The first apply/rollback cycle made no game launch, profile selection change
+  or save edit. The second cycle's separate isolated-profile harness and subsequent
+  user-run native acceptance are recorded below; original saves were not edited.
 - Full independent backup:
   `C:\Users\chris\Games\CEBG-Backups\RC-20260903-before-kit-links-20260920`.
   Its `game` child contains 166,410 files / 12,099,587,163 bytes (~11.27 GiB).
@@ -84,18 +88,85 @@ rechecked all recorded protected-file hashes. Original WeiDU.log SHA256 restored
 `37a828a8a628abe9acbc26cd6062f005e1d7317e772373e895179665067435d4`.
 No new installation, download of the mod stack or cascade reinstall was performed.
 
-## Still pending — do not advertise these as implemented
+## Subsequent production source integration — September 20
 
-1. Isolated native verification of the displayed kit descriptions. No game was
-   launched in this pilot. The original RC is currently rolled back, not left patched.
-2. Production Rust integration using the existing invocation infrastructure, signed
-   patch catalog, per-install eligibility, backup choice/space reporting, progress,
-   failure recovery and Apply/Undo actions in Updates.
-3. Public packaging/release of a supported patch. Alpha.18 app/recipe channels are
+The separate Rust/Tauri/Updates flow is now **implemented in source**, including
+the signed patch catalog, per-install eligibility, backup choices/space reporting,
+progress, recovery and Apply/Undo. See the
+[production-flow acceptance record](existing-install-patches-acceptance-2026-09-20.md)
+for its exact supported scope and remaining delivery checks. The pilot tooling
+and its historical transactions remain separate evidence.
+
+Verification: 25 engine patch tests (24 ordinary plus one public-download/native
+WeiDU flow), 15 native-app tests, and 176 frontend tests passed; frontend typecheck
+and build also passed. The public-flow test downloaded the pinned LF adapter and
+official WeiDU, created independent game/profile backups, applied using the hidden
+production runner to a **synthetic game**, checked semantic/protected hashes,
+recognized a repeat without another transaction, and undid back to originals.
+The base receipt and save were unchanged. This is not a new real-game UI playtest:
+the RC, stream installation and original saves were not written in this source
+integration turn.
+
+## Still pending — do not advertise these as delivered
+
+1. Public packaging/release of a supported patch. Alpha.18 app/recipe channels are
    unchanged by this work. No public hotpatch button exists yet.
-4. Broader component coverage and a separately audited local-text adapter. No TLK
+2. Native end-user interaction with the packaged Updates flow is not established
+   by the synthetic game and frontend/native-app tests above.
+3. Broader component coverage and a separately audited local-text adapter. No TLK
    writes, saved-actor migrations or automatic save editing belong to this pilot.
 
 The [accepted design](plans/2026-09-20-existing-install-patch-pilot.md) records the
 three user-facing categories, backup requirements and the completed Opus 5 xhigh
 design review. That review was not a review of the subsequent implementation.
+
+## Reapplied for Christopher's native test — September 20
+
+At Christopher's request, a separate transaction at
+`C:\BG-EET-RC-20260903\.chriz\patches\kit-links-native-test-20260920`
+reapplied the same six cells successfully. The previous cycle's immutable rollback
+record remains intact and is linked by hash. Existing guards rechecked the full
+backup against the restored game, source/tool identities, closed-game condition,
+exact table changes, component suffix and protected hashes including all 20 TLKs.
+No full reinstall or new game backup was necessary.
+
+After successful patch verification, a separate test-harness step changed only
+the RC's `engine_name` to
+`Baldur's Gate - Enhanced Edition Trilogy - CEBG Patch Test 20260920`.
+The matching profile under the user's actual Windows Documents folder contains
+786 files copied from the independent profile backup, all hash-verified. Original
+profile/save files were not edited. The original engine file and before/after
+hashes are retained in the transaction's `harness` directory.
+
+Launch `C:\BG-EET-RC-20260903\game\InfinityLoader.exe` for this test. In BG1
+character creation, inspect Archer (Rapid Shot), Beast Master (Beast Friend), and
+Assassin (Cloak of Shadows) descriptions; compare BG2 if desired. Load a copied
+save, inspect party/record screens, save to a new slot and reload. This tests
+description routing and basic existing-save loading, not kit ability behavior or
+every mod. This was the requested checklist, not evidence that every individual
+step was performed; Christopher's actual report is recorded below.
+
+The engine/profile switch is **not part of the patch itself**. Restore the backed-up
+engine identity with the game closed before transaction audit/undo. Gameplay may
+produce additional runtime files; assess those rather than bypassing rollback's
+drift protection. Keep both the full backup and test saves pending cleanup approval.
+
+## User live acceptance — September 20
+
+Christopher reported testing intensely and confirmed that the applied repair
+worked. After clarification that the older passive Cloak of Shadows text was
+expected for the RC's installed kit version, he confirmed: “everything seems to
+be working. Even the loaded save worked as expected.”
+
+Record the description-link repair and existing-save loading/observed behavior
+as **user accepted**. A separate new-slot save/reload was suggested but was not
+explicitly reported; do not claim that specific sequence, exhaustive campaign
+coverage, or the newer activated Assassin rework was tested by this pilot.
+The patch reused existing installation-local description references; all 20 TLKs
+were byte-identical in the pre/post application checks. User acceptance does not
+extend that write scope to mechanics, new text or saved-character migration.
+
+Christopher subsequently approved connecting this controlled process to Updates.
+Other deferred work is indexed in
+[the next-work index](plans/2026-09-20-next-work-index.md); it is not implicitly
+part of the first public patch implementation.

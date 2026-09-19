@@ -1,7 +1,9 @@
 //! Cheap launcher checks against the successful receipt; no full game-file scan.
 
 use bg_engine::{
-    manifest::GameRoot, receipt::FinalLogReceipt, recovery_receipt::read_completed_state,
+    manifest::GameRoot,
+    receipt::{FinalLogReceipt, LogComponentReceipt},
+    recovery_receipt::read_completed_state,
     weidu::log::parse_active_entries,
 };
 use serde::Serialize;
@@ -39,8 +41,22 @@ pub fn inspect(managed_root: &Path) -> ConsistencySummary {
 }
 
 fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummary, String> {
+    check_logs_with_patch_verifier(root, logs, bg_engine::patches::verified_log_suffix)
+}
+
+fn check_logs_with_patch_verifier(
+    root: &Path,
+    logs: &[FinalLogReceipt],
+    verify_patch: impl FnOnce(&Path) -> Result<Vec<LogComponentReceipt>, String>,
+) -> Result<ConsistencySummary, String> {
     if logs.is_empty() {
         return Err("No final mod lists.".to_owned());
+    }
+    // A managed patch extends the expected BG2 tail, never the immutable base receipt.
+    // Pending or invalid patch evidence is not evidence of an installed component.
+    let patch_suffix = verify_patch(root)?;
+    if !patch_suffix.is_empty() && !logs.iter().any(|log| log.target == GameRoot::Bg2) {
+        return Err("The patched BG2 mod list is missing from the completed receipt.".to_owned());
     }
     let mut count = 0;
     let mut mods = BTreeSet::new();
@@ -52,6 +68,15 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
             GameRoot::Bg2 => ("game", "BG2"),
         };
         let path = root.join(folder).join("WeiDU.log");
+        let expected_components = expected
+            .components
+            .iter()
+            .chain(
+                patch_suffix
+                    .iter()
+                    .filter(|_| expected.target == GameRoot::Bg2),
+            )
+            .collect::<Vec<_>>();
         let metadata = fs::symlink_metadata(&path).map_err(|error| error.to_string())?;
         if !metadata.is_file()
             || metadata.file_type().is_symlink()
@@ -64,17 +89,17 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
             .map_err(|error| error.to_string())?;
         count += entries.len();
         mods.extend(entries.iter().map(|entry| entry.tp2_key.clone()));
-        changed |= entries.len() != expected.components.len()
+        changed |= entries.len() != expected_components.len()
             || entries
                 .iter()
-                .zip(&expected.components)
+                .zip(&expected_components)
                 .any(|(actual, recorded)| {
                     actual.tp2_key != recorded.tp2
                         || actual.language != recorded.language
                         || actual.component != recorded.component
                 });
         let mut consumed = vec![false; entries.len()];
-        for recorded in &expected.components {
+        for recorded in expected_components {
             let match_index = entries.iter().enumerate().position(|(index, actual)| {
                 !consumed[index]
                     && actual.tp2_key == recorded.tp2
@@ -126,6 +151,8 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
         state: if changed { "changed" } else { "matches" }.to_owned(),
         detail: if changed {
             "The mod list has changed since CEBG installed this game."
+        } else if !patch_suffix.is_empty() {
+            "The mod list matches the completed installation and its verified applied fixes."
         } else {
             "The mod list matches the completed installation."
         }
@@ -279,6 +306,124 @@ mod tests {
         assert!(check_logs(temp.path(), &logs).is_err());
         fs::remove_file(path).unwrap();
         assert!(check_logs(temp.path(), &logs).is_err());
+    }
+
+    fn patch_component() -> LogComponentReceipt {
+        LogComponentReceipt {
+            tp2: "akcb_kit_descriptions/setup-akcb_kit_descriptions.tp2".to_owned(),
+            language: 0,
+            component: 0,
+        }
+    }
+
+    const PATCH_ROW: &str =
+        "~AKCB_KIT_DESCRIPTIONS/setup-AKCB_KIT_DESCRIPTIONS.tp2~ #0 #0 // Description links: 1.0\n";
+
+    #[test]
+    fn verified_patch_extends_only_bg2_and_preserves_the_base_receipt() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write_logs(root);
+        let state = final_state(root);
+        let mut receipt = failed_base(root);
+        receipt.outcome = ReceiptOutcome::Succeeded;
+        receipt.final_state = Some(state.clone());
+        let receipt_bytes = pretty_json(&receipt);
+        fs::create_dir(root.join(".chriz")).unwrap();
+        fs::write(root.join(".chriz/install-receipt.json"), &receipt_bytes).unwrap();
+        fs::write(
+            root.join("game/WeiDU.log"),
+            format!("~bg2/setup.tp2~ #0 #0\n{PATCH_ROW}"),
+        )
+        .unwrap();
+
+        let checked = check_logs_with_patch_verifier(root, &state.logs, |target| {
+            assert_eq!(target, root);
+            Ok(vec![patch_component()])
+        })
+        .unwrap();
+        assert_eq!(checked.state, "matches");
+        assert_eq!((checked.mod_count, checked.component_count), (3, 3));
+        assert_eq!(checked.components[2].target, "BG2");
+        assert_eq!(checked.components[2].status, "installed");
+        assert_eq!(
+            checked.components[2].title.as_deref(),
+            Some("Description links")
+        );
+        assert_eq!(checked.components[2].version.as_deref(), Some("1.0"));
+        assert!(checked.detail.contains("verified applied fixes"));
+        assert_eq!(state.logs[1].components.len(), 1);
+        assert_eq!(
+            fs::read(root.join(".chriz/install-receipt.json")).unwrap(),
+            receipt_bytes
+        );
+    }
+
+    #[test]
+    fn verified_patch_does_not_accept_unknown_reordered_or_bg1_rows() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write_logs(root);
+        let state = final_state(root);
+        for text in [
+            format!("~bg2/setup.tp2~ #0 #0\n{PATCH_ROW}~other/setup.tp2~ #0 #9\n"),
+            format!("{PATCH_ROW}~bg2/setup.tp2~ #0 #0\n"),
+        ] {
+            fs::write(root.join("game/WeiDU.log"), text).unwrap();
+            let checked =
+                check_logs_with_patch_verifier(root, &state.logs, |_| Ok(vec![patch_component()]))
+                    .unwrap();
+            assert_eq!(checked.state, "changed");
+        }
+        fs::write(root.join("game/WeiDU.log"), "~bg2/setup.tp2~ #0 #0\n").unwrap();
+        fs::write(
+            root.join("bg1/WeiDU.log"),
+            format!("~bg1/setup.tp2~ #0 #0\n{PATCH_ROW}"),
+        )
+        .unwrap();
+        let checked =
+            check_logs_with_patch_verifier(root, &state.logs, |_| Ok(vec![patch_component()]))
+                .unwrap();
+        assert_eq!(checked.state, "changed");
+        assert!(checked
+            .components
+            .iter()
+            .any(|component| { component.target == "BG1" && component.status == "extra" }));
+        assert!(checked
+            .components
+            .iter()
+            .any(|component| { component.target == "BG2" && component.status == "missing" }));
+    }
+
+    #[test]
+    fn a_patch_row_without_verified_history_remains_extra() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write_logs(root);
+        let state = final_state(root);
+        fs::write(
+            root.join("game/WeiDU.log"),
+            format!("~bg2/setup.tp2~ #0 #0\n{PATCH_ROW}"),
+        )
+        .unwrap();
+        let checked =
+            check_logs_with_patch_verifier(root, &state.logs, |_| Ok(Vec::new())).unwrap();
+        assert_eq!(checked.state, "changed");
+        assert_eq!(checked.components[2].status, "extra");
+    }
+
+    #[test]
+    fn pending_or_corrupt_patch_history_cannot_report_a_match() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write_logs(root);
+        let state = final_state(root);
+        for reason in ["Patch is pending", "Patch evidence is corrupt"] {
+            let error =
+                check_logs_with_patch_verifier(root, &state.logs, |_| Err(reason.to_owned()))
+                    .unwrap_err();
+            assert_eq!(error, reason);
+        }
     }
 
     #[test]

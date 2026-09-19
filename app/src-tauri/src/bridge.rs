@@ -55,6 +55,8 @@ const REVIEW_LIFETIME: Duration = Duration::from_secs(10 * 60);
 const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 
+include!("patch_bridge.rs");
+
 /// Engine services used by the native bridge. The test-only seam exercises the same stateful
 /// review and worker boundary without launching WeiDU.
 #[doc(hidden)]
@@ -463,6 +465,7 @@ pub struct ManagedInstallationResponse {
     /// Successful receipt completion time used only for launcher display and ordering.
     pub completed_at_millis: Option<u64>,
     pub available: bool,
+    pub patch_recovery_needed: bool,
     pub resumable: bool,
     pub recipe_version: Option<String>,
     pub consistency: Option<crate::consistency::ConsistencySummary>,
@@ -1292,6 +1295,7 @@ impl NativeBridge {
                         error.to_string(),
                     )
                 })?;
+        bg_engine::patches::launch_guard(&record.managed_root).map_err(patch_error)?;
         let launch_name = record
             .launch_path
             .file_name()
@@ -2998,6 +3002,8 @@ fn project_managed_install(
     let available = card.availability == InstallAvailability::Available;
     let record = card.record;
     let consistency = available.then(|| crate::consistency::inspect(&record.managed_root));
+    let patch_recovery_needed =
+        available && bg_engine::patches::launch_guard(&record.managed_root).is_err();
     let radar_version = if available {
         bg_engine::radar::status(&record.managed_root, record.managed_root.join("game"), None)
             .ok()
@@ -3013,7 +3019,9 @@ fn project_managed_install(
         id: record.install_id,
         name: record.display_name,
         path,
-        status: if available {
+        status: if patch_recovery_needed {
+            "Patch recovery needed — open Updates".to_owned()
+        } else if available {
             "Ready to play".to_owned()
         } else {
             "Unavailable — folder moved or changed".to_owned()
@@ -3022,6 +3030,7 @@ fn project_managed_install(
         launch_path: Some(launch_path),
         completed_at_millis: Some(record.completed_at_millis),
         available,
+        patch_recovery_needed,
         resumable: false,
         recipe_version: Some(record.recipe_version),
         consistency,
@@ -3049,6 +3058,7 @@ fn project_managed_campaign(
         launch_path: None,
         completed_at_millis: None,
         consistency: None,
+        patch_recovery_needed: false,
         radar_version: None,
         available: false,
         resumable,

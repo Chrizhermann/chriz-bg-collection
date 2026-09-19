@@ -9,6 +9,7 @@ pub mod loader;
 pub mod lock;
 pub mod manifest;
 pub mod orchestrator;
+pub mod patches;
 pub mod postcondition;
 pub mod preflight;
 pub mod radar;

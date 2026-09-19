@@ -19,6 +19,7 @@ import type {
   ManualDownloadRequirement,
   ManagedInstallation,
   NormalizedSelection,
+  PatchPreview,
   PhaseSummary,
   RunEventEnvelope,
   RunSnapshot,
@@ -70,6 +71,10 @@ export interface Backend {
   getUpdates(): Promise<UpdateSummary>;
   installAppUpdate(version: string): Promise<void>;
   activateRecipeUpdate(version: string): Promise<void>;
+  inspectInstallPatches?(installId: string): Promise<PatchPreview>;
+  applyInstallPatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean): Promise<PatchPreview>;
+  undoInstallPatch?(installId: string): Promise<PatchPreview>;
+  restoreInstallPatch?(installId: string): Promise<PatchPreview>;
 }
 
 export type InvokeCommand = (
@@ -177,6 +182,7 @@ type ManagedInstallationWire = {
   readonly completed_at_millis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
+  readonly patch_recovery_needed?: boolean;
   readonly recipe_version?: string | null;
   readonly radar_version?: string | null;
   readonly consistency?: {
@@ -493,6 +499,7 @@ export class NativeBackend implements Backend {
       completed_at_millis: completedAtMillis,
       recipe_version: recipeVersion,
       radar_version: radarVersion,
+      patch_recovery_needed: patchRecoveryNeeded,
       consistency,
       ...installation
     }) => ({
@@ -502,6 +509,7 @@ export class NativeBackend implements Backend {
       completedAtMillis,
       recipeVersion,
       radarVersion,
+      patchRecoveryNeeded,
       consistency: consistency == null ? undefined : {
         state: consistency.state,
         detail: consistency.detail,
@@ -588,6 +596,22 @@ export class NativeBackend implements Backend {
     await this.#command("activate_recipe_update", { version });
   }
 
+  inspectInstallPatches(installId: string): Promise<PatchPreview> {
+    return this.#command("inspect_install_patches", { installId });
+  }
+
+  applyInstallPatch(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean): Promise<PatchPreview> {
+    return this.#command("apply_install_patch", { installId, reviewToken, fullBackup, saveBackup });
+  }
+
+  undoInstallPatch(installId: string): Promise<PatchPreview> {
+    return this.#command("undo_install_patch", { installId });
+  }
+
+  restoreInstallPatch(installId: string): Promise<PatchPreview> {
+    return this.#command("restore_install_patch", { installId });
+  }
+
   async #command<T>(command: string, args?: Record<string, unknown>): Promise<T> {
     try {
       return await this.#invoke(command, args) as T;
@@ -626,6 +650,8 @@ function wait(milliseconds: number): Promise<void> {
 }
 
 export class FixtureBackend implements Backend {
+  readonly #patches = new Map<string, PatchPreview>();
+  #patchReviewSequence = 0;
   readonly #removedInstallations = new Set<string>();
   readonly #removalTokens = new Map<string, string>();
   readonly #options: FixtureOptions;
@@ -867,6 +893,43 @@ export class FixtureBackend implements Backend {
 
   activateRecipeUpdate(_version: string): Promise<void> {
     return Promise.resolve();
+  }
+
+  async inspectInstallPatches(installId: string): Promise<PatchPreview> {
+    const copies = (await this.getUpdates()).managedCopies;
+    const copy = copies.find((entry) => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    const current = this.#patches.get(installId);
+    if (current) return current;
+    const patch: PatchPreview = {
+      installId, patchId: "artisan-campaign-description-links-1.0", title: "Artisan kit-description links",
+      state: "available", detail: "Preview only: repairs character-creation description links without changing abilities or text.",
+      baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown", appliedPatchIds: [],
+      reviewToken: `fixture-patch-${installId}-${++this.#patchReviewSequence}`, canUndo: false, canRestore: false,
+      fullBackupBytes: "12884901888", saveBackupBytes: "104857600", availableBytes: "107374182400",
+      backupPath: "C:\\Fixture\\CEBG-Backups",
+    };
+    this.#patches.set(installId, patch);
+    return patch;
+  }
+
+  async applyInstallPatch(installId: string, reviewToken: string, _fullBackup: boolean, _saveBackup: boolean): Promise<PatchPreview> {
+    const patch = this.#patches.get(installId);
+    if (!patch || patch.state !== "available" || patch.reviewToken !== reviewToken) throw new Error("Check this fixture installation again before applying.");
+    const applied: PatchPreview = { ...patch, state: "applied", detail: "Preview only: the description-link fix was applied.", reviewToken: null, canUndo: true, appliedPatchIds: [patch.patchId] };
+    this.#patches.set(installId, applied);
+    return applied;
+  }
+
+  async undoInstallPatch(installId: string): Promise<PatchPreview> {
+    const patch = this.#patches.get(installId);
+    if (!patch || patch.state !== "applied" || !patch.canUndo) throw new Error("No fixture fix can be undone.");
+    this.#patches.delete(installId);
+    return this.inspectInstallPatches(installId);
+  }
+
+  async restoreInstallPatch(_installId: string): Promise<PatchPreview> {
+    throw new Error("No interrupted fixture patch needs recovery.");
   }
 
   #snapshot(): BuildSnapshot {

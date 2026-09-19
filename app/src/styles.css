@@ -1845,3 +1845,88 @@ input[type="search"] {
   opacity: 1;
   transform: translateY(0);
 }
+
+.install-patches {
+  border-top: 1px solid var(--slate-light);
+  padding-block: 1rem;
+}
+
+.install-patches h2,
+.install-patches h3,
+.install-patches p {
+  margin-block: 0 0.6rem;
+}
+
+.patch-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-block: 0.85rem 0.5rem;
+}
+
+.patch-install-label {
+  display: grid;
+  gap: 0.35rem;
+  flex: 1 1 24rem;
+  font-size: 0.85rem;
+}
+
+.patch-install-label select {
+  width: 100%;
+}
+
+.patch-path,
+.patch-history {
+  overflow-wrap: anywhere;
+}
+
+.patch-path {
+  font-size: 0.8rem;
+}
+
+.patch-result {
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--slate-light);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+}
+
+.patch-result h3 {
+  font-size: 1rem;
+}
+
+.patch-state,
+.patch-progress {
+  color: var(--teal);
+  font-size: 0.85rem;
+}
+
+.patch-error,
+.patch-result[data-patch-state="needs-recovery"] .patch-state {
+  color: var(--ember);
+}
+
+.patch-backups {
+  border-top: 1px solid var(--slate-light);
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.patch-backup-choice {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+  padding-block: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.patch-backup-choice input {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+}
+
+.patch-result .button {
+  margin-block: 0.4rem 0.75rem;
+}
