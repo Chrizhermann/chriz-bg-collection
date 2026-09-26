@@ -214,8 +214,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
 
     // The base manifest includes the approved SoD skip (910) added after alpha.10,
     // Red Wizard 5102 (c907b38), the Acton Balthis 25 opt-out (9c66cee) and the
-    // September 16 intake (cb07eca). Its plan is distinct from the 448-component
-    // curated runtime recipe.
+    // September 16 intake (cb07eca), and September 26 Emotion exclusivity (301).
+    // Its plan is distinct from the 450-component curated runtime recipe.
     assert_eq!(
         evaluation
             .plan
@@ -223,7 +223,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        357
+        358
     );
 }
 

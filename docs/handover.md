@@ -2,6 +2,39 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## September 26 — recipe alpha.18: approved Emotion default
+
+The prior app alpha.19 / recipe alpha.17 source was completed and committed first
+as `d57b70a`. The next recipe, **0.1.0-alpha.18**, pins BG Rebalance **v0.6.0** and
+makes component **301** default/ready under `mod:chriz-bg-rebalance`, with no extra
+requirements. Recommended selection: **450 components / 50 runs**; the base
+profile has 358 components. Bard progression `420`/`421` stays unselected.
+
+Christopher's decision is dated **2026-09-26**: fix any issue in a follow-up,
+without gating on more testing. Earlier live checks used standalone spells;
+IWDification provider mode has fixture coverage. A quick Hope/Courage replacement
+and refresh check on the next install is nonblocking. Source ordering and the
+later CDTweaks/Modpack interactions are recorded in the
+[recipe note](recipe-alpha18-2026-09-26.md).
+
+The v0.6.0 archive was freshly downloaded, hashed and verified with the installer
+authoring tool. The generated recipe, curation totals, source/evidence records,
+golden digest and alpha.18 ledger are synchronized. App version stays alpha.19.
+This is a source/recipe change for new installations or the next playthrough;
+the September 23 package still contains alpha.17. No publication or live action.
+
+Final source verification passed: **806 native tests**, 13 existing opt-in ignored;
+formatting and Clippy with warnings denied; **105 Python tests**, one existing
+opt-in skip. Native job `4e708c54-f961-425a-9878-fab6c6706bcd` exited 0; status and
+logs in `target/work/sep26-alpha18-native` were inspected. Both public-alpha
+profile validations returned zero findings. Planning resolves 450/358 components;
+the existing 5/6 conditional-omission notices are unchanged, and disabling 301
+removes only that component. Fresh generation reproduced all 101 recipe files
+with normalized line endings. The semantic golden digest is
+`9f5d6131c8c13887a80b6d82b592c440484d84043f38f0a0f5378ee177a29015`.
+The app's 327 frontend tests/typecheck/build passed during the preceding source
+closeout; this recipe change adds no frontend code.
+
 ## September 26 — finish recipe alpha.17 / app alpha.19 source
 
 Christopher requested completion and a commit of the existing installer work
@@ -27,9 +60,9 @@ reservation limitation remains a follow-up. No new dependencies or public APIs
 were introduced by the finishing correction; diagnostics tests contain deliberate
 fake credential strings for redaction coverage, not credentials.
 
-Next, in a separate recipe commit: add Christopher's September 26 approved
-BG Rebalance 301 default with v0.6.0, leaving bard progression 420/421 unselected.
-The provider-mode Hope/Courage check is a nonblocking next-install follow-up.
+Completed as source in the separate recipe change above: Christopher's September
+26 approved BG Rebalance 301 default with v0.6.0, leaving bard progression
+420/421 unselected. The provider-mode check remains nonblocking.
 
 ## September 24 gameplay follow-ups: preparation only
 

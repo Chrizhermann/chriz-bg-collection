@@ -9,10 +9,17 @@ initially selected installation; that correction is not in the September 23 bina
 See [package evidence](package-acceptance-alpha19-2026-09-22.md)
 and [release readiness](plans/2026-09-22-release-readiness.md).
 
-Collection **0.1.0-alpha.17** corrects component information and update records,
-and includes the in-game interval-save controls by default. The recommended
-selection is now **449 components / 50 mod-install runs**; mod versions and order
-are unchanged. Updating the CEBG app does not change your existing game or choices.
+Current source uses collection **0.1.0-alpha.18**, with **450 components / 50
+mod-install runs**. BG Rebalance v0.6.0 component 301 is now a recommended default:
+Emotion, Courage and Hope replace each other and recasting refreshes. Bard
+progression 420/421 stays unselected. Christopher approved this on September 26;
+the IWDification provider check is a nonblocking next-install follow-up. See the
+[recipe note](recipe-alpha18-2026-09-26.md).
+
+The preceding collection alpha.17 corrected component information and update
+records and added the in-game interval-save controls. The September 23 package
+still bundles that alpha.17 recipe (449 components). Updating the CEBG app does
+not change your existing game or choices.
 
 ## Fixes for your current game
 
@@ -45,7 +52,8 @@ are unchanged. Updating the CEBG app does not change your existing game or choic
   have complete catalog entries; older update records no longer repeat the same
   changes or omit changed download identities.
 - Removes the incorrect Red Wizard / Spell Revisions exclusion note and unused
-  archive records. Selected mods and their installation order do not change.
+  archive records. Those record corrections preserve the prior selections and order;
+  alpha.18 separately adds the approved Emotion default described above.
 
 ## Update BuffBot without reinstalling your game
 

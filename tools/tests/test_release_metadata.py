@@ -39,10 +39,10 @@ class ReleaseMetadataTests(unittest.TestCase):
             output = Path(temp) / "recipe"
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             self.assertEqual(json.loads((output / "release.json").read_text())["version"],
-                             "0.1.0-alpha.17")
+                             "0.1.0-alpha.18")
             seen = set()
             previous = "0.1.0-alpha.13"
-            for number in range(14, 18):
+            for number in range(14, 19):
                 version = f"0.1.0-alpha.{number}"
                 ledger = tomllib.loads((output / f"releases/v{version}/ledger.toml").read_text())
                 self.assertEqual(ledger["supersedes"], previous)
@@ -55,6 +55,26 @@ class ReleaseMetadataTests(unittest.TestCase):
                 previous = version
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.5.toml").exists())
             self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.4.toml").exists())
+            self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
+
+    def test_emotion_default_has_a_separate_next_playthrough_release(self):
+        ledger = tomllib.loads(
+            (self.root / "manifest/releases/v0.1.0-alpha.18/ledger.toml").read_text()
+        )
+        self.assertEqual(ledger["version"], "0.1.0-alpha.18")
+        self.assertEqual(ledger["supersedes"], "0.1.0-alpha.17")
+        self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.19")
+        self.assertEqual(len(ledger["changes"]), 1)
+        change = ledger["changes"][0]
+        self.assertEqual(change["id"], "emotion-courage-hope-exclusive-default")
+        self.assertEqual(change["save_applicability"], "next-playthrough")
+        self.assertEqual(change["urgency"], "recommended")
+        self.assertCountEqual(change["covers"], [
+            "artifact:chriz-bg-rebalance-0.4.0",
+            "artifact:chriz-bg-rebalance-0.6.0",
+            "run:chriz-bg-rebalance-bg2",
+            "feature:feature:chriz-bg-rebalance:component-301",
+        ])
 
 
 if __name__ == "__main__":

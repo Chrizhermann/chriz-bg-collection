@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.17"
+RECIPE_VERSION = "0.1.0-alpha.18"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -851,6 +851,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     for directory in ["artifacts", "game-builds", "mods", "releases"]:
         shutil.copytree(root / "manifest" / directory, destination / directory, dirs_exist_ok=True)
     for obsolete in [
+        "chriz-bg-rebalance-0.4.0",
         "chriz-sod-remix-0.6.4",
         "chriz-sod-remix-0.6.5",
         "chriz-sod-remix-0.6.6",

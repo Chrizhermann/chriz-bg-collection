@@ -15,9 +15,10 @@ const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187,
     200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910,
 ];
-const BG_REBALANCE_COMPONENTS: &[u32] = &[100, 101, 120, 121, 400, 401, 404, 405, 407, 408];
-const BG_REBALANCE_RUN_COMPONENTS: &[u32] =
-    &[100, 101, 110, 111, 120, 121, 400, 401, 404, 405, 407, 408];
+const BG_REBALANCE_COMPONENTS: &[u32] = &[100, 101, 120, 121, 301, 400, 401, 404, 405, 407, 408];
+const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
+    100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408,
+];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
 fn recipe_root() -> PathBuf {
@@ -146,23 +147,25 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
 #[test]
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["chriz-bg-rebalance-0.3.2"];
-    assert_eq!(artifact.version, "0.3.2");
+    let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.6.0");
+    let artifact = &manifest.artifacts[artifact_id];
+    assert_eq!(artifact.version, "0.6.0");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.2/chriz-bg-rebalance-v0.3.2.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.6.0/chriz-bg-rebalance-v0.6.0.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.3.2");
+    assert_eq!(artifact.source.reference, "v0.6.0");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.3.2.zip")
+        Some("chriz-bg-rebalance-v0.6.0.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_369_825));
+    assert_eq!(artifact.source.expected_length, Some(1_724_047));
     assert_eq!(
         artifact.source.sha256,
-        "25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4"
+        "e5f39cb60ecf90a715715d95848df4582168e55cdcff4fc5455bc768f3063224"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -249,6 +252,11 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 1
             ),
             (
+                "feature:chriz-bg-rebalance:component-301",
+                Decision::Default,
+                1
+            ),
+            (
                 "feature:chriz-bg-rebalance:tempus-bundle",
                 Decision::Default,
                 6
@@ -271,7 +279,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
     let no_tempus = evaluate(&manifest, &no_tempus).unwrap();
     assert_eq!(
         no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 120, 121][..])
+        Some(&[100, 101, 120, 121, 301][..])
     );
 
     let mut disabled = Selection::defaults("windows");

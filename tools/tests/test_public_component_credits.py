@@ -38,15 +38,17 @@ class PublicComponentCreditsTests(unittest.TestCase):
             self.assertEqual(actual[run_id], [value for value in runs[run_id]["components"] if value in selected])
             self.assertEqual(len(actual[run_id]), len(set(actual[run_id])))
         self.assertEqual(self.result["componentCount"], sum(map(len, actual.values())))
-        # Candidate alpha.17 adds Hidden Gameplay Options 38 to alpha.16's 448
-        # components. The existing 15-minute rotating saves (CDTweaks 3354) remain.
+        # Alpha.18 adds Rebalance 301 to alpha.17's 449 components; interval-save
+        # controls and the existing 15-minute rotating saves remain selected.
         controls = "feature:hiddengameplayoptions:component-38"
         self.assertTrue(effective[controls])
         controls_feature = next(feature for feature in collection["features"] if feature["id"] == controls)
         self.assertEqual(controls_feature["components"], [{"run_id": "hiddengameplayoptions-bg2", "component": 38}])
         self.assertEqual(actual["hiddengameplayoptions-bg2"].count(38), 1)
         self.assertIn(3354, actual["cdtweaks-bg2"])
-        self.assertEqual(self.result["componentCount"], 449)
+        self.assertEqual(actual["chriz-bg-rebalance-bg2"].count(301), 1)
+        self.assertTrue({420, 421}.isdisjoint(actual["chriz-bg-rebalance-bg2"]))
+        self.assertEqual(self.result["componentCount"], 450)
         self.assertEqual(len(actual), 50)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
@@ -55,7 +57,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
         recipe_version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
         self.assertEqual(self.result["applicationVersion"], app_version)
         self.assertEqual(self.result["recipeVersion"], recipe_version)
-        self.assertEqual(recipe_version, "0.1.0-alpha.17")
+        self.assertEqual(recipe_version, "0.1.0-alpha.18")
         encoded = json.dumps(self.result).lower()
         for forbidden in ("artifact_id", "source_reference", "expected_filename", ".zip", ".iemod", "c:\\\\", "creator-full"):
             self.assertNotIn(forbidden, encoded)

@@ -1,12 +1,16 @@
 # CHRIZ-BG-REBALANCE — components
 
-The pinned target is public release **v0.4.0**. The
+The pinned target is public release **v0.6.0**. Christopher approved component
+`301` as a recommended default on **2026-09-26**, based on earlier in-game testing;
+fix any issue in a follow-up rather than gating on more testing. The
 [September 16 candidate](../../alpha16-candidate-2026-09-16.md) approved dragon
 components `110` and `111` as optional, unchecked additions. The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-16 entries, 10 recommended selections. ✓ = selected and receipt-verified in the isolated
+17 curated entries, 11 recommended selections. The release also contains bard
+progression `420`/`421`; they remain outside the offered recipe and unselected.
+✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
@@ -17,6 +21,7 @@ component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 | 111 | SCS: dragon wing-buffet spacing rebalance | SCS adjustments |  |  | optional |
 | 120 | SCS + Spell Revisions: repair false weapon-protection semantics | SCS adjustments |  | ✓ | mandatory |
 | 121 | EEex + SCS: ambient caster readiness and one honest first-contact defense | SCS adjustments |  | ✓ | default |
+| 301 | Emotion, Courage / Emotion, Hope — mutually exclusive beneficial emotions | Cross-cutting audits |  |  | default |
 | 400 | Cleric of Tempus: weapon training — axe, longsword, crossbow, and two-pip mastery | Class and kit revisions |  | ✓ | default |
 | 401 | Cleric of Tempus: Holy Power — automatic semantic detection (recommended) | Class and kit revisions | Cleric of Tempus: Holy Power compatibility | ✓ | default |
 | 402 | Cleric of Tempus: Holy Power — force true-doubling compatibility | Class and kit revisions | Cleric of Tempus: Holy Power compatibility |  | |
@@ -56,6 +61,24 @@ component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
   `401` family. The atomic bundle guarantees that chain. Component `401` supports either
   SR or non-SR spell mappings, but must inspect the final installed resources.
 
+## Emotion default — September 26 decision
+
+Component `301` replaces the other beneficial Emotion on each target; the latest
+wins and recasting refreshes. In the collection it rebuilds IWDification's Courage
+and Hope in place. The post-EET-end run follows IWDification, SCS `5900` and Spell
+Revisions. Later CDTweaks `2312` keeps hostile save-coupled removers aligned and
+does not change Courage/Hope; Modpack `430` leaves their fixed-level scrolls alone.
+The offered run follows source order:
+`100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408`.
+Dragon `110`/`111` remain optional and unchecked.
+
+The v0.4.0-to-v0.6.0 intake adds `301` and the unselected `420`/`421`; all previously
+selected components are unchanged. This default applies to new installations /
+the next playthrough, not an automatic edit to an existing game. Earlier live
+checks used standalone spells; IWDification provider mode has installer and
+transformer fixture coverage only. A quick Hope/Courage replacement and refresh
+check in the next install is worthwhile, explicitly **not a release gate**.
+
 ## Remaining follow-up
 - Stage the fixed APR implementation against EEex v1.2 and verify 1.5 APR with a two-pip
   weapon, 2.5 under Holy Power, no cycling, and prompt return to normal with a zero-pip
@@ -63,6 +86,6 @@ component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 - Components `120` and `121` are now curated and selected. Current-version component `121`
   passed ambient delivery/accounting and the neutral-to-hostile urgent path; its older-EEex
   fallback remains a nonblocking compatibility check.
-- Revisit planned `200` and `301` only if they enter the real menu.
+- Revisit planned `200` only if it enters the real menu.
 - Recheck whether the final SCS release supersedes `100` or `101`, and refresh the source
   repository's stale component documentation before publishing.

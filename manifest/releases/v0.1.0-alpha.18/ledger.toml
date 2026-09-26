@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.18"
+published_at = "2026-09-26T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.19"
+supersedes = "0.1.0-alpha.17"
+
+[[changes]]
+id = "emotion-courage-hope-exclusive-default"
+title = "Emotion, Courage and Hope no longer stack"
+summary = "New recommended installations use BG Rebalance 0.6.0 component 301: casting Courage or Hope replaces the other on each target, and recasting refreshes it. Christopher approved this default on September 26; any issue will be fixed in a follow-up. Existing installations are unchanged. Bard progression components 420/421 remain unselected."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.4.0",
+  "artifact:chriz-bg-rebalance-0.6.0",
+  "run:chriz-bg-rebalance-bg2",
+  "feature:feature:chriz-bg-rebalance:component-301",
+]

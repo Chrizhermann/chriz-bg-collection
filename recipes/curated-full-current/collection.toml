@@ -313,7 +313,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 400, 401, 404, 405, 407, 408]
+components = [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408]
 args = []
 
 [[runs]]
@@ -4226,6 +4226,18 @@ readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["feature:stratagems:mandatory-components", "feature:eeex:mandatory-components"]
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 121 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-301"
+title = "Emotion, Courage and Hope don't stack"
+description = "Casting either Emotion removes the other from each target; the latest wins and recasting refreshes."
+category = "spells"
+source_label = "BG Rebalance"
+group_label = "Cross-cutting audits"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 301 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:tempus-bundle"

@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 457 default/mandatory rows — conditional inactive: 5, deferred: 5, selected for installation: 447.
+Engine-equivalent resolved-selection summary: 458 default/mandatory rows — conditional inactive: 5, deferred: 5, selected for installation: 448.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -222,16 +222,17 @@ Engine-equivalent resolved-selection summary: 457 default/mandatory rows — con
 | `CHRIZ-BG-MODPACK:450` | mandatory | `feature:chriz-bg-modpack:component-450` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 450 |  |
 | `CHRIZ-BG-MODPACK:610` | default | `feature:chriz-bg-modpack:component-610` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 610 |  |
 | `CHRIZ-BG-MODPACK:620` | default | `feature:chriz-bg-modpack:component-620` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 620 |  |
-| `CHRIZ-BG-REBALANCE:100` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 100 |  |
-| `CHRIZ-BG-REBALANCE:101` | default | `feature:chriz-bg-rebalance:component-101` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 101 |  |
-| `CHRIZ-BG-REBALANCE:120` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 120 |  |
-| `CHRIZ-BG-REBALANCE:121` | default | `feature:chriz-bg-rebalance:component-121` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 121 |  |
-| `CHRIZ-BG-REBALANCE:400` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 400 |  |
-| `CHRIZ-BG-REBALANCE:401` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 401 |  |
-| `CHRIZ-BG-REBALANCE:404` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 404 |  |
-| `CHRIZ-BG-REBALANCE:405` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 405 |  |
-| `CHRIZ-BG-REBALANCE:407` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 407 |  |
-| `CHRIZ-BG-REBALANCE:408` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 408 |  |
+| `CHRIZ-BG-REBALANCE:100` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 100 |  |
+| `CHRIZ-BG-REBALANCE:101` | default | `feature:chriz-bg-rebalance:component-101` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 101 |  |
+| `CHRIZ-BG-REBALANCE:120` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 120 |  |
+| `CHRIZ-BG-REBALANCE:121` | default | `feature:chriz-bg-rebalance:component-121` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 121 |  |
+| `CHRIZ-BG-REBALANCE:301` | default | `feature:chriz-bg-rebalance:component-301` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 301 |  |
+| `CHRIZ-BG-REBALANCE:400` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 400 |  |
+| `CHRIZ-BG-REBALANCE:401` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 401 |  |
+| `CHRIZ-BG-REBALANCE:404` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 404 |  |
+| `CHRIZ-BG-REBALANCE:405` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 405 |  |
+| `CHRIZ-BG-REBALANCE:407` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 407 |  |
+| `CHRIZ-BG-REBALANCE:408` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.6.0 0.6.0 (v0.6.0), component 408 |  |
 | `CHRIZ-SOD-REMIX:100` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 100 |  |
 | `CHRIZ-SOD-REMIX:110` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 110 |  |
 | `CHRIZ-SOD-REMIX:115` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 115 |  |

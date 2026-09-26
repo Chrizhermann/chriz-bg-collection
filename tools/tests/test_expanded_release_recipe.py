@@ -87,8 +87,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(artifact["source"]["expected_length"], 1367203)
         self.assertEqual(artifact["source"]["sha256"], "f134085e8220a4222190981f173034653efe7aa92d47caa8430682a1352d1c19")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
-        # Alpha.17 adds only the approved interval-save settings default to the
-        # alpha.16 count; Modpack's reviewed component selection remains unchanged.
+        # Alpha.18 adds Rebalance 301 after alpha.17's interval-save controls;
+        # Modpack's reviewed component selection remains unchanged.
         selected = self.selected()
         interval_controls = "feature:hiddengameplayoptions:component-38"
         without_controls = self.selected({interval_controls: "off"})
@@ -96,8 +96,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(self.preset[interval_controls], "on")
         self.assertEqual(selected - without_controls, {("hiddengameplayoptions-bg2", 38)})
         self.assertEqual(without_controls - selected, set())
-        self.assertEqual(len(without_controls), 448)
-        self.assertEqual(len(selected), 449)
+        self.assertEqual(len(without_controls), 449)
+        self.assertEqual(len(selected), 450)
         self.assertEqual(len({run for run, _ in selected}), 50)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -160,6 +160,50 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
             self.assertIn("feature:stratagems:mandatory-components", self.features[f"feature:chriz-bg-rebalance:component-{component}"]["requires"])
         self.assertLess(self.positions["stratagems-bg2"], self.positions["chriz-bg-rebalance-bg2"])
         self.assertEqual(self.collection["runs"][-1]["run_id"], "buffbot-bg2")
+
+    def test_emotion_exclusivity_is_default_with_an_independent_optout(self):
+        feature_id = "feature:chriz-bg-rebalance:component-301"
+        run_id = "chriz-bg-rebalance-bg2"
+        feature = self.features[feature_id]
+        self.assertEqual(feature["decision"], "default")
+        self.assertEqual(feature["readiness"], "ready")
+        self.assertEqual(feature["parent"], "mod:chriz-bg-rebalance")
+        self.assertEqual(feature.get("requires", []), [])
+        self.assertEqual(feature.get("requires_any", []), [])
+        self.assertEqual(feature["components"], [{"run_id": run_id, "component": 301}])
+        self.assertEqual(self.preset[feature_id], "on")
+
+        baseline = self.selected()
+        opted_out = self.selected({feature_id: "off"})
+        self.assertEqual(baseline - opted_out, {(run_id, 301)})
+        self.assertEqual(opted_out - baseline, set())
+        self.assertEqual(len(opted_out), 449)
+        parent_off = self.selected({"mod:chriz-bg-rebalance": "off"})
+        self.assertFalse(any(run == run_id for run, _ in parent_off))
+        # Keep 301 selectable for either provider or standalone spell handling;
+        # this checks recipe eligibility, not the installed spell behavior.
+        for provider in ("mod:spell-rev", "mod:iwdification", "mod:stratagems"):
+            with self.subTest(provider=provider):
+                self.assertIn(provider, self.features)
+                self.assertIn((run_id, 301), self.selected({provider: "off"}))
+
+    def test_emotion_run_keeps_source_order_and_excludes_bard_progression(self):
+        run_id = "chriz-bg-rebalance-bg2"
+        self.assertEqual(self.runs[run_id]["components"],
+                         [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408])
+        for component in (420, 421):
+            self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
+            self.assertNotIn((run_id, component), self.selected())
+        for provider in ("iwdification-bg2", "stratagems-bg2", "spell-rev-core-bg2"):
+            self.assertLess(self.positions[provider], self.positions[run_id])
+        for later in ("cdtweaks-spell-save-penalties-bg2", "chriz-bg-modpack-bg2"):
+            self.assertLess(self.positions[run_id], self.positions[later])
+        selected = self.selected()
+        for identity in (("iwdification-bg2", 30), ("iwdification-bg2", 40),
+                         ("stratagems-bg2", 5900), ("spell-rev-core-bg2", 0),
+                         ("cdtweaks-spell-save-penalties-bg2", 2312),
+                         ("chriz-bg-modpack-bg2", 430)):
+            self.assertIn(identity, selected)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1205
+expected_rows = 1206
 expected_choice_groups = 72
 expected_optional_none_groups = 23
 expected_fixed_groups = 10
@@ -1870,6 +1870,12 @@ rows = ["CHRIZ-BG-REBALANCE:101"]
 id = "feature:chriz-bg-rebalance:component-121"
 kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:121"]
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-301"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:301"]
+parent = "mod:chriz-bg-rebalance"
 
 [[targets]]
 id = "feature:chriz-bg-rebalance:component-110"

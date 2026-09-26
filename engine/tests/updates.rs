@@ -249,6 +249,46 @@ fn draft_alpha14_ledger_covers_armor_and_bardic_update_addresses() {
 }
 
 #[test]
+fn alpha18_recommends_emotion_exclusivity_for_the_next_playthrough() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let ledger = load_release(
+        &root.join("recipes/curated-full-current/releases/v0.1.0-alpha.18/ledger.toml"),
+    )
+    .unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.0-alpha.18/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.version, "0.1.0-alpha.18");
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0-alpha.17"));
+    assert_eq!(ledger.minimum_app_version, "0.1.0-alpha.19");
+    assert_eq!(ledger.changes.len(), 1);
+    let change = &ledger.changes[0];
+    assert_eq!(change.id, "emotion-courage-hope-exclusive-default");
+    assert_eq!(
+        change.save_applicability,
+        SaveApplicability::NextPlaythrough
+    );
+    assert_eq!(change.urgency, Urgency::Recommended);
+    let differences = [
+        "artifact:chriz-bg-rebalance-0.4.0",
+        "artifact:chriz-bg-rebalance-0.6.0",
+        "run:chriz-bg-rebalance-bg2",
+        "feature:feature:chriz-bg-rebalance:component-301",
+    ]
+    .into_iter()
+    .map(|subject| RecipeDifference {
+        subject: subject.to_owned(),
+        cosmetic_only: false,
+    })
+    .collect::<Vec<_>>();
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    let summary = classify_updates("0.1.0-alpha.17", "0.1.0-alpha.19", &[ledger]).unwrap();
+    assert_eq!(
+        summary.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+}
+
+#[test]
 fn coverage_error_names_uncovered_subject() {
     let differences = vec![RecipeDifference {
         subject: "run:missing".to_owned(),
@@ -287,7 +327,7 @@ fn released_history_covers_real_differences_and_skipping_versions_does_not_dupli
             .collect::<Vec<_>>();
         ensure_change_coverage(&differences, &ledger).unwrap();
     }
-    let releases = (14..=17)
+    let releases = (14..=18)
         .map(|number| {
             load_release(&root.join(format!(
                 "recipes/curated-full-current/releases/v0.1.0-alpha.{number}/ledger.toml"
@@ -296,10 +336,10 @@ fn released_history_covers_real_differences_and_skipping_versions_does_not_dupli
         })
         .collect::<Vec<_>>();
     let summary = classify_updates("0.1.0-alpha.13", "0.1.0-alpha.19", &releases).unwrap();
-    assert_eq!(summary.latest_version.as_deref(), Some("0.1.0-alpha.17"));
+    assert_eq!(summary.latest_version.as_deref(), Some("0.1.0-alpha.18"));
     assert_eq!(
         summary.disposition,
         UpdateDisposition::DeferredForNextPlaythrough
     );
-    assert_eq!(summary.changes.len(), 18);
+    assert_eq!(summary.changes.len(), 19);
 }

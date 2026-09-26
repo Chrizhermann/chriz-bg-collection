@@ -180,6 +180,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 "bardicwonders-v2.9c-balance.2",
                 "chriz-sod-remix-0.6.5",
                 "chriz-sod-remix-0.6.6",
+                "chriz-bg-rebalance-0.4.0",
                 "creator-full-private-extras-20260902",
             ]:
                 (output / "artifacts" / f"{stale}.toml").write_text(f'id = "{stale}"\n', encoding="utf-8")
@@ -241,8 +242,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                # September 22 approval: HGO 38 follows installed interval saves by default.
-                "62a03115adcea4a9812af4a760944ad81a68f0a0a06c7b3e1b1b2b2d8cb50088",
+                # September 26 approval adds only Rebalance 301 to alpha.17's
+                # run, feature inventory and recommended selections.
+                "9f5d6131c8c13887a80b6d82b592c440484d84043f38f0a0f5378ee177a29015",
             )
 
             legacy_bg1npc_groups = {
@@ -531,20 +533,21 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.4.0")
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.6.0")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.4.0.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.6.0.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.4.0")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.4.0")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1393406)
+            self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
+            self.assertEqual(bg_artifact["version"], "0.6.0")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.6.0")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1724047)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "211b509e0fb2c101c1cc20f3238a2cc1dd0e272f997359751cf8f9e13cb16439",
+                "e5f39cb60ecf90a715715d95848df4582168e55cdcff4fc5455bc768f3063224",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.17")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.18")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(

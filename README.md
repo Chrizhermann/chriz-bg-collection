@@ -11,8 +11,10 @@ separate installation, verifies the result, and reopens later as a simple launch
 ## Current development status (2026-09-26)
 
 This branch prepares Windows app **0.1.0-alpha.19** with collection
-**0.1.0-alpha.17**. It adds the supported BuffBot update and description fix,
+**0.1.0-alpha.18**. It adds the supported BuffBot update and description fix,
 clearer progress/results, unique installation names and Customize improvements.
+The new recipe makes BG Rebalance's Courage/Hope exclusivity a recommended default;
+see the [alpha.18 recipe note](docs/recipe-alpha18-2026-09-26.md).
 Source checks pass; the September 23 review package predates the September 26
 default-selection feedback correction. Publication and final package review remain
 separate. See the [release checklist](docs/plans/2026-09-22-release-readiness.md)
