@@ -27,24 +27,6 @@ See the [selected policy and release integration boundary](../../research/2026-0
 These components are not yet selected by the published collection recipe; the table
 below retains its existing release-candidate provenance.
 
-## Emotion, Courage / Emotion, Hope exclusivity (301) — intended default
-
-On 2026-09-26 Christopher chose component `301` as a collection default. It makes the two
-beneficial Emotions mutually exclusive per creature (last application wins; recasting
-refreshes) and repairs the installed Courage self-stacking defect. Fear and Symbol,
-Hopelessness keep removing their matching benefit in their own save/MR domain.
-
-In this collection it transforms IWDification's Courage and Hope in place (provider mode),
-so it must run after IWDification `30`, SCS `5900` and Spell Revisions; the late
-Rebalance run satisfies that. CDTweaks `2312` runs later and adds the same save penalty
-to every saved effect of a header, so the removers stay aligned with their hostile effects.
-
-The 2026-08-30 implementation was never committed or released. It was recovered from a
-Codex worktree snapshot and ported onto Rebalance v0.5.0 on branch
-`claude/emotion-hope-courage-301`. Before the recipe can select it, a Rebalance release
-containing `301` must be published and pinned. Live tests so far used standalone mode
-(no IWDification); provider mode has installer and transformer fixture coverage only.
-
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
 | 100 | SCS: Telekinetic Storm — restore save vs. spell for half damage (+ bypass Mirror Image) | SCS adjustments |  | ✓ | mandatory |
@@ -93,7 +75,6 @@ containing `301` must be published and pinned. Live tests so far used standalone
 - Components `120` and `121` are now curated and selected. Current-version component `121`
   passed ambient delivery/accounting and the neutral-to-hostile urgent path; its older-EEex
   fallback remains a nonblocking compatibility check.
-- Revisit planned `110` and `200` only if they enter the real menu; `301` is an intended
-  default awaiting release (see above).
+- Revisit planned `110`, `200`, and `301` only if they enter the real menu.
 - Recheck whether the final SCS release supersedes `100` or `101`, and refresh the source
   repository's stale component documentation before publishing.
