@@ -8,6 +8,10 @@ edition = "2021"
 name = "chriz_bg_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Local diagnostic builds only; normal release builds do not write lookup traces.
+installation-lookup-diagnostics = []
+
 [build-dependencies]
 tauri-build = { version = "=2.6.3", features = [] }
 

@@ -14,6 +14,7 @@ export interface InstallScreenModel {
   readonly selectedBg1Id: string;
   readonly selectedBg2Id: string;
   readonly installationName: string;
+  readonly installationNameError?: string | null;
   readonly destination: DestinationEvaluation;
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationPending: boolean;
@@ -196,7 +197,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const location = field("Install location", "install-location", model.destination.path);
   name.input.disabled = model.starting;
   location.input.disabled = model.starting;
-  const nameError = validateInstallationName(model.installationName);
+  const nameError = model.installationNameError ?? validateInstallationName(model.installationName);
   const nameHelp = element("p", nameError === null ? "field-help" : "field-error", nameError ?? "This name also labels your installation in CEBG.");
   nameHelp.id = "install-name-help";
   name.input.setAttribute("aria-describedby", nameHelp.id);
@@ -265,7 +266,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
 
   const bg1 = selectedCandidate(model.discovery.bg1Candidates, model.selectedBg1Id);
   const bg2 = selectedCandidate(model.discovery.bg2Candidates, model.selectedBg2Id);
-  const selectionReady = installationReadiness({
+  const selectionReady = nameError === null && installationReadiness({
     starting: model.starting,
     name: model.installationName,
     bg1,

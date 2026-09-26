@@ -1,15 +1,16 @@
 # CHRIZ-BG-MODPACK — components
 
-Refreshed for public release **v0.2.0-alpha.5**.
-39 current or historical entries; the public installer exposes 22 and the recommended
-collection selects 18. Component `195` already includes the work from standalone component
+Refreshed for the pinned public release **v0.2.0-alpha.7**, retaining the choices
+approved in the [September 16 candidate](../../alpha16-candidate-2026-09-16.md).
+43 current or historical entries; the collection exposes 26 and its recommended
+selection includes 22. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
 ## Implementation status
 
 - The public alpha implements `110`, `130`, `140`, `160`, `170`, `190`, `192`–`198`,
-  `220`–`223`, `400`, `410`, `430`, `440`, `450`, and `610`. It contains no advertised
+  `188`, `189`, `199`, `220`–`223`, `400`, `410`, `430`, `440`, `450`, `610`, and `620`. It contains no advertised
   FAIL placeholders.
 - The collection exposes every implemented component except standalone `160`, whose exact
   skill repair is invoked atomically by the default Skie component `195`.
@@ -24,6 +25,18 @@ The four ✓ marks record the old reference install, not the new default recipe.
   and with Artisan's Invisible Blade component `7104`.
 - Progressive utility XP `610` is a default-checked option. It requires the working EEex
   runtime and runs in the existing post-EET_end modpack slot, after earlier XP-table tweaks.
+- Yeslick `188` is automatic only with Yeslick NPC's Fighter/Alaghor component `1`;
+  the vanilla class choice omits it. It runs with the other companion build changes
+  before continuity `199`, which immediately precedes EET_end.
+- Continuity `199` is default-checked and preserves Xan/Yeslick progression across EET,
+  including vanilla class choices. It requires EET and is for new installations;
+  it does not migrate saved actors.
+- Safana `189` is automatic with official Safana core `0`, after that core and the
+  final arrival-script writers. It clears inherited inventory once at first SoA arrival,
+  preserving later equipment, and does not change her class or kit.
+- Imoen `620` is default-checked, requires EEex, and runs in the late-companion slot
+  before Spell Revisions spellbook processing. At first Spellhold recruitment it raises
+  mage XP to the party average, capped at 3 million, without repeating on rejoin.
 - Components `120`, `200`, `210`, and `300` are retired/superseded. The other historical
   numbers below remain excluded; component `600` is intentionally outside the fresh preset.
 - See [Collection tail fixes](COLLECTION_TAIL_FIXES.md) for the complete mapping of all
@@ -41,6 +54,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 160 | Skie: redistribute Move Silently to Open Locks (Swashbuckler fix) | chriz-bg-modpack: NPC fixes |  |  | |
 | 170 | Xan Eldritch Knight for EET (XAN_/4/6/TTXAN) | chriz-bg-modpack: NPC fixes |  |  | mandatory |
 | 180 | Remove SR hidden subspells from joinable NPC spellbooks | chriz-bg-modpack: NPC fixes |  |  | |
+| 188 | Yeslick: apply the selected Alaghor kit in BG1 | chriz-bg-modpack: NPC fixes |  |  | mandatory |
+| 189 | Safana: clear carried-over arrival inventory once | chriz-bg-modpack: NPC fixes |  |  | mandatory |
 | 190 | Sarah: Archer conversion and curated proficiencies | chriz-bg-modpack: NPC fixes |  |  | default |
 | 192 | Viconia: permanent Cleric/Thief conversion | chriz-bg-modpack: NPC fixes |  |  | default |
 | 193 | Shar-Teel: Wizard Slayer kit | chriz-bg-modpack: NPC fixes |  |  | default |
@@ -49,6 +64,7 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 196 | Faldorn: Avenger kit | chriz-bg-modpack: NPC fixes |  |  | default |
 | 197 | Dynaheir: learn the installed Haste spell | chriz-bg-modpack: NPC fixes |  |  | default |
 | 198 | Kivan: Archer kit | chriz-bg-modpack: NPC fixes |  |  | default |
+| 199 | Xan and Yeslick: preserve progression across EET | chriz-bg-modpack: NPC fixes |  |  | default |
 | 220 | Yoshimo: Swashbuckler | chriz-bg-modpack: NPC fixes |  |  | default |
 | 221 | Shadowdancer | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | default |
 | 222 | Fighter/Thief multiclass | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | optional |
@@ -71,3 +87,4 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 514 | Historical Edwin spell-slot migration slot (audit required) | chriz-bg-modpack: Meta / multi-fix |  |  | |
 | 600 | Disable UB "Cat and Mouse" Bodhi hunts in the Spellhold maze (and fix the ultimatum deadlock under SCS) | chriz-bg-modpack: Gameplay tweaks |  | ✓ | |
 | 610 | Progressive utility XP for locks, traps, and learning spells | chriz-bg-modpack: Gameplay tweaks |  |  | default |
+| 620 | Imoen: bring mage XP up to the party average at Spellhold | chriz-bg-modpack: Gameplay tweaks |  |  | default |

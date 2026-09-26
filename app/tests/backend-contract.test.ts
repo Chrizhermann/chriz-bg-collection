@@ -7,7 +7,65 @@ import {
   type EventChannelFactory,
   type InvokeCommand,
 } from "../src/backend";
-import type { RunEventEnvelope } from "../src/contracts";
+import type { OperationProgress, RunEventEnvelope, UpdateSummary } from "../src/contracts";
+
+describe("opt-in installation lookup diagnostics", () => {
+  const wire = {
+    checked_at: "2026-09-22T07:00:00Z",
+    network_state: "unconfigured",
+    application: { state: "up-to-date", current_version: "0.1.0-alpha.19", available_version: null, detail: "Current app." },
+    recipe: { state: "up-to-date", current_version: "0.1.0-alpha.17", available_version: null, disposition: "up-to-date", detail: "Bundled collection.", changes: [] },
+    managed_copies: [
+      { install_id: "ready", name: "Ready game", path: "D:\\Ready", installed_recipe_version: "0.1.0-alpha.17", state: "up-to-date", detail: "Available." },
+      { install_id: "old", name: "Chriz Easy BG — incomplete installation", path: "D:\\Old", installed_recipe_version: null, state: "stale", detail: "Folder unavailable." },
+    ],
+  } as const;
+  const expected: UpdateSummary = {
+    checkedAt: wire.checked_at,
+    networkState: "unconfigured",
+    application: { state: "up-to-date", currentVersion: "0.1.0-alpha.19", availableVersion: null, detail: "Current app.", releaseNotes: undefined },
+    recipe: { state: "up-to-date", currentVersion: "0.1.0-alpha.17", availableVersion: null, disposition: "up-to-date", detail: "Bundled collection.", changes: [] },
+    managedCopies: [
+      { installId: "ready", name: "Ready game", path: "D:\\Ready", installedRecipeVersion: "0.1.0-alpha.17", state: "up-to-date", detail: "Available." },
+      { installId: "old", name: "Chriz Easy BG — incomplete installation", path: "D:\\Old", installedRecipeVersion: null, state: "stale", detail: "Folder unavailable." },
+    ],
+    radar: undefined,
+  };
+
+  it.each([undefined, false])("does not log when the native flag is %s", async (enabled) => {
+    const invoke = vi.fn<InvokeCommand>(async () => enabled === undefined ? wire : { ...wire, lookup_trace_enabled: enabled });
+
+    await expect(new NativeBackend(invoke).getUpdates()).resolves.toEqual(expected);
+    expect(invoke.mock.calls).toEqual([["check_updates", undefined]]);
+  });
+
+  it("logs exactly the received identities and states without changing their projection", async () => {
+    const invoke = vi.fn<InvokeCommand>(async (command) => command === "check_updates" ? { ...wire, lookup_trace_enabled: true } : undefined);
+
+    await expect(new NativeBackend(invoke).getUpdates()).resolves.toEqual(expected);
+    expect(invoke.mock.calls).toEqual([
+      ["check_updates", undefined],
+      ["record_install_lookup_client", { report: {
+        checked_at: wire.checked_at,
+        copies: [
+          { install_id: "ready", name: "Ready game", path: "D:\\Ready", state: "up-to-date" },
+          { install_id: "old", name: "Chriz Easy BG — incomplete installation", path: "D:\\Old", state: "stale" },
+        ],
+      } }],
+    ]);
+  });
+
+  it("keeps Updates working if the diagnostic command is rejected", async () => {
+    const invoke = vi.fn<InvokeCommand>(async (command) => {
+      if (command === "check_updates") return { ...wire, lookup_trace_enabled: true };
+      throw new Error("Diagnostic log is not writable.");
+    });
+
+    await expect(new NativeBackend(invoke).getUpdates()).resolves.toEqual(expected);
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(invoke.mock.calls[1]?.[0]).toBe("record_install_lookup_client");
+  });
+});
 
 describe("managed patch recovery projection", () => {
   it("maps recovery independently from the folder being available", async () => {
@@ -417,5 +475,73 @@ describe("native command adapter", () => {
     });
 
     await expect(backend.exportDiagnostics("install-failed")).resolves.toBeNull();
+  });
+});
+
+describe("native progress and rename boundaries", () => {
+  type ProgressCallback = (progress: OperationProgress) => void;
+  type TestProgressChannel = { emit: (event: unknown) => void };
+  const progress: OperationProgress = { stage: "backup-game", completed: "5", total: "10", unit: "bytes" };
+
+  const operations: [string, Record<string, unknown>, (backend: NativeBackend, callback: ProgressCallback) => Promise<unknown>][] = [
+    ["install_app_update", { version: "0.1.0-alpha.19" }, (backend, callback) => backend.installAppUpdate("0.1.0-alpha.19", callback)],
+    ["apply_mod_upgrade", { installId: "chosen", reviewToken: "review", fullBackup: true, backupSaves: false }, (backend, callback) => backend.applyModUpgrade("chosen", "review", true, false, callback)],
+    ["restore_mod_upgrade", { installId: "chosen", undo: true }, (backend, callback) => backend.restoreModUpgrade("chosen", true, callback)],
+    ["apply_install_patch", { installId: "chosen", reviewToken: "review", fullBackup: false, saveBackup: true }, (backend, callback) => backend.applyInstallPatch("chosen", "review", false, true, callback)],
+    ["undo_install_patch", { installId: "chosen" }, (backend, callback) => backend.undoInstallPatch("chosen", callback)],
+    ["restore_install_patch", { installId: "chosen" }, (backend, callback) => backend.restoreInstallPatch("chosen", callback)],
+  ];
+
+  it.each(operations)("routes decoded %s progress without changing command authority", async (command, expected, operation) => {
+    let channel!: TestProgressChannel;
+    const channelFactory: EventChannelFactory = onMessage => (channel = { emit: onMessage });
+    const received = vi.fn<ProgressCallback>();
+    const invoke = vi.fn<InvokeCommand>(async (name, args) => {
+      expect(name).toBe(command);
+      expect(args).toEqual({ ...expected, onProgress: channel });
+      for (const malformed of [null, 7, "applying", [], {}, { stage: "not-a-known-stage" }]) channel.emit(malformed);
+      channel.emit(progress);
+      return undefined;
+    });
+    await operation(new NativeBackend(invoke, channelFactory), received);
+    expect(received).toHaveBeenCalledExactlyOnceWith(progress);
+    channel.emit({ ...progress, completed: "10" });
+    expect(received).toHaveBeenCalledTimes(1);
+    expect(invoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes a progress channel after a rejected operation as well", async () => {
+    let channel!: TestProgressChannel;
+    const callback = vi.fn<ProgressCallback>();
+    const backend = new NativeBackend(async () => {
+      channel.emit(progress);
+      throw { code: "write_failed", message: "Update failed", recovery_action: "Keep the game closed", technical_detail: "fixture failure" };
+    }, onMessage => (channel = { emit: onMessage }));
+    await expect(backend.restoreModUpgrade("chosen", false, callback)).rejects.toMatchObject({ code: "write_failed" });
+    channel.emit({ ...progress, stage: "finishing", completed: "10" });
+    expect(callback).toHaveBeenCalledExactlyOnceWith(progress);
+  });
+
+  it("does not create a progress channel when no listener was requested", async () => {
+    const channelFactory = vi.fn<EventChannelFactory>();
+    const invoke = vi.fn<InvokeCommand>(async () => undefined);
+    await new NativeBackend(invoke, channelFactory).installAppUpdate("0.1.0-alpha.19");
+    expect(channelFactory).not.toHaveBeenCalled();
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("install_app_update", { version: "0.1.0-alpha.19" });
+  });
+
+  it("renames by registry ID and proposed display name only", async () => {
+    const invoke = vi.fn<InvokeCommand>(async () => ({ name: "My campaign" }));
+    const backend = new NativeBackend(invoke);
+    await expect(backend.renameInstallation("chosen", "  My campaign  ")).resolves.toEqual({ name: "My campaign" });
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("rename_installation", { installId: "chosen", name: "  My campaign  " });
+  });
+
+  it("preserves a rejected rename without retrying or falling back to a folder operation", async () => {
+    const invoke = vi.fn<InvokeCommand>(async () => {
+      throw { code: "invalid_name", message: "That name is already used", recovery_action: "Choose another name", technical_detail: "duplicate" };
+    });
+    await expect(new NativeBackend(invoke).renameInstallation("chosen", "Existing name")).rejects.toMatchObject({ code: "invalid_name", recoveryAction: "Choose another name" });
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 });

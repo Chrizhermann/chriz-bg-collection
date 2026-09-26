@@ -9,7 +9,10 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::digest::sha256_bytes;
-use crate::session::{CampaignCreated, SessionStore};
+use crate::session::{CampaignCreated, FreshCopySeal, SessionStore};
+
+/// Mutable display-only names, kept separate from immutable installation identity.
+pub mod names;
 
 /// Managed-install registry schema emitted by this engine version.
 pub const REGISTRY_SCHEMA_VERSION: u32 = 1;
@@ -114,6 +117,17 @@ pub enum RegistryError {
     /// A record contradicts its schema or target receipt.
     #[error("invalid managed-install record: {0}")]
     InvalidRecord(String),
+    /// A player-facing name is blank, too long, or contains unsupported characters.
+    #[error("{0}")]
+    InvalidName(String),
+    /// Another registered copy already uses the requested display name.
+    #[error("An installation named {name:?} already exists. Choose a different name.")]
+    DuplicateName {
+        /// Requested trimmed name.
+        name: String,
+        /// Stable identity which already owns that name.
+        install_id: String,
+    },
     /// The stable id already belongs to another managed root.
     #[error(
         "managed install id {install_id:?} already belongs to a different managed root: {existing}"
@@ -154,12 +168,14 @@ pub enum RegistryError {
 pub struct ManagedInstallRegistry {
     records_root: PathBuf,
     campaigns_root: PathBuf,
+    names_root: PathBuf,
 }
 
 impl ManagedInstallRegistry {
     /// Forget only an exact indexed identity whose folder is already absent.
     /// Callers hold its target lock; no game files are removed by this operation.
     pub fn forget_missing(&self, install_id: &str, root: &Path) -> Result<(), RegistryError> {
+        let _names_guard = self.lock_names()?;
         validate_identifier(install_id, "install id", root)?;
         match fs::symlink_metadata(root) {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -228,6 +244,7 @@ impl ManagedInstallRegistry {
         Ok(Self {
             records_root,
             campaigns_root,
+            names_root: app_data_root.join("managed-install-names"),
         })
     }
 
@@ -504,25 +521,47 @@ fn validate_campaign_record(record: &ManagedCampaignRecord) -> Result<(), Regist
 }
 
 fn campaign_availability(record: &ManagedCampaignRecord) -> CampaignAvailability {
-    if !direct_directory_exists(&record.managed_root) {
-        return CampaignAvailability::Stale;
+    match inspect_campaign_availability(record) {
+        Ok(None) => CampaignAvailability::Resumable,
+        Ok(Some(_)) => CampaignAvailability::FreshCopyRequired,
+        Err(_) => CampaignAvailability::Stale,
     }
-    let Ok(replay) = SessionStore::open(&record.managed_root).and_then(|store| store.replay())
-    else {
-        return CampaignAvailability::Stale;
-    };
+}
+
+/// Inspect a campaign pointer without changing its registry or ledger.
+///
+/// Returns `None` for a resumable campaign, its permanent seal for a campaign
+/// requiring a fresh copy, or the exact failed availability check for a stale
+/// campaign. The record's schema is validated separately when the registry reads it.
+pub fn inspect_campaign_availability(
+    record: &ManagedCampaignRecord,
+) -> Result<Option<FreshCopySeal>, RegistryError> {
+    validate_direct_directory(&record.managed_root)?;
+    let replay = SessionStore::open(&record.managed_root)
+        .and_then(|store| store.replay())
+        .map_err(|error| {
+            RegistryError::InvalidRecord(format!(
+                "campaign ledger at {} is unavailable: {error}",
+                record.managed_root.display()
+            ))
+        })?;
     let created = replay.created();
-    if created.install_id != record.install_id
-        || created.managed_root != record.managed_root
-        || created.recipe_payload_sha256 != record.recipe_sha256
-    {
-        return CampaignAvailability::Stale;
+    for (field, matches) in [
+        ("install id", created.install_id == record.install_id),
+        ("managed root", created.managed_root == record.managed_root),
+        (
+            "recipe SHA-256",
+            created.recipe_payload_sha256 == record.recipe_sha256,
+        ),
+    ] {
+        if !matches {
+            return Err(RegistryError::InvalidRecord(format!(
+                "campaign {field} differs from ledger record zero at {}",
+                record.managed_root.display()
+            )));
+        }
     }
-    if replay.fresh_copy_required().is_some() {
-        CampaignAvailability::FreshCopyRequired
-    } else {
-        CampaignAvailability::Resumable
-    }
+    Ok(replay.fresh_copy_required().cloned())
 }
 
 fn validate_stored_record(record: &ManagedInstallRecord) -> Result<(), RegistryError> {
@@ -571,26 +610,44 @@ fn validate_stored_record(record: &ManagedInstallRecord) -> Result<(), RegistryE
 }
 
 fn availability(record: &ManagedInstallRecord) -> InstallAvailability {
-    let receipt = record.managed_root.join(".chriz/install-receipt.json");
-    let available = direct_directory_exists(&record.managed_root)
-        && direct_file_exists(&receipt)
-        && direct_file_exists(&record.launch_path)
-        && canonical_launch_is_contained(record)
-        && hash_file(&receipt)
-            .map(|hash| hash == record.receipt_sha256.to_ascii_lowercase())
-            .unwrap_or(false);
-    if available {
+    if inspect_install_availability(record).is_ok() {
         InstallAvailability::Available
     } else {
         InstallAvailability::Stale
     }
 }
 
-fn canonical_launch_is_contained(record: &ManagedInstallRecord) -> bool {
-    canonicalize(&record.managed_root)
-        .and_then(|root| canonicalize(&record.launch_path).map(|launch| (root, launch)))
-        .map(|(root, launch)| launch.starts_with(root))
-        .unwrap_or(false)
+/// Inspect a completed pointer without changing any installation or registry files.
+///
+/// Success means the same checks used by registry cards consider it available.
+/// An error retains the failing path and underlying filesystem error when present.
+/// The record's schema is validated separately when the registry reads it.
+pub fn inspect_install_availability(record: &ManagedInstallRecord) -> Result<(), RegistryError> {
+    let receipt = record.managed_root.join(".chriz/install-receipt.json");
+    validate_direct_directory(&record.managed_root)?;
+    validate_direct_file(&receipt)?;
+    validate_direct_file(&record.launch_path)?;
+    let root = canonicalize(&record.managed_root)?;
+    let launch = canonicalize(&record.launch_path)?;
+    if !launch.starts_with(&root) {
+        return Err(unsafe_path(
+            &record.launch_path,
+            &format!(
+                "canonical launch path {} is outside managed root {}",
+                launch.display(),
+                root.display()
+            ),
+        ));
+    }
+    let actual = hash_file(&receipt)?;
+    if actual != record.receipt_sha256.to_ascii_lowercase() {
+        return Err(RegistryError::InvalidRecord(format!(
+            "receipt SHA-256 mismatch at {}: expected {}, found {actual}",
+            receipt.display(),
+            record.receipt_sha256
+        )));
+    }
+    Ok(())
 }
 
 fn canonicalize(path: &Path) -> Result<PathBuf, RegistryError> {
@@ -776,18 +833,6 @@ fn validate_direct_file(path: &Path) -> Result<(), RegistryError> {
         return Err(unsafe_path(path, "expected a direct non-symlink file"));
     }
     Ok(())
-}
-
-fn direct_directory_exists(path: &Path) -> bool {
-    fs::symlink_metadata(path)
-        .map(|metadata| metadata.is_dir() && !metadata.file_type().is_symlink())
-        .unwrap_or(false)
-}
-
-fn direct_file_exists(path: &Path) -> bool {
-    fs::symlink_metadata(path)
-        .map(|metadata| metadata.is_file() && !metadata.file_type().is_symlink())
-        .unwrap_or(false)
 }
 
 fn unsafe_path(path: &Path, message: &str) -> RegistryError {

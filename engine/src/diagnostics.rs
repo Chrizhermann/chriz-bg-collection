@@ -243,6 +243,7 @@ fn select_entries(
         add_step_evidence(&mut selected, &steps_root)?;
     }
     add_patch_evidence(&mut selected, state_root)?;
+    add_upgrade_evidence(&mut selected, state_root, "mod-upgrades", "v1")?;
 
     Ok(selected.into_values().collect())
 }
@@ -251,8 +252,17 @@ fn add_patch_evidence(
     entries: &mut BTreeMap<String, SelectedEntry>,
     state_root: &Path,
 ) -> Result<(), DiagnosticsError> {
-    let patches = state_root.join("patches");
-    let transactions = patches.join("cebg-v1");
+    add_upgrade_evidence(entries, state_root, "patches", "cebg-v1")
+}
+
+fn add_upgrade_evidence(
+    entries: &mut BTreeMap<String, SelectedEntry>,
+    state_root: &Path,
+    namespace: &str,
+    format: &str,
+) -> Result<(), DiagnosticsError> {
+    let patches = state_root.join(namespace);
+    let transactions = patches.join(format);
     // Validate each parent explicitly; never discover other patch formats or backups.
     for directory in [&patches, &transactions] {
         match fs::symlink_metadata(directory) {
@@ -293,7 +303,7 @@ fn add_patch_evidence(
                     add_required(
                         entries,
                         source,
-                        &format!("patches/cebg-v1/{id}/{name}"),
+                        &format!("{namespace}/{format}/{id}/{name}"),
                         false,
                     )?;
                 }
@@ -566,7 +576,9 @@ fn read_selected_entry(entry: &SelectedEntry) -> Result<Vec<u8>, DiagnosticsErro
     // Recheck the selected file before opening; bound new patch evidence even if it grew
     // after selection. Existing receipt/recipe/log behavior remains unchanged.
     validate_direct_file(&entry.source)?;
-    if !entry.archive_name.starts_with("patches/cebg-v1/") {
+    if !entry.archive_name.starts_with("patches/cebg-v1/")
+        && !entry.archive_name.starts_with("mod-upgrades/v1/")
+    {
         return fs::read(&entry.source).map_err(|source| DiagnosticsError::Io {
             path: entry.source.clone(),
             source,
@@ -663,13 +675,16 @@ receipt/attempt-receipt.json contains the full outcome, versions, selected optio
 ledger/ retains durable step transitions. logs/steps/ contains invocation.json, process-result.json, captured output and before/after WeiDU logs where available. Missing files may identify the point where evidence stopped; they do not establish the operating-system cause.\n\
 receipt/install-receipt.json is included when present. An older failure receipt may coexist with a later successful installation; inspect the attempt IDs and timestamps.\n\
 patches/cebg-v1/ contains optional existing-install patch records and captured logs. The base receipt is unchanged by a patch; check these records separately. Backup contents, mod payloads, executables and saves are not included.\n\
+mod-upgrades/v1/ contains whole-mod update and restore history, separate from the original collection receipt. It contains records and logs only, not backup or player-file contents.\n\
 Diagnostics remain local until you share them. Personal paths and common secrets are redacted, but review the ZIP before sharing.\n");
     summary
 }
 
 fn sanitize_evidence(archive_name: &str, bytes: &[u8], redactions: &[String]) -> Vec<u8> {
     if archive_name.ends_with(".json")
-        || (archive_name.starts_with("patches/cebg-v1/") && archive_name.ends_with(".pending"))
+        || ((archive_name.starts_with("patches/cebg-v1/")
+            || archive_name.starts_with("mod-upgrades/v1/"))
+            && archive_name.ends_with(".pending"))
     {
         if let Ok(mut value) = serde_json::from_slice::<serde_json::Value>(bytes) {
             redact_json_value(&mut value, redactions);

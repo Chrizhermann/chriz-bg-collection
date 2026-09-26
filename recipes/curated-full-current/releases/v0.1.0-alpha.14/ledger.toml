@@ -11,7 +11,11 @@ title = "Use thief skills in armor"
 summary = "Adds the default-checked optional Klatu Tweaks 2150 component for ordinary thieving and stealth in armor with no added skill penalties. Equipment permissions, spellcasting restrictions, unrelated kit abilities, and Find Traps armor restrictions remain unchanged."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["feature:feature:klatu:component-2150", "run:klatu-armor-thieving-bg2", "artifact:klatu-tweaks-1.7.4"]
+covers = [
+  "artifact:klatu-tweaks-1.7.4",
+  "feature:feature:klatu:component-2150",
+  "run:klatu-armor-thieving-bg2",
+]
 
 [[changes]]
 id = "bardic-wonders-accepted-update"
@@ -19,7 +23,11 @@ title = "Update Bardic Wonders balance fixes"
 summary = "Includes the user-tested Bardic Wonders owner release and its bard song, kit and high-level ability corrections. Existing component choices and the Darkbloom / Spell Revisions exclusion are preserved."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["mod:bardicwonders"]
+covers = [
+  "artifact:bardicwonders-v2.9c-balance.3",
+  "artifact:bardicwonders-v2.9c-balance.4",
+  "artifact:bardicwonders-v2.9c-balance.5",
+]
 
 [[changes]]
 id = "restore-red-wizard-default"
@@ -27,7 +35,9 @@ title = "Restore Edwin's Red Wizard default"
 summary = "Restores Artisan's Red Wizard kit as a default-checked optional Edwin choice with Spell Revisions. Removes the unsupported collection exclusion. Existing games and saves are not modified."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["feature:feature:artisanskitpack-npc:component-5102", "run:artisanskitpack-npc-bg2"]
+covers = [
+  "feature:feature:artisanskitpack-npc:component-5102",
+]
 
 [[changes]]
 id = "acton-balthis-opt-in"
@@ -35,7 +45,9 @@ title = "The Murder of Acton Balthis is now opt-in"
 summary = "BG2 Unfinished Business component 25 is unchecked by default and remains available in Customize. Other UB selections are unchanged. Existing installations and saves are not modified."
 save_applicability = "new-game-only"
 urgency = "optional"
-covers = ["feature:feature:ub:component-25", "run:ub-bg2"]
+covers = [
+  "feature:feature:ub:component-25",
+]
 
 [[changes]]
 id = "racial-kit-unlock"
@@ -43,7 +55,10 @@ title = "Choose kits regardless of race"
 summary = "Adds default-checked optional Tweaks Anthology 2380 after kit additions, complementing the existing class unlock. This includes missing elf mage specialists. NPC-only kits and gnome mage rules are preserved. Existing games and saves are not modified."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["feature:feature:cdtweaks:component-2380", "run:cdtweaks-bg2"]
+covers = [
+  "feature:feature:cdtweaks:component-2380",
+  "run:cdtweaks-bg2",
+]
 
 [[changes]]
 id = "scs-optional-immersion"
@@ -51,7 +66,12 @@ title = "Optional SCS resting, inns and death rules"
 summary = "Adds three unchecked, not-recommended experimental choices: provisions for resting, more expensive inns with rest bonuses, and revised death effects. Community reports of problems are unconfirmed in CEBG. SCS's native Spell Revisions exclusion is enforced for death effects. Recommended selections and mod versions are unchanged."
 save_applicability = "new-game-only"
 urgency = "optional"
-covers = ["feature:feature:stratagems:component-4130", "feature:feature:stratagems:component-4135", "feature:feature:stratagems:component-4140", "run:stratagems-bg2"]
+covers = [
+  "feature:feature:stratagems:component-4130",
+  "feature:feature:stratagems:component-4135",
+  "feature:feature:stratagems:component-4140",
+  "run:stratagems-bg2",
+]
 
 [[changes]]
 id = "screened-optional-scs-tweaks"
@@ -59,7 +79,85 @@ title = "More optional SCS and Tweaks Anthology choices"
 summary = "Offers 21 additional SCS and 44 Tweaks Anthology choices, all unchecked. Alternatives use enforced choice groups, duplicate IWD casting graphics are blocked, and spell-save-penalty alternatives retain their late installation position. Riskier kit, proficiency, spell and story overhauls remain excluded. Source-screened, not live-tested in every combination; the recommended setup is unchanged."
 save_applicability = "new-game-only"
 urgency = "optional"
-covers = ["run:stratagems-bg2", "run:cdtweaks-bg2", "run:cdtweaks-spell-save-penalties-bg2", "run:iwdification-bg2"]
+covers = [
+  "feature:feature:cdtweaks:component-1030",
+  "feature:feature:cdtweaks:component-1035",
+  "feature:feature:cdtweaks:component-1036",
+  "feature:feature:cdtweaks:component-1100",
+  "feature:feature:cdtweaks:component-1101",
+  "feature:feature:cdtweaks:component-1140",
+  "feature:feature:cdtweaks:component-1141",
+  "feature:feature:cdtweaks:component-1142",
+  "feature:feature:cdtweaks:component-140",
+  "feature:feature:cdtweaks:component-150",
+  "feature:feature:cdtweaks:component-160",
+  "feature:feature:cdtweaks:component-170",
+  "feature:feature:cdtweaks:component-171",
+  "feature:feature:cdtweaks:component-200",
+  "feature:feature:cdtweaks:component-2151",
+  "feature:feature:cdtweaks:component-2152",
+  "feature:feature:cdtweaks:component-2190",
+  "feature:feature:cdtweaks:component-2191",
+  "feature:feature:cdtweaks:component-2192",
+  "feature:feature:cdtweaks:component-220",
+  "feature:feature:cdtweaks:component-2220",
+  "feature:feature:cdtweaks:component-2310",
+  "feature:feature:cdtweaks:component-2311",
+  "feature:feature:cdtweaks:component-2312",
+  "feature:feature:cdtweaks:component-240",
+  "feature:feature:cdtweaks:component-241",
+  "feature:feature:cdtweaks:component-3030",
+  "feature:feature:cdtweaks:component-3031",
+  "feature:feature:cdtweaks:component-3060",
+  "feature:feature:cdtweaks:component-3070",
+  "feature:feature:cdtweaks:component-3071",
+  "feature:feature:cdtweaks:component-3072",
+  "feature:feature:cdtweaks:component-3073",
+  "feature:feature:cdtweaks:component-3130",
+  "feature:feature:cdtweaks:component-3131",
+  "feature:feature:cdtweaks:component-3132",
+  "feature:feature:cdtweaks:component-3150",
+  "feature:feature:cdtweaks:component-3151",
+  "feature:feature:cdtweaks:component-3191",
+  "feature:feature:cdtweaks:component-3194",
+  "feature:feature:cdtweaks:component-3195",
+  "feature:feature:cdtweaks:component-3196",
+  "feature:feature:cdtweaks:component-3197",
+  "feature:feature:cdtweaks:component-3198",
+  "feature:feature:cdtweaks:component-3200",
+  "feature:feature:cdtweaks:component-3205",
+  "feature:feature:cdtweaks:component-3230",
+  "feature:feature:cdtweaks:component-3320",
+  "feature:feature:cdtweaks:component-4140",
+  "feature:feature:cdtweaks:component-70",
+  "feature:feature:cdtweaks:component-90",
+  "feature:feature:iwdification:component-10",
+  "feature:feature:stratagems:component-3015",
+  "feature:feature:stratagems:component-4020",
+  "feature:feature:stratagems:component-4050",
+  "feature:feature:stratagems:component-4051",
+  "feature:feature:stratagems:component-4052",
+  "feature:feature:stratagems:component-4093",
+  "feature:feature:stratagems:component-4145",
+  "feature:feature:stratagems:component-4150",
+  "feature:feature:stratagems:component-4160",
+  "feature:feature:stratagems:component-4161",
+  "feature:feature:stratagems:component-4162",
+  "feature:feature:stratagems:component-4163",
+  "feature:feature:stratagems:component-4164",
+  "feature:feature:stratagems:component-4170",
+  "feature:feature:stratagems:component-4171",
+  "feature:feature:stratagems:component-4172",
+  "feature:feature:stratagems:component-4173",
+  "feature:feature:stratagems:component-4174",
+  "feature:feature:stratagems:component-4216",
+  "feature:feature:stratagems:component-4217",
+  "feature:feature:stratagems:component-4218",
+  "feature:feature:stratagems:component-4230",
+  "run:cdtweaks-bg2",
+  "run:cdtweaks-spell-save-penalties-bg2",
+  "run:stratagems-bg2",
+]
 
 [[changes]]
 id = "artisan-accepted-update"
@@ -67,7 +165,9 @@ title = "Updated Artisan kits and fighter abilities"
 summary = "Includes the user-tested Artisan release: Assassin, Magekiller, Hivemaster, Paladin, fighter modal and kit description improvements. Recommended companion choices and genuine compatibility restrictions remain in place."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["artifact:artisans-kitpack-chriz-v1.5.0"]
+covers = [
+  "artifact:artisans-kitpack-chriz-v1.5.0",
+]
 
 [[changes]]
 id = "spell-revisions-lightning-and-rr"
@@ -75,7 +175,16 @@ title = "Classic Lightning and Rogue Rebalancing compatibility"
 summary = "Classic bouncing Lightning Bolt is default, with a mutually exclusive non-bouncing alternative. The SR/RR fix automatically follows Spell Revisions and either selected Rogue Rebalancing encounter, before SCS. Turning Spell Revisions off removes these dependent changes."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["run:spell-rev-lightning-bg2", "mod:srcb-rr-compat", "artifact:spell-revisions-4.21-chriz.5"]
+covers = [
+  "artifact:spell-revisions-4.21-chriz.5",
+  "artifact:srcb-rr-compat-4.21-chriz.5",
+  "feature:feature:spell-rev:component-80",
+  "feature:feature:spell-rev:component-81",
+  "feature:feature:srcb-rr-compat:component-0",
+  "feature:mod:srcb-rr-compat",
+  "run:spell-rev-lightning-bg2",
+  "run:srcb-rr-compat-bg2",
+]
 
 [[changes]]
 id = "companion-continuity-and-arrival"
@@ -83,7 +192,36 @@ title = "Companion progression, Yeslick and Safana"
 summary = "Adds BG1 Yeslick's Alaghor conversion when chosen, companion continuity through EET transitions, Spellhold Imoen XP catch-up, and official Safana with one-time arrival inventory cleanup. Vanilla kit choices are preserved; no saved characters are migrated by this installer update."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["mod:chriz-bg-modpack", "mod:safana"]
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.6",
+  "artifact:safana-in-amn-v05",
+  "feature:feature:chriz-bg-modpack:component-110",
+  "feature:feature:chriz-bg-modpack:component-140",
+  "feature:feature:chriz-bg-modpack:component-170",
+  "feature:feature:chriz-bg-modpack:component-188",
+  "feature:feature:chriz-bg-modpack:component-189",
+  "feature:feature:chriz-bg-modpack:component-190",
+  "feature:feature:chriz-bg-modpack:component-192",
+  "feature:feature:chriz-bg-modpack:component-193",
+  "feature:feature:chriz-bg-modpack:component-194",
+  "feature:feature:chriz-bg-modpack:component-195",
+  "feature:feature:chriz-bg-modpack:component-196",
+  "feature:feature:chriz-bg-modpack:component-197",
+  "feature:feature:chriz-bg-modpack:component-198",
+  "feature:feature:chriz-bg-modpack:component-199",
+  "feature:feature:chriz-bg-modpack:component-220",
+  "feature:feature:chriz-bg-modpack:component-221",
+  "feature:feature:chriz-bg-modpack:component-222",
+  "feature:feature:chriz-bg-modpack:component-223",
+  "feature:feature:chriz-bg-modpack:component-620",
+  "feature:feature:safana:mandatory-components",
+  "feature:mod:safana",
+  "run:chriz-bg-modpack-bg2",
+  "run:chriz-bg-modpack-continuity-bg2",
+  "run:chriz-bg-modpack-late-companions-bg2",
+  "run:chriz-bg-modpack-pre-continuity-bg2",
+  "run:safana-bg2",
+]
 
 [[changes]]
 id = "sod-accepted-update"
@@ -91,7 +229,12 @@ title = "SoD Remix fixes and Khalid continuity"
 summary = "Includes the completed SoD Remix release and Bridgefort Khalid continuity correction. Keeps the full SoD skip and accepted bridge changes. Extra bridge sequencers remain optional; repair-only components are not selected on fresh installs."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["artifact:chriz-sod-remix-0.6.10"]
+covers = [
+  "artifact:chriz-sod-remix-0.6.10",
+  "feature:feature:chriz-sod-remix:component-257",
+  "feature:feature:chriz-sod-remix:mandatory-components",
+  "run:chriz-sod-remix-bg2",
+]
 
 [[changes]]
 id = "optional-dragon-challenge"
@@ -99,7 +242,12 @@ title = "Optional stronger dragon encounters"
 summary = "Offers the implemented lethal-melee and buffet-timing dragon challenge components as unchecked choices. These are not part of the recommended default difficulty; native combat acceptance remains pending."
 save_applicability = "new-game-only"
 urgency = "optional"
-covers = ["mod:chriz-bg-rebalance"]
+covers = [
+  "artifact:chriz-bg-rebalance-0.4.0",
+  "feature:feature:chriz-bg-rebalance:component-110",
+  "feature:feature:chriz-bg-rebalance:component-111",
+  "run:chriz-bg-rebalance-bg2",
+]
 
 [[changes]]
 id = "buffbot-identification-update"
@@ -107,4 +255,13 @@ title = "BuffBot respects unidentified items"
 summary = "Updates BuffBot to 1.8.4-alpha so unidentified items are not offered for automatic use. BuffBot remains the final mod installation step."
 save_applicability = "new-game-only"
 urgency = "recommended"
-covers = ["artifact:buffbot-1.8.4-alpha"]
+covers = [
+  "artifact:buffbot-1.8.4-alpha",
+]
+[[changes]]
+id = "kivan-fix-prerequisite"
+title = "Apply the Kivan quest fix only with its required content"
+summary = "The Kivan repair now requires the BG1 NPC Project quests component, not just any component from that mod. Existing games and saves are not modified."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["feature:feature:chriz-bg-modpack:component-130"]

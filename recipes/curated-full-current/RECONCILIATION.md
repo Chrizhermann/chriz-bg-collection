@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 445 default/mandatory rows — conditional inactive: 5, deferred: 5, selected for installation: 435.
+Engine-equivalent resolved-selection summary: 457 default/mandatory rows — conditional inactive: 5, deferred: 5, selected for installation: 447.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -202,6 +202,8 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `CHRIZ-BG-MODPACK:130` | mandatory | `feature:chriz-bg-modpack:component-130` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 130 |  |
 | `CHRIZ-BG-MODPACK:140` | mandatory | `feature:chriz-bg-modpack:component-140` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 140 |  |
 | `CHRIZ-BG-MODPACK:170` | mandatory | `feature:chriz-bg-modpack:component-170` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 170 |  |
+| `CHRIZ-BG-MODPACK:188` | mandatory | `feature:chriz-bg-modpack:component-188` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 188 |  |
+| `CHRIZ-BG-MODPACK:189` | mandatory | `feature:chriz-bg-modpack:component-189` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 189 |  |
 | `CHRIZ-BG-MODPACK:190` | default | `feature:chriz-bg-modpack:component-190` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 190 |  |
 | `CHRIZ-BG-MODPACK:192` | default | `feature:chriz-bg-modpack:component-192` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 192 |  |
 | `CHRIZ-BG-MODPACK:193` | default | `feature:chriz-bg-modpack:component-193` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 193 |  |
@@ -210,6 +212,7 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `CHRIZ-BG-MODPACK:196` | default | `feature:chriz-bg-modpack:component-196` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 196 |  |
 | `CHRIZ-BG-MODPACK:197` | default | `feature:chriz-bg-modpack:component-197` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 197 |  |
 | `CHRIZ-BG-MODPACK:198` | default | `feature:chriz-bg-modpack:component-198` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 198 |  |
+| `CHRIZ-BG-MODPACK:199` | default | `feature:chriz-bg-modpack:component-199` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 199 |  |
 | `CHRIZ-BG-MODPACK:220` | default | `feature:chriz-bg-modpack:component-220` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 220 |  |
 | `CHRIZ-BG-MODPACK:221` | default | `feature:chriz-bg-modpack:component-221` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 221 |  |
 | `CHRIZ-BG-MODPACK:400` | mandatory | `feature:chriz-bg-modpack:component-400` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 400 | Requires feature:branwen:component-0. |
@@ -218,6 +221,7 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `CHRIZ-BG-MODPACK:440` | mandatory | `feature:chriz-bg-modpack:component-440` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 440 |  |
 | `CHRIZ-BG-MODPACK:450` | mandatory | `feature:chriz-bg-modpack:component-450` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 450 |  |
 | `CHRIZ-BG-MODPACK:610` | default | `feature:chriz-bg-modpack:component-610` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 610 |  |
+| `CHRIZ-BG-MODPACK:620` | default | `feature:chriz-bg-modpack:component-620` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.7 0.2.0-alpha.7 (v0.2.0-alpha.7), component 620 |  |
 | `CHRIZ-BG-REBALANCE:100` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 100 |  |
 | `CHRIZ-BG-REBALANCE:101` | default | `feature:chriz-bg-rebalance:component-101` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 101 |  |
 | `CHRIZ-BG-REBALANCE:120` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 120 |  |
@@ -230,8 +234,10 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `CHRIZ-BG-REBALANCE:408` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.4.0 0.4.0 (v0.4.0), component 408 |  |
 | `CHRIZ-SOD-REMIX:100` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 100 |  |
 | `CHRIZ-SOD-REMIX:110` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 110 |  |
+| `CHRIZ-SOD-REMIX:115` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 115 |  |
 | `CHRIZ-SOD-REMIX:120` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 120 |  |
 | `CHRIZ-SOD-REMIX:130` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 130 |  |
+| `CHRIZ-SOD-REMIX:135` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 135 |  |
 | `CHRIZ-SOD-REMIX:140` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 140 |  |
 | `CHRIZ-SOD-REMIX:150` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 150 |  |
 | `CHRIZ-SOD-REMIX:145` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 145 |  |
@@ -254,7 +260,10 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `CHRIZ-SOD-REMIX:240` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 240 |  |
 | `CHRIZ-SOD-REMIX:250` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 250 |  |
 | `CHRIZ-SOD-REMIX:255` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 255 |  |
+| `CHRIZ-SOD-REMIX:256` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 256 |  |
 | `CHRIZ-SOD-REMIX:260` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 260 |  |
+| `CHRIZ-SOD-REMIX:265` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 265 |  |
+| `CHRIZ-SOD-REMIX:266` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 266 |  |
 | `CHRIZ-SOD-REMIX:270` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 270 |  |
 | `CHRIZ-SOD-REMIX:280` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 280 |  |
 | `CHRIZ-SOD-REMIX:290` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.11 0.6.11 (v0.6.11), component 290 |  |
@@ -304,6 +313,7 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `HIDDENGAMEPLAYOPTIONS:35` | default | `feature:hiddengameplayoptions:component-35` | selected for installation | hidden-gameplay-options → hidden-gameplay-options-5.2 5.2 (v5.2), component 35 |  |
 | `HIDDENGAMEPLAYOPTIONS:36` | default | `feature:hiddengameplayoptions:component-36` | selected for installation | hidden-gameplay-options → hidden-gameplay-options-5.2 5.2 (v5.2), component 36 |  |
 | `HIDDENGAMEPLAYOPTIONS:37` | default | `feature:hiddengameplayoptions:component-37` | selected for installation | hidden-gameplay-options → hidden-gameplay-options-5.2 5.2 (v5.2), component 37 |  |
+| `HIDDENGAMEPLAYOPTIONS:38` | default | `feature:hiddengameplayoptions:component-38` | selected for installation | hidden-gameplay-options → hidden-gameplay-options-5.2 5.2 (v5.2), component 38 |  |
 | `HIDDENGAMEPLAYOPTIONS:39` | default | `feature:hiddengameplayoptions:component-39` | selected for installation | hidden-gameplay-options → hidden-gameplay-options-5.2 5.2 (v5.2), component 39 |  |
 | `HIDDENGAMEPLAYOPTIONS:300` | default | `feature:hiddengameplayoptions:component-300` | selected for installation | hidden-gameplay-options → hidden-gameplay-options-5.2 5.2 (v5.2), component 300 |  |
 | `HIDDENGAMEPLAYOPTIONS:301` | default | `feature:hiddengameplayoptions:component-301` | selected for installation | hidden-gameplay-options → hidden-gameplay-options-5.2 5.2 (v5.2), component 301 |  |
@@ -355,6 +365,8 @@ Engine-equivalent resolved-selection summary: 445 default/mandatory rows — con
 | `SPELL_REV:55` | default | `feature:spell-rev:component-55` | selected for installation | spell-rev → spell-revisions-4.21-chriz.5 4.21-chriz.5 (v4.21-chriz.5), component 55 |  |
 | `SPELL_REV:60` | default | `feature:spell-rev:component-60` | selected for installation | spell-rev → spell-revisions-4.21-chriz.5 4.21-chriz.5 (v4.21-chriz.5), component 60 |  |
 | `SPELL_REV:65` | default | `feature:spell-rev:component-65` | selected for installation | spell-rev → spell-revisions-4.21-chriz.5 4.21-chriz.5 (v4.21-chriz.5), component 65 |  |
+| `SPELL_REV:80` | default | `feature:spell-rev:component-80` | selected for installation | spell-rev → spell-revisions-4.21-chriz.5 4.21-chriz.5 (v4.21-chriz.5), component 80 |  |
+| `SRCB_RR_COMPAT:0` | mandatory | `feature:srcb-rr-compat:component-0` | selected for installation | srcb-rr-compat → srcb-rr-compat-4.21-chriz.5 4.21-chriz.5 (v4.21-chriz.5), component 0 |  |
 | `STRATAGEMS:2000` | mandatory | `feature:stratagems:mandatory-components` | selected for installation | stratagems → stratagems-35.21 35.21 (v35.21), component 2000 |  |
 | `STRATAGEMS:2500` | mandatory | `feature:stratagems:mandatory-components` | selected for installation | stratagems → stratagems-35.21 35.21 (v35.21), component 2500 |  |
 | `STRATAGEMS:2510` | mandatory | `feature:stratagems:mandatory-components` | selected for installation | stratagems → stratagems-35.21 35.21 (v35.21), component 2510 |  |

@@ -317,15 +317,23 @@ def apply_feature_presentations(collection_text: str, presentations: dict[str, F
         for key, value in replacements.items():
             if value is not None:
                 block = re.sub(rf"(?m)^{key} = .*?$", f"{key} = {quoted(value)}", block, count=1)
-        fields = [
-            f"source_label = {quoted(presentation.source_label)}",
-            f"group_label = {quoted(presentation.group_label)}",
-        ]
+        fields = {
+            "source_label": presentation.source_label,
+            "group_label": presentation.group_label,
+        }
         if presentation.choice_group:
-            fields.append(f"choice_group = {quoted(presentation.choice_group)}")
+            fields["choice_group"] = presentation.choice_group
         lines = block.splitlines()
+        additions = []
+        for key, value in fields.items():
+            replacement = f"{key} = {quoted(value)}"
+            existing = next((i for i, line in enumerate(lines) if line.startswith(f"{key} = ")), None)
+            if existing is None:
+                additions.append(replacement)
+            else:
+                lines[existing] = replacement
         insert_at = next((i for i, line in enumerate(lines) if line.startswith("decision = ")), len(lines))
-        lines[insert_at:insert_at] = fields
+        lines[insert_at:insert_at] = additions
         return "\n".join(lines) + "\n\n"
 
     return pattern.sub(update, collection_text).rstrip() + "\n"

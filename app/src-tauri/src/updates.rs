@@ -77,6 +77,8 @@ pub struct ManagedCopyUpdateResponse {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct UpdateCenterResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lookup_trace_enabled: Option<bool>,
     pub checked_at: Option<String>,
     pub network_state: String,
     pub application: ApplicationUpdateResponse,

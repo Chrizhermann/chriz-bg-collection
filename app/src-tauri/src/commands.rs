@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use bg_engine::games::GameRole;
 use bg_engine::recipe_view::NormalizedSelection;
-use tauri::ipc::Channel;
+use tauri::ipc::{Channel, JavaScriptChannelId};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_updater::{Update, UpdaterExt};
@@ -77,6 +77,78 @@ where
         .map_err(CommandError::background_task)?
 }
 
+fn report_progress(
+    channel: &Option<Channel<bg_engine::operation_progress::OperationProgress>>,
+    progress: bg_engine::operation_progress::OperationProgress,
+) {
+    if let Some(channel) = channel {
+        let _ = channel.send(progress);
+    }
+}
+
+#[tauri::command]
+pub async fn inspect_mod_upgrade(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.inspect_mod_upgrade(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn apply_mod_upgrade(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    review_token: String,
+    full_backup: bool,
+    backup_saves: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.apply_mod_upgrade_with_progress(
+            &install_id,
+            &review_token,
+            full_backup,
+            backup_saves,
+            &|progress| report_progress(&on_progress, progress),
+        )
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn restore_mod_upgrade(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    undo: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.restore_mod_upgrade_with_progress(&install_id, undo, &|progress| {
+            report_progress(&on_progress, progress)
+        })
+    })
+    .await
+}
+
 #[tauri::command]
 pub async fn inspect_install_patches(
     state: State<'_, BridgeState>,
@@ -96,14 +168,23 @@ pub async fn apply_install_patch(
     review_token: String,
     full_backup: bool,
     save_backup: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
 ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
     let bridge = state
         .bridge
         .lock()
         .unwrap_or_else(|p| p.into_inner())
         .clone();
     background(move || {
-        bridge.apply_install_patch(&install_id, &review_token, full_backup, save_backup)
+        bridge.apply_install_patch_with_progress(
+            &install_id,
+            &review_token,
+            full_backup,
+            save_backup,
+            &|progress| report_progress(&on_progress, progress),
+        )
     })
     .await
 }
@@ -111,25 +192,41 @@ pub async fn apply_install_patch(
 pub async fn undo_install_patch(
     state: State<'_, BridgeState>,
     install_id: String,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
 ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
     let bridge = state
         .bridge
         .lock()
         .unwrap_or_else(|p| p.into_inner())
         .clone();
-    background(move || bridge.restore_install_patch(&install_id, true)).await
+    background(move || {
+        bridge.restore_install_patch_with_progress(&install_id, true, &|progress| {
+            report_progress(&on_progress, progress)
+        })
+    })
+    .await
 }
 #[tauri::command]
 pub async fn restore_install_patch(
     state: State<'_, BridgeState>,
     install_id: String,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
 ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
     let bridge = state
         .bridge
         .lock()
         .unwrap_or_else(|p| p.into_inner())
         .clone();
-    background(move || bridge.restore_install_patch(&install_id, false)).await
+    background(move || {
+        bridge.restore_install_patch_with_progress(&install_id, false, &|progress| {
+            report_progress(&on_progress, progress)
+        })
+    })
+    .await
 }
 
 fn local_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
@@ -158,7 +255,10 @@ pub async fn bootstrap(state: State<'_, BridgeState>) -> Result<BootstrapRespons
 }
 
 #[tauri::command]
-pub fn installation_defaults(app: AppHandle) -> Result<InstallationDefaultsResponse, CommandError> {
+pub async fn installation_defaults(
+    app: AppHandle,
+    state: State<'_, BridgeState>,
+) -> Result<InstallationDefaultsResponse, CommandError> {
     let home = app.path().home_dir().map_err(|error| {
         CommandError::new(
             "home_path_unavailable",
@@ -167,7 +267,26 @@ pub fn installation_defaults(app: AppHandle) -> Result<InstallationDefaultsRespo
             error.to_string(),
         )
     })?;
-    crate::bridge::installation_defaults(&home)
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.suggest_installation_defaults(&home)).await
+}
+
+#[tauri::command]
+pub async fn rename_installation(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    name: String,
+) -> Result<crate::bridge::InstallationNameResponse, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.rename_installation(&install_id, &name)).await
 }
 
 #[tauri::command]
@@ -555,14 +674,38 @@ pub async fn check_updates(
             copy.detail = if copy.state == "up-to-date" { "Built with this collection version." } else { "A newer setup can be installed separately. Your current game and saves stay unchanged." }.to_owned();
         }
     }
+    crate::installation_lookup_trace::updates_returned(&summary);
     Ok(summary)
+}
+
+#[tauri::command]
+pub async fn record_install_lookup_client(
+    report: crate::installation_lookup_trace::ClientUpdateTrace,
+) -> Result<(), CommandError> {
+    background(move || crate::installation_lookup_trace::client_received(report)).await
+}
+
+#[tauri::command]
+pub async fn inspect_installed_update(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::installed_updates::InstalledUpdatePlan, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.inspect_installed_update(&install_id)).await
 }
 
 #[tauri::command]
 pub async fn install_app_update(
     state: State<'_, BridgeState>,
     version: String,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
 ) -> Result<(), CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
     let bridge = state
         .bridge
         .lock()
@@ -584,8 +727,33 @@ pub async fn install_app_update(
             )
         })?;
     let _guard = bridge.begin_app_update()?;
+    let mut downloaded = 0u64;
+    let mut reported = std::time::Instant::now();
+    bg_engine::operation_progress::stage(&|p| report_progress(&on_progress, p), "downloading");
     update
-        .download_and_install(|_, _| {}, || {})
+        .download_and_install(
+            |chunk, total| {
+                downloaded = downloaded.saturating_add(chunk as u64);
+                if reported.elapsed() >= Duration::from_millis(250) || total == Some(downloaded) {
+                    report_progress(
+                        &on_progress,
+                        bg_engine::operation_progress::OperationProgress {
+                            stage: "downloading".into(),
+                            completed: Some(downloaded.to_string()),
+                            total: total.map(|n| n.to_string()),
+                            unit: Some("bytes".into()),
+                        },
+                    );
+                    reported = std::time::Instant::now();
+                }
+            },
+            || {
+                bg_engine::operation_progress::stage(
+                    &|p| report_progress(&on_progress, p),
+                    "applying",
+                )
+            },
+        )
         .await
         .map_err(update_error)
 }

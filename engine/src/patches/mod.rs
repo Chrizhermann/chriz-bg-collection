@@ -1,7 +1,7 @@
 //! A deliberately narrow existing-install patch path. Base receipts and saves are immutable.
 pub mod catalog;
 pub mod description;
-mod files;
+pub(crate) mod files;
 mod transaction;
 #[cfg(all(test, windows))]
 mod transaction_tests;
@@ -18,7 +18,8 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-pub use transaction::{apply, launch_guard, restore, verified_log_suffix};
+pub use transaction::{active_log_transition, apply, launch_guard, restore, verified_log_suffix};
+pub use transaction::{apply_with_progress, restore_with_progress};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -188,6 +189,7 @@ fn fingerprint(plan: &Plan, catalog: &catalog::Catalog, id: &str) -> Result<Stri
 }
 
 pub fn inspect(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<PatchPreview, String> {
+    crate::mod_upgrades::launch_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;
     let mut preview = PatchPreview {
         install_id: ctx.record.install_id.clone(),
@@ -277,15 +279,27 @@ fn unchanged_hashes(game: &Path, hashes: &BTreeMap<String, String>) -> Result<()
     }
     Ok(())
 }
-fn close_check(game: &Path, hashes: &BTreeMap<String, String>) -> Result<(), String> {
+pub(crate) fn close_check(game: &Path, hashes: &BTreeMap<String, String>) -> Result<(), String> {
     close_check_inner(game, hashes, false)
+}
+/// Only after the caller has validated restoration ownership/backups. Existing
+/// files remain exclusively probed; a missing TLK must not block its restoration.
+pub(crate) fn close_restore_check(
+    game: &Path,
+    hashes: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    close_check_inner(game, hashes, true)
 }
 fn close_check_inner(
     game: &Path,
     hashes: &BTreeMap<String, String>,
     restoring: bool,
 ) -> Result<(), String> {
-    crate::preflight::recheck_target_before_mutation(game, "en_US").map_err(err)?;
+    if restoring {
+        crate::preflight::recheck_staging_target_before_mutation(game, "en_US").map_err(err)?;
+    } else {
+        crate::preflight::recheck_target_before_mutation(game, "en_US").map_err(err)?;
+    }
     let mut paths = Vec::new();
     for name in hashes.keys() {
         let path = game.join(name);

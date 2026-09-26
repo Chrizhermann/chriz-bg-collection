@@ -1139,7 +1139,9 @@ fn restart_lists_and_resumes_only_a_verified_indexed_campaign() {
     let cards = bridge.list_managed_installations().unwrap();
     assert_eq!(cards.len(), 1);
     assert_eq!(cards[0].id, "install-restart");
-    assert_eq!(cards[0].name, "Chriz Easy BG — incomplete installation");
+    // Legacy campaigns have no display-name sidecar; use their unique folder
+    // label instead of making every incomplete installation look identical.
+    assert_eq!(cards[0].name, "campaign");
     assert!(!cards[0].available);
     assert!(cards[0].resumable);
     assert_eq!(cards[0].receipt_path, None);

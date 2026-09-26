@@ -590,8 +590,17 @@ safe diagnostic line\n",
 
 #[test]
 fn exports_only_named_patch_evidence_and_redacts_pending_json() {
+    check_update_evidence("patches/cebg-v1");
+}
+
+#[test]
+fn exports_only_named_mod_upgrade_evidence_without_backups_or_player_data() {
+    check_update_evidence("mod-upgrades/v1");
+}
+
+fn check_update_evidence(namespace: &str) {
     let fixture = fixture(true);
-    let transaction = ".chriz/patches/cebg-v1/1758326400000000000";
+    let transaction = format!(".chriz/{namespace}/1758326400000000000");
     let evidence = serde_json::to_vec(&serde_json::json!({
         "managed_root": fixture.home.join("Games/Test"),
         "nested": { "token": "invented-patch-secret" },
@@ -614,7 +623,7 @@ fn exports_only_named_patch_evidence_and_redacts_pending_json() {
                 &format!("{transaction}/{name}"),
                 &evidence,
             );
-            expected_names.push(format!("patches/cebg-v1/1758326400000000000/{name}"));
+            expected_names.push(format!("{namespace}/1758326400000000000/{name}"));
         }
     }
     for name in ["attempt.debug", "output.log"] {
@@ -627,7 +636,7 @@ fn exports_only_named_patch_evidence_and_redacts_pending_json() {
             )
             .as_bytes(),
         );
-        expected_names.push(format!("patches/cebg-v1/1758326400000000000/{name}"));
+        expected_names.push(format!("{namespace}/1758326400000000000/{name}"));
     }
     for relative in [
         format!("{transaction}/affected/prepared.json"),
@@ -658,7 +667,7 @@ fn exports_only_named_patch_evidence_and_redacts_pending_json() {
     let entries = zip_entries(&result.path);
     let patch_entries = entries
         .iter()
-        .filter(|(name, _)| name.starts_with("patches/"))
+        .filter(|(name, _)| name.starts_with(namespace))
         .collect::<Vec<_>>();
     expected_names.sort();
     assert_eq!(

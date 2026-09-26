@@ -40,23 +40,28 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["chriz-bg-modpack-0.2.0-alpha.5"];
-    assert_eq!(artifact.version, "0.2.0-alpha.5");
+    let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.7");
+    let artifact = &manifest.artifacts[artifact_id];
+    assert!(!manifest
+        .artifacts
+        .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
+    assert_eq!(artifact.version, "0.2.0-alpha.7");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.5");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.7");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.5/chriz-bg-modpack-v0.2.0-alpha.5.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.7/chriz-bg-modpack-v0.2.0-alpha.7.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.5.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.7.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_335_026));
+    assert_eq!(artifact.source.expected_length, Some(1_367_203));
     assert_eq!(
         artifact.source.sha256,
-        "2278c839f60e019bedba355cb794176a052d24b68db2851248af926580840b33"
+        "f134085e8220a4222190981f173034653efe7aa92d47caa8430682a1352d1c19"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

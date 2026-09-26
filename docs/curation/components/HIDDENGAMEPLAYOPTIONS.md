@@ -17,8 +17,11 @@ Subgroup = mutually exclusive; choose zero or one.
 - New-in-v5.2 component `306` supports EET only when EET GUI `0` is installed. That GUI
   is not in this collection, so keep `306` excluded. Refresh the stale v5.1 latest-version
   entry in `manifest/mod-sources.tsv` when the source pin is authored.
-- Component `38` requires one Tweaks Anthology interval-save component (`3350`–`3358`).
-  Component `40` requires Tweaks Anthology component `3400`.
+- Component `38` is selected with the recommended Tweaks Anthology 15-minute,
+  four-save interval setting (`3354`). It remains available with any curated
+  interval-save choice (`3350`–`3357`) and is inactive when none is selected;
+  choosing no interval saves must not restore one implicitly. Component `40`
+  requires Tweaks Anthology component `3400`.
 - Component `201` is a no-log maintenance updater for component `200`, not a normal
   player preference. Keep it out of the component UI. If `200` is selected, install it
   after content mods; the orchestrator may invoke `201` internally for a later refresh.
@@ -67,7 +70,7 @@ generated order must not replay its early reference position, especially when co
 | 35 | Add in-game option "Show Learnable Spells" | Game Options |  | ✓ | default |
 | 36 | Add in-game option "Render Search Map" | Game Options |  | ✓ | default |
 | 37 | Add in-game option "Render Dynamic Search Map" | Game Options |  | ✓ | default |
-| 38 | Add in-game options for Tweak Anthology's "Create Interval Saves" | Game Options |  |  | optional |
+| 38 | Add in-game options for Tweak Anthology's "Create Interval Saves" | Game Options |  |  | default |
 | 39 | Add in-game option "Force Dialog Pause" | Game Options |  | ✓ | default |
 | 40 | Add in-game options for Tweaks Anthology's "Restored Loading Hints" | Game Options |  |  | optional |
 | 200 | Improved Cheat Menu | Cheat Menu |  |  | optional |

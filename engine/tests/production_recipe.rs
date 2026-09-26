@@ -527,6 +527,12 @@ fn artifact_verification_evidence() -> ArtifactVerificationEvidence {
 #[test]
 fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() {
     let manifest = recipe();
+    // Preserve historical verification evidence without bundling the retired
+    // archive descriptor as an available current download.
+    let historical_modpack: bg_engine::manifest::Artifact = toml::from_str(include_str!(
+        "../../manifest/reference/historical-artifacts/chriz-bg-modpack-0.2.0-alpha.5.toml"
+    ))
+    .unwrap();
     let evidence = artifact_verification_evidence();
     let expected_observations = BTreeMap::from([
         (
@@ -819,6 +825,9 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
         let artifact = manifest
             .artifacts
             .get(&record.artifact_id)
+            .or_else(|| {
+                (record.artifact_id == historical_modpack.id).then_some(&historical_modpack)
+            })
             .unwrap_or_else(|| panic!("unknown evidence artifact {}", record.artifact_id));
         let (expected_host, expected_wrapper, expected_shape) = expected_observations
             .get(record.artifact_id.as_str())

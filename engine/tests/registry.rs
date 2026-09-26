@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::registry::{
-    CampaignAvailability, InstallAvailability, ManagedInstallRecord, ManagedInstallRegistry,
+    inspect_campaign_availability, inspect_install_availability, CampaignAvailability,
+    InstallAvailability, ManagedInstallRecord, ManagedInstallRegistry, RegistryError,
     REGISTRY_SCHEMA_VERSION,
 };
 use bg_engine::resolve::InstallPlan;
@@ -110,6 +111,7 @@ fn stores_one_immutable_file_per_install_and_lists_live_targets() {
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].record, expected);
     assert_eq!(listed[0].availability, InstallAvailability::Available);
+    inspect_install_availability(&expected).unwrap();
     assert_eq!(registry.publish(&expected).unwrap(), path);
 }
 
@@ -127,6 +129,11 @@ fn a_missing_or_moved_target_stays_as_a_stale_card() {
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].record, expected);
     assert_eq!(listed[0].availability, InstallAvailability::Stale);
+    assert!(matches!(
+        inspect_install_availability(&expected),
+        Err(RegistryError::Io { path, source })
+            if path == managed && source.kind() == std::io::ErrorKind::NotFound
+    ));
 }
 
 #[test]
@@ -169,6 +176,61 @@ fn missing_launch_executable_marks_an_install_stale() {
     let listed = registry.list().unwrap();
 
     assert_eq!(listed[0].availability, InstallAvailability::Stale);
+    assert!(matches!(
+        inspect_install_availability(&expected),
+        Err(RegistryError::Io { path, source })
+            if path == expected.launch_path && source.kind() == std::io::ErrorKind::NotFound
+    ));
+}
+
+#[test]
+fn changed_receipt_stays_stale_and_reports_the_exact_receipt_path() {
+    let (_temp, _app_data, managed, registry) = setup();
+    let mut expected = record(&managed);
+    expected.receipt_sha256 = sha256_bytes(b"immutable receipt");
+    registry.publish(&expected).unwrap();
+    let receipt_path = managed.join(".chriz/install-receipt.json");
+    std::fs::write(&receipt_path, b"changed receipt").unwrap();
+
+    assert_eq!(
+        registry.list().unwrap()[0].availability,
+        InstallAvailability::Stale
+    );
+    let reason = inspect_install_availability(&expected)
+        .unwrap_err()
+        .to_string();
+    assert!(reason.contains("receipt SHA-256 mismatch"), "{reason}");
+    assert!(
+        reason.contains(&receipt_path.display().to_string()),
+        "{reason}"
+    );
+    assert!(
+        reason.contains(&sha256_bytes(b"changed receipt")),
+        "{reason}"
+    );
+    assert_eq!(std::fs::read(&receipt_path).unwrap(), b"changed receipt");
+}
+
+#[test]
+fn inspection_distinguishes_a_non_directory_root_and_an_escaping_launcher() {
+    let (temp, _app_data, managed, _registry) = setup();
+    let mut expected = record(&managed);
+    expected.receipt_sha256 = sha256_bytes(b"immutable receipt");
+    let outside = temp.path().join("outside.exe");
+    std::fs::write(&outside, b"outside launcher").unwrap();
+    expected.launch_path = outside.clone();
+    assert!(matches!(
+        inspect_install_availability(&expected),
+        Err(RegistryError::UnsafePath { path, message })
+            if path == outside && message.contains("outside managed root")
+    ));
+
+    expected.managed_root = outside.clone();
+    assert!(matches!(
+        inspect_install_availability(&expected),
+        Err(RegistryError::UnsafePath { path, message })
+            if path == outside && message.contains("direct non-symlink directory")
+    ));
 }
 
 #[test]
@@ -218,6 +280,10 @@ fn publishes_a_create_once_started_campaign_and_replays_it_as_resumable() {
         created.recipe_payload_sha256
     );
     assert_eq!(listed[0].availability, CampaignAvailability::Resumable);
+    assert_eq!(
+        inspect_campaign_availability(&listed[0].record).unwrap(),
+        None
+    );
 }
 
 #[test]
@@ -241,6 +307,18 @@ fn moved_or_corrupt_started_campaigns_remain_visible_but_stale() {
     assert!(listed
         .iter()
         .all(|card| card.availability == CampaignAvailability::Stale));
+    let corrupt_card = listed
+        .iter()
+        .find(|card| card.record.install_id == "install-corrupt")
+        .unwrap();
+    let reason = inspect_campaign_availability(&corrupt_card.record)
+        .unwrap_err()
+        .to_string();
+    assert!(reason.contains("campaign ledger"), "{reason}");
+    assert!(
+        reason.contains(&corrupt.managed_root.display().to_string()),
+        "{reason}"
+    );
 }
 
 #[test]
@@ -268,6 +346,41 @@ fn a_fresh_copy_seal_is_visible_but_never_resumable() {
     assert_eq!(
         listed[0].availability,
         CampaignAvailability::FreshCopyRequired
+    );
+    let seal = inspect_campaign_availability(&listed[0].record)
+        .unwrap()
+        .unwrap();
+    assert_eq!(seal.step_id, "stage:bg1");
+    assert_eq!(seal.attempt, 1);
+    assert_eq!(seal.detail, "target evidence changed");
+}
+
+#[test]
+fn campaign_inspection_reports_the_mismatched_identity_field() {
+    let temp = TempDir::new().unwrap();
+    let registry = ManagedInstallRegistry::open_or_create(&temp.path().join("app-data")).unwrap();
+    let (created, _store) = create_started_campaign(temp.path(), "install-identity");
+    registry.publish_campaign(&created).unwrap();
+    let original = registry.list_campaigns().unwrap().remove(0).record;
+
+    let mut changed = original.clone();
+    changed.install_id = "install-other".to_owned();
+    let reason = inspect_campaign_availability(&changed)
+        .unwrap_err()
+        .to_string();
+    assert!(reason.contains("campaign install id differs"), "{reason}");
+    changed = original;
+    changed.recipe_sha256 = "ff".repeat(32);
+    let reason = inspect_campaign_availability(&changed)
+        .unwrap_err()
+        .to_string();
+    assert!(
+        reason.contains("campaign recipe SHA-256 differs"),
+        "{reason}"
+    );
+    assert_eq!(
+        registry.list_campaigns().unwrap()[0].availability,
+        CampaignAvailability::Resumable
     );
 }
 
@@ -309,4 +422,413 @@ fn a_started_install_id_cannot_be_reassigned_to_another_valid_ledger() {
         error.to_string().contains("different managed root"),
         "{error}"
     );
+}
+
+fn create_named_campaign(root: &Path, install_id: &str, name: &str) -> CampaignCreated {
+    let managed = root.join(format!("named-{install_id}"));
+    let cache = root.join(format!("cache-{install_id}"));
+    std::fs::create_dir_all(&managed).unwrap();
+    std::fs::create_dir_all(&cache).unwrap();
+    let mut created = started_campaign(
+        &managed.canonicalize().unwrap(),
+        &cache.canonicalize().unwrap(),
+        install_id,
+    );
+    created.recipe_payload =
+        serde_json::to_vec(&serde_json::json!({ "display_name": name })).unwrap();
+    created.recipe_payload_sha256 = sha256_bytes(&created.recipe_payload);
+    SessionStore::create(
+        &created.managed_root,
+        SessionEvent::Created(Box::new(created.clone())),
+    )
+    .unwrap();
+    created
+}
+
+#[test]
+fn name_defaults_include_failed_missing_and_completed_entries() {
+    let (temp, _app_data, managed, registry) = setup();
+    assert_eq!(registry.suggested_display_name().unwrap(), "Chriz Easy BG");
+    let mut completed = record(&managed);
+    completed.display_name = "  chriz EASY bg  ".to_owned();
+    completed.receipt_sha256 = sha256_bytes(b"immutable receipt");
+    registry.publish(&completed).unwrap();
+    assert_eq!(
+        registry.suggested_display_name().unwrap(),
+        "Chriz Easy BG (2)"
+    );
+    let campaign = create_named_campaign(temp.path(), "failed-two", "Chriz Easy BG (2)");
+    registry
+        .publish_campaign_named(&campaign, "Chriz Easy BG (2)")
+        .unwrap();
+    let store = SessionStore::open(&campaign.managed_root).unwrap();
+    store
+        .append(SessionEvent::StepStarted {
+            step_id: "stage:bg1".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    store
+        .append(SessionEvent::FreshCopyRequired {
+            step_id: "stage:bg1".to_owned(),
+            attempt: 1,
+            detail: "fixture failure".to_owned(),
+        })
+        .unwrap();
+    std::fs::rename(&managed, temp.path().join("moved-completed")).unwrap();
+    assert_eq!(
+        registry.suggested_display_name().unwrap(),
+        "Chriz Easy BG (3)"
+    );
+    assert_eq!(
+        registry.display_name("failed-two").unwrap(),
+        "Chriz Easy BG (2)"
+    );
+}
+
+#[test]
+fn name_validation_trims_compares_case_insensitively_and_rejects_invalid_input() {
+    use bg_engine::registry::names::normalize_display_name;
+    let (temp, _app_data, _managed, registry) = setup();
+    let campaign = create_named_campaign(temp.path(), "custom", "My adventure");
+    registry
+        .publish_campaign_named(&campaign, "  My adventure  ")
+        .unwrap();
+    assert_eq!(registry.display_name("custom").unwrap(), "My adventure");
+    assert_eq!(
+        registry
+            .validate_display_name("  Different  ", None)
+            .unwrap(),
+        "Different"
+    );
+    assert!(
+        matches!(registry.validate_display_name(" MY ADVENTURE ", None), Err(RegistryError::DuplicateName { install_id, .. }) if install_id == "custom")
+    );
+    assert_eq!(
+        registry
+            .validate_display_name(" MY ADVENTURE ", Some("custom"))
+            .unwrap(),
+        "MY ADVENTURE"
+    );
+    for invalid in [
+        "",
+        "   ",
+        ".",
+        "..",
+        "line\nbreak",
+        "Bad/name",
+        "Bad\\name",
+        "Name?",
+        "Name:",
+        "<name>",
+    ] {
+        assert!(
+            matches!(
+                normalize_display_name(invalid),
+                Err(RegistryError::InvalidName(_))
+            ),
+            "{invalid:?}"
+        );
+    }
+    assert!(normalize_display_name(&"a".repeat(81)).is_err());
+    assert_eq!(
+        normalize_display_name(&"界".repeat(80))
+            .unwrap()
+            .chars()
+            .count(),
+        80
+    );
+    assert!(registry
+        .validate_display_name("Name", Some("unknown"))
+        .is_err());
+}
+
+#[test]
+fn name_comparison_handles_non_ascii_case() {
+    let (temp, _app_data, _managed, registry) = setup();
+    let campaign = create_named_campaign(temp.path(), "unicode", "Älven adventure");
+    registry
+        .publish_campaign_named(&campaign, "Älven adventure")
+        .unwrap();
+    assert!(matches!(
+        registry.validate_display_name("älven ADVENTURE", None),
+        Err(RegistryError::DuplicateName { .. })
+    ));
+}
+
+#[test]
+fn name_survives_failure_reopen_completion_and_display_only_rename() {
+    let (temp, app_data, _managed, registry) = setup();
+    let campaign = create_named_campaign(temp.path(), "lifecycle", "First name");
+    let pointer = registry
+        .publish_campaign_named(&campaign, "First name")
+        .unwrap();
+    let pointer_before = std::fs::read(&pointer).unwrap();
+    let ledger = campaign.managed_root.join(".chriz/ledger/0000000000.json");
+    let ledger_before = std::fs::read(&ledger).unwrap();
+    assert_eq!(
+        registry
+            .rename_display_name("lifecycle", "  Better name  ")
+            .unwrap(),
+        "Better name"
+    );
+    assert_eq!(
+        ManagedInstallRegistry::open_or_create(&app_data)
+            .unwrap()
+            .display_name("lifecycle")
+            .unwrap(),
+        "Better name"
+    );
+    registry
+        .publish_campaign_named(&campaign, "First name")
+        .unwrap();
+    assert_eq!(registry.display_name("lifecycle").unwrap(), "Better name");
+    assert_eq!(std::fs::read(&pointer).unwrap(), pointer_before);
+    assert_eq!(std::fs::read(&ledger).unwrap(), ledger_before);
+
+    std::fs::create_dir_all(campaign.managed_root.join("game")).unwrap();
+    std::fs::write(
+        campaign.managed_root.join("game/InfinityLoader.exe"),
+        b"launcher",
+    )
+    .unwrap();
+    std::fs::write(
+        campaign.managed_root.join(".chriz/install-receipt.json"),
+        b"receipt",
+    )
+    .unwrap();
+    let profile = temp.path().join("saved-profile");
+    std::fs::create_dir_all(&profile).unwrap();
+    std::fs::write(profile.join("save.sav"), b"untouched save").unwrap();
+    let mut completed = record(&campaign.managed_root);
+    completed.install_id = campaign.install_id.clone();
+    completed.display_name = "First name".to_owned();
+    completed.managed_save_root = profile.clone();
+    completed.receipt_sha256 = sha256_bytes(b"receipt");
+    let completed_path = registry.publish(&completed).unwrap();
+    let completed_before = std::fs::read(&completed_path).unwrap();
+    registry
+        .rename_display_name("lifecycle", "Final name")
+        .unwrap();
+    assert_eq!(registry.display_name("lifecycle").unwrap(), "Final name");
+    assert_eq!(registry.list().unwrap()[0].record, completed);
+    assert_eq!(std::fs::read(&completed_path).unwrap(), completed_before);
+    assert_eq!(
+        std::fs::read(campaign.managed_root.join(".chriz/install-receipt.json")).unwrap(),
+        b"receipt"
+    );
+    assert_eq!(
+        std::fs::read(profile.join("save.sav")).unwrap(),
+        b"untouched save"
+    );
+    assert!(campaign.managed_root.is_dir());
+    assert!(!campaign.managed_root.with_file_name("Final name").exists());
+}
+
+#[test]
+fn legacy_campaign_names_are_read_from_frozen_payload_without_a_migration() {
+    let (temp, app_data, _managed, registry) = setup();
+    let campaign = create_named_campaign(temp.path(), "legacy", "Legacy chosen name");
+    registry.publish_campaign(&campaign).unwrap();
+    assert_eq!(
+        registry.display_name("legacy").unwrap(),
+        "Legacy chosen name"
+    );
+    assert!(!app_data.join("managed-install-names").exists());
+    assert!(matches!(
+        registry.validate_display_name("LEGACY CHOSEN NAME", None),
+        Err(RegistryError::DuplicateName { .. })
+    ));
+}
+
+#[test]
+fn legacy_duplicate_names_remain_readable_but_new_duplicates_are_rejected() {
+    let (temp, _app_data, _managed, registry) = setup();
+    let first = create_named_campaign(temp.path(), "duplicate-first", "Repeated");
+    let second = create_named_campaign(temp.path(), "duplicate-second", "Repeated");
+    registry.publish_campaign(&first).unwrap();
+    registry.publish_campaign(&second).unwrap();
+    assert_eq!(
+        registry.display_name(&first.install_id).unwrap(),
+        "Repeated"
+    );
+    assert_eq!(
+        registry.display_name(&second.install_id).unwrap(),
+        "Repeated"
+    );
+    // Legacy resume does not force a rename or break the campaign.
+    registry.publish_campaign_named(&first, "Repeated").unwrap();
+    let third = create_named_campaign(temp.path(), "duplicate-third", "Repeated");
+    assert!(matches!(
+        registry.publish_campaign_named(&third, "Repeated"),
+        Err(RegistryError::DuplicateName { .. })
+    ));
+    assert!(matches!(
+        registry.rename_display_name(&first.install_id, "repeated"),
+        Err(RegistryError::DuplicateName { .. })
+    ));
+    registry
+        .rename_display_name(&first.install_id, "Unique now")
+        .unwrap();
+    assert_eq!(
+        registry.display_name(&second.install_id).unwrap(),
+        "Repeated"
+    );
+}
+
+#[test]
+fn unavailable_name_persists_and_forgetting_releases_it_without_deleting_other_metadata() {
+    let (temp, app_data, _managed, registry) = setup();
+    let campaign = create_named_campaign(temp.path(), "missing-named", "Chriz Easy BG");
+    registry
+        .publish_campaign_named(&campaign, "Chriz Easy BG")
+        .unwrap();
+    std::fs::rename(&campaign.managed_root, temp.path().join("moved-named")).unwrap();
+    registry
+        .rename_display_name(&campaign.install_id, "Unavailable but named")
+        .unwrap();
+    assert_eq!(
+        registry.display_name(&campaign.install_id).unwrap(),
+        "Unavailable but named"
+    );
+    registry
+        .forget_missing(&campaign.install_id, &campaign.managed_root)
+        .unwrap();
+    assert!(registry.display_name(&campaign.install_id).is_err());
+    assert_eq!(
+        registry
+            .validate_display_name("Unavailable but named", None)
+            .unwrap(),
+        "Unavailable but named"
+    );
+    assert!(app_data
+        .join("managed-install-names/missing-named.json")
+        .is_file());
+}
+
+#[test]
+fn competing_campaign_names_have_exactly_one_winner() {
+    use std::sync::{Arc, Barrier};
+    let (temp, _app_data, _managed, registry) = setup();
+    let first = create_named_campaign(temp.path(), "race-first", "Same name");
+    let second = create_named_campaign(temp.path(), "race-second", "same NAME");
+    let start = Arc::new(Barrier::new(2));
+    let jobs: Vec<_> = [(first, "Same name"), (second, "same NAME")]
+        .into_iter()
+        .map(|(created, name)| {
+            let registry = registry.clone();
+            let start = Arc::clone(&start);
+            std::thread::spawn(move || {
+                start.wait();
+                registry.publish_campaign_named(&created, name)
+            })
+        })
+        .collect();
+    let results: Vec<_> = jobs.into_iter().map(|job| job.join().unwrap()).collect();
+    assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+    assert_eq!(
+        results
+            .iter()
+            .filter(|result| matches!(result, Err(RegistryError::DuplicateName { .. })))
+            .count(),
+        1
+    );
+    assert_eq!(registry.list_campaigns().unwrap().len(), 1);
+}
+
+#[test]
+fn competing_renames_preserve_the_loser_and_have_exactly_one_winner() {
+    use std::sync::{Arc, Barrier};
+    let (temp, _app_data, _managed, registry) = setup();
+    for (id, name) in [("rename-first", "First"), ("rename-second", "Second")] {
+        let created = create_named_campaign(temp.path(), id, name);
+        registry.publish_campaign_named(&created, name).unwrap();
+    }
+    let start = Arc::new(Barrier::new(2));
+    let jobs: Vec<_> = ["rename-first", "rename-second"]
+        .into_iter()
+        .map(|id| {
+            let registry = registry.clone();
+            let start = Arc::clone(&start);
+            std::thread::spawn(move || {
+                start.wait();
+                registry.rename_display_name(id, "New shared name")
+            })
+        })
+        .collect();
+    let results: Vec<_> = jobs.into_iter().map(|job| job.join().unwrap()).collect();
+    assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+    assert_eq!(
+        results
+            .iter()
+            .filter(|result| matches!(result, Err(RegistryError::DuplicateName { .. })))
+            .count(),
+        1
+    );
+    let names: Vec<_> = ["rename-first", "rename-second"]
+        .into_iter()
+        .map(|id| registry.display_name(id).unwrap())
+        .collect();
+    assert_eq!(
+        names
+            .iter()
+            .filter(|name| *name == "New shared name")
+            .count(),
+        1
+    );
+    assert_eq!(
+        names
+            .iter()
+            .filter(|name| matches!(name.as_str(), "First" | "Second"))
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn name_metadata_rejects_foreign_identity_corruption_and_path_traversal() {
+    let (temp, app_data, _managed, registry) = setup();
+    let campaign = create_named_campaign(temp.path(), "guarded-name", "Guarded name");
+    registry
+        .publish_campaign_named(&campaign, "Guarded name")
+        .unwrap();
+    let path = app_data.join("managed-install-names/guarded-name.json");
+    let before = std::fs::read(&path).unwrap();
+    let mut value: serde_json::Value = serde_json::from_slice(&before).unwrap();
+    value["managed_root"] = serde_json::json!(temp.path().join("foreign-root"));
+    std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+    assert!(registry
+        .display_name("guarded-name")
+        .unwrap_err()
+        .to_string()
+        .contains("does not match"));
+    assert!(registry
+        .rename_display_name("guarded-name", "Overwrite?")
+        .is_err());
+    std::fs::write(&path, b"malformed JSON").unwrap();
+    assert!(matches!(
+        registry.display_name("guarded-name"),
+        Err(RegistryError::Json { .. })
+    ));
+    assert!(registry
+        .rename_display_name("../outside", "Safe name")
+        .is_err());
+    assert!(registry.display_name("../outside").is_err());
+}
+
+#[test]
+fn name_publication_rejects_an_id_reassigned_to_a_different_root() {
+    let (temp, _app_data, _managed, registry) = setup();
+    let first = create_named_campaign(temp.path(), "bound-name", "Bound name");
+    registry
+        .publish_campaign_named(&first, "Bound name")
+        .unwrap();
+    let second_parent = temp.path().join("other");
+    std::fs::create_dir(&second_parent).unwrap();
+    let second = create_named_campaign(&second_parent, "bound-name", "Other name");
+    assert!(matches!(
+        registry.publish_campaign_named(&second, "Other name"),
+        Err(RegistryError::DuplicateRoot { .. })
+    ));
+    assert_eq!(registry.display_name("bound-name").unwrap(), "Bound name");
 }

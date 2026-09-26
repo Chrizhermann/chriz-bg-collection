@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Build six bounded, local-only source archives for the 2026-09-08 playtest.
+"""Build seven historical, local-only source archives for the 2026-09-08 playtest.
 
 The archives are assembled from exact Git objects wherever possible.  The two dirty
 inputs are deliberately narrow: one hash-pinned Artisan file, and the six reviewed
 dragon runtime changes rebased onto the released BG Rebalance v0.3.2 tree.
+
+These historical pins are not replacements for today's published collection.
+prepare_combined_playtest_recipe.py keeps published pins by default and rejects
+local overrides whose TP2 declarations cannot cover the requested components.
 """
 
 from __future__ import annotations

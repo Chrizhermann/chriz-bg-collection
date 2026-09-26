@@ -56,6 +56,9 @@ const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 
 include!("patch_bridge.rs");
+include!("installed_update_bridge.rs");
+include!("mod_upgrade_bridge.rs");
+include!("install_names.rs");
 
 /// Engine services used by the native bridge. The test-only seam exercises the same stateful
 /// review and worker boundary without launching WeiDU.
@@ -1248,24 +1251,42 @@ impl NativeBridge {
     pub fn list_managed_installations(
         &self,
     ) -> Result<Vec<ManagedInstallationResponse>, CommandError> {
-        let completed = self.registry_cards()?;
-        let completed_ids = completed
-            .iter()
-            .map(|card| card.record.install_id.clone())
-            .collect::<BTreeSet<_>>();
-        let mut responses = completed
-            .into_iter()
-            .map(project_managed_install)
-            .collect::<Result<Vec<_>, _>>()?;
-        responses.extend(
-            self.campaign_cards()?
-                .into_iter()
-                .filter(|card| !completed_ids.contains(&card.record.install_id))
-                .map(project_managed_campaign)
-                .collect::<Result<Vec<_>, _>>()?,
+        let mut trace = crate::installation_lookup_trace::LookupTrace::new(
+            self.app_data.as_deref(),
+            &self.recipe,
+            self.resource_root.as_deref(),
         );
-        responses.sort_by(|left, right| left.id.cmp(&right.id));
-        Ok(responses)
+        let result = (|| {
+            let completed = self.registry_cards()?;
+            trace.completed(&completed);
+            let completed_ids = completed
+                .iter()
+                .map(|card| card.record.install_id.clone())
+                .collect::<BTreeSet<_>>();
+            let mut responses = completed
+                .into_iter()
+                .map(project_managed_install)
+                .collect::<Result<Vec<_>, _>>()?;
+            let campaigns = self.campaign_cards()?;
+            trace.campaigns(&campaigns, &completed_ids);
+            responses.extend(
+                campaigns
+                    .into_iter()
+                    .filter(|card| !completed_ids.contains(&card.record.install_id))
+                    .map(project_managed_campaign)
+                    .collect::<Result<Vec<_>, _>>()?,
+            );
+            responses.sort_by(|left, right| left.id.cmp(&right.id));
+            let registry = self.registry()?;
+            for response in &mut responses {
+                response.name = registry
+                    .display_name(&response.id)
+                    .map_err(installation_name_error)?;
+            }
+            Ok(responses)
+        })();
+        trace.finish(&result);
+        result
     }
 
     /// Launches the exact verified InfinityLoader path owned by one available registry id.
@@ -1296,6 +1317,7 @@ impl NativeBridge {
                     )
                 })?;
         bg_engine::patches::launch_guard(&record.managed_root).map_err(patch_error)?;
+        bg_engine::mod_upgrades::launch_guard(&record.managed_root).map_err(mod_upgrade_error)?;
         let launch_name = record
             .launch_path
             .file_name()
@@ -1456,7 +1478,10 @@ impl NativeBridge {
             .to_path_buf();
         let request = ShortcutRequest {
             install_id: record.install_id.clone(),
-            display_name: record.display_name,
+            display_name: self
+                .registry()?
+                .display_name(&record.install_id)
+                .map_err(installation_name_error)?,
             target,
             arguments: format!("--install-id={}", record.install_id),
             working_directory,
@@ -1518,6 +1543,7 @@ impl NativeBridge {
         bg1_candidate_id: &str,
         bg2_candidate_id: &str,
     ) -> Result<FrozenReviewResponse, CommandError> {
+        let display_name = self.validate_installation_name(display_name, None)?.name;
         let overrides = selection_overrides(selection);
         let plan_report = plan_recipe(&self.recipe, &self.preset, &selection.platform, &overrides)
             .map_err(CommandError::from_cli)?;
@@ -1748,6 +1774,7 @@ impl NativeBridge {
             })
             .collect();
         Ok(UpdateCenterResponse {
+            lookup_trace_enabled: cfg!(feature = "installation-lookup-diagnostics").then_some(true),
             checked_at: None,
             network_state: "unconfigured".to_owned(),
             application: ApplicationUpdateResponse {
@@ -1829,7 +1856,10 @@ impl NativeBridge {
         );
         let response = InstallationRemovalPreview {
             install_id: plan.install_id.clone(),
-            display_name: plan.display_name.clone(),
+            display_name: self
+                .registry()?
+                .display_name(install_id)
+                .map_err(installation_name_error)?,
             managed_root: display_windows_path(&plan.managed_root)?,
             action: plan.action,
             preserved_save_path: plan
@@ -2327,7 +2357,14 @@ fn default_application_data_root() -> Option<PathBuf> {
 /// This is intentionally a pure projection. The destination is not created or trusted;
 /// the existing destination inspection and frozen-review boundaries re-resolve it before use.
 pub fn installation_defaults(home: &Path) -> Result<InstallationDefaultsResponse, CommandError> {
-    let name = "Chriz Easy BG".to_owned();
+    installation_defaults_named(home, "Chriz Easy BG")
+}
+
+pub fn installation_defaults_named(
+    home: &Path,
+    name: &str,
+) -> Result<InstallationDefaultsResponse, CommandError> {
+    let name = name.to_owned();
     let path = display_windows_path(&home.join("Games").join(&name))?;
     Ok(InstallationDefaultsResponse { name, path })
 }
@@ -3002,8 +3039,9 @@ fn project_managed_install(
     let available = card.availability == InstallAvailability::Available;
     let record = card.record;
     let consistency = available.then(|| crate::consistency::inspect(&record.managed_root));
-    let patch_recovery_needed =
-        available && bg_engine::patches::launch_guard(&record.managed_root).is_err();
+    let patch_recovery_needed = available
+        && (bg_engine::patches::launch_guard(&record.managed_root).is_err()
+            || bg_engine::mod_upgrades::launch_guard(&record.managed_root).is_err());
     let radar_version = if available {
         bg_engine::radar::status(&record.managed_root, record.managed_root.join("game"), None)
             .ok()
@@ -3020,7 +3058,7 @@ fn project_managed_install(
         name: record.display_name,
         path,
         status: if patch_recovery_needed {
-            "Patch recovery needed — open Updates".to_owned()
+            "Update recovery needed — open Updates".to_owned()
         } else if available {
             "Ready to play".to_owned()
         } else {

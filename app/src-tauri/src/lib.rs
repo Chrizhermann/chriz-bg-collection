@@ -2,6 +2,7 @@ pub mod bridge;
 mod commands;
 pub mod consistency;
 pub mod error;
+mod installation_lookup_trace;
 pub mod shortcut;
 pub mod updates;
 
@@ -19,6 +20,11 @@ pub fn run() -> tauri::Result<()> {
         .setup(move |app| {
             let resource_dir = app.path().resource_dir()?;
             let cache_dir = app.path().app_cache_dir()?;
+            if cfg!(feature = "installation-lookup-diagnostics") {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.set_title("Chriz Easy BG — Diagnostics")?;
+                }
+            }
             app.manage(BridgeState::new(
                 NativeBridge::from_resource_dir_with_cache(&resource_dir, &cache_dir)
                     .with_startup_install_id(startup_install_id.clone()),
@@ -29,6 +35,7 @@ pub fn run() -> tauri::Result<()> {
             commands::bootstrap,
             commands::select_profile,
             commands::installation_defaults,
+            commands::rename_installation,
             commands::discover_games,
             commands::choose_game_folder,
             commands::inspect_game_path,
@@ -54,6 +61,11 @@ pub fn run() -> tauri::Result<()> {
             commands::open_install_folder,
             commands::create_desktop_shortcut,
             commands::check_updates,
+            commands::record_install_lookup_client,
+            commands::inspect_installed_update,
+            commands::inspect_mod_upgrade,
+            commands::apply_mod_upgrade,
+            commands::restore_mod_upgrade,
             commands::inspect_install_patches,
             commands::apply_install_patch,
             commands::undo_install_patch,

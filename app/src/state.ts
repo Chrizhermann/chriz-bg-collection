@@ -3,6 +3,7 @@ import type {
   DestinationEvaluation,
   FrozenReview,
   GameCandidate,
+  InputValue,
   NormalizedSelection,
   Route,
   SelectionEvaluation,
@@ -33,6 +34,7 @@ export type AppAction =
   | { readonly type: "set-destination"; readonly path: string; readonly automatic?: boolean }
   | { readonly type: "set-feature"; readonly id: string; readonly selected: boolean }
   | { readonly type: "set-features"; readonly changes: Readonly<Record<string, boolean>> }
+  | { readonly type: "set-input"; readonly featureId: string; readonly inputId: string; readonly value: InputValue }
   | { readonly type: "reset-selection" }
   | { readonly type: "restore-selection"; readonly selection: NormalizedSelection }
   | { readonly type: "evaluation-requested"; readonly revision: number }
@@ -81,6 +83,10 @@ export function reduce(state: AppState, action: AppAction): AppState {
       return { ...state, selection: { ...state.selection, features: { ...state.selection.features, [action.id]: action.selected } } };
     case "set-features":
       return { ...state, frozenReview: null, selection: { ...state.selection, features: { ...state.selection.features, ...action.changes } } };
+    case "set-input":
+      return { ...state, frozenReview: null, selection: { ...state.selection, inputs: { ...state.selection.inputs,
+        [action.featureId]: { ...state.selection.inputs[action.featureId], [action.inputId]: action.value },
+      } } };
     case "reset-selection":
       return { ...state, selection: { platform: state.selection.platform, features: {}, inputs: {} }, frozenReview: null };
     case "restore-selection":

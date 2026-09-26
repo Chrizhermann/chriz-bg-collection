@@ -260,3 +260,46 @@ fn coverage_error_names_uncovered_subject() {
         .to_string()
         .contains("run:missing"));
 }
+
+#[test]
+fn released_history_covers_real_differences_and_skipping_versions_does_not_duplicate_changes() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    // Captured by comparing the exact recipe Git objects named in the fixture,
+    // using diff_recipe_packages' subject rules; not inferred from the ledgers.
+    let snapshots: serde_json::Value = serde_json::from_str(include_str!(
+        "fixtures/updates/released-recipe-differences.json"
+    ))
+    .unwrap();
+    for snapshot in snapshots.as_array().unwrap() {
+        let version = snapshot["version"].as_str().unwrap();
+        let ledger = load_release(&root.join(format!(
+            "recipes/curated-full-current/releases/v{version}/ledger.toml"
+        )))
+        .unwrap();
+        let differences = snapshot["subjects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|subject| RecipeDifference {
+                subject: subject.as_str().unwrap().to_owned(),
+                cosmetic_only: false,
+            })
+            .collect::<Vec<_>>();
+        ensure_change_coverage(&differences, &ledger).unwrap();
+    }
+    let releases = (14..=17)
+        .map(|number| {
+            load_release(&root.join(format!(
+                "recipes/curated-full-current/releases/v0.1.0-alpha.{number}/ledger.toml"
+            )))
+            .unwrap()
+        })
+        .collect::<Vec<_>>();
+    let summary = classify_updates("0.1.0-alpha.13", "0.1.0-alpha.19", &releases).unwrap();
+    assert_eq!(summary.latest_version.as_deref(), Some("0.1.0-alpha.17"));
+    assert_eq!(
+        summary.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(summary.changes.len(), 18);
+}

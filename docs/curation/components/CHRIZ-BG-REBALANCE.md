@@ -1,17 +1,20 @@
 # CHRIZ-BG-REBALANCE — components
 
-The 14-component target menu below is public release **v0.3.1**, tag commit
-`d31fda2c6723610c8ac1c6b712306446a9dbfd5b`. It includes the accepted component `120`
+The pinned target is public release **v0.4.0**. The
+[September 16 candidate](../../alpha16-candidate-2026-09-16.md) approved dragon
+components `110` and `111` as optional, unchecked additions. The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-14 entries, 10 current-alpha selections. ✓ = selected and receipt-verified in the isolated
+16 entries, 10 recommended selections. ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
 | 100 | SCS: Telekinetic Storm — restore save vs. spell for half damage (+ bypass Mirror Image) | SCS adjustments |  | ✓ | mandatory |
 | 101 | SCS: Adventurer's Mart — restore the five Freedom scrolls (spell tweak orphaned in v35) | SCS adjustments |  | ✓ | default |
+| 110 | SCS: dragon melee delivery and death-protection rebalance | SCS adjustments |  |  | optional |
+| 111 | SCS: dragon wing-buffet spacing rebalance | SCS adjustments |  |  | optional |
 | 120 | SCS + Spell Revisions: repair false weapon-protection semantics | SCS adjustments |  | ✓ | mandatory |
 | 121 | EEex + SCS: ambient caster readiness and one honest first-contact defense | SCS adjustments |  | ✓ | default |
 | 400 | Cleric of Tempus: weapon training — axe, longsword, crossbow, and two-pip mastery | Class and kit revisions |  | ✓ | default |
@@ -41,6 +44,10 @@ component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
   includes it. Component `101` requires SCS `2000` or `5900`. Both run after SCS.
 - Components `120` and `121` inspect the effective SCS/SR/EEex stack and therefore run as
   late compatibility components. On the researched stack, run `120` before `121`.
+- Dragon `110` requires Smarter Dragons and EEex; `111` requires Smarter Dragons and
+  spaces wing buffets 18 seconds apart rather than 6. Both remain unchecked and
+  independent options. Their inclusion is source-screened; native combat acceptance
+  remains pending as recorded in the September 16 candidate.
 - Run the Tempus bundle after SCS, final Spell Revisions processing, Artisan's Kitpack
   proficiency infrastructure, and EEex.
 - Component `400` requires Artisan's `C0PR#C4`, its permission spells, and its custom
@@ -56,6 +63,6 @@ component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 - Components `120` and `121` are now curated and selected. Current-version component `121`
   passed ambient delivery/accounting and the neutral-to-hostile urgent path; its older-EEex
   fallback remains a nonblocking compatibility check.
-- Revisit planned `110`, `200`, and `301` only if they enter the real menu.
+- Revisit planned `200` and `301` only if they enter the real menu.
 - Recheck whether the final SCS release supersedes `100` or `101`, and refresh the source
   repository's stale component documentation before publishing.

@@ -4,6 +4,7 @@ import { campaignLedger } from "../components/campaign-ledger";
 import { errorDetails } from "../components/error-details";
 import { statusCard } from "../components/status-card";
 import { technicalLog, type TechnicalLogState } from "../components/technical-log";
+import { progressDisplay } from "../components/operation-feedback";
 
 export interface BuildActions {
   readonly backToSetup: () => void | Promise<void>;
@@ -27,7 +28,8 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
   const page = element("div", "screen-stack build-screen");
   page.append(screenIntro("", "Installation progress", ""));
   const tone = snapshot.state === "failed" ? "danger" : snapshot.state === "running" || snapshot.state === "complete" ? "ok" : "warning";
-  const stateCard = statusCard(snapshot.headline, snapshot.detail, tone);
+  const stateCard = statusCard(snapshot.headline, snapshot.state === "running" ? "" : snapshot.detail, tone);
+  if (snapshot.state === "running") stateCard.append(progressDisplay(snapshot.progress, snapshot.detail));
   if (snapshot.failureReason) stateCard.insertBefore(element("p", "failure-reason", snapshot.failureReason), stateCard.children[1] ?? null);
   const controls = element("div", "inline-actions");
   if (snapshot.recoveryAction) stateCard.append(element("p", "recovery-action", snapshot.recoveryAction));

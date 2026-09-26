@@ -1,6 +1,7 @@
 import type { ManagedInstallation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { errorDetails } from "../components/error-details";
+import { installationNameEditor } from "../components/installation-name";
 
 export interface HomeActions {
   readonly begin: () => void | Promise<void>;
@@ -12,6 +13,7 @@ export interface HomeActions {
   readonly diagnostics: (installId: string) => void | Promise<void>;
   readonly remove?: (installId: string) => void | Promise<void>;
   readonly removalDisabled?: boolean;
+  readonly rename?: (installId: string, name: string) => Promise<void>;
 }
 
 export interface ShortcutFeedback {
@@ -35,8 +37,15 @@ function installationPicker(
   const field = element("div", "install-switcher");
   const label = element("label", undefined, "Switch install");
   const select = element("select");
+  const used = new Set<string>();
   for (const installation of installations) {
-    const option = element("option", undefined, installation.name);
+    const duplicate = installations.filter(copy => copy.name.toLowerCase() === installation.name.toLowerCase()).length > 1;
+    const folder = installation.path.replace(/[\\/]+$/, "").split(/[\\/]/).at(-1) ?? installation.path;
+    const base = duplicate ? `${installation.name} — ${folder}` : installation.name;
+    let label = base;
+    for (let suffix = 2; used.has(label.toLowerCase()); suffix++) label = `${base} (${suffix})`;
+    used.add(label.toLowerCase());
+    const option = element("option", undefined, label);
     option.value = installation.id;
     option.selected = installation.id === selectedId;
     select.append(option);
@@ -175,6 +184,9 @@ export function homeScreen(
   if (metadata.childElementCount > 0) card.append(metadata);
   const picker = installationPicker(installations, selected.id, actions.select);
   if (picker !== null) card.append(picker);
+  if (actions.rename) card.append(installationNameEditor({ installId: selected.id, name: selected.name,
+    installations: installations.map(copy => ({ installId: copy.id, name: copy.name })),
+    disabled: actions.removalDisabled, onRename: actions.rename }));
   const controls = element("div", "inline-actions launcher-actions");
   let feedback: HTMLElement | null = null;
   if (selected.available) {

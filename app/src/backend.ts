@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { decodeOperationProgress } from "./operation-feedback";
 
 import type {
   BackendStatus,
@@ -15,9 +16,12 @@ import type {
   InstallationDefaults,
   InstallationRemovalPreview,
   InstalledComponent,
+  InstalledUpdatePlan,
   ManualArchiveSupply,
   ManualDownloadRequirement,
   ManagedInstallation,
+  ModUpgradePreview,
+  OperationProgress,
   NormalizedSelection,
   PatchPreview,
   PhaseSummary,
@@ -62,6 +66,7 @@ export interface Backend {
   retryBuild(): Promise<BuildSnapshot>;
   exportDiagnostics(installId: string): Promise<{ readonly path: string } | null>;
   listManagedInstallations(): Promise<ManagedInstallation[]>;
+  renameInstallation?(installId: string, name: string): Promise<{ readonly name: string }>;
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
   removeInstallation(installId: string, confirmationToken: string): Promise<void>;
   launchInstall(installId: string): Promise<void>;
@@ -69,12 +74,16 @@ export interface Backend {
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
   installRadar(installId: string): Promise<void>;
   getUpdates(): Promise<UpdateSummary>;
-  installAppUpdate(version: string): Promise<void>;
+  installAppUpdate(version: string, onProgress?: (progress: OperationProgress) => void): Promise<void>;
   activateRecipeUpdate(version: string): Promise<void>;
+  inspectInstalledUpdate?(installId: string): Promise<InstalledUpdatePlan>;
+  inspectModUpgrade?(installId: string): Promise<ModUpgradePreview>;
+  applyModUpgrade?(installId: string, reviewToken: string, fullBackup: boolean, backupSaves: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview>;
+  restoreModUpgrade?(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview>;
   inspectInstallPatches?(installId: string): Promise<PatchPreview>;
-  applyInstallPatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean): Promise<PatchPreview>;
-  undoInstallPatch?(installId: string): Promise<PatchPreview>;
-  restoreInstallPatch?(installId: string): Promise<PatchPreview>;
+  applyInstallPatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
+  undoInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
+  restoreInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
 }
 
 export type InvokeCommand = (
@@ -195,6 +204,7 @@ type ManagedInstallationWire = {
 };
 
 type UpdateSummaryWire = {
+  readonly lookup_trace_enabled?: boolean;
   readonly checked_at: string | null;
   readonly network_state: UpdateSummary["networkState"];
   readonly application: {
@@ -546,6 +556,15 @@ export class NativeBackend implements Backend {
 
   async getUpdates(): Promise<UpdateSummary> {
     const update = await this.#command<UpdateSummaryWire>("check_updates");
+    if (update.lookup_trace_enabled) {
+      // Local diagnostic builds only. A logging failure must not block Updates.
+      void this.#command("record_install_lookup_client", { report: {
+        checked_at: update.checked_at,
+        copies: update.managed_copies.map(copy => ({
+          install_id: copy.install_id, name: copy.name, path: copy.path, state: copy.state,
+        })),
+      } }).catch(() => undefined);
+    }
     return {
       checkedAt: update.checked_at,
       networkState: update.network_state,
@@ -588,8 +607,12 @@ export class NativeBackend implements Backend {
     };
   }
 
-  async installAppUpdate(version: string): Promise<void> {
-    await this.#command("install_app_update", { version });
+  async installAppUpdate(version: string, onProgress?: (progress: OperationProgress) => void): Promise<void> {
+    await this.#commandWithProgress("install_app_update", { version }, onProgress);
+  }
+
+  renameInstallation(installId: string, name: string): Promise<{ readonly name: string }> {
+    return this.#command("rename_installation", { installId, name });
   }
 
   async activateRecipeUpdate(version: string): Promise<void> {
@@ -600,16 +623,43 @@ export class NativeBackend implements Backend {
     return this.#command("inspect_install_patches", { installId });
   }
 
-  applyInstallPatch(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean): Promise<PatchPreview> {
-    return this.#command("apply_install_patch", { installId, reviewToken, fullBackup, saveBackup });
+  inspectInstalledUpdate(installId: string): Promise<InstalledUpdatePlan> {
+    return this.#command("inspect_installed_update", { installId });
   }
 
-  undoInstallPatch(installId: string): Promise<PatchPreview> {
-    return this.#command("undo_install_patch", { installId });
+  inspectModUpgrade(installId: string): Promise<ModUpgradePreview> {
+    return this.#command("inspect_mod_upgrade", { installId });
   }
 
-  restoreInstallPatch(installId: string): Promise<PatchPreview> {
-    return this.#command("restore_install_patch", { installId });
+  applyModUpgrade(installId: string, reviewToken: string, fullBackup: boolean, backupSaves: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview> {
+    return this.#commandWithProgress("apply_mod_upgrade", { installId, reviewToken, fullBackup, backupSaves }, onProgress);
+  }
+
+  restoreModUpgrade(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<ModUpgradePreview> {
+    return this.#commandWithProgress("restore_mod_upgrade", { installId, undo }, onProgress);
+  }
+
+  applyInstallPatch(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview> {
+    return this.#commandWithProgress("apply_install_patch", { installId, reviewToken, fullBackup, saveBackup }, onProgress);
+  }
+
+  undoInstallPatch(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview> {
+    return this.#commandWithProgress("undo_install_patch", { installId }, onProgress);
+  }
+
+  restoreInstallPatch(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview> {
+    return this.#commandWithProgress("restore_install_patch", { installId }, onProgress);
+  }
+
+  async #commandWithProgress<T>(command: string, args: Record<string, unknown>, onProgress?: (progress: OperationProgress) => void): Promise<T> {
+    if (!onProgress) return this.#command(command, args);
+    let active = true;
+    const channel = this.#eventChannel((event) => {
+      const progress = decodeOperationProgress(event);
+      if (active && progress) onProgress(progress);
+    });
+    try { return await this.#command(command, { ...args, onProgress: channel }); }
+    finally { active = false; }
   }
 
   async #command<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -651,6 +701,7 @@ function wait(milliseconds: number): Promise<void> {
 
 export class FixtureBackend implements Backend {
   readonly #patches = new Map<string, PatchPreview>();
+  readonly #modUpgrades = new Map<string, ModUpgradePreview>();
   #patchReviewSequence = 0;
   readonly #removedInstallations = new Set<string>();
   readonly #removalTokens = new Map<string, string>();
@@ -913,12 +964,62 @@ export class FixtureBackend implements Backend {
     return patch;
   }
 
+  async inspectInstalledUpdate(installId: string): Promise<InstalledUpdatePlan> {
+    const updates = await this.getUpdates();
+    const copy = updates.managedCopies.find((entry) => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    return {
+      installId, baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown",
+      targetRecipeVersion: updates.recipe.currentVersion, state: "comparison-ready",
+      detail: "Preview fixture only. No real installation was inspected.",
+      choicesPreserved: true, issues: [], runs: [],
+    };
+  }
+
   async applyInstallPatch(installId: string, reviewToken: string, _fullBackup: boolean, _saveBackup: boolean): Promise<PatchPreview> {
     const patch = this.#patches.get(installId);
     if (!patch || patch.state !== "available" || patch.reviewToken !== reviewToken) throw new Error("Check this fixture installation again before applying.");
     const applied: PatchPreview = { ...patch, state: "applied", detail: "Preview only: the description-link fix was applied.", reviewToken: null, canUndo: true, appliedPatchIds: [patch.patchId] };
     this.#patches.set(installId, applied);
     return applied;
+  }
+
+  async inspectModUpgrade(installId: string): Promise<ModUpgradePreview> {
+    const current = this.#modUpgrades.get(installId);
+    if (current) return current;
+    const copy = (await this.getUpdates()).managedCopies.find(entry => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    const preview: ModUpgradePreview = {
+      installId, upgradeId: "buffbot-1.8.3-to-1.8.4", title: "BuffBot",
+      state: "available", detail: "Preview fixture only. No real installation was inspected.",
+      baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown", installedVersion: "1.8.3-alpha", targetVersion: "1.8.4-alpha",
+      reviewToken: `fixture-mod-upgrade-${installId}`, canUndo: false, canRestore: false,
+      fullBackupBytes: "12884901888", saveBackupBytes: "104857600", availableBytes: "107374182400",
+      backupPath: "C:\\Fixture\\CEBG-Backups", saveCompatibility: "Preview only. No saved games are changed.", history: [],
+    };
+    this.#modUpgrades.set(installId, preview);
+    return preview;
+  }
+
+  async applyModUpgrade(installId: string, reviewToken: string, _fullBackup: boolean, _backupSaves: boolean): Promise<ModUpgradePreview> {
+    const preview = this.#modUpgrades.get(installId);
+    if (!preview || preview.state !== "available" || preview.reviewToken !== reviewToken) throw new Error("Check this fixture installation again before updating.");
+    const applied: ModUpgradePreview = { ...preview, state: "applied", installedVersion: preview.targetVersion,
+      detail: "Preview only: BuffBot was updated. No game files changed.", reviewToken: null, canUndo: true,
+      history: [...preview.history, { transactionId: "fixture-upgrade", fromVersion: preview.installedVersion ?? "Unknown", toVersion: preview.targetVersion, state: "applied" }],
+    };
+    this.#modUpgrades.set(installId, applied);
+    return applied;
+  }
+
+  async restoreModUpgrade(installId: string, undo: boolean): Promise<ModUpgradePreview> {
+    const preview = this.#modUpgrades.get(installId);
+    if (!preview || !(undo ? preview.canUndo : preview.canRestore)) throw new Error("No fixture update can be restored.");
+    this.#modUpgrades.delete(installId);
+    const restored = await this.inspectModUpgrade(installId);
+    const result = { ...restored, history: preview.history.map(entry => ({ ...entry, state: "restored" })) };
+    this.#modUpgrades.set(installId, result);
+    return result;
   }
 
   async undoInstallPatch(installId: string): Promise<PatchPreview> {

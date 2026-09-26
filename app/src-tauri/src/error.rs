@@ -37,6 +37,26 @@ impl CommandError {
     pub fn from_cli(error: CliError) -> Self {
         let code = error.code();
         let (message, recovery_action) = match code {
+            "folder_access_denied" => (
+                "Windows blocked access to an installation or save folder.",
+                "Check the folder in Error details and its Windows permissions. If Windows Security blocked CEBG, allow this app rather than turning protection off.",
+            ),
+            "folder_unavailable" => (
+                "A folder needed for installation or saves is unavailable.",
+                "Check the exact path in Error details. Reconnect its drive or make a redirected folder available, then retry if offered.",
+            ),
+            "folder_in_use" => (
+                "Another program is using a folder or file CEBG needs.",
+                "Close the game and any other installer using this copy, then retry if offered.",
+            ),
+            "folder_conflict" => (
+                "The installation or save folder conflicts with existing files.",
+                "Keep existing files. Check Error details and choose a new empty installation folder if needed.",
+            ),
+            "folder_failed" => (
+                "CEBG could not prepare an installation or save folder.",
+                "Check the operation and path in Error details. Export diagnostics if it keeps failing.",
+            ),
             "recipe_load_failed" | "validation_failed" => (
                 "The installer recipe could not be verified.",
                 "Repair or replace the installer recipe, then try again.",
@@ -81,5 +101,53 @@ impl CommandError {
             "Retry the check. If it still fails, keep the technical detail for diagnosis.",
             error.to_string(),
         )
+    }
+}
+
+#[cfg(test)]
+mod folder_error_tests {
+    use super::*;
+    use bg_engine::cli::{CampaignReport, CampaignStatus};
+
+    #[test]
+    fn contextual_folder_codes_keep_diagnostics_and_give_specific_recovery() {
+        for (code, expected) in [
+            ("folder_access_denied", "Windows blocked"),
+            ("folder_unavailable", "unavailable"),
+            ("folder_in_use", "Another program"),
+            ("folder_conflict", "conflicts"),
+            ("folder_failed", "could not prepare"),
+        ] {
+            let reason =
+                format!("[{code}] create save folder C:\\Fixture\\Documents: OS error evidence");
+            let error = CommandError::from_cli(CliError::from_campaign(CampaignReport {
+                install_id: "fixture".into(),
+                managed_root: "C:/Fixture/Managed".into(),
+                plan_sha256: "11".repeat(32),
+                status: CampaignStatus::Failed {
+                    step_id: "stage:bg1".into(),
+                    reason: reason.clone(),
+                },
+            }));
+            assert_eq!(error.code, code);
+            assert!(error.message.contains(expected));
+            assert!(error.technical_detail.contains(&reason));
+            assert!(!error.recovery_action.contains("run as administrator"));
+            assert!(!error.message.contains("could not complete that check"));
+        }
+    }
+
+    #[test]
+    fn unclassified_message_cannot_accidentally_acquire_a_folder_code() {
+        let error = CommandError::from_cli(CliError::from_campaign(CampaignReport {
+            install_id: "fixture".into(),
+            managed_root: "C:/Fixture".into(),
+            plan_sha256: "11".repeat(32),
+            status: CampaignStatus::Failed {
+                step_id: "install:fixture".into(),
+                reason: "a mod mentions folder_access_denied in its own output".into(),
+            },
+        }));
+        assert_eq!(error.code, "campaign_failed");
     }
 }

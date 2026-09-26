@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.16"
+RECIPE_VERSION = "0.1.0-alpha.17"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -623,7 +623,6 @@ def _update_release_records(destination: Path, commit: str) -> None:
         "mod:evandra",
         "feature:artisanskitpack-npc:component-99001",
         "feature:chriz-bg-modpack:component-430",
-        "feature:artisanskitpack-npc:component-5102",
     ]:
         pattern = re.compile(rf'(?ms)^\[\[omissions\]\]\nfeature_id = {re.escape(_q(feature_id))}\n.*?(?=^\[\[omissions\]\]|\Z)')
         limitations, count = pattern.subn("", limitations)
@@ -733,140 +732,6 @@ scope = "Passed focused selection, dependencies, native component ordering and s
     acceptance_path.write_text(acceptance + "\n", encoding="utf-8", newline="\n")
 
 
-def _write_draft_release_ledger(destination: Path) -> None:
-    release_dir = destination / "releases/v0.1.0-alpha.16"
-    release_dir.mkdir(parents=True, exist_ok=True)
-    (release_dir / "ledger.toml").write_text(
-        """schema = 1
-recipe_id = "chriz-bg-collection"
-version = "0.1.0-alpha.16"
-published_at = "2026-09-20T00:00:00Z"
-minimum_app_version = "0.1.0-alpha.18"
-supersedes = "0.1.0-alpha.15"
-
-[[changes]]
-id = "modpack-compatible-presets"
-title = "More compatible companion builds and dispels"
-summary = "Updates Modpack to v0.2.0-alpha.7: selected companion builds tolerate different incoming stats and proficiency layouts, while Yeslick and Keldorn's dispel fix accepts valid effect layouts without losing casting hooks. Component choices and install order are unchanged. Existing games and saved actors are not modified."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["artifact:chriz-bg-modpack-0.2.0-alpha.7", "mod:chriz-bg-modpack"]
-
-[[changes]]
-id = "sod-skie-khalid-compatibility"
-title = "Fix SoD Skie recruitment installation"
-summary = "Updates SoD Remix to v0.6.11 so Skie recruitment installs alongside Khalid continuity and the bridge changes. Keeps all existing component choices and defaults."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["mod:chriz-sod-remix"]
-
-[[changes]]
-id = "armor-thieving-qol"
-title = "Use thief skills in armor"
-summary = "Adds the default-checked optional Klatu Tweaks 2150 component for ordinary thieving and stealth in armor with no added skill penalties. Equipment permissions, spellcasting restrictions, unrelated kit abilities, and Find Traps armor restrictions remain unchanged."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["feature:feature:klatu:component-2150", "run:klatu-armor-thieving-bg2", "artifact:klatu-tweaks-1.7.4"]
-
-[[changes]]
-id = "bardic-wonders-accepted-update"
-title = "Update Bardic Wonders balance fixes"
-summary = "Includes the user-tested Bardic Wonders owner release and its bard song, kit and high-level ability corrections. Existing component choices and the Darkbloom / Spell Revisions exclusion are preserved."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["mod:bardicwonders"]
-
-[[changes]]
-id = "restore-red-wizard-default"
-title = "Restore Edwin's Red Wizard default"
-summary = "Restores Artisan's Red Wizard kit as a default-checked optional Edwin choice with Spell Revisions. Removes the unsupported collection exclusion. Existing games and saves are not modified."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["feature:feature:artisanskitpack-npc:component-5102", "run:artisanskitpack-npc-bg2"]
-
-[[changes]]
-id = "acton-balthis-opt-in"
-title = "The Murder of Acton Balthis is now opt-in"
-summary = "BG2 Unfinished Business component 25 is unchecked by default and remains available in Customize. Other UB selections are unchanged. Existing installations and saves are not modified."
-save_applicability = "new-game-only"
-urgency = "optional"
-covers = ["feature:feature:ub:component-25", "run:ub-bg2"]
-
-[[changes]]
-id = "racial-kit-unlock"
-title = "Choose kits regardless of race"
-summary = "Adds default-checked optional Tweaks Anthology 2380 after kit additions, complementing the existing class unlock. This includes missing elf mage specialists. NPC-only kits and gnome mage rules are preserved. Existing games and saves are not modified."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["feature:feature:cdtweaks:component-2380", "run:cdtweaks-bg2"]
-
-[[changes]]
-id = "scs-optional-immersion"
-title = "Optional SCS resting, inns and death rules"
-summary = "Adds three unchecked, not-recommended experimental choices: provisions for resting, more expensive inns with rest bonuses, and revised death effects. Community reports of problems are unconfirmed in CEBG. SCS's native Spell Revisions exclusion is enforced for death effects. Recommended selections and mod versions are unchanged."
-save_applicability = "new-game-only"
-urgency = "optional"
-covers = ["feature:feature:stratagems:component-4130", "feature:feature:stratagems:component-4135", "feature:feature:stratagems:component-4140", "run:stratagems-bg2"]
-
-[[changes]]
-id = "screened-optional-scs-tweaks"
-title = "More optional SCS and Tweaks Anthology choices"
-summary = "Offers 21 additional SCS and 44 Tweaks Anthology choices, all unchecked. Alternatives use enforced choice groups, duplicate IWD casting graphics are blocked, and spell-save-penalty alternatives retain their late installation position. Riskier kit, proficiency, spell and story overhauls remain excluded. Source-screened, not live-tested in every combination; the recommended setup is unchanged."
-save_applicability = "new-game-only"
-urgency = "optional"
-covers = ["run:stratagems-bg2", "run:cdtweaks-bg2", "run:cdtweaks-spell-save-penalties-bg2", "run:iwdification-bg2"]
-
-[[changes]]
-id = "artisan-accepted-update"
-title = "Updated Artisan kits and fighter abilities"
-summary = "Includes the user-tested Artisan release: Assassin, Magekiller, Hivemaster, Paladin, fighter modal and kit description improvements. Recommended companion choices and genuine compatibility restrictions remain in place."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["artifact:artisans-kitpack-chriz-v1.5.0"]
-
-[[changes]]
-id = "spell-revisions-lightning-and-rr"
-title = "Classic Lightning and Rogue Rebalancing compatibility"
-summary = "Classic bouncing Lightning Bolt is default, with a mutually exclusive non-bouncing alternative. The SR/RR fix automatically follows Spell Revisions and either selected Rogue Rebalancing encounter, before SCS. Turning Spell Revisions off removes these dependent changes."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["run:spell-rev-lightning-bg2", "mod:srcb-rr-compat", "artifact:spell-revisions-4.21-chriz.5"]
-
-[[changes]]
-id = "companion-continuity-and-arrival"
-title = "Companion progression, Yeslick and Safana"
-summary = "Adds BG1 Yeslick's Alaghor conversion when chosen, companion continuity through EET transitions, Spellhold Imoen XP catch-up, and official Safana with one-time arrival inventory cleanup. Vanilla kit choices are preserved; no saved characters are migrated by this installer update."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["mod:chriz-bg-modpack", "mod:safana"]
-
-[[changes]]
-id = "sod-accepted-update"
-title = "SoD Remix fixes and Khalid continuity"
-summary = "Includes the completed SoD Remix release and Bridgefort Khalid continuity correction. Keeps the full SoD skip and accepted bridge changes. Extra bridge sequencers remain optional; repair-only components are not selected on fresh installs."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["artifact:chriz-sod-remix-0.6.10"]
-
-[[changes]]
-id = "optional-dragon-challenge"
-title = "Optional stronger dragon encounters"
-summary = "Offers the implemented lethal-melee and buffet-timing dragon challenge components as unchecked choices. These are not part of the recommended default difficulty; native combat acceptance remains pending."
-save_applicability = "new-game-only"
-urgency = "optional"
-covers = ["mod:chriz-bg-rebalance"]
-
-[[changes]]
-id = "buffbot-identification-update"
-title = "BuffBot respects unidentified items"
-summary = "Updates BuffBot to 1.8.4-alpha so unidentified items are not offered for automatic use. BuffBot remains the final mod installation step."
-save_applicability = "new-game-only"
-urgency = "recommended"
-covers = ["artifact:buffbot-1.8.4-alpha"]
-""",
-        encoding="utf-8",
-        newline="\n",
-    )
 
 
 def _effective_features(collection: dict, preset: dict) -> dict[str, bool]:
@@ -993,9 +858,11 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         "chriz-sod-remix-0.6.10",
         "chriz-bg-rebalance-0.3.1",
         "chriz-bg-modpack-0.2.0-alpha.1",
+        "chriz-bg-modpack-0.2.0-alpha.5",
         "chriz-bg-modpack-0.2.0-alpha.6",
         "bardicwonders-v2.9c-balance.2",
         "bardicwonders-v2.9c-balance.3",
+        "bardicwonders-v2.9c-balance.4",
         "creator-full-private-extras-20260902",
     ]:
         (destination / "artifacts" / f"{obsolete}.toml").unlink(missing_ok=True)
@@ -1064,8 +931,15 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     base_collection = _replace_feature(
         base_collection,
         "feature:hiddengameplayoptions:component-38",
-        {"readiness": '"ready"', "unavailable_reason": None},
-        ['requires = ["feature:cdtweaks:component-3354"]'],
+        {"decision": '"default"', "readiness": '"ready"', "unavailable_reason": None},
+        [
+            "requires_any = ["
+            + ", ".join(
+                _q(f"feature:cdtweaks:component-{component}")
+                for component in range(3350, 3358)
+            )
+            + "]"
+        ],
     )
     base_collection = _replace_feature(
         base_collection,
@@ -1107,7 +981,8 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         newline="\n",
     )
     _update_release_records(destination, commit)
-    _write_draft_release_ledger(destination)
+    # Release ledgers are authored once in manifest/releases and copied above.
+    # Do not synthesize a cumulative ledger or rewrite prior versions here.
     _write_reconciliation(root, destination)
 
 

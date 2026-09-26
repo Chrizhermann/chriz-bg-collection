@@ -76,7 +76,10 @@ use crate::weidu::runner::{
 use crate::weidu::verify::{reconcile as reconcile_weidu, ExpectedRun, Reconciliation};
 use crate::Manifest;
 
+mod installed_update;
 mod recovery;
+pub use installed_update::inspect_installed_update;
+pub(crate) use installed_update::verify_installed_baseline;
 pub use recovery::{
     accept_supervised_recovery, inspect_supervised_recovery, SupervisedRecoveryRequest,
 };
@@ -433,7 +436,9 @@ impl CliError {
                 "a paused campaign is resumable and cannot be represented as an error".to_owned(),
             ),
             CampaignStatus::Failed { step_id, reason } => {
-                let code = if step_id == "preflight" && reason.contains("source_not_fresh") {
+                let code = if let Some(code) = folder_step_code(reason) {
+                    code
+                } else if step_id == "preflight" && reason.contains("source_not_fresh") {
                     "source_not_fresh"
                 } else if step_id.starts_with("acquire:")
                     || reason.contains("required artifact")
@@ -660,7 +665,8 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
 }
 
 fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
-    validate_display_name(&request.display_name)?;
+    let display_name = crate::registry::names::normalize_display_name(&request.display_name)
+        .map_err(|error| CliError::new("invalid_display_name", error.to_string()))?;
     let manifest = load_recipe(&request.recipe)?;
     validate::check(&manifest).map_err(|error| {
         CliError::new(
@@ -692,7 +698,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
         schema: CLI_FROZEN_RECIPE_SCHEMA,
         release_version: recipe_release_version(&manifest.root)?,
         application_version: request.application_version.clone(),
-        display_name: Some(request.display_name.clone()),
+        display_name: Some(display_name),
         collection: manifest.collection.clone(),
         artifacts: manifest.artifacts.clone(),
         mods: manifest.mods.clone(),
@@ -1937,7 +1943,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             &self.frozen.bg1.root,
             &self.frozen.bg2.root,
         )
-        .map_err(step_error)
+        .map_err(stage_error)
     }
 
     fn save_identity(&self, layout: &ManagedLayout) -> Result<ReservedSaveIdentity, StepFailure> {
@@ -1947,7 +1953,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             self.frozen.effective_display_name(),
             &self.created.install_id,
         )
-        .map_err(step_error)
+        .map_err(stage_error)
     }
 
     fn artifact(&self, id: &str) -> Result<&Artifact, StepFailure> {
@@ -2244,7 +2250,9 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 impl<S: EventSink> CampaignRecorder for GuardedCliDependencies<'_, S> {
     fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
         ManagedInstallRegistry::open_or_create(&self.app_data)
-            .and_then(|registry| registry.publish_campaign(created))
+            .and_then(|registry| {
+                registry.publish_campaign_named(created, self.frozen.effective_display_name())
+            })
             .map(|_| ())
             .map_err(step_error)
     }
@@ -2371,18 +2379,18 @@ impl<S: EventSink> StagingService for GuardedCliDependencies<'_, S> {
                 let identity = self.save_identity(&layout)?;
                 stage_bgee_sod(&layout, &identity)
                     .map(|_| ())
-                    .map_err(step_error)
+                    .map_err(stage_error)
             }
             GameRole::Bg2ee => stage_game_copy(&layout, GameRole::Bg2ee)
                 .map(|_| ())
-                .map_err(step_error),
+                .map_err(stage_error),
         }
     }
 
     fn finalize_identity(&mut self) -> Result<(), StepFailure> {
         let layout = self.layout()?;
         let identity = self.save_identity(&layout)?;
-        finalize_game_identity(&layout, &identity).map_err(step_error)
+        finalize_game_identity(&layout, &identity).map_err(stage_error)
     }
 }
 
@@ -3069,6 +3077,7 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
         let identity = self.save_identity(&layout)?;
         let bg1_engine_name = read_engine_name(layout.bg1_root()).map_err(step_error)?;
         let bg2_engine_name = read_engine_name(layout.game_root()).map_err(step_error)?;
+        crate::stage::verify_profile_settings(&layout, &identity).map_err(step_error)?;
         if bg1_engine_name != identity.engine_name || bg2_engine_name != identity.engine_name {
             return Err(StepFailure::new(
                 "staged game identities differ from the reserved managed save identity",
@@ -3182,6 +3191,27 @@ impl<S: EventSink> CampaignClock for GuardedCliDependencies<'_, S> {
 
 fn step_error(error: impl std::fmt::Display) -> StepFailure {
     StepFailure::new(error.to_string())
+}
+
+// Preserve a stable folder category through the existing string-only campaign ledger.
+// This affects explanation only; retry eligibility still comes from the durable checks.
+fn stage_error(error: crate::error::EngineError) -> StepFailure {
+    match error.folder_failure_code() {
+        Some(code) => StepFailure::new(format!("[{code}] {error}")),
+        None => step_error(error),
+    }
+}
+
+fn folder_step_code(reason: &str) -> Option<&'static str> {
+    [
+        "folder_access_denied",
+        "folder_unavailable",
+        "folder_in_use",
+        "folder_conflict",
+        "folder_failed",
+    ]
+    .into_iter()
+    .find(|code| reason.starts_with(&format!("[{code}] ")))
 }
 
 fn unix_millis() -> Result<u64, StepFailure> {

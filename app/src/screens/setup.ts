@@ -1,6 +1,8 @@
 import type { SelectionEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { persistDisclosure } from "../components/disclosure";
+import { gameInterfaceSelector } from "../components/game-interface";
+import { featureInputs, type InputChange } from "../components/feature-inputs";
 import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, type ExclusiveChoiceGroup } from "../customization";
 
 export interface SetupViewState {
@@ -16,6 +18,7 @@ export interface SetupViewState {
 export interface SetupBatchActions {
   change(changes: Record<string, boolean>, focusId: string): void | Promise<void>;
   reset(): void | Promise<void>;
+  input?: InputChange;
 }
 
 const decisionLabels = { mandatory: "Always included", default: "Recommended", optional: "Optional", excluded: "Not included" } as const;
@@ -51,11 +54,19 @@ export function setupScreen(
   const page = element("div", "screen-stack setup-screen");
   const header = element("div", "setup-toolbar");
   const top = element("div", "setup-heading");
-  top.append(screenIntro("", "Customize your installation", "Chriz’s setup is ready to install. Change just the things you want."), screenActions(back, actionButton("Done", next)));
+  const done = actionButton("Done", next);
+  const invalidInputs = new Set<string>();
+  const inputValidity = (id: string, valid: boolean): void => {
+    if (valid) invalidInputs.delete(id); else invalidInputs.add(id);
+    done.disabled = invalidInputs.size > 0;
+  };
+  top.append(screenIntro("", "Customize your installation", "Chriz’s setup is ready to install. Change just the things you want."), screenActions(back, done));
   header.append(top);
   page.append(header);
+  const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
+  const interfaceGroup = exclusiveGroups.find(group => group.id === "game-interface");
   const bundles = batch ? commonBundles(evaluation) : [];
-  if (batch && bundles.length > 0) {
+  if (batch && (bundles.length > 0 || interfaceGroup)) {
     const common = element("details", "common-choices choice-group");
     common.open = viewState.commonOpen ?? true;
     const title = element("summary", "category-heading", "Common changes");
@@ -87,7 +98,9 @@ export function setupScreen(
     const reset = actionButton("Reset to Chriz’s setup", () => { viewState.bundleMemory = {}; void batch.reset(); }, "quiet");
     reset.classList.add("button-quiet");
     const body = element("div", "category-body");
-    body.append(choices, reset);
+    body.append(choices);
+    if (interfaceGroup) body.append(gameInterfaceSelector(evaluation, interfaceGroup, batch.change));
+    body.append(reset);
     common.append(title, body);
     page.append(common);
   }
@@ -132,8 +145,7 @@ export function setupScreen(
   filters.append(searchLabel, categoryLabel, summary);
   advanced.append(filters);
   const groups = element("div", "setup-groups");
-  const filterable: { group: HTMLElement; category: string; rows: { element: HTMLElement; text: string }[] }[] = [];
-  const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
+  const filterable: { group: HTMLDetailsElement; category: string; rows: { element: HTMLElement; text: string }[] }[] = [];
   const exclusiveByControl = new Map(exclusiveGroups.flatMap(group => group.controls.map(control => [control.id, group] as const)));
   evaluation.view.categories.forEach((category) => {
     const section = element("details", "choice-group");
@@ -142,10 +154,13 @@ export function setupScreen(
     const heading = element("summary", "category-heading");
     heading.append(element("span", "category-title", displayCategory(category)));
     const count = element("span", "category-count");
-    const categoryControls = evaluation.view.controls.filter((control) => control.category === category);
+    const categoryControls = evaluation.view.controls.filter((control) => control.category === category && !interfaceGroup?.controls.includes(control));
+    if (categoryControls.length === 0) return;
     count.textContent = `${categoryControls.filter((control) => control.selected).length} / ${categoryControls.length} included`;
     heading.append(count);
     persistDisclosure(section, heading, (open) => {
+      // Search temporarily opens matches; it must not erase the player's layout.
+      if (viewState.search.trim()) return;
       viewState.categoryOpen ??= {};
       viewState.categoryOpen[category] = open;
     });
@@ -154,7 +169,7 @@ export function setupScreen(
     section.append(fieldset);
     if (batch) {
       const buttons = element("div", "category-actions");
-      for (const [selected, label] of [[true, "Include all compatible"], [false, "Exclude all optional"]] as const) {
+      for (const [selected, label] of [[true, "Include available choices"], [false, "Exclude optional choices"]] as const) {
         const id = `category-${category}-${selected ? "include" : "exclude"}`;
         const changes = bulkCategoryChanges(evaluation, category, selected);
         const button = actionButton(label, () => { void batch.change(changes, id); }, "quiet");
@@ -162,11 +177,12 @@ export function setupScreen(
         button.disabled = Object.keys(changes).length === 0;
         buttons.append(button);
       }
-      fieldset.append(buttons, element("p", "category-hint", "Required fixes stay included. Unavailable choices and conflicting alternatives are left out."));
+      fieldset.append(buttons, element("p", "category-hint", "Both buttons affect the whole category, including choices hidden by your search. Include keeps your existing alternatives but can add challenge or experimental choices; it is not a recommendation. Required fixes stay included."));
     }
     const rows: { element: HTMLElement; text: string }[] = [];
     const renderedExclusiveGroups = new Set<string>();
     evaluation.view.controls.filter((control) => control.category === category).forEach((control) => {
+      if (interfaceGroup?.controls.includes(control)) return;
       const exclusive = exclusiveByControl.get(control.id);
       if (exclusive) {
         if (renderedExclusiveGroups.has(exclusive.id)) return;
@@ -179,7 +195,7 @@ export function setupScreen(
         select.id = selectId;
         const selectedControl = exclusive.controls.find(option => option.selected);
         if (exclusive.allowNone) {
-          const none = element("option", undefined, "None / unchanged");
+          const none = element("option", undefined, "Leave these options out");
           none.value = "";
           select.append(none);
         } else if (!selectedControl) {
@@ -197,7 +213,8 @@ export function setupScreen(
           select.append(option);
         }
         select.value = selectedControl?.id ?? "";
-        const detail = element("p", "exclusive-choice-description", selectedControl?.description ?? "No option selected.");
+        const noneDetail = "No option from this group. Other selected mods may still affect this part of the game.";
+        const detail = element("p", "exclusive-choice-description", selectedControl?.description ?? noneDetail);
         const sources = [...new Set(exclusive.controls.map(option => option.sourceLabel).filter((source): source is string => Boolean(source)))];
         const source = element("p", "exclusive-choice-source", `${sources.length === 1 ? "Source" : "Sources"}: ${sources.join(", ")}`);
         source.hidden = sources.length === 0;
@@ -210,11 +227,12 @@ export function setupScreen(
         reasons.id = `${selectId}-reasons`;
         select.addEventListener("change", () => {
           const selected = exclusive.controls.find(option => option.id === select.value);
-          detail.textContent = selected?.description ?? "No option selected.";
+          detail.textContent = selected?.description ?? noneDetail;
           if (select.value === "" && !exclusive.allowNone) return;
           void batch!.change(exclusiveChoiceChanges(exclusive, select.value), select.id);
         });
         row.append(label, select, detail, source, reasons);
+        if (selectedControl?.inputs.length) row.append(featureInputs(selectedControl, batch?.input, inputValidity));
         fieldset.append(row);
         rows.push({
           element: row,
@@ -243,12 +261,14 @@ export function setupScreen(
       const copy = element("div");
       const label = element("label", undefined, control.title);
       label.htmlFor = input.id;
-      const badge = element("span", `badge ${control.decision}`, decisionLabels[control.decision]);
+      const conditional = control.parent || control.requires?.length || control.requiresAny?.length;
+      const badge = element("span", `badge ${control.decision}`, control.decision === "mandatory" && conditional ? "Required when applicable" : decisionLabels[control.decision]);
       const description = element("p", undefined, control.description);
       description.id = descriptionId;
       copy.append(label, badge);
       if (control.readiness !== "ready") copy.append(element("span", `badge ${control.readiness}`, control.readiness === "blocked" ? "Unavailable" : "Experimental"));
       if (hasDistinctDescription) copy.append(description);
+      if (control.inputs.length) copy.append(featureInputs(control, batch?.input, inputValidity));
       if (control.unavailableReason) {
         const reason = element("p", "unavailable-reason", control.unavailableReason);
         reason.id = `${control.id}-reason`;
@@ -278,10 +298,11 @@ export function setupScreen(
         if (!row.element.hidden) groupVisible += 1;
       }
       group.group.hidden = groupVisible === 0;
+      group.group.open = query ? groupVisible > 0 : (viewState.categoryOpen?.[group.category] ?? true);
       visible += groupVisible;
     }
     empty.hidden = visible > 0;
-    summary.textContent = `${evaluation.selectedChoiceCount} choices included${query || viewState.category ? ` · ${visible} shown` : ""}`;
+    summary.textContent = `${evaluation.selectedChoiceCount} choices included${query || viewState.category ? ` · ${visible} matching rows` : ""}`;
   };
   search.addEventListener("input", filter);
   categorySelect.addEventListener("change", filter);

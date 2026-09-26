@@ -5,9 +5,14 @@ pub mod digest;
 pub mod error;
 pub mod events;
 pub mod games;
+pub mod installed_updates;
 pub mod loader;
 pub mod lock;
 pub mod manifest;
+pub mod mod_upgrades;
+pub mod operation_progress;
+#[cfg(test)]
+mod operation_progress_tests;
 pub mod orchestrator;
 pub mod patches;
 pub mod postcondition;

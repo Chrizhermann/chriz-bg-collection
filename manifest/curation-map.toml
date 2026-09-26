@@ -1,8 +1,8 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1190
-expected_choice_groups = 71
+expected_rows = 1205
+expected_choice_groups = 72
 expected_optional_none_groups = 23
 expected_fixed_groups = 10
 
@@ -28,6 +28,7 @@ parents = [
   "mod:safana",
   "mod:sarahtob",
   "mod:spell-rev",
+  "mod:srcb-rr-compat",
   "mod:stratagems",
   "mod:xan",
 ]
@@ -213,6 +214,10 @@ id = "SPELL_REV"
 excluded = [70]
 
 [[catalogs]]
+id = "SRCB_RR_COMPAT"
+excluded = []
+
+[[catalogs]]
 id = "STRATAGEMS"
 excluded = [100, 1500, 1510, 1520, 1600, 1610, 2010, 2020, 2030, 2040, 2050, 2060, 2070, 2080, 2520, 2900, 3010, 3017, 3020, 3021, 3022, 3500, 3501, 3510, 3551, 3552, 4030, 4099, 4100, 4146, 4190, 5070, 5080, 6020, 6700]
 
@@ -296,7 +301,13 @@ parent = "mod:chriz-bg-rebalance"
 [[targets]]
 id = "feature:chriz-sod-remix:mandatory-components"
 kind = "feature"
-rows = ["CHRIZ-SOD-REMIX:100", "CHRIZ-SOD-REMIX:110", "CHRIZ-SOD-REMIX:120", "CHRIZ-SOD-REMIX:130", "CHRIZ-SOD-REMIX:140", "CHRIZ-SOD-REMIX:150", "CHRIZ-SOD-REMIX:145", "CHRIZ-SOD-REMIX:160", "CHRIZ-SOD-REMIX:170", "CHRIZ-SOD-REMIX:180", "CHRIZ-SOD-REMIX:175", "CHRIZ-SOD-REMIX:185", "CHRIZ-SOD-REMIX:190", "CHRIZ-SOD-REMIX:195", "CHRIZ-SOD-REMIX:210", "CHRIZ-SOD-REMIX:197", "CHRIZ-SOD-REMIX:187", "CHRIZ-SOD-REMIX:200", "CHRIZ-SOD-REMIX:215", "CHRIZ-SOD-REMIX:220", "CHRIZ-SOD-REMIX:225", "CHRIZ-SOD-REMIX:245", "CHRIZ-SOD-REMIX:230", "CHRIZ-SOD-REMIX:240", "CHRIZ-SOD-REMIX:250", "CHRIZ-SOD-REMIX:255", "CHRIZ-SOD-REMIX:260", "CHRIZ-SOD-REMIX:270", "CHRIZ-SOD-REMIX:280", "CHRIZ-SOD-REMIX:290", "CHRIZ-SOD-REMIX:900", "CHRIZ-SOD-REMIX:910"]
+rows = ["CHRIZ-SOD-REMIX:100", "CHRIZ-SOD-REMIX:110", "CHRIZ-SOD-REMIX:115", "CHRIZ-SOD-REMIX:120", "CHRIZ-SOD-REMIX:130", "CHRIZ-SOD-REMIX:135", "CHRIZ-SOD-REMIX:140", "CHRIZ-SOD-REMIX:150", "CHRIZ-SOD-REMIX:145", "CHRIZ-SOD-REMIX:160", "CHRIZ-SOD-REMIX:170", "CHRIZ-SOD-REMIX:180", "CHRIZ-SOD-REMIX:175", "CHRIZ-SOD-REMIX:185", "CHRIZ-SOD-REMIX:190", "CHRIZ-SOD-REMIX:195", "CHRIZ-SOD-REMIX:210", "CHRIZ-SOD-REMIX:197", "CHRIZ-SOD-REMIX:187", "CHRIZ-SOD-REMIX:200", "CHRIZ-SOD-REMIX:215", "CHRIZ-SOD-REMIX:220", "CHRIZ-SOD-REMIX:225", "CHRIZ-SOD-REMIX:245", "CHRIZ-SOD-REMIX:230", "CHRIZ-SOD-REMIX:240", "CHRIZ-SOD-REMIX:250", "CHRIZ-SOD-REMIX:255", "CHRIZ-SOD-REMIX:256", "CHRIZ-SOD-REMIX:260", "CHRIZ-SOD-REMIX:265", "CHRIZ-SOD-REMIX:266", "CHRIZ-SOD-REMIX:270", "CHRIZ-SOD-REMIX:280", "CHRIZ-SOD-REMIX:290", "CHRIZ-SOD-REMIX:900", "CHRIZ-SOD-REMIX:910"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-257"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:257"]
 parent = "mod:chriz-sod-remix"
 
 [[targets]]
@@ -1861,6 +1872,18 @@ kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:121"]
 
 [[targets]]
+id = "feature:chriz-bg-rebalance:component-110"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:110"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-111"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:111"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
 id = "feature:crossmodbg2:component-0"
 kind = "feature"
 rows = ["CROSSMODBG2:0"]
@@ -1902,6 +1925,18 @@ parent = "mod:chriz-bg-modpack"
 id = "feature:chriz-bg-modpack:component-170"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:170"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-188"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:188"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-189"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:189"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
@@ -1950,6 +1985,12 @@ parent = "mod:chriz-bg-modpack"
 id = "feature:chriz-bg-modpack:component-198"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:198"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-199"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:199"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
@@ -2010,6 +2051,12 @@ parent = "mod:chriz-bg-modpack"
 id = "feature:chriz-bg-modpack:component-610"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:610"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-620"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:620"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
@@ -2483,6 +2530,24 @@ id = "feature:spell-rev:component-65"
 kind = "feature"
 rows = ["SPELL_REV:65"]
 parent = "mod:spell-rev"
+
+[[targets]]
+id = "feature:spell-rev:component-80"
+kind = "feature"
+rows = ["SPELL_REV:80"]
+parent = "mod:spell-rev"
+
+[[targets]]
+id = "feature:spell-rev:component-81"
+kind = "feature"
+rows = ["SPELL_REV:81"]
+parent = "mod:spell-rev"
+
+[[targets]]
+id = "feature:srcb-rr-compat:component-0"
+kind = "feature"
+rows = ["SRCB_RR_COMPAT:0"]
+parent = "mod:srcb-rr-compat"
 
 [[targets]]
 id = "feature:stratagems:component-3040"
@@ -3210,6 +3275,13 @@ catalog = "CHRIZ-BG-MODPACK"
 subgroup = "Hexxat: choose a class or kit"
 options = ["CHRIZ-BG-MODPACK:221", "CHRIZ-BG-MODPACK:222", "CHRIZ-BG-MODPACK:223"]
 default = "CHRIZ-BG-MODPACK:221"
+
+[[choice_groups]]
+id = "spell-rev-lightning-bolt"
+catalog = "SPELL_REV"
+subgroup = "Lightning Bolt behavior"
+options = ["SPELL_REV:80", "SPELL_REV:81"]
+default = "SPELL_REV:80"
 
 [[choice_groups]]
 id = "choice:cdtweaks:adjust-cromwell-s-forging-time"

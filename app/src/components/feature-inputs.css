@@ -1,0 +1,7 @@
+.feature-inputs { margin-top: 0.8rem; }
+.feature-input { display: grid; gap: 0.4rem; padding: 0.8rem; border-left: 2px solid var(--brass-dark); }
+.feature-input label { font-size: 0.9rem; }
+.feature-input input[type="number"], .feature-input select { width: min(100%, 16rem); min-height: 44px; padding: 0.5rem 0.7rem; border: 1px solid var(--slate-light); border-radius: var(--radius); background: var(--iron); color: var(--vellum); }
+.feature-input .feature-input-hint, .feature-input .feature-input-error { margin: 0; font-size: 0.85rem; }
+.feature-input .feature-input-error { color: var(--ember); }
+.feature-input input:disabled { opacity: 0.6; }

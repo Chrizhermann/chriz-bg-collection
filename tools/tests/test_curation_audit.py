@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -124,14 +125,15 @@ class CatalogParserTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2] / "docs" / "curation" / "components"
         rows = load_catalogs(root)
 
-        self.assertEqual(len(rows), 1_190)
+        self.assertEqual(len(rows), 1_205)
         self.assertEqual(
             decision_totals(rows),
             {
                 Decision.EXCLUDED: 515,
-                Decision.OPTIONAL: 230,
-                Decision.DEFAULT: 302,
-                Decision.MANDATORY: 143,
+                # September 22 approval moves HGO 38 from optional to default.
+                Decision.OPTIONAL: 233,
+                Decision.DEFAULT: 306,
+                Decision.MANDATORY: 151,
             },
         )
 
@@ -353,13 +355,50 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_190)
+        self.assertEqual(result.mapped_rows, 1_205)
         self.assertEqual(result.excluded_rows, 515)
-        self.assertEqual(result.feature_rows + result.omission_rows, 675)
-        self.assertEqual(result.choice_groups, 71)
+        self.assertEqual(result.feature_rows + result.omission_rows, 690)
+        self.assertEqual(result.choice_groups, 72)
         self.assertEqual(result.optional_none_groups, 23)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1190", coverage_report(rows, result))
+        self.assertIn("rows=1205", coverage_report(rows, result))
+
+    def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
+        root = Path(__file__).resolve().parents[2]
+        rows = {
+            RowKey(row.catalog, row.component_id): row
+            for row in load_catalogs(root / "docs/curation/components")
+        }
+        curation_map = load_curation_map(root / "manifest/curation-map.toml")
+        target_by_row = {row: target for target in curation_map.targets for row in target.rows}
+        collection = tomllib.loads((root / "manifest/collection.toml").read_text())
+        features = {feature["id"]: feature for feature in collection["features"]}
+        approved = {
+            "CHRIZ-BG-MODPACK": ("chriz-bg-modpack", {188: "mandatory", 189: "mandatory", 199: "default", 620: "default"}),
+            "CHRIZ-SOD-REMIX": ("chriz-sod-remix", {115: "mandatory", 135: "mandatory", 256: "mandatory", 257: "optional", 265: "mandatory", 266: "mandatory"}),
+            "CHRIZ-BG-REBALANCE": ("chriz-bg-rebalance", {110: "optional", 111: "optional"}),
+            "SPELL_REV": ("spell-rev", {80: "default", 81: "optional"}),
+            "SRCB_RR_COMPAT": ("srcb-rr-compat", {0: "mandatory"}),
+        }
+        for catalog, (mod_id, components) in approved.items():
+            for component, decision in components.items():
+                with self.subTest(catalog=catalog, component=component):
+                    key = RowKey(catalog, component)
+                    self.assertTrue(key in rows, f"missing approved catalog row {key}")
+                    self.assertEqual(rows[key].decision.value, decision)
+                    self.assertTrue(key in target_by_row, f"missing approved mapping {key}")
+                    target = target_by_row[key]
+                    feature = features[target.target_id]
+                    self.assertEqual(target.kind, "feature")
+                    self.assertEqual(target.parent, f"mod:{mod_id}")
+                    self.assertEqual(feature["decision"], decision)
+                    self.assertTrue(any(ref["component"] == component for ref in feature["components"]))
+
+        lightning = next((group for group in curation_map.choice_groups
+                          if group.group_id == "spell-rev-lightning-bolt"), None)
+        self.assertIsNotNone(lightning, "missing approved Lightning Bolt choice group")
+        self.assertEqual(lightning.options, (RowKey("SPELL_REV", 80), RowKey("SPELL_REV", 81)))
+        self.assertEqual(lightning.default, "SPELL_REV:80")
 
     def test_current_map_freezes_reviewed_omissions_and_atomic_bundles(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -426,8 +465,10 @@ default = "none"
                 for component_id in (
                     100,
                     110,
+                    115,
                     120,
                     130,
+                    135,
                     140,
                     150,
                     145,
@@ -450,7 +491,10 @@ default = "none"
                     240,
                     250,
                     255,
+                    256,
                     260,
+                    265,
+                    266,
                     270,
                     280,
                     290,

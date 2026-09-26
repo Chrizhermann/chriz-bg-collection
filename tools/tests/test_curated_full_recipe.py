@@ -241,7 +241,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "b91ae4f49eb1dcaad6ae14269e5c1efcb1a4a953c217c2cce428bc15ac6b48d0",
+                # September 22 approval: HGO 38 follows installed interval saves by default.
+                "62a03115adcea4a9812af4a760944ad81a68f0a0a06c7b3e1b1b2b2d8cb50088",
             )
 
             legacy_bg1npc_groups = {
@@ -542,8 +543,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bg_artifact["source"]["sha256"],
                 "211b509e0fb2c101c1cc20f3238a2cc1dd0e272f997359751cf8f9e13cb16439",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.16")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.17")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(
@@ -557,7 +558,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(draft_ledger["version"], "0.1.0-alpha.16")
             self.assertEqual(draft_ledger["minimum_app_version"], "0.1.0-alpha.18")
             self.assertEqual(draft_ledger["supersedes"], "0.1.0-alpha.15")
-            self.assertIn("sod-skie-khalid-compatibility", {change["id"] for change in draft_ledger["changes"]})
+            self.assertEqual({change["id"] for change in draft_ledger["changes"]}, {"modpack-compatible-presets"})
             self.assertFalse((output / "reference").exists())
 
     def test_common_customization_routes_preserve_dependency_collateral(self) -> None:
@@ -649,6 +650,48 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertTrue(effective["feature:chriz-bg-modpack:component-197"])
             for component in (130, 430, 440, 450):
                 self.assertTrue(effective[f"feature:chriz-bg-modpack:component-{component}"])
+
+    def test_interval_save_options_default_with_hgo_and_can_be_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            baseline = tomllib.loads(
+                (output / "presets/chris-recommended.toml").read_text(encoding="utf-8")
+            )["selections"]
+            features = {feature["id"]: feature for feature in collection["features"]}
+            runs = {run["run_id"]: run for run in collection["runs"]}
+            hgo_id = "feature:hiddengameplayoptions:component-38"
+            interval_ids = [
+                f"feature:cdtweaks:component-{component}"
+                for component in range(3350, 3358)
+            ]
+
+            self.assertEqual(features[hgo_id]["decision"], "default")
+            self.assertEqual(features[hgo_id]["readiness"], "ready")
+            self.assertEqual(features[hgo_id].get("requires", []), [])
+            self.assertEqual(features[hgo_id]["requires_any"], interval_ids)
+            self.assertEqual(baseline["feature:cdtweaks:component-3354"], "on")
+            self.assertEqual(baseline[hgo_id], "on")
+            self.assertTrue(_effective_features(collection, baseline)[hgo_id])
+            self.assertIn(3354, runs["cdtweaks-bg2"]["components"])
+            self.assertIn(38, runs["hiddengameplayoptions-bg2"]["components"])
+
+            alternate = {
+                **baseline,
+                "feature:cdtweaks:component-3354": "off",
+                "feature:cdtweaks:component-3355": "on",
+            }
+            self.assertTrue(_effective_features(collection, alternate)[hgo_id])
+
+            no_interval_saves = baseline.copy()
+            no_interval_saves.update({feature_id: "off" for feature_id in interval_ids})
+            effective = _effective_features(collection, no_interval_saves)
+            self.assertFalse(effective[hgo_id])
+            self.assertFalse(any(effective[feature_id] for feature_id in interval_ids))
+
+            explicit_no_interval_saves = {**no_interval_saves, hgo_id: "off"}
+            self.assertFalse(_effective_features(collection, explicit_no_interval_saves)[hgo_id])
 
     def test_scs_immersion_options_are_opt_in_and_honor_native_sr_gate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -763,8 +806,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             report = (output / "RECONCILIATION.md").read_text(encoding="utf-8")
             self.assertIn("Engine-equivalent resolved-selection summary", report)
-            self.assertTrue("445 default/mandatory rows" in report)
             self.assertTrue("`CDTWEAKS:2380` | default" in report)
+            self.assertIn("`HIDDENGAMEPLAYOPTIONS:38` | default", report)
             self.assertIn("`KLATU:2150` | default", report)
             self.assertIn("`IWDIFICATION:120` | default", report)
             self.assertIn("`BARDICWONDERS:1006` | default", report)

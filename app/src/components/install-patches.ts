@@ -64,14 +64,18 @@ function formatBytes(value: string): string {
 }
 
 /** Explicit per-install check: rendering this section never scans or patches a game. */
-export function installPatchesSection(copies: readonly ManagedCopyUpdate[], actions: InstallPatchActions, disabled = false): HTMLElement {
+export function installPatchesSection(copies: readonly ManagedCopyUpdate[], actions: InstallPatchActions, disabled = false, sharedSelection = false): HTMLElement {
   const blocked = disabled || actions.patchBusy === true;
   const section = element("section", "install-patches");
   section.setAttribute("aria-labelledby", "install-patches-heading");
   section.setAttribute("aria-busy", String(actions.patchBusy === true));
   const title = element("h2", undefined, "Fixes for your current game");
   title.id = "install-patches-heading";
-  section.append(title, element("p", "update-note", "Check one installation for supported, individual fixes. This does not upgrade all of its mods."));
+  const headingRow = element("div", "update-section-heading");
+  headingRow.append(title);
+  section.append(headingRow, element("p", "update-note", sharedSelection
+    ? "Individual fixes for this game, not an upgrade of every mod. Applying requires confirmation."
+    : "Check one installation for supported, individual fixes. This does not upgrade all of its mods."));
   if (copies.length === 0) {
     section.append(element("p", "update-note", "Complete an installation first to check for fixes."));
     return section;
@@ -97,8 +101,11 @@ export function installPatchesSection(copies: readonly ManagedCopyUpdate[], acti
     const copy = selectedCopy();
     if (!blocked && copy && copy.state !== "stale") return actions.onCheckPatches?.(copy.installId);
   }, "quiet compact");
-  toolbar.append(label, check);
-  section.append(toolbar);
+  if (sharedSelection) headingRow.append(check);
+  else {
+    toolbar.append(label, check);
+    section.append(toolbar);
+  }
   const content = element("div", "patch-content");
   section.append(content);
 
@@ -108,12 +115,12 @@ export function installPatchesSection(copies: readonly ManagedCopyUpdate[], acti
     const copy = selectedCopy();
     check.disabled = blocked || !actions.onCheckPatches || !copy || copy.state === "stale";
     if (!copy) return;
-    content.append(element("p", "path patch-path", copy.path));
+    if (!sharedSelection) content.append(element("p", "path patch-path", copy.path));
     const patch = actions.patches?.installId === copy.installId ? actions.patches : null;
     if (copy.state === "stale") {
-      content.append(element("p", "update-note", "This folder is unavailable. Restore its location before checking for fixes."));
+      if (!sharedSelection) content.append(element("p", "update-note", "This folder is unavailable. Restore its location before checking for fixes."));
     } else if (!patch) {
-      content.append(element("p", "update-note", "Not checked yet. Your game files stay unchanged until you choose Apply."));
+      if (!sharedSelection) content.append(element("p", "update-note", "Not checked yet. Your game files stay unchanged until you choose Apply."));
     } else {
       const result = element("article", "patch-result");
       result.dataset.patchState = patch.state;

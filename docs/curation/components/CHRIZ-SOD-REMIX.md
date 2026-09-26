@@ -1,19 +1,26 @@
 # CHRIZ-SOD-REMIX — components
 
-Target public release **v0.6.8** (commit
-`6c308f5facb6837b78f7e161613bb972c08b201b`) from
-`Chrizhermann/chriz-sod-rebalance`. It has 34 component declarations; the recommended
-EET setup installs 32 of them. Component `901` is the unselected alternative to `900`,
-and component `291` is a repair-only tail for existing `290` installations.
+Pinned public release **v0.6.11** from `Chrizhermann/chriz-sod-rebalance`.
+This catalog has 40 current or historical entries; the recommended EET setup installs
+37 components. The [September 16 candidate](../../alpha16-candidate-2026-09-16.md)
+approved normal components `115`, `135`, `256`, `265`, and `266` in the mandatory bundle,
+with `257` optional and unchecked. Component `901` remains the unselected alternative
+to `900`, and component `291` is a repair-only tail for existing `290` installations.
+The Dev marks below retain their historical scope and do not certify the new additions.
 
 ## UI/preset behavior
 
-- Present exactly one parent-level checkbox: **Include CHRIZ-SOD-REMIX**.
+- Present the parent-level checkbox **Include CHRIZ-SOD-REMIX**.
 - The parent checkbox is `default` (checked initially) and can disable the whole mod.
-- Do not expose individual component toggles. When the parent is enabled, install every
+- Except for optional Extra Challenge `257`, do not expose individual component toggles.
+  When the parent is enabled, install every
   row marked `mandatory` below in TP2 source order. This extends the reviewed setup with
   the accepted victory ending `290`, treasure choice `900`, and accepted EET SoD skip
   `910`; exclude repair `291` and alternative `901`.
+- Extra Challenge `257` is unchecked and depends on the mandatory bundle, including
+  revised bridge `256`. It adds the Insane bridge sequencers without removing the
+  normal bridge improvements when disabled. Component `266` separately limits the
+  Shadow Aspect's Mislead; `265` does not provide that correction.
 - The mod requires loose Siege of Dragonspear `BD*` content, either from BG:EE+SoD or an
   EET game with SoD imported. In this EET-only collection, make the parent unavailable if
   the staged game does not contain the required SoD resources.
@@ -22,7 +29,9 @@ and component `291` is a repair-only tail for existing `290` installations.
 
 ## Source/version and follow-up checks
 
-- Pin the public `v0.6.8` release. Component `900` now preserves existing camp-chest
+- The pinned `v0.6.11` release fixes Skie recruitment installation alongside Khalid
+  continuity and the bridge changes, retaining the September 16 component choices.
+  The earlier `v0.6.8` release made component `900` preserve existing camp-chest
   item records rather than rejecting anything except one sword; this fixes the reported
   three-item chest install failure. Component `910` is unchanged from v0.6.7.
   The release retains component `210` before dependent component
@@ -49,8 +58,10 @@ and component `291` is a repair-only tail for existing `290` installations.
 |---|---|---|---|---|---|
 | 100 | SoD remix: rest-ambush chance reduced 5x (felt rate) | Wave 1 - global system levers |  | ✓ | mandatory |
 | 110 | SoD remix: keep all companions at SoD start | Wave 1 - global system levers |  | ✓ | mandatory |
+| 115 | SoD remix: Khalid continuity at Bridgefort | Chapter pass - the road north |  |  | mandatory |
 | 120 | SoD remix: remove the hooded man from the mid-campaign | Wave 1 - global system levers |  | ✓ | mandatory |
 | 130 | SoD remix: skip the four chapter rest-dreams | Wave 1 - global system levers |  | ✓ | mandatory |
+| 135 | SoD remix: assassin ambush without dead magic | Wave 1 - global system levers |  |  | mandatory |
 | 140 | SoD remix: prologue - skip the Korlasz dungeon | Chapter pass - prologue |  | ✓ | mandatory |
 | 150 | SoD remix: prologue - no assassination night, crusade council | Chapter pass - prologue |  | ✓ | mandatory |
 | 145 | SoD remix: prologue - no auto-granted starting party (new/imported SoD) | Chapter pass - prologue |  | ✓ | mandatory |
@@ -73,7 +84,11 @@ and component `291` is a repair-only tail for existing `290` installations.
 | 240 | SoD remix: Forest of Wyrms - bugbear cave removed, temple behind the dragon | Chapter pass - the road north |  | ✓ | mandatory |
 | 250 | SoD remix: Morentherene - a real dragon on Hard and Insane | Chapter pass - the road north |  | ✓ | mandatory |
 | 255 | SoD remix: Boareskyr battle - durable explosive barrels | Chapter pass - the road north |  | ✓ | mandatory |
+| 256 | SoD remix: bridge elemental finale | Chapter pass - the road north |  |  | mandatory |
+| 257 | SoD remix: optional Insane bridge sequencers | Chapter pass - the road north |  |  | optional |
 | 260 | SoD remix: coalition camp arc - fewer, cleaner enemies on the scouting maps | Chapter pass - the coalition camp |  | ✓ | mandatory |
+| 265 | SoD remix: Mizhena amulet, filler cuts, and XP corrections | Chapter pass - the coalition camp |  |  | mandatory |
+| 266 | SoD remix: finite Shadow Aspect Mislead | Chapter pass - the coalition camp |  |  | mandatory |
 | 270 | SoD remix: Kanaglym - fewer undead | Chapter pass - the coalition camp |  | ✓ | mandatory |
 | 280 | SoD remix: no party dispel at the basement reveal | Chapter pass - the coalition camp |  | ✓ | mandatory |
 | 290 | SoD remix: end after the playable victory celebration | Chapter pass - victory ending |  |  | mandatory |

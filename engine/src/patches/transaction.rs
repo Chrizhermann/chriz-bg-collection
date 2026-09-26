@@ -182,6 +182,35 @@ pub fn verified_log_suffix(
     }
     Ok(suffix)
 }
+
+/// A later legacy fix may follow a whole-mod upgrade. Retain its exact before/after
+/// log link rather than treating an old intermediate log hash as today's state.
+pub fn active_log_transition(root: &Path) -> Result<Option<(String, String)>, String> {
+    if verified_log_suffix(root)?.is_empty() {
+        return Ok(None);
+    }
+    for entry in fs::read_dir(root.join(".chriz/patches/cebg-v1")).map_err(err)? {
+        let dir = entry.map_err(err)?.path();
+        if dir.join("applied.json").exists() && !restored(&dir)? {
+            let p: Prepared = read_json(&dir.join("prepared.json"))?;
+            let a: Applied = read_json(&dir.join("applied.json"))?;
+            let before = p
+                .plan
+                .hashes
+                .iter()
+                .find(|(n, _)| n.eq_ignore_ascii_case("weidu.log"))
+                .map(|(_, h)| h.clone())
+                .ok_or("Patch is missing its original mod list")?;
+            let after = a
+                .post_hashes
+                .get("weidu.log")
+                .cloned()
+                .ok_or("Patch is missing its final mod list")?;
+            return Ok(Some((before, after)));
+        }
+    }
+    Err("Applied patch log transition is missing.".into())
+}
 fn load_prepared(ctx: &Context<'_>, dir: &Path) -> Result<Prepared, String> {
     files::direct(dir)?;
     if dir.parent() != Some(ctx.state().as_path()) {
@@ -414,8 +443,21 @@ pub fn apply(
     full_backup: bool,
     save_backup: bool,
 ) -> Result<PatchPreview, String> {
+    apply_with_progress(ctx, catalog, token, full_backup, save_backup, &|_| {})
+}
+
+pub fn apply_with_progress(
+    ctx: &Context<'_>,
+    catalog: &catalog::Catalog,
+    token: &str,
+    full_backup: bool,
+    save_backup: bool,
+    progress: crate::operation_progress::ProgressSink<'_>,
+) -> Result<PatchPreview, String> {
+    crate::operation_progress::stage(progress, "checking");
     let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
         .map_err(err)?;
+    crate::mod_upgrades::launch_guard(&ctx.record.managed_root)?;
     launch_guard(&ctx.record.managed_root)?;
     let plan = plan(ctx, catalog)?;
     if plan.description.changes.is_empty() {
@@ -463,6 +505,7 @@ pub fn apply(
         .to_string();
     let dir = ctx.state().join(&id);
     files::create(&dir.join("identity"), ctx.record.install_id.as_bytes())?;
+    crate::operation_progress::stage(progress, "downloading");
     let tool = prepare_payload(ctx, &dir)?; // No game writes, even if a download fails.
     let backup_root = ctx.backups().join(&id);
     files::create(
@@ -470,15 +513,24 @@ pub fn apply(
         ctx.record.install_id.as_bytes(),
     )?;
     if full_backup {
-        files::copy_tree(&ctx.game(), &backup_root.join("game"), false)?;
+        files::copy_tree_with_progress(
+            &ctx.game(),
+            &backup_root.join("game"),
+            false,
+            "backup-game",
+            progress,
+        )?;
     }
     if save_backup {
-        files::copy_tree(
+        files::copy_tree_with_progress(
             &ctx.record.managed_save_root,
             &backup_root.join("profile"),
             true,
+            "backup-saves",
+            progress,
         )?;
     }
+    crate::operation_progress::stage(progress, "backup-files");
     let mut backups = BTreeMap::new();
     for name in [
         "override/bgclatxt.2da",
@@ -507,9 +559,11 @@ pub fn apply(
         backups,
     };
     files::json_new(&dir.join("prepared.json"), &prepared)?;
+    crate::operation_progress::stage(progress, "applying");
     let result = apply_inner(ctx, &dir, &tool, &prepared);
     if let Err(error) = result {
         let _ = files::json_new(&dir.join("failure.json"), &error);
+        crate::operation_progress::stage(progress, "restoring");
         match restore_inner(ctx, &dir, false) {
             Ok(()) => {
                 return Err(format!(
@@ -523,6 +577,7 @@ pub fn apply(
             }
         }
     }
+    crate::operation_progress::stage(progress, "verifying");
     inspect(ctx, catalog)
 }
 
@@ -657,8 +712,19 @@ pub fn restore(
     catalog: &catalog::Catalog,
     undo: bool,
 ) -> Result<PatchPreview, String> {
+    restore_with_progress(ctx, catalog, undo, &|_| {})
+}
+
+pub fn restore_with_progress(
+    ctx: &Context<'_>,
+    catalog: &catalog::Catalog,
+    undo: bool,
+    progress: crate::operation_progress::ProgressSink<'_>,
+) -> Result<PatchPreview, String> {
+    crate::operation_progress::stage(progress, "checking");
     let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
         .map_err(err)?;
+    crate::mod_upgrades::launch_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;
     let (dir, state) = latest(ctx)?.ok_or("There is no patch to restore.")?;
     if undo && state != "applied" {
@@ -667,7 +733,9 @@ pub fn restore(
     if !undo && state != "prepared" && state != "restoring" {
         return Err("No interrupted patch needs restoration.".into());
     }
+    crate::operation_progress::stage(progress, "restoring");
     restore_inner(ctx, &dir, undo)?;
+    crate::operation_progress::stage(progress, "verifying");
     inspect(ctx, catalog)
 }
 fn restore_inner(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result<(), String> {

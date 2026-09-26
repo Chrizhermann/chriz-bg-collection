@@ -74,6 +74,11 @@ Source pointers: `engine/src/acquire/cache.rs` (partial resume),
 
 ## 3. Customize for a casual player (after recovery)
 
+Viewer ideas added 2026-09-07: [optional broader weapon groups and companion pip
+customization](2026-09-07-optional-proficiencies-and-companion-customization.md).
+Existing mod candidates and their compatibility/side-effect constraints are recorded;
+this is research only and does not change the curated defaults.
+
 Update 2026-09-06: Christopher explicitly requested these grouped controls next. The
 [implemented source slice and bounded acceptance](../customization-acceptance-2026-09-06.md)
 supersede the unimplemented status below for common bundles/category actions. Safe

@@ -25,7 +25,7 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        448
+        449 // September 22 approval: interval-save settings (HGO 38) now default.
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");
@@ -40,6 +40,53 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         .control("feature:cdtweaks:component-1142")
         .unwrap();
     assert_eq!(potion.title, "Potions require identification");
+}
+
+#[test]
+fn interval_save_controls_follow_the_selected_interval_without_forcing_it_on() {
+    let manifest = recipe();
+    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let hgo = "feature:hiddengameplayoptions:component-38";
+    assert!(baseline.view.control(hgo).unwrap().selected);
+    assert!(baseline
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.mod_id == "hidden-gameplay-options")
+        .unwrap()
+        .components
+        .contains(&38));
+    let mut selection = baseline.normalized_selection.to_selection();
+    selection.set_feature("feature:cdtweaks:component-3354", false);
+    selection.set_feature("feature:cdtweaks:component-3355", true);
+    assert!(
+        evaluate(&manifest, &selection)
+            .unwrap()
+            .view
+            .control(hgo)
+            .unwrap()
+            .selected
+    );
+    selection.set_feature("feature:cdtweaks:component-3355", false);
+    let disabled = evaluate(&manifest, &selection).unwrap();
+    assert!(!disabled.view.control(hgo).unwrap().selected);
+    assert!(disabled
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.mod_id == "cdtweaks")
+        .unwrap()
+        .components
+        .iter()
+        .all(|id| !(3350..=3357).contains(id)));
+    assert!(!disabled
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.mod_id == "hidden-gameplay-options")
+        .unwrap()
+        .components
+        .contains(&38));
 }
 
 #[test]

@@ -87,8 +87,23 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(artifact["source"]["expected_length"], 1367203)
         self.assertEqual(artifact["source"]["sha256"], "f134085e8220a4222190981f173034653efe7aa92d47caa8430682a1352d1c19")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
-        self.assertEqual(len(self.selected()), 448)
-        self.assertEqual(len({run for run, _ in self.selected()}), 50)
+        # Alpha.17 adds only the approved interval-save settings default to the
+        # alpha.16 count; Modpack's reviewed component selection remains unchanged.
+        selected = self.selected()
+        interval_controls = "feature:hiddengameplayoptions:component-38"
+        without_controls = self.selected({interval_controls: "off"})
+        self.assertEqual(self.features[interval_controls]["decision"], "default")
+        self.assertEqual(self.preset[interval_controls], "on")
+        self.assertEqual(selected - without_controls, {("hiddengameplayoptions-bg2", 38)})
+        self.assertEqual(without_controls - selected, set())
+        self.assertEqual(len(without_controls), 448)
+        self.assertEqual(len(selected), 449)
+        self.assertEqual(len({run for run, _ in selected}), 50)
+        self.assertIn(("cdtweaks-bg2", 3354), selected)
+        controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
+        controls_change = next(change for change in controls_ledger["changes"]
+                               if change["id"] == "interval-save-controls-default")
+        self.assertEqual(controls_change["covers"], [f"feature:{interval_controls}"])
         for component in (140, 170):
             self.assertIn(("chriz-bg-modpack-pre-continuity-bg2", component), self.selected())
         self.assertIn(("chriz-bg-modpack-bg2", 410), self.selected())

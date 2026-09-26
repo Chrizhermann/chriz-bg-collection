@@ -41,24 +41,16 @@ impl NativeBridge {
         full: bool,
         saves: bool,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
-        let _guard = self.begin_app_update()?;
-        let record = self.available_managed_install(id)?.record;
-        let app_data = self
-            .app_data
-            .as_ref()
-            .ok_or_else(|| patch_error("Application data unavailable"))?;
-        let ctx = bg_engine::patches::Context {
-            record: &record,
-            app_data,
-            cache: &self.cache,
-        };
-        bg_engine::patches::apply(&ctx, &packaged_patch_catalog()?, token, full, saves)
-            .map_err(patch_error)
+        self.apply_install_patch_with_progress(id, token, full, saves, &|_| {})
     }
-    pub fn restore_install_patch(
+
+    pub fn apply_install_patch_with_progress(
         &self,
         id: &str,
-        undo: bool,
+        token: &str,
+        full: bool,
+        saves: bool,
+        progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(id)?.record;
@@ -71,7 +63,43 @@ impl NativeBridge {
             app_data,
             cache: &self.cache,
         };
-        bg_engine::patches::restore(&ctx, &packaged_patch_catalog()?, undo).map_err(patch_error)
+        bg_engine::patches::apply_with_progress(
+            &ctx,
+            &packaged_patch_catalog()?,
+            token,
+            full,
+            saves,
+            progress,
+        )
+        .map_err(patch_error)
+    }
+    pub fn restore_install_patch(
+        &self,
+        id: &str,
+        undo: bool,
+    ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        self.restore_install_patch_with_progress(id, undo, &|_| {})
+    }
+
+    pub fn restore_install_patch_with_progress(
+        &self,
+        id: &str,
+        undo: bool,
+        progress: bg_engine::operation_progress::ProgressSink<'_>,
+    ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        let _guard = self.begin_app_update()?;
+        let record = self.available_managed_install(id)?.record;
+        let app_data = self
+            .app_data
+            .as_ref()
+            .ok_or_else(|| patch_error("Application data unavailable"))?;
+        let ctx = bg_engine::patches::Context {
+            record: &record,
+            app_data,
+            cache: &self.cache,
+        };
+        bg_engine::patches::restore_with_progress(&ctx, &packaged_patch_catalog()?, undo, progress)
+            .map_err(patch_error)
     }
     pub fn file_update_active(&self) -> bool {
         self.runtime_lock().app_update_active
@@ -85,7 +113,7 @@ mod patch_catalog_tests {
         let catalog = super::packaged_patch_catalog().unwrap();
         assert_eq!(catalog.patch_id, bg_engine::patches::catalog::PATCH_ID);
         let ledger = include_str!(
-            "../../../recipes/curated-full-current/releases/v0.1.0-alpha.16/ledger.toml"
+            "../../../recipes/curated-full-current/releases/v0.1.0-alpha.14/ledger.toml"
         );
         for id in catalog.change_ids {
             assert!(ledger.contains(&format!("id = \"{id}\"")));

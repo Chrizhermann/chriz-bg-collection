@@ -154,7 +154,7 @@ describe("common customization bundles", () => {
     const advanced = view.querySelector<HTMLDetailsElement>(".setup-advanced")!;
     expect(advanced.open).toBe(false);
     advanced.open = true;
-    expect(within(advanced).getAllByRole("button", { name: /Include all compatible/ })).toHaveLength(2);
+    expect(within(advanced).getAllByRole("button", { name: /Include available choices/ })).toHaveLength(2);
     expect(getByRole(view, "button", { name: "Reset to Chriz’s setup" })).toBeTruthy();
     view.remove();
   });

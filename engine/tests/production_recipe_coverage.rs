@@ -65,6 +65,7 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "yeslicknpc" => "YESLICKNPC",
         "sirene-bg2" => "SIRENE_BG2",
         "spell-rev" => "SPELL_REV",
+        "srcb-rr-compat" => "SRCB_RR_COMPAT",
         "ascension" => "ASCENSION",
         "artisanskitpack" => "ARTISANSKITPACK",
         "artisanskitpack-npc" => "ARTISANSKITPACK_NPC",

@@ -41,7 +41,21 @@ pub fn inspect(managed_root: &Path) -> ConsistencySummary {
 }
 
 fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummary, String> {
-    check_logs_with_patch_verifier(root, logs, bg_engine::patches::verified_log_suffix)
+    // Updates replace the recorded BuffBot rows in place; they do not append fake
+    // components or rewrite the base receipt. Pending/unrecognized update history
+    // and unrecorded log changes must not be called a successful consistency check.
+    let upgrade = bg_engine::mod_upgrades::active_upgrade(root)?;
+    let mut result =
+        check_logs_with_patch_verifier(root, logs, bg_engine::patches::verified_log_suffix)?;
+    if result.state == "matches" {
+        if let Some(upgrade) = upgrade {
+            result.detail = format!(
+                "The mod list matches the completed installation, its recorded BuffBot {} update and any verified applied fixes.",
+                upgrade.version
+            );
+        }
+    }
+    Ok(result)
 }
 
 fn check_logs_with_patch_verifier(
@@ -270,6 +284,17 @@ mod tests {
         let mut bytes = serde_json::to_vec_pretty(value).unwrap();
         bytes.push(b'\n');
         bytes
+    }
+
+    #[test]
+    fn unknown_mod_upgrade_history_cannot_report_a_matching_installation() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        write_logs(root);
+        fs::create_dir_all(root.join(".chriz/mod-upgrades/unknown-format")).unwrap();
+        let log_before = fs::read(root.join("game/WeiDU.log")).unwrap();
+        assert!(check_logs(root, &final_state(root).logs).is_err());
+        assert_eq!(fs::read(root.join("game/WeiDU.log")).unwrap(), log_before);
     }
 
     #[test]

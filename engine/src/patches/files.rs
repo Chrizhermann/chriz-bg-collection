@@ -168,11 +168,31 @@ pub fn inventory(root: &Path, profile: bool) -> Result<Inventory, String> {
 pub fn total(items: &Inventory) -> u64 {
     items.values().map(|v| v.length).sum()
 }
+#[cfg(test)]
 pub fn copy_tree(source: &Path, destination: &Path, profile: bool) -> Result<(), String> {
+    copy_tree_with_progress(source, destination, profile, "backup-game", &|_| {})
+}
+
+pub fn copy_tree_with_progress(
+    source: &Path,
+    destination: &Path,
+    profile: bool,
+    stage: &str,
+    progress: crate::operation_progress::ProgressSink<'_>,
+) -> Result<(), String> {
+    crate::operation_progress::stage(progress, stage);
     if destination.exists() {
         return Err("Backup destination already exists.".into());
     }
     let before = inventory(source, profile)?;
+    let total = before
+        .values()
+        .filter(|stamp| !stamp.directory)
+        .map(|stamp| stamp.length)
+        .sum();
+    let mut completed = 0;
+    let mut reported = std::time::Instant::now();
+    crate::operation_progress::bytes(progress, stage, completed, total);
     direct(destination.parent().ok_or("Backup parent missing")?)?;
     fs::create_dir(destination).map_err(err)?;
     for (name, stamp) in &before {
@@ -197,11 +217,17 @@ pub fn copy_tree(source: &Path, destination: &Path, profile: bool) -> Result<(),
             if hash(&to)? != before_hash || hash(&from)? != before_hash {
                 return Err(format!("Backup verification failed: {name}"));
             }
+            completed += stamp.length;
+            if completed < total && reported.elapsed() >= std::time::Duration::from_millis(250) {
+                crate::operation_progress::bytes(progress, stage, completed, total);
+                reported = std::time::Instant::now();
+            }
         }
     }
     if inventory(source, profile)? != before {
         return Err("Backup source changed during copying.".into());
     }
+    crate::operation_progress::bytes(progress, stage, completed, total);
     Ok(())
 }
 

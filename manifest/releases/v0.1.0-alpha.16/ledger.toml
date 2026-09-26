@@ -1,0 +1,14 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.16"
+published_at = "2026-09-20T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.18"
+supersedes = "0.1.0-alpha.15"
+
+[[changes]]
+id = "modpack-compatible-presets"
+title = "More compatible companion builds and dispels"
+summary = "Updates Modpack to v0.2.0-alpha.7: selected companion builds tolerate different incoming stats and proficiency layouts, while Yeslick and Keldorn's dispel fix accepts valid effect layouts without losing casting hooks. Component choices and install order are unchanged. Existing games and saved actors are not modified."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["artifact:chriz-bg-modpack-0.2.0-alpha.6", "artifact:chriz-bg-modpack-0.2.0-alpha.7"]

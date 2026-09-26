@@ -2,6 +2,550 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## September 26 — finish recipe alpha.17 / app alpha.19 source
+
+Christopher requested completion and a commit of the existing installer work
+before adding BG Rebalance 301 to the next recipe. The existing comparison,
+BuffBot update/Undo, naming, progress, diagnostics, Customize and recipe-record
+changes are complete as source. A focused review found and corrected hidden
+patch/Radar feedback on the default Updates selection; four regression cases
+cover progress, success/error and switching installations.
+
+Current checks: frontend typecheck, 327 tests and production build; Python
+102 tests with one existing opt-in real-WeiDU skip; 803 native tests with 13
+existing opt-in tests ignored,
+formatting and Clippy with warnings denied; both recipe profiles pass
+public-alpha validation with zero findings. Native job
+`b38bf370-eda2-4cab-9366-b58677d4ea59` exited 0; saved results are in
+`target/work/sep26-alpha17-final-native`.
+
+The September 23 package record is historical and predates today's feedback
+correction. No package rebuild, publication, installed-app or game action was
+performed. Final packaged UI review remains user-driven. Existing accepted
+BuffBot Apply/gameplay/Undo is not being repeated. The known concurrent-name
+reservation limitation remains a follow-up. No new dependencies or public APIs
+were introduced by the finishing correction; diagnostics tests contain deliberate
+fake credential strings for redaction coverage, not credentials.
+
+Next, in a separate recipe commit: add Christopher's September 26 approved
+BG Rebalance 301 default with v0.6.0, leaving bard progression 420/421 unselected.
+The provider-mode Hope/Courage check is a nonblocking next-install follow-up.
+
+## September 24 gameplay follow-ups: preparation only
+
+September 25: Christopher authorized a parallel, source-backed Time Stop/Haste
+feasibility plan, not implementation. Proposed owner: BG Rebalance. Check whether
+EEex can safely separate periodic cadence and buff expiry from speed/time-stop
+behavior; do not promise full tabletop fidelity or current-save compatibility.
+See [research scope](plans/2026-09-24-effect-timing-traps-and-shift-dialogue.md#september-25-feasibility-research-requested).
+The [source-backed feasibility report](plans/2026-09-25-timestop-haste-feasibility.md)
+is now complete: credible route, but usual effect-list listeners run too late.
+Next would be a separately authorized isolated proof before native expiry/pulses,
+or a focused EEex extension. No implementation or runtime test occurred.
+
+New backlog items: Time Stop/Haste effect timing, instant trap detection, and
+optional off-by-default dialogue for shifted Shapeshifters/Hivemasters. See
+[scope and preparation](plans/2026-09-24-effect-timing-traps-and-shift-dialogue.md).
+These are not additions to the built review package or new release gates. No live
+game/desktop control is authorized; Christopher is streaming. Keep the existing
+installer acceptance work separate and user-driven.
+
+## Current priorities — September 22, after accepted BuffBot Undo
+
+Christopher lowered priority for (1) broader existing-mod updates, (2) a general
+current-run/new-run/new-install classification system and (3) more hotpatches.
+Keep the two existing supported routes and their protections; these expansions
+are not release gates. See the updated [work index](plans/2026-09-20-next-work-index.md)
+and [preserved requirements](plans/2026-09-20-existing-install-upgrades-priority.md).
+He subsequently approved the four implementation lanes. Source now includes
+compact Updates with real backup progress, persistent completion/Undo/error
+feedback, unique display names and rename controls, contextual folder diagnostics,
+and the completed Customize/typed-input frontend from `cebg-ui-options`.
+Full native verification passed: **797 tests**, 13 existing opt-in tests ignored,
+formatting and Clippy with warnings denied. Job
+`cc6839dc-ab5b-476b-b2ff-31ff351e25cb` exited 0 at 2026-09-22T15:02:24Z;
+saved status/stdout/stderr in `target/work/sep22-feedback-final-native` were read.
+The older channel compile failure (`0ecc35d9...`) and generic-name test failure
+(`f2299f45...`) are already fixed and superseded. Their delayed notifications do
+not call for rerunning them.
+A final naming review found that automatic destinations must stay free after
+display-only rename. The native defaults helper now independently suffixes
+occupied/registered destinations; six extra native tests cover it. The final job
+passed all 38 app-library tests (eight naming), 40 command contracts, Clippy,
+frontend 323 tests/typecheck/build, and four package tests including the signature.
+The first package attempt stopped before packaging: two new test expectations
+used mixed Windows path separators. Actual free-destination selection was correct;
+the expectations now use separate native path joins. Job `a7af1479...` exit 101
+is handled; do not rerun it unchanged.
+Final job **`d75b1f80-08e3-4958-9b3d-bc28168d0a12`** exited **0** at
+2026-09-22T15:13:36Z. Its saved status/stdout/stderr were read in
+`target/work/sep23-feedback-review-package-final`. Normal release build, diagnostic
+feature off. The updater signature matches the bundled public key.
+Offline extraction matched all **191 resource files** to the current source,
+with no extra recipe files. The executable differs from the raw build only by
+Tauri's documented three-byte UNK→NSS bundle marker, with every other byte equal.
+Verified setup/signature copies are in Downloads under the new, non-overwritten
+name `Chriz Easy BG alpha19 - Review 2026-09-23-setup.exe` (adjacent `.sig`).
+Setup SHA-256: `9cbae97c0f51505adc66cd36d897d96933982287c7487377c3d67e88b9528e6a`.
+See [final package evidence](package-acceptance-alpha19-2026-09-22.md).
+All subagent lanes are done; no command is still pending for this batch. The
+package is ready for Christopher's finishing UI review, **not installed, launched
+or published**. No further automated game/update test is requested.
+UI provider **recipe** integration is still separate: the imported controls stay
+hidden when the actual recipe has no verified provider group. Infinity UI++ and
+EET SoD preparation remains in the owning fork; LeUI remains compatibility-blocked.
+The website draft remains with its owning task. Do not describe these as shipped.
+No new game actions, real-install deletion or publication is implied.
+Frontend typecheck, 323 tests and web build passed. The full Python suite passed
+102 tests with one existing opt-in real-WeiDU skip. Focused headless desktop/narrow
+checks passed; evidence is in `target/work/sep22-feedback-layout/verification.md`.
+
+### September 22 implementation notes
+
+- Progress is observational only. Backup byte counts are published after verified
+  copies, with final 100% after the source inventory recheck. Unknown work uses a
+  spinner. Existing mutation checks, backups, recovery and save policy are intact.
+- App-update success survives restart only when the requested different version
+  is actually running. Mere download or an online up-to-date result is not success.
+- Names live in separate AppData metadata keyed to the registered ID/root. Rename
+  never rewrites receipts, frozen recipes, game/save folders or profile identity.
+  Legacy duplicates remain resumable and are disambiguated visually. New creation
+  and rename have cross-process uniqueness checks.
+- Known narrow naming limitation: two independent CEBG processes starting the
+  same name simultaneously allow only one registration, but the loser can leave
+  an unindexed metadata-only destination because freeze precedes registration.
+  No game copying has started. A future reservation across freeze/publication is
+  needed before promising clean retry for that concurrency case; do not weaken the
+  name check or delete an arbitrary destination to work around it.
+- Folder codes preserve operation/path and original OS cause. Failed cleanup no
+  longer hides the primary problem. This is error clarity, not a proven diagnosis
+  of the viewer report or a new OneDrive/Documents fallback.
+
+## No-SR lookup discrepancy explained — 2026-09-22, user-side repair pending
+
+**Current acceptance: Apply, user gameplay and Undo passed.** Christopher applied
+the BuffBot 1.8.3-to-1.8.4 update himself in the diagnostic app, accepted gameplay,
+then used Undo. The installation is now back on **1.8.3-alpha**. The earlier Apply
+disk checks confirmed successful installation of both components and
+the expected new artifact. Transaction: `.chriz/mod-upgrades/v1/01790071515151257500`
+inside `C:\Users\chris\Games\ChrizEasyBG-No-SR-Test`.
+All 96 current update-file hashes, 96 affected-file backup hashes and 59 unchanged
+guard hashes match. Original receipt and dialog.tlk are unchanged; all 400 other
+active WeiDU rows match the pre-update log exactly. The prepared-journal hash is
+valid. Optional backups also checked: full game has 159,300 files / 3,393 directories
+/ 11,898,950,716 bytes, matching every pre-update path/type/size with no extra or
+missing entries; all 12 profile files (1,456,735 bytes, five directories) match the
+isolated profile byte-for-byte at the Apply audit, before gameplay. Full-game backup contents were not all
+rehashed. Actual backup file handles resolve to normal AppData, not Codex LocalCache;
+the applied journal and live TLK resolve to the intended No-SR game. Backup audit
+helper: `target/work/buffbot-applied-verification-sep22/backup-check.ps1`.
+Christopher subsequently reported **"its fine, it works"** after the requested
+existing-save/BuffBot check. Record this as user-accepted gameplay for this narrow
+upgrade; no further BuffBot gameplay testing is requested. Christopher then used
+Undo, completed at 20:12:39 +09:00. Read-only checks confirm all 155 original guarded
+game-file hashes and all 96 affected-file backup hashes match, the entire original
+WeiDU.log is restored byte-for-byte, and the original receipt and dialog.tlk are
+unchanged. The restored marker matches the prepared journal SHA-256
+`4a56f5d5c96ce798c6935ac17601c5b611c31ecf5b632c4e2ebb0e89b217026b`.
+No game process was running at verification. This accepts this exact Apply → user
+gameplay → Undo flow, not other mod upgrades or publication. No agent game launch,
+UI click, Apply, Undo or save edit was performed. Do not reapply automatically.
+History wording is corrected in source to **Restored BuffBot 1.8.3-alpha** rather
+than presenting the original upgrade arrow followed by "restored". It remains
+inside closed history; applied, unfinished and unknown states also have explicit
+wording. Typecheck and all 18 focused mod-upgrade tests passed. Not packaged yet.
+The journal was created at 19:05:15; preparation finished at 19:37:29; the WeiDU
+step ran approximately 19:37:32–19:37:35; the applied record was written 19:37:44.
+Most waiting time was preparing the backups, supporting the progress-feedback request.
+
+Additional UI requirements captured (not implemented by the compact-selector work):
+- Lead with the supported action and applicability: current run / new run / new
+  installation. Put comparison prose, dependency explanations and diagnostics in
+  closed Details. Eligibility must be evidence-backed; unassessed work must not
+  be labelled compatible. Keep consequential warnings beside confirmation.
+- Reuse a compact progress display across installation, updates, downloads,
+  backups and game discovery. Show the actual current stage (e.g. backing up,
+  downloading, applying, verifying), a determinate bar when byte/file/step totals
+  are known, and an indeterminate spinner otherwise. Never invent percentages or
+  remaining time. Preserve access to optional activity details and clear final
+  success/failure. This is queued UI work, not a change to the running update.
+- Completion must be conspicuous for every update type: a persistent, dismissible
+  **Update complete** banner at the top, installation/add-on name and new version,
+  and the appropriate next action (Play / start a new run / open new installation).
+  Keep Details and supported Undo accessible, remove obsolete pre-update wording,
+  and distinguish success, partial completion and failure. App-update confirmation
+  must survive restart and reflect the completed update, not merely "up to date".
+  A newly built copy should say Installation ready, not imply the old copy was
+  updated. Progress, completion and errors should be accessible announcements;
+  do not rely on changed small text, colour alone or a short-lived toast.
+
+**Latest: the user-side record repair succeeded at 16:57:21 +09:00.** Christopher
+ran the supplied launcher from File Explorer. Its result file reports that the
+single record was copied into normal AppData and verified at the expected SHA-256,
+with the Codex copy preserved and no game/save/mod changes. No CEBG process was
+running when this result was checked. He subsequently reopened it and supplied
+the successful recognition/available-update screenshot recorded above.
+The historical "pending" heading is retained for existing links. Do not rerun the
+repair or mistake agent-side registry visibility for user-app acceptance.
+
+The diagnostic build's real user-opened process (PID 73584) sees **one completed
+record and three campaign pointers**, not the five completed records and 13
+campaign pointers visible to agent-launched helpers. Its native lookup, IPC reply
+and frontend acknowledgement agree. No-SR's completed-record probe returns
+NotFound; its game root exists, but the remaining historical campaign is sealed
+FreshCopyRequired. The UI's generic "folder unavailable" explanation is misleading.
+
+**Proven cause: Windows redirects agent-side file reads to Codex's private AppData
+copy.** Opening the apparently normal No-SR record and querying its actual file
+handle with GetFinalPathNameByHandle resolves to:
+`C:\Users\chris\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Local\Chriz BG Collection\managed-installs\install-c9dc8c3e0e0b0a3476e0.json`.
+The normal user-opened CEBG process cannot see that completion record. This is why
+helper checks and earlier agent-launched app checks contradicted Christopher's UI.
+Do not claim a refresh or reinstall of the game fixes this. Package-identity API,
+environment and directory-handle checks alone missed the redirection: check the
+actual **file** handle. Do not copy all historical records, delete the package cache,
+or change Codex's virtualization settings.
+
+Prepared in Downloads, **subsequently executed successfully as recorded above**, for Christopher to double-click from
+File Explorer outside Codex: `CEBG - Restore No-SR completion record.cmd` and its
+same-named `.ps1`. The script restores only the 720-byte completed record into normal
+AppData, verifies the exact record and existing game receipt hashes, rejects
+redirected destinations and conflicting records, and never overwrites a record or
+changes game files/saves/mods. Its syntax and read-only path helper were checked;
+the user-run copy then succeeded. Result file: `CEBG - No-SR record repair result.txt`.
+Record SHA-256: `16b3c35bf2221265eb336be9f22e4d951597af9f57db2522d727e73274f71d5d`.
+Receipt SHA-256: `a06b6e0928ee0dc1463247252e4d118c21234e6bdba702ad18a3dd2061b35379`.
+Verify the repair through the **user-opened app's trace**, not an agent helper.
+Trace evidence: `%TEMP%\CEBG-installation-lookup-73584-1790060629093.jsonl`.
+
+Christopher is using the PC and drives the app. No unsolicited app closing,
+launching, clicking, Apply/Undo, or game actions. BuffBot update, gameplay and Undo
+acceptance passed as recorded above. Latest UI request: a compact, obvious selected
+installation at the top of Updates, less repeated text and smaller selection frame;
+all game-specific actions must use that same selection. Independent user work:
+draft the website's differences from vanilla, without publishing untested claims.
+
+### Compact Updates selection — source implemented, not packaged
+
+The selected game now appears directly below Updates in a compact bar. Short,
+disambiguated labels replace path/ID-heavy choices; exact folder, identity and
+status detail remain in a closed disclosure. Installed mods, current-game fixes
+and Radar use the same selected ID. Changing games clears old comparison/fix
+previews and errors; selection is locked during patch operations or mutations,
+while obsolete read-only comparisons remain discardable. Radar no longer quietly
+targets the independently selected My installs entry. App/collection actions are
+separate below the selected game's controls. New-copy availability on this page
+follows the selected game, rather than any other outdated installation.
+
+Existing dark/gold styling retained with tighter, Updates-only spacing. Persistent
+installation renaming remains separate roadmap work; these labels do not rename
+game folders or rewrite records. Stale entries now say Needs attention in the
+top bar rather than asserting a missing folder when other checks may have failed.
+
+Validation: `npm run check` passed (typecheck, **223 tests**, frontend build).
+Eight new tests cover shared selection, clearing old Apply controls, exact target
+IDs for comparison/fix/Radar, operation locks, stale/empty states and duplicate
+labels. One old Radar fixture was inconsistent (managed list `stream`, update list
+`fixture-install`); its two mock lists now refer to the same game, without weakening
+the expected Radar target. Headless synthetic previews at 1440x1000 and 390x844
+had no horizontal overflow, including expanded long paths; controls remain at
+least 44px. Evidence: `target/work/compact-updates-sep22/`. Lead inspected both
+screenshots. No native app/game actions, NSIS rebuild, publication or real-game
+update were performed. The user still has the earlier diagnostic build installed.
+
+## Opt-in running-app lookup diagnostics — 2026-09-22, package verified
+
+Christopher approved instrumenting the running app's lookup ("Then do that").
+Source now has the opt-in Cargo feature `installation-lookup-diagnostics`.
+Normal builds do not emit lookup traces. Diagnostic builds show
+**Chriz Easy BG — Diagnostics** in the window title and automatically write
+`%TEMP%\CEBG-installation-lookup-<pid>-<timestamp>.jsonl` (create-new, max 4 MiB).
+No logging failure changes lookup acceptance or permits an update.
+
+The trace captures process/executable SHA-256 and the specific LOCALAPPDATA/cwd,
+actual registry directory entries, completed/campaign records and which wins,
+original availability, separately labelled rechecks with exact rejected gate/IO
+reason, and the final native list. Updates additionally records the native IPC
+reply and a bounded frontend acknowledgement of its received IDs/names/states.
+It does not copy saves/game content, dump other environment variables, upload
+anything, reconstruct records, relax checks, or alter game files.
+
+The engine now exposes `inspect_install_availability` and
+`inspect_campaign_availability`; existing availability uses the same unchanged
+checks, with reasons retained. Thirteen focused registry tests, six trace tests,
+and 19 frontend adapter tests passed. A trace test's Windows separator expectation
+was corrected; no safety assertion was removed.
+
+Local job `6b13b22c-40c4-4edf-a231-a92af7d809dd` finished with **exit 0**, verified
+at completion: 13 registry tests, 40 command contracts, six trace tests, 215
+frontend tests, Clippy/formatting and four package/signature tests passed.
+Results: `target/work/alpha19-lookup-diagnostics-sep22/`. Do not rerun the job.
+The separately labelled setup in Downloads is ready:
+`Chriz Easy BG alpha19 - Lookup Diagnostics-setup.exe` (5,872,109 bytes, plus `.sig`).
+Setup SHA-256: `6a260c146873f7d9dd9c25edcd60d46eb28590b1be032a90d2fe681a232cd73b`.
+Embedded executable SHA-256 (read directly from NSIS):
+`316d570650ce4323223cb48951701d985e5da227c5e18ac9d09faf0e7d2844da`.
+The normal Downloads candidate, installed app and public feed were not replaced.
+
+Christopher installed and opened this diagnostic version himself. Its process
+trace identified the AppData redirection described above; previous unknown-cause
+notes below are historical evidence, not the current diagnosis.
+
+## Unavailable No-SR entry recurred after candidate installation — 2026-09-22
+
+Christopher installed the corrected candidate himself. The sole running app
+(`chriz-bg-app.exe`, PID 63628 at the time of inspection) started at 14:55:25;
+its executable hash matches the executable embedded in the corrected Downloads
+setup: `07fbd0b8613861cc7b151af187e9472cf9b64c3d6769f75a30f85b20e09dd036`.
+His 14:56 screenshot still shows No-SR as an unavailable **incomplete** campaign.
+Do not ask him to reinstall the game or claim the recurrence is fixed.
+
+Read-only checks found the No-SR root, launcher and completed receipt intact;
+receipt SHA-256 still matches its immutable registry record
+(`a06b6e0928ee0dc1463247252e4d118c21234e6bdba702ad18a3dd2061b35379`).
+Both debug/release engine checks see five completed records and 13 campaign
+pointers. A helper linked to the current release **app** library, using the
+installed resource directory, projects 13 installations and No-SR as
+`Ready to play`; its Update Center also recognizes the completed record.
+The running app belongs to Christopher and its process environment has the
+expected `LOCALAPPDATA`; its working directory is the installed app folder.
+
+The incomplete display name comes from campaign projection, not from a completed
+record merely becoming unavailable. Completed IDs normally suppress their old
+campaign entries. No alternate frontend fixture/persisted-record source was found.
+The discrepancy between the open window and these checks remains unexplained.
+Christopher confirms **Check for updates has already been retried and does not
+help**. Do not repeat refresh/restart/reinstall instructions as a substitute for
+diagnosis. The test originally failed, but its `supervised_recovery` receipt
+(`tempus-v032-20260907`) records completion after the tail repair on September 7;
+current WeiDU.log reaches the final BuffBot 1.8.3 components 1 and 0. Its historical
+failed campaign pointer is not evidence that the repaired game remains incomplete.
+Do not launch/close/control his apps while he is working at the machine.
+
+Diagnostics are local under `target/work/inspect_managed_registry*`,
+`inspect_packaged_bridge*`, and `inspect-cebg-process-context.ps1`. The latter
+reads only the app's working directory and LOCALAPPDATA; never dump its complete
+environment. No game, save, receipt, registry record, or public release changed.
+Actual BuffBot Apply/Undo and gameplay acceptance remain pending.
+
+## Overnight update check and source-fingerprint fix — 2026-09-22
+
+Christopher explicitly changed the earlier clicking restriction: "Just try it
+yourself now, I am going to bed anyway." Automation is scoped to the No-SR test
+below, not the stream installation. Windows UI action-time confirmations still
+apply to installing software. No actual update/Undo/gameplay test has occurred.
+
+Reopened the existing alpha.19 app. It now shows 13 installation records and
+correctly recognizes `ChrizEasyBG-No-SR-Test`; the prior unavailable status cleared
+on restart, but its cause is not established. The collection comparison works.
+BuffBot preview failed before mutation: both hardcoded source-tree digests were
+wrong for the exact hash-verified published ZIPs. Re-downloading was not a remedy.
+
+Corrected both fingerprints in `engine/src/mod_upgrades/buffbot.rs` without
+loosening the file inventory or byte checks. Added an explicit real-archive test:
+`published_archives_match_reviewed_sources` (requires the two local archive paths;
+no network/game execution). It failed before the fix; all **24 update-module tests**,
+including that opt-in test, now pass. Changed and extra source files remain rejected.
+All 41 installed source files and 31 copied runtime files on No-SR match 1.8.3;
+the loader and backup metadata checks also found no drift in read-only inspection.
+
+Read-only preview failures now have distinct wording: no update was applied and
+existing recovery warnings still apply. Apply/Restore errors retain their recovery
+guidance. **Six native bridge tests** pass. These fixes are not yet in the installed
+alpha.19 app or the September 22 first candidate. No game, save or receipt changed.
+
+The corrected engine's complete read-only preview on No-SR now returns
+**available** (1.8.3 → 1.8.4), with 11,898,950,716 game-backup bytes,
+1,456,735 profile-backup bytes and sufficient free space. This is eligibility
+evidence, not a completed update. Replacement local build runs the real-archive
+test before packaging; results belong in
+`target/work/alpha19-preview-fix-sep22/`. Do not rerun/poll its watcher.
+
+Replacement job `f78462ce-7d67-4d7d-8fb3-20dc1d3aef79` is now **verified complete,
+exit 0**: 24 real-package/update tests, six native bridge tests, 211 UI tests,
+Clippy/formatting and four package/signature checks passed. Corrected setup and
+signature replaced the old candidate in Downloads after hash checks; see
+[current hashes](package-acceptance-alpha19-2026-09-22.md#corrected-candidate--current-download).
+The installed app is unchanged. Next step is action-time user confirmation to
+install this corrected candidate; the computer-use skill requires it even after
+general test authorization. No silent-install workaround, Apply or game launch.
+
+## Old app cleanup and user-driven acceptance — 2026-09-22
+
+Historical restriction, superseded by the overnight authorization above:
+Christopher will do **all clicking** for the supervised update test. Do not launch
+or control apps/games or apply updates on his behalf. The current running app was
+verified as alpha.19 at `%LOCALAPPDATA%\Chriz Easy BG\chriz-bg-app.exe`; actual
+BuffBot update/Undo and gameplay acceptance remain pending.
+
+At his request, recycled 34 obsolete files (old downloaded/build installers,
+signatures, alpha.1 app binaries and its Start Menu shortcut) and the exact old
+alpha.8 smoke app directory. Removed its stale Windows uninstall entry after
+exporting a `.reg` backup. Current alpha.19 app/setup/signature and all managed
+install/campaign record hashes were unchanged; no game/profile/save was touched.
+Evidence: `target/work/old-app-cleanup-20260922/` (local, not for publication).
+
+**Naming migration remains open:** `%LOCALAPPDATA%\Chriz BG Collection` still holds
+live registries and locks used by both app and engine. Do not delete/rename it or
+run an old uninstaller. Move that state to the CEBG-named data location through a
+backed-up, tested migration in a new build, with the app closed. Preserve install
+identities, recovery histories and compatibility with existing records. Do not
+blindly rename the stable updater identifier, game ownership markers or repo.
+
+## Current-source alpha.19 test package ready — 2026-09-22
+
+The fresh signed NSIS build succeeded, with 211 frontend tests and four package
+checks including its exact updater signature. It includes the BuffBot update route
+and interval-save fix below. See [package path/hashes and acceptance limits](package-acceptance-alpha19-2026-09-22.md).
+No setup/app/game was launched and public alpha.18 remains unchanged.
+
+Proposed supervised target: the already registered
+`C:\Users\chris\Games\ChrizEasyBG-No-SR-Test`, whose completed receipt matches the
+registry and whose final two WeiDU rows are BuffBot 1.8.3 components 1 then 0.
+Remaining eligibility is untested. Christopher approved continuing but will drive
+the app himself; guide his checks and inspect results without clicking for him.
+
+## Interval saves repaired; installer regression covered — 2026-09-22
+
+The current game had CDTweaks 3354 (15 minutes, four rotating slots) installed,
+but its isolated profile lacked the required Script settings. EET temporarily
+changes `engine_name`, so CDTweaks wrote those settings to the shared EET profile;
+CEBG restored its private profile name without initializing the settings there.
+
+With no game process running, added only `IntervalSaveEnabled=1` and
+`IntervalSaveCombat=0` to
+`C:\Users\chris\OneDrive\Documents\Chriz Easy BG - ec2c39f8d9c3\Baldur.lua`.
+Original backup: `C:\Users\chris\Games\CEBG-Backups\Baldur-before-interval-save-fix-20260922.lua`.
+No saves, mod resources, WeiDU.log or dialog.tlk changed. The settings-menu mod was
+**not** added to this existing game. No game launch or timed-save test was performed.
+
+Installer finalization now initializes missing interval-save flags in its reserved
+profile, only when WeiDU.log confirms CDTweaks 3350–3357. It preserves explicit
+preferences (including disabled saves), and final verification checks the settings.
+Automated tests cover EET profile switching, all supported presets, exclusions,
+existing preferences, repeat finalization, unsafe files and missing settings.
+
+Christopher approved HGO 38's controls as default for future installations, dependent
+on any supported interval-save choice rather than only 3354. Curated defaults are
+now **449 components / 50 runs**. This is in the unpublished collection alpha.17
+and the September 22 app alpha.19 local package; public alpha.18 does not include
+it. Interactive acceptance and publication still wait for Christopher.
+
+## Priority correction: real existing-install updates first — 2026-09-20
+
+Christopher expected collection updates to upgrade the existing installed mod set,
+not always create a fresh installation. The current `buildUpdatedCopy` flow and the
+narrow description-link hotpatch are not that general capability. Make
+[existing-install updates](plans/2026-09-20-existing-install-upgrades-priority.md)
+the highest next-feature priority; distinguish app updates, targeted game patches
+and collection upgrades clearly. Preserve the user's selected setup and truthful
+partial-update history. Do not claim a general upgrade path is implemented.
+
+[UI providers and manual checkpoints](plans/2026-09-20-ui-choices-and-manual-checkpoints.md)
+are now parked, with design/source findings and the latest choices preserved.
+No further research/implementation of those features now. Live testing of the
+approved UI candidates may be left to users; Dragonspear UI++ waits for a request.
+Parallel patch-delivery work has advanced beyond some historical entries below;
+refresh its current owner/source status before redispatching old blockers.
+
+## First whole-mod update implemented in source — 2026-09-21
+
+The next slice is now implemented: Updates can offer **BuffBot 1.8.3-alpha →
+1.8.4-alpha in the same game folder**, with affected/full/optional-save backups,
+explicit confirmation, separate version history, Undo and interrupted Restore.
+See [scope, checks and remaining acceptance](existing-install-upgrades-2026-09-21.md).
+Original receipts and saves stay unchanged. Other whole-mod upgrades are not yet
+supported; do not advertise this as Update All or a complete collection upgrade.
+
+Automated fixture/frontend/native checks were run, and both release archives'
+hashes/tree fingerprints were verified. **No real WeiDU upgrade, interactive
+app/game test or publication was performed for this new route.**
+The September 22 local package now includes it; Christopher must be present for
+its acceptance test. Public alpha.18 remains untouched.
+
+## Existing-install comparison groundwork — 2026-09-21
+
+The parallel preparation is now partly implemented: Updates can explicitly compare
+a registered installation with the bundled collection using its recorded choices,
+including exclusions and settings. New optional content stays off; missing choices,
+new requirements, changed mod lists and unknown history are reported rather than
+silently accepted. This is **read-only groundwork, not a whole-mod updater**.
+No Apply action or save-compatibility claim is attached to the comparison.
+
+See [implementation and next steps](existing-install-comparison-2026-09-21.md).
+The supported BuffBot transition and durable update/restore history are now in
+source as described above. Do not publish the comparison alone as completion of
+existing-install upgrades. UI providers and manual checkpoints remain parked.
+
+**Interactive testing waits for Christopher.** Do not launch the app/game, apply
+an update, or repeat the earlier disposable-fixture acceptance without his renewed
+go-ahead. This turn changed repository source and ran automated fixture tests only.
+
+## alpha.19 local candidate, not published — updated 2026-09-22
+
+Source is at app **0.1.0-alpha.19**, collection **0.1.0-alpha.17** (record corrections
+plus the approved interval-save controls default above; mod versions and order
+are unchanged). The patch catalog's
+`minimum_app_version` 0.1.0-alpha.18 still holds. [Release notes](release-notes-alpha19.md)
+are prepared. The September 22 signed local Windows candidate now includes the
+latest update-route and interval-save work; it supersedes the earlier September 20
+local candidate. Packaged interactive acceptance and publication remain pending.
+The earlier missing-key report was incorrect: the existing updater key is present
+at the documented developer signing path, and its public companion matches the
+app's configured key. No key was created or rotated. Christopher subsequently
+stopped unattended interactive testing; the earlier instruction to launch a
+disposable Updates fixture is superseded. Arrange acceptance with him before
+continuing that step. Keep the published alpha.18 assets/channel unchanged until
+publication is authorized.
+
+Issues [#6](https://github.com/Chrizhermann/chriz-bg-collection/issues/6),
+[#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
+[#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8) now have local
+fixes: transcribed existing curation approvals, corrected update coverage and
+duplicate history, and removed stale fallback metadata. The combined-playtest
+tool retains published sources and rejects incompatible explicit local overrides.
+No new curation decision or work from Christopher was needed. See the alpha.19
+acceptance record for final check/build results when available; do not infer full
+gameplay acceptance from these source checks.
+
+## Updates patch flow implemented; packaging still pending — 2026-09-20
+
+Christopher accepted the description-link pilot and loaded-save behavior, then
+approved integrating it into Updates. The [production implementation record](existing-install-patches-acceptance-2026-09-20.md)
+now covers per-install checks, signed catalog, exact pinned downloads, independent
+backup choices, Apply/Undo/Restore, launch blocking during recovery, patch-aware
+consistency and diagnostic export. This remains a **narrow description-link fix**,
+not newer Assassin mechanics or a whole-mod upgrade. No RC/stream writes or full
+installation took place in this implementation turn. Public alpha.18 is unchanged.
+
+Verification: 24 engine patch tests plus a successful real-download/WeiDU
+synthetic apply/repeat/Undo test; 15 native unit and 15 diagnostics tests;
+179 frontend tests, typecheck and web build. Twenty isolated mock renders across
+five viewport sizes had no horizontal overflow or page errors. Native packaged
+Updates interaction and public publication are not yet claimed.
+
+**Packaging blocker resolved — 2026-09-20.** The bundled selectable `manifest/`
+public-alpha profile had six selected runs without accepted static evidence and
+three without tail approvals, while the curated profile carried both. Root cause:
+cb07eca added the runs to `manifest/` (the profile *and* the generator base) and
+4c9199b recorded evidence only in the generated curated output, so alpha.16, .17
+and .18 all shipped a fallback profile that failed validation. Fixed without
+weakening anything: a new fallback-profile test covers those runs (303e629), six
+accepted static-test records cite it, and Christopher extended his 2026-09-16
+curated tail approval to public-alpha (c8f1593). Both profiles now validate with
+no findings, the curated generator reconciles by identity and still reproduces the
+committed recipe byte for byte, and the 40 command-contract tests pass.
+
+See [alpha.19 status](#alpha19-local-candidate-not-published--updated-2026-09-21) above for the
+current release state.
+
+The remaining work is now indexed in [Next work](plans/2026-09-20-next-work-index.md):
+more targeted patches, My installs/unique names, customization, randomiser ideas,
+challenge mode, companion changes, poison XP, regeneration on rest, website vanilla
+differences and deferred community reports. The index distinguishes delivered work
+from ideas, and flags ownership/context gaps. Choose the next bounded batch with
+Christopher after finishing this delivery; do not redispatch every old plan.
+
 ## Existing-install patch pilot — 2026-09-20
 
 Christopher approved the pragmatic three-category design, full-backup recommendation
@@ -11,12 +555,16 @@ Artisan description-link adapter to the named old RC, verified six intended tabl
 cell changes/no TLK change, detected repeat application without invoking WeiDU, and
 rolled back to the original log/resource hashes. Full game and separate profile
 backups remain under the user's Games/CEBG-Backups directory. Twenty focused tests
-pass. The RC is now **rolled back**, not upgraded, and the stream game was untouched.
+pass. On Christopher's subsequent request, the same patch was **reapplied in a
+second transaction** (`kit-links-native-test-20260920`), and Christopher accepted
+its native descriptions and loaded-save behavior. The stream game remains untouched. A separate, backed-up engine-name
+switch selects an isolated profile with 786 hash-verified copied files; see the
+acceptance record for the launcher, test checklist and restore-first undo caveat.
 
-Next: isolated native display verification, then production Updates integration
-against a separate signed patch catalog. The supervised pilot is not a public
-Apply/Undo feature, and no public version/feed was changed. No game was launched
-and no save was edited. See the [accepted plan](plans/2026-09-20-existing-install-patch-pilot.md)
+The subsequent production Updates integration is recorded above; do not repeat
+the accepted RC test. The supervised pilot is not itself a public Apply/Undo
+release, and no public version/feed was changed. The agent did not launch the game
+or edit original saves. See the [accepted plan](plans/2026-09-20-existing-install-patch-pilot.md)
 for exact scope and guardrails; do not restart a full installation for this work.
 
 ## Alpha.18 published with reviewed Modpack fixes — 2026-09-20
@@ -33,6 +581,57 @@ the signed download, tests, public assets and update feed. The alpha.18 setup is
 also in Downloads; the website owner has the verified publication handoff.
 Use [the release notes](release-notes-alpha18.md) for the included changes.
 The wiki and newly proposed Baeloth work remain deferred, not release blockers.
+
+## Next-release triage: Randomiser feedback — 2026-09-18
+
+[Queued report and feature ideas](plans/2026-09-18-randomiser-next-release-triage.md):
+unconfirmed Mode 2 / BG-style proficiency conflict; editable RR/EE item pools;
+expanded cursed items; per-new-game randomisation; optional combat-focused reward
+placement. Christopher explicitly requested recording only, no investigation now.
+Discuss scope before promising the larger features for the next release.
+
+## Queued UX follow-up: My installs and unique names — 2026-09-16
+
+Christopher finds alpha.17's My installs view cluttered and its duplicate generic
+incomplete-install labels ambiguous. The [cleanup roadmap follow-up](plans/2026-09-07-managed-install-cleanup.md#follow-up-roadmap-my-installs-clarity-and-unique-names--september-16)
+records compact layout, persistent unique display names, automatic numbered
+defaults, legacy-entry disambiguation and clear post-removal selection. Planned
+only; no new app build, game changes or delay to his full-install test.
+
+## Alpha.17: SoD fix, disclosure polish and explicit cleanup — 2026-09-16
+
+The [alpha.17 candidate record](alpha17-candidate-2026-09-16.md) tracks app alpha.17 /
+collection alpha.15 with SoD Remix v0.6.11, the previously unbundled download retries,
+technical-log/scroll fixes, collapsible framed Customize categories and confirmed
+managed-install deletion. Defaults remain 448 components / 50 runs. Static, fixture
+and bounded headless UI checks pass; consult that record for package status.
+
+Christopher has **chosen a fresh test install**, superseding the proposed supervised
+197 recovery. Do not repair or delete his failed alpha.16 installation automatically.
+He will test the full install and deletion later. No new live installation/deletion
+test, stream-game modification, public release or updater-channel change is implied.
+Automatic repair of sealed partial batches remains a separate feature.
+
+## Incremental download retries and viewer follow-up — 2026-09-16
+
+[Retry implementation](download-retry-acceptance-2026-09-16.md): five attempts with
+0/2/10/30-second retry waits, ordinary technical-log notices, unchanged integrity
+and resume protections. 47 focused tests pass. Source only; the earlier alpha.16
+setup must be rebuilt before this can be advertised or published as included.
+Viewer diagnostics 2 confirms Xan recovered and all 34 archives are ready, but
+BG1 staging still fails at the Documents save child. The [Documents handoff](handoffs/2026-09-16-documents-folder-robustness.md)
+records the evidence and remaining security-history question; root cause not proven.
+
+## Deferred until tomorrow: player poison kill XP — reported 2026-09-16
+
+Christopher reports that enemies killed by poison originating from the player
+appear not to award kill experience. **Unconfirmed; do not investigate or fix now.**
+
+Next-session plan: identify the exact poison source and affected installation,
+compare a poison finishing tick with a direct-damage kill, and check kill/XP
+attribution. Route the confirmed cause to the owning mod repo (owner unknown yet),
+then make a focused fix and regression check. Do not assume all poison sources or
+the base engine are affected. No game/save changes or agent dispatch requested now.
 
 ## Alpha.16 candidate assembled — 2026-09-16
 

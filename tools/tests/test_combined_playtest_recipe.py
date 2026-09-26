@@ -3,12 +3,14 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import re
+import shutil
 import tempfile
 import tomllib
 import unittest
 import zipfile
 
-from tools.prepare_combined_playtest_recipe import REQUIRED_SOURCE_IDS, build_recipe
+from tools.prepare_combined_playtest_recipe import REQUIRED_SOURCE_IDS, SOURCE_MODS, _literal_components, build_recipe
 
 
 class CombinedPlaytestRecipeTests(unittest.TestCase):
@@ -16,7 +18,7 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.root = Path(__file__).resolve().parents[2]
 
-    def _sources(self, root: Path) -> Path:
+    def _sources(self, root: Path, omit: dict[str, set[int]] | None = None) -> Path:
         layouts = {
             "chriz-bg-modpack": (["chriz-bg-modpack", "setup-chriz-bg-modpack.tp2"], ["setup-chriz-bg-modpack.tp2"]),
             "chriz-sod-remix": (["chriz-sod-remix"], ["chriz-sod-remix/setup-chriz-sod-remix.tp2"]),
@@ -31,8 +33,11 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             publish_roots, tp2_paths = layouts[source_id]
             archive = root / f"{source_id}-20260908.zip"
             with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
-                for tp2 in tp2_paths:
-                    package.writestr(tp2, f"BACKUP ~backup~\nAUTHOR ~test~\nBEGIN ~{source_id}~\n")
+                for tp2, mod_id in zip(tp2_paths, SOURCE_MODS[source_id], strict=True):
+                    mod = tomllib.loads((self.root / "recipes/curated-full-current/mods" / f"{mod_id}.toml").read_text(encoding="utf-8"))
+                    ids = [component["id"] for component in mod["components"] if component["id"] not in (omit or {}).get(source_id, set())]
+                    declarations = "".join(f"BEGIN ~component {component}~ DESIGNATED {component}\n" for component in ids)
+                    package.writestr(tp2, f"BACKUP ~backup~\nAUTHOR ~test~\n{declarations}")
             data = archive.read_bytes()
             with zipfile.ZipFile(archive) as package:
                 infos = package.infolist()
@@ -83,15 +88,16 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp = Path(temp_dir)
             output = temp / "recipe"
-            build_recipe(self.root, self._sources(temp), output)
+            # Today's recipe must work without any obsolete development archives.
+            build_recipe(self.root, None, output)
 
             self.assertEqual(before, self._tree_hashes(base))
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             base_collection = tomllib.loads((base / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
             runs = collection["runs"]
-            # The public base absorbed this content in the September 16 intake, so the
-            # tool only repoints artifacts now. Nothing may be added twice.
+            # The public base absorbed this content in the September 16 intake.
+            # Neither old archives nor duplicate runs may replace the public selection.
             base_runs = [run["run_id"] for run in base_collection["runs"]]
             run_ids = [run["run_id"] for run in runs]
             self.assertEqual(len(run_ids), len(set(run_ids)))
@@ -159,20 +165,87 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             for original in base_collection["features"]:
                 self.assertEqual(original, generated_features[original["id"]], original["id"])
 
-            changed_mods = {
-                "artisanskitpack.toml", "artisanskitpack-npc.toml", "artisanskitpack-tweak.toml",
-                "spell-rev.toml", "chriz-sod-remix.toml", "chriz-bg-modpack.toml",
-                "chriz-bg-rebalance.toml", "srcb-rr-compat.toml", "safana.toml",
-            }
-            for name in changed_mods:
-                generated = tomllib.loads((output / "mods" / name).read_text(encoding="utf-8"))
-                self.assertTrue(
-                    generated["artifact_id"].startswith("local-playtest-"),
-                    f"{name} must point at a frozen local snapshot",
-                )
             for path in (base / "mods").glob("*.toml"):
-                if path.name not in changed_mods:
-                    self.assertEqual(path.read_bytes(), (output / "mods" / path.name).read_bytes())
+                self.assertEqual(path.read_bytes(), (output / "mods" / path.name).read_bytes())
+            self.assertEqual(json.loads((output / "combined-playtest-sources.json").read_text())["sources"], [])
+
+    def test_old_snapshots_do_not_replace_delivered_public_components(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            sources = self._sources(temp, {"chriz-sod-remix": {115, 257, 266}, "chriz-bg-modpack": {188}})
+            output = temp / "recipe"
+            build_recipe(self.root, sources, output)
+            base = self.root / "recipes/curated-full-current"
+            for name in ("chriz-sod-remix", "chriz-bg-modpack"):
+                self.assertEqual((base / "mods" / f"{name}.toml").read_bytes(), (output / "mods" / f"{name}.toml").read_bytes())
+
+    def test_explicit_local_override_rejects_missing_real_declarations(self) -> None:
+        for source_id, missing in (("chriz-sod-remix", {115, 257, 266}), ("chriz-bg-modpack", {188})):
+            with self.subTest(source=source_id), tempfile.TemporaryDirectory() as temp_dir:
+                temp = Path(temp_dir)
+                sources = self._sources(temp, {source_id: missing})
+                with self.assertRaisesRegex(ValueError, "cannot prove component coverage") as raised:
+                    build_recipe(self.root, sources, temp / "recipe", local_sources={source_id})
+                for component in missing:
+                    self.assertIn(str(component), str(raised.exception))
+                self.assertFalse((temp / "recipe").exists())
+
+    def test_explicit_compatible_local_overrides_are_checked_and_pinned(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            output = temp / "recipe"
+            build_recipe(self.root, self._sources(temp), output, local_sources=set(REQUIRED_SOURCE_IDS))
+            for mod_ids in SOURCE_MODS.values():
+                for mod_id in mod_ids:
+                    mod = tomllib.loads((output / "mods" / f"{mod_id}.toml").read_text(encoding="utf-8"))
+                    self.assertTrue(mod["artifact_id"].startswith("local-playtest-"))
+
+    def test_missing_safana_and_compat_mods_reach_their_fallbacks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            old_root = temp / "old-base"
+            old_base = old_root / "recipes/curated-full-current"
+            shutil.copytree(self.root / "recipes/curated-full-current", old_base)
+            for name in ("safana", "srcb-rr-compat"):
+                (old_base / "mods" / f"{name}.toml").unlink()
+            output = temp / "recipe"
+            build_recipe(old_root, self._sources(temp), output)
+            for name in ("safana", "srcb-rr-compat"):
+                mod = tomllib.loads((output / "mods" / f"{name}.toml").read_text(encoding="utf-8"))
+                self.assertTrue(mod["artifact_id"].startswith("local-playtest-"))
+                self.assertEqual(mod["components"][0]["id"], 0)
+            self.assertFalse((old_base / "mods/safana.toml").exists())
+
+    def test_missing_catalogue_component_requires_a_compatible_local_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            old_root = temp / "old-base"
+            old_base = old_root / "recipes/curated-full-current"
+            shutil.copytree(self.root / "recipes/curated-full-current", old_base)
+            mod_path = old_base / "mods/chriz-sod-remix.toml"
+            original = mod_path.read_text(encoding="utf-8")
+            reduced, count = re.subn(r"(?ms)^\[\[components\]\]\nid = 265\n.*?(?=^\[\[components\]\]|\Z)", "", original)
+            self.assertEqual(count, 1)
+            mod_path.write_text(reduced, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "frozen sources are required for chriz-sod-remix"):
+                build_recipe(old_root, None, temp / "missing-source")
+            self.assertFalse((temp / "missing-source").exists())
+            output = temp / "recipe"
+            build_recipe(old_root, self._sources(temp), output)
+            mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
+            self.assertTrue(mod["artifact_id"].startswith("local-playtest-chriz-sod-remix-"))
+            self.assertIn(265, [component["id"] for component in mod["components"]])
+
+    def test_component_coverage_ignores_comment_and_string_examples(self) -> None:
+        text = '''// BEGIN ~fake~ DESIGNATED 115
+/* nested /* comment */ BEGIN ~fake~ DESIGNATED 266 */
+BEGIN ~real~ DESIGNATED 100
+PRINT ~BEGIN bogus DESIGNATED 188~
+BEGIN @10 DESIGNATED 110
+'''
+        self.assertEqual(_literal_components(text), {100, 110})
+        self.assertEqual(_literal_components('BEGIN ~core~\nPRINT ~ok~'), {0})
+        self.assertEqual(_literal_components('BEGIN ~dynamic~ DESIGNATED %component%'), set())
 
     def test_reports_missing_frozen_source_instead_of_dropping_it(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -182,7 +255,7 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             payload["sources"] = [source for source in payload["sources"] if source["id"] != "srcb-rr-compat"]
             sources_path.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "missing required frozen sources.*srcb-rr-compat"):
-                build_recipe(self.root, sources_path, temp / "recipe")
+                build_recipe(self.root, sources_path, temp / "recipe", local_sources={"srcb-rr-compat"})
 
     def test_refuses_to_overwrite_any_existing_destination(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

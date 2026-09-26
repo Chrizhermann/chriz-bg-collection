@@ -155,7 +155,10 @@ describe("player feedback regressions", () => {
       installed: string[] = [];
       constructor() { super({ managedInstallations: [installation] }); }
       override async getUpdates() {
-        return { ...await super.getUpdates(), radar: { state: "not-installed" as const, currentVersion: null,
+        return { ...await super.getUpdates(),
+          managedCopies: [{ installId: installation.id, name: installation.name, path: installation.path,
+            installedRecipeVersion: installation.recipeVersion!, state: "up-to-date" as const, detail: "" }],
+          radar: { state: "not-installed" as const, currentVersion: null,
           availableVersion: "1.2.3", detail: "Available", releaseNotes: "Improved overlay controls." } };
       }
       override installRadar(installId: string) {

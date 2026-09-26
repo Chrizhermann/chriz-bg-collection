@@ -227,7 +227,15 @@ export interface BuildPhase extends PhaseSummary {
   readonly state: PhaseState;
 }
 
+export interface OperationProgress {
+  readonly stage: string;
+  readonly completed?: string | null;
+  readonly total?: string | null;
+  readonly unit?: "bytes" | "items" | null;
+}
+
 export interface BuildSnapshot {
+  readonly progress?: OperationProgress;
   readonly state: BuildState;
   readonly headline: string;
   readonly detail: string;
@@ -316,6 +324,56 @@ export interface ManagedCopyUpdate {
   readonly installedRecipeVersion: string | null;
   readonly state: ManagedCopyUpdateState;
   readonly detail: string;
+}
+
+/** Read-only comparison; no state in this contract authorizes applying an update. */
+export interface InstalledUpdatePlan {
+  readonly installId: string;
+  readonly baseRecipeVersion: string;
+  readonly targetRecipeVersion: string;
+  readonly state: "comparison-ready" | "blocked";
+  readonly detail: string;
+  readonly choicesPreserved: boolean;
+  readonly issues: readonly {
+    readonly rule: string;
+    readonly featureId: string | null;
+    readonly message: string;
+  }[];
+  readonly runs: readonly {
+    readonly runId: string;
+    readonly modName: string;
+    readonly installedVersion: string;
+    readonly targetVersion: string | null;
+    readonly components: readonly number[];
+    readonly state: "unchanged" | "unassessed" | "requires-migration";
+    readonly detail: string;
+  }[];
+}
+
+/** One explicitly supported whole-mod transition, not an entire collection upgrade. */
+export interface ModUpgradePreview {
+  readonly installId: string;
+  readonly upgradeId: string;
+  readonly title: string;
+  readonly state: "available" | "already-current" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
+  readonly detail: string;
+  readonly baseRecipeVersion: string;
+  readonly installedVersion: string | null;
+  readonly targetVersion: string;
+  readonly reviewToken: string | null;
+  readonly canUndo: boolean;
+  readonly canRestore: boolean;
+  readonly fullBackupBytes: string;
+  readonly saveBackupBytes: string;
+  readonly availableBytes: string;
+  readonly backupPath: string;
+  readonly saveCompatibility: string;
+  readonly history: readonly {
+    readonly transactionId: string;
+    readonly fromVersion: string;
+    readonly toVersion: string;
+    readonly state: string;
+  }[];
 }
 
 /** One independently verified fix, not a whole-mod or collection upgrade. */

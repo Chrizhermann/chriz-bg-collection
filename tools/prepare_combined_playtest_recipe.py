@@ -5,11 +5,11 @@ This intentionally starts from the public curated recipe and writes only to a
 separate destination. Development snapshots use the ordinary manual archive
 contract so the installer cache still verifies their exact length and SHA-256.
 
-Since the September 16 intake the public recipe already carries most of what
-this tool once added, so every step is additive and idempotent: mods are
-repointed at the frozen local archives, and runs, components, features and
-preset selections are only created where the base recipe lacks them. Content
-the base already defines is left exactly as curated.
+Since the September 16 intake the public recipe already carries this content.
+Keep its published archive pins wherever its component catalogue covers the
+requested runs. Frozen archives are needed only for missing content or an
+explicit --local-source override; their component coverage is checked before
+the destination is published. Existing curated runs and features are retained.
 """
 
 from __future__ import annotations
@@ -125,7 +125,8 @@ def _verify_zip(source: dict[str, object], archive: Path) -> None:
             raise ValueError(f"frozen source {source_id!r} is missing declared TP2 {tp2!r}")
 
 
-def load_sources(path: Path) -> dict[str, dict[str, object]]:
+def load_sources(path: Path, required_ids: set[str] | None = None) -> dict[str, dict[str, object]]:
+    required_ids = set(REQUIRED_SOURCE_IDS) if required_ids is None else required_ids
     payload = _read_json(path)
     if not isinstance(payload, dict) or payload.get("schema_version") != 1 or not isinstance(payload.get("sources"), list):
         raise ValueError("frozen source manifest must have schema_version 1 and a sources list")
@@ -137,14 +138,14 @@ def load_sources(path: Path) -> dict[str, dict[str, object]]:
         if source_id in sources:
             raise ValueError(f"duplicate frozen source id {source_id!r}")
         sources[source_id] = item
-    missing = [source_id for source_id in REQUIRED_SOURCE_IDS if source_id not in sources]
+    missing = sorted(required_ids - sources.keys())
     if missing:
         raise ValueError(f"missing required frozen sources: {', '.join(missing)}")
     extras = sorted(set(sources) - set(REQUIRED_SOURCE_IDS))
     if extras:
         raise ValueError(f"unexpected frozen sources (recipe mapping is not authored): {', '.join(extras)}")
-    for source_id in REQUIRED_SOURCE_IDS:
-        source = sources[source_id]
+    sources = {source_id: source for source_id, source in sources.items() if source_id in required_ids}
+    for source_id, source in sources.items():
         required = {
             "archive", "sha256", "size_bytes", "entry_count", "max_entry_bytes", "max_depth",
             "uncompressed_bytes", "root_layout", "root_rule", "publish_roots", "tp2_paths",
@@ -349,9 +350,14 @@ def _add_sod_components_to_mandatory_feature(collection: str, additions: tuple[i
 
 def _write_mod_overrides(destination: Path, sources: dict[str, dict[str, object]]) -> None:
     for source_id, mod_ids in SOURCE_MODS.items():
+        if source_id not in sources:
+            continue
         artifact_id = _artifact_id(source_id, sources[source_id])
         for mod_id in mod_ids:
             path = destination / "mods" / f"{mod_id}.toml"
+            # The two additional mods are created below when an older base lacks them.
+            if not path.exists() and mod_id in {"srcb-rr-compat", "safana"}:
+                continue
             text = _replace_scalar(path.read_text(encoding="utf-8"), "artifact_id", artifact_id)
             path.write_text(text, encoding="utf-8", newline="\n")
 
@@ -362,17 +368,30 @@ def _write_mod_overrides(destination: Path, sources: dict[str, dict[str, object]
         "chriz-bg-rebalance": [(110, "Dragon melee delivery and death-protection rebalance"), (111, "Dragon wing-buffet spacing rebalance")],
     }
     for mod_id, components in additions.items():
+        if not any(mod_id in SOURCE_MODS[source_id] for source_id in sources):
+            continue
         path = destination / "mods" / f"{mod_id}.toml"
         path.write_text(_append_components(path.read_text(encoding="utf-8"), components), encoding="utf-8", newline="\n")
 
-    # Both mods are curated in the public base today; only their artifact pin is
-    # repointed above. The literals below remain for a base that predates them.
-    compat = sources["srcb-rr-compat"]
-    tp2_paths = compat["tp2_paths"]
+    # Both mods are curated in the public base today. Older bases need complete
+    # mod files before their frozen component coverage can be checked.
+    compat_path = destination / "mods/srcb-rr-compat.toml"
+    if not compat_path.exists():
+        _write_missing_mod(compat_path, "srcb-rr-compat", sources["srcb-rr-compat"],
+                           "SRCB SR/RR compatibility (LOCAL EXPERIMENT)",
+                           "Spell Revisions / Rogue Rebalancing compatibility")
+    safana_path = destination / "mods/safana.toml"
+    if not safana_path.exists():
+        _write_missing_mod(safana_path, "safana-in-amn", sources["safana-in-amn"],
+                           "Safana in Amn (LOCAL COMBINED PLAYTEST)", "Safana in Amn: v0.5")
+
+
+def _write_missing_mod(path: Path, source_id: str, source: dict[str, object], name: str, component_name: str) -> None:
+    tp2_paths = source["tp2_paths"]
     assert isinstance(tp2_paths, list)
-    text = f'''id = "srcb-rr-compat"
-artifact_id = {_quote(_artifact_id('srcb-rr-compat', compat))}
-name = "SRCB SR/RR compatibility (LOCAL EXPERIMENT)"
+    text = f'''id = {_quote(path.stem)}
+artifact_id = {_quote(_artifact_id(source_id, source))}
+name = {_quote(name)}
 tp2 = {_quote(str(tp2_paths[0]))}
 language = 0
 weidu_artifact_id = "weidu-249-amd64"
@@ -380,30 +399,9 @@ invocation_mode = "setup-name"
 
 [[components]]
 id = 0
-name = "Spell Revisions / Rogue Rebalancing compatibility"
+name = {_quote(component_name)}
 '''
-    compat_path = destination / "mods/srcb-rr-compat.toml"
-    if not compat_path.exists():
-        compat_path.write_text(text, encoding="utf-8", newline="\n")
-
-    safana = sources["safana-in-amn"]
-    safana_tp2s = safana["tp2_paths"]
-    assert isinstance(safana_tp2s, list)
-    safana_text = f'''id = "safana"
-artifact_id = {_quote(_artifact_id('safana-in-amn', safana))}
-name = "Safana in Amn (LOCAL COMBINED PLAYTEST)"
-tp2 = {_quote(str(safana_tp2s[0]))}
-language = 0
-weidu_artifact_id = "weidu-249-amd64"
-invocation_mode = "setup-name"
-
-[[components]]
-id = 0
-name = "Safana in Amn: v0.5"
-'''
-    safana_path = destination / "mods/safana.toml"
-    if not safana_path.exists():
-        safana_path.write_text(safana_text, encoding="utf-8", newline="\n")
+    path.write_text(text, encoding="utf-8", newline="\n")
 
 
 def _write_collection(destination: Path) -> None:
@@ -480,7 +478,107 @@ def _write_preset(destination: Path) -> None:
     path.write_text(text + "\n", encoding="utf-8", newline="\n")
 
 
-def build_recipe(root: Path, sources_json: Path, destination: Path) -> None:
+def _requested_components(recipe: Path) -> dict[str, set[int]]:
+    requested: dict[str, set[int]] = {}
+    collection = tomllib.loads((recipe / "collection.toml").read_text(encoding="utf-8"))
+    for run in collection["runs"]:
+        requested.setdefault(run["mod_id"], set()).update(run["components"])
+    return requested
+
+
+def _needed_sources(base: Path, recipe: Path, explicit: set[str]) -> set[str]:
+    unknown = explicit - SOURCE_MODS.keys()
+    if unknown:
+        raise ValueError(f"unknown local source overrides: {', '.join(sorted(unknown))}")
+    needed = set(explicit)
+    requested = _requested_components(recipe)
+    for source_id, mod_ids in SOURCE_MODS.items():
+        for mod_id in mod_ids:
+            path = base / "mods" / f"{mod_id}.toml"
+            if not path.exists():
+                needed.add(source_id)
+                continue
+            mod = tomllib.loads(path.read_text(encoding="utf-8"))
+            available = {component["id"] for component in mod["components"]}
+            if requested.get(mod_id, set()) - available:
+                needed.add(source_id)
+    return needed
+
+
+def _literal_components(text: str) -> set[int]:
+    """Conservatively recognize literal TP2 declarations, never comment/string examples.
+
+    This is a component-coverage check, not a WeiDU parser or install acceptance.
+    Explicit DESIGNATED numbers and a leading implicit component zero are supported;
+    dynamic/generated component declarations cannot satisfy the coverage check.
+    """
+    masked: list[str] = []
+    index = 0
+    while index < len(text):
+        if text.startswith("//", index):
+            end = text.find("\n", index + 2)
+            index = len(text) if end < 0 else end
+            masked.append(" ")
+        elif text.startswith("/*", index):
+            index += 2
+            depth = 1
+            while index < len(text) and depth:
+                if text.startswith("/*", index):
+                    depth += 1
+                    index += 2
+                elif text.startswith("*/", index):
+                    depth -= 1
+                    index += 2
+                else:
+                    index += 1
+            if depth:
+                raise ValueError("frozen TP2 has an unterminated comment")
+            masked.append(" ")
+        elif text[index] in '~"%':
+            delimiter = "~~~~~" if text.startswith("~~~~~", index) else text[index]
+            end = text.find(delimiter, index + len(delimiter))
+            if end < 0:
+                raise ValueError("frozen TP2 has an unterminated string")
+            index = end + len(delimiter)
+            masked.append(" __TP2_STRING__ ")
+        else:
+            masked.append(text[index])
+            index += 1
+    code = "".join(masked)
+    declarations = list(re.finditer(r"\bBEGIN\s+(?:__TP2_STRING__|@\d+)\b", code, re.IGNORECASE))
+    components: set[int] = set()
+    for index, declaration in enumerate(declarations):
+        end = declarations[index + 1].start() if index + 1 < len(declarations) else len(code)
+        body = code[declaration.end():end]
+        designated = re.findall(r"\bDESIGNATED\s+(\d+)\b", body, re.IGNORECASE)
+        if len(designated) == 1:
+            components.add(int(designated[0]))
+        elif not designated and index == 0 and not re.search(r"\bDESIGNATED\b", body, re.IGNORECASE):
+            components.add(0)
+    return components
+
+
+def _verify_local_component_coverage(recipe: Path, sources: dict[str, dict[str, object]]) -> None:
+    requested = _requested_components(recipe)
+    for source_id, source in sources.items():
+        with zipfile.ZipFile(source["_archive_path"]) as archive:
+            names = {name.replace("\\", "/").casefold(): name for name in archive.namelist()}
+            for mod_id in SOURCE_MODS[source_id]:
+                mod = tomllib.loads((recipe / "mods" / f"{mod_id}.toml").read_text(encoding="utf-8"))
+                tp2 = names.get(mod["tp2"].replace("\\", "/").casefold())
+                if tp2 is None:
+                    raise ValueError(f"frozen source {source_id!r} lacks mod {mod_id!r} TP2 {mod['tp2']!r}")
+                available = _literal_components(archive.read(tp2).decode("latin-1"))
+                missing = sorted(requested.get(mod_id, set()) - available)
+                if missing:
+                    raise ValueError(
+                        f"frozen source {source_id!r} cannot prove component coverage for {mod_id!r}: "
+                        f"missing literal declarations {missing}. Keep the published base pin or supply "
+                        "a compatible archive; no recipe was published."
+                    )
+
+
+def build_recipe(root: Path, sources_json: Path | None, destination: Path, *, local_sources: set[str] | None = None) -> None:
     root = root.resolve()
     base = (root / "recipes/curated-full-current").resolve()
     destination = destination.resolve()
@@ -488,32 +586,38 @@ def build_recipe(root: Path, sources_json: Path, destination: Path) -> None:
         raise ValueError("destination must be separate from the public curated recipe")
     if destination.exists():
         raise ValueError(f"destination already exists; refusing to overwrite or delete it: {destination}")
-    sources = load_sources(sources_json.resolve())
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="combined-recipe-", dir=destination.parent) as temp_dir:
         staged = Path(temp_dir) / "recipe"
         shutil.copytree(base, staged)
+        _write_collection(staged)
+        _write_preset(staged)
+        needed = _needed_sources(base, staged, local_sources or set())
+        if needed and sources_json is None:
+            raise ValueError(f"frozen sources are required for {', '.join(sorted(needed))}; supply --sources")
+        sources = load_sources(sources_json.resolve(), needed) if needed else {}
         for source_id, source in sources.items():
             artifact_id = _artifact_id(source_id, source)
             (staged / "artifacts" / f"{artifact_id}.toml").write_text(_artifact_text(source_id, source), encoding="utf-8", newline="\n")
         _write_mod_overrides(staged, sources)
-        _write_collection(staged)
-        _write_preset(staged)
+        _verify_local_component_coverage(staged, sources)
         lock = {"schema_version": 1, "local_only": True, "sources": [{key: value for key, value in source.items() if key != "_archive_path"} for source in sources.values()]}
         (staged / "combined-playtest-sources.json").write_text(json.dumps(lock, indent=2) + "\n", encoding="utf-8", newline="\n")
         (staged / "release.json").unlink(missing_ok=True)
-        (staged / "LOCAL-ONLY.md").write_text("# LOCAL EXPERIMENT ONLY\n\nThis frozen recipe is for one combined fresh SR-on playtest. It is not a public recipe, release, or live-acceptance record. Supply the exact ZIPs named in `combined-playtest-sources.json` through the normal verified manual-cache flow.\n", encoding="utf-8", newline="\n")
+        (staged / "LOCAL-ONLY.md").write_text("# LOCAL EXPERIMENT ONLY\n\nThis recipe is for a combined fresh SR-on playtest. It is not a public release or live-acceptance record. Published base archive pins are retained wherever their catalogues cover the requested components. Only the local overrides listed in `combined-playtest-sources.json` require frozen ZIPs through the verified manual-cache flow. Local TP2 declaration checks prove component numbering only, not successful installation or gameplay.\n", encoding="utf-8", newline="\n")
         shutil.move(str(staged), destination)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Prepare the local-only combined playtest recipe")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--sources", type=Path, required=True, help="Frozen sources.json from the source packager")
+    parser.add_argument("--sources", type=Path, help="Frozen sources.json, required only for missing content or explicit local overrides")
+    parser.add_argument("--local-source", action="append", default=[], choices=REQUIRED_SOURCE_IDS,
+                        help="Explicitly override a published source with a compatible frozen archive (repeatable)")
     parser.add_argument("--output", type=Path, default=Path("target/combined-playtest-20260908/recipe"))
     args = parser.parse_args(argv)
     try:
-        build_recipe(args.root, args.sources, args.output)
+        build_recipe(args.root, args.sources, args.output, local_sources=set(args.local_source))
     except (OSError, ValueError) as error:
         print(f"combined playtest recipe generation failed: {error}", file=sys.stderr)
         return 1
