@@ -1,6 +1,17 @@
 import type { InstallationRemovalPreview } from "../contracts";
 import { actionButton, element } from "./app-shell";
 
+function approximateSize(value: string | null | undefined): string {
+  if (value == null || !/^\d+$/.test(value)) return "unavailable";
+  const amount = BigInt(value);
+  const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"];
+  let unit = 0;
+  let divisor = 1n;
+  while (amount / divisor >= 1024n && unit < units.length - 1) { unit++; divisor *= 1024n; }
+  const tenths = (amount * 10n + divisor / 2n) / divisor;
+  return `${tenths / 10n}${tenths % 10n === 0n ? "" : `.${tenths % 10n}`} ${units[unit]}`;
+}
+
 export function installationRemovalDialog(
   preview: InstallationRemovalPreview,
   busy: boolean,
@@ -23,6 +34,8 @@ export function installationRemovalDialog(
   description.id = "removal-description";
   dialog.append(title, element("strong", undefined, preview.displayName), description, element("p", "path removal-path", preview.managedRoot));
   if (!forget) {
+    const size = approximateSize(preview.approximateSizeBytes);
+    dialog.append(element("p", "muted", `Approximate folder size: ${size}.${size === "unavailable" ? "" : " Disk space freed may differ."}`));
     dialog.append(element("p", "muted", "Your original game sources and shared downloads stay untouched. Saves stored outside this folder are kept."));
     if (preview.preservedSavePath) {
       dialog.append(element("p", "muted", "Saved-game profile kept:"), element("p", "path", preview.preservedSavePath));

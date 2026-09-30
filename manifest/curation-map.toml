@@ -1,8 +1,8 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1206
-expected_choice_groups = 72
+expected_rows = 1213
+expected_choice_groups = 73
 expected_optional_none_groups = 23
 expected_fixed_groups = 10
 
@@ -735,6 +735,11 @@ rows = ["ARTISANSKITPACK_TWEAK:7203"]
 id = "feature:artisanskitpack-tweak:component-8204"
 kind = "feature"
 rows = ["ARTISANSKITPACK_TWEAK:8204"]
+
+[[targets]]
+id = "feature:artisanskitpack-tweak:component-51010"
+kind = "feature"
+rows = ["ARTISANSKITPACK_TWEAK:51010"]
 
 [[targets]]
 id = "feature:ascension:component-0"
@@ -1875,6 +1880,11 @@ rows = ["CHRIZ-BG-REBALANCE:121"]
 id = "feature:chriz-bg-rebalance:component-301"
 kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:301"]
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-302"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:302"]
 parent = "mod:chriz-bg-rebalance"
 
 [[targets]]
@@ -2064,6 +2074,36 @@ id = "feature:chriz-bg-modpack:component-620"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:620"]
 parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-224"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:224"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-225"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:225"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-611"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:611"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-630"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:630"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-640"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:640"]
+collection_root = true
 
 [[targets]]
 id = "feature:eet:component-100"
@@ -3099,6 +3139,13 @@ rows = ["STRATAGEMS:4217"]
 id = "feature:stratagems:component-4230"
 kind = "feature"
 rows = ["STRATAGEMS:4230"]
+
+[[choice_groups]]
+id = "choice:chriz-bg-modpack:utility-xp-mode"
+catalog = "CHRIZ-BG-MODPACK"
+subgroup = "Utility XP scaling"
+options = ["CHRIZ-BG-MODPACK:610", "CHRIZ-BG-MODPACK:611"]
+default = "CHRIZ-BG-MODPACK:611"
 
 [[choice_groups]]
 id = "choice:cdtweaks:outline-white-spell-icons-for-accessibility"

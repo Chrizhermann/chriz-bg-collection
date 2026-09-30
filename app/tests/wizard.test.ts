@@ -466,9 +466,9 @@ describe("Chriz Easy BG application flow", () => {
         return Promise.reject(new Error("Updates are offline."));
       }
 
-      override launchInstall(installId: string) {
+      override launchInstall(installId: string, startRadar: boolean) {
         this.launched.push(installId);
-        return Promise.resolve();
+        return super.launchInstall(installId, startRadar);
       }
 
       override openInstallFolder(installId: string) {

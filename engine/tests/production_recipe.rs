@@ -127,12 +127,13 @@ fn pins_exact_core_artifact_identities_and_archive_contracts() {
                 EET_SHA256,
                 ArchiveKind::Zip,
                 ArchiveRootRule::SingleWrapper,
-                vec!["EET", "EET_end"],
+                vec!["EET", "EET_end", "EET_gui"],
                 vec![
                     "EET/EET.tp2",
                     "EET/other/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker.tp2",
                     "EET/other/EET_modConverter/EET_modConverter/EET_modConverter.tp2",
                     "EET_end/EET_end.tp2",
+                    "EET_gui/EET_gui.tp2",
                 ],
             ),
         ),
@@ -405,7 +406,7 @@ fn eet_and_eet_end_share_one_payload_and_every_run_uses_the_pinned_x64_tool() {
         .mods
         .values()
         .all(|mod_file| mod_file.weidu_artifact_id == "weidu-249-amd64"));
-    assert!(!eet_artifact
+    assert!(eet_artifact
         .archive
         .publish_roots
         .iter()
@@ -527,6 +528,7 @@ fn artifact_verification_evidence() -> ArtifactVerificationEvidence {
 #[test]
 fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() {
     let manifest = recipe();
+    let curated = Manifest::load(&recipe_root().join("../recipes/curated-full-current")).unwrap();
     // Preserve historical verification evidence without bundling the retired
     // archive descriptor as an available current download.
     let historical_modpack: bg_engine::manifest::Artifact = toml::from_str(include_str!(
@@ -534,6 +536,10 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
     ))
     .unwrap();
     let evidence = artifact_verification_evidence();
+    let historical_artisan: bg_engine::manifest::Artifact = toml::from_str(include_str!(
+        "../../manifest/reference/historical-artifacts/artisans-kitpack-chriz-v1.6.0.toml"
+    ))
+    .unwrap();
     let expected_observations = BTreeMap::from([
         (
             "weidu-249-amd64",
@@ -815,6 +821,62 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
                 },
             ),
         ),
+        (
+            "artisans-kitpack-chriz-v1.6.0",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 7,
+                    entry_count: 2992,
+                    max_entry_uncompressed_bytes: 6142193,
+                    total_uncompressed_bytes: 117985313,
+                    max_compression_ratio: 432,
+                },
+            ),
+        ),
+        (
+            "bardicwonders-v2.9c-balance.6",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 834,
+                    max_entry_uncompressed_bytes: 3311752,
+                    total_uncompressed_bytes: 33010183,
+                    max_compression_ratio: 432,
+                },
+            ),
+        ),
+        (
+            "chriz-sod-remix-0.6.12",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 259,
+                    max_entry_uncompressed_bytes: 1364992,
+                    total_uncompressed_bytes: 6226854,
+                    max_compression_ratio: 16,
+                },
+            ),
+        ),
+        (
+            "buffbot-1.9.0",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 4,
+                    entry_count: 47,
+                    max_entry_uncompressed_bytes: 1364992,
+                    total_uncompressed_bytes: 5205392,
+                    max_compression_ratio: 7,
+                },
+            ),
+        ),
     ]);
 
     assert_eq!(evidence.schema, 1);
@@ -839,8 +901,12 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
         let artifact = manifest
             .artifacts
             .get(&record.artifact_id)
+            .or_else(|| curated.artifacts.get(&record.artifact_id))
             .or_else(|| {
                 (record.artifact_id == historical_modpack.id).then_some(&historical_modpack)
+            })
+            .or_else(|| {
+                (record.artifact_id == historical_artisan.id).then_some(&historical_artisan)
             })
             .unwrap_or_else(|| panic!("unknown evidence artifact {}", record.artifact_id));
         let (expected_host, expected_wrapper, expected_shape) = expected_observations
@@ -947,6 +1013,29 @@ fn measured_archive_shape(path: &Path) -> ObservedArchiveShape {
 #[test]
 #[ignore = "requires official HTTPS or a prepopulated external artifact cache"]
 fn real_artifact_verification_matches_committed_evidence() {
+    use bg_engine::acquire::{
+        extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
+    };
+
+    fn canonical_paths(paths: &[String]) -> Vec<String> {
+        let mut paths = paths
+            .iter()
+            .map(|path| path.replace('\\', "/").to_lowercase())
+            .collect::<Vec<_>>();
+        paths.sort();
+        paths
+    }
+
+    fn extraction_entries(parent: &Path) -> BTreeSet<PathBuf> {
+        match std::fs::read_dir(parent) {
+            Ok(entries) => entries
+                .map(|entry| entry.expect("read extraction contract entry").path())
+                .collect(),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => BTreeSet::new(),
+            Err(error) => panic!("inspect extraction cache {}: {error}", parent.display()),
+        }
+    }
+
     let evidence = artifact_verification_evidence();
     let cache_root = PathBuf::from(
         std::env::var_os("CHRIZ_BG_REAL_ARTIFACT_CACHE")
@@ -961,22 +1050,37 @@ fn real_artifact_verification_matches_committed_evidence() {
         .expect("manifest should have a repository parent")
         .to_path_buf();
     assert!(
-        !cache_root.starts_with(repository_root),
+        !cache_root.starts_with(&repository_root),
         "real artifact cache must remain outside the repository"
     );
     let entire_cache_was_fresh = !cache_root.exists();
+    let descriptor_directories = [
+        recipe_root().join("artifacts"),
+        repository_root.join("recipes/curated-full-current/artifacts"),
+        recipe_root().join("reference/historical-artifacts"),
+    ];
 
     for record in &evidence.artifacts {
-        let artifact_path = recipe_root()
-            .join("artifacts")
-            .join(format!("{}.toml", record.artifact_id));
+        let artifact_path = descriptor_directories
+            .iter()
+            .map(|directory| directory.join(format!("{}.toml", record.artifact_id)))
+            .find(|path| path.is_file())
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing recorded artifact descriptor {}",
+                    record.artifact_id
+                )
+            });
+        let artifact: bg_engine::manifest::Artifact = toml::from_str(
+            &std::fs::read_to_string(&artifact_path).expect("read recorded artifact descriptor"),
+        )
+        .expect("parse recorded artifact descriptor");
         let digest = &record.actual_sha256;
-        let extraction_marker = cache_root
-            .join("production-extracted/sha256-v2")
+        let extraction_parent = cache_root
+            .join("production-extracted/sha256-v3")
             .join(&digest[..2])
-            .join(digest)
-            .join(".chriz-bg-extraction.json");
-        let extraction_was_fresh = !extraction_marker.exists();
+            .join(digest);
+        let previous_extractions = extraction_entries(&extraction_parent);
         let output = Command::new(env!("CARGO_BIN_EXE_chriz-bg-author"))
             .args(["artifact", "verify"])
             .arg(&artifact_path)
@@ -1008,14 +1112,18 @@ fn real_artifact_verification_matches_committed_evidence() {
             record.wrapper_directory.as_deref()
         );
         assert_eq!(
-            serde_json::from_value::<Vec<String>>(report["archive"]["publish_roots"].clone())
-                .expect("publish roots"),
-            record.materialized_publish_roots
+            canonical_paths(
+                &serde_json::from_value::<Vec<String>>(report["archive"]["publish_roots"].clone())
+                    .expect("publish roots")
+            ),
+            canonical_paths(&record.materialized_publish_roots)
         );
         assert_eq!(
-            serde_json::from_value::<Vec<String>>(report["archive"]["tp2_paths"].clone())
-                .expect("TP2 paths"),
-            record.declared_tp2_paths
+            canonical_paths(
+                &serde_json::from_value::<Vec<String>>(report["archive"]["tp2_paths"].clone())
+                    .expect("TP2 paths")
+            ),
+            canonical_paths(&record.declared_tp2_paths)
         );
         assert_eq!(
             report["pe_machine"].as_str(),
@@ -1039,13 +1147,64 @@ fn real_artifact_verification_matches_committed_evidence() {
             .join(&digest[..2])
             .join(format!("{digest}.archive"));
         assert_eq!(measured_archive_shape(&archive_path), record.observed_shape);
-        let marker: serde_json::Value = serde_json::from_slice(
-            &std::fs::read(&extraction_marker).expect("read v2 extraction marker"),
+        // The author report exposes logical paths, not the extraction location. Ask the
+        // extractor for its verified result and require the author to have published it
+        // already, without reproducing the contract-fingerprint algorithm in this test.
+        let published_extractions = extraction_entries(&extraction_parent);
+        let extracted = extract_archive(
+            &archive_path,
+            &cache_root.join("production-extracted"),
+            &ArchiveRequirements {
+                artifact_sha256: artifact.source.sha256.clone(),
+                format: match artifact.archive.kind {
+                    ArchiveKind::Zip => ArchiveFormat::Zip,
+                    ArchiveKind::Iemod => ArchiveFormat::Iemod,
+                    ArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
+                },
+                expected_roots: artifact.archive.publish_roots.clone(),
+                expected_tp2_paths: artifact.archive.tp2_paths.clone(),
+                limits: ArchiveLimits {
+                    max_depth: artifact.archive.limits.max_depth,
+                    max_entries: artifact.archive.limits.max_entries,
+                    max_entry_uncompressed_bytes: artifact
+                        .archive
+                        .limits
+                        .max_entry_uncompressed_bytes,
+                    max_total_uncompressed_bytes: artifact
+                        .archive
+                        .limits
+                        .max_total_uncompressed_bytes,
+                    max_compression_ratio: artifact.archive.limits.max_compression_ratio,
+                },
+                mode: ArchiveMode::Public,
+            },
         )
-        .expect("parse v2 extraction marker");
+        .expect("revalidate the author's extracted artifact");
+        assert!(published_extractions.contains(&extracted.root));
+        assert_eq!(extracted.root.parent(), Some(extraction_parent.as_path()));
+        let extraction_was_fresh = !previous_extractions.contains(&extracted.root);
+        let extraction_marker = extracted.root.join(".chriz-bg-extraction.json");
+        let marker: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(&extraction_marker).expect("read current extraction marker"),
+        )
+        .expect("parse current extraction marker");
+        assert_eq!(marker["version"], 3);
+        assert_eq!(marker["artifact_sha256"], record.actual_sha256);
         assert_eq!(
-            marker["version"],
-            serde_json::Value::from(evidence.extraction_marker_version)
+            marker["contract_sha256"],
+            extracted.extraction_contract_sha256
+        );
+        assert_eq!(
+            extracted.root.file_name().and_then(|name| name.to_str()),
+            Some(extracted.extraction_contract_sha256.as_str())
+        );
+        assert_eq!(
+            extracted.expected_roots,
+            canonical_paths(&record.materialized_publish_roots)
+        );
+        assert_eq!(
+            extracted.expected_tp2_paths,
+            canonical_paths(&record.declared_tp2_paths)
         );
         if entire_cache_was_fresh {
             assert_eq!(report["cache_disposition"], "downloaded");

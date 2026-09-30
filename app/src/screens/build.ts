@@ -5,6 +5,7 @@ import { errorDetails } from "../components/error-details";
 import { statusCard } from "../components/status-card";
 import { technicalLog, type TechnicalLogState } from "../components/technical-log";
 import { progressDisplay } from "../components/operation-feedback";
+import { manualCheckpointPanel, type ManualCheckpointActions } from "../components/manual-checkpoints";
 
 export interface BuildActions {
   readonly backToSetup: () => void | Promise<void>;
@@ -18,23 +19,30 @@ export interface BuildActions {
   readonly diagnosticsAvailable: boolean;
   readonly fixture: boolean;
   readonly retryAvailable: boolean;
+  readonly resuming?: boolean;
   readonly logState: TechnicalLogState;
   readonly updateLogState: (state: TechnicalLogState) => void;
   readonly remove?: () => void | Promise<void>;
   readonly removalDisabled?: boolean;
+  readonly manualCheckpoint?: ManualCheckpointActions;
 }
 
 export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTMLElement {
   const page = element("div", "screen-stack build-screen");
   page.append(screenIntro("", "Installation progress", ""));
   const tone = snapshot.state === "failed" ? "danger" : snapshot.state === "running" || snapshot.state === "complete" ? "ok" : "warning";
-  const stateCard = statusCard(snapshot.headline, snapshot.state === "running" ? "" : snapshot.detail, tone);
+  const preparingResume = actions.resuming && snapshot.state === "paused" && !actions.manualCheckpoint;
+  const stateCard = statusCard(preparingResume ? "Resuming installation" : snapshot.headline,
+    preparingResume ? "Checking saved progress…" : snapshot.state === "running" ? "" : snapshot.detail, tone);
   if (snapshot.state === "running") stateCard.append(progressDisplay(snapshot.progress, snapshot.detail));
-  if (snapshot.failureReason) stateCard.insertBefore(element("p", "failure-reason", snapshot.failureReason), stateCard.children[1] ?? null);
+  const structuredErrorDetail = snapshot.state === "failed" ? snapshot.commandError?.technical_detail : undefined;
+  if (snapshot.failureReason && (!structuredErrorDetail || snapshot.freshCopyRequired)) stateCard.insertBefore(element("p", "failure-reason", snapshot.failureReason), stateCard.children[1] ?? null);
   const controls = element("div", "inline-actions");
   if (snapshot.recoveryAction) stateCard.append(element("p", "recovery-action", snapshot.recoveryAction));
-  if (snapshot.state === "failed" && snapshot.commandError?.technical_detail) {
-    stateCard.append(errorDetails(snapshot.commandError.technical_detail, snapshot.commandError.code === "unsafe_target"));
+  if (structuredErrorDetail) {
+    const detail = snapshot.failureReason && !snapshot.freshCopyRequired && !structuredErrorDetail.includes(snapshot.failureReason)
+      ? `${snapshot.failureReason}\n\n${structuredErrorDetail}` : structuredErrorDetail;
+    stateCard.append(errorDetails(detail, snapshot.commandError?.code === "unsafe_target"));
   }
   if (snapshot.state === "waiting-manual") {
     stateCard.append(element("p", "path", snapshot.manualArchiveName ?? ""));
@@ -49,7 +57,10 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
     else controls.append(actionButton("Back to setup", actions.backToSetup));
     if (actions.diagnosticsAvailable) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));
   } else if (snapshot.state === "paused") {
-    controls.append(actionButton("Resume installation", actions.retry));
+    if (actions.manualCheckpoint) {
+      stateCard.append(manualCheckpointPanel(actions.manualCheckpoint));
+    }
+    else controls.append(actionButton("Resume installation", actions.retry));
   } else if (snapshot.state === "running") {
     controls.append(actions.fixture
       ? actionButton("Finish fixture build", actions.advance)
@@ -63,6 +74,7 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
     if (removal.disabled) removal.title = "Pause or stop the installation before deleting it.";
     controls.append(removal);
   }
+  if (actions.resuming) controls.querySelectorAll<HTMLButtonElement>("button").forEach(button => { button.disabled = true; });
   if (controls.childElementCount > 0) stateCard.append(controls);
   page.append(stateCard, campaignLedger(snapshot.phases, true), technicalLog(snapshot.logTail, actions.logState, actions.updateLogState));
   return page;

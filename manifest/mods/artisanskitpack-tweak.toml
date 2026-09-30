@@ -1,5 +1,5 @@
 id = "artisanskitpack-tweak"
-artifact_id = "artisans-kitpack-chriz-v1.5.0"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.1"
 name = "The Artisan's Kitpack — Late Tweaks"
 tp2 = "ArtisansKitpack_tweak/ArtisansKitpack_tweak.TP2"
 language = 0
@@ -7,8 +7,12 @@ weidu_artifact_id = "weidu-249-amd64"
 invocation_mode = "setup-name"
 
 [[components]]
+id = 51010
+name = "Allow talking in Shapeshifter and Hivemaster forms"
+
+[[components]]
 id = 20101
-name = "Archer: Apply Manyshot to mod-added items"
+name = "Archer: Remove legacy Manyshot from mod-added items"
 
 [[components]]
 id = 12012

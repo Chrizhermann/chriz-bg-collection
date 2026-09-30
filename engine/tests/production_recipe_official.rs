@@ -382,6 +382,13 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "eefixpack-bg2",
             "eet-initialize-bg2",
             "eeex-bg2",
+            "game-interface-infinity-bg2",
+            "game-interface-eet-sod-bg2",
+            "game-interface-leui-bg2-bg2",
+            "game-interface-leui-bg1-bg2",
+            "game-interface-leui-sod-bg2",
+            "game-interface-dragonspear-bg2",
+            "chriz-bg-modpack-ui-compat-bg2",
             "bubb-spell-menu-bg2",
             "bggo-bg2",
             "rr-bg2",
@@ -420,24 +427,24 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "buffbot-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..32]
+    assert!(manifest.collection.runs[6..39]
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);
     assert_eq!(
-        manifest.collection.runs[9].components,
+        manifest.collection.runs[16].components,
         RR_AUTHORED_COMPONENTS
     );
     assert_eq!(
-        manifest.collection.runs[13].components,
+        manifest.collection.runs[20].components,
         UB_AUTHORED_COMPONENTS
     );
     assert_eq!(
-        manifest.collection.runs[17].components,
+        manifest.collection.runs[24].components,
         ASCENSION_COMPONENTS
     );
-    assert!(!manifest.collection.runs[13].components.contains(&19));
-    assert!(!manifest.collection.runs[17].components.contains(&40));
+    assert!(!manifest.collection.runs[20].components.contains(&19));
+    assert!(!manifest.collection.runs[24].components.contains(&40));
 }
 
 #[test]

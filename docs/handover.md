@@ -2,6 +2,823 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## October 1 — final candidate packaged; publication still held
+
+The Radar Fix candidate completed automated checks and packaging at 04:09 KST
+(September 30, 19:09 UTC), exit 0. This supersedes the earlier statements below
+that Radar is source-only or final packaging is pending. App version remains
+**0.1.0-alpha.19**, bundled collection **0.1.0-alpha.18**.
+
+Local setup:
+`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`.
+Its adjacent `.sig` is verified against the app's updater public key. This is
+not Windows publisher signing or a Defender clearance. See the exact hashes,
+test counts and limits in [candidate verification](package-acceptance-alpha19-radar-2026-10-01.md).
+The local update feed is prepared but not published. No setup, app or game was
+launched by this job. No new full game installation is required.
+
+Remaining user check: when agreed and after assessing the Defender issue, test
+Play with Radar unchecked, then opted in; verify Windows approval, actual overlay
+appearance, and a clear nonfatal message when approval is declined. The agent
+must not click or launch this check on Christopher's behalf.
+
+Microsoft's latest analyst reply reported no detection/telemetry for the initially
+submitted Selection Fix sample and requested the affected machine's support CAB.
+This does **not** clear the different Dragon and Order Fix executable identified
+in the incident logs. Christopher approved sending the existing diagnostic CAB
+and the correction. The follow-up form is prepared with the original submission
+ID, corrected affected hash and diagnostic context; final CAPTCHA/Submit was
+handed to Christopher. **No follow-up receipt has yet been confirmed.** The
+private preparation record is under ignored `target/work/oct01-defender-submission`.
+Do not claim the diagnostic submission succeeded or repeat it without checking.
+No new reproduction, quarantine restore or antivirus setting change was made.
+Public downloads, updater channel, website and Discord announcement remain held
+until the incident is assessed and Christopher chooses how to proceed.
+
+Cleanup inventory found about 45.3 GiB in `target/debug/incremental`. Its exact,
+validated removal was rejected by tool policy **before execution**; zero files
+were deleted and no alternate route was attempted. This was not a reported game
+file lock. Keep games, saves, backups, release outputs and `target/work` evidence.
+The cleanup evidence is local under `target/work/oct01-cache-cleanup`.
+
+## September 30 — quick release preparation during streaming
+
+Christopher requested only quick preparation now; builds, installs and supervised
+game/Radar checks wait until after his stream. No automatic evening wake-up or
+publication is authorized by that timing discussion. The release notes now contain
+short Discord and website draft copy, clearly held for final packaging and the
+Defender decision. The smoke checklist records the completed fresh installation
+and removes the obsolete September 29 setup instruction; no additional full
+installation is required. No announcement, website or download was published.
+
+Tonight: prepare and verify the package containing the Radar fix, agree the short
+remaining checks, finalize the release copy and download links, then make the
+publication decision based on the unresolved Defender findings below. The pending
+Microsoft correction is already approved; do not ask again for the same text scope.
+
+## September 30 — Defender quarantined CEBG; completed game and Radar remain
+
+New release-readiness issue: at 17:17:38–17:18:18 local, Microsoft Defender
+detected `Behavior:Win32/DefenseEvasion.A!ml` and quarantined the installed
+`%LOCALAPPDATA%\Chriz Easy BG\chriz-bg-app.exe`. The executable and Start-menu
+shortcut are absent; the action also names its uninstall registration. Defender
+events 1116/1117 and Get-MpThreatDetection confirm successful remediation. Cloud
+intelligence events 2010 immediately precede detection, but neither establishes
+the exact behavioral trigger. Entries naming Elgato WaveLink are not proof that
+WaveLink caused the detection. Antivirus, real-time and behavior protection stay
+enabled. No exclusions, restore, reinstall or app/game launch have been performed
+by this investigation. The separately authorized Microsoft submission is recorded below.
+
+The first investigation checked the preserved Selection Fix executable and setup
+against their verified hashes. **The later support-log collection below identifies
+the affected installed app as the earlier Dragon and Order Fix build instead.**
+The Selection Fix sample submitted to Microsoft is not byte-identical to that
+affected executable; the case needs a correction. Both preserved builds have Windows
+Authenticode status `NotSigned`; the existing Tauri updater signature is a
+different signature and is not a Windows publisher certificate. Do not describe
+this issue as resolved by previous package tests or propose arbitrary binary
+changes to evade detection. Next steps: await Microsoft's determination and review
+the behavior in a controlled environment with separate live-test authorization.
+Evaluate Windows publisher-signing separately; it is no guarantee.
+[Microsoft developer guidance](https://learn.microsoft.com/en-us/defender-xdr/developer-faq).
+
+The user reused `C:\Users\chris\Games\Chriz Easy BG Test 19` for a **new successful
+installation**, ID `install-6a5411d310041f2ae2c1`, completion at 08:56 local.
+Do not confuse it with the earlier failed attempt. Its game/loader/WeiDU.log
+remain present. Radar **2.5.2.0** is also present at
+`game\BG Radar Overlay\BG Radar Overlay.exe`; receipt in
+`.chriz/addons/bg-radar-overlay.json` records automatic installation at 08:56:35.
+There is no Customize checkbox for Radar. CEBG's Play action **attempts** to launch
+both game and overlay. Christopher explicitly confirms he used Play and Radar did
+not appear; do not attribute his failure to launching InfinityLoader directly.
+
+Follow-up read-only diagnosis: all 15 Radar receipt-owned files match their size
+and SHA-256, and receipt/root validation currently supports `UpToDate`. Radar's
+embedded XML manifest requires `requireAdministrator` (actual XML nodes, not
+commented examples). In the affected packaged build, `SystemBridgeSystem::launch` uses `Command::spawn`, which
+does not request Windows elevation consent; `launch_install` silently discards
+Radar status and launch errors (`bridge.rs:1361-1367`). This is a concrete launch
+design defect and explains rejection when CEBG is unelevated; the exact historic
+Windows error was not recorded and no live reproduction was attempted. Fix
+direction: Windows-supported consent-aware launching for Radar only, plus clear
+nonfatal feedback while preserving successful game launch. Do not elevate the
+whole installer or alter Radar's binary/manifest. The old native tests mocked
+successful launches without a Radar receipt; the new tests cover this branch.
+[Windows UAC launch guidance](https://learn.microsoft.com/en-us/windows/win32/dxtecharts/user-account-control-for-game-developers).
+
+Defender sequence clarified: Play started the game; later, while viewing install
+details and copying the folder path, CEBG disappeared and Defender notified him.
+Details/path text has no native toggle/copy handler. The Play call chain checks
+filesystem records, starts InfinityLoader and attempts Radar; it does not reach
+the broad process scanner or the PowerShell patch-mutation checks. There is no
+post-Play frontend polling. Therefore do not claim those unrelated scanner paths
+or copying text caused this detection. Game/loader launch and possible delayed
+Defender attribution remain investigation candidates, not established causes.
+
+Initial read-only checks: Defender's process-start FILETIME places this CEBG
+process at 06:43:40 local, over ten hours before the detection, not a newly
+started installer. Available event XML exposes no offending API or parent/child
+chain; Security process auditing and Sysmon supply no additional evidence in
+that window. Defender Support logs were access-denied under the ordinary token;
+that initial pass did not elevate or change ACLs. The subsequently authorized
+elevated collection is recorded below. The three cloud-entry identifiers
+do not match the preserved app's SHA-1; do not present them as its file hash.
+
+The cached EEex 1.2.0 archive matches the recipe's exact length and SHA-256. All
+12 EXE/DLL payloads under installed `EEex/loader`, and all nine active loader
+binaries (2.7.3.0/LuaJIT), match their respective archive entries. This verifies
+provenance, not antivirus safety. EEex's author documents runtime game-memory
+patching and antivirus alerts; that makes loader behavior a reasonable lead,
+not proof of why Defender quarantined **CEBG** here.
+[EEex documentation](https://github.com/Bubb13/EEex/blob/master/README.md#how-eeex-works).
+
+Christopher approved submission of the preserved CEBG executable and a short
+report to Microsoft, excluding saves and personal logs. After Christopher completed
+sign-in, account consent, the CAPTCHA and final submission, the receipt was verified:
+submission for `chriz-bg-app.exe`, September 30
+at 17:54:38 as displayed by the portal. Status is **Submitted**, final determination
+**Pending**, with no analyst comments yet. Submission is not a clean verdict or
+blanket approval of future versions. Treat the antivirus incident as unresolved
+for public release even when the independent Radar tests pass. Do not restore
+quarantine or weaken protection to continue it.
+
+Radar correction is now implemented in source: remembered per-install **Start
+Radar with the game** checkbox, off by default; native Windows consent for Radar
+only; visible nonfatal cancellation/failure result after successful game launch.
+Automatic Radar installation is unchanged. The frontend's complete 396-test
+suite, typecheck and production build pass. Native changes add eight mocked
+launch-contract tests and two Windows result/path unit tests. The coordinated
+run under `target/work/sep30-radar-consent-tests`, background job
+`0346a784-997d-46a5-ab6f-477f63494ff1`, completed with exit 0 at 17:44 local;
+status and both logs were verified. All 45 library tests and all 50 native
+command-contract tests passed, none failed or ignored. No new package or public
+release has been produced.
+Do not launch the game/app or a real UAC prompt without renewed live-test
+agreement. OS launch success is not proof that Radar attached to the game.
+
+The prepared, sanitized Microsoft report is local-only at
+`target/work/sep30-defender-report/submission-report.txt`. The approved sample is
+`target/work/sep30-selection-focus-package/extracted/chriz-bg-app.exe`, not the
+whole game or any personal log. The uploaded sample SHA-256 was rechecked as
+`3e50d7d3c6c155a5e505e48d19df832ada61b69538ca815693d2632e33581243`.
+The private receipt and submission ID remain in the local report records;
+they are not public troubleshooting links. No automatic follow-up monitor has
+been scheduled.
+
+### Authorized local support collection — new evidence, 18:44 local
+
+Microsoft's signed `MpCmdRun -GetFiles -SupportLogLocation` completed with exit 0
+after administrator consent. The 28,450,944-byte support CAB is local-only under
+ignored `target/work/sep30-defender-local-diagnostics`; status and findings are
+saved there. No diagnostic bundle was uploaded; no app/game was launched,
+quarantine restored, ACL changed or Defender protection weakened.
+
+MPLog now records InfinityLoader behavior telemetry at 08:17:34 UTC, explicitly
+naming the affected CEBG process among its parents. A behavior cloud report follows at
+08:17:36, new signatures at 08:17:37, then a resource scan of CEBG together with
+`InfinityLoaderCommon.dll` and `InfinityLoaderUtil.dll` at 08:17:37–38. Its sole
+detection is CEBG. This strongly narrows investigation to the launch/loader chain,
+but does not reveal the precise triggering operation or prove a false positive.
+Do not attribute this to UnRAR without evidence.
+
+The same log explicitly records the affected executable's SHA-256 as
+`0b0ea4e0217d3c202485a3fe738adb6c470a7e6f1470bd4de7518cb369ae063e`,
+matching the **Dragon and Order Fix** package record, not submitted Selection Fix
+`3e50d7d3...`. Reading the preserved Dragon/Order executable for a fresh hash was
+blocked by Defender (new event 1116 at 18:46:46 local); it was not executed.
+The current-read hash is therefore unverified; the match uses Defender's logged
+hash and the prior package-verification record. Do not retry or bypass the block.
+
+A sanitized correction is drafted locally as
+`target/work/sep30-defender-report/submission-addendum-draft.txt`, **not sent**.
+Christopher has now approved adding that correction and timeline to the existing
+Microsoft case. A fresh portal check still shows **Submitted / Pending**, no
+analyst comments, and no case-edit/contact form. The automatic Cloud and Client
+scan results say **No malware detected** for the submitted Selection Fix sample;
+this is not a final analyst determination or clearance of the affected build.
+The visible "Provide feedback" control is general website feedback and was
+closed without submitting. Microsoft's submission guide says the developer
+contact form is provided with the submission results. Keep the approved addendum
+ready for that route; do not claim it was posted or ask again for the same scope.
+Sending the support CAB would require separate explicit approval.
+[Microsoft submission guidance](https://learn.microsoft.com/en-us/unified-secops/submission-guide).
+
+## September 30 — Customize selector fix; replacement setup ready
+
+Christopher chose to delete the failed Test19 and start a fresh overnight install.
+Do not resume the old recovery work or start/control an installation for him.
+While configuring the new install, changing SoD component 257 raised an invalid
+CSS selector error. The choice had been saved; the failure happened afterward,
+when `#render` tried to focus an ID containing colons via an unescaped selector.
+This was a frontend defect, not a failed SoD mod installation.
+
+The app now finds the exact literal ID inside its own root. Recipe IDs, saved
+choices and install validation are unchanged. Regression tests verify checkbox
+and option-field focus, no error banner, persistence, and isolation from an
+outside-root duplicate ID. Focused checks: **24 passed**. Full frontend check:
+**382 tests in 33 files passed**, TypeScript and production build passed. A
+read-only native-agent review found no defects. No game/setup was launched.
+
+Replacement local package job `a08a616a-fe4c-4d4b-83a4-1899806f118b` **exited 0**.
+Results: `target/work/sep30-selection-focus-package/`. Four package tests passed,
+including updater-signature verification; all 223 bundled resources matched.
+The packaged executable matched the compiled app with only the expected NSIS
+marker change. The Downloads setup and signature hashes were rechecked after
+completion. Verified setup, superseding Dragon and Order Fix for the fresh test:
+`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Selection Fix 2026-09-30-setup.exe`.
+Size 6,027,850 bytes; SHA-256:
+`614e71cfc4416dc0a71e2bb2eb4616b0f96a33ba889796ab8cc1f628f569620f`.
+See the [package verification addendum](package-acceptance-alpha19-dragon-order-2026-09-30.md#selection-fix-addendum--latest-local-setup).
+Same app alpha.19 / curated collection alpha.18; no public CEBG publication.
+Christopher closes CEBG, installs this app setup, then continues his fresh-install
+configuration. No executable or game was launched by the agent; manual acceptance
+of this replacement is still his next step.
+
+## September 30 — corrected dragon/order setup ready; Test19 recovery still separate
+
+Verified local setup:
+`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Dragon and Order Fix 2026-09-30-setup.exe`.
+Still app alpha.19 / collection alpha.18. SHA-256:
+`3d94c594470486030e3792f94c22ef42bc7cc68e9b2894969fb3c653ace8c6f9`.
+[Package verification](package-acceptance-alpha19-dragon-order-2026-09-30.md)
+records the published Rebalance v0.7.1 pin, corrected 302-last order, improved
+failure diagnostics and duplicate-Resume/progress fixes included in this binary.
+
+Build job `794e24e5-6a8d-42dc-8e30-3078d3bcaa26` exited 1 **after successfully
+producing the app and NSIS**, because its PowerShell helper could not resolve
+`Get-FileHash`. It was not rerun. The hash-bound signing continuation in explicit
+PowerShell 7 exited 0: four package tests, signature verification and all 223
+bundled resources passed. Previous setup files were preserved. No CEBG/setup,
+game install or desktop click was launched; no public CEBG release/feed changed.
+
+**The stopped Test19 was not repaired.** Christopher subsequently chose deletion
+and a fresh combined test; the next decision is no longer recovery versus restart.
+Do not tell him to Retry/Resume that stopped copy. Earlier incident evidence and
+recovery constraints below are historical, not an active recovery assignment.
+
+## September 30 — Test19 stopped at Rebalance; two independent defects corrected
+
+The later Test19 failure supersedes the running-install status below. Attempt
+`attempt-efefa812f3e79bcb8406`, step `0121-fab86e09514d1f0a`, attempt 1 exited 2.
+Its first 396 WeiDU entries are unchanged. Thirteen Rebalance components were
+appended; 110 failed and 302 was installed last, as declared by the actual TP2.
+There is no evidence of a second installer or lab test modifying this game.
+
+- **Apex Dragons:** valid SCS GLOBAL difficulty scripts were rejected by our
+  INI-only guard. The owner-repo v0.7.1 fix supports either backend, preserving
+  the existing SCS body and all approved dragon tuning. All 52 focused dragon
+  checks pass, including the actual Test19 inputs in a disposable synthetic
+  game and exact uninstall restoration. Full regression passed: 395 tests,
+  no skips. **v0.7.1 is published as normal Latest**, PR #5 merged at
+  `1578fac00cd93ba88341ffdfcb0346c08480cd21`, annotated tag on that commit.
+  Fresh download: 1,734,037 bytes, SHA-256
+  `ba53f02e1b5542534412331dc2f33d78c4b3a19e2dd3dee60ef6a9755ef170ab`.
+  Christopher authorized the mod release, not a public CEBG release or
+  modification of his installed game.
+- **Recipe order:** the batch now follows the TP2's declaration order, with 302
+  after 408. The curated generator retains it. A new archive-backed order check
+  verifies the pinned archive's length/hash and source order before accepting
+  the recipe; it never invokes WeiDU. Both profiles are pinned to v0.7.1.
+  Historical local-candidate evidence is kept distinct from fresh published
+  acquisition evidence; neither claims full installation or gameplay acceptance.
+- **Failure explanation:** bounded diagnostics now distinguish missing selected
+  components from wrong order when the old log prefix is unchanged. Other-mod,
+  duplicate, changed-prefix and malformed cases still reject. This only improves
+  the explanation; it does not weaken reconciliation or enable unsafe Resume.
+  The earlier duplicate-Resume/frontend progress corrections are also in source.
+
+**Test19 itself is untouched and is not safely resumable yet.** Updating CEBG or
+the mod archive alone cannot repair its frozen failed attempt. Do not edit its
+recipe, plan, WeiDU log, ledger or failure evidence. A future supervised recovery
+must explicitly record the corrected order, rehearse component 301's nonempty
+`OTHER.301` ADD_SPELL bookkeeping, restore the 396-row prefix and affected files,
+then reinstall the same 14 selections and finish the eight frozen remaining runs.
+The old `recover-no-sr-tempus.ps1` worker cannot simply be retargeted to this case.
+Expected final count for that exact selection is 27 BG1 + 425 BG2 components.
+
+The 395-case owner-suite job `a1860b1e-802c-4b74-925c-4cab146fbaa8` finished with
+exit 0 in `target/work/sep30-rebalance-global-release-tests`. Do not rerun it.
+Collection combined verification job `6846363d-d5ff-4337-ab90-4b36a6aace25`
+finished with exit 0 in `target/work/sep30-dragon-order-checks`: 137 Python cases
+(one existing skip), 850 Rust passes (14 opt-in ignores), 380 frontend tests,
+TypeScript, formatting, warnings-denied Clippy and both profile validations
+(zero findings). The added post-publication metadata check and archive checker
+also passed their separate 11-case Python run after fresh release acquisition.
+Do not rerun the completed jobs.
+
+Packaging job `794e24e5-6a8d-42dc-8e30-3078d3bcaa26` and its successful signing
+continuation are recorded in the newer entry above. They did not launch the app,
+install a game, update a public feed or recover Test19. Read-only final log hash remains
+`ac62ca57362662983ad81ec13eb3ebec5fe1536b40824716dd1d7109ab8fe9d0`.
+
+## September 30 — resume display fix in source; leave the live installation running
+
+Christopher installed the corrected local setup and resumed Test 19 himself.
+Read-only evidence confirmed Infinity attempt 2 completed (ledger 178), Bubb's
+Spell Menu completed (180), and BGGO started (181), with one CEBG process and its
+one BGGO child. This proves the Infinity launch recovery, not full installation
+completion or gameplay acceptance. No agent started a second game installation.
+
+The reported `build_already_running` banner came from rejecting an additional
+resume request; native rejection does not stop or replace the existing worker.
+The frontend left Resume enabled while the first request was pending, kept the
+rejected request's error banner, and had no phase projection after reopening.
+Tool-cache byte counts could also appear as 100% of an unrelated install step.
+
+Source now guards launcher Resume, failed-step Retry, and manual-checkpoint
+continuation before asynchronous work. Pending actions are disabled; early
+worker events and real rejected-resume errors are preserved. Old event callbacks
+and delayed pause/failure snapshots cannot overwrite a newer attempt. Reopened
+installs display phases actually reported by their frozen campaign, without
+reevaluating against the current recipe. Finished-step progress is cleared, and
+artifact download progress is not confused with mod-install progress.
+
+This frontend follow-up is **not in the signed Downloads setup below or
+the currently running app**. Include it in the next package; do not close,
+replace, pause, or retry the live install to apply a display-only correction.
+No game files, frozen recipe, ledger, saves, native campaign guard, or public
+release/feed were changed. TypeScript, all **380 frontend tests (32 files)**,
+the production frontend build, and scoped whitespace checks pass. This includes
+new duplicate-click, delayed-acknowledgement, real-rejection, old-event/snapshot,
+manual-pause continuation, phase projection, and native download-ID regressions.
+Native/package tests were not rerun for this frontend-only follow-up; the signed
+package evidence below remains specific to the earlier delivered binary.
+
+## September 30 — Infinity launch failure: corrected package ready; user retry next
+
+**Use the new verified local setup:**
+`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
+It is still app alpha.19 / collection alpha.18. Setup SHA-256:
+`b17421335809b1f5b9c26a4475c1194875bbb86e3f6669860fc2e9b85bb19738`.
+See [complete package evidence](package-acceptance-alpha19-2026-09-30.md).
+Christopher closes CEBG, installs this app update, then reopens Test 19 and retries
+the failed step. No game install/resume or desktop click was performed by us.
+
+The same combined **Test 19** resumed beyond the cache failure: EET and EEex
+completed. Ledger event 176 stopped `install:game-interface-infinity-bg2` before
+Infinity launched. Its attempt contains only `before.log`; there is no invocation
+or process evidence and the installed log ends with EEex components 0–8.
+All six new optional UI descriptors mistakenly selected `explicit-tp2`, which the
+production CLI deliberately forbids. This is our recipe/validation defect, not a
+demonstrated Infinity runtime incompatibility. Do not restart the test or edit its
+frozen recipe, ledger, game files or saves.
+
+Source now uses supported setup-name mode for all six. Their pinned archives were
+hash/length checked and their TP2/setup identities checked for collisions. Public
+validation and fresh-install preflight reject unsupported invocation modes before
+staging, including unselected options. General authoring fixtures remain permissive.
+For the exact previously shipped Infinity 1.28/WeiDU 249 pins, `weidu/ui_compat.rs`
+selects setup-name without changing the frozen plan. It verifies the staged TP2
+hash, rejects shadowing discovery candidates, and records the correction in new
+attempt evidence. Old-failure retry requires the exact terminal guard, attempt 1,
+`before.log` alone and an unchanged live WeiDU log. All other missing execution
+evidence remains fail-closed. New errors are explained in ordinary language;
+technical text is collapsed without losing fresh-copy reasons or Retry access.
+
+The EET cache fix is also implemented: extraction namespace v3 keys immutable
+archives by the canonical layout, format, policy and safety limits. Old v2 entries
+are left untouched; raw downloads can be reused. No user-cache/game mutation was
+performed during this source fix. Focused evidence: 37 archive/materialization/RAR,
+13 public validation, 5 UI recipe, 3 native error, 40 frontend error/wizard checks,
+TypeScript, exact frozen retry matrix and UI identity/discovery tests pass.
+A real pinned WeiDU test also installed a synthetic component using Infinity's
+folder/setup naming in an isolated fake game. This is launch-mechanism evidence,
+not a full Infinity install or gameplay acceptance.
+
+Complete: combined checks and signed local package. Next Christopher installs the
+corrected app and retries **the same Test 19**. No public release/feed update or
+desktop clicking is authorized by this repair. Keep the old September 29 candidate
+as historical evidence, not the corrected installer. Wish/SR challenge-mode idea
+is recorded for later, not implemented in this patch.
+
+Background verification/build job **4e19b950-1727-4886-8d44-69fb261498a3** finished
+with exit 101 in `target/work/sep30-ui-launch-recovery-package`, before packaging.
+Python (129 cases, one existing skip), Evandra defaults, formatting and all but two
+Rust test targets passed. The 13 failures shared outdated disposable production
+fixtures copied from the general authoring example's deliberate `explicit-tp2`.
+Only fixture preparation in `engine/tests/cli.rs` and native `command_contract.rs`
+was corrected; generic authoring files and existing test assertions are unchanged.
+Both complete affected suites now pass (30 engine CLI, 42 native command cases).
+No production checks were relaxed. Do not rerun the finished job.
+
+Continuation job **04767c1f-361f-4b20-b6fe-dff90cf32fc8** completed the remaining
+Clippy/profile/frontend checks (358 frontend tests) and app/NSIS build, then timed
+out at the signing password prompt. Its status remains timed_out, not success.
+Windows PowerShell had removed the empty-password environment variable.
+`target/work/sep30-ui-launch-sign-existing.ps1` then passed the existing key's empty
+password explicitly through Node argv, signed the already-built setup and exited
+0. Four package tests and all 221 offline resource checks passed; both Downloads
+hashes were independently rechecked. No job was rerun and no game install started.
+The finished output is:
+`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
+The current live WeiDU.log and failed attempt's before.log both hash to
+`7890d5bd4df56bcb585ecbac6c8a0d0dfa6a02bde104b41ca670713976d7be0d`.
+The extra 34 focused Python cases and the expanded retry matrix passed. Diagnostics
+now includes the small UI correction evidence file, never the third-party TP2.
+
+## September 29 — EET extraction-cache collision: test unblocked, source fix pending
+
+The combined Test 19 install stopped at `materialize:eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d:bg2`
+(ledger event 94, first attempt), before this step published EET into the game.
+The archive hash `9834a53322b7fe9d8923bfde36c0e6bc8bef54d730d32ac29286b80d6f08287e`
+was reverified successfully. The existing extracted-cache marker expected only
+`EET`/`EET_end`; the installed candidate now also requires `EET_gui` and its TP2.
+`engine/src/acquire/archive.rs` keys extracted trees by archive hash alone but
+then requires the exact requested roots/TP2 list. This is our cache identity bug,
+not a bad download, Evandra problem, UI runtime incompatibility or damaged save.
+
+Immediate recovery: the old extracted-cache copies were moved aside under
+`%LOCALAPPDATA%\dev.chrizhermann.bgcollection\extracted\sha256-v2\98\`
+as `<hash>.stale-layout-20260929` and `<hash>.stale-layout-20260929-second`.
+The first move unexpectedly left another same-marker old directory at the source;
+its identity was rechecked and a separate rename preserved that copy too.
+The active hash directory was then confirmed absent. No files were deleted;
+the verified raw archive, game files, saves, frozen recipe and ledger are unchanged.
+Christopher was told to click Retry failed step; no retry or live installer action
+was performed by the agent. The subsequent read-only ledger inspection on
+September 30 verified EET and EEex completion; see the current entry above.
+
+Before public release, fix extraction identity so differing requested layouts of
+the same verified archive can coexist (canonical layout fingerprint, with full
+marker/file verification retained). Do not simply weaken the marker comparison
+or delete caches broadly. Cover old-to-expanded-to-old layout reuse and concurrent
+different-layout publication; the creator profile still uses the old EET layout.
+Also replace the user-facing hash/generic-check failure with a named mod and
+actionable wording; keep technical detail collapsed. Prefer an automatic cache
+refresh that does not need user intervention. Current error classification misses
+this materialization failure, and its generic Retry advice cannot repair the old
+cache by itself. Source hardening and user-facing copy changes remain pending.
+
+## September 29 — Wing Buffet default; combined install now running
+
+Christopher approved BG Rebalance `111` (18-second Wing Buffet spacing) as a
+recommended default. Source recipe/preset/curation now include it; `110` remains
+unchecked and the existing Smarter Dragons requirement is unchanged. Rebuild
+before public packaging: the verified Downloads candidate below predates this
+default-only change and must not be described as containing the new default.
+Do not replace or interrupt the running test for this checkbox change.
+Both source profiles validate with zero findings; 57 focused Python checks and
+22 focused Rust checks pass after updating the exact selection/ledger snapshots.
+The other ten curated-clarity cases passed in the preceding run; its stale
+Emotion component-list assertion was corrected and the affected case rerun.
+Formatting and scoped diff checks pass. New recommended counts are 454 curated /
+360 base components; earlier package counts below describe the unchanged EXE.
+
+Read-only inspection of `C:\Users\chris\Games\Chriz Easy BG Test 19` confirmed its
+frozen selections already enable `111`, Infinity UI++, Evandra core, and Modpack
+`224`/`225` (Sorcerer/portrait). Evandra acquisition completed using the verified
+manual archive cached on September 16; no repeat file prompt was needed.
+This confirms selection/acquisition, not completion or in-game behavior.
+
+## September 29 — combined test installer ready; one manual install next
+
+Latest scope decision: **Less companion chatter is deferred to the following
+release**, not added to this candidate. Its direction is approved and recorded in
+[the chatter plan](plans/2026-09-29-companion-chatter.md). Proceed with the existing
+verified installer and minimal combined check; do not rebuild for this idea.
+
+Christopher asked to proceed, not extend planning. The approved owner releases,
+UI-provider integration and manual component breakpoints are complete in this
+checkout. The refreshed local test installer is built and verified, not installed
+or publicly released. See [package evidence](package-acceptance-alpha19-2026-09-29.md).
+The Artisan owner published **v4.81a-dev.85928f9-chriz.1** with optional shifted
+dialogue (51010); PR #11 merge `0798dc4` and all three TP2 versions match. Twelve
+focused checks passed; all 2,705 downloaded files match the commit. Root verified
+the public asset size/hash and passed the exact pin to the recipe worker. See
+[fork versioning](fork-versioning.md) for provenance. Modpack **v0.2.0-alpha.8**
+is also published as normal Latest (commit `baa176b`), with approved 224/225/611/630
+and the bounded legacy-UI helper 640. Root verified public asset metadata:
+1,575,997 bytes, SHA-256
+`8019d60d2d5c9e5b5961b73ddfcc65729d7feb819bc3e99f4134dd3058835989`.
+Its owner passed Linux/Windows CI including eight packaged-installer checks.
+Unapproved companion-stat/Baeloth choices stay out. Final recipe integration is
+complete; helper 640 runs after LeUI/Dragonspear and before Bubb, independent
+of HGO and the optional gameplay-Modpack switch.
+BG Rebalance **v0.7.0** with 302 is published as normal Latest (PR #4, merge
+`5db2f64`). The downloaded archive is 1,733,901 bytes, SHA-256
+`3aae59bc634671ad6a6565d5862c4db984584bd90094ecbf640dda338d665b87`.
+All 13 Flail checks pass; full suite has 382 cases with 26 existing fixture skips,
+exit 0. TP2/TPA parsing and the extracted catalogue pass. Exact pin/default 302
+integration is complete. No live gameplay claim.
+
+Manual breakpoints are implemented across engine/native/frontend. Focused checks:
+11 checkpoint cases, two CLI cases including a complete two-pause/final-receipt
+scenario, 42 native command-contract cases, workspace all-target check and Clippy
+with warnings denied pass. Frontend suite passed 352 cases before the last small
+guidance refinements; the 17 focused cases/typecheck passed after those refinements.
+Combined final checks and package build now pass. Technical pause evidence
+stays collapsed; guide explicitly says no automatic full checkpoint backup.
+The feature accepts appended WeiDU components, not arbitrary removals/reinstalls
+or file-copy mods. Accepted manual additions permanently disable game patches/mod
+upgrades for that installation, not app updates. See [guide](manual-mods.md).
+
+Final recipe integration passed 129 Python cases (one existing skip), 50 focused
+Rust cases (one existing HTTPS-dependent ignore), both public-alpha validation
+profiles and the active Evandra publication gate. Recommended counts: **453
+curated components / 50 runs**, **359 base components**. Modpack 611 replaces
+610 as default; Evandra 224/225 add two curated defaults. All six alternative UI
+choices are selectable/experimental, with 640 automatic only for classic UIs.
+The narrower base profile still omits Evandra core; only the full generated
+profile enables her dependent fixes. Intermediate Artisan 1.6 recipe descriptors
+were removed, not the published legacy release. Default UI/Emotion choices remain.
+
+Combined check job **630d3594-bbb5-4f5e-84ba-7d03240fe9f0** exited 101 before
+packaging. Python (129 total, one existing skip) and the Evandra gate passed.
+Its first Rust failure was an exact test allowlist omitting the six newly approved
+UI modules. Root corrected that list and the corresponding authored-run-order
+expectation (six UI runs plus helper 640). Both full test files now pass, 11 cases;
+assertions remain exact and no production feature/check was weakened. A read-only
+scan found no additional stale integration expectations; the full suite then passed.
+
+Continuation job **a820c812-eac4-479e-bdad-68f1fb19645c** completed with exit 0 in
+`target/work/sep29-next-release-package-final`, using
+`target/work/sep29-next-release-continue-build.ps1`. Saved status/stdout/stderr were
+inspected after completion. Workspace tests, formatting, Clippy, 353 frontend
+tests/typecheck/build, signed NSIS build and all four package tests pass. Offline
+inspection matched all 221 bundled resources and the packaged executable; the
+Downloads setup/signature hashes were independently rechecked. Unchanged Python
+and Evandra-gate results above remain valid. Exact results and hashes are in the
+[September 29 package record](package-acceptance-alpha19-2026-09-29.md).
+Verified installer: `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Combined Test 2026-09-29-setup.exe`.
+It contains app alpha.19 / curated collection alpha.18. No app/setup/game was
+launched; public CEBG release/feed/website are unchanged. Do not rerun either job.
+
+Manual tests must remain minimal: see [the combined smoke check](next-release-smoke-check.md).
+One fresh installation and a brief launch/save/reload plus targeted new-feature
+check, not a full replay or another install for each component/provider. Existing
+accepted work is not reopened without a concrete regression. Do not operate the
+desktop, mutate a live game, or start the user's install without authorization.
+
+## September 29 — approved fork refresh, story XP and Flail delivery
+
+The following records the earlier source-integration milestones. Publication and
+delivery statements in the section above supersede its then-pending statuses.
+
+Christopher approved including our published **Artisan `chriz-v1.6.0`** and
+**Bardic `v2.9c-balance.6`** in the next fresh-install recipe. Both pins are now
+integrated in source; this is not an installed-game update or public package release.
+Preserve existing kit/default selections and do not enable Bardic 3010 by inference.
+
+Downloaded artifacts passed the engine's acquisition/hash/extraction/TP2 checks;
+both profiles validate with zero findings. 27 focused Python and 24 focused Rust
+tests passed, and regeneration reproduces all 101 files byte-for-byte. Recommended
+counts remain 450 curated / 358 base, with no new selected component IDs. The
+Artisan 20101 name now describes its actual legacy-Manyshot cleanup. New ledger
+records describe the two package refreshes; the stale expected ledger count was
+updated and retested. Existing Evandra publication checks still correctly reject
+the old Modpack alpha.7 artifact. No game, app package or public release changed.
+
+The remaining published refreshes are also integrated: **SoD Remix v0.6.12**
+and **BuffBot v1.9.0 stable**. Fresh production acquisition/extraction passes for
+both. Follow-up checks: 27 Python and 19 Rust tests pass; both profiles validate
+with zero findings and all 102 generated files reproduce byte-for-byte. The
+semantic selection digest is unchanged. SoD 256 contains the new bridge timer;
+258 is not added and 257 stays optional. BuffBot keeps components [1, 0] last.
+The existing-game BuffBot 1.8.3-to-1.8.4 update/undo route and its old artifact
+are deliberately unchanged. The Evandra package gate remains active.
+
+Version identity: Artisan 1.6.0 is the **legacy independent fork release**, not
+upstream's version. Christopher rejected continuing that naming: the next release
+must use **upstream version + our revision**, like SR/Bardic. Upstream-only changes
+advance the base part; our changes advance the suffix. Keep published tags and
+archives immutable, identify untagged upstream snapshots accurately, and migrate
+all three installers/release metadata/CEBG pins together when the next owner
+release is prepared. See [fork version identity](fork-versioning.md) for the rule.
+Current exact migration target: `v4.81a-dev.85928f9-chriz.1`; upstream's latest
+named release is v4.81a but the included base is 297 commits later. Artisan owner
+chat `01a0c7fa-4c66-79f3-9255-b3fcb0e6a452` is preparing the source/tooling migration;
+no tag, archive or current CEBG pin is renamed in place.
+Artisan's included upstream commit is `85928f964f6965fd37980bf679d7eeb9af410256`;
+the three Artisan installers share one fork artifact. The September 29 owner audits
+are complete: Artisan, Bardic, Spell Revisions and Randomiser have no incoming
+upstream changes to merge. Updating CEBG's older pins remains separate work.
+
+Utility-XP decision: **campaign/story-based rewards are the intended new default**,
+with BG1-sized rewards throughout BG1 and SoD and BG2-sized rewards beginning in
+SoA (also in ToB). Keep existing Modpack 610's protagonist-XP smooth curve unchanged
+as an optional, mutually exclusive alternative. The suggested party-average
+redesign is deferred, not part of this implementation. The Modpack owner chat
+`01a0b92c-da6d-7701-8d51-b0df1a17fe08` implemented **611 / cbm_story_utility_xp**
+in the `companion-spellbooks` checkout. It uses EET campaign flags rather than
+overlapping chapter numbers and rejects unsupported campaigns. Owner reports
+376 focused offline checks passing, including transitions/direct starts/reloads,
+reciprocal 610/611 exclusions, installation and uninstall. Current 610 calculation
+is unchanged. Christopher explicitly approved **EE Fixpack's 155-XP correction**
+for level-16+ BG1/SoD locks rather than the original 15; the owner verified the
+implemented value and removed provisional wording from its README, changelog and
+guide. See that checkout's `docs/story-utility-xp.md`. Reconcile this
+branch with the pending Modpack 224/225/630 owner work before release. No new
+source component is selectable until its owner release contains it.
+
+**Flail of the Ages is implemented as BG Rebalance 302 / cbr_flail_of_ages_rebalance**,
+intended default after publication: +5 Free Action permits Haste/Improved Haste; Slow saves versus
+breath at -2/+3, -4/all +4 variants, -6/+5. Preserve proc chance, duration, damage,
+unrelated protections and lower tiers. Source is on `codex/flail-of-ages-rebalance`
+in `C:\src\private\chriz-bg-rebalance\.worktrees\bard-progression-release-20260920`,
+based on released v0.6.0. Thirteen real-WeiDU disposable tests pass, including
+captured vanilla/CEBG resources, SR rider saves, local descriptions, idempotence
+and exact uninstall; the four full current CEBG descriptions passed separately.
+Parsing/diff checks pass. Not committed, published, integrated or live-tested;
+do not add 302 to the old v0.6.0 artifact. Use the existing late post-EET_end
+Rebalance run, with no EEex dependency. Broader Free Action policy and Dispelling
+Screen remain deferred. See the
+[Flail design](plans/2026-09-28-flail-free-action-and-dispelling-screen.md).
+
+Next after these owner changes: publish/verify their reviewed artifacts, integrate
+the remaining approved pins/components, finish alternative UI provider wiring and
+advanced manual breakpoints, then focused combined checks and a new package for
+Christopher/community testing. Existing Emotion 301 remains default. No live-game,
+save, installed-app, deletion or desktop-control action is authorized by this work.
+
+## September 29 — release follow-up decisions and parallel owner reviews
+
+- **Emotion Courage/Hope is included:** BG Rebalance 301 is already default in
+  recipe alpha.18. Its omission from a chat summary was not a scope change. Keep
+  it in the next package; the existing no-extra-playtest-gate decision stands.
+- **Unidentified-item visuals:** reuse ordinary installed-game item icons and
+  pictures by category; no newly drawn/generated art. Modpack 630 already reads
+  donors from `unidentified-items/donors.2da`; identified items retain their art.
+- **Instant trap detection:** deferred beyond the upcoming release. Do not add it
+  as a new last-minute implementation or test gate.
+- **Flail of the Ages:** remains the next bounded balance candidate, using the
+  already recorded +5 Haste compatibility and tiered Slow saves. No source or
+  gameplay implementation was performed in this coordination turn.
+- **Utility XP:** Christopher suspects the agreed curve is too generous, not
+  necessarily broken. Uncapped XP and a long-running 3–4-member party may reach
+  high reward thresholds early. Current source uses protagonist lifetime XP and
+  reaches 1,000 party-total scribing XP per spell level at 440,000 XP. Asked the
+  Modpack owner to compare the existing mode with EET campaign/chapter-driven
+  progression (BG2 rewards unlocked at SoA), with both modes as possible options.
+  No new formula, defaults, chapter numbers or live-game changes selected.
+- **Artisan Fighter discussion:** inspect the reported all-weapon two-pip grant,
+  exact level and single/multi/dual-class behavior, then discuss removal/reduction.
+  Do not implement a nerf or change kit defaults before Christopher chooses.
+
+Owner requests dispatched to existing chats: Artisan/upstream and Fighter review
+`01a0c7fa-4c66-79f3-9255-b3fcb0e6a452`; utility XP
+`01a0b92c-da6d-7701-8d51-b0df1a17fe08`; Randomiser upstream
+`01a0bb24-3c8e-77b2-849a-b3d3b0300eb0`; Spell Revisions upstream
+`01a0df45-df6a-7cb1-9e6a-0f70435f4419`. Upstream requests are bounded comparisons
+and merge-risk recommendations, not permission to merge/release automatically.
+Use thread status/results when resuming, not duplicate investigations.
+
+Bardic upstream check completed: live upstream master `4e72d973` equals the
+merge-base of published fork master `7db98616` / balance.6; 30 fork-only and zero
+upstream-only commits. No upstream merge is needed. Dirty local owner work was
+preserved. The other reviews were still running when dispatched; do not infer
+their results from Bardic's status.
+
+Fade's proposed humorous race label is a separate user-led fork task, personal
+and cosmetic only. No race/stat/global text/save change is authorized here.
+
+## September 29 — UI choices and manual breakpoints in the next release
+
+Christopher explicitly reconfirmed that **manual installation breakpoints belong
+in the next release too**, not an unspecified later follow-up. Use the existing
+advanced/off-by-default design: multiple completed-component boundaries, explicit
+acceptance of manual additions, intact WeiDU history through finalization, and
+game hotpatches disabled for manually customized installs. Implementation is still
+pending; do not confuse ordinary pause/resume with this feature.
+
+Testing policy: do proportionate automated checks and basic installer-safety
+verification, then leave broader UI/mod compatibility and gameplay testing to
+Christopher and the community. Do not require exhaustive agent-led full installs
+or make Christopher personally test every option before shipping. Fix known
+deterministic failures and retain file/history safeguards; untested combinations
+can be clearly described as experimental and awaiting community feedback, not
+certified or already community-tested.
+
+Christopher now wants Dragonspear UI++ included as an **optional, new-install-only
+interface choice**, alongside the previously approved UI providers. This replaces
+the earlier wait-for-a-request decision; the recommended interface stays unchanged.
+The selector exists, but production provider integration is still pending. Pin
+Dragonspear's own package and record its component/order/conflicts rather than
+assuming Infinity UI++'s rules apply. See the updated
+[UI plan](plans/2026-09-20-ui-choices-and-manual-checkpoints.md) and
+[release checklist](plans/2026-09-22-release-readiness.md).
+
+Praetor reports that manually installing it after pausing at EEex made finalization
+reject extra WeiDU.log entries. Removing those entries allowed continuation, but
+that workaround hides installed history and must not be recommended. Record this
+for the manual-checkpoint feature in the same next release: accepted additions must
+survive resume/finalization with their log rows intact; unapproved drift remains
+blocked. A built-in UI selection should need neither manual insertion nor log edits.
+This update records scope/report only: no recipe, package or game changes.
+
+## September 29 — high priority for later: Fade XP catch-up
+
+Christopher reports that Fade does not catch up in experience. Investigate and
+fix soon, but this request is **capture only**, not authorization to inspect or
+change the running game. Confirm the affected install, expected catch-up behavior
+and recruitment/rejoining circumstances before diagnosing the cause. Route any
+collection-owned companion fix to `chriz-bg-modpack` after checking the existing
+Fade/XP handling. No cause, fix, release target or save-repair procedure is verified.
+
+Additional September 29 report: **Evandra also does not reach the expected
+1,250,000 XP**, despite Christopher's protagonist having substantially more XP.
+Include her in this high-priority companion catch-up investigation. A subsequent
+read-only check found the 1,250,000 XP rule in the installed Evandra source
+`scripts/bgee.baf`, but its inclusion in the effective compiled script is not yet
+verified. Do not assume Fade and Evandra share a cause. No game or save changes.
+
+The same read-only investigation confirmed two separate migration omissions:
+
+- **Sorcerer conversion:** the historical `EVANDRA_SORCERER` v2 patch and curation
+  notes specify it as the intended default, but the public recipe never acquired
+  a conversion feature/run. The stream install has Evandra v2.2 core/crossmod and
+  Modpack alpha.6, no conversion; effective `rh#eva.cre` and `rh#ev25.cre` remain
+  Mages with the Illusionist kit. This is not a failed installed conversion.
+- **Custom portrait:** stream `override/rh#eval.bmp` is byte-identical to the
+  installed upstream `evandra/images/rh#eval.bmp` (SHA-256
+  `1a8a4209a5b0e6c6f59bf4b09cac889eff484b3a44bf4a95125ae7e4d4c5e0b2`). The old
+  read-only reference's custom override still exists and differs (SHA-256
+  `b4bde98aec195d47db521d3cc4d72b636ae5a0f391cc7469ea5d48688b112aad`). Stream
+  `rh#eva.cre` points both portrait slots at `rh#evaL`. The missing asset migration
+  was already documented in `curation/components/EVANDRA.md`.
+
+September 29 implementation follow-up: Modpack source now owns **224** (Sorcerer
+with a starting spellbook appropriate to her stored level) and **225** (custom
+portrait). Christopher confirmed he created the portrait with ChatGPT and
+approved including it. The two options are independent and intended defaults
+when Evandra's core is selected; skipping Evandra skips both. Source integration
+and a packaging check are implemented here, but **the released alpha.7 artifact
+does not contain them**. Publish and verify the owner release, pin it and regenerate
+the recipe before packaging CEBG; do not append new IDs to the old archive's
+catalogue. See [delivery status](handoffs/2026-09-29-evandra-default-restoration.md).
+This does not fix the separate XP catch-up report. Christopher is repairing the
+current companion himself in EE Keeper; do not edit his running game or saves.
+
+Later September 29, Christopher explicitly authorized the portrait replacement
+only. Restored the old custom BMP into the stream game's `override/rh#eval.bmp`
+and verified its hash; retained the original at
+`C:\Users\chris\Games\Chriz Easy BG\portrait-backups\evandra-20260929-032318\rh#eval.bmp`.
+No save, CRE, TLK, or gameplay state was edited. In-game visual confirmation is
+pending reload/restart. This local repair does not implement recipe delivery.
+He wants her **starting level-10 spellbook**, then to select the later spells
+himself while leveling to 1,250,000 XP. The old SoA conversion starts at level 10 /
+300,000 XP with 5/4/3/2/1 known spells and 6/6/6/5/3 casts; leave level 10 when
+raising XP in EE Keeper so the game offers the level-up, rather than presetting
+level 13 and its spells. He owns the class/spellbook save repair.
+
+## September 28 — balance ideas captured for later
+
+See [Flail / Free Action / Dispelling Screen](plans/2026-09-28-flail-free-action-and-dispelling-screen.md).
+Flail balance belongs in BG Rebalance, intended default when delivered: +5 Free
+Action should allow Haste; Slow gets breath saves at -2 / -4 / -6 for +3 / all +4
+variants / +5. Broader Free Action policy is separate and undecided. Dispelling
+Screen first needs a correctness check for reported dispels getting through
+while active. Alternatives, not chosen together: a 0.5–1 second grace period,
+the earlier longer window, or excluding dispels from sequencers/contingencies
+including AI combinations. Entropy Shield balance is a separate low-priority
+discussion. Record only: no source investigation, implementation, selection or
+release commitment yet; leave all of these for another session.
+
+## September 28 — stronghold selection repair and bounded compatibility audit
+
+See the [selection audit](plans/2026-09-28-selection-compatibility-audit.md).
+Source now excludes CDTweaks Multiple Strongholds 1160/1161 from individual
+all-class choices 1340–1347, without making the individual choices exclusive to
+each other or changing defaults. Generator, curated recipe and unreleased
+alpha.18 ledger updated; not packaged/released and no game files touched.
+The bounded source scan is complete. It also fixed missing BG1NPC core
+requirements on 36 optional choices and made our SCS bundle require Ascension's
+actual finale component, not just its parent selection. All defaults remain
+unchanged; 46 Python, 31 Rust and 13 Customize tests passed (see audit for scope).
+Opus returned no findings: its job failed because the installed Claude client
+does not support the requested model. Lead/native source review supplied these
+results instead. No retry or client update is pending.
+Mystic Fire is parked in the Artisan owner's deferred plan; kit defaults remain
+unchanged and Warlock stays deferred.
+
+## September 27 — fresh owner inventory and two small source additions
+
+See the [pre-package inventory](plans/2026-09-27-pre-package-inventory.md) before
+building. The source recipe is behind SoD v0.6.12, Artisan chriz-v1.6.0, Bardic
+balance.6 and BuffBot v1.9.0. Alternative UI controls exist, but production
+provider integration is still absent; Infinity/EET are prepared and LeUI needs
+its game-2.7 helper. Simplified proficiency and companion pip options need the
+specific compatibility work recorded there, not just inclusion of upstream IDs.
+
+Approved source additions are implemented: advisory folder size in deletion
+confirmation (42 frontend/six native focused checks and typecheck passed), and
+optional shifted dialogue in the Artisan owner's `codex/shifted-dialogue-qol`
+branch (five real-WeiDU synthetic tests passed). Christopher explicitly waived
+a separate manual dialogue test gate; do not claim native playtesting. Neither
+addition is packaged or released. The inventory also preserves Modpack 630,
+separate dirty companion work and active Randomiser work without silently
+merging or selecting them. No live-game, deletion or publication action occurred.
+
+## September 27 — batch generic-artwork testing with the next release install
+
+Christopher asked to test the new Modpack **630** generic unidentified-item
+artwork component together with the **next release installation**, not start a
+separate test now. It is recorded in the
+[next release-install checklist](plans/2026-09-22-release-readiness.md#next-release-install-playtest--additions-agreed-september-27).
+Use 630 with conflicting Randomiser appearance component **570 off**; ordinary
+loot randomization can remain. Source is committed in the Modpack feature branch,
+but publication, CEBG pin/exclusion integration and live acceptance are pending.
+No game action or recipe/default change was performed for this scheduling request.
+
 ## September 26 — recipe alpha.18: approved Emotion default
 
 The prior app alpha.19 / recipe alpha.17 source was completed and committed first
@@ -477,7 +1294,9 @@ partial-update history. Do not claim a general upgrade path is implemented.
 [UI providers and manual checkpoints](plans/2026-09-20-ui-choices-and-manual-checkpoints.md)
 are now parked, with design/source findings and the latest choices preserved.
 No further research/implementation of those features now. Live testing of the
-approved UI candidates may be left to users; Dragonspear UI++ waits for a request.
+approved UI candidates may be left to users. This is the historical September 20
+boundary; the September 29 entry above now approves Dragonspear UI++ for the next
+release and supersedes its earlier deferral.
 Parallel patch-delivery work has advanced beyond some historical entries below;
 refresh its current owner/source status before redispatching old blockers.
 

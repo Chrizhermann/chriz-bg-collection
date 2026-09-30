@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.7"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.8"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -83,6 +83,14 @@ id = 223
 name = "Hexxat: Assassin"
 
 [[components]]
+id = 224
+name = "Evandra: Sorcerer build and starting spellbook"
+
+[[components]]
+id = 225
+name = "Evandra: custom portrait"
+
+[[components]]
 id = 400
 name = "Branwen Spiritual Hammer: repair magical-weapon charges"
 
@@ -107,5 +115,17 @@ id = 610
 name = "Progressive utility XP for locks, traps, and learning spells"
 
 [[components]]
+id = 611
+name = "Story-stage utility XP for locks, traps, and learning spells"
+
+[[components]]
 id = 620
 name = "Imoen: Spellhold party-average XP catch-up"
+
+[[components]]
+id = 630
+name = "Hide unidentified item appearance until identification"
+
+[[components]]
+id = 640
+name = "Legacy UI translation helper compatibility"

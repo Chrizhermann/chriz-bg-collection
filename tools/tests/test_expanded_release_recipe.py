@@ -81,14 +81,14 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.7")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.7.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.7")
-        self.assertEqual(artifact["source"]["expected_length"], 1367203)
-        self.assertEqual(artifact["source"]["sha256"], "f134085e8220a4222190981f173034653efe7aa92d47caa8430682a1352d1c19")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.8")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.8.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.8")
+        self.assertEqual(artifact["source"]["expected_length"], 1575997)
+        self.assertEqual(artifact["source"]["sha256"], "8019d60d2d5c9e5b5961b73ddfcc65729d7feb819bc3e99f4134dd3058835989")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
-        # Alpha.18 adds Rebalance 301 after alpha.17's interval-save controls;
-        # Modpack's reviewed component selection remains unchanged.
+        # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
+        # Modpack also restores Evandra defaults and switches 610 to 611.
         selected = self.selected()
         interval_controls = "feature:hiddengameplayoptions:component-38"
         without_controls = self.selected({interval_controls: "off"})
@@ -96,8 +96,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(self.preset[interval_controls], "on")
         self.assertEqual(selected - without_controls, {("hiddengameplayoptions-bg2", 38)})
         self.assertEqual(without_controls - selected, set())
-        self.assertEqual(len(without_controls), 449)
-        self.assertEqual(len(selected), 450)
+        self.assertEqual(len(without_controls), 453)
+        self.assertEqual(len(selected), 454)
         self.assertEqual(len({run for run, _ in selected}), 50)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -119,7 +119,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertIn((continuity, 199), self.selected())
         self.assertEqual(self.positions[continuity] + 1, self.positions["eet-end-bg2"])
         self.assertLess(self.positions[pre], self.positions[continuity])
-        self.assertEqual(self.runs[pre]["components"], [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223])
+        self.assertEqual(self.runs[pre]["components"], [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225])
         for component in self.runs[pre]["components"]:
             self.assertNotIn(component, self.runs["chriz-bg-modpack-bg2"]["components"])
 
@@ -152,12 +152,25 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertFalse({176, 235, 291, 901} & set(self.runs["chriz-sod-remix-bg2"]["components"]))
         self.assertLess(self.runs["chriz-sod-remix-bg2"]["components"].index(256), self.runs["chriz-sod-remix-bg2"]["components"].index(257))
 
-    def test_dragons_are_opt_in_and_follow_scs(self):
-        for component in (110, 111):
-            identity = ("chriz-bg-rebalance-bg2", component)
-            self.assertNotIn(identity, self.selected())
-            self.assertIn(identity, self.selected({f"feature:chriz-bg-rebalance:component-{component}": "on"}))
-            self.assertIn("feature:stratagems:mandatory-components", self.features[f"feature:chriz-bg-rebalance:component-{component}"]["requires"])
+    def test_wing_buffet_spacing_is_default_and_deselectable_while_lethal_melee_is_optional(self):
+        run_id = "chriz-bg-rebalance-bg2"
+        wing_buffet = "feature:chriz-bg-rebalance:component-111"
+        lethal_melee = "feature:chriz-bg-rebalance:component-110"
+        selected = self.selected()
+        self.assertEqual(self.features[wing_buffet]["decision"], "default")
+        self.assertEqual(self.features[wing_buffet]["readiness"], "ready")
+        self.assertEqual(self.preset[wing_buffet], "on")
+        self.assertIn((run_id, 111), selected)
+        opted_out = self.selected({wing_buffet: "off"})
+        self.assertEqual(selected - opted_out, {(run_id, 111)})
+        self.assertEqual(opted_out - selected, set())
+        self.assertEqual(self.features[lethal_melee]["decision"], "optional")
+        self.assertEqual(self.preset.get(lethal_melee, "off"), "off")
+        self.assertNotIn((run_id, 110), selected)
+        self.assertIn((run_id, 110), self.selected({lethal_melee: "on"}))
+        self.assertEqual(self.features[wing_buffet]["requires"], ["feature:stratagems:mandatory-components"])
+        self.assertIn("feature:stratagems:mandatory-components", self.features[lethal_melee]["requires"])
+        self.assertNotIn((run_id, 111), self.selected({"mod:stratagems": "off"}))
         self.assertLess(self.positions["stratagems-bg2"], self.positions["chriz-bg-rebalance-bg2"])
         self.assertEqual(self.collection["runs"][-1]["run_id"], "buffbot-bg2")
 
@@ -177,7 +190,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_out = self.selected({feature_id: "off"})
         self.assertEqual(baseline - opted_out, {(run_id, 301)})
         self.assertEqual(opted_out - baseline, set())
-        self.assertEqual(len(opted_out), 449)
+        self.assertEqual(len(opted_out), 453)
         parent_off = self.selected({"mod:chriz-bg-rebalance": "off"})
         self.assertFalse(any(run == run_id for run, _ in parent_off))
         # Keep 301 selectable for either provider or standalone spell handling;
@@ -190,7 +203,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_and_excludes_bard_progression(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408])
+                         [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertNotIn((run_id, component), self.selected())

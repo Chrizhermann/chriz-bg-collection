@@ -36,6 +36,9 @@ impl CommandError {
     /// Converts the engine CLI's stable category without leaking an unstructured rejection.
     pub fn from_cli(error: CliError) -> Self {
         let code = error.code();
+        if code.starts_with("manual_checkpoint") || code == "invalid_manual_breakpoint" {
+            return Self::new(code, error.to_string(), "Close the game and manual installers. Keep all WeiDU.log rows; correct the issue or restore your checkpoint backup, then check again.", error.to_string());
+        }
         let (message, recovery_action) = match code {
             "folder_access_denied" => (
                 "Windows blocked access to an installation or save folder.",
@@ -77,7 +80,11 @@ impl CommandError {
                 "The selected collection options are not compatible.",
                 "Review the unavailable options and try again.",
             ),
-            "campaign_error" | "recipe_freeze_failed" => (
+            "installer_launch_unsupported" => (
+                "This CEBG release cannot start one of the selected mod installers.",
+                "Install a corrected CEBG release, then retry this installation in the same folder. Keep the existing installation files.",
+            ),
+            "campaign_error" | "campaign_failed" | "recipe_freeze_failed" => (
                 "The installation could not finish.",
                 "See the technical log for the cause. Retry if available, or return to setup.",
             ),
@@ -108,6 +115,29 @@ impl CommandError {
 mod folder_error_tests {
     use super::*;
     use bg_engine::cli::{CampaignReport, CampaignStatus};
+
+    #[test]
+    fn unsupported_installer_requires_a_corrected_app_and_preserves_the_current_copy() {
+        let technical = "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence; use setup-name mode";
+        let error = CommandError::from_cli(CliError::from_campaign(CampaignReport {
+            install_id: "fixture".into(),
+            managed_root: "C:/Fixture/Managed".into(),
+            plan_sha256: "11".repeat(32),
+            status: CampaignStatus::Failed {
+                step_id: "install:game-interface-infinity-bg2".into(),
+                reason: technical.into(),
+            },
+        }));
+        assert_eq!(error.code, "installer_launch_unsupported");
+        assert_eq!(
+            error.message,
+            "This CEBG release cannot start one of the selected mod installers."
+        );
+        assert!(error.recovery_action.contains("corrected CEBG release"));
+        assert!(error.recovery_action.contains("same folder"));
+        assert!(!error.recovery_action.contains("Retry the check"));
+        assert_eq!(error.technical_detail, technical);
+    }
 
     #[test]
     fn contextual_folder_codes_keep_diagnostics_and_give_specific_recovery() {
@@ -149,5 +179,6 @@ mod folder_error_tests {
             },
         }));
         assert_eq!(error.code, "campaign_failed");
+        assert_eq!(error.message, "The installation could not finish.");
     }
 }

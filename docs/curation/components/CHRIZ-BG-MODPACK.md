@@ -1,16 +1,21 @@
 # CHRIZ-BG-MODPACK — components
 
-Refreshed for the pinned public release **v0.2.0-alpha.7**, retaining the choices
+Refreshed for the pinned public release **v0.2.0-alpha.8**, retaining the choices
 approved in the [September 16 candidate](../../alpha16-candidate-2026-09-16.md).
-43 current or historical entries; the collection exposes 26 and its recommended
-selection includes 22. Component `195` already includes the work from standalone component
+48 current or historical entries; the collection exposes 31 and its recommended
+curated selection includes 25. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
 ## Implementation status
 
+- Evandra `224` (Sorcerer) and `225` (owner-created portrait) are released and
+  pinned independent defaults requiring Evandra core. They run after class and
+  NPC providers, before continuity and EET_end; the generator and packaging
+  check enforce the delivery contract. See
+  [Evandra handoff](../../handoffs/2026-09-29-evandra-default-restoration.md).
 - The public alpha implements `110`, `130`, `140`, `160`, `170`, `190`, `192`–`198`,
-  `188`, `189`, `199`, `220`–`223`, `400`, `410`, `430`, `440`, `450`, `610`, and `620`. It contains no advertised
+  `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
   FAIL placeholders.
 - The collection exposes every implemented component except standalone `160`, whose exact
   skill repair is invoked atomically by the default Skie component `195`.
@@ -23,8 +28,15 @@ The four ✓ marks record the old reference install, not the new default recipe.
 - Yoshimo `220` is a default companion conversion. Hexxat `221` (Shadowdancer) is the
   default; `222` and `223` are unchecked alternatives, mutually exclusive with each other
   and with Artisan's Invisible Blade component `7104`.
-- Progressive utility XP `610` is a default-checked option. It requires the working EEex
-  runtime and runs in the existing post-EET_end modpack slot, after earlier XP-table tweaks.
+- Story-stage utility XP `611` is the default; unchanged party-progress curve `610`
+  remains optional. They are mutually exclusive, and either or neither can be chosen.
+  Both require EEex and run after EET_end and earlier reward/XP tweaks; `611` requires EET.
+- Unidentified appearance `630` is optional/off-default, Windows/EEex only, after
+  item/art writers. Only Randomiser's appearance `570` conflicts; ordinary loot
+  randomization remains compatible.
+- Legacy text helper `640` is mandatory only when LeUI or Dragonspear is selected,
+  after the final full UI and before Bubb. It has no HGO, EEex or optional Modpack
+  gameplay-parent dependency. See [game interfaces](../game-interfaces.md).
 - Yeslick `188` is automatic only with Yeslick NPC's Fighter/Alaghor component `1`;
   the vanilla class choice omits it. It runs with the other companion build changes
   before continuity `199`, which immediately precedes EET_end.
@@ -69,6 +81,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 221 | Shadowdancer | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | default |
 | 222 | Fighter/Thief multiclass | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | optional |
 | 223 | Assassin | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | optional |
+| 224 | Evandra: Sorcerer build and starting spellbook | chriz-bg-modpack: NPC fixes | | | default |
+| 225 | Evandra: custom portrait | chriz-bg-modpack: NPC fixes | | | default |
 | 200 | Artisan Kitpack: fix missing multiclass proficiency stats | chriz-bg-modpack: Kit fixes |  |  | |
 | 210 | Druid/Ranger: remove Elemental Prince Call (SPPR724) from CLAB tables | chriz-bg-modpack: Kit fixes |  |  | |
 | 300 | Red Bearskin Mail: Rashemi Berserker kit usability fix | chriz-bg-modpack: Item fixes |  |  | |
@@ -86,5 +100,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 513 | Historical evil-NPC reputation migration slot (superseded by CDTweaks `3121`) | chriz-bg-modpack: Meta / multi-fix |  |  | |
 | 514 | Historical Edwin spell-slot migration slot (audit required) | chriz-bg-modpack: Meta / multi-fix |  |  | |
 | 600 | Disable UB "Cat and Mouse" Bodhi hunts in the Spellhold maze (and fix the ultimatum deadlock under SCS) | chriz-bg-modpack: Gameplay tweaks |  | ✓ | |
-| 610 | Progressive utility XP for locks, traps, and learning spells | chriz-bg-modpack: Gameplay tweaks |  |  | default |
+| 610 | Progressive utility XP for locks, traps, and learning spells | chriz-bg-modpack: Gameplay tweaks | Utility XP scaling | | optional |
+| 611 | Story-stage utility XP for locks, traps, and learning spells | chriz-bg-modpack: Gameplay tweaks | Utility XP scaling | | default |
 | 620 | Imoen: bring mage XP up to the party average at Spellhold | chriz-bg-modpack: Gameplay tweaks |  |  | default |
+| 630 | Hide unidentified item appearance | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |

@@ -25,6 +25,11 @@ import tempfile
 import tomllib
 import zipfile
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from tools.check_native_component_order import mask_tp2_source
+
 
 REQUIRED_SOURCE_IDS = (
     "chriz-bg-modpack",
@@ -512,39 +517,7 @@ def _literal_components(text: str) -> set[int]:
     Explicit DESIGNATED numbers and a leading implicit component zero are supported;
     dynamic/generated component declarations cannot satisfy the coverage check.
     """
-    masked: list[str] = []
-    index = 0
-    while index < len(text):
-        if text.startswith("//", index):
-            end = text.find("\n", index + 2)
-            index = len(text) if end < 0 else end
-            masked.append(" ")
-        elif text.startswith("/*", index):
-            index += 2
-            depth = 1
-            while index < len(text) and depth:
-                if text.startswith("/*", index):
-                    depth += 1
-                    index += 2
-                elif text.startswith("*/", index):
-                    depth -= 1
-                    index += 2
-                else:
-                    index += 1
-            if depth:
-                raise ValueError("frozen TP2 has an unterminated comment")
-            masked.append(" ")
-        elif text[index] in '~"%':
-            delimiter = "~~~~~" if text.startswith("~~~~~", index) else text[index]
-            end = text.find(delimiter, index + len(delimiter))
-            if end < 0:
-                raise ValueError("frozen TP2 has an unterminated string")
-            index = end + len(delimiter)
-            masked.append(" __TP2_STRING__ ")
-        else:
-            masked.append(text[index])
-            index += 1
-    code = "".join(masked)
+    code = mask_tp2_source(text)
     declarations = list(re.finditer(r"\bBEGIN\s+(?:__TP2_STRING__|@\d+)\b", code, re.IGNORECASE))
     components: set[int] = set()
     for index, declaration in enumerate(declarations):

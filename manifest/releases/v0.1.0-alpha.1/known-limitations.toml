@@ -68,3 +68,24 @@ approved_by = "Christopher"
 approved_on = "2026-09-04"
 reason = "The repair requires Tweaks Anthology component 2170, which is not available in the alpha recipe."
 user_facing_limitation = "Use Any Item scroll caster-level repair is unavailable because its required Tweaks component is not installed."
+
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-640"
+approved_by = "Christopher"
+approved_on = "2026-09-29"
+reason = "The mandatory compatibility helper is conditional on a classic UI provider; the recommended interface requires no adapter."
+user_facing_limitation = "Classic interface text compatibility is installed automatically only with Lefreut or Dragonspear UI++."
+
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-224"
+approved_by = "Christopher"
+approved_on = "2026-09-29"
+reason = "The narrower authored fallback does not supply Evandra's core; the generated production recipe enables this released default with that exact core."
+user_facing_limitation = "Evandra's Sorcerer conversion is available in the generated full recipe only."
+
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-225"
+approved_by = "Christopher"
+approved_on = "2026-09-29"
+reason = "The narrower authored fallback does not supply Evandra's core; the generated production recipe enables this released default with that exact core."
+user_facing_limitation = "Evandra's custom portrait is available in the generated full recipe only."

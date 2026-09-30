@@ -82,7 +82,7 @@ describe("managed patch recovery projection", () => {
 
 describe("explicit installation removal", () => {
   it("uses only the registry id and confirmed token on the native command boundary", async () => {
-    const preview = { installId: "managed-one", displayName: "Test", managedRoot: "D:\\Test", action: "delete", preservedSavePath: null, confirmationToken: "bound-token" };
+    const preview = { installId: "managed-one", displayName: "Test", managedRoot: "D:\\Test", action: "delete", approximateSizeBytes: "12884901888", preservedSavePath: null, confirmationToken: "bound-token" };
     const invoke = vi.fn(async (command: string) => command === "preview_installation_removal" ? preview : undefined);
     const backend = new NativeBackend(invoke);
     await expect(backend.previewInstallationRemoval("managed-one")).resolves.toEqual(preview);
@@ -420,6 +420,8 @@ describe("native command adapter", () => {
           expect(args).toEqual({ installId: "install-ready" });
           return { path: "D:\\Diagnostics\\install-ready.zip" };
         case "launch_install":
+          expect(args).toEqual({ installId: "install-ready", startRadar: false });
+          return { installId: "install-ready", radar: { state: "not-requested", detail: null, technicalDetail: null } };
         case "open_install_folder":
           expect(args).toEqual({ installId: "install-ready" });
           return null;
@@ -460,7 +462,9 @@ describe("native command adapter", () => {
     await expect(backend.exportDiagnostics("install-ready")).resolves.toEqual({
       path: "D:\\Diagnostics\\install-ready.zip",
     });
-    await expect(backend.launchInstall("install-ready")).resolves.toBeUndefined();
+    await expect(backend.launchInstall("install-ready", false)).resolves.toEqual({
+      installId: "install-ready", radar: { state: "not-requested", detail: null, technicalDetail: null },
+    });
     await expect(backend.openInstallFolder("install-ready")).resolves.toBeUndefined();
     await expect(backend.createDesktopShortcut("install-ready")).resolves.toEqual({
       path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk",

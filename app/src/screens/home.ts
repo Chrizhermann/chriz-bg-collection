@@ -1,11 +1,12 @@
-import type { ManagedInstallation } from "../contracts";
+import type { LaunchInstallResult, ManagedInstallation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { errorDetails } from "../components/error-details";
 import { installationNameEditor } from "../components/installation-name";
 
 export interface HomeActions {
   readonly begin: () => void | Promise<void>;
-  readonly launch: (installId: string) => void | Promise<void>;
+  readonly launch: (installId: string, startRadar: boolean) => void | Promise<void>;
+  readonly setStartRadar?: (installId: string, enabled: boolean) => void;
   readonly openFolder: (installId: string) => void | Promise<void>;
   readonly resume: (installId: string) => void | Promise<void>;
   readonly select: (installId: string) => void | Promise<void>;
@@ -26,6 +27,12 @@ export interface ShortcutFeedback {
 export interface AddonFeedback {
   readonly installId: string;
   readonly state: "installing" | "failed";
+}
+
+export interface LaunchState {
+  readonly startRadar: boolean;
+  readonly pending: boolean;
+  readonly feedback?: LaunchInstallResult;
 }
 
 function installationPicker(
@@ -133,7 +140,7 @@ export function firstPlayGuide(installation: ManagedInstallation): HTMLDetailsEl
     steps.append(element("li", undefined, "In game, press F11 to open BuffBot and choose the buffs you want automated."));
   }
   if (installation.radarVersion) {
-    steps.append(element("li", undefined, `BG Radar Overlay ${installation.radarVersion} is installed. Play Chriz Easy BG starts it with the game; its executable is also in the BG Radar Overlay folder inside the game folder.`));
+    steps.append(element("li", undefined, `BG Radar Overlay ${installation.radarVersion} is installed. Select Start Radar with the game before pressing Play if you want to use it. Windows may ask for administrator approval. Its executable is in the BG Radar Overlay folder inside the game folder.`));
   } else {
     steps.append(element("li", undefined, "BG Radar Overlay is optional. You can add it from Updates after setup."));
   }
@@ -147,6 +154,7 @@ export function homeScreen(
   actions: HomeActions,
   shortcutFeedback: ShortcutFeedback | null = null,
   addonFeedback: AddonFeedback | null = null,
+  launchState: LaunchState = { startRadar: false, pending: false },
 ): HTMLElement {
   const page = element("div", "screen-stack launcher-screen");
   if (selected === null) {
@@ -182,6 +190,7 @@ export function homeScreen(
     metadata.append(summary);
   }
   if (metadata.childElementCount > 0) card.append(metadata);
+  if (selected.customized) card.append(element("p", "manual-mod-warning", "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled; CEBG app updates still work."));
   const picker = installationPicker(installations, selected.id, actions.select);
   if (picker !== null) card.append(picker);
   if (actions.rename) card.append(installationNameEditor({ installId: selected.id, name: selected.name,
@@ -191,8 +200,27 @@ export function homeScreen(
   let feedback: HTMLElement | null = null;
   if (selected.available) {
     const currentFeedback = shortcutFeedback?.installId === selected.id ? shortcutFeedback : null;
-    const play = actionButton("Play Chriz Easy BG", () => !patchRecoveryNeeded ? actions.launch(selected.id) : undefined);
-    play.disabled = patchRecoveryNeeded;
+    const radar = element("input");
+    radar.type = "checkbox";
+    radar.id = "start-radar";
+    radar.checked = Boolean(selected.radarVersion) && launchState.startRadar;
+    radar.disabled = !selected.radarVersion || patchRecoveryNeeded || launchState.pending;
+    radar.setAttribute("aria-describedby", "radar-launch-help");
+    radar.addEventListener("change", () => {
+      if (!radar.disabled) actions.setStartRadar?.(selected.id, radar.checked);
+    });
+    const radarLabel = element("label", "radar-launch-choice");
+    radarLabel.append(radar, element("span", undefined, "Start Radar with the game"));
+    const radarHelp = element("p", "muted", patchRecoveryNeeded
+      ? "Finish patch recovery in Updates before using Radar."
+      : selected.radarVersion ? "Windows may ask for administrator approval." : "Add BG Radar Overlay from Updates to use this option.");
+    radarHelp.id = "radar-launch-help";
+    const radarOption = element("div", "radar-launch-option");
+    radarOption.append(radarLabel, radarHelp);
+    card.append(radarOption);
+    const play = actionButton(launchState.pending ? "Starting game…" : "Play Chriz Easy BG",
+      () => !patchRecoveryNeeded && !launchState.pending ? actions.launch(selected.id, radar.checked) : undefined);
+    play.disabled = patchRecoveryNeeded || launchState.pending;
     controls.append(
       play,
       actionButton("Open game folder", () => actions.openFolder(selected.id), "quiet"),
@@ -221,13 +249,26 @@ export function homeScreen(
     }
   } else if (selected.resumable && !patchRecoveryNeeded) {
     controls.append(
-      actionButton("Continue installation", () => actions.resume(selected.id)),
+      actionButton(selected.status === "Paused for your mods" ? "Review manual-mod pause" : "Continue installation", () => actions.resume(selected.id)),
       actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
     );
   } else {
     controls.append(actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"));
   }
   card.append(controls);
+  if (launchState.feedback?.installId === selected.id) {
+    const { radar } = launchState.feedback;
+    const warning = radar.state === "failed" || radar.state === "cancelled";
+    const notice = element("div", `shortcut-feedback ${warning ? "warning" : "ok"}`);
+    notice.setAttribute("role", warning ? "alert" : "status");
+    notice.append(element("strong", undefined, radar.state === "cancelled"
+      ? "Game started, but Radar wasn't started because administrator approval was cancelled."
+      : radar.state === "failed" ? "Game started, but Radar couldn't start."
+        : radar.state === "started" ? "Game and Radar started." : "Game started."));
+    if (radar.detail) notice.append(element("p", undefined, radar.detail));
+    if (radar.technicalDetail) notice.append(errorDetails(radar.technicalDetail));
+    card.append(notice);
+  }
   if (actions.remove) {
     const removal = actionButton("Delete / remove installation…", () => actions.remove!(selected.id), "danger-quiet");
     removal.id = "remove-installation";

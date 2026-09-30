@@ -5,6 +5,11 @@ proficiencies and choosing companions' weapon pips. Research/planning only; the
 recommended recipe, released pins, and existing installations remain unchanged.
 Current curation excludes CDTweaks 2160-2164 and SCS 4099/4100.
 
+September 27: [fresh source check](2026-09-27-pre-package-inventory.md#viewer-request-simplified-weapon-proficiencies)
+confirms 2161 as the best first candidate, with Randomiser/Artisan/final-NPC-pip
+compatibility still to address. SCS 4100 is broader than a pip picker and also
+needs the Infinity UI interaction checked. No options were enabled.
+
 ## Two separate player choices
 
 - **Weapon proficiency groups:** keep the current system by default; investigate
@@ -45,11 +50,14 @@ dual-class handling. Baeloth, Caelar, Hexxat and Wilson are excluded. The legacy
   multiples-of-five thief-skill behavior. Model this as a replacement/subsumed
   feature, never ask WeiDU to install both. CDTweaks 2370/2372 are also forbidden
   alongside 4100; they are currently excluded.
-- Our SCS run precedes post-EET_end chriz-bg-modpack NPC conversions and a late
+- Our SCS run precedes chriz-bg-modpack NPC conversions and a late
   Artisan NPC conversion. SCS captures class/dual-class metadata and clears
   spellbooks; later converters may overwrite its level-zero setup. Inspect the
   ordering/metadata interaction before enabling it. Preserve Dynaheir's Haste,
   Sarah's intended identity, Viconia's multiclass and Artisan kit abilities.
+  September 27 correction: the current main Modpack NPC conversions occur before
+  EET_end; the earlier post-EET_end description was stale. The SCS-before-conversion
+  ordering concern remains.
 
 **NPC_EE 2000:** alternative optional-tome respec that keeps XP and does not
 automatically rebuild a companion until used. Broader class/stat/kit changes and

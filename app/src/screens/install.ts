@@ -4,10 +4,12 @@ import type {
   GameCandidate,
   GameDiscovery,
   ManualDownloadRequirement,
+  ManualBreakpoint,
   SelectionEvaluation,
 } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
 import { installationReadiness, validateInstallationName } from "../state";
+import { invalidBreakpoints } from "../components/manual-checkpoints";
 
 export interface InstallScreenModel {
   readonly discovery: GameDiscovery;
@@ -27,6 +29,7 @@ export interface InstallScreenModel {
   readonly manualDownloadGateVisible: boolean;
   readonly manualDownloadCheckingArtifactId: string | null;
   readonly manualDownloadError: { readonly artifactId: string; readonly message: string } | null;
+  readonly manualBreakpoints?: readonly ManualBreakpoint[];
 }
 
 export interface InstallScreenActions {
@@ -255,6 +258,14 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     recipe.append(label, select);
   }
   recipe.append(customize);
+  if (model.manualBreakpoints?.length) {
+    const invalid = invalidBreakpoints(model.manualBreakpoints, model.evaluation?.manualCheckpointOptions ?? []);
+    const note = element("p", invalid.length ? "unavailable-reason" : "muted", invalid.length
+      ? "A manual-mod pause no longer matches this setup. Open Customize and correct it before installing."
+      : `${model.manualBreakpoints.length} manual-mod ${model.manualBreakpoints.length === 1 ? "pause" : "pauses"} selected. Installation will stop at these points for your additions.`);
+    if (invalid.length) note.setAttribute("role", "alert");
+    recipe.append(note);
+  }
   if (model.evaluation !== null && model.evaluation.findings.length > 0) {
     const notices = element("details", "recipe-notices");
     notices.append(element("summary", undefined, `${model.evaluation.findings.length} setup ${model.evaluation.findings.length === 1 ? "note" : "notes"}`));
@@ -274,6 +285,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     destination: model.destination,
     evaluation: model.evaluation,
     evaluationPending: model.evaluationPending,
+    manualBreakpoints: model.manualBreakpoints,
   });
   const manualDownloadPending = model.manualDownloadGateVisible
     && (model.manualDownloadCheckingArtifactId !== null || model.manualDownloads.some((requirement) => !requirement.ready));

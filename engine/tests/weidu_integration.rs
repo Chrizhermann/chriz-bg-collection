@@ -508,6 +508,60 @@ fn fixture_root() -> PathBuf {
         .join("testmod")
 }
 
+#[test]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+fn setup_name_discovers_the_infinity_ui_folder_layout() {
+    let harness = Harness::new();
+    fs::create_dir(harness.game.root.join("infinity_ui")).unwrap();
+    fs::rename(
+        harness.game.root.join(TESTMOD_TP2),
+        harness.game.root.join("infinity_ui/infinity_ui.tp2"),
+    )
+    .unwrap();
+    let attempt = harness._temp.path().join("infinity-layout");
+    fs::create_dir(&attempt).unwrap();
+    let invocation = build(
+        &InvocationInput {
+            target: GameRoot::Bg2,
+            tp2: "infinity_ui/infinity_ui.tp2".into(),
+            mode: InvocationMode::SetupName,
+            explicit_tp2_tested: false,
+            language: 0,
+            remaining_components: vec![0],
+            run_args: vec![],
+            prompts: vec![],
+        },
+        &harness.roots,
+        &harness.tool,
+        &attempt,
+    )
+    .unwrap();
+    assert_eq!(
+        invocation.program.file_name().unwrap(),
+        "Setup-infinity_ui.exe"
+    );
+    assert!(!invocation
+        .args
+        .iter()
+        .any(|arg| arg == "infinity_ui/infinity_ui.tp2"));
+    let evidence = harness.run_sync(invocation, "infinity-layout");
+    assert!(
+        matches!(evidence.outcome, RunOutcome::Exited { code: 0 }),
+        "{:?}\n{}\n{}",
+        evidence.outcome,
+        evidence.output,
+        evidence.debug
+    );
+    let entries = parse_active_entries(&evidence.after_log).unwrap();
+    assert_eq!(entries.last().unwrap().component, 0);
+    assert!(evidence
+        .after_log
+        .to_ascii_lowercase()
+        .contains("infinity_ui/infinity_ui.tp2"));
+    harness.assert_protected_unchanged();
+    harness.assert_override_publications(&["tmcopy.ids"]);
+}
+
 fn copy_fixture(source: &Path, target_root: &Path) {
     assert!(
         source.is_dir(),

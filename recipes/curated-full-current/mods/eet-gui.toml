@@ -1,0 +1,11 @@
+id = "eet-gui"
+artifact_id = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+name = "EET: SoD style"
+tp2 = "EET_gui/EET_gui.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "EET: SoD style - core interface"

@@ -249,7 +249,7 @@ fn draft_alpha14_ledger_covers_armor_and_bardic_update_addresses() {
 }
 
 #[test]
-fn alpha18_recommends_emotion_exclusivity_for_the_next_playthrough() {
+fn alpha18_records_emotion_default_and_stronghold_selection_fix_for_new_installs() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let ledger = load_release(
         &root.join("recipes/curated-full-current/releases/v0.1.0-alpha.18/ledger.toml"),
@@ -260,7 +260,7 @@ fn alpha18_recommends_emotion_exclusivity_for_the_next_playthrough() {
     assert_eq!(ledger.version, "0.1.0-alpha.18");
     assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0-alpha.17"));
     assert_eq!(ledger.minimum_app_version, "0.1.0-alpha.19");
-    assert_eq!(ledger.changes.len(), 1);
+    assert_eq!(ledger.changes.len(), 12);
     let change = &ledger.changes[0];
     assert_eq!(change.id, "emotion-courage-hope-exclusive-default");
     assert_eq!(
@@ -280,6 +280,92 @@ fn alpha18_recommends_emotion_exclusivity_for_the_next_playthrough() {
         cosmetic_only: false,
     })
     .collect::<Vec<_>>();
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    let strongholds = &ledger.changes[1];
+    assert_eq!(strongholds.id, "stronghold-selection-exclusions");
+    assert_eq!(
+        strongholds.save_applicability,
+        SaveApplicability::NextPlaythrough
+    );
+    assert_eq!(strongholds.urgency, Urgency::Recommended);
+    let subjects = [1160, 1161]
+        .into_iter()
+        .chain(1340..=1347)
+        .map(|n| format!("feature:feature:cdtweaks:component-{n}"))
+        .collect::<Vec<_>>();
+    assert_eq!(strongholds.covers, subjects);
+    let dependencies = &ledger.changes[2];
+    assert_eq!(dependencies.id, "custom-selection-core-dependencies");
+    assert_eq!(
+        dependencies.save_applicability,
+        SaveApplicability::NextPlaythrough
+    );
+    assert_eq!(dependencies.urgency, Urgency::Recommended);
+    let mut dependency_subjects = vec!["feature:mod:stratagems".to_owned()];
+    for n in [20, 30, 40, 50, 60, 70]
+        .into_iter()
+        .flat_map(|start| start..start + 5)
+        .chain([110, 112, 113, 114, 131, 241])
+    {
+        dependency_subjects.push(format!("feature:feature:bg1npc:component-{n}"));
+    }
+    assert_eq!(dependencies.covers, dependency_subjects);
+    for (index, id, subjects) in [
+        (
+            3,
+            "artisan-chriz-1-6-refresh",
+            vec![
+                "artifact:artisans-kitpack-chriz-v1.5.0",
+                "artifact:artisans-kitpack-chriz-v1.6.0",
+                "feature:feature:artisanskitpack-tweak:component-20101",
+            ],
+        ),
+        (
+            4,
+            "bardic-balance-6-refresh",
+            vec![
+                "artifact:bardicwonders-v2.9c-balance.5",
+                "artifact:bardicwonders-v2.9c-balance.6",
+            ],
+        ),
+        (
+            5,
+            "sod-remix-0-6-12-refresh",
+            vec![
+                "artifact:chriz-sod-remix-0.6.11",
+                "artifact:chriz-sod-remix-0.6.12",
+            ],
+        ),
+        (
+            6,
+            "buffbot-1-9-0-refresh",
+            vec!["artifact:buffbot-1.8.4-alpha", "artifact:buffbot-1.9.0"],
+        ),
+    ] {
+        let change = &ledger.changes[index];
+        assert_eq!(change.id, id);
+        assert_eq!(
+            change.save_applicability,
+            SaveApplicability::NextPlaythrough
+        );
+        assert_eq!(change.urgency, Urgency::Recommended);
+        assert_eq!(change.covers, subjects);
+        let differences = subjects
+            .into_iter()
+            .map(|subject| RecipeDifference {
+                subject: subject.to_owned(),
+                cosmetic_only: false,
+            })
+            .collect::<Vec<_>>();
+        ensure_change_coverage(&differences, &ledger).unwrap();
+    }
+    let differences = subjects
+        .into_iter()
+        .map(|subject| RecipeDifference {
+            subject,
+            cosmetic_only: false,
+        })
+        .collect::<Vec<_>>();
     ensure_change_coverage(&differences, &ledger).unwrap();
     let summary = classify_updates("0.1.0-alpha.17", "0.1.0-alpha.19", &[ledger]).unwrap();
     assert_eq!(
@@ -341,5 +427,5 @@ fn released_history_covers_real_differences_and_skipping_versions_does_not_dupli
         summary.disposition,
         UpdateDisposition::DeferredForNextPlaythrough
     );
-    assert_eq!(summary.changes.len(), 19);
+    assert_eq!(summary.changes.len(), 30); // September 29 adds pins, UI choices, Modpack and Wing Buffet defaults.
 }

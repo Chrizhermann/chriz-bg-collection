@@ -1,8 +1,8 @@
 # ARTISANSKITPACK_TWEAK — components
 
-Refreshed for the selected Artisan fork release **chriz-v1.3.1**
-(`ac718614991e34b4f720807bec5edc96266c6c5e`).
-17 entries, 7 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
+Refreshed for the selected Artisan fork release **v4.81a-dev.85928f9-chriz.1**
+(`0798dc4ee3d09b5d97c56b69c80d9d2ac2317911`).
+18 entries, 7 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
 
@@ -17,10 +17,15 @@ Refreshed for the selected Artisan fork release **chriz-v1.3.1**
   express that predicate; it is not a gameplay option or a global mandatory component.
 - `300010` is unavailable while its unsafe parent `30001` is unavailable.
 - `2000001` requires EEex.
+- `51010` is optional and off by default; requires Shapeshifter `5100` OR
+  Hivemaster `5002`, with no EEex dependency. It is first in the released tweak
+  TP2, so the late run selects it before `12012` when enabled. Five real-WeiDU
+  synthetic checks were reported by the owner; no live-game acceptance is implied.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
-| 20101 | Artisan's Kitpack: Archer - Apply Manyshot to mod-added items (install this after any mods that add mod bows and crossbows) |  |  | ✓ | default |
+| 51010 | Allow talking in Shapeshifter and Hivemaster forms | Quality of life |  |  | optional |
+| 20101 | Artisan's Kitpack: Archer - Remove legacy Manyshot from mod-added items (compatibility cleanup; chriz-v1.6.0) |  |  | ✓ | default |
 | 12012 | Artisan's Kitpack: Beastmaster - Modify Restrictions for Mod Items (install this after any mods that add mod axes, daggers, spears, armor, etc.) |  |  | ✓ | default |
 | 20021 | Artisan's Kitpack: Dark Hunter - Allow Disarm Traps and Open Locks |  |  |  | |
 | 3210 | Artisan's Kitpack: Cavalier - Rename Kit to Chevalier |  |  |  | |

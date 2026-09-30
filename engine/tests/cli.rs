@@ -378,6 +378,7 @@ fn display_name_cli_default_is_exact_and_custom_name_reaches_the_registry() {
 fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, PathBuf) {
     let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
+    use_production_invocation_mode(&recipe);
     let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
     let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
     fs::write(bg1.join("setup-dirty.exe"), b"modified")
@@ -478,14 +479,7 @@ fn executable_fixture() -> ExecutableFixture {
         ),
     )
     .expect("write synthetic tool contract");
-    let mod_file = recipe.join("mods/eefixpack.toml");
-    let text = fs::read_to_string(&mod_file)
-        .expect("read fixture mod")
-        .replace(
-            "invocation_mode = \"explicit-tp2\"",
-            "invocation_mode = \"setup-name\"",
-        );
-    fs::write(mod_file, text).expect("select setup-name fixture mode");
+    use_production_invocation_mode(&recipe);
 
     ExecutableFixture {
         _temp: temp,
@@ -498,6 +492,22 @@ fn executable_fixture() -> ExecutableFixture {
         app_data,
         documents,
     }
+}
+
+fn use_production_invocation_mode(recipe: &Path) {
+    // The shared authoring fixture deliberately exercises explicit-TP2 parsing. Tests
+    // entering the production installer need its supported setup-name mode instead.
+    let mod_file = recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&mod_file).expect("read fixture mod");
+    assert!(text.contains("invocation_mode = \"explicit-tp2\""));
+    fs::write(
+        mod_file,
+        text.replace(
+            "invocation_mode = \"explicit-tp2\"",
+            "invocation_mode = \"setup-name\"",
+        ),
+    )
+    .expect("select supported production fixture mode");
 }
 
 fn install_versioned_fixture_executable(recipe: &Path, game: &Path, profile_name: &str) {
@@ -597,6 +607,167 @@ fn executable_command(fixture: &ExecutableFixture) -> Command {
         .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2");
     command
+}
+
+#[cfg(windows)]
+#[test]
+fn manual_checkpoints_resume_two_boundaries_and_finalize_with_dragonspear_history_intact() {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .args([
+            "--manual-pause-after",
+            "eefixpack-bg1:0",
+            "--manual-pause-after",
+            "eefixpack-bg2:0",
+        ]);
+    let first = install.output().unwrap();
+    assert!(
+        first.status.success(),
+        "{}\n{}",
+        stdout(&first),
+        stderr(&first)
+    );
+    let first = json_stdout(&first);
+    assert_eq!(first["status"]["status"], "paused");
+    let install_id = first["install_id"].as_str().unwrap();
+    let frozen_path = fixture.managed.join(".chriz/recipe/payload.zip");
+    let original_recipe = fs::read(&frozen_path).unwrap();
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/WeiDU.log"))
+            .unwrap()
+            .lines()
+            .count(),
+        1
+    );
+    assert!(!fixture.managed.join(".chriz/install-receipt.json").exists());
+
+    // Reopening/resuming without explicit acceptance must preserve the pending pause.
+    let reopened = executable_command(&fixture)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(reopened.status.success(), "{}", stdout(&reopened));
+    assert_eq!(json_stdout(&reopened)["status"]["status"], "paused");
+    for index in 0..2 {
+        if index == 1 {
+            let directory = fixture.managed.join("game/DragonspearUI");
+            fs::create_dir(&directory).unwrap();
+            fs::write(
+                directory.join("setup-DragonspearUI.tp2"),
+                "BACKUP ~DragonspearUI/backup~\nAUTHOR ~Fixture~\n",
+            )
+            .unwrap();
+            let path = fixture.managed.join("game/WeiDU.log");
+            let before = fs::read_to_string(&path).unwrap();
+            fs::write(path, format!("{before}~DragonspearUI/setup-DragonspearUI.tp2~ #0 #0 // Dragonspear UI++: reported version\n")).unwrap();
+            fs::write(
+                fixture.managed.join("game/SETUP-DRAGONSPEARUI.DEBUG"),
+                "SUCCESSFULLY INSTALLED Dragonspear UI++\n",
+            )
+            .unwrap();
+        }
+        let checked = executable_command(&fixture)
+            .args([
+                "--json",
+                "check-manual-checkpoint",
+                fixture.managed.to_str().unwrap(),
+                "--install-id",
+                install_id,
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            checked.status.success(),
+            "{}\n{}",
+            stdout(&checked),
+            stderr(&checked)
+        );
+        let checkpoint = json_stdout(&checked)["checkpoint"].clone();
+        assert_eq!(checkpoint["target"], if index == 0 { "bg1" } else { "bg2" });
+        assert_eq!(checkpoint["additions"].as_array().unwrap().len(), index);
+        // A stale/forged review token never records acceptance.
+        let denied = executable_command(&fixture)
+            .args([
+                "--json",
+                "accept-manual-checkpoint",
+                fixture.managed.to_str().unwrap(),
+                "--install-id",
+                install_id,
+                "--review-token",
+                "stale",
+                "--accept-additions",
+            ])
+            .output()
+            .unwrap();
+        assert!(!denied.status.success());
+        let mut accept = executable_command(&fixture);
+        accept.args([
+            "--json",
+            "accept-manual-checkpoint",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            install_id,
+            "--review-token",
+            checkpoint["reviewToken"].as_str().unwrap(),
+        ]);
+        if index == 1 {
+            accept.arg("--accept-additions");
+        }
+        let accepted = accept.output().unwrap();
+        assert!(
+            accepted.status.success(),
+            "{}\n{}",
+            stdout(&accepted),
+            stderr(&accepted)
+        );
+        let resumed = executable_command(&fixture)
+            .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+            .output()
+            .unwrap();
+        assert!(
+            resumed.status.success(),
+            "{}\n{}",
+            stdout(&resumed),
+            stderr(&resumed)
+        );
+        assert_eq!(
+            json_stdout(&resumed)["status"]["status"],
+            if index == 0 { "paused" } else { "complete" }
+        );
+    }
+    assert_eq!(fs::read(&frozen_path).unwrap(), original_recipe);
+    let receipt: InstallReceipt = serde_json::from_slice(
+        &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert_eq!(receipt.runs.len(), 3, "only the requested batch was split");
+    assert!(receipt.final_state.unwrap().logs.iter().any(|log| log
+        .components
+        .iter()
+        .any(|entry| entry.tp2.contains("dragonspearui"))));
+    assert!(fs::read_to_string(fixture.managed.join("game/WeiDU.log"))
+        .unwrap()
+        .contains("DragonspearUI"));
+    assert!(bg_engine::manual_checkpoint::game_update_guard(&fixture.managed).is_err());
+    let report = executable_command(&fixture)
+        .args(["--json", "report", fixture.managed.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        report.status.success(),
+        "{}\n{}",
+        stdout(&report),
+        stderr(&report)
+    );
 }
 
 #[test]
@@ -1640,7 +1811,7 @@ fn launched_run_with_missing_invocation_is_never_classified_as_unstarted() {
 
 #[cfg(windows)]
 #[test]
-fn explicit_relative_tp2_stays_unavailable_without_signed_recipe_evidence() {
+fn explicit_relative_tp2_is_rejected_before_staging_or_freezing() {
     let fixture = executable_fixture();
     let mod_file = fixture.recipe.join("mods/eefixpack.toml");
     let text = fs::read_to_string(&mod_file)
@@ -1663,10 +1834,12 @@ fn explicit_relative_tp2_stays_unavailable_without_signed_recipe_evidence() {
 
     assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
     let response = json_stdout(&output);
-    assert_eq!(response["error"]["code"], "campaign_failed");
-    assert!(stdout_from_value(&response).contains(
-        "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence"
-    ));
+    assert_eq!(response["error"]["code"], "installer_launch_unsupported");
+    assert!(stdout_from_value(&response).contains("unsupported explicit-tp2 invocation"));
+    assert!(
+        !fixture.managed.exists(),
+        "must reject before creating the installation"
+    );
 }
 
 #[cfg(windows)]

@@ -12,6 +12,59 @@ from tools.curated_full_recipe import _effective_features, build_recipe
 class ReleaseMetadataTests(unittest.TestCase):
     root = Path(__file__).resolve().parents[2]
 
+    def test_rebalance_candidate_does_not_claim_published_acquisition(self):
+        evidence = tomllib.loads(
+            (self.root / "manifest/evidence/release-candidate-20260930-rebalance.toml").read_text()
+        )
+        self.assertEqual(evidence["evidence_kind"], "release-candidate-local-verification")
+        record, = evidence["artifacts"]
+        self.assertEqual(record["artifact_id"], "chriz-bg-rebalance-0.7.1")
+        self.assertFalse(record["fresh_download"])
+        self.assertFalse(record["fresh_extraction"])
+        self.assertFalse(record["published_release_verified"])
+        for relative in ("manifest", "recipes/curated-full-current"):
+            with self.subTest(profile=relative):
+                profile = self.root / relative
+                mod = tomllib.loads((profile / "mods/chriz-bg-rebalance.toml").read_text())
+                self.assertEqual(mod["artifact_id"], record["artifact_id"])
+                artifact = tomllib.loads((profile / f"artifacts/{mod['artifact_id']}.toml").read_text())
+                for source_key, evidence_key in (
+                    ("reference", "source_reference"), ("url", "planned_source_url"),
+                    ("expected_length", "actual_length"), ("sha256", "actual_sha256"),
+                ):
+                    self.assertEqual(artifact["source"][source_key], record[evidence_key])
+
+    def test_published_rebalance_intake_matches_pins_and_native_order_without_claiming_extraction(self):
+        evidence = tomllib.loads(
+            (self.root / "manifest/evidence/release-intake-20260930.toml").read_text()
+        )
+        self.assertEqual(evidence["evidence_kind"], "published-release-download-and-native-order-verification")
+        record, = evidence["artifacts"]
+        self.assertEqual(record["source_commit"], "1578fac00cd93ba88341ffdfcb0346c08480cd21")
+        self.assertTrue(record["fresh_download"])
+        self.assertFalse(record["fresh_extraction"])
+        self.assertTrue(record["published_release_verified"])
+        self.assertTrue(record["normal_latest"])
+        self.assertTrue(record["native_component_order_verified"])
+        for relative in ("manifest", "recipes/curated-full-current"):
+            with self.subTest(profile=relative):
+                profile = self.root / relative
+                mod = tomllib.loads((profile / "mods/chriz-bg-rebalance.toml").read_text())
+                self.assertEqual(mod["artifact_id"], record["artifact_id"])
+                artifact = tomllib.loads((profile / f"artifacts/{mod['artifact_id']}.toml").read_text())
+                for source_key, evidence_key in (
+                    ("reference", "source_reference"), ("url", "immutable_source_url"),
+                    ("expected_length", "actual_length"), ("sha256", "actual_sha256"),
+                ):
+                    self.assertEqual(artifact["source"][source_key], record[evidence_key])
+                collection = tomllib.loads((profile / "collection.toml").read_text())
+                for run in collection["runs"]:
+                    if run["mod_id"] == "chriz-bg-rebalance":
+                        self.assertEqual(run["components"], [
+                            component for component in record["native_components"]
+                            if component in run["components"]
+                        ])
+
     def test_both_profiles_cover_every_selected_run_and_tail(self):
         for relative in ("manifest", "recipes/curated-full-current"):
             with self.subTest(profile=relative):
@@ -64,8 +117,9 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertEqual(ledger["version"], "0.1.0-alpha.18")
         self.assertEqual(ledger["supersedes"], "0.1.0-alpha.17")
         self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.19")
-        self.assertEqual(len(ledger["changes"]), 1)
-        change = ledger["changes"][0]
+        self.assertEqual(len(ledger["changes"]), 12)
+        change = next(item for item in ledger["changes"]
+                      if item["id"] == "emotion-courage-hope-exclusive-default")
         self.assertEqual(change["id"], "emotion-courage-hope-exclusive-default")
         self.assertEqual(change["save_applicability"], "next-playthrough")
         self.assertEqual(change["urgency"], "recommended")

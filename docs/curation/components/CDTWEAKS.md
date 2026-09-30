@@ -5,6 +5,12 @@ Listed at installed version **v18**.
 
 ## UI/dependency notes
 
+- `1160`/`1161` (Multiple Strongholds) each conflict with every individual
+  all-class stronghold `1340`–`1347`. The individual options remain compatible
+  with each other. Source: v18 `setup-cdtweaks.tp2:1088–1195`; each `134x`
+  predicate rejects both Multiple Strongholds variants, including batch mode.
+  Keep both directions of these exclusions in the generated recipe. Default
+  `1161` is unchanged; turn Multiple Strongholds off to choose individual ones.
 - `2380` is approved as **default-checked, optional** for the next patch
   (2026-09-12). It complements Artisan's base-class unlock by broadening playable
   kit choices, including elf mage specialists. Keep it after the main kit additions;

@@ -13,7 +13,7 @@ use zip::{CompressionMethod, ZipWriter};
 
 const STATE_DIRECTORY: &str = ".chriz";
 const TEMP_SUFFIX: &str = "diagnostics-tmp";
-const STEP_EVIDENCE_FILES: [&str; 11] = [
+const STEP_EVIDENCE_FILES: [&str; 12] = [
     "weidu.debug.log",
     "process-output.log",
     "stdout.log",
@@ -25,6 +25,7 @@ const STEP_EVIDENCE_FILES: [&str; 11] = [
     "invocation.json",
     "pre-spawn-failure.json",
     "eet-compatibility.json",
+    "ui-invocation-compatibility.json",
 ];
 const PATCH_RECORD_FILES: [&str; 6] = [
     "prepared.json",
@@ -244,6 +245,25 @@ fn select_entries(
     }
     add_patch_evidence(&mut selected, state_root)?;
     add_upgrade_evidence(&mut selected, state_root, "mod-upgrades", "v1")?;
+    let checkpoints = state_root.join("manual-checkpoints");
+    if checkpoints.exists() {
+        validate_direct_directory(&checkpoints)?;
+        for entry in read_directory(&checkpoints)? {
+            let id = entry.file_name().to_string_lossy().into_owned();
+            if !id.starts_with("manual-") || !id[7..].bytes().all(|byte| byte.is_ascii_digit()) {
+                continue;
+            }
+            validate_direct_directory(&entry.path())?;
+            for name in ["baseline.json", "acceptance.json"] {
+                add_optional(
+                    &mut selected,
+                    entry.path().join(name),
+                    &format!("manual-checkpoints/{id}/{name}"),
+                    false,
+                )?;
+            }
+        }
+    }
 
     Ok(selected.into_values().collect())
 }

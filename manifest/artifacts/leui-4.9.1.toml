@@ -1,0 +1,32 @@
+id = "leui-4.9.1"
+name = "Lefreut's Enhanced UI: BG2 style"
+version = "4.9.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/r-e-d/LeUI/releases/download/v4.9.1/lefreuts-enhanced-ui-bg2ee-skin-4.9.1.iemod"
+reference = "v4.9.1"
+expected_filename = "lefreuts-enhanced-ui-bg2ee-skin-4.9.1.iemod"
+expected_length = 19549249
+sha256 = "93f78e68f371e62acabbd22fb1f8eb84fa548f069e96f4c1fc2fe976ddd6644a"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["LeUI"]
+tp2_paths = ["LeUI/LeUI.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://github.com/r-e-d/LeUI"
+license = "Fetch-only from the author's official release; no redistribution by CEBG"
+url = "https://github.com/r-e-d/LeUI/releases/tag/v4.9.1"
+reviewed_on = "2026-09-29"

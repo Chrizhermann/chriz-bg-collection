@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, getByRole, waitFor } from "@testing-library/dom";
+import { fireEvent, getByRole, queryByRole, waitFor } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mountApp } from "../src/app";
@@ -56,13 +56,19 @@ function percentage(root: HTMLElement): HTMLInputElement {
 
 async function setPercentage(opened: Awaited<ReturnType<typeof open>>, value: number) {
   await opened.user.click(getByRole(opened.root, "checkbox", { name: "Chance to leave an item in place" }));
-  await waitFor(() => expect(percentage(opened.root).disabled).toBe(false));
+  await waitFor(() => {
+    expect(percentage(opened.root).disabled).toBe(false);
+    expect(queryByRole(opened.root, "alert")).toBeNull();
+    expect(document.activeElement).toBe(getByRole(opened.root, "checkbox", { name: "Chance to leave an item in place" }));
+  });
   const previousField = percentage(opened.root);
   fireEvent.change(previousField, { target: { value: String(value) } });
   await waitFor(() => {
     expect(opened.backend.requests.at(-1)?.inputs[featureId]?.[inputId]).toEqual({ kind: "integer", value });
     expect(percentage(opened.root)).not.toBe(previousField);
     expect(percentage(opened.root).value).toBe(String(value));
+    expect(queryByRole(opened.root, "alert")).toBeNull();
+    expect(document.activeElement).toBe(percentage(opened.root));
   });
 }
 

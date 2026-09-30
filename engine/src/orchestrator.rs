@@ -350,6 +350,20 @@ pub trait ProcessRunner<I> {
 
 /// Owns durable before/debug/raw/after evidence and strict WeiDU.log reconciliation.
 pub trait InstallLogVerifier {
+    /// Explicit frozen manual boundaries; absent in ordinary campaigns.
+    fn manual_checkpoints(&self) -> Vec<crate::manual_checkpoint::FrozenCheckpoint> {
+        Vec::new()
+    }
+
+    /// Persist a durable baseline or verify explicit acceptance. False means remain paused.
+    fn manual_checkpoint(
+        &mut self,
+        _checkpoint: &crate::manual_checkpoint::FrozenCheckpoint,
+    ) -> Result<bool, StepFailure> {
+        Err(StepFailure::new(
+            "Manual checkpoints are not supported by this backend.",
+        ))
+    }
     /// Reconcile an earlier attempt whose logical step did not complete.
     fn recover(
         &mut self,
@@ -464,7 +478,7 @@ where
     D: CampaignDependencies,
     S: EventSink,
 {
-    let schedule = build_schedule(request)?;
+    let schedule = build_schedule(request, &dependencies.manual_checkpoints())?;
     reject_protected_or_relative_target(&request.created.managed_root)?;
     reject_lock_registry_overlap(request)?;
 
@@ -559,12 +573,16 @@ enum PipelineKind {
     Stage(GameRole),
     Materialize(MaterializationTask),
     Install(usize),
+    ManualCheckpoint(Box<crate::manual_checkpoint::FrozenCheckpoint>),
     FinalIdentity,
     FinalVerify,
     Receipt,
 }
 
-fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, OrchestratorError> {
+fn build_schedule(
+    request: &CampaignRequest,
+    checkpoints: &[crate::manual_checkpoint::FrozenCheckpoint],
+) -> Result<Vec<PipelineStep>, OrchestratorError> {
     let actual_plan = plan_digest(&request.plan)?;
     if actual_plan != request.created.plan_sha256 {
         return Err(OrchestratorError::InvalidCampaign(format!(
@@ -670,6 +688,16 @@ fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, Orches
             label: format!("Install {}", run.mod_id),
             kind: PipelineKind::Install(index),
         });
+        for checkpoint in checkpoints
+            .iter()
+            .filter(|checkpoint| checkpoint.after_run_id == run.run_id)
+        {
+            schedule.push(PipelineStep {
+                id: format!("checkpoint:{}", checkpoint.checkpoint_id),
+                label: "Paused for your mods".to_owned(),
+                kind: PipelineKind::ManualCheckpoint(Box::new(checkpoint.clone())),
+            });
+        }
     }
     schedule.extend([
         PipelineStep {
@@ -969,7 +997,9 @@ where
             };
             if let Some(outcome) = outcome {
                 let replay = self.store.replay()?;
-                write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
+                if !matches!(outcome, CampaignOutcome::Paused { .. }) {
+                    write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
+                }
                 return Ok(outcome);
             }
             if self.progress.completed_prefix < self.schedule.len()
@@ -989,6 +1019,19 @@ where
     ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
         let attempt = self.begin_or_resume(step)?;
         let execution = match &step.kind {
+            PipelineKind::ManualCheckpoint(checkpoint) => {
+                // The preceding WeiDU invocation has exited and its exact log/debug
+                // evidence is complete. Never hand over a suspended child process.
+                match self.dependencies.manual_checkpoint(checkpoint) {
+                    Ok(false) => {
+                        return Ok(Some(CampaignOutcome::Paused {
+                            after_step_id: step.id.clone(),
+                        }))
+                    }
+                    Ok(true) => Ok(SimpleExecution::Complete),
+                    Err(error) => Err(error),
+                }
+            }
             PipelineKind::Preflight => {
                 let replay = self.store.replay()?;
                 self.dependencies

@@ -58,6 +58,55 @@ components = [0, 1, 2, 3, 4, 5, 6, 7, 8]
 args = []
 
 [[runs]]
+run_id = "game-interface-infinity-bg2"
+mod_id = "infinity-ui"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-eet-sod-bg2"
+mod_id = "eet-gui"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-leui-bg2-bg2"
+mod_id = "leui"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-leui-bg1-bg2"
+mod_id = "leui-bg1ee"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-leui-sod-bg2"
+mod_id = "leui-sod"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "game-interface-dragonspear-bg2"
+mod_id = "dragonspear-ui"
+phase = "main"
+components = [1]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-ui-compat-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [640]
+args = []
+
+[[runs]]
 run_id = "bubb-spell-menu-bg2"
 mod_id = "bubb-spell-menu"
 phase = "main"
@@ -208,7 +257,7 @@ args = []
 run_id = "artisanskitpack-tweak-late-bg2"
 mod_id = "artisanskitpack-tweak"
 phase = "main"
-components = [12012, 3202, 3302, 8204]
+components = [51010, 12012, 3202, 3302, 8204]
 args = []
 
 [[runs]]
@@ -222,7 +271,7 @@ args = []
 run_id = "chriz-bg-modpack-pre-continuity-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "main"
-components = [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223]
+components = [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225]
 args = []
 
 [[runs]]
@@ -257,7 +306,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408]
+components = [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302]
 args = []
 
 [[runs]]
@@ -271,7 +320,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 400, 410, 430, 440, 450, 610]
+components = [130, 400, 410, 430, 440, 450, 610, 611, 630]
 args = []
 
 [[runs]]
@@ -896,6 +945,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 28 }]
+conflicts = [{ feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects its idle-sound control with Lefreut's interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects its idle-sound control with Lefreut's interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects its idle-sound control with Lefreut's interface. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-29"
@@ -906,6 +956,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 29 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-30"
@@ -916,6 +967,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 30 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-32"
@@ -1028,6 +1080,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 300 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-301"
@@ -1038,6 +1091,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 301 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-302"
@@ -1048,6 +1102,7 @@ decision = "optional"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 302 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-304"
@@ -1058,6 +1113,7 @@ decision = "optional"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
 components = [{ run_id = "hiddengameplayoptions-bg2", component = 304 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:leui-sod", reason = "Hidden Gameplay Options rejects this component with the selected interface. Your preference is remembered when you switch back." }, { feature_id = "feature:game-interface:dragonspear", reason = "Hidden Gameplay Options rejects this component with Dragonspear UI++. Your preference is remembered when you switch back." }]
 
 [[features]]
 id = "feature:hiddengameplayoptions:component-101"
@@ -2654,8 +2710,8 @@ requires = ["mod:artisanskitpack"]
 
 [[features]]
 id = "feature:artisanskitpack-tweak:component-20101"
-title = "Manyshot for mod-added weapons"
-description = "Apply Archer Manyshot support to mod-added bows and crossbows."
+title = "Remove old Manyshot effects"
+description = "Remove legacy Manyshot effects from mod-added bows and crossbows. Archer's Aimed Shot supports these weapons automatically."
 category = "kits"
 decision = "default"
 readiness = "ready"
@@ -2727,6 +2783,17 @@ readiness = "ready"
 parent = "mod:artisanskitpack-tweak"
 requires = ["feature:artisanskitpack:component-8004", "feature:eeex:mandatory-components"]
 components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 8204 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-51010"
+title = "Talk while shapeshifted"
+description = "Allow dialogue in Artisan's Shapeshifter and Hivemaster forms. Requires either kit and does not require EEex."
+category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires_any = ["feature:artisanskitpack:component-5100", "feature:artisanskitpack:component-5002"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 51010 }]
 
 [[features]]
 id = "mod:spell-rev"
@@ -2809,11 +2876,11 @@ components = [{ run_id = "spell-rev-core-bg2", component = 65 }]
 [[features]]
 id = "mod:stratagems"
 title = "Sword Coast Stratagems"
-description = "Install the curated SCS spell, AI, and encounter package with WeiDU 249."
+description = "Install the curated SCS spell, AI, and encounter package with WeiDU 249. This package includes Ascension encounters and requires its rewritten final chapter."
 category = "difficulty"
 decision = "default"
 readiness = "ready"
-requires = ["mod:ascension"]
+requires = ["feature:ascension:component-0"]
 
 [[features]]
 id = "feature:stratagems:mandatory-components"
@@ -3012,6 +3079,7 @@ decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 4115 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Infinity UI++ cannot use SCS's five-point thief-skill screen. This choice uses normal point allocation; your preference is restored with the default interface." }]
 
 [[features]]
 id = "feature:stratagems:component-4130"
@@ -3355,6 +3423,7 @@ category = "randomisation"
 decision = "default"
 readiness = "ready"
 parent = "mod:randomiser"
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-630", reason = "Choose either Randomiser's cursed-item appearance or the unidentified-appearance helper, not both. Ordinary loot randomization remains available." }]
 components = [{ run_id = "randomiser-bg2", component = 570 }]
 
 [[features]]
@@ -3519,6 +3588,16 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 301 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-302"
+title = "Flail of the Ages balance"
+description = "The +5 flail allows Haste and Improved Haste. Slow uses Breath saves at -2 for +3, -4 for both +4 variants and -6 for +5; proc chance and duration stay unchanged."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 302 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:tempus-bundle"
@@ -3789,11 +3868,72 @@ id = "feature:chriz-bg-modpack:component-610"
 title = "Scale utility XP with party progress"
 description = "Progressively scale lock, trap, and spell-learning XP from early BG1 through BG2 using the released default curve."
 category = "convenience"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+choice_group = "utility-xp-mode"
+requires = ["feature:eeex:mandatory-components", "mod:eet-end"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-611", reason = "Choose either party-progress or story-stage utility XP." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 610 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-611"
+title = "Scale utility XP with the story"
+description = "Use EET campaign and chapter progress to scale lock, trap and spell-learning XP. Replaces the party-progress curve for new recommended installations."
+category = "convenience"
 decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
+choice_group = "utility-xp-mode"
+requires = ["feature:eeex:mandatory-components", "feature:eet:mandatory-components", "mod:eet-end"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-610", reason = "Choose either story-stage or party-progress utility XP." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 611 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-630"
+title = "Hide unidentified item appearance"
+description = "Use generic item art until identification on Windows with EEex. Optional; incompatible only with Randomiser's cursed-item appearance, not ordinary loot randomization."
+category = "items"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
 requires = ["feature:eeex:mandatory-components", "mod:eet-end"]
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 610 }]
+conflicts = [{ feature_id = "feature:randomiser:component-570", reason = "Turn off Randomiser's cursed-item appearance before enabling this helper. Ordinary loot randomization can stay enabled." }]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 630 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-640"
+title = "Classic interface text compatibility"
+description = "Automatically supplies the legacy text helper for Lefreut and Dragonspear interfaces on game 2.7. Independent of HGO and optional Modpack gameplay changes."
+category = "interface"
+decision = "mandatory"
+readiness = "ready"
+requires_any = ["feature:game-interface:leui-bg2", "feature:game-interface:leui-bg1", "feature:game-interface:leui-sod", "feature:game-interface:dragonspear"]
+components = [{ run_id = "chriz-bg-modpack-ui-compat-bg2", component = 640 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-224"
+title = "Make Evandra a Sorcerer"
+description = "Use Evandra's curated Sorcerer build and starting spellbook."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Evandra's verified core is supplied by the generated full recipe, not this narrower fallback profile."
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:evandra"]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 224 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-225"
+title = "Use Evandra's custom portrait"
+description = "Use Christopher's custom Evandra portrait."
+category = "npcs"
+decision = "default"
+readiness = "blocked"
+unavailable_reason = "Evandra's verified core is supplied by the generated full recipe, not this narrower fallback profile."
+parent = "mod:chriz-bg-modpack"
+requires = ["mod:evandra"]
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 225 }]
 
 [[features]]
 id = "mod:buffbot"
@@ -3951,10 +4091,94 @@ components = [{ run_id = "chriz-bg-rebalance-bg2", component = 110 }]
 [[features]]
 id = "feature:chriz-bg-rebalance:component-111"
 title = "Dragon wing buffet: longer spacing"
-description = "Space SCS dragon wing buffets 18 seconds apart instead of 6 seconds. Requires Smarter Dragons; offered as an optional dragon-encounter adjustment."
+description = "Space SCS dragon wing buffets 18 seconds apart instead of 6 seconds. Included by default; requires Smarter Dragons and can be switched off."
 category = "difficulty"
-decision = "optional"
+decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 111 }]
+
+[[features]]
+id = "feature:game-interface:infinity"
+title = "Infinity UI++"
+description = "A redesigned interface with several skins chosen in-game. Omits SCS five-point thief skills and incompatible HGO controls. Experimental; community playtesting is still needed."
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-infinity-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:eet-sod"
+title = "EET: SoD style"
+description = "Use EET's Siege of Dragonspear-style interface across the trilogy. Experimental; community playtesting is still needed."
+category = "interface"
+source_label = "EET: SoD style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-eet-sod-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:leui-bg2"
+title = "Lefreut's Enhanced UI: BG2 style"
+description = "A classic BG2 look with reorganized screens."
+category = "interface"
+source_label = "Lefreut's Enhanced UI: BG2 style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-leui-bg2-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:leui-bg1"
+title = "Lefreut's Enhanced UI: BG1 style"
+description = "Lefreut's reorganized screens with a classic BG1 look."
+category = "interface"
+source_label = "Lefreut's Enhanced UI: BG1 style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-leui-bg1-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:leui-sod"
+title = "Lefreut's Enhanced UI: SoD style"
+description = "Lefreut's reorganized screens with a Siege of Dragonspear look."
+category = "interface"
+source_label = "Lefreut's Enhanced UI: SoD style"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-leui-sod-bg2", component = 0 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:dragonspear", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:game-interface:dragonspear"
+title = "Dragonspear UI++"
+description = "A Dragonspear-style interface, separate from Infinity UI++. Includes the released game 2.7 text compatibility helper. Experimental; community playtesting is still needed."
+category = "interface"
+source_label = "Dragonspear UI++"
+group_label = "Game interface"
+choice_group = "game-interface"
+decision = "optional"
+readiness = "experimental"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "game-interface-dragonspear-bg2", component = 1 }]
+conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }]

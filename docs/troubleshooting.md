@@ -15,6 +15,34 @@ The supported game-update features are in the alpha.19 candidate, not promised
 in every older public installer. They are not an **Update all mods** button.
 Check the installer version and release notes if an action is missing.
 
+## CEBG disappears and Windows Security reports a threat
+
+Check Windows Security's **Protection history** for the detection name and
+affected file. Report those alongside the CEBG version and what you were doing.
+Don't disable protection, add broad exclusions, or repeatedly restore/reinstall
+the flagged build. We need to investigate the exact detection first.
+
+On September 30, Defender quarantined the alpha.19 candidate as
+`Behavior:Win32/DefenseEvasion.A!ml`. The cause is under investigation; it has
+not been confirmed as a false positive. That incident removed the launcher, but
+the separately installed game and Radar files remained present. Do not delete
+your game or saves just because the launcher is missing.
+
+## The game starts without Radar
+
+Radar is stored in **BG Radar Overlay** inside the installation's `game` folder,
+not directly beside `InfinityLoader.exe`.
+
+The next corrected build adds **Start Radar with the game** beside Play. It is
+off initially and remembers your choice for each installation. Windows may ask
+for administrator approval for Radar; cancelling starts the game without it.
+If Radar cannot start, the corrected build shows a warning and optional details.
+This does not require running the whole CEBG installer as administrator.
+
+Older alpha.19 builds can silently fail to start Radar because they do not
+request its required Windows approval. The source correction is not yet a
+published or live-tested fix.
+
 ## The installer cannot find or create a folder
 
 - Check the exact path in the error. The clean game sources and the destination

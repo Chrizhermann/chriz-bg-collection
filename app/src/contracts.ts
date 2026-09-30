@@ -139,6 +139,7 @@ export interface PhaseSummary {
 }
 
 export interface SelectionEvaluation {
+  readonly manualCheckpointOptions?: readonly ManualCheckpointOption[];
   readonly view: RecipeView;
   readonly normalizedSelection: NormalizedSelection;
   readonly findings: readonly SelectionFinding[];
@@ -146,6 +147,32 @@ export interface SelectionEvaluation {
     readonly phases: readonly PhaseSummary[];
   };
   readonly selectedChoiceCount: number;
+}
+
+export interface ManualBreakpoint {
+  readonly runId: string;
+  readonly component: number;
+}
+
+export interface ManualCheckpointOption extends ManualBreakpoint {
+  readonly modId: string;
+  readonly modLabel: string;
+  readonly componentLabel: string;
+  readonly phase: string;
+  readonly target: "bg1" | "bg2";
+  readonly unavailableReason: string | null;
+}
+
+export interface ManualCheckpointStatus {
+  readonly checkpointId: string;
+  readonly target: "bg1" | "bg2";
+  readonly targetPath: string;
+  readonly after: ManualCheckpointOption;
+  readonly next: ManualCheckpointOption | null;
+  readonly additions: readonly { readonly tp2: string; readonly language: number; readonly component: number; readonly description: string | null }[];
+  readonly diagnostics: readonly string[];
+  readonly reviewToken: string;
+  readonly customized: boolean;
 }
 
 export interface FrozenReview {
@@ -249,6 +276,7 @@ export interface BuildSnapshot {
 }
 
 export interface ManagedInstallation {
+  readonly customized?: boolean;
   readonly id: string;
   readonly name: string;
   readonly path: string;
@@ -270,11 +298,22 @@ export interface ManagedInstallation {
   };
 }
 
+export interface LaunchInstallResult {
+  readonly installId: string;
+  readonly radar: {
+    readonly state: "not-requested" | "started" | "cancelled" | "failed";
+    readonly detail: string | null;
+    readonly technicalDetail: string | null;
+  };
+}
+
 export interface InstallationRemovalPreview {
   readonly installId: string;
   readonly displayName: string;
   readonly managedRoot: string;
   readonly action: "delete" | "forget";
+  /** Advisory logical file bytes; absent when the bounded scan cannot finish. */
+  readonly approximateSizeBytes?: string | null;
   readonly preservedSavePath: string | null;
   readonly confirmationToken: string;
 }

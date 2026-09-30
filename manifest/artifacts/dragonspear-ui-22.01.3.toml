@@ -1,0 +1,32 @@
+id = "dragonspear-ui-22.01.3"
+name = "Dragonspear UI++ (anongit continuation)"
+version = "22.01.3"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0"
+reference = "d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0"
+expected_filename = "DragonspearUI-d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0.zip"
+expected_length = 60892281
+sha256 = "81bf0403bc5f521a6c1204ecb0e913040cec2b06dbfcc822e5b6455b782d32f1"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["dragonspear_ui++"]
+tp2_paths = ["dragonspear_ui++/dragonspear_ui++.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 16777216
+max_total_uncompressed_bytes = 268435456
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://github.com/anongit/DragonspearUI"
+license = "Fetch-only tagged author continuation; no redistribution by CEBG"
+url = "https://github.com/anongit/DragonspearUI/tree/22.01.3"
+reviewed_on = "2026-09-29"

@@ -1,10 +1,11 @@
 # Near-term: game UI choices and manual installation checkpoints
 
-Status: **parked September 20** behind
-[real existing-install updates](2026-09-20-existing-install-upgrades-priority.md).
-Preserve these quick source findings and design decisions; no further research or
-implementation now. No new compatibility certification, game changes or release
-in this task.
+Status: initially parked September 20 behind existing-install updates; those
+broader updates were subsequently lowered in priority. **September 29: Dragonspear
+UI++ is approved for the next-release UI batch**, alongside the existing approved
+providers. **Manual checkpoints are also explicitly included in the next release**
+by Christopher's September 29 clarification. Both implementations remain pending;
+this scope decision does not relax unexpected-change checks or claim a release.
 
 Latest user decisions supersede tentative scope/testing language below:
 
@@ -14,9 +15,15 @@ Latest user decisions supersede tentative scope/testing language below:
   do not assume replacing UI scripts cannot affect menus or compatibility.
 - LeUI is approved for the initial options. Do not hold this work for agent-led
   exhaustive gameplay testing; document the unverified 2.7.3 behavior honestly.
-- Dragonspear UI++ is deferred until someone asks for it.
+- Dragonspear UI++ is approved September 29 as an optional next-release choice,
+  superseding the earlier deferral. Keep the recommended interface unchanged.
 - UI choices remain new-install-only. Manual checkpoints retain the confirmed
   limited scope and no-game-hotpatches-after-manual-additions policy.
+- Community testing is an accepted delivery route. Keep focused automated checks
+  and basic file/history safety verification, but do not require exhaustive
+  agent-led installation/gameplay coverage or Christopher's personal acceptance
+  for every UI and manual-mod combination. Report the actual verification boundary
+  and fix known deterministic failures rather than certifying untested combinations.
 
 ## 1. Choose a game interface
 
@@ -82,9 +89,11 @@ No reliable comparable usage totals were established in this quick check.
   [BG1 skin](https://github.com/r-e-d/LeUI-BG1EE),
   [SoD skin](https://github.com/r-e-d/LeUI-SoD),
   [latest release](https://github.com/r-e-d/LeUI/releases/latest).
-- **Dragonspear UI++: deferred until requested.** Infinity UI++ grew out of this
-  author's older UI. Preserve the reference, but do not research/integrate it now;
-  if requested, check the package's support separately rather than inheriting Infinity's.
+- **Dragonspear UI++: approved September 29 for the next release.** It is a separate
+  provider, not Infinity UI++'s Dragonspear skin. Pin and check its own package,
+  install order and specific conflicts; do not inherit Infinity's compatibility
+  rules without evidence. Praetor reports it worked after manual installation,
+  but his altered WeiDU.log is not a clean installation acceptance result.
   Source: [official releases](https://github.com/Renegade0/DragonspearUI/releases).
 - **IWDEE-UI-BGEE: later candidate**, reproducing the IWD interface with declared
   EET support. Not needed to expand the first batch when Infinity already offers
@@ -122,7 +131,27 @@ stack both implementations or silently change the current default recipe.
 Recorded only: no implementation, install, or live test is authorized by this note;
 existing-install updates remain the priority and UI work remains parked.
 
+The preceding paragraph records the September 20 boundary, not the current
+priority. See the September 29 approval at the top of this plan.
+
 ## 2. Pause to install your own mods (advanced)
+
+### September 29 report: manual UI addition rejected at finalization
+
+Praetor reports pausing after EEex, installing Dragonspear UI++ manually, and
+CEBG failing finalization on the extra WeiDU.log entries. He removed those entries
+and continued. This is a reported reproduction, not locally reproduced evidence.
+Do not recommend editing out installation history: the added mod still exists,
+while the log no longer honestly records the installed stack.
+
+Keep this as a checkpoint regression case: accept an explicitly reviewed manual
+addition at an intended checkpoint, preserve its WeiDU entries and provenance,
+resume the remaining managed work, and successfully finalize with both histories.
+Unapproved changes must still stop; ordinary pause/resume is not permission for
+arbitrary log changes. Official Dragonspear integration should instead declare
+its expected components in the normal recipe, requiring no manual pause or edit.
+
+### Confirmed design
 
 Put this behind a collapsed **Advanced → Add your own mods** section, off by
 default. First-use warning: “Manual mods can conflict with this setup. You choose
@@ -194,10 +223,13 @@ Other constraints to cover before implementation:
 - Document a worked example, both target folders, ordering responsibility, normal
   resume vs manual checkpoints, backups, known limitations and troubleshooting.
 
-Later tests: two checkpoints (including inside a multi-component run), no additions,
+Focused automated checks: two checkpoints (including inside a multi-component run), no additions,
 successful additions, reopen while paused, wrong target, failed manual install,
 changed managed prefix, namespace collision, final receipt and patch eligibility.
-Use small fixtures first and one targeted integration run, not repeated full installs.
+Use small fixtures and basic package checks; broad real-mod combinations and live
+playtesting may be covered by the community. Do not add a mandatory full-install
+matrix or repeated personal playtests as a release gate. Praetor's reported path
+must be represented by an accepted-addition/finalization regression check.
 
 ## Source pointers from this quick pass
 
@@ -211,7 +243,8 @@ Use small fixtures first and one targeted integration run, not repeated full ins
 - `engine/src/receipt.rs`: receipt and per-attempt log-diff validation.
 - `engine/src/acquire/materialize.rs`: owned publication/collision protections.
 
-Initial UI batch is approved: current default plus Infinity UI++, EET's SoD GUI
-and LeUI. The new-install-only and additive-log-only scope are confirmed. Work is
-parked behind existing-install updates; no implementation or release was performed
-for this planning follow-up.
+Approved UI batch: current default plus Infinity UI++, EET's SoD GUI, LeUI and
+(added September 29) Dragonspear UI++. New-install-only and additive-log-only
+checkpoint scope remain confirmed. Provider integration and checkpoint support
+are both in the next-release scope and remain unfinished; scope approval is not
+implementation or release.

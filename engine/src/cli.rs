@@ -184,6 +184,8 @@ pub struct SelectionOverrides {
     pub features: Vec<String>,
     /// `feature-id/input-id=<typed-value>` values.
     pub inputs: Vec<String>,
+    /// Advanced, opt-in component boundaries frozen with the reviewed recipe.
+    pub manual_breakpoints: Vec<crate::manual_checkpoint::ManualBreakpoint>,
 }
 
 /// Deterministic evaluated-plan result.
@@ -322,6 +324,8 @@ struct FrozenCliRecipe {
     presets: BTreeMap<String, PresetFile>,
     profiles: GameProfiles,
     plan: InstallPlan,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    manual_checkpoints: Vec<crate::manual_checkpoint::FrozenCheckpoint>,
     normalized_selection: crate::recipe_view::NormalizedSelection,
     preset: String,
     bg1: FrozenSource,
@@ -438,6 +442,8 @@ impl CliError {
             CampaignStatus::Failed { step_id, reason } => {
                 let code = if let Some(code) = folder_step_code(reason) {
                     code
+                } else if reason == crate::weidu::ui_compat::LEGACY_FAILURE {
+                    "installer_launch_unsupported"
                 } else if step_id == "preflight" && reason.contains("source_not_fresh") {
                     "source_not_fresh"
                 } else if step_id.starts_with("acquire:")
@@ -677,6 +683,17 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
             ),
         )
     })?;
+    let unsupported = crate::release_validate::validate_production_invocations(&manifest);
+    if !unsupported.is_empty() {
+        return Err(CliError::new(
+            "installer_launch_unsupported",
+            unsupported
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        ));
+    }
     let choices = selection_choices(&manifest, &request.preset, &request.overrides)?;
     let evaluation = evaluate(
         &manifest,
@@ -694,6 +711,17 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     let managed_root = prospective_direct_path(&request.managed_root, "managed root")?;
     let cache_root = canonical_existing_directory(&request.cache, "cache root")?;
     reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
+    let (execution_plan, mut manual_checkpoints) = crate::manual_checkpoint::split_plan(
+        &evaluation.plan,
+        &request.overrides.manual_breakpoints,
+    )
+    .map_err(|error| CliError::new("invalid_manual_breakpoint", error))?;
+    for checkpoint in &mut manual_checkpoints {
+        crate::manual_checkpoint::label_component(&mut checkpoint.after, &manifest.mods);
+        if let Some(next) = &mut checkpoint.next {
+            crate::manual_checkpoint::label_component(next, &manifest.mods);
+        }
+    }
     let frozen = FrozenCliRecipe {
         schema: CLI_FROZEN_RECIPE_SCHEMA,
         release_version: recipe_release_version(&manifest.root)?,
@@ -704,7 +732,8 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
         mods: manifest.mods.clone(),
         presets: manifest.presets.clone(),
         profiles,
-        plan: evaluation.plan.clone(),
+        plan: execution_plan,
+        manual_checkpoints,
         normalized_selection: evaluation.normalized_selection.clone(),
         preset: request.preset.clone(),
         bg1: frozen_bg1,
@@ -731,7 +760,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
         selection_sha256: selection_digest(&evaluation.normalized_selection)
             .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?,
         normalized_selection: evaluation.normalized_selection,
-        plan_sha256: plan_digest(&evaluation.plan)
+        plan_sha256: plan_digest(&frozen.plan)
             .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?,
         source_games: SourceGameFingerprints {
             bg1: frozen.bg1.fingerprint.clone(),
@@ -855,6 +884,135 @@ fn resume_campaign_internal<S: EventSink + Sync>(
         })?;
     validate_frozen_cli_recipe(&created, &frozen)?;
     execute_frozen_campaign(created, frozen, sink, controls)
+}
+
+fn open_manual_campaign(
+    managed_root: &Path,
+    expected_install_id: &str,
+) -> Result<(SessionReplay, FrozenCliRecipe), CliError> {
+    let replay = SessionStore::open(managed_root)
+        .and_then(|store| store.replay())
+        .map_err(|error| CliError::new("manual_checkpoint_unavailable", error.to_string()))?;
+    if replay.created().install_id != expected_install_id || replay.fresh_copy_required().is_some()
+    {
+        return Err(CliError::new(
+            "manual_checkpoint_unavailable",
+            "The saved campaign identity is unavailable or requires attention.",
+        ));
+    }
+    let frozen: FrozenCliRecipe = serde_json::from_slice(&replay.created().recipe_payload)
+        .map_err(|error| CliError::new("manual_checkpoint_unavailable", error.to_string()))?;
+    validate_frozen_cli_recipe(replay.created(), &frozen)?;
+    Ok((replay, frozen))
+}
+
+fn pending_manual<'a>(
+    replay: &SessionReplay,
+    frozen: &'a FrozenCliRecipe,
+) -> Option<&'a crate::manual_checkpoint::FrozenCheckpoint> {
+    let step = replay.unresolved_step()?;
+    frozen
+        .manual_checkpoints
+        .iter()
+        .find(|checkpoint| step == format!("checkpoint:{}", checkpoint.checkpoint_id))
+}
+
+/// Read a saved manual pause; fresh changes are inspected only on an explicit check.
+pub fn inspect_manual_checkpoint(
+    managed_root: &Path,
+    expected_install_id: &str,
+    check_changes: bool,
+) -> Result<Option<crate::manual_checkpoint::ManualCheckpointStatus>, CliError> {
+    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
+        .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
+    let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
+    let Some(checkpoint) = pending_manual(&replay, &frozen) else {
+        return Ok(None);
+    };
+    if check_changes {
+        crate::manual_checkpoint::check_manual_processes().map_err(manual_error)?;
+        recheck_target_before_mutation(&replay.created().staged_bg1, "en_US")
+            .map_err(manual_error)?;
+        recheck_target_before_mutation(&replay.created().staged_bg2, "en_US")
+            .map_err(manual_error)?;
+        crate::manual_checkpoint::review(
+            managed_root,
+            checkpoint,
+            &frozen.plan,
+            &frozen.mods,
+            &frozen.artifacts,
+        )
+        .map(|reviewed| Some(reviewed.status))
+        .map_err(manual_error)
+    } else {
+        crate::manual_checkpoint::paused_status(managed_root, checkpoint)
+            .map(Some)
+            .map_err(manual_error)
+    }
+}
+
+/// Bind explicit confirmation to the exact reviewed history under the campaign mutation lock.
+pub fn accept_manual_checkpoint(
+    managed_root: &Path,
+    expected_install_id: &str,
+    review_token: &str,
+    accept_additions: bool,
+) -> Result<(), CliError> {
+    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
+        .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
+    let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
+    let checkpoint = pending_manual(&replay, &frozen)
+        .ok_or_else(|| manual_error("This campaign is not paused for manual mods."))?;
+    crate::manual_checkpoint::check_manual_processes().map_err(manual_error)?;
+    recheck_target_before_mutation(&replay.created().staged_bg1, "en_US").map_err(manual_error)?;
+    recheck_target_before_mutation(&replay.created().staged_bg2, "en_US").map_err(manual_error)?;
+    let reviewed = crate::manual_checkpoint::review(
+        managed_root,
+        checkpoint,
+        &frozen.plan,
+        &frozen.mods,
+        &frozen.artifacts,
+    )
+    .map_err(manual_error)?;
+    if reviewed.status.review_token != review_token || review_token.is_empty() {
+        return Err(manual_error("Manual installation evidence changed since review. Check changes again before accepting."));
+    }
+    if !accept_additions && !reviewed.status.additions.is_empty() {
+        return Err(manual_error("Manual additions were found. Review and explicitly accept them, or restore the checkpoint backup."));
+    }
+    crate::manual_checkpoint::accept(managed_root, checkpoint, &reviewed).map_err(manual_error)
+}
+
+fn manual_error(error: impl std::fmt::Display) -> CliError {
+    CliError::new("manual_checkpoint_needs_attention", error.to_string())
+}
+
+fn verify_manual_prefix(
+    root: &Path,
+    plan: &InstallPlan,
+    frozen: &FrozenCliRecipe,
+) -> Result<(), String> {
+    let (bg1, bg2) = crate::manual_checkpoint::read_logs(root)?;
+    for (target, log) in [(GameRoot::Bg1, bg1), (GameRoot::Bg2, bg2)] {
+        let entries = parse_active_entries(&log).map_err(|e| e.to_string())?;
+        let expected = crate::manual_checkpoint::expected_components(
+            root,
+            plan,
+            &frozen.mods,
+            &frozen.manual_checkpoints,
+            target,
+        )?;
+        if entries.len() != expected.len()
+            || !entries.iter().zip(&expected).all(|(a, b)| {
+                a.tp2_key == b.tp2 && a.language == b.language && a.component == b.component
+            })
+        {
+            return Err("Game history changed outside a declared manual checkpoint. Preserve WeiDU.log and the installation folder.".into());
+        }
+    }
+    Ok(())
 }
 
 fn execute_frozen_campaign<S: EventSink + Sync>(
@@ -1863,6 +2021,17 @@ impl DocumentsLocator for CliDocumentsLocator {
 }
 
 impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
+    fn reviewed_ui_correction(&self, run: &PlannedRun) -> bool {
+        let (Some(mod_file), Some(artifact), Some(tool)) = (
+            self.frozen.mods.get(&run.mod_id),
+            self.frozen.artifacts.get(&run.artifact_id),
+            self.frozen.artifacts.get(&run.weidu_artifact_id),
+        ) else {
+            return false;
+        };
+        crate::weidu::ui_compat::reviewed(run, mod_file, artifact, tool)
+    }
+
     fn new(
         created: &'a CampaignCreated,
         frozen: &'a FrozenCliRecipe,
@@ -2450,13 +2619,11 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 run.run_id
             )));
         }
-        // The frozen recipe currently carries the invocation mode but no signed evidence that a
-        // particular explicit relative TP2 path was compatibility-tested. Keep production
-        // execution limited to setup-name mode until that schema contract is separately reviewed.
-        if mod_file.invocation_mode == InvocationMode::ExplicitTp2 {
-            return Err(StepFailure::new(
-                "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence; use setup-name mode",
-            ));
+        // An old, exact Infinity recipe is corrected to the already-supported setup-name
+        // invocation. No explicit-TP2 execution is enabled and its frozen plan is unchanged.
+        let ui_correction = self.reviewed_ui_correction(run) && components == [0];
+        if mod_file.invocation_mode == InvocationMode::ExplicitTp2 && !ui_correction {
+            return Err(StepFailure::new(crate::weidu::ui_compat::LEGACY_FAILURE));
         }
         let authored_prompts = run
             .prompt_scripts
@@ -2493,6 +2660,26 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
             })
             .collect();
         let tool = self.verified_tool(&run.weidu_artifact_id)?;
+        if ui_correction {
+            crate::weidu::invocation::validate_setup_name_declarations(
+                self.frozen
+                    .mods
+                    .values()
+                    .filter(|item| {
+                        item.invocation_mode == InvocationMode::SetupName || item.id == run.mod_id
+                    })
+                    .map(|item| item.tp2.as_str()),
+            )
+            .map_err(step_error)?;
+            let evidence = crate::weidu::ui_compat::prepare(self.target_root(run.target))
+                .map_err(step_error)?;
+            write_json_once(
+                &attempt
+                    .evidence_root
+                    .join("ui-invocation-compatibility.json"),
+                &evidence,
+            )?;
+        }
         // Run here, not only during materialization, so retrying an older frozen EET
         // attempt receives the same narrowly hash-guarded Windows compatibility fix.
         let artifact = self.artifact(&run.artifact_id)?;
@@ -2517,7 +2704,11 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
             &InvocationInput {
                 target: run.target,
                 tp2: mod_file.tp2.clone(),
-                mode: mod_file.invocation_mode,
+                mode: if ui_correction {
+                    InvocationMode::SetupName
+                } else {
+                    mod_file.invocation_mode
+                },
                 explicit_tp2_tested: false,
                 language: mod_file.language,
                 remaining_components: components.to_vec(),
@@ -2697,6 +2888,15 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
                 }
             }
             marker.components
+        } else if attempt.attempt == 1
+            && detail == crate::weidu::ui_compat::LEGACY_FAILURE
+            && self.reviewed_ui_correction(run)
+        {
+            // The shipped alpha.19 guard returned before tool preparation/invocation.json.
+            // Require its exact failure, first attempt, before.log alone and (below) an
+            // unchanged live log. Missing evidence for any other failure remains unsafe.
+            pre_spawn_file_digests(attempt, MutationKind::InvocationBuild, false)?;
+            run.components.clone()
         } else {
             // Alpha.13 predates the structured guard record. Its synchronized invocation
             // file is a mandatory write barrier before runner entry. Accept only its first
@@ -2993,6 +3193,60 @@ impl<S: EventSink + Sync> EventSink for BorrowedSink<'_, S> {
 }
 
 impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
+    fn manual_checkpoints(&self) -> Vec<crate::manual_checkpoint::FrozenCheckpoint> {
+        self.frozen.manual_checkpoints.clone()
+    }
+
+    fn manual_checkpoint(
+        &mut self,
+        checkpoint: &crate::manual_checkpoint::FrozenCheckpoint,
+    ) -> Result<bool, StepFailure> {
+        let root = &self.created.managed_root;
+        if crate::manual_checkpoint::acceptance(root, checkpoint)
+            .map_err(step_error)?
+            .is_some()
+        {
+            crate::manual_checkpoint::check_manual_processes().map_err(step_error)?;
+            recheck_target_before_mutation(&self.created.staged_bg1, "en_US")
+                .map_err(step_error)?;
+            recheck_target_before_mutation(&self.created.staged_bg2, "en_US")
+                .map_err(step_error)?;
+            crate::manual_checkpoint::verify_accepted_current(
+                root,
+                checkpoint,
+                &self.frozen.plan,
+                &self.frozen.mods,
+                &self.frozen.artifacts,
+            )
+            .map_err(step_error)?;
+            Ok(true)
+        } else {
+            // Validate the complete managed prefix before freezing a hand-over baseline.
+            let through = self
+                .frozen
+                .plan
+                .runs
+                .iter()
+                .position(|run| run.run_id == checkpoint.after_run_id)
+                .ok_or_else(|| StepFailure::new("Frozen checkpoint run is absent."))?;
+            let prefix = InstallPlan {
+                runs: self.frozen.plan.runs[..=through].to_vec(),
+            };
+            if !crate::manual_checkpoint::has_baseline(root, checkpoint).map_err(step_error)? {
+                verify_manual_prefix(root, &prefix, self.frozen).map_err(step_error)?;
+            }
+            crate::manual_checkpoint::begin(
+                root,
+                checkpoint,
+                &self.frozen.plan,
+                &self.frozen.mods,
+                &self.frozen.artifacts,
+            )
+            .map_err(step_error)?;
+            Ok(false)
+        }
+    }
+
     fn recover(
         &mut self,
         run: &PlannedRun,
@@ -3088,7 +3342,14 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
             let bytes = read_optional_weidu_log(self.target_root(target))?;
             let entries =
                 parse_active_entries(&String::from_utf8_lossy(&bytes)).map_err(step_error)?;
-            let expected = expected_log_components(plan, &self.frozen.mods, target)?;
+            let expected = crate::manual_checkpoint::expected_components(
+                &self.created.managed_root,
+                plan,
+                &self.frozen.mods,
+                &self.frozen.manual_checkpoints,
+                target,
+            )
+            .map_err(step_error)?;
             if entries.len() != expected.len()
                 || !entries.iter().zip(&expected).all(|(actual, expected)| {
                     actual.tp2_key == expected.tp2.replace('\\', "/").to_ascii_lowercase()
@@ -3114,10 +3375,18 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
             bg2_engine_name,
             managed_save_root: identity.save_root,
             launch_path,
-            verification_summary: format!(
-                "exact frozen stack matched across {} planned WeiDU runs",
-                plan.runs.len()
-            ),
+            verification_summary: if crate::manual_checkpoint::is_customized(
+                &self.created.managed_root,
+            )
+            .map_err(step_error)?
+            {
+                format!("Frozen managed stack and explicitly accepted manual WeiDU additions matched across {} planned runs. Manual compatibility is unverified; game updates are disabled.", plan.runs.len())
+            } else {
+                format!(
+                    "exact frozen stack matched across {} planned WeiDU runs",
+                    plan.runs.len()
+                )
+            },
         };
         self.persist_named_evidence("final", "state", &final_state)
     }
@@ -3311,7 +3580,10 @@ fn pre_spawn_file_digests(
             && !(prepared
                 && matches!(
                     name.as_str(),
-                    INVOCATION_FILE | DEBUG_LOG_FILE | "eet-compatibility.json"
+                    INVOCATION_FILE
+                        | DEBUG_LOG_FILE
+                        | "eet-compatibility.json"
+                        | "ui-invocation-compatibility.json"
                 ))
         {
             return Err(StepFailure::new(format!(
@@ -3537,34 +3809,62 @@ fn non_prefix_component_diagnostic(
         return None;
     }
 
+    // This is explanatory evidence only, never permission to resume. A missing
+    // component and a different order can occur together; do not lose either
+    // diagnosis by requiring the recorded subset to be an ordered subsequence.
+    let requested_set = requested.iter().copied().collect::<BTreeSet<_>>();
+    if requested_set.len() != requested.len() {
+        return None;
+    }
     let mut installed = Vec::with_capacity(appended.len());
-    let mut requested_cursor = 0;
+    let mut installed_set = BTreeSet::new();
     for entry in appended {
-        let offset = requested[requested_cursor..]
-            .iter()
-            .position(|component| *component == entry.component)?;
-        requested_cursor += offset + 1;
+        if !requested_set.contains(&entry.component)
+            || !installed_set.insert(entry.component)
+            || before_entries
+                .iter()
+                .any(|previous| same_log_entry(previous, entry))
+        {
+            return None;
+        }
         installed.push(entry.component);
     }
     let missing = requested
         .iter()
         .copied()
-        .filter(|component| !installed.contains(component))
+        .filter(|component| !installed_set.contains(component))
         .collect::<Vec<_>>();
-    if missing.is_empty() {
+    let expected_installed = requested
+        .iter()
+        .copied()
+        .filter(|component| installed_set.contains(component))
+        .collect::<Vec<_>>();
+    let order_differs = installed != expected_installed;
+    if missing.is_empty() && !order_differs {
         return None;
     }
-    let missing = missing
-        .iter()
-        .map(u32::to_string)
-        .collect::<Vec<_>>()
-        .join(", ");
 
-    Some(format!(
-        "For run {run_id:?} (mod {mod_id:?}), {} of {} requested components are recorded. Components {missing} are not recorded as installed. Missing rows do not identify the cause; see the attempt diagnostics.",
+    let mut detail = format!(
+        "For run {run_id:?} (mod {mod_id:?}), {} of {} requested components are recorded. Previously installed components are still recorded in the same order.",
         installed.len(),
         requested.len(),
-    ))
+    );
+    if !missing.is_empty() {
+        let missing = missing
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        detail.push_str(&format!(
+            " Components {missing} are not recorded as installed. Missing rows do not identify the cause; see the attempt diagnostics."
+        ));
+    }
+    if order_differs {
+        detail.push_str(&format!(
+            " Component order differs from the recipe: expected the recorded components in order {expected_installed:?}, found {installed:?}."
+        ));
+    }
+    Some(detail)
 }
 
 fn stack_disturbed_reconciliation(
@@ -3576,14 +3876,15 @@ fn stack_disturbed_reconciliation(
     language: u32,
     requested: &[u32],
 ) -> InstallReconciliation {
-    let reason =
-        non_prefix_component_diagnostic(before, after, run_id, mod_id, tp2, language, requested)
-            .map_or_else(
-                || "WeiDU.log changed outside the exact frozen component suffix".to_owned(),
-                |detail| {
-                    format!("WeiDU.log changed outside the exact frozen component suffix. {detail}")
-                },
-            );
+    let reason = non_prefix_component_diagnostic(
+        before, after, run_id, mod_id, tp2, language, requested,
+    )
+    .map_or_else(
+        || "WeiDU.log changed outside the exact frozen component suffix".to_owned(),
+        |detail| {
+            format!("The mod's recorded result does not match the installation recipe. {detail}")
+        },
+    );
     InstallReconciliation::FreshCopyRequired { reason }
 }
 
@@ -3891,6 +4192,158 @@ mod tests {
         }
     }
 
+    #[test]
+    fn frozen_infinity_retry_requires_exact_terminal_failure_and_unchanged_unstarted_evidence() {
+        use super::{GuardedCliDependencies, StepAttempt};
+        use crate::events::ChannelSink;
+        use crate::games::{Eligibility, GameCandidate};
+        use crate::manifest::InvocationMode;
+        use crate::session::{SessionEvent, SessionStore};
+
+        for case in [
+            "valid",
+            "wrong-reason",
+            "wrong-pin",
+            "wrong-run",
+            "changed-log",
+            "runner-output",
+            "debug-output",
+            "prepared-invocation",
+            "wrong-attempt",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = temp.path().canonicalize().unwrap();
+            let manifest =
+                Manifest::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest")).unwrap();
+            let authored = manifest
+                .collection
+                .runs
+                .iter()
+                .find(|run| run.run_id == "game-interface-infinity-bg2")
+                .unwrap();
+            let mut run = crate::resolve::PlannedRun {
+                run_id: authored.run_id.clone(),
+                mod_id: authored.mod_id.clone(),
+                target: authored.phase.game_root(),
+                phase: authored.phase,
+                components: authored.components.clone(),
+                args: authored.args.clone(),
+                postconditions: authored.postconditions.clone(),
+                artifact_id: "infinity-ui-1.28".into(),
+                weidu_artifact_id: "weidu-249-amd64".into(),
+                prompt_scripts: vec![],
+            };
+            if case == "wrong-run" {
+                run.run_id = "other-run".into();
+            }
+            let mut frozen = frozen_recipe_fixture();
+            frozen.mods = manifest.mods;
+            frozen.artifacts = manifest.artifacts;
+            frozen.mods.get_mut("infinity-ui").unwrap().invocation_mode =
+                InvocationMode::ExplicitTp2;
+            if case == "wrong-pin" {
+                frozen
+                    .artifacts
+                    .get_mut("infinity-ui-1.28")
+                    .unwrap()
+                    .source
+                    .sha256 = "00".repeat(32);
+            }
+            frozen.plan.runs = vec![run.clone()];
+            let mut created =
+                created_for_frozen_recipe(&frozen, serde_json::to_vec(&frozen).unwrap());
+            created.managed_root = root.clone();
+            created.cache_root = root.join("cache");
+            created.staged_bg1 = root.join("bg1");
+            created.staged_bg2 = root.join("game");
+            for path in [
+                &created.cache_root,
+                &created.staged_bg1,
+                &created.staged_bg2,
+            ] {
+                std::fs::create_dir(path).unwrap();
+            }
+            let store =
+                SessionStore::create(&root, SessionEvent::Created(Box::new(created.clone())))
+                    .unwrap();
+            let step_id = format!("install:{}", run.run_id);
+            store
+                .append(SessionEvent::StepStarted {
+                    step_id: step_id.clone(),
+                    attempt: 1,
+                })
+                .unwrap();
+            store
+                .append(SessionEvent::StepFailed {
+                    step_id: step_id.clone(),
+                    attempt: 1,
+                    detail: if case == "wrong-reason" {
+                        "some unrelated build error".into()
+                    } else {
+                        crate::weidu::ui_compat::LEGACY_FAILURE.into()
+                    },
+                })
+                .unwrap();
+            let evidence_root = root.join("evidence");
+            std::fs::create_dir(&evidence_root).unwrap();
+            std::fs::write(evidence_root.join("before.log"), b"").unwrap();
+            if case == "changed-log" {
+                std::fs::write(created.staged_bg2.join("WeiDU.log"), b"changed").unwrap();
+            }
+            if case == "runner-output" {
+                std::fs::write(evidence_root.join("stdout.log"), b"possible execution").unwrap();
+            }
+            if case == "debug-output" {
+                std::fs::write(evidence_root.join("weidu.debug.log"), b"possible execution")
+                    .unwrap();
+            }
+            if case == "prepared-invocation" {
+                std::fs::write(evidence_root.join("invocation.json"), b"{}").unwrap();
+            }
+            let attempt = StepAttempt {
+                step_id,
+                attempt: if case == "wrong-attempt" { 2 } else { 1 },
+                evidence_root,
+            };
+            let candidate = GameCandidate {
+                role: GameRole::Bg2ee,
+                storefront: Storefront::Steam,
+                root: root.clone(),
+                build: None,
+                eligibility: Eligibility::Eligible,
+                findings: vec![],
+                fingerprint: None,
+            };
+            let (sink, _events) = ChannelSink::unbounded();
+            let dependencies = GuardedCliDependencies::new(
+                &created,
+                &frozen,
+                candidate.clone(),
+                candidate,
+                root.join("app-data"),
+                &sink,
+                RunnerControlHandle::default(),
+            );
+            let result = dependencies.recover_before_spawn(&run, &attempt);
+            if case == "valid" {
+                assert_eq!(
+                    result.unwrap(),
+                    Some(InstallReconciliation::Retry { remaining: vec![0] })
+                );
+            } else {
+                assert!(
+                    !matches!(result, Ok(Some(InstallReconciliation::Retry { .. }))),
+                    "unsafe retry for {case}"
+                );
+            }
+            assert_eq!(
+                store.replay().unwrap().records.len(),
+                3,
+                "inspection must not rewrite history"
+            );
+        }
+    }
+
     fn frozen_recipe_fixture() -> FrozenCliRecipe {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest");
         let manifest = Manifest::load(&root).expect("load frozen-recipe manifest fixture");
@@ -3910,6 +4363,7 @@ mod tests {
         .expect("load game-profile fixtures");
         FrozenCliRecipe {
             release_version: None,
+            manual_checkpoints: Vec::new(),
             application_version: None,
             schema: CLI_FROZEN_RECIPE_SCHEMA,
             display_name: Some("Chriz Easy BG".to_owned()),
@@ -4106,6 +4560,238 @@ mod tests {
             InstallReconciliation::FreshCopyRequired { reason }
                 if reason.contains("170, 192")
         ));
+    }
+
+    fn diagnostic_log(before: &str, components: &[u32]) -> String {
+        let mut after = before.to_owned();
+        for component in components {
+            after.push_str(&format!(
+                "~SETUP-CHRIZ-BG-REBALANCE.TP2~ #0 #{component} // selected\n"
+            ));
+        }
+        after
+    }
+
+    #[test]
+    fn non_prefix_diagnostic_reports_missing_components_and_reordered_subset_separately() {
+        let requested = [
+            100, 101, 110, 111, 120, 121, 301, 302, 400, 401, 404, 405, 407, 408,
+        ];
+        let installed = [
+            100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302,
+        ];
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let after = diagnostic_log(before, &installed);
+
+        let detail = non_prefix_component_diagnostic(
+            before,
+            &after,
+            "chriz-bg-rebalance-bg2",
+            "chriz-bg-rebalance",
+            "setup-chriz-bg-rebalance.tp2",
+            0,
+            &requested,
+        )
+        .expect("missing component and reordered tail should both be explained");
+
+        assert!(detail.contains("13 of 14 requested components"));
+        assert!(detail.contains("Components 110 are not recorded as installed"));
+        assert!(
+            detail.contains("Previously installed components are still recorded in the same order")
+        );
+        assert!(detail.contains("Component order differs from the recipe"));
+        assert!(
+            detail.contains("[100, 101, 111, 120, 121, 301, 302, 400, 401, 404, 405, 407, 408]")
+        );
+        assert!(
+            detail.contains("[100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302]")
+        );
+        assert!(matches!(
+            stack_disturbed_reconciliation(
+                before,
+                &after,
+                "chriz-bg-rebalance-bg2",
+                "chriz-bg-rebalance",
+                "setup-chriz-bg-rebalance.tp2",
+                0,
+                &requested,
+            ),
+            InstallReconciliation::FreshCopyRequired { reason }
+                if reason.contains("Components 110")
+                    && reason.contains("Component order differs")
+                    && !reason.contains("changed outside")
+        ));
+    }
+
+    #[test]
+    fn non_prefix_diagnostic_explains_complete_but_reordered_run_without_permitting_resume() {
+        use crate::weidu::verify::{reconcile, ExpectedRun, Reconciliation};
+
+        let requested = [301, 302, 400];
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let after = diagnostic_log(before, &[301, 400, 302]);
+        let detail = non_prefix_component_diagnostic(
+            before,
+            &after,
+            "rebalance",
+            "chriz-bg-rebalance",
+            "setup-chriz-bg-rebalance.tp2",
+            0,
+            &requested,
+        )
+        .expect("full but reordered result should explain the order discrepancy");
+
+        assert!(detail.contains("3 of 3 requested components"));
+        assert!(detail.contains("Component order differs from the recipe"));
+        assert!(!detail.contains("not recorded as installed"));
+        let debug = "SUCCESSFULLY INSTALLED component\n".repeat(3);
+        assert_eq!(
+            reconcile(
+                before,
+                &after,
+                &debug,
+                &ExpectedRun {
+                    tp2: "setup-chriz-bg-rebalance.tp2".into(),
+                    language: 0,
+                    components: requested.into(),
+                    exit_code: 0,
+                },
+            ),
+            Reconciliation::StackDisturbed,
+        );
+        assert!(matches!(
+            stack_disturbed_reconciliation(
+                before,
+                &after,
+                "rebalance",
+                "chriz-bg-rebalance",
+                "setup-chriz-bg-rebalance.tp2",
+                0,
+                &requested,
+            ),
+            InstallReconciliation::FreshCopyRequired { .. }
+        ));
+    }
+
+    #[test]
+    fn non_prefix_diagnostic_does_not_explain_untrusted_or_unchanged_results_as_partial_success() {
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let tail = diagnostic_log("", &[301, 400]);
+        let changed_prefix = "~EARLIER/SETUP-EARLIER.TP2~ #0 #2 // changed\n";
+        let earlier_same_component = diagnostic_log(before, &[301]);
+        let cases = [
+            (
+                "empty result",
+                before.to_owned(),
+                before.to_owned(),
+                vec![301, 302, 400],
+            ),
+            (
+                "exact result",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 302, 400]),
+                vec![301, 302, 400],
+            ),
+            (
+                "duplicate requested",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 400]),
+                vec![301, 302, 400, 301],
+            ),
+            (
+                "duplicate recorded",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 400, 301]),
+                vec![301, 302, 400],
+            ),
+            (
+                "duplicate earlier component",
+                earlier_same_component.clone(),
+                diagnostic_log(&earlier_same_component, &[301, 400]),
+                vec![301, 302, 400],
+            ),
+            (
+                "unrequested component",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 999]),
+                vec![301, 302, 400],
+            ),
+            (
+                "changed earlier component",
+                before.to_owned(),
+                format!("{changed_prefix}{tail}"),
+                vec![301, 302, 400],
+            ),
+            (
+                "removed earlier component",
+                before.to_owned(),
+                tail.clone(),
+                vec![301, 302, 400],
+            ),
+            (
+                "wrong mod",
+                before.to_owned(),
+                format!(
+                    "{before}{}",
+                    tail.replace("SETUP-CHRIZ-BG-REBALANCE", "SETUP-OTHER")
+                ),
+                vec![301, 302, 400],
+            ),
+            (
+                "wrong path",
+                before.to_owned(),
+                format!("{before}{}", tail.replace("~SETUP-", "~OTHER/SETUP-")),
+                vec![301, 302, 400],
+            ),
+            (
+                "wrong language",
+                before.to_owned(),
+                format!("{before}{}", tail.replace("#0", "#1")),
+                vec![301, 302, 400],
+            ),
+            (
+                "new uninstall",
+                before.to_owned(),
+                format!(
+                    "{before}{tail}// Recently Uninstalled: ~EARLIER/SETUP-EARLIER.TP2~ #0 #1\n"
+                ),
+                vec![301, 302, 400],
+            ),
+            (
+                "malformed result",
+                before.to_owned(),
+                format!("{before}{tail}~BROKEN\n"),
+                vec![301, 302, 400],
+            ),
+            (
+                "malformed before",
+                "~BROKEN\n".to_owned(),
+                format!("{before}{tail}"),
+                vec![301, 302, 400],
+            ),
+            (
+                "empty request",
+                before.to_owned(),
+                format!("{before}{tail}"),
+                vec![],
+            ),
+        ];
+
+        for (name, before, after, requested) in cases {
+            assert!(
+                non_prefix_component_diagnostic(
+                    &before,
+                    &after,
+                    "rebalance",
+                    "chriz-bg-rebalance",
+                    "setup-chriz-bg-rebalance.tp2",
+                    0,
+                    &requested,
+                )
+                .is_none(),
+                "unexpected bounded diagnosis for {name}"
+            );
+        }
     }
 
     #[test]

@@ -18,6 +18,11 @@ Allow partial delivery: describe exactly which rules are enforced, which are
 partly enforced and which remain player rules. Do not promise an exploit-proof
 mode or build elaborate enforcement for low-value edge cases.
 
+September 29 clarification: place **Challenge Mode** among CEBG's main prominent
+mod checkboxes, with multiple individually explained component choices beneath
+it. Do not hide it among advanced settings or make it an indivisible bundle.
+This is future UI scope, not a change to the current install or release candidate.
+
 ## Complete rule inventory
 
 | Source | Rule / requested change | Preparation and boundary for later work |
@@ -29,6 +34,7 @@ mode or build elaborate enforcement for low-value edge cases.
 | 3 + new request | No traps; Skull Trap only after combat starts. Untriggered Skull Traps explode automatically after one round | Treat party trap-setting separately from world traps/enemy encounters. Include kit/HLA trap sources in the audit. Keep both Skull Trap requirements: the timer alone does not enforce combat-only casting. Verify the actual SR/non-SR spell variants later. |
 | 4 + new request | No Arrows of Dispelling against enemies; remove almost all from availability, at least BG1 | Identify BG1 sources first; later-game removals and any retained exceptions need an explicit list. “Almost all” is not approval for deleting every copy globally. |
 | 5 | At most one Wish per combat | Candidate enforcement; settle combat boundaries and cast/clone accounting before implementing. Do not silently reinterpret as one per character. |
+| September 29 addition | Wish's Improved Haste uses the Spell Revisions version when SR is installed | Separate Challenge Mode component choice. Replace the vanilla Improved Haste effect granted by Wish with SR Improved Haste; no change requested for non-SR installs or other Wish results. Coordinate with the SR owner and check the effective Wish effect/provider when implementing. This is independent of the once-per-combat Wish rule; record only now, no source research, implementation or current-release addition. |
 | 6 | Each character may memorize at most one Time Stop | This is a prepared-copy limit, not automatically a once-per-fight casting limit. Check kit and spell-system interactions before choosing enforcement. |
 | 7 | No explosive arrows | Candidate availability/use restriction; identify all relevant variants without removing unrelated ammunition. |
 | 8 | Stealing limited to five items per shopkeeper | Lower-priority enforcement unless simple. Decide item-versus-stack and persistent shopkeeper accounting later. |

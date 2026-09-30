@@ -2,6 +2,7 @@ import type { SelectionEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { persistDisclosure } from "../components/disclosure";
 import { gameInterfaceSelector } from "../components/game-interface";
+import { manualBreakpointEditor, invalidBreakpoints, type ManualBreakpointEditorModel } from "../components/manual-checkpoints";
 import { featureInputs, type InputChange } from "../components/feature-inputs";
 import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, type ExclusiveChoiceGroup } from "../customization";
 
@@ -13,12 +14,14 @@ export interface SetupViewState {
   categoryOpen?: Record<string, boolean>;
   bundleMemory?: Record<string, Readonly<Record<string, boolean>>>;
   adjustedChoices?: readonly string[];
+  manualModsOpen?: boolean;
 }
 
 export interface SetupBatchActions {
   change(changes: Record<string, boolean>, focusId: string): void | Promise<void>;
   reset(): void | Promise<void>;
   input?: InputChange;
+  manualBreakpoints?: Omit<ManualBreakpointEditorModel, "open" | "onOpen" | "phaseTitles">;
 }
 
 const decisionLabels = { mandatory: "Always included", default: "Recommended", optional: "Optional", excluded: "Not included" } as const;
@@ -56,12 +59,21 @@ export function setupScreen(
   const top = element("div", "setup-heading");
   const done = actionButton("Done", next);
   const invalidInputs = new Set<string>();
+  const invalidPauses = batch?.manualBreakpoints ? invalidBreakpoints(batch.manualBreakpoints.selected, batch.manualBreakpoints.options).length > 0 : false;
+  done.disabled = invalidPauses;
   const inputValidity = (id: string, valid: boolean): void => {
     if (valid) invalidInputs.delete(id); else invalidInputs.add(id);
-    done.disabled = invalidInputs.size > 0;
+    done.disabled = invalidInputs.size > 0 || invalidPauses;
   };
   top.append(screenIntro("", "Customize your installation", "Chriz’s setup is ready to install. Change just the things you want."), screenActions(back, done));
   header.append(top);
+  if (invalidPauses) {
+    const notice = element("p", "unavailable-reason", "A manual-mod pause needs correction. Open Advanced: Add your own mods below, then remove the pause or restore its component.");
+    notice.id = "manual-pause-correction";
+    notice.setAttribute("role", "alert");
+    done.setAttribute("aria-describedby", notice.id);
+    header.append(notice);
+  }
   page.append(header);
   const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
   const interfaceGroup = exclusiveGroups.find(group => group.id === "game-interface");
@@ -309,6 +321,10 @@ export function setupScreen(
   filter();
   advanced.append(groups, empty);
   page.append(advanced);
+  if (batch?.manualBreakpoints) page.append(manualBreakpointEditor({ ...batch.manualBreakpoints,
+    open: viewState.manualModsOpen, onOpen: open => { viewState.manualModsOpen = open; },
+    phaseTitles: Object.fromEntries(evaluation.plan.phases.map(phase => [phase.id, phase.title])),
+  }));
   if (evaluation.findings.length > 0) {
     const notices = element("details", "recipe-notices setup-notices");
     const heading = element("summary", undefined, `${evaluation.findings.length} setup ${evaluation.findings.length === 1 ? "note" : "notes"}`);

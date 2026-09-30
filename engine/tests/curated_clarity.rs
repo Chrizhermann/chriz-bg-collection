@@ -26,7 +26,7 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        450 // September 26 approval: Emotion exclusivity (BG Rebalance 301) now default.
+        454 // September 29 adds Flail 302, Evandra 224/225 and Wing Buffet 111 defaults.
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");
@@ -61,11 +61,11 @@ fn emotion_exclusivity_is_a_ready_default_with_an_independent_opt_out() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.6.0"
+        "chriz-bg-rebalance-0.7.1"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 120, 121, 301, 400, 401, 404, 405, 407, 408][..])
+        Some(&[100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302][..])
     );
 
     let mut selection = baseline.normalized_selection.to_selection();
@@ -92,6 +92,71 @@ fn emotion_exclusivity_is_a_ready_default_with_an_independent_opt_out() {
             .components_for("chriz-bg-rebalance-bg2"),
         None
     );
+}
+
+#[test]
+fn stronghold_choices_cannot_send_native_incompatible_components_to_weidu() {
+    let manifest = recipe();
+    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let feature = |n| format!("feature:cdtweaks:component-{n}");
+    for n in 1340..=1347 {
+        let control = baseline.view.control(&feature(n)).unwrap();
+        assert!(!control.selected && !control.interactive);
+        assert!(control
+            .unavailable_reason
+            .as_deref()
+            .unwrap()
+            .contains("Multiple Strongholds"));
+    }
+
+    // Both supported Multiple Strongholds choices remain usable on their own.
+    for multiple in [1160, 1161] {
+        let mut selection = baseline.normalized_selection.to_selection();
+        for n in [1160, 1161] {
+            selection.set_feature(&feature(n), n == multiple);
+        }
+        let result = evaluate(&manifest, &selection).unwrap();
+        assert!(result
+            .plan
+            .components_for("cdtweaks-bg2")
+            .unwrap()
+            .contains(&multiple));
+        // Even a stale/imported selection cannot slip an incompatible pair through.
+        for individual in 1340..=1347 {
+            let mut invalid = selection.clone();
+            invalid.set_feature(&feature(individual), true);
+            let result = evaluate(&manifest, &invalid).unwrap();
+            let components = result.plan.components_for("cdtweaks-bg2").unwrap();
+            assert!(!components.contains(&multiple));
+            assert!(!components.contains(&individual));
+        }
+    }
+
+    // All eight individual choices are mutually compatible once Multiple is off.
+    let mut selection = baseline.normalized_selection.to_selection();
+    for n in [1160, 1161] {
+        selection.set_feature(&feature(n), false);
+    }
+    for n in 1340..=1347 {
+        selection.set_feature(&feature(n), true);
+    }
+    let result = evaluate(&manifest, &selection).unwrap();
+    let mut expected = baseline.plan.clone();
+    let components = &mut expected
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == "cdtweaks-bg2")
+        .unwrap()
+        .components;
+    // These eight components immediately follow 1161 in the native TP2 order,
+    // which is not globally numeric. Preserve every other component's position.
+    let at = components.iter().position(|n| *n == 1161).unwrap();
+    components.splice(at..=at, 1340..=1347);
+    assert_eq!(result.plan, expected);
+    for n in 1340..=1347 {
+        let control = result.view.control(&feature(n)).unwrap();
+        assert!(control.selected && control.interactive);
+    }
 }
 
 #[test]
@@ -123,6 +188,64 @@ fn emotion_exclusivity_keeps_the_reviewed_provider_and_later_tweak_order() {
         .components_for("cdtweaks-spell-save-penalties-bg2")
         .unwrap()
         .contains(&2312));
+}
+
+#[test]
+fn custom_bg1npc_choices_require_the_core_even_with_the_parent_enabled() {
+    let manifest = recipe();
+    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let mut selection = baseline.normalized_selection.to_selection();
+    selection.set_feature("feature:bg1npc:component-0", false);
+    for feature in &manifest.collection.features {
+        if feature.id.starts_with("feature:bg1npc:") && feature.id != "feature:bg1npc:component-0" {
+            let mut requested = selection.clone();
+            requested.set_feature(&feature.id, true);
+            let result = evaluate(&manifest, &requested).unwrap();
+            assert!(result.view.control("mod:bg1npc").unwrap().selected);
+            assert!(result.normalized_selection.features[&feature.id]);
+            assert!(
+                !result.view.control(&feature.id).unwrap().selected,
+                "{}",
+                feature.id
+            );
+            assert_eq!(
+                result.plan.components_for("bg1npc-bg1"),
+                None,
+                "{}",
+                feature.id
+            );
+        }
+    }
+    selection.set_feature("feature:bg1npc:component-0", true);
+    assert_eq!(evaluate(&manifest, &selection).unwrap().plan, baseline.plan);
+}
+
+#[test]
+fn scs_bundle_requires_the_actual_ascension_finale_in_both_profiles() {
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(
+            &PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join(directory),
+        )
+        .unwrap();
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        let mut selection = baseline.normalized_selection.to_selection();
+        selection.set_feature("feature:ascension:component-0", false);
+        let result = evaluate(&manifest, &selection).unwrap();
+        assert!(result.view.control("mod:ascension").unwrap().selected);
+        let scs = result.view.control("mod:stratagems").unwrap();
+        assert!(!scs.selected && !scs.interactive);
+        assert!(scs
+            .unavailable_reason
+            .as_deref()
+            .unwrap()
+            .contains("Rewritten Final Chapter"));
+        assert!(result.normalized_selection.features["mod:stratagems"]);
+        assert_eq!(result.plan.components_for("stratagems-bg2"), None);
+        selection.set_feature("feature:ascension:component-0", true);
+        assert_eq!(evaluate(&manifest, &selection).unwrap().plan, baseline.plan);
+    }
 }
 
 #[test]

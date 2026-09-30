@@ -16,12 +16,12 @@ use super::AcquireError;
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const EXTRACTION_MARKER: &str = ".chriz-bg-extraction.json";
-const EXTRACTION_MARKER_VERSION: u32 = 2;
-const EXTRACTION_CACHE_NAMESPACE: &str = "sha256-v2";
+const EXTRACTION_MARKER_VERSION: u32 = 3;
+const EXTRACTION_CACHE_NAMESPACE: &str = "sha256-v3";
 static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Resource limits applied before any archive entry is written.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ArchiveLimits {
     /// Maximum number of path components in one entry.
     pub max_depth: usize,
@@ -48,7 +48,8 @@ impl Default for ArchiveLimits {
 }
 
 /// Extraction policy selected by the recipe source.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum ArchiveMode {
     /// A redistributable recipe with a mandatory immutable digest and ZIP-compatible framing.
     Public,
@@ -57,7 +58,8 @@ pub enum ArchiveMode {
 }
 
 /// ZIP-compatible archive framing declared by the recipe.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum ArchiveFormat {
     /// A standard `.zip` artifact.
     Zip,
@@ -91,6 +93,8 @@ pub struct ExtractedArtifact {
     pub root: PathBuf,
     /// Verified archive SHA-256 used as the cache key.
     pub artifact_sha256: String,
+    /// Digest of the canonical extraction layout, policy, format, and limits.
+    pub extraction_contract_sha256: String,
     /// Single stripped wrapper directory, when present.
     pub wrapper_directory: Option<String>,
     /// Recipe-approved materialization roots.
@@ -112,6 +116,7 @@ struct ValidatedEntry {
 struct ExtractionMarker {
     version: u32,
     artifact_sha256: String,
+    contract_sha256: String,
     wrapper_directory: Option<String>,
     expected_roots: Vec<String>,
     expected_tp2_paths: Vec<String>,
@@ -125,8 +130,25 @@ struct ExtractedFile {
     sha256: String,
 }
 
+#[derive(Serialize)]
+struct ExtractionContract<'a> {
+    version: u32,
+    format: ArchiveFormat,
+    mode: ArchiveMode,
+    expected_roots: &'a [String],
+    expected_tp2_paths: &'a [String],
+    limits: &'a ArchiveLimits,
+}
+
+struct ExtractionIdentity<'a> {
+    digest: &'a str,
+    contract_sha256: &'a str,
+    expected_roots: &'a [String],
+    expected_tp2_paths: &'a [String],
+}
+
 /// Validate a complete ZIP central directory, extract only approved payload roots into a
-/// private temporary, and publish them under the verified archive digest.
+/// private temporary, and publish them under the archive and extraction-contract digests.
 pub fn extract_archive(
     archive_path: &Path,
     extraction_cache: &Path,
@@ -210,17 +232,24 @@ pub fn extract_archive(
     }
 
     let digest = actual_digest;
+    // The same immutable archive can be used by recipes with different publish roots or
+    // safety policies. A stricter policy must validate the archive anew, not reuse a tree
+    // accepted under broader limits. Legacy digest-only namespaces remain untouched.
+    let contract_sha256 =
+        extraction_contract_sha256(requirements, &expected_roots, &expected_tp2_paths)?;
+    let identity = ExtractionIdentity {
+        digest: &digest,
+        contract_sha256: &contract_sha256,
+        expected_roots: &expected_roots,
+        expected_tp2_paths: &expected_tp2_paths,
+    };
     let final_root = extraction_cache
         .join(EXTRACTION_CACHE_NAMESPACE)
         .join(&digest[..2])
-        .join(&digest);
+        .join(&digest)
+        .join(&contract_sha256);
     if final_root.exists() {
-        return validate_published_extraction(
-            final_root,
-            &digest,
-            &expected_roots,
-            &expected_tp2_paths,
-        );
+        return validate_published_extraction(final_root, &identity);
     }
 
     let (entries, wrapper_directory) = match requirements.format {
@@ -263,19 +292,15 @@ pub fn extract_archive(
             snapshot.path(),
             &entries,
             &temporary,
-            &digest,
             wrapper_directory.clone(),
-            &expected_roots,
-            &expected_tp2_paths,
+            &identity,
         ),
         ArchiveFormat::SelfExtractingRar => extract_rar_entries(
             snapshot.path(),
             &entries,
             &temporary,
-            &digest,
             wrapper_directory.clone(),
-            &expected_roots,
-            &expected_tp2_paths,
+            &identity,
         ),
     };
     if let Err(error) = result {
@@ -295,12 +320,7 @@ pub fn extract_archive(
         Ok(()) => {}
         Err(_source) if final_root.exists() => {
             let _ = fs::remove_dir_all(&temporary);
-            return validate_published_extraction(
-                final_root,
-                &digest,
-                &expected_roots,
-                &expected_tp2_paths,
-            );
+            return validate_published_extraction(final_root, &identity);
         }
         Err(source) => {
             let _ = fs::remove_dir_all(&temporary);
@@ -315,10 +335,32 @@ pub fn extract_archive(
     Ok(ExtractedArtifact {
         root: final_root,
         artifact_sha256: digest,
+        extraction_contract_sha256: contract_sha256,
         wrapper_directory,
         expected_roots,
         expected_tp2_paths,
     })
+}
+
+fn extraction_contract_sha256(
+    requirements: &ArchiveRequirements,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> Result<String, AcquireError> {
+    // Named, fixed-order fields and JSON string/array framing avoid ambiguous concatenation.
+    // Paths have already been validated, case-folded, separator-normalized, and sorted.
+    let contract = ExtractionContract {
+        version: EXTRACTION_MARKER_VERSION,
+        format: requirements.format,
+        mode: requirements.mode,
+        expected_roots,
+        expected_tp2_paths,
+        limits: &requirements.limits,
+    };
+    let bytes = serde_json::to_vec(&contract).map_err(|error| {
+        AcquireError::InvalidRequest(format!("could not encode extraction contract: {error}"))
+    })?;
+    Ok(hex::encode(Sha256::digest(bytes)))
 }
 
 fn validate_limits(limits: &ArchiveLimits) -> Result<(), AcquireError> {
@@ -341,14 +383,14 @@ fn normalize_expected_paths(values: &[String], label: &str) -> Result<Vec<String
     for value in values {
         let path = normalize_relative_path(value, false)?;
         let key = casefold(&path);
-        if !seen.insert(key) {
+        if !seen.insert(key.clone()) {
             return Err(AcquireError::InvalidRequest(format!(
                 "duplicate case-insensitive expected {label}: {value}"
             )));
         }
-        normalized.push(path);
+        normalized.push(key);
     }
-    normalized.sort_by_key(|path| casefold(path));
+    normalized.sort();
     Ok(normalized)
 }
 
@@ -938,10 +980,8 @@ fn extract_zip_entries(
     archive_path: &Path,
     entries: &[ValidatedEntry],
     temporary: &Path,
-    digest: &str,
     wrapper_directory: Option<String>,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
     let file = File::open(archive_path).map_err(|source| AcquireError::Io {
         action: "open archive",
@@ -1022,14 +1062,7 @@ fn extract_zip_entries(
             sha256: hex::encode(hash.finalize()),
         });
     }
-    write_extraction_marker(
-        temporary,
-        digest,
-        wrapper_directory,
-        expected_roots,
-        expected_tp2_paths,
-        records,
-    )
+    write_extraction_marker(temporary, wrapper_directory, identity, records)
 }
 
 #[cfg(not(windows))]
@@ -1037,10 +1070,8 @@ fn extract_rar_entries(
     archive_path: &Path,
     _entries: &[ValidatedEntry],
     _temporary: &Path,
-    _digest: &str,
     _wrapper_directory: Option<String>,
-    _expected_roots: &[String],
-    _expected_tp2_paths: &[String],
+    _identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
     Err(AcquireError::ArchiveFormat {
         path: archive_path.to_path_buf(),
@@ -1115,10 +1146,8 @@ fn extract_rar_entries(
     archive_path: &Path,
     entries: &[ValidatedEntry],
     temporary: &Path,
-    digest: &str,
     wrapper_directory: Option<String>,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
     let path = WideCString::from_os_str(archive_path).map_err(|_| {
         AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
@@ -1322,31 +1351,23 @@ fn extract_rar_entries(
             message: "not every validated RAR entry was extracted".to_owned(),
         });
     }
-    write_extraction_marker(
-        temporary,
-        digest,
-        wrapper_directory,
-        expected_roots,
-        expected_tp2_paths,
-        records,
-    )
+    write_extraction_marker(temporary, wrapper_directory, identity, records)
 }
 
 fn write_extraction_marker(
     temporary: &Path,
-    digest: &str,
     wrapper_directory: Option<String>,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
     mut records: Vec<ExtractedFile>,
 ) -> Result<(), AcquireError> {
     records.sort_by_key(|record| casefold(&record.relative_path));
     let marker = ExtractionMarker {
         version: EXTRACTION_MARKER_VERSION,
-        artifact_sha256: digest.to_owned(),
+        artifact_sha256: identity.digest.to_owned(),
+        contract_sha256: identity.contract_sha256.to_owned(),
         wrapper_directory,
-        expected_roots: expected_roots.to_vec(),
-        expected_tp2_paths: expected_tp2_paths.to_vec(),
+        expected_roots: identity.expected_roots.to_vec(),
+        expected_tp2_paths: identity.expected_tp2_paths.to_vec(),
         files: records,
     };
     let marker_path = temporary.join(EXTRACTION_MARKER);
@@ -1375,10 +1396,14 @@ fn write_extraction_marker(
 
 fn validate_published_extraction(
     root: PathBuf,
-    digest: &str,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
 ) -> Result<ExtractedArtifact, AcquireError> {
+    let ExtractionIdentity {
+        digest,
+        contract_sha256,
+        expected_roots,
+        expected_tp2_paths,
+    } = *identity;
     let metadata = fs::symlink_metadata(&root).map_err(|source| AcquireError::Io {
         action: "inspect published extraction",
         path: root.clone(),
@@ -1415,6 +1440,7 @@ fn validate_published_extraction(
         })?;
     if marker.version != EXTRACTION_MARKER_VERSION
         || marker.artifact_sha256 != digest
+        || marker.contract_sha256 != contract_sha256
         || marker.expected_roots != expected_roots
         || marker.expected_tp2_paths != expected_tp2_paths
     {
@@ -1551,6 +1577,7 @@ fn validate_published_extraction(
     Ok(ExtractedArtifact {
         root,
         artifact_sha256: digest.to_owned(),
+        extraction_contract_sha256: contract_sha256.to_owned(),
         wrapper_directory: marker.wrapper_directory,
         expected_roots: expected_roots.to_vec(),
         expected_tp2_paths: expected_tp2_paths.to_vec(),
@@ -1560,9 +1587,12 @@ fn validate_published_extraction(
 pub(super) fn verify_extracted_artifact(artifact: &ExtractedArtifact) -> Result<(), AcquireError> {
     let verified = validate_published_extraction(
         artifact.root.clone(),
-        &artifact.artifact_sha256,
-        &artifact.expected_roots,
-        &artifact.expected_tp2_paths,
+        &ExtractionIdentity {
+            digest: &artifact.artifact_sha256,
+            contract_sha256: &artifact.extraction_contract_sha256,
+            expected_roots: &artifact.expected_roots,
+            expected_tp2_paths: &artifact.expected_tp2_paths,
+        },
     )?;
     if verified.wrapper_directory != artifact.wrapper_directory {
         return Err(AcquireError::CorruptCache {

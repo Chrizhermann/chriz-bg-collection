@@ -51,6 +51,13 @@ approved_on = "2026-09-04"
 reason = "The maintained repair is selected conditionally and stays inactive unless the optional Branwen component is selected."
 user_facing_limitation = "Branwen's Spell Revisions Spiritual Hammer repair is selected only when Branwen is selected."
 
+[[omissions]]
+feature_id = "feature:chriz-bg-modpack:component-640"
+approved_by = "Christopher"
+approved_on = "2026-09-29"
+reason = "The mandatory compatibility helper is conditional on a classic UI provider; the recommended interface requires no adapter."
+user_facing_limitation = "Classic interface text compatibility is installed automatically only with Lefreut or Dragonspear UI++."
+
 
 [[omissions]]
 feature_id = "feature:bardicwonders:component-1006"

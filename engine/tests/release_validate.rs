@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use bg_engine::manifest::InvocationMode;
 use bg_engine::release_validate::{
     validate_public_alpha_at, RULE_RELEASE_FAIL_STUB, RULE_RELEASE_OMISSION,
     RULE_RELEASE_OMISSION_APPROVAL, RULE_RELEASE_STATIC_EVIDENCE, RULE_RELEASE_TAIL,
@@ -70,6 +71,61 @@ fn selected_default_with_no_artifact_is_release_blocking() {
     assert!(
         !findings.is_empty(),
         "a missing selected artifact must block public-alpha evaluation"
+    );
+}
+
+#[test]
+fn unselected_ui_with_unsupported_invocation_is_release_blocking() {
+    let mut manifest = recipe();
+    let baseline =
+        bg_engine::recipe_view::evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    assert!(baseline
+        .plan
+        .components_for("game-interface-infinity-bg2")
+        .is_none());
+    manifest
+        .mods
+        .get_mut("infinity-ui")
+        .unwrap()
+        .invocation_mode = InvocationMode::ExplicitTp2;
+
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(
+        findings.iter().any(|finding| {
+            finding.rule == "release-invocation-mode"
+                && finding.severity == bg_engine::validate::Severity::Error
+                && finding.message.contains("infinity-ui")
+                && finding.message.contains("setup-name")
+        }),
+        "{findings:#?}"
+    );
+    assert!(
+        !has_rule(
+            &bg_engine::validate::validate(&manifest),
+            "release-invocation-mode",
+        ),
+        "general authoring validation must keep its explicit-TP2 support"
+    );
+}
+
+#[test]
+fn production_invocation_gate_applies_even_without_release_records() {
+    let manifest =
+        Manifest::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest"))
+            .expect("fixture recipe should load");
+    assert_eq!(
+        manifest.mods["eefixpack"].invocation_mode,
+        InvocationMode::ExplicitTp2
+    );
+    let temp = tempfile::tempdir().unwrap();
+
+    let findings =
+        validate_public_alpha_at(&manifest, &temp.path().join("no-release-records")).unwrap();
+    assert!(
+        findings.iter().any(|finding| {
+            finding.rule == "release-invocation-mode" && finding.message.contains("eefixpack")
+        }),
+        "{findings:#?}"
     );
 }
 
@@ -210,9 +266,12 @@ fn mandatory_blocked_tail_fixes_are_recorded_as_limitations_not_forgotten() {
 
 #[test]
 fn non_release_fixture_does_not_require_production_release_records() {
-    let manifest =
+    let mut manifest =
         Manifest::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest"))
             .expect("fixture recipe should load");
+    for mod_file in manifest.mods.values_mut() {
+        mod_file.invocation_mode = InvocationMode::SetupName;
+    }
     let missing = tempfile::tempdir()
         .unwrap()
         .path()

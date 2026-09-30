@@ -5,6 +5,12 @@ Status: backlog and bounded parallel preparation, not implemented or selected fo
 the current release. Do not modify the stream install, saves, live game, desktop
 or game settings. Interactive tests remain user-driven.
 
+September 27 update: optional shifted dialogue is now implemented in the Artisan
+owner's source as tweak 51010, with five passing real-WeiDU synthetic checks.
+Christopher waived a separate manual playtest gate for this narrow change.
+Owner release and CEBG wiring remain pending. Other items below retain their
+research/preparation scope. See [current inventory](2026-09-27-pre-package-inventory.md).
+
 ## 1. Effect timing under Time Stop and Haste
 
 Requested outcome:
@@ -72,6 +78,9 @@ nonimmune actor, one timed buff and one native periodic family. No prototype or
 live test was performed. This is feasibility evidence, not a compatibility claim.
 
 ## 2. Instant trap detection
+
+September 29 decision: defer this beyond the upcoming release. Retain the scope
+below for the following patch; do not begin implementation as a quick extra now.
 
 Working scope: remove the wait between valid detection checks, not grant universal
 trap knowledge or disarm traps automatically. Preserve Find Traps skill checks,

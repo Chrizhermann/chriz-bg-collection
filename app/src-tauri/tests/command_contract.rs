@@ -19,7 +19,8 @@ use bg_engine::session::{CampaignCreated, SessionEvent, SessionStore, SourceGame
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
 use chriz_bg_app_lib::bridge::{
     display_windows_path, installation_defaults, parse_startup_install_id, BridgeEngine,
-    BridgeSystem, NativeBridge, RunEventEnvelope, SequencedEventSink,
+    BridgeSystem, NativeBridge, RadarLaunchState, RadarProcessOutcome, RunEventEnvelope,
+    SequencedEventSink,
 };
 use chriz_bg_app_lib::error::CommandError;
 use chriz_bg_app_lib::shortcut::{shortcut_file_name, ShortcutRequest};
@@ -64,6 +65,22 @@ fn recipe_with_profiles() -> (TempDir, PathBuf) {
         &workspace_root().join("engine/tests/fixtures/manifest"),
         &recipe,
     );
+    // The shared authoring fixture exercises explicit TP2 parsing. Native commands use
+    // the production launch contract, so adapt only this disposable recipe copy.
+    let installer = recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&installer).expect("read copied installer fixture");
+    assert_eq!(
+        text.matches("invocation_mode = \"explicit-tp2\"").count(),
+        1
+    );
+    fs::write(
+        installer,
+        text.replace(
+            "invocation_mode = \"explicit-tp2\"",
+            "invocation_mode = \"setup-name\"",
+        ),
+    )
+    .expect("select supported invocation for native command fixture");
     copy_tree(
         &workspace_root().join("engine/tests/fixtures/games/profiles"),
         &recipe.join("game-builds"),
@@ -235,6 +252,9 @@ impl FakeBridgeEngine {
 #[derive(Default)]
 struct RecordingBridgeSystem {
     launches: Mutex<Vec<(PathBuf, PathBuf)>>,
+    launch_error: Mutex<Option<String>>,
+    radar_launches: Mutex<Vec<(PathBuf, PathBuf)>>,
+    radar_launch_result: Mutex<Option<Result<RadarProcessOutcome, String>>>,
     folders: Mutex<Vec<PathBuf>>,
     urls: Mutex<Vec<String>>,
     diagnostics: Mutex<Vec<(PathBuf, PathBuf)>>,
@@ -247,7 +267,26 @@ impl BridgeSystem for RecordingBridgeSystem {
             .lock()
             .unwrap()
             .push((executable.to_path_buf(), working_directory.to_path_buf()));
-        Ok(())
+        match self.launch_error.lock().unwrap().as_ref() {
+            Some(error) => Err(error.clone()),
+            None => Ok(()),
+        }
+    }
+
+    fn launch_radar(
+        &self,
+        executable: &Path,
+        working_directory: &Path,
+    ) -> Result<RadarProcessOutcome, String> {
+        self.radar_launches
+            .lock()
+            .unwrap()
+            .push((executable.to_path_buf(), working_directory.to_path_buf()));
+        self.radar_launch_result
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or(Ok(RadarProcessOutcome::Started))
     }
 
     fn open_folder(&self, path: &Path) -> Result<(), String> {
@@ -311,6 +350,22 @@ fn publish_started_campaign(
     cache: &Path,
     install_id: &str,
 ) -> SessionStore {
+    publish_started_campaign_with_payload(
+        app_data,
+        managed,
+        cache,
+        install_id,
+        b"PK\x03\x04restart fixture".to_vec(),
+    )
+}
+
+fn publish_started_campaign_with_payload(
+    app_data: &Path,
+    managed: &Path,
+    cache: &Path,
+    install_id: &str,
+    payload: Vec<u8>,
+) -> SessionStore {
     fs::create_dir_all(managed).unwrap();
     fs::create_dir_all(cache).unwrap();
     let managed = managed.canonicalize().unwrap();
@@ -321,7 +376,6 @@ fn publish_started_campaign(
         inputs: BTreeMap::new(),
     };
     let plan = InstallPlan { runs: Vec::new() };
-    let payload = b"PK\x03\x04restart fixture".to_vec();
     let envelope = br#"{"kind":"restart-fixture"}"#.to_vec();
     let created = CampaignCreated {
         install_id: install_id.to_owned(),
@@ -912,7 +966,7 @@ fn chosen_game_folders_are_validated_and_cancelled_choices_are_noops() {
 }
 
 #[test]
-fn evaluate_build_returns_only_semantic_ui_projection_and_phase_summaries() {
+fn evaluate_build_keeps_semantic_controls_and_exposes_explicit_advanced_pause_options() {
     let bridge = NativeBridge::new(workspace_root().join("manifest"), "chris-recommended");
 
     let evaluation = bridge
@@ -932,6 +986,45 @@ fn evaluate_build_returns_only_semantic_ui_projection_and_phase_summaries() {
         .any(|phase| phase.id == "main"));
     let serialized = serde_json::to_string(&evaluation).expect("serialize evaluation");
     assert!(!serialized.contains("\"components\":"));
+    assert!(!evaluation.manual_checkpoint_options.is_empty());
+    for option in &evaluation.manual_checkpoint_options {
+        assert!(!option.run_id.is_empty());
+        assert!(!option.mod_label.is_empty());
+        assert!(!option.component_label.is_empty());
+        assert!(evaluation
+            .plan
+            .phases
+            .iter()
+            .any(|phase| phase.id == option.phase));
+    }
+    assert!(serialized.contains("\"manual_checkpoint_options\":"));
+    assert!(serialized.contains("\"runId\":"));
+    assert!(serialized.contains("\"componentLabel\":"));
+}
+
+#[test]
+fn manual_breakpoint_missing_from_selection_is_rejected_before_source_or_destination_work() {
+    let bridge = NativeBridge::new(workspace_root().join("manifest"), "chris-recommended");
+    let selection = NormalizedSelection {
+        platform: "windows".into(),
+        features: Default::default(),
+        inputs: Default::default(),
+    };
+    let error = bridge
+        .freeze_review_with_breakpoints(
+            "Manual fixture",
+            &selection,
+            Path::new("unreachable-destination"),
+            "missing-bg1",
+            "missing-bg2",
+            &[bg_engine::manual_checkpoint::ManualBreakpoint {
+                run_id: "not-selected".into(),
+                component: 900,
+            }],
+        )
+        .unwrap_err();
+    assert_eq!(error.code, "invalid_manual_breakpoint");
+    assert!(error.message.contains("no longer selected"));
 }
 
 #[test]
@@ -1694,7 +1787,7 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         .starts_with(r"\\?\"));
     assert_eq!(cards[0].completed_at_millis, Some(1));
 
-    bridge.launch_install("install-task23").unwrap();
+    bridge.launch_install("install-task23", false).unwrap();
     bridge.open_install_folder("install-task23").unwrap();
     assert_eq!(
         system.launches.lock().unwrap().as_slice(),
@@ -1708,9 +1801,295 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         &[canonical_managed]
     );
     assert_eq!(
-        bridge.launch_install("not-a-registry-id").unwrap_err().code,
+        bridge
+            .launch_install("not-a-registry-id", false)
+            .unwrap_err()
+            .code,
         "managed_install_unknown"
     );
+}
+
+struct RadarLaunchFixture {
+    _temp: TempDir,
+    managed: PathBuf,
+    bridge: NativeBridge,
+    system: Arc<RecordingBridgeSystem>,
+}
+
+impl RadarLaunchFixture {
+    fn new() -> Self {
+        let (temp, recipe) = recipe_with_profiles();
+        let root = temp.path();
+        let cache = root.join("cache");
+        let app_data = root.join("app-data");
+        let managed = root.join("radar-campaign");
+        fs::create_dir(&cache).unwrap();
+        publish_started_campaign(&app_data, &managed, &cache, "radar-fixture");
+        publish_managed_install(&app_data, &managed, "radar-fixture");
+        let system = Arc::new(RecordingBridgeSystem::default());
+        let bridge = NativeBridge::with_engine_and_system(
+            recipe,
+            "recommended",
+            cache,
+            app_data,
+            Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+            system.clone(),
+        );
+        Self {
+            _temp: temp,
+            managed: managed.canonicalize().unwrap(),
+            bridge,
+            system,
+        }
+    }
+
+    fn receipt(&self) -> PathBuf {
+        self.managed.join(".chriz/addons/bg-radar-overlay.json")
+    }
+
+    fn install_radar(&self) {
+        let directory = self.managed.join("game/BG Radar Overlay");
+        fs::create_dir_all(&directory).unwrap();
+        fs::create_dir_all(self.receipt().parent().unwrap()).unwrap();
+        let mut files = Vec::new();
+        // These are inert bytes. Every process launch remains behind RecordingBridgeSystem.
+        for (path, bytes) in [
+            ("BG Radar Overlay.exe", b"fake Radar executable".as_slice()),
+            ("resources.pak", b"fake Radar resources".as_slice()),
+        ] {
+            fs::write(directory.join(path), bytes).unwrap();
+            files.push(json!({
+                "path": path,
+                "length": bytes.len(),
+                "sha256": sha256_bytes(bytes),
+            }));
+        }
+        fs::write(
+            self.receipt(),
+            serde_json::to_vec(&json!({
+                "schema": 1,
+                "repository": "tapahob/BG2RadarOverlay",
+                "install_directory": "BG Radar Overlay",
+                "installed_at_unix_seconds": 1,
+                "release": {
+                    "release_id": 1,
+                    "tag": "2.5.2.0",
+                    "published_at": "2026-09-08T11:07:15Z",
+                    "asset_id": 1,
+                    "asset_name": "BG.Radar.Overlay.2.5.2.0.7z",
+                    "asset_url": "https://github.com/tapahob/BG2RadarOverlay/releases/download/2.5.2.0/BG.Radar.Overlay.2.5.2.0.7z",
+                    "asset_length": 100,
+                    "sha256": "ab".repeat(32),
+                },
+                "files": files,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    fn assert_game_launched_once(&self) {
+        assert_eq!(
+            self.system.launches.lock().unwrap().as_slice(),
+            &[(
+                self.managed.join("game/InfinityLoader.exe"),
+                self.managed.join("game"),
+            )],
+        );
+    }
+}
+
+#[test]
+fn radar_launch_opt_out_ignores_even_an_invalid_radar_installation() {
+    let fixture = RadarLaunchFixture::new();
+    fixture.install_radar();
+    fs::write(
+        fixture.receipt(),
+        b"invalid receipt must not affect playing without Radar",
+    )
+    .unwrap();
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", false)
+        .unwrap();
+    assert_eq!(
+        serde_json::to_value(result).unwrap(),
+        json!({
+            "installId": "radar-fixture",
+            "radar": {"state": "not-requested", "detail": null, "technicalDetail": null},
+        }),
+    );
+    fixture.assert_game_launched_once();
+    assert!(fixture.system.radar_launches.lock().unwrap().is_empty());
+}
+
+#[test]
+fn radar_launch_opt_in_starts_only_the_verified_overlay_after_the_game() {
+    let fixture = RadarLaunchFixture::new();
+    fixture.install_radar();
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", true)
+        .unwrap();
+    assert_eq!(
+        serde_json::to_value(result).unwrap(),
+        json!({
+            "installId": "radar-fixture",
+            "radar": {"state": "started", "detail": null, "technicalDetail": null},
+        }),
+    );
+    fixture.assert_game_launched_once();
+    assert_eq!(
+        fixture.system.radar_launches.lock().unwrap().as_slice(),
+        &[(
+            fixture
+                .managed
+                .join("game/BG Radar Overlay/BG Radar Overlay.exe"),
+            fixture.managed.join("game/BG Radar Overlay"),
+        )],
+    );
+}
+
+#[test]
+fn radar_launch_consent_cancellation_leaves_a_successful_game_launch_and_visible_notice() {
+    let fixture = RadarLaunchFixture::new();
+    fixture.install_radar();
+    *fixture.system.radar_launch_result.lock().unwrap() = Some(Ok(RadarProcessOutcome::Cancelled));
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", true)
+        .unwrap();
+    assert_eq!(result.radar.state, RadarLaunchState::Cancelled);
+    assert!(result
+        .radar
+        .detail
+        .as_deref()
+        .unwrap()
+        .contains("cancelled"));
+    assert!(result
+        .radar
+        .technical_detail
+        .as_deref()
+        .unwrap()
+        .contains("ERROR_CANCELLED"));
+    fixture.assert_game_launched_once();
+    assert_eq!(fixture.system.radar_launches.lock().unwrap().len(), 1);
+}
+
+#[test]
+fn radar_launch_failure_is_nonfatal_and_preserves_the_actual_error() {
+    let fixture = RadarLaunchFixture::new();
+    fixture.install_radar();
+    *fixture.system.radar_launch_result.lock().unwrap() =
+        Some(Err("mock Windows launch failure 5".to_owned()));
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", true)
+        .unwrap();
+    assert_eq!(result.radar.state, RadarLaunchState::Failed);
+    assert!(result
+        .radar
+        .detail
+        .as_deref()
+        .unwrap()
+        .contains("Windows could not start"));
+    assert_eq!(
+        result.radar.technical_detail.as_deref(),
+        Some("mock Windows launch failure 5")
+    );
+    fixture.assert_game_launched_once();
+}
+
+#[test]
+fn radar_launch_missing_installation_produces_a_warning_not_a_game_failure() {
+    let fixture = RadarLaunchFixture::new();
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", true)
+        .unwrap();
+    assert_eq!(result.radar.state, RadarLaunchState::Failed);
+    assert!(result
+        .radar
+        .detail
+        .as_deref()
+        .unwrap()
+        .contains("Install BG Radar Overlay"));
+    assert!(result.radar.technical_detail.is_some());
+    fixture.assert_game_launched_once();
+    assert!(fixture.system.radar_launches.lock().unwrap().is_empty());
+}
+
+#[test]
+fn radar_launch_checks_all_receipted_files_before_calling_windows() {
+    for remove_file in [false, true] {
+        let fixture = RadarLaunchFixture::new();
+        fixture.install_radar();
+        let resource = fixture.managed.join("game/BG Radar Overlay/resources.pak");
+        if remove_file {
+            fs::remove_file(resource).unwrap();
+        } else {
+            // Same length as the original: this must fail the digest check, not only size.
+            fs::write(resource, b"FAKE Radar resources").unwrap();
+        }
+        let result = fixture
+            .bridge
+            .launch_install("radar-fixture", true)
+            .unwrap();
+        assert_eq!(result.radar.state, RadarLaunchState::Failed);
+        assert!(result
+            .radar
+            .detail
+            .as_deref()
+            .unwrap()
+            .contains("files are missing or changed"));
+        assert!(result
+            .radar
+            .technical_detail
+            .as_deref()
+            .unwrap()
+            .contains("integrity checks"));
+        fixture.assert_game_launched_once();
+        assert!(fixture.system.radar_launches.lock().unwrap().is_empty());
+    }
+}
+
+#[test]
+fn radar_launch_status_error_is_visible_and_does_not_fail_the_game() {
+    let fixture = RadarLaunchFixture::new();
+    fixture.install_radar();
+    fs::write(fixture.receipt(), b"invalid receipt").unwrap();
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", true)
+        .unwrap();
+    assert_eq!(result.radar.state, RadarLaunchState::Failed);
+    assert!(result
+        .radar
+        .detail
+        .as_deref()
+        .unwrap()
+        .contains("could not verify"));
+    assert!(result
+        .radar
+        .technical_detail
+        .as_deref()
+        .unwrap()
+        .contains("invalid Radar Overlay receipt"));
+    fixture.assert_game_launched_once();
+    assert!(fixture.system.radar_launches.lock().unwrap().is_empty());
+}
+
+#[test]
+fn radar_launch_game_failure_stays_an_error_and_does_not_start_radar() {
+    let fixture = RadarLaunchFixture::new();
+    fixture.install_radar();
+    *fixture.system.launch_error.lock().unwrap() = Some("mock game launch failure".to_owned());
+    let error = fixture
+        .bridge
+        .launch_install("radar-fixture", true)
+        .unwrap_err();
+    assert_eq!(error.code, "managed_launch_failed");
+    assert!(fixture.system.radar_launches.lock().unwrap().is_empty());
 }
 
 #[test]
@@ -1739,6 +2118,7 @@ fn installation_removal_requires_native_confirmation_and_refuses_busy_or_changed
         .is_err());
     let preview = bridge.preview_installation_removal("remove-one").unwrap();
     assert_eq!(serde_json::to_value(&preview).unwrap()["action"], "forget");
+    assert!(preview.approximate_size_bytes.is_none());
     assert!(app_data.join("managed-campaigns/remove-one.json").exists()); // Cancel means no execute.
     assert!(bridge
         .remove_installation("different-install", &preview.confirmation_token)
@@ -1749,7 +2129,7 @@ fn installation_removal_requires_native_confirmation_and_refuses_busy_or_changed
         .remove_installation("remove-one", &preview.confirmation_token)
         .is_err());
     assert!(bridge.preview_installation_removal("remove-one").is_err());
-    assert!(bridge.launch_install("remove-one").is_err());
+    assert!(bridge.launch_install("remove-one", false).is_err());
     drop(busy);
     fs::create_dir(&managed).unwrap();
     assert!(bridge
@@ -1765,6 +2145,63 @@ fn installation_removal_requires_native_confirmation_and_refuses_busy_or_changed
     assert!(bridge
         .remove_installation("remove-one", &confirmed.confirmation_token)
         .is_err());
+}
+
+#[test]
+fn installation_removal_size_is_advisory_and_does_not_change_confirmation_identity() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("remove-size-fixture");
+    let sources = root.join("source-games");
+    fs::create_dir(&sources).unwrap();
+    fs::write(sources.join("original"), [0; 500]).unwrap();
+    let payload = serde_json::to_vec(&serde_json::json!({
+        "bg1": { "root": sources.canonicalize().unwrap() },
+        "bg2": { "root": sources.canonicalize().unwrap() }
+    }))
+    .unwrap();
+    publish_started_campaign_with_payload(&app_data, &managed, &cache, "remove-size", payload);
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache.clone(),
+        app_data.clone(),
+        Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+    let plan = bg_engine::removal::preview(&app_data, "remove-size").unwrap();
+    let original = bridge.preview_installation_removal("remove-size").unwrap();
+    let original_bytes = original
+        .approximate_size_bytes
+        .as_ref()
+        .unwrap()
+        .parse::<u64>()
+        .unwrap();
+    assert!(original_bytes > 0);
+    assert_eq!(
+        serde_json::to_value(&original).unwrap()["approximateSizeBytes"],
+        original_bytes.to_string()
+    );
+    fs::create_dir(managed.join("game")).unwrap();
+    fs::write(managed.join("game/changed-log"), [0; 123]).unwrap();
+    let updated = bridge.preview_installation_removal("remove-size").unwrap();
+    assert_eq!(
+        updated.approximate_size_bytes,
+        Some((original_bytes + 123).to_string())
+    );
+    assert_eq!(
+        bg_engine::removal::preview(&app_data, "remove-size").unwrap(),
+        plan
+    );
+    // The original confirmation remains valid when only file sizes change.
+    bridge
+        .remove_installation("remove-size", &original.confirmation_token)
+        .unwrap();
+    assert!(!managed.exists());
+    assert!(sources.join("original").is_file());
+    assert!(cache.is_dir());
 }
 
 #[test]
@@ -1881,7 +2318,10 @@ fn stale_managed_install_is_listed_but_cannot_be_launched_or_opened() {
     assert!(!cards[0].available);
     assert_eq!(cards[0].status, "Unavailable — folder moved or changed");
     assert_eq!(
-        bridge.launch_install("install-stale").unwrap_err().code,
+        bridge
+            .launch_install("install-stale", false)
+            .unwrap_err()
+            .code,
         "managed_install_stale"
     );
     assert_eq!(

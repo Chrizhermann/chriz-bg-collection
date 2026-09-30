@@ -14,8 +14,9 @@ Subgroup = mutually exclusive; choose zero or one.
 - Components `15`, `21`, `26`, `31`, `303`, and new-in-v5.1 component `305`
   target PST:EE or IWD:EE rather than EET and are therefore excluded. Component `31`
   additionally requires Level Up Icon Tweaks `0`.
-- New-in-v5.2 component `306` supports EET only when EET GUI `0` is installed. That GUI
-  is not in this collection, so keep `306` excluded. Refresh the stale v5.1 latest-version
+- New-in-v5.2 component `306` supports EET only when EET GUI `0` is installed. EET GUI
+  is now an optional interface choice; `306` remains excluded from this first UI batch.
+  Refresh the stale v5.1 latest-version
   entry in `manifest/mod-sources.tsv` when the source pin is authored.
 - Component `38` is selected with the recommended Tweaks Anthology 15-minute,
   four-save interval setting (`3354`). It remains available with any curated
@@ -34,6 +35,11 @@ Subgroup = mutually exclusive; choose zero or one.
   explicit **Do not update key bindings** choice; `103` is selected by default.
 
 ## Integration note
+
+The September 29 [interface integration](../game-interfaces.md) authors exact
+provider exclusions. Dragonspear retains `28`/`29`/`30`; do not inherit Infinity's
+restrictions. Other settings and cheat menu `200` stay eligible. Classic providers
+remain unavailable until their independent game-2.7 text helper is published.
 
 Upstream recommends installing this mod after Tweaks Anthology and GUI mods. The fresh
 generated order must not replay its early reference position, especially when component

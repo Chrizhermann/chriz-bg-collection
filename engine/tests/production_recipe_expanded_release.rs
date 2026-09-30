@@ -72,6 +72,7 @@ fn authors_the_six_runs_exactly() {
             Phase::Main,
             &[
                 110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223,
+                224, 225,
             ],
         ),
         (CONTINUITY, "chriz-bg-modpack", Phase::Main, &[199]),
@@ -203,10 +204,10 @@ fn freezes_the_reviewed_release_sources() {
         ),
         (
             "chriz-bg-modpack",
-            "chriz-bg-modpack-0.2.0-alpha.7",
-            "v0.2.0-alpha.7",
-            1_367_203,
-            "f134085e8220a4222190981f173034653efe7aa92d47caa8430682a1352d1c19",
+            "chriz-bg-modpack-0.2.0-alpha.8",
+            "v0.2.0-alpha.8",
+            1_575_997,
+            "8019d60d2d5c9e5b5961b73ddfcc65729d7feb819bc3e99f4134dd3058835989",
         ),
         (
             "safana",

@@ -40,3 +40,29 @@ the versioned assets are published and checked, the same generated feed can be
 published as `latest.json` on the separate `alpha` channel release. Update that
 channel file for subsequent alphas; keep each versioned setup and signature
 unchanged. The helper leaves both publishing steps to the release owner.
+
+## Antivirus reports during testing
+
+A clean archive scan or successful package test does not clear a later runtime
+detection. The September 30 alpha.19 quarantine is an open release-readiness
+issue; see [handover](handover.md) for the exact sample and investigation status.
+
+- Preserve the affected build and its hashes. Record the threat name, action,
+  security-intelligence versions and launch sequence without publishing personal
+  logs or extracting quarantine as a workaround.
+- Use Microsoft's developer-analysis submission route with the owner's approval.
+  Record the submission ID and actual result; don't label it a confirmed false
+  positive before evidence supports that conclusion.
+- Tauri updater signatures do not supply Windows Authenticode publisher identity.
+  Consistent publisher signing is worth evaluating, but neither signing nor an
+  earlier clean scan guarantees that future behavior detections cannot occur.
+- If Microsoft needs reproduction, arrange a separate, approved disposable
+  environment with protection enabled. Distinguish opening CEBG, Play with Radar
+  off, and Play with Radar consent. Do not conduct those live tests on the user's
+  playing installation without agreement.
+- Do not publish instructions to disable antivirus, add broad exclusions, or
+  change binaries merely to avoid detection. Keep the public release on hold
+  until the incident has been assessed and the owner chooses how to proceed.
+
+[Microsoft guidance for software developers](https://learn.microsoft.com/en-us/defender-xdr/developer-faq)
+and [file-analysis submission](https://www.microsoft.com/en-us/wdsi/filesubmission).

@@ -9,6 +9,7 @@ pub mod installed_updates;
 pub mod loader;
 pub mod lock;
 pub mod manifest;
+pub mod manual_checkpoint;
 pub mod mod_upgrades;
 pub mod operation_progress;
 #[cfg(test)]

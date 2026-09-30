@@ -93,13 +93,13 @@ fn requirements(path: &Path) -> ArchiveRequirements {
     }
 }
 
-fn published_path(cache: &Path, digest: &str) -> PathBuf {
-    cache.join("sha256-v2").join(&digest[..2]).join(digest)
+fn published_archive_parent(cache: &Path, digest: &str) -> PathBuf {
+    cache.join("sha256-v3").join(&digest[..2]).join(digest)
 }
 
 fn assert_rejected_before_publish(archive: &Path, cache: &Path, request: &ArchiveRequirements) {
     assert!(extract_archive(archive, cache, request).is_err());
-    assert!(!published_path(cache, &request.artifact_sha256).exists());
+    assert!(!published_archive_parent(cache, &request.artifact_sha256).exists());
 }
 
 #[test]
@@ -236,6 +236,26 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
         let cache = temp.path().join("extract");
         assert_rejected_before_publish(&archive, &cache, &request);
         assert!(!cache.join("temporary").exists());
+
+        // A successful extraction under permissive limits must not bypass any later
+        // stricter limit, including limits violated only by unpublished archive entries.
+        let warm_cache = temp.path().join("warm-extract");
+        let permissive = requirements(&archive);
+        let previous = extract_archive(&archive, &warm_cache, &permissive).unwrap();
+        assert!(matches!(
+            extract_archive(&archive, &warm_cache, &request),
+            Err(AcquireError::ArchiveLimitExceeded(_))
+        ));
+        assert_eq!(
+            previous,
+            extract_archive(&archive, &warm_cache, &permissive).unwrap()
+        );
+        assert_eq!(
+            std::fs::read_dir(previous.root.parent().unwrap())
+                .unwrap()
+                .count(),
+            1
+        );
     }
 }
 
@@ -356,7 +376,7 @@ fn rejects_undeclared_tp2_inside_publish_root_before_writing() {
         AcquireError::ArchiveLayout(message)
             if message.contains("undeclared TP2 `mod/tools/live-patch.tp2`")
     ));
-    assert!(!published_path(&cache, &request.artifact_sha256).exists());
+    assert!(!published_archive_parent(&cache, &request.artifact_sha256).exists());
     assert!(!cache.join("temporary").exists());
 }
 
@@ -379,7 +399,7 @@ fn tp2_publish_root_matching_is_case_insensitive_and_component_bounded() {
         AcquireError::ArchiveLayout(message)
             if message.contains("undeclared TP2 `MOD/Tools/Live-Patch.TP2`")
     ));
-    assert!(!published_path(&inside_cache, &inside_request.artifact_sha256).exists());
+    assert!(!published_archive_parent(&inside_cache, &inside_request.artifact_sha256).exists());
     assert!(!inside_cache.join("temporary").exists());
 
     let sibling = TempDir::new().unwrap();
@@ -436,12 +456,12 @@ fn extracts_and_records_only_files_within_declared_publish_roots() {
     assert!(extracted.root.join("mod/data.txt").is_file());
     assert!(!extracted.root.join("unpublished").exists());
     let marker = std::fs::read_to_string(extracted.root.join(".chriz-bg-extraction.json")).unwrap();
-    assert!(marker.contains("\"version\": 2"));
+    assert!(marker.contains("\"version\": 3"));
     assert!(!marker.contains("unpublished"));
 }
 
 #[test]
-fn ignores_the_unreleased_v1_extraction_namespace() {
+fn leaves_both_legacy_digest_only_extraction_namespaces_untouched() {
     let temp = TempDir::new().unwrap();
     let archive = temp.path().join("valid.zip");
     write_zip(
@@ -453,13 +473,17 @@ fn ignores_the_unreleased_v1_extraction_namespace() {
         )],
     );
     let digest = sha256(&archive);
-    let legacy = temp
-        .path()
-        .join("extract/sha256")
-        .join(&digest[..2])
-        .join(&digest);
-    std::fs::create_dir_all(&legacy).unwrap();
-    std::fs::write(legacy.join("untrusted-v1-file"), b"ignore me").unwrap();
+    let legacy_roots = ["sha256", "sha256-v2"].map(|namespace| {
+        let legacy = temp
+            .path()
+            .join("extract")
+            .join(namespace)
+            .join(&digest[..2])
+            .join(&digest);
+        std::fs::create_dir_all(&legacy).unwrap();
+        std::fs::write(legacy.join("legacy-file"), b"leave me untouched").unwrap();
+        legacy
+    });
 
     let extracted = extract_archive(
         &archive,
@@ -469,10 +493,21 @@ fn ignores_the_unreleased_v1_extraction_namespace() {
     .unwrap();
 
     assert_eq!(
-        extracted.root,
-        published_path(&temp.path().join("extract"), &digest)
+        extracted.root.parent().unwrap(),
+        published_archive_parent(&temp.path().join("extract"), &digest)
     );
-    assert!(legacy.join("untrusted-v1-file").is_file());
+    assert_eq!(
+        extracted.root.file_name().unwrap().to_str().unwrap(),
+        extracted.extraction_contract_sha256
+    );
+    assert!(extracted.root.join("mod/setup-mod.tp2").is_file());
+    for legacy in legacy_roots {
+        assert_eq!(
+            std::fs::read(legacy.join("legacy-file")).unwrap(),
+            b"leave me untouched"
+        );
+        assert_eq!(std::fs::read_dir(legacy).unwrap().count(), 1);
+    }
 }
 
 #[test]
@@ -603,6 +638,208 @@ fn cache_hit_root_and_tp2_ownership_is_case_insensitive_but_component_bounded() 
     assert!(!second.root.join("mod-live").exists());
 }
 
+fn write_multi_root_archive(path: &Path) -> (ArchiveRequirements, ArchiveRequirements) {
+    write_zip(
+        path,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("extra/setup-extra.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("gui/setup-gui.tp2", TP2, CompressionMethod::Stored),
+        ],
+    );
+    let mut two_roots = requirements(path);
+    two_roots.expected_roots.push("extra".to_owned());
+    two_roots
+        .expected_tp2_paths
+        .push("extra/setup-extra.tp2".to_owned());
+    let mut three_roots = two_roots.clone();
+    three_roots.expected_roots.push("gui".to_owned());
+    three_roots
+        .expected_tp2_paths
+        .push("gui/setup-gui.tp2".to_owned());
+    (two_roots, three_roots)
+}
+
+#[test]
+fn same_archive_layouts_have_distinct_stable_cache_entries() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("multiple-layouts.zip");
+    let cache = temp.path().join("extract");
+    let (two_roots, three_roots) = write_multi_root_archive(&archive);
+
+    let first = extract_archive(&archive, &cache, &two_roots).unwrap();
+    let expanded = extract_archive(&archive, &cache, &three_roots).unwrap();
+    let reused = extract_archive(&archive, &cache, &two_roots).unwrap();
+
+    assert_ne!(first.root, expanded.root);
+    assert_eq!(first, reused);
+    assert!(!first.root.join("gui").exists());
+    assert!(expanded.root.join("gui/setup-gui.tp2").is_file());
+    assert_eq!(first.root.parent(), expanded.root.parent());
+
+    let mut equivalent = two_roots.clone();
+    equivalent.expected_roots.reverse();
+    equivalent.expected_tp2_paths.reverse();
+    for path in equivalent
+        .expected_roots
+        .iter_mut()
+        .chain(&mut equivalent.expected_tp2_paths)
+    {
+        *path = path.replace('/', "\\").to_ascii_uppercase();
+    }
+    assert_eq!(
+        first,
+        extract_archive(&archive, &cache, &equivalent).unwrap()
+    );
+}
+
+#[test]
+fn concurrent_layouts_and_identical_requests_publish_independent_verified_entries() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("concurrent-layouts.zip");
+    let cache = temp.path().join("extract");
+    let (two_roots, three_roots) = write_multi_root_archive(&archive);
+    let requests = [&two_roots, &three_roots, &two_roots, &three_roots];
+    let barrier = std::sync::Barrier::new(requests.len());
+    let results = std::thread::scope(|scope| {
+        let workers = requests
+            .into_iter()
+            .map(|request| {
+                let (archive, cache, barrier) = (&archive, &cache, &barrier);
+                scope.spawn(move || {
+                    barrier.wait();
+                    extract_archive(archive, cache, request)
+                })
+            })
+            .collect::<Vec<_>>();
+        workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap().unwrap())
+            .collect::<Vec<_>>()
+    });
+
+    assert_eq!(results[0], results[2]);
+    assert_eq!(results[1], results[3]);
+    assert_ne!(results[0].root, results[1].root);
+    for (result, request) in results.iter().zip(requests) {
+        assert_eq!(*result, extract_archive(&archive, &cache, request).unwrap());
+    }
+    assert_eq!(
+        std::fs::read_dir(cache.join("temporary")).unwrap().count(),
+        0
+    );
+}
+
+#[test]
+fn cache_contract_separates_format_mode_and_limits() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("contract.zip");
+    let cache = temp.path().join("extract");
+    let (original, _) = write_multi_root_archive(&archive);
+    let first = extract_archive(&archive, &cache, &original).unwrap();
+    let mut changed_format = original.clone();
+    changed_format.format = ArchiveFormat::Iemod;
+    let mut changed_mode = original.clone();
+    changed_mode.mode = ArchiveMode::Authoring;
+    changed_mode.artifact_sha256 = "0".repeat(64);
+    let mut changed_limits = original.clone();
+    changed_limits.limits.max_entries += 1;
+    let mut roots = std::collections::BTreeSet::from([first.root.clone()]);
+    for request in [changed_format, changed_mode, changed_limits] {
+        let extracted = extract_archive(&archive, &cache, &request).unwrap();
+        assert!(roots.insert(extracted.root.clone()));
+        assert_eq!(
+            extracted,
+            extract_archive(&archive, &cache, &request).unwrap()
+        );
+    }
+
+    let mut wrong_format = original.clone();
+    wrong_format.format = ArchiveFormat::SelfExtractingRar;
+    assert!(matches!(
+        extract_archive(&archive, &cache, &wrong_format),
+        Err(AcquireError::PublicArchiveRejected(_))
+    ));
+    let mut unpinned_public = original.clone();
+    unpinned_public.artifact_sha256 = "0".repeat(64);
+    assert!(matches!(
+        extract_archive(&archive, &cache, &unpinned_public),
+        Err(AcquireError::PublicArchiveRejected(_))
+    ));
+}
+
+#[test]
+fn changed_tp2_contract_is_checked_against_the_archive() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("tp2-contract.zip");
+    let cache = temp.path().join("extract");
+    let (original, _) = write_multi_root_archive(&archive);
+    let first = extract_archive(&archive, &cache, &original).unwrap();
+    let mut changed = original.clone();
+    changed
+        .expected_tp2_paths
+        .push("mod/missing.tp2".to_owned());
+
+    assert!(matches!(
+        extract_archive(&archive, &cache, &changed),
+        Err(AcquireError::ArchiveLayout(_))
+    ));
+    assert_eq!(first, extract_archive(&archive, &cache, &original).unwrap());
+}
+
+#[test]
+fn cache_hit_rejects_modified_payload_and_contract_marker_without_rebuilding() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("tampered.zip");
+    let (request, _) = write_multi_root_archive(&archive);
+    let payload_cache = temp.path().join("payload-cache");
+    let extracted = extract_archive(&archive, &payload_cache, &request).unwrap();
+    let payload = extracted.root.join("mod/setup-mod.tp2");
+    std::fs::write(&payload, b"modified payload").unwrap();
+    assert!(matches!(
+        extract_archive(&archive, &payload_cache, &request),
+        Err(AcquireError::CorruptCache { .. })
+    ));
+    assert_eq!(std::fs::read(payload).unwrap(), b"modified payload");
+
+    let marker_cache = temp.path().join("marker-cache");
+    let extracted = extract_archive(&archive, &marker_cache, &request).unwrap();
+    edit_extraction_marker(&extracted.root, |marker| {
+        marker["contract_sha256"] = serde_json::json!("0".repeat(64));
+    });
+    assert!(matches!(
+        extract_archive(&archive, &marker_cache, &request),
+        Err(AcquireError::CorruptCache { .. })
+    ));
+}
+
+#[test]
+fn populated_cache_still_rejects_noncanonical_duplicate_and_ambiguous_requests() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("invalid-contracts.zip");
+    let cache = temp.path().join("extract");
+    let (original, _) = write_multi_root_archive(&archive);
+    let first = extract_archive(&archive, &cache, &original).unwrap();
+    let mut duplicate_root = original.clone();
+    duplicate_root.expected_roots.push("MOD".to_owned());
+    let mut duplicate_tp2 = original.clone();
+    duplicate_tp2
+        .expected_tp2_paths
+        .push("MOD\\SETUP-MOD.TP2".to_owned());
+    let mut ambiguous_owner = original.clone();
+    ambiguous_owner
+        .expected_roots
+        .push("mod/setup-mod.tp2".to_owned());
+
+    for invalid in [duplicate_root, duplicate_tp2, ambiguous_owner] {
+        assert!(matches!(
+            extract_archive(&archive, &cache, &invalid),
+            Err(AcquireError::InvalidRequest(_))
+        ));
+    }
+    assert_eq!(first, extract_archive(&archive, &cache, &original).unwrap());
+}
+
 #[test]
 fn declared_tp2_requires_exactly_one_publish_root() {
     for (index, roots, tp2_path, entries) in [
@@ -649,7 +886,7 @@ fn declared_tp2_requires_exactly_one_publish_root() {
             ),
             "unexpected error: {error:?}"
         );
-        assert!(!published_path(&cache, &request.artifact_sha256).exists());
+        assert!(!published_archive_parent(&cache, &request.artifact_sha256).exists());
         assert!(!cache.join("temporary").exists());
     }
 }

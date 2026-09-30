@@ -26,6 +26,30 @@
   min-width: 0;
 }
 
+.manual-breakpoint-body,
+.manual-checkpoint-panel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+
+.manual-checkpoint-panel { padding: 0.5rem 0; }
+.manual-breakpoint-body p,
+.manual-checkpoint-panel p { margin: 0; }
+.manual-breakpoint-body label { display: grid; gap: 0.35rem; }
+.manual-breakpoint-body input,
+.manual-breakpoint-body select { width: 100%; min-height: 44px; }
+.manual-mod-warning { color: var(--vellum); max-width: 76ch; line-height: 1.55; }
+.manual-breakpoint-list,
+.manual-addition-list { margin: 0; padding-left: 1.5rem; }
+.manual-breakpoint-row { padding: 0.5rem 0; }
+.manual-breakpoint-row > div { display: inline; }
+.manual-breakpoint-row > button { margin-top: 0.35rem; }
+.manual-breakpoint-row strong,
+.manual-checkpoint-panel .path,
+.manual-checkpoint-panel dd { overflow-wrap: anywhere; }
+.manual-checkpoint-panel .review-list { margin: 0; }
+
 [hidden] {
   display: none !important;
 }
@@ -1597,6 +1621,26 @@ input[type="search"] {
 
 .launcher-actions {
   margin-block: 0.25rem;
+}
+
+.radar-launch-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
+.radar-launch-choice input {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--teal);
+}
+
+.radar-launch-option p {
+  margin-block: 0.35rem 0;
+  font-size: 0.85rem;
 }
 
 .installation-metadata {

@@ -193,6 +193,7 @@ fn selected_version(ctx: &Context<'_>) -> Result<Option<String>, String> {
 }
 
 fn plan(ctx: &Context<'_>, old_source: &Path, new_source: &Path) -> Result<Plan, String> {
+    crate::manual_checkpoint::game_update_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;
     if selected_version(ctx)?.as_deref() != Some(buffbot::OLD_VERSION) {
         return Err("The supported old BuffBot version is not installed.".into());
@@ -287,6 +288,7 @@ fn token(plan: &Plan) -> Result<String, String> {
 }
 
 pub fn inspect(ctx: &Context<'_>) -> Result<ModUpgradePreview, String> {
+    crate::manual_checkpoint::game_update_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;
     let history = transaction::history(&ctx.record.managed_root)?;
     let mut preview=ModUpgradePreview {

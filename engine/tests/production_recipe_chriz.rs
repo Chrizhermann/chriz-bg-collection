@@ -15,9 +15,11 @@ const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187,
     200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910,
 ];
-const BG_REBALANCE_COMPONENTS: &[u32] = &[100, 101, 120, 121, 301, 400, 401, 404, 405, 407, 408];
+const BG_REBALANCE_COMPONENTS: &[u32] = &[
+    100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302,
+];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
-    100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408,
+    100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302,
 ];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
@@ -32,23 +34,27 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.8"];
-    assert_eq!(artifact.version, "0.6.8");
+    assert_eq!(
+        manifest.mods["chriz-sod-remix"].artifact_id,
+        "chriz-sod-remix-0.6.12"
+    );
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.12"];
+    assert_eq!(artifact.version, "0.6.12");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.8/chriz-sod-remix-v0.6.8.zip"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.12/chriz-sod-remix-v0.6.12.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.8");
+    assert_eq!(artifact.source.reference, "v0.6.12");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-sod-remix-v0.6.8.zip")
+        Some("chriz-sod-remix-v0.6.12.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_513_381));
+    assert_eq!(artifact.source.expected_length, Some(2_959_604));
     assert_eq!(
         artifact.source.sha256,
-        "29eb10537ebf759608da93b8764acfc678cd301bcef24e14cc860db01b33efbb"
+        "8c1a18debed45530d629efa19aa6c6d3b34317751d89683104b0c0306e67cd97"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -137,6 +143,10 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
         assert!(run.components.contains(&prerequisite));
     }
     assert!(!run.components.contains(&291));
+    assert!(
+        !run.components.contains(&258),
+        "fresh component 256 includes the bridge timer; 258 is only a retrofit"
+    );
 
     let mut selection = Selection::defaults("windows");
     selection.set_feature("mod:chriz-sod-remix", false);
@@ -148,24 +158,24 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.6.0");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.7.1");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.6.0");
+    assert_eq!(artifact.version, "0.7.1");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.6.0/chriz-bg-rebalance-v0.6.0.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.7.1/chriz-bg-rebalance-v0.7.1.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.0");
+    assert_eq!(artifact.source.reference, "v0.7.1");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.6.0.zip")
+        Some("chriz-bg-rebalance-v0.7.1.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_724_047));
+    assert_eq!(artifact.source.expected_length, Some(1_734_037));
     assert_eq!(
         artifact.source.sha256,
-        "e5f39cb60ecf90a715715d95848df4582168e55cdcff4fc5455bc768f3063224"
+        "ba53f02e1b5542534412331dc2f33d78c4b3a19e2dd3dee60ef6a9755ef170ab"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -257,6 +267,11 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 1
             ),
             (
+                "feature:chriz-bg-rebalance:component-302",
+                Decision::Default,
+                1
+            ),
+            (
                 "feature:chriz-bg-rebalance:tempus-bundle",
                 Decision::Default,
                 6
@@ -268,7 +283,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
             ),
             (
                 "feature:chriz-bg-rebalance:component-111",
-                Decision::Optional,
+                Decision::Default,
                 1
             ),
         ]
@@ -279,7 +294,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
     let no_tempus = evaluate(&manifest, &no_tempus).unwrap();
     assert_eq!(
         no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 120, 121, 301][..])
+        Some(&[100, 101, 111, 120, 121, 301, 302][..])
     );
 
     let mut disabled = Selection::defaults("windows");
@@ -301,4 +316,45 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
             .collect::<Vec<_>>(),
         TEMPUS_COMPONENTS
     );
+}
+
+#[test]
+fn defaults_wing_buffet_spacing_with_scs_and_an_independent_optout() {
+    let manifest = recipe();
+    let feature_id = "feature:chriz-bg-rebalance:component-111";
+    let run_id = "chriz-bg-rebalance-bg2";
+    let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let wing_buffet = evaluation.view.control(feature_id).unwrap();
+    assert_eq!(wing_buffet.decision, Decision::Default);
+    assert_eq!(wing_buffet.readiness, Readiness::Ready);
+    assert!(wing_buffet.selected);
+    assert!(wing_buffet.interactive);
+    assert_eq!(
+        wing_buffet.requires,
+        ["feature:stratagems:mandatory-components"]
+    );
+    let lethal_melee = evaluation
+        .view
+        .control("feature:chriz-bg-rebalance:component-110")
+        .unwrap();
+    assert_eq!(lethal_melee.decision, Decision::Optional);
+    assert!(!lethal_melee.selected);
+
+    let mut selection = Selection::defaults("windows");
+    let defaults = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(
+        defaults.plan.components_for(run_id),
+        Some(BG_REBALANCE_COMPONENTS)
+    );
+    selection.set_feature(feature_id, false);
+    let opted_out = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(
+        opted_out.plan.components_for(run_id),
+        Some(&[100, 101, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302][..])
+    );
+
+    let mut no_scs = Selection::defaults("windows");
+    no_scs.set_feature("mod:stratagems", false);
+    let no_scs = evaluate(&manifest, &no_scs).unwrap();
+    assert!(!no_scs.plan.components_for(run_id).unwrap().contains(&111));
 }

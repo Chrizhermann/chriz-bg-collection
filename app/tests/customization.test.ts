@@ -74,6 +74,19 @@ describe("common customization bundles", () => {
     expect(bulkCategoryChanges(e, "kits", false)).toEqual({ a: false, b: false });
   });
 
+  it("include all preserves either stronghold route without combining incompatible families", () => {
+    const multiple = [1160, 1161].map(n => `feature:cdtweaks:component-${n}`);
+    const individual = Array.from({ length: 8 }, (_, i) => `feature:cdtweaks:component-${1340 + i}`);
+    for (const retained of [multiple[1]!, individual[0]!]) {
+      const e = evaluation([...multiple, ...individual].map(id => control(id, {
+        selected: id === retained,
+        conflicts: multiple.includes(id) ? [...multiple, ...individual].filter(other => other !== id) : multiple,
+      })));
+      const selected = Object.keys(bulkCategoryChanges(e, "kits", true));
+      expect(selected).toEqual(retained === multiple[1] ? [retained] : individual);
+    }
+  });
+
   it("groups only structurally safe, fully symmetric explicit alternatives", () => {
     const valid = evaluation([
       control("a", { selected: true, decision: "default", parent: "mod", choiceGroup: "route", groupLabel: "Class route", conflicts: ["b"], choiceAvailable: true }),

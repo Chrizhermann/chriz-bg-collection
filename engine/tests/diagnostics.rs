@@ -189,6 +189,37 @@ fn exports_eet_compatibility_hash_evidence_without_mod_payloads() {
 }
 
 #[test]
+fn exports_ui_launch_correction_evidence_without_mod_payloads() {
+    let fixture = fixture(false);
+    let evidence = br#"{"fix_id":"infinity-ui-1.28-setup-name-v1","original_mode":"explicit-tp2","effective_mode":"setup-name"}"#;
+    write(&fixture.managed, ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/ui-invocation-compatibility.json", evidence);
+    write(
+        &fixture.managed,
+        "game/infinity_ui/infinity_ui.tp2",
+        b"not for diagnostics",
+    );
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".into(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    let exported = entries
+        .iter()
+        .find(|(name, _)| name.ends_with("/ui-invocation-compatibility.json"))
+        .unwrap();
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&exported.1).unwrap(),
+        serde_json::from_slice::<serde_json::Value>(evidence).unwrap()
+    );
+    assert!(!entries
+        .iter()
+        .any(|(name, _)| name.ends_with("infinity_ui.tp2")));
+}
+
+#[test]
 fn summary_explains_empty_attempts_without_claiming_the_process_never_started() {
     let fixture = fixture(false);
     write(&fixture.managed, ".chriz/attempts/attempt-001/receipt.json", &serde_json::to_vec(&serde_json::json!({

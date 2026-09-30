@@ -1,0 +1,20 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-09-30"
+command = "python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id chriz-bg-rebalance --archive <freshly downloaded published ZIP>"
+scope = "The release task verified the merged commit, annotated tag and normal GitHub Latest release, then freshly downloaded the asset. Both recipe batches were checked against that downloaded ZIP's measured hash/length and actual TP2 declaration order. No production extraction, WeiDU installation, game mutation or gameplay acceptance is claimed."
+
+[[artifacts]]
+artifact_id = "chriz-bg-rebalance-0.7.1"
+source_reference = "v0.7.1"
+source_commit = "1578fac00cd93ba88341ffdfcb0346c08480cd21"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.7.1/chriz-bg-rebalance-v0.7.1.zip"
+actual_length = 1734037
+actual_sha256 = "ba53f02e1b5542534412331dc2f33d78c4b3a19e2dd3dee60ef6a9755ef170ab"
+tp2_sha256 = "ad816ef04081e7a9d88ddfb5c77411061ae8a4ff4eba698f7a64ad04ae42f186"
+native_components = [100, 101, 110, 111, 120, 121, 301, 400, 401, 402, 403, 404, 405, 406, 407, 409, 408, 302, 420, 421]
+fresh_download = true
+fresh_extraction = false
+published_release_verified = true
+normal_latest = true
+native_component_order_verified = true

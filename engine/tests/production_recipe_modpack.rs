@@ -9,25 +9,25 @@ use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223,
-    400, 410, 430, 440, 450, 610, 620,
+    224, 225, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
 /// companion preparation before continuity, the continuity run before EET_end,
 /// the unchanged post-EET slot and the late companions after Safana.
 const PRE_CONTINUITY_COMPONENTS: &[u32] = &[
-    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223,
+    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225,
 ];
 
 const CONTINUITY_COMPONENTS: &[u32] = &[199];
 
-const POST_EET_END_COMPONENTS: &[u32] = &[130, 400, 410, 430, 440, 450, 610];
+const POST_EET_END_COMPONENTS: &[u32] = &[130, 400, 410, 430, 440, 450, 610, 611, 630];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
     110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221,
 ];
 
-const RECOMMENDED_COMPONENTS: &[u32] = &[130, 410, 440, 450, 610];
+const RECOMMENDED_COMPONENTS: &[u32] = &[130, 410, 440, 450, 611];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -41,27 +41,27 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.7");
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.8");
     let artifact = &manifest.artifacts[artifact_id];
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.7");
+    assert_eq!(artifact.version, "0.2.0-alpha.8");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.7");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.8");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.7/chriz-bg-modpack-v0.2.0-alpha.7.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.8/chriz-bg-modpack-v0.2.0-alpha.8.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.7.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.8.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_367_203));
+    assert_eq!(artifact.source.expected_length, Some(1_575_997));
     assert_eq!(
         artifact.source.sha256,
-        "f134085e8220a4222190981f173034653efe7aa92d47caa8430682a1352d1c19"
+        "8019d60d2d5c9e5b5961b73ddfcc65729d7feb819bc3e99f4134dd3058835989"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -115,7 +115,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(late.components, [189, 620]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.7");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.8");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -168,7 +168,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.unavailable_reason.is_some(), "{id}");
     }
 
-    for component in [110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 610] {
+    for component in [110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 611] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -190,7 +190,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.selected, "{id}");
     }
 
-    for component in [222, 223] {
+    for component in [222, 223, 610] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -215,7 +215,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // The base manifest includes the approved SoD skip (910) added after alpha.10,
     // Red Wizard 5102 (c907b38), the Acton Balthis 25 opt-out (9c66cee) and the
     // September 16 intake (cb07eca), and September 26 Emotion exclusivity (301).
-    // Its plan is distinct from the 450-component curated runtime recipe.
+    // Its plan is distinct from the 454-component curated runtime recipe.
     assert_eq!(
         evaluation
             .plan
@@ -223,7 +223,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        358
+        360
     );
 }
 
@@ -381,4 +381,86 @@ fn modpack_can_be_disabled_and_conditional_fixes_follow_their_dependencies() {
         .components_for("chriz-bg-modpack-bg2")
         .expect("remaining selected modpack components");
     assert!(!components.contains(&410));
+}
+
+#[test]
+fn story_xp_is_default_and_appearance_is_an_independent_optional_choice() {
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        let run = "chriz-bg-modpack-bg2";
+        let components = baseline.plan.components_for(run).unwrap();
+        assert!(components.contains(&611));
+        assert!(!components.contains(&610));
+        assert!(!components.contains(&630));
+        for (old, story, expected) in [
+            (true, false, vec![610]),
+            (false, true, vec![611]),
+            (false, false, vec![]),
+            (true, true, vec![]),
+        ] {
+            let mut selection = baseline.normalized_selection.to_selection();
+            selection.set_feature("feature:chriz-bg-modpack:component-610", old);
+            selection.set_feature("feature:chriz-bg-modpack:component-611", story);
+            let result = evaluate(&manifest, &selection).unwrap();
+            let actual: Vec<_> = result
+                .plan
+                .components_for(run)
+                .unwrap()
+                .iter()
+                .copied()
+                .filter(|c| [610, 611].contains(c))
+                .collect();
+            assert_eq!(actual, expected);
+        }
+        let mut selection = baseline.normalized_selection.to_selection();
+        selection.set_feature("feature:chriz-bg-modpack:component-630", true);
+        assert!(!evaluate(&manifest, &selection)
+            .unwrap()
+            .plan
+            .components_for(run)
+            .unwrap()
+            .contains(&630));
+        selection.set_feature("feature:randomiser:component-570", false);
+        let appearance = evaluate(&manifest, &selection).unwrap();
+        assert!(appearance.plan.components_for(run).unwrap().contains(&630));
+        assert!(appearance
+            .plan
+            .components_for("randomiser-bg2")
+            .unwrap()
+            .contains(&1100));
+        assert!(
+            appearance
+                .view
+                .control("feature:chriz-bg-modpack:component-611")
+                .unwrap()
+                .selected
+        );
+        selection.set_feature("mod:eeex", false);
+        let without_eeex = evaluate(&manifest, &selection).unwrap();
+        assert!(!without_eeex
+            .plan
+            .components_for(run)
+            .unwrap()
+            .iter()
+            .any(|c| [610, 611, 630].contains(c)));
+        assert!(evaluate_preset(&manifest, "chris-recommended", "linux").is_err());
+        let positions = |id: &str| {
+            manifest
+                .collection
+                .runs
+                .iter()
+                .position(|r| r.run_id == id)
+                .unwrap()
+        };
+        for earlier in [
+            "stratagems-bg2",
+            "randomiser-bg2",
+            "eet-end-bg2",
+            "chriz-bg-rebalance-bg2",
+            "chriz-sod-remix-bg2",
+        ] {
+            assert!(positions(earlier) < positions(run));
+        }
+    }
 }

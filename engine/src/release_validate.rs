@@ -6,7 +6,7 @@ use std::path::{Component as PathComponent, Path};
 use serde::Deserialize;
 
 use crate::error::EngineError;
-use crate::manifest::{AcquisitionPolicy, Decision, Feature, Phase, Readiness};
+use crate::manifest::{AcquisitionPolicy, Decision, Feature, InvocationMode, Phase, Readiness};
 use crate::recipe_view::{evaluate_preset, SelectionEvaluation};
 use crate::validate::{Finding, Severity};
 use crate::Manifest;
@@ -29,6 +29,8 @@ pub const RULE_RELEASE_OMISSION_APPROVAL: &str = "release-omission-approval";
 pub const RULE_RELEASE_RECORD: &str = "release-record";
 /// An unavailable optional feature lacks its authored UI explanation.
 pub const RULE_RELEASE_OPTIONAL_NOTE: &str = "release-optional-note";
+/// An offered installer requests an invocation mode unavailable to production execution.
+pub const RULE_RELEASE_INVOCATION_MODE: &str = "release-invocation-mode";
 
 const RELEASE_SCHEMA: u32 = 1;
 const PUBLIC_ALPHA_PRESET: &str = "chris-recommended";
@@ -118,15 +120,16 @@ pub fn validate_public_alpha_at(
     manifest: &Manifest,
     release_dir: &Path,
 ) -> crate::error::Result<Vec<Finding>> {
+    let mut findings = validate_production_invocations(manifest);
     // Small synthetic recipes used by engine/app contract tests are not the named public
     // release candidate. A real candidate either carries the canonical preset or its release
     // directory, in which case missing/malformed records remain release-blocking below.
+    // Production invocation support is independent of these release records.
     if !manifest.presets.contains_key(PUBLIC_ALPHA_PRESET) && !release_dir.exists() {
-        return Ok(Vec::new());
+        return Ok(findings);
     }
     let limitations: KnownLimitations = read_toml(&release_dir.join("known-limitations.toml"))?;
     let acceptance: Acceptance = read_toml(&release_dir.join("acceptance.toml"))?;
-    let mut findings = Vec::new();
 
     check_release_metadata(&limitations, &acceptance, &mut findings);
     if !manifest.presets.contains_key(PUBLIC_ALPHA_PRESET) {
@@ -157,6 +160,27 @@ pub fn validate_public_alpha_at(
     }
 
     Ok(findings)
+}
+
+/// Reject invocation modes that a fresh production installation cannot execute.
+///
+/// Check every declared installer, including optional choices that the recommended preset
+/// leaves unselected. General authoring validation still supports explicit TP2 fixtures;
+/// production has no signed compatibility-evidence contract for that invocation mode.
+pub fn validate_production_invocations(manifest: &Manifest) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (id, mod_file) in &manifest.mods {
+        if mod_file.invocation_mode == InvocationMode::ExplicitTp2 {
+            release_error(
+                &mut findings,
+                RULE_RELEASE_INVOCATION_MODE,
+                format!(
+                    "installer {id:?} requests unsupported explicit-tp2 invocation; production recipes must use setup-name mode"
+                ),
+            );
+        }
+    }
+    findings
 }
 
 fn read_toml<T>(path: &Path) -> crate::error::Result<T>

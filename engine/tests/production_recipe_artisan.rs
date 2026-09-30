@@ -7,9 +7,9 @@ use bg_engine::recipe_view::{evaluate, evaluate_preset};
 use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
-const ARTIFACT_ID: &str = "artisans-kitpack-chriz-v1.5.0";
-const ARTIFACT_SHA256: &str = "bb9b461c89a922a1b9f8720f0cd590cc27fd5b3e6bde98a50fac1f12d16630f6";
-const RELEASE_TAG: &str = "chriz-v1.5.0";
+const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.1";
+const ARTIFACT_SHA256: &str = "6d954fab27b86c4a94b8fc06b2f8b5a34b9ae0b3f09cb03ce38de1d5ce80a73b";
+const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.1";
 
 const MAIN_AUTHORED: &[u32] = &[
     1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005,
@@ -37,20 +37,20 @@ fn recipe() -> Manifest {
 }
 
 #[test]
-fn freezes_the_immutable_chriz_v1_5_0_release_asset_for_all_three_installers() {
+fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
     let manifest = recipe();
     let artifact = &manifest.artifacts[ARTIFACT_ID];
-    assert_eq!(artifact.version, RELEASE_TAG);
+    assert_eq!(artifact.version, RELEASE_TAG.trim_start_matches('v'));
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(artifact.source.reference, RELEASE_TAG);
     assert_eq!(
         artifact.source.url,
         format!(
-            "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-v1.5.0.zip"
+            "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-{RELEASE_TAG}.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(89_599_465));
+    assert_eq!(artifact.source.expected_length, Some(89_631_846));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -86,6 +86,28 @@ fn freezes_the_immutable_chriz_v1_5_0_release_asset_for_all_three_installers() {
         assert_eq!(installer.tp2, tp2, "{mod_id}");
         assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64", "{mod_id}");
     }
+    let tweaks = &manifest.mods["artisanskitpack-tweak"];
+    assert!(tweaks
+        .components
+        .iter()
+        .any(|component| component.id == 51010));
+    let cleanup = tweaks
+        .components
+        .iter()
+        .find(|component| component.id == 20101)
+        .unwrap();
+    assert_eq!(
+        cleanup.name,
+        "Archer: Remove legacy Manyshot from mod-added items"
+    );
+    let cleanup_feature = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == "feature:artisanskitpack-tweak:component-20101")
+        .unwrap();
+    assert_eq!(cleanup_feature.title, "Remove old Manyshot effects");
+    assert!(cleanup_feature.description.contains("Aimed Shot"));
 }
 
 #[test]
@@ -135,7 +157,10 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
     assert_eq!(runs[main].components, MAIN_AUTHORED);
     assert_eq!(runs[npcs].components, NPC_EARLY_AUTHORED);
     assert_eq!(runs[early_tweaks].components, TWEAK_EARLY);
-    assert_eq!(runs[late_tweaks].components, TWEAK_LATE);
+    assert_eq!(
+        runs[late_tweaks].components,
+        [51010, 12012, 3202, 3302, 8204]
+    );
     assert_eq!(runs[late_npc].components, [200010]);
 
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();

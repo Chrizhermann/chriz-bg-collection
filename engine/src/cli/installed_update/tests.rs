@@ -121,6 +121,7 @@ impl Fixture {
         }
         let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
         let frozen = FrozenCliRecipe {
+            manual_checkpoints: Vec::new(),
             schema: CLI_FROZEN_RECIPE_SCHEMA,
             release_version: Some("0.1.0".into()),
             application_version: Some("0.1.0".into()),

@@ -17,3 +17,204 @@ covers = [
   "run:chriz-bg-rebalance-bg2",
   "feature:feature:chriz-bg-rebalance:component-301",
 ]
+
+[[changes]]
+id = "stronghold-selection-exclusions"
+title = "Prevent incompatible stronghold choices"
+summary = "Customize no longer combines Multiple Strongholds with the individual strongholds-for-all-classes options that Tweaks Anthology refuses to install together. The individual options can still be combined with each other. Recommended choices are unchanged; existing games are not modified."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:cdtweaks:component-1160",
+  "feature:feature:cdtweaks:component-1161",
+  "feature:feature:cdtweaks:component-1340",
+  "feature:feature:cdtweaks:component-1341",
+  "feature:feature:cdtweaks:component-1342",
+  "feature:feature:cdtweaks:component-1343",
+  "feature:feature:cdtweaks:component-1344",
+  "feature:feature:cdtweaks:component-1345",
+  "feature:feature:cdtweaks:component-1346",
+  "feature:feature:cdtweaks:component-1347",
+]
+
+[[changes]]
+id = "custom-selection-core-dependencies"
+title = "Check required components before installing custom choices"
+summary = "Optional BG1 NPC features now require the actual BG1 NPC core. The curated SCS package, which includes Ascension encounters, now requires Ascension's rewritten final chapter rather than only its parent checkbox. Recommended choices are unchanged."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:mod:stratagems",
+  "feature:feature:bg1npc:component-20",
+  "feature:feature:bg1npc:component-21",
+  "feature:feature:bg1npc:component-22",
+  "feature:feature:bg1npc:component-23",
+  "feature:feature:bg1npc:component-24",
+  "feature:feature:bg1npc:component-30",
+  "feature:feature:bg1npc:component-31",
+  "feature:feature:bg1npc:component-32",
+  "feature:feature:bg1npc:component-33",
+  "feature:feature:bg1npc:component-34",
+  "feature:feature:bg1npc:component-40",
+  "feature:feature:bg1npc:component-41",
+  "feature:feature:bg1npc:component-42",
+  "feature:feature:bg1npc:component-43",
+  "feature:feature:bg1npc:component-44",
+  "feature:feature:bg1npc:component-50",
+  "feature:feature:bg1npc:component-51",
+  "feature:feature:bg1npc:component-52",
+  "feature:feature:bg1npc:component-53",
+  "feature:feature:bg1npc:component-54",
+  "feature:feature:bg1npc:component-60",
+  "feature:feature:bg1npc:component-61",
+  "feature:feature:bg1npc:component-62",
+  "feature:feature:bg1npc:component-63",
+  "feature:feature:bg1npc:component-64",
+  "feature:feature:bg1npc:component-70",
+  "feature:feature:bg1npc:component-71",
+  "feature:feature:bg1npc:component-72",
+  "feature:feature:bg1npc:component-73",
+  "feature:feature:bg1npc:component-74",
+  "feature:feature:bg1npc:component-110",
+  "feature:feature:bg1npc:component-112",
+  "feature:feature:bg1npc:component-113",
+  "feature:feature:bg1npc:component-114",
+  "feature:feature:bg1npc:component-131",
+  "feature:feature:bg1npc:component-241",
+]
+
+[[changes]]
+id = "artisan-chriz-1-6-refresh"
+title = "Updated Archer balance"
+summary = "New installations use our Artisan fork chriz-v1.6.0: Aimed Shot replaces Manyshot, Called Shot uses a saveable movement slow, and the old item-support option now removes legacy Manyshot effects. Existing kit and companion selections are unchanged. This is not an update to an existing game or saved character."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:artisans-kitpack-chriz-v1.5.0",
+  "artifact:artisans-kitpack-chriz-v1.6.0",
+  "feature:feature:artisanskitpack-tweak:component-20101",
+]
+
+[[changes]]
+id = "bardic-balance-6-refresh"
+title = "Updated Bardic Wonders package"
+summary = "New installations use our Bardic Wonders v2.9c-balance.6 fork. Existing kit selections and compatibility restrictions are unchanged; the new optional spell-progression adapter is not enabled by this package refresh. Existing games are unchanged."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:bardicwonders-v2.9c-balance.5",
+  "artifact:bardicwonders-v2.9c-balance.6",
+]
+
+[[changes]]
+id = "sod-remix-0-6-12-refresh"
+title = "Boareskyr Bridge has a battle timer"
+summary = "New installations use SoD Remix 0.6.12. The existing bridge component now includes its difficulty-scaled collapse timer and warnings. Extra Challenge remains optional; the separate timer retrofit is not needed or selected for fresh installs. Existing games are unchanged."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-sod-remix-0.6.11",
+  "artifact:chriz-sod-remix-0.6.12",
+]
+
+[[changes]]
+id = "buffbot-1-9-0-refresh"
+title = "BuffBot stable release"
+summary = "New installations use BuffBot 1.9.0, including its latest fixes and optional 5E Spellcasting compatibility. CEBG does not add 5E Spellcasting or change BuffBot's selected components. The separate, already-supported 1.8.3 to 1.8.4 update for existing games is unchanged; this refresh does not offer an in-place update to 1.9.0."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.8.4-alpha",
+  "artifact:buffbot-1.9.0",
+]
+
+[[changes]]
+id = "artisan-upstream-version-and-shifted-dialogue"
+title = "Artisan release identity and optional shifted dialogue"
+summary = "New installations use Artisan 4.81a-dev.85928f9-chriz.1, identifying the actual upstream snapshot plus our revision. The optional Talk while shapeshifted choice supports Shapeshifter or Hivemaster without EEex; it stays unchecked. Existing kit selections and published legacy versions remain unchanged."
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "artifact:artisans-kitpack-chriz-v1.6.0",
+  "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.1",
+  "feature:feature:artisanskitpack-tweak:component-51010",
+  "run:artisanskitpack-tweak-late-bg2",
+]
+
+[[changes]]
+id = "wing-buffet-longer-spacing-default"
+title = "Longer dragon Wing Buffet cooldown by default"
+summary = "Recommended new installations space SCS dragon Wing Buffets 18 seconds apart instead of 6. This existing option can still be switched off and requires Smarter Dragons. The separate dragon melee adjustment stays unchecked; existing games are unchanged."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = ["feature:feature:chriz-bg-rebalance:component-111"]
+
+[[changes]]
+id = "flail-of-ages-default"
+title = "Flail of the Ages balance"
+summary = "New recommended installations use BG Rebalance 0.7.1 component 302. The +5 flail permits Haste and Improved Haste; Slow saves versus Breath at -2 for +3, -4 for both +4 variants and -6 for +5. Proc chance, duration and damage stay unchanged. Emotion 301 remains selected and bard progression 420/421 stays unselected. The same release fixes optional Apex Dragons on SCS GLOBAL difficulty scripts; the batch uses native TP2 declaration order."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.6.0",
+  "artifact:chriz-bg-rebalance-0.7.0",
+  "artifact:chriz-bg-rebalance-0.7.1",
+  "feature:feature:chriz-bg-rebalance:component-302",
+  "run:chriz-bg-rebalance-bg2",
+]
+
+[[changes]]
+id = "optional-game-interface-providers"
+title = "Choose a game interface for a new installation"
+summary = "Customize now offers pinned, mutually exclusive experimental interface providers while retaining the recommended default: Infinity UI++, EET SoD, separate Dragonspear UI++ and three LeUI styles. The released Modpack text helper is automatic for classic providers, independent of HGO. Provider-specific HGO conflicts and Infinity's SCS five-point thief-skill conflict are explained; requested preferences return when compatible. Community playtesting remains welcome."
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "artifact:infinity-ui-1.28",
+  "artifact:dragonspear-ui-22.01.3",
+  "artifact:leui-4.9.1",
+  "artifact:leui-bg1ee-4.9.1",
+  "artifact:leui-sod-4.9.1",
+  "artifact:eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d",
+  "run:game-interface-infinity-bg2",
+  "run:game-interface-eet-sod-bg2",
+  "run:game-interface-dragonspear-bg2",
+  "run:game-interface-leui-bg2-bg2",
+  "run:game-interface-leui-bg1-bg2",
+  "run:game-interface-leui-sod-bg2",
+  "feature:feature:game-interface:infinity",
+  "feature:feature:game-interface:eet-sod",
+  "feature:feature:game-interface:dragonspear",
+  "feature:feature:game-interface:leui-bg2",
+  "feature:feature:game-interface:leui-bg1",
+  "feature:feature:game-interface:leui-sod",
+  "feature:feature:hiddengameplayoptions:component-28",
+  "feature:feature:hiddengameplayoptions:component-29",
+  "feature:feature:hiddengameplayoptions:component-30",
+  "feature:feature:hiddengameplayoptions:component-300",
+  "feature:feature:hiddengameplayoptions:component-301",
+  "feature:feature:hiddengameplayoptions:component-302",
+  "feature:feature:hiddengameplayoptions:component-304",
+  "feature:feature:stratagems:component-4115",
+  "run:chriz-bg-modpack-ui-compat-bg2",
+  "feature:feature:chriz-bg-modpack:component-640",
+]
+
+[[changes]]
+id = "modpack-story-xp-evandra-and-item-appearance"
+title = "Story-based utility XP and Evandra defaults"
+summary = "New recommended installations use Modpack alpha.8: story-stage utility XP 611 replaces the unchanged optional party-progress curve 610, and Evandra's Sorcerer build 224 and custom portrait 225 are independent defaults when her core is selected. Unidentified item appearance 630 is optional and conflicts only with Randomiser appearance 570, not ordinary randomization. Existing installations and saves are unchanged."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.7",
+  "artifact:chriz-bg-modpack-0.2.0-alpha.8",
+  "run:chriz-bg-modpack-pre-continuity-bg2",
+  "run:chriz-bg-modpack-bg2",
+  "feature:feature:chriz-bg-modpack:component-224",
+  "feature:feature:chriz-bg-modpack:component-225",
+  "feature:feature:chriz-bg-modpack:component-610",
+  "feature:feature:chriz-bg-modpack:component-611",
+  "feature:feature:chriz-bg-modpack:component-630",
+  "feature:feature:randomiser:component-570",
+]

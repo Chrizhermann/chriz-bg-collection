@@ -1,14 +1,16 @@
 # CHRIZ-BG-REBALANCE — components
 
-The pinned target is public release **v0.6.0**. Christopher approved component
+The pinned target is public release **v0.7.0**. Christopher approved component
 `301` as a recommended default on **2026-09-26**, based on earlier in-game testing;
 fix any issue in a follow-up rather than gating on more testing. The
 [September 16 candidate](../../alpha16-candidate-2026-09-16.md) approved dragon
-components `110` and `111` as optional, unchecked additions. The release retains component `120`
+components `110` and `111` as optional, unchecked additions. On September 29,
+Christopher changed `111` to a recommended default; `110` stays unchecked.
+The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-17 curated entries, 11 recommended selections. The release also contains bard
+18 curated entries, 13 recommended selections. The release also contains bard
 progression `420`/`421`; they remain outside the offered recipe and unselected.
 ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
@@ -18,10 +20,11 @@ progression `420`/`421`; they remain outside the offered recipe and unselected.
 | 100 | SCS: Telekinetic Storm — restore save vs. spell for half damage (+ bypass Mirror Image) | SCS adjustments |  | ✓ | mandatory |
 | 101 | SCS: Adventurer's Mart — restore the five Freedom scrolls (spell tweak orphaned in v35) | SCS adjustments |  | ✓ | default |
 | 110 | SCS: dragon melee delivery and death-protection rebalance | SCS adjustments |  |  | optional |
-| 111 | SCS: dragon wing-buffet spacing rebalance | SCS adjustments |  |  | optional |
+| 111 | SCS: dragon wing-buffet spacing rebalance | SCS adjustments |  |  | default |
 | 120 | SCS + Spell Revisions: repair false weapon-protection semantics | SCS adjustments |  | ✓ | mandatory |
 | 121 | EEex + SCS: ambient caster readiness and one honest first-contact defense | SCS adjustments |  | ✓ | default |
 | 301 | Emotion, Courage / Emotion, Hope — mutually exclusive beneficial emotions | Cross-cutting audits |  |  | default |
+| 302 | Flail of the Ages — tiered Slow saves and haste-compatible +5 | Item balance |  |  | default |
 | 400 | Cleric of Tempus: weapon training — axe, longsword, crossbow, and two-pip mastery | Class and kit revisions |  | ✓ | default |
 | 401 | Cleric of Tempus: Holy Power — automatic semantic detection (recommended) | Class and kit revisions | Cleric of Tempus: Holy Power compatibility | ✓ | default |
 | 402 | Cleric of Tempus: Holy Power — force true-doubling compatibility | Class and kit revisions | Cleric of Tempus: Holy Power compatibility |  | |
@@ -50,8 +53,9 @@ progression `420`/`421`; they remain outside the offered recipe and unselected.
 - Components `120` and `121` inspect the effective SCS/SR/EEex stack and therefore run as
   late compatibility components. On the researched stack, run `120` before `121`.
 - Dragon `110` requires Smarter Dragons and EEex; `111` requires Smarter Dragons and
-  spaces wing buffets 18 seconds apart rather than 6. Both remain unchecked and
-  independent options. Their inclusion is source-screened; native combat acceptance
+  spaces wing buffets 18 seconds apart rather than 6. `111` is default-on and can
+  be disabled; `110` stays unchecked. They are independent options.
+  Their inclusion is source-screened; native combat acceptance
   remains pending as recorded in the September 16 candidate.
 - Run the Tempus bundle after SCS, final Spell Revisions processing, Artisan's Kitpack
   proficiency infrastructure, and EEex.
@@ -70,7 +74,7 @@ Revisions. Later CDTweaks `2312` keeps hostile save-coupled removers aligned and
 does not change Courage/Hope; Modpack `430` leaves their fixed-level scrolls alone.
 The offered run follows source order:
 `100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408`.
-Dragon `110`/`111` remain optional and unchecked.
+Dragon `110` remains unchecked; `111` is default-on following the September 29 decision.
 
 The v0.4.0-to-v0.6.0 intake adds `301` and the unselected `420`/`421`; all previously
 selected components are unchanged. This default applies to new installations /
@@ -80,6 +84,16 @@ transformer fixture coverage only. A quick Hope/Courage replacement and refresh
 check in the next install is worthwhile, explicitly **not a release gate**.
 
 ## Remaining follow-up
+
+September 29: Flail component `302` is an approved default in released v0.7.0.
+The +5 Free Action permits Haste/Improved Haste. Slow saves versus Breath at
+-2 for +3, -4 for both +4 variants, and -6 for +5; proc chance, duration and damage
+remain unchanged. It follows `301` in the existing post-EET-end run, after SR,
+SCS and item-description changes, without an EEex dependency. Thirteen focused
+real-WeiDU synthetic/resource checks and the owner's full suite passed; this is
+not live gameplay acceptance. Existing `301` stays selected and `420`/`421`
+stay unselected.
+
 - Stage the fixed APR implementation against EEex v1.2 and verify 1.5 APR with a two-pip
   weapon, 2.5 under Holy Power, no cycling, and prompt return to normal with a zero-pip
   weapon. The earlier installed test used EEex v0.11, so it is not target acceptance.

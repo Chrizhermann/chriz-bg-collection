@@ -115,6 +115,7 @@ fn tables(game: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
 }
 
 fn plan(ctx: &Context<'_>, catalog: &catalog::Catalog) -> Result<Plan, String> {
+    crate::manual_checkpoint::game_update_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;
     let game = ctx.game();
     if !String::from_utf8(files::read(&game.join("weidu.conf"), 65536)?)

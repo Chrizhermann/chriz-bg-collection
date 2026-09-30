@@ -3,6 +3,7 @@ mod commands;
 pub mod consistency;
 pub mod error;
 mod installation_lookup_trace;
+mod removal_size;
 pub mod shortcut;
 pub mod updates;
 
@@ -46,6 +47,10 @@ pub fn run() -> tauri::Result<()> {
             commands::freeze_review,
             commands::start_build,
             commands::resume_build,
+            commands::get_manual_checkpoint,
+            commands::check_manual_checkpoint,
+            commands::accept_manual_checkpoint,
+            commands::open_manual_checkpoint_folder,
             commands::supply_manual_archive,
             commands::open_manual_source,
             commands::get_run_snapshot,

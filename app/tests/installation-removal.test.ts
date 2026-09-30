@@ -6,6 +6,7 @@ import { BackendCommandError, FixtureBackend } from "../src/backend";
 import type { InstallationRemovalPreview, ManagedInstallation } from "../src/contracts";
 import { mountApp } from "../src/app";
 import { buildScreen } from "../src/screens/build";
+import { installationRemovalDialog } from "../src/components/installation-removal";
 
 const installation: ManagedInstallation = {
   id: "chosen", name: "My test installation", path: "D:\\CEBG\\My test installation", status: "Ready",
@@ -39,6 +40,39 @@ class RemovalBackend extends FixtureBackend {
 
 describe("explicit managed-install removal", () => {
   afterEach(() => { document.body.replaceChildren(); window.localStorage.clear(); });
+
+  it.each([
+    ["12884901888", "12 GiB"],
+    ["1610612736", "1.5 GiB"],
+    ["0", "0 B"],
+  ])("shows %s bytes as an approximate folder size", (approximateSizeBytes, formatted) => {
+    const dialog = installationRemovalDialog({
+      installId: installation.id, displayName: installation.name, managedRoot: installation.path,
+      action: "delete", preservedSavePath: null, confirmationToken: "token", approximateSizeBytes,
+    }, false, null, () => {}, () => {});
+    expect(dialog.textContent).toContain(`Approximate folder size: ${formatted}`);
+    expect(dialog.textContent).toContain("Disk space freed may differ");
+    expect(dialog.textContent).toContain("This cannot be undone");
+  });
+
+  it.each([undefined, null, "invalid", "-1"])("keeps deletion available when size is %s", (approximateSizeBytes) => {
+    const dialog = installationRemovalDialog({
+      installId: installation.id, displayName: installation.name, managedRoot: installation.path,
+      action: "delete", preservedSavePath: null, confirmationToken: "token", approximateSizeBytes,
+    }, false, null, () => {}, () => {});
+    expect(dialog.textContent).toContain("Approximate folder size: unavailable");
+    expect((getByRole(dialog, "button", { name: "Delete permanently" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("shows no size estimate when forgetting a missing folder", () => {
+    const dialog = installationRemovalDialog({
+      installId: installation.id, displayName: installation.name, managedRoot: installation.path,
+      action: "forget", preservedSavePath: null, confirmationToken: "token", approximateSizeBytes: "12884901888",
+    }, false, null, () => {}, () => {});
+    expect(dialog.textContent).not.toContain("folder size");
+    expect(dialog.textContent).not.toContain("Disk space");
+    expect(dialog.textContent).toContain("no files will be deleted");
+  });
 
   it("previews the exact selected folder, preserves saves outside it, and cancellation performs no removal", async () => {
     const backend = new RemovalBackend();

@@ -38,7 +38,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
             self.assertEqual(actual[run_id], [value for value in runs[run_id]["components"] if value in selected])
             self.assertEqual(len(actual[run_id]), len(set(actual[run_id])))
         self.assertEqual(self.result["componentCount"], sum(map(len, actual.values())))
-        # Alpha.18 adds Rebalance 301 to alpha.17's 449 components; interval-save
+        # Alpha.18 adds Rebalance 301/302 to alpha.17's 449 components; interval-save
         # controls and the existing 15-minute rotating saves remain selected.
         controls = "feature:hiddengameplayoptions:component-38"
         self.assertTrue(effective[controls])
@@ -48,7 +48,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertIn(3354, actual["cdtweaks-bg2"])
         self.assertEqual(actual["chriz-bg-rebalance-bg2"].count(301), 1)
         self.assertTrue({420, 421}.isdisjoint(actual["chriz-bg-rebalance-bg2"]))
-        self.assertEqual(self.result["componentCount"], 450)
+        self.assertEqual(self.result["componentCount"], 454)
         self.assertEqual(len(actual), 50)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

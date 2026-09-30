@@ -3,6 +3,7 @@ import { createAppShell } from "./components/app-shell";
 import type { TechnicalLogState } from "./components/technical-log";
 import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, InstallationRemovalPreview, InstalledUpdatePlan, ManagedInstallation, ManualDownloadRequirement, ModUpgradePreview, Route, RunEventEnvelope, UpdateSummary, PatchPreview } from "./contracts";
 import { buildScreen } from "./screens/build";
+import { updateBuildPhase } from "./build-progress";
 import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
 import { homeScreen, type AddonFeedback, type ShortcutFeedback } from "./screens/home";
@@ -31,6 +32,9 @@ import { clearAppUpdate, completedAppUpdate, rememberAppUpdate, type OperationFe
 import type { OperationProgress } from "./contracts";
 import type { InputValue } from "./contracts";
 import { installationNameError } from "./components/installation-name";
+import type { ManualBreakpoint, ManualCheckpointStatus } from "./contracts";
+import type { LaunchInstallResult } from "./contracts";
+import { RadarLaunchPreferences } from "./radar-launch-preference";
 
 export interface AppHandle {
   navigate(route: Route): Promise<void>;
@@ -105,10 +109,19 @@ class AppController implements AppHandle {
   #identityRevision = 0;
   #manualDownloadRevision = 0;
   #starting = false;
+  #resuming = false;
+  #runRevision = 0;
+  #activeStepId: string | null = null;
+  #stepProgressFinished = false;
   #manualDownloads: readonly ManualDownloadRequirement[] = [];
   #manualDownloadGateVisible = false;
   #manualDownloadCheckingArtifactId: string | null = null;
   #manualDownloadError: { readonly artifactId: string; readonly message: string } | null = null;
+  #manualCheckpoint: ManualCheckpointStatus | null = null;
+  #manualCheckpointExpected = false;
+  #manualCheckpointBusy = false;
+  #manualCheckpointError: string | undefined;
+  #manualCheckpointRevision = 0;
   #runId: string | null = null;
   #installId: string | null = null;
   #retryAvailable = false;
@@ -124,6 +137,9 @@ class AppController implements AppHandle {
   #changingProfile = false;
   #radarAttempts = new Set<string>();
   #addonFeedback: AddonFeedback | null = null;
+  readonly #radarLaunchPreferences = new RadarLaunchPreferences();
+  readonly #launchPending = new Set<string>();
+  readonly #launchFeedback = new Map<string, LaunchInstallResult>();
   #logRenderTimer: number | null = null;
   #removalPreview: InstallationRemovalPreview | null = null;
   #removalBusy = false;
@@ -165,6 +181,11 @@ class AppController implements AppHandle {
     this.#installId = selected?.id ?? null;
     if (installations.length > 0) {
       this.#dispatch({ type: "navigate", route: "home", remember: false });
+      if (selected?.resumable && selected.status === "Paused for your mods") {
+        this.#showManualPause();
+        this.#dispatch({ type: "navigate", route: "build", remember: false });
+        await this.#loadManualCheckpoint(selected.id);
+      }
     } else {
       await this.#prepareInstallFlow();
     }
@@ -208,6 +229,7 @@ class AppController implements AppHandle {
           this.#dispatch({ type: "set-installation-name", name: draft.installationName });
           this.#dispatch({ type: "set-destination", path: draft.destinationPath, automatic: draft.destinationAutomatic });
           this.#dispatch({ type: "restore-selection", selection: draft.selection });
+          this.#dispatch({ type: "set-manual-breakpoints", breakpoints: draft.manualBreakpoints ?? [] });
           this.#createDesktopShortcutAfterInstall = draft.createDesktopShortcut;
           this.#savedSourcePaths = { ...draft.sourcePaths };
           await Promise.all([
@@ -264,13 +286,15 @@ class AppController implements AppHandle {
       installationName: this.#state.installationName, destinationPath: this.#state.destinationPath,
       destinationAutomatic: this.#state.destinationAutomatic, sourcePaths: this.#savedSourcePaths,
       selection: this.#state.selection, createDesktopShortcut: this.#createDesktopShortcutAfterInstall,
+      manualBreakpoints: this.#state.manualBreakpoints,
     });
   }
 
   async navigate(route: Route): Promise<void> {
+    if ((this.#manualCheckpointBusy || this.#resuming) && route !== "build") return;
     if (this.#modUpgradeBusy && route !== "updates") return;
     const buildNeedsControls = this.#state.build !== null
-      && (["running", "attention", "waiting-manual"].includes(this.#state.build.state)
+      && (["running", "attention", "waiting-manual", "pausing"].includes(this.#state.build.state)
         || (this.#state.build.state === "failed" && this.#retryAvailable));
     if (this.#status.mode === "native"
       && route !== "build"
@@ -295,7 +319,7 @@ class AppController implements AppHandle {
   #dispatch(action: AppAction): void {
     this.#state = reduce(this.#state, action);
     if (action.type === "select-game" && action.id !== "") delete this.#sourceRestoreNotices[action.game];
-    if (["select-game", "set-installation-name", "set-destination", "set-feature", "set-features", "set-input", "reset-selection", "evaluation-resolved"].includes(action.type)) {
+    if (["select-game", "set-installation-name", "set-destination", "set-feature", "set-features", "set-input", "set-manual-breakpoints", "reset-selection", "evaluation-resolved"].includes(action.type)) {
       this.#saveDraft();
     }
   }
@@ -472,6 +496,7 @@ class AppController implements AppHandle {
     if (this.#modUpgradeBusy || this.#installedUpdateBusy || this.#patchBusy || this.#installingUpdate || this.#installationActive()) return;
     const preview = this.#modUpgrade;
     const installId = this.#installedUpdateInstallId;
+    if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
     if (!preview || preview.installId !== installId) return;
     if (kind === "apply" && (preview.state !== "available" || !preview.reviewToken || !this.backend.applyModUpgrade)) return;
     if (kind === "undo" && (preview.state !== "applied" || !preview.canUndo || !this.backend.restoreModUpgrade)) return;
@@ -532,6 +557,7 @@ class AppController implements AppHandle {
   }
 
   async #patchOperation(kind: "check" | "apply" | "undo" | "restore", installId = this.#patchInstallId, fullBackup = true, saveBackup = false): Promise<void> {
+    if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
     if (this.#patchBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy) return;
     if (kind !== "check") {
       this.#installedUpdatePlan = null;
@@ -648,6 +674,7 @@ class AppController implements AppHandle {
         this.#destination.path,
         this.#state.selectedBg1Id,
         this.#state.selectedBg2Id,
+        this.#state.manualBreakpoints,
       );
       if (identityRevision !== this.#identityRevision) {
         throw new BackendCommandError({
@@ -673,7 +700,7 @@ class AppController implements AppHandle {
       this.#dispatch({ type: "review-frozen", review });
       this.#retryAvailable = false;
       this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
-      const started = await this.backend.startBuild(review.reviewToken, (event) => this.#handleRunEvent(event));
+      const started = await this.backend.startBuild(review.reviewToken, this.#runEventListener());
       this.#runId = started.runId;
       if (this.#status.mode === "fixture" && this.#installId === null) this.#installId = "fixture-install";
       if (render && this.#state.build?.state !== "complete") await this.navigate("build");
@@ -706,14 +733,20 @@ class AppController implements AppHandle {
 
   async #retryBuild(): Promise<void> {
     if (this.#status.mode === "native") {
-      if (this.#installId === null) return;
-      const started = await this.backend.resumeBuild(this.#installId, (event) => this.#handleRunEvent(event));
-      this.#runId = started.runId;
-      this.#retryAvailable = false;
-      if (this.#state.build?.state === "failed" || this.#state.build?.state === "waiting-manual") {
-        this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
-      }
+      if (this.#installId === null || this.#resumeBlocked()) return;
+      const installId = this.#installId;
+      this.#resuming = true;
       this.#render();
+      try {
+        if (this.#manualCheckpointExpected || this.#manualCheckpoint) {
+          await this.#loadManualCheckpoint(installId);
+          return;
+        }
+        await this.#launchResume(installId);
+      } finally {
+        this.#resuming = false;
+        this.#render();
+      }
       return;
     }
     this.#dispatch({ type: "build-updated", build: await this.backend.retryBuild() });
@@ -883,6 +916,7 @@ class AppController implements AppHandle {
       destination: this.#destination,
       evaluation: this.#state.evaluation,
       evaluationPending: this.#state.evaluationPending,
+      manualBreakpoints: this.#state.manualBreakpoints,
     });
   }
 
@@ -902,7 +936,7 @@ class AppController implements AppHandle {
   }
 
   async #startInstallation(): Promise<void> {
-    if (!this.#canInstall()) return;
+    if (!this.#canInstall() || this.#resuming || this.#campaignRunning()) return;
     this.#saveDraft();
     const identityRevision = this.#identityRevision;
     this.#starting = true;
@@ -935,10 +969,12 @@ class AppController implements AppHandle {
   }
 
   async #cancelBuild(): Promise<void> {
+    if (this.#resuming || this.#manualCheckpointBusy) return;
     if (this.#runId !== null) await this.backend.cancelRun(this.#runId);
   }
 
   async #pauseBuild(): Promise<void> {
+    if (this.#resuming || this.#manualCheckpointBusy) return;
     if (this.#runId === null || this.#state.build === null) return;
     const runId = this.#runId;
     const current = this.#state.build;
@@ -954,8 +990,13 @@ class AppController implements AppHandle {
   }
 
   async #waitForPause(runId: string): Promise<void> {
-    while (runId === this.#runId) {
-      const snapshot = await this.backend.getRunSnapshot(runId);
+    const revision = this.#runRevision;
+    while (runId === this.#runId && revision === this.#runRevision) {
+      const snapshot = await this.backend.getRunSnapshot(runId).catch(error => {
+        if (runId !== this.#runId || revision !== this.#runRevision) return null;
+        throw error;
+      });
+      if (snapshot === null || runId !== this.#runId || revision !== this.#runRevision) return;
       if (snapshot.status === "paused") {
         if (snapshot.report !== null) this.#installId = snapshot.report.install_id;
         this.#retryAvailable = true;
@@ -966,6 +1007,7 @@ class AppController implements AppHandle {
           headline: "Paused — safe to close CEBG",
           detail: "The completed work is recorded. Resume this installation to continue with the next pipeline step.",
         } });
+        if (this.#installId !== null && this.backend.getManualCheckpoint) await this.#loadManualCheckpoint(this.#installId);
         this.#render();
         return;
       }
@@ -1004,6 +1046,61 @@ class AppController implements AppHandle {
     };
   }
 
+  #campaignRunning(): boolean {
+    const state = this.#state.build?.state;
+    return this.#runId !== null && (state === "running" || state === "attention" || state === "pausing"
+      || (state === "waiting-manual" && !this.#retryAvailable));
+  }
+
+  #resumeBlocked(): boolean {
+    return this.#starting || this.#resuming || this.#manualCheckpointBusy || this.#modUpgradeBusy || this.#campaignRunning();
+  }
+
+  #runEventListener(): (event: RunEventEnvelope) => void {
+    const revision = ++this.#runRevision;
+    this.#activeStepId = null;
+    this.#stepProgressFinished = false;
+    return event => {
+      if (revision === this.#runRevision) this.#handleRunEvent(event);
+    };
+  }
+
+  // Callers hold either the resume or manual-checkpoint guard before their first await.
+  async #launchResume(installId: string): Promise<void> {
+    const previous = this.#state.build;
+    const previousRunId = this.#runId;
+    const previousRetry = this.#retryAvailable;
+    this.#runId = null;
+    this.#retryAvailable = false;
+    this.#commandError = null;
+    const onEvent = this.#runEventListener();
+    let receivedEvent = false;
+    this.#dispatch({ type: "build-updated", build: {
+      ...this.#initialNativeBuild(),
+      phases: previous?.phases ?? [],
+      logTail: previous?.logTail ?? [],
+      headline: "Resuming installation",
+      detail: "Preparing to continue…",
+    } });
+    this.#render();
+    try {
+      const started = await this.backend.resumeBuild(installId, event => {
+        receivedEvent = true;
+        onEvent(event);
+      });
+      this.#runId = started.runId;
+      // Events can arrive before the command response, including failure or completion.
+      // Never replace their newer snapshot or retry decision with a starting state.
+    } catch (error) {
+      if (!receivedEvent) {
+        this.#runId = previousRunId;
+        this.#retryAvailable = previousRetry;
+        if (previous !== null) this.#dispatch({ type: "build-updated", build: previous });
+      }
+      throw error;
+    }
+  }
+
   #handleRunEvent(envelope: RunEventEnvelope): void {
     this.#runId = envelope.runId;
     const current = this.#state.build ?? this.#initialNativeBuild();
@@ -1013,32 +1110,29 @@ class AppController implements AppHandle {
     const log = (line: string): readonly string[] => [...current.logTail, line].slice(-200);
     switch (event.type) {
       case "campaign_started":
+        this.#activeStepId = null;
+        this.#stepProgressFinished = false;
+        this.#manualCheckpoint = null;
+        this.#manualCheckpointExpected = false;
         this.#installId = event.install_id;
-        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "Setting up your selected mods…", logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
+        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "Setting up your selected mods…", progress: undefined, failureReason: undefined, commandError: undefined, recoveryAction: undefined, freshCopyRequired: undefined, logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
         break;
       case "phase_started": {
-        const phaseIds: Readonly<Record<string, string>> = {
-          "Prepare Baldur's Gate: Enhanced Edition": "bg1-preparation",
-          "Prepare Baldur's Gate II: Enhanced Edition": "bg2-preparation",
-          "Build the EET campaign": "eet-initialization",
-          "Install the curated collection": "main",
-          "Finalize EET": "eet-finalization",
-          "Apply reviewed final compatibility fixes": "post-eet-end",
-        };
-        const matchedIndex = current.phases.findIndex((phase) => phase.id === phaseIds[event.name]);
-        const currentIndex = matchedIndex >= 0
-          ? matchedIndex
-          : Math.max(0, current.phases.findIndex((phase) => phase.state === "pending"));
-        next = { ...current, phases: current.phases.map((phase, index) => ({ ...phase, state: index < currentIndex ? "done" : index === currentIndex ? "current" : "pending" })), logTail: log(`${envelope.sequenceAsString}: ${event.name}`) };
+        next = { ...current, phases: updateBuildPhase(current.phases, event.name), logTail: log(`${envelope.sequenceAsString}: ${event.name}`) };
         break;
       }
       case "step_started":
+        this.#activeStepId = event.id;
+        this.#stepProgressFinished = false;
         next = { ...current, progress: undefined };
         next = attentionWasActive
           ? { ...next, state: "running", headline: "Installation in progress", detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) }
           : { ...next, detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
         break;
       case "step_progress":
+        // Archive downloads identify the artifact; the pipeline prefixes it with acquire:.
+        if (this.#stepProgressFinished || (this.#activeStepId !== null
+          && event.id !== this.#activeStepId && `acquire:${event.id}` !== this.#activeStepId)) return;
         next = { ...current, progress: { stage: "applying", completed: String(event.done), total: String(event.total), unit: "items" }, logTail: log(`${envelope.sequenceAsString}: ${event.id} ${event.done}/${event.total}`) };
         break;
       case "console_line":
@@ -1057,6 +1151,11 @@ class AppController implements AppHandle {
           : attentionWasActive
           ? { ...current, state: "running", headline: "Installation in progress", detail: "The previous installation step finished.", logTail: log(`${event.id}: ${event.outcome}`) }
           : { ...current, logTail: log(`${event.id}: ${event.outcome}`) };
+        if (this.#activeStepId === event.id) {
+          next = { ...next, progress: undefined };
+          this.#activeStepId = null;
+          this.#stepProgressFinished = true;
+        }
         break;
       case "manual_download_needed":
         next = { ...current, state: "waiting-manual", headline: "Manual archive needed", detail: `Download ${event.mod_id} from ${event.page}. Then choose the downloaded archive; the installer will verify it before resuming.`, manualArchiveName: event.mod_id, logTail: log(`Expected SHA-256: ${event.expected_sha256}`) };
@@ -1079,9 +1178,14 @@ class AppController implements AppHandle {
         this.#installId = event.install_id;
         this.#retryAvailable = true;
         next = { ...current, state: "paused", headline: "Paused — safe to close CEBG", detail: "The completed work is recorded. Resume this installation to continue with the next pipeline step.", logTail: log(`${envelope.sequenceAsString}: paused after ${event.after_step_id}`) };
+        this.#manualCheckpointExpected = event.after_step_id.startsWith("checkpoint:manual-");
         break;
     }
     this.#dispatch({ type: "build-updated", build: next });
+    if (event.type === "campaign_paused" && this.#manualCheckpointExpected) {
+      this.#showManualPause();
+      void this.#loadManualCheckpoint(event.install_id);
+    }
     if (event.type === "campaign_finished") {
       this.#render();
       void this.#finishInstallation(event.install_id);
@@ -1151,9 +1255,10 @@ class AppController implements AppHandle {
   }
 
   async #refreshRetryAvailability(runId: string): Promise<void> {
+    const revision = this.#runRevision;
     try {
       const snapshot = await this.backend.getRunSnapshot(runId);
-      if (runId !== this.#runId) return;
+      if (runId !== this.#runId || revision !== this.#runRevision) return;
       const freshCopyRequired = snapshot.status === "failed"
         && snapshot.report?.status.status === "fresh_copy_required";
       this.#retryAvailable = snapshot.status === "failed"
@@ -1189,6 +1294,7 @@ class AppController implements AppHandle {
       }
       this.#render();
     } catch (error: unknown) {
+      if (runId !== this.#runId || revision !== this.#runRevision) return;
       this.#commandError = error instanceof BackendCommandError ? error : null;
       this.#render();
     }
@@ -1206,9 +1312,20 @@ class AppController implements AppHandle {
     announcement.focus();
   }
 
-  async #launchInstall(installId: string): Promise<void> {
-    if (this.#modUpgradeBusy) return;
-    await this.backend.launchInstall(installId);
+  async #launchInstall(installId: string, startRadar: boolean): Promise<void> {
+    if (this.#modUpgradeBusy || this.#launchPending.has(installId)) return;
+    const installation = this.#installations.find(copy => copy.id === installId);
+    if (!installation?.available || installation.patchRecoveryNeeded) return;
+    this.#launchPending.add(installId);
+    this.#launchFeedback.delete(installId);
+    this.#render();
+    try {
+      const result = await this.backend.launchInstall(installId, Boolean(installation.radarVersion) && startRadar);
+      this.#launchFeedback.set(installId, result);
+    } finally {
+      this.#launchPending.delete(installId);
+      this.#render();
+    }
   }
 
   async #openInstallFolder(installId: string): Promise<void> {
@@ -1305,17 +1422,125 @@ class AppController implements AppHandle {
   }
 
   async #resumeManagedInstall(installId: string): Promise<void> {
-    if (this.#modUpgradeBusy) return;
+    if (this.#resumeBlocked()) return;
+    this.#resuming = true;
     this.#installId = installId;
+    this.#runId = null;
     this.#retryAvailable = false;
-    this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
+    this.#manualCheckpoint = null;
+    this.#manualCheckpointExpected = false;
+    this.#dispatch({ type: "build-updated", build: {
+      ...this.#initialNativeBuild(), phases: [], state: "paused", headline: "Ready to resume",
+      detail: "Your previous progress is saved.",
+    } });
     this.#dispatch({ type: "navigate", route: "build" });
     this.#render();
-    await this.#retryBuild();
+    try {
+      if (this.backend.getManualCheckpoint && await this.#loadManualCheckpoint(installId)) return;
+      await this.#launchResume(installId);
+    } finally {
+      this.#resuming = false;
+      this.#render();
+    }
+  }
+
+  #showManualPause(): void {
+    this.#manualCheckpointExpected = true;
+    this.#dispatch({ type: "build-updated", build: {
+      ...(this.#state.build ?? this.#initialNativeBuild()), state: "paused", headline: "Paused for your mods",
+      detail: "Your progress is saved. Check and explicitly accept any manual additions before continuing.",
+    } });
+  }
+
+  async #loadManualCheckpoint(installId: string): Promise<boolean> {
+    if (!this.backend.getManualCheckpoint) return false;
+    const revision = ++this.#manualCheckpointRevision;
+    this.#manualCheckpointBusy = true;
+    this.#manualCheckpointError = undefined;
+    this.#manualCheckpoint = null;
+    this.#render();
+    try {
+      const status = await this.backend.getManualCheckpoint(installId);
+      if (revision !== this.#manualCheckpointRevision || installId !== this.#installId) return true;
+      this.#manualCheckpoint = status;
+      this.#manualCheckpointExpected = status !== null;
+      if (status) this.#showManualPause();
+      else if (this.#state.build?.state === "paused") this.#dispatch({ type: "build-updated", build: {
+        ...this.#state.build, headline: "Paused — safe to close CEBG",
+        detail: "Resume this installation to continue with the next pipeline step.",
+      } });
+      return status !== null;
+    } catch (error) {
+      if (revision === this.#manualCheckpointRevision) {
+        this.#showManualPause();
+        this.#manualCheckpointError = this.#checkpointError(error);
+      }
+      return true;
+    } finally {
+      if (revision === this.#manualCheckpointRevision) {
+        this.#manualCheckpointBusy = false;
+        this.#render();
+      }
+    }
+  }
+
+  #checkpointError(error: unknown): string {
+    return error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}`
+      : error instanceof Error ? error.message : "The checkpoint could not be checked. Keep the installation paused and try again.";
+  }
+
+  async #checkManualCheckpoint(expectUnchanged = false): Promise<void> {
+    const installId = this.#installId;
+    if (!installId || this.#manualCheckpointBusy || !this.backend.checkManualCheckpoint) return;
+    this.#manualCheckpointBusy = true;
+    this.#manualCheckpointError = undefined;
+    if (this.#manualCheckpoint) this.#manualCheckpoint = { ...this.#manualCheckpoint, reviewToken: "", additions: [] };
+    this.#render();
+    try {
+      const status = await this.backend.checkManualCheckpoint(installId);
+      if (installId !== this.#installId) return;
+      this.#manualCheckpoint = status;
+      if (expectUnchanged && status.additions.length) this.#manualCheckpointError = "Manual additions were found. Review and accept them explicitly before continuing.";
+    } catch (error) {
+      this.#manualCheckpointError = this.#checkpointError(error);
+    } finally {
+      this.#manualCheckpointBusy = false;
+      this.#render(this.#manualCheckpointError ? "manual-checkpoint-error" : "manual-checkpoint-review");
+    }
+  }
+
+  async #acceptManualCheckpoint(): Promise<void> {
+    const installId = this.#installId;
+    const status = this.#manualCheckpoint;
+    if (!installId || !status?.reviewToken || this.#resumeBlocked() || !this.backend.acceptManualCheckpoint) return;
+    this.#manualCheckpointBusy = true;
+    this.#manualCheckpointError = undefined;
+    // Every attempt consumes the displayed authority; a failure requires a fresh check.
+    this.#manualCheckpoint = { ...status, reviewToken: "" };
+    this.#render();
+    try {
+      await this.backend.acceptManualCheckpoint(installId, status.reviewToken, status.additions.length > 0);
+      this.#manualCheckpoint = null;
+      this.#manualCheckpointExpected = false;
+      if (status.additions.length) this.#installations = this.#installations.map(copy => copy.id === installId ? { ...copy, customized: true } : copy);
+      await this.#launchResume(installId);
+    } catch (error) {
+      this.#manualCheckpointError = this.#checkpointError(error);
+      this.#showManualPause();
+    } finally {
+      this.#manualCheckpointBusy = false;
+      this.#render(this.#manualCheckpointError ? "manual-checkpoint-error" : undefined);
+    }
+  }
+
+  #changeManualBreakpoints(breakpoints: readonly ManualBreakpoint[]): void {
+    if (!this.#beginIdentityEdit()) return;
+    this.#dispatch({ type: "set-manual-breakpoints", breakpoints });
+    this.#render("manual-breakpoint-search");
   }
 
   #installationActive(): boolean {
-    return this.#modUpgradeBusy || this.#starting || (this.#state.build !== null && ["running", "attention", "waiting-manual"].includes(this.#state.build.state));
+    return this.#manualCheckpointBusy || this.#modUpgradeBusy || this.#starting || this.#resuming || (this.#state.build !== null && ["running", "attention", "waiting-manual", "pausing"].includes(this.#state.build.state));
   }
 
   async #previewInstallationRemoval(installId: string): Promise<void> {
@@ -1422,7 +1647,8 @@ class AppController implements AppHandle {
       this.#installations.find((installation) => installation.id === this.#installId) ?? null,
       {
         begin: () => safely(() => this.#beginNewInstallation()),
-        launch: (installId) => safely(() => this.#launchInstall(installId)),
+        launch: (installId, startRadar) => safely(() => this.#launchInstall(installId, startRadar)),
+        setStartRadar: (installId, enabled) => this.#radarLaunchPreferences.set(installId, enabled),
         openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
         resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
         select: (installId) => this.#selectManagedInstallation(installId),
@@ -1434,6 +1660,11 @@ class AppController implements AppHandle {
       },
       this.#shortcutFeedback,
       this.#addonFeedback,
+      {
+        startRadar: this.#installId !== null && this.#radarLaunchPreferences.get(this.#installId),
+        pending: this.#installId !== null && this.#launchPending.has(this.#installId),
+        feedback: this.#installId === null ? undefined : this.#launchFeedback.get(this.#installId),
+      },
     );
     let content: HTMLElement;
     switch (this.#state.route) {
@@ -1472,6 +1703,7 @@ class AppController implements AppHandle {
           installRadar: selectedInstallation && selected?.state !== "stale" ? () => safely(() => this.#installRadar(selectedInstallation.id)) : undefined,
           installationName: selectedInstallation?.name,
           radarVersion: selectedInstallation?.radarVersion ?? null,
+          customized: this.#installations.find(item => item.id === selected?.installId)?.customized,
         }, this.#checkingUpdates, this.#installingUpdate);
         break;
       }
@@ -1498,6 +1730,7 @@ class AppController implements AppHandle {
           manualDownloadGateVisible: this.#manualDownloadGateVisible,
           manualDownloadCheckingArtifactId: this.#manualDownloadCheckingArtifactId,
           manualDownloadError: this.#manualDownloadError,
+          manualBreakpoints: this.#state.manualBreakpoints,
         }, {
           selectSource: (game, id) => safely(() => this.#selectGame(game, id)),
           browseSource: (game) => safely(() => this.#chooseGameFolder(game)),
@@ -1551,6 +1784,10 @@ class AppController implements AppHandle {
           change: (changes, focusId) => safely(() => this.#changeFeatures(changes, focusId)),
           reset: () => safely(() => this.#resetChoices()),
           input: (featureId, inputId, value, focusId) => safely(() => this.#changeInput(featureId, inputId, value, focusId)),
+          manualBreakpoints: evaluation.manualCheckpointOptions || this.#state.manualBreakpoints.length ? {
+            options: evaluation.manualCheckpointOptions ?? [], selected: this.#state.manualBreakpoints,
+            disabled: this.#state.evaluationPending, onChange: anchors => this.#changeManualBreakpoints(anchors),
+          } : undefined,
         });
         break;
       case "review":
@@ -1573,10 +1810,19 @@ class AppController implements AppHandle {
           diagnosticsAvailable: this.#installId !== null,
           fixture: this.#status.mode === "fixture",
           retryAvailable: this.#status.mode === "fixture" || this.#retryAvailable,
+          resuming: this.#resuming || this.#manualCheckpointBusy,
           logState: this.#logState,
           updateLogState: (state) => { this.#logState = state; },
           remove: this.#installId === null ? undefined : () => safely(() => this.#previewInstallationRemoval(this.#installId!)),
           removalDisabled: this.#removalBusy || this.#installationActive(),
+          manualCheckpoint: this.#manualCheckpointExpected || this.#manualCheckpoint ? {
+            status: this.#manualCheckpoint, busy: this.#manualCheckpointBusy, error: this.#manualCheckpointError,
+            openFolder: () => { if (this.#installId && this.backend.openManualCheckpointFolder) safely(() => this.backend.openManualCheckpointFolder!(this.#installId!)); },
+            reload: () => { if (this.#installId) void this.#loadManualCheckpoint(this.#installId); },
+            check: () => { void this.#checkManualCheckpoint(); },
+            continueUnchanged: () => { void this.#checkManualCheckpoint(true); },
+            accept: () => { void this.#acceptManualCheckpoint(); },
+          } : undefined,
         });
         break;
       case "complete": {
@@ -1633,7 +1879,12 @@ class AppController implements AppHandle {
     const main = this.root.querySelector("main");
     if (main !== null) main.scrollTop = scrollTop;
     if (focusTargetId || !sameRoute) {
-      (focusTargetId ? this.root.querySelector<HTMLElement>(`#${focusTargetId}`) : this.root.querySelector<HTMLElement>("h1"))?.focus({ preventScroll: true });
+      // Recipe IDs contain CSS punctuation. Match the literal ID inside this
+      // app root instead of interpreting it as a selector or searching globally.
+      const target = focusTargetId
+        ? Array.from(this.root.querySelectorAll<HTMLElement>("[id]")).find(element => element.id === focusTargetId)
+        : this.root.querySelector<HTMLElement>("h1");
+      target?.focus({ preventScroll: true });
     }
     if (this.#removalPreview !== null) {
       this.root.querySelector<HTMLElement>(".app-shell")!.inert = true;

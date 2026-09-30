@@ -15,10 +15,14 @@ import type {
   GameRole,
   InstallationDefaults,
   InstallationRemovalPreview,
+  LaunchInstallResult,
   InstalledComponent,
   InstalledUpdatePlan,
   ManualArchiveSupply,
   ManualDownloadRequirement,
+  ManualBreakpoint,
+  ManualCheckpointOption,
+  ManualCheckpointStatus,
   ManagedInstallation,
   ModUpgradePreview,
   OperationProgress,
@@ -52,7 +56,12 @@ export interface Backend {
     destination: string,
     bg1CandidateId: string,
     bg2CandidateId: string,
+    manualBreakpoints?: readonly ManualBreakpoint[],
   ): Promise<FrozenReview>;
+  getManualCheckpoint?(installId: string): Promise<ManualCheckpointStatus | null>;
+  checkManualCheckpoint?(installId: string): Promise<ManualCheckpointStatus>;
+  acceptManualCheckpoint?(installId: string, reviewToken: string, acceptAdditions: boolean): Promise<void>;
+  openManualCheckpointFolder?(installId: string): Promise<void>;
   startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null>;
@@ -69,7 +78,7 @@ export interface Backend {
   renameInstallation?(installId: string, name: string): Promise<{ readonly name: string }>;
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
   removeInstallation(installId: string, confirmationToken: string): Promise<void>;
-  launchInstall(installId: string): Promise<void>;
+  launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult>;
   openInstallFolder(installId: string): Promise<void>;
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
   installRadar(installId: string): Promise<void>;
@@ -131,6 +140,7 @@ type FeatureControlWire = Omit<FeatureControl, "unavailableReason" | "sourceLabe
 };
 
 type SelectionEvaluationWire = {
+  readonly manual_checkpoint_options?: readonly ManualCheckpointOption[];
   readonly view: {
     readonly categories: readonly string[];
     readonly controls: readonly FeatureControlWire[];
@@ -182,6 +192,7 @@ type ManualDownloadRequirementWire = {
 };
 
 type ManagedInstallationWire = {
+  readonly customized?: boolean;
   readonly id: string;
   readonly name: string;
   readonly path: string;
@@ -302,6 +313,7 @@ function projectCandidate(candidate: GameCandidateWire): GameCandidate {
 
 function projectEvaluation(evaluation: SelectionEvaluationWire): SelectionEvaluation {
   return {
+    ...(evaluation.manual_checkpoint_options === undefined ? {} : { manualCheckpointOptions: evaluation.manual_checkpoint_options }),
     view: {
       categories: evaluation.view.categories,
       controls: evaluation.view.controls.map((control) => {
@@ -418,6 +430,7 @@ export class NativeBackend implements Backend {
     destination: string,
     bg1CandidateId: string,
     bg2CandidateId: string,
+    manualBreakpoints?: readonly ManualBreakpoint[],
   ): Promise<FrozenReview> {
     const review = await this.#command<FrozenReviewWire>("freeze_review", {
       displayName,
@@ -425,6 +438,7 @@ export class NativeBackend implements Backend {
       destination,
       bg1CandidateId,
       bg2CandidateId,
+      ...(manualBreakpoints?.length ? { manualBreakpoints } : {}),
     });
     return {
       reviewToken: review.review_token,
@@ -440,6 +454,22 @@ export class NativeBackend implements Backend {
     const onEventChannel = this.#eventChannel((event) => onEvent(projectRunEvent(event as RunEventEnvelopeWire)));
     const started = await this.#command<StartBuildWire>("start_build", { reviewToken, onEvent: onEventChannel });
     return { runId: started.run_id };
+  }
+
+  getManualCheckpoint(installId: string): Promise<ManualCheckpointStatus | null> {
+    return this.#command("get_manual_checkpoint", { installId });
+  }
+
+  checkManualCheckpoint(installId: string): Promise<ManualCheckpointStatus> {
+    return this.#command("check_manual_checkpoint", { installId });
+  }
+
+  acceptManualCheckpoint(installId: string, reviewToken: string, acceptAdditions: boolean): Promise<void> {
+    return this.#command("accept_manual_checkpoint", { installId, reviewToken, acceptAdditions });
+  }
+
+  openManualCheckpointFolder(installId: string): Promise<void> {
+    return this.#command("open_manual_checkpoint_folder", { installId });
   }
 
   async resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {
@@ -530,8 +560,8 @@ export class NativeBackend implements Backend {
     }));
   }
 
-  async launchInstall(installId: string): Promise<void> {
-    await this.#command("launch_install", { installId });
+  launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {
+    return this.#command("launch_install", { installId, startRadar });
   }
 
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {
@@ -895,8 +925,10 @@ export class FixtureBackend implements Backend {
     }]);
   }
 
-  launchInstall(_installId: string): Promise<void> {
-    return Promise.resolve();
+  launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {
+    return Promise.resolve({ installId, radar: {
+      state: startRadar ? "started" : "not-requested", detail: null, technicalDetail: null,
+    } });
   }
 
   async previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {

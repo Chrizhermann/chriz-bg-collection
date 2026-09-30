@@ -1,0 +1,11 @@
+id = "leui-sod"
+artifact_id = "leui-sod-4.9.1"
+name = "Lefreut's Enhanced UI: SoD style"
+tp2 = "LeUI-SoD/LeUI-SoD.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Lefreut's Enhanced UI: SoD style - core interface"

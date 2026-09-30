@@ -14,9 +14,9 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 use crate::bridge::{
     BootstrapResponse, DesktopShortcutResponse, DestinationEvaluationResponse,
     DiagnosticsExportResponse, EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse,
-    GameDiscoveryResponse, InstallationDefaultsResponse, ManagedInstallationResponse,
-    ManualArchiveResponse, ManualDownloadRequirementResponse, NativeBridge, RunEventEnvelope,
-    RunSnapshotResponse, StartBuildResponse,
+    GameDiscoveryResponse, InstallationDefaultsResponse, LaunchInstallResponse,
+    ManagedInstallationResponse, ManualArchiveResponse, ManualDownloadRequirementResponse,
+    NativeBridge, RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
 };
 use crate::error::CommandError;
 use crate::updates::UpdateCenterResponse;
@@ -528,13 +528,14 @@ pub async fn export_diagnostics(
 pub async fn launch_install(
     state: State<'_, BridgeState>,
     install_id: String,
-) -> Result<(), CommandError> {
+    start_radar: Option<bool>,
+) -> Result<LaunchInstallResponse, CommandError> {
     let bridge = state
         .bridge
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone();
-    background(move || bridge.launch_install(&install_id)).await
+    background(move || bridge.launch_install(&install_id, start_radar.unwrap_or(false))).await
 }
 
 #[tauri::command]
@@ -797,6 +798,7 @@ pub async fn freeze_review(
     destination: String,
     bg1_candidate_id: String,
     bg2_candidate_id: String,
+    manual_breakpoints: Option<Vec<bg_engine::manual_checkpoint::ManualBreakpoint>>,
 ) -> Result<FrozenReviewResponse, CommandError> {
     let bridge = state
         .bridge
@@ -804,13 +806,83 @@ pub async fn freeze_review(
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone();
     background(move || {
-        bridge.freeze_review(
+        bridge.freeze_review_with_breakpoints(
             &display_name,
             &selection,
             &PathBuf::from(destination),
             &bg1_candidate_id,
             &bg2_candidate_id,
+            &manual_breakpoints.unwrap_or_default(),
         )
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_manual_checkpoint(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<Option<bg_engine::manual_checkpoint::ManualCheckpointStatus>, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.inspect_manual_checkpoint(&install_id, false)).await
+}
+
+#[tauri::command]
+pub async fn check_manual_checkpoint(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::manual_checkpoint::ManualCheckpointStatus, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge
+            .inspect_manual_checkpoint(&install_id, true)?
+            .ok_or_else(|| {
+                CommandError::new(
+                    "manual_checkpoint_unavailable",
+                    "This installation is not paused for manual mods.",
+                    "Refresh the installation status.",
+                    "No pending manual checkpoint exists.",
+                )
+            })
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn open_manual_checkpoint_folder(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.open_manual_checkpoint_folder(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn accept_manual_checkpoint(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    review_token: String,
+    accept_additions: bool,
+) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.accept_manual_checkpoint(&install_id, &review_token, accept_additions)
     })
     .await
 }

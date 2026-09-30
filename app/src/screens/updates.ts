@@ -4,6 +4,7 @@ import { installPatchesSection, type InstallPatchActions } from "../components/i
 import { installedUpdateSection, type InstalledUpdateActions } from "../components/installed-update-plan";
 
 export interface UpdateActions extends InstallPatchActions, InstalledUpdateActions {
+  readonly customized?: boolean;
   readonly checkAgain: () => void | Promise<void>;
   readonly installApplication: (version: string) => void | Promise<void>;
   readonly buildUpdatedCopy: (version: string) => void | Promise<void>;
@@ -113,10 +114,13 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   page.append(installationSelection(updates.managedCopies, selected, actions, installing || actions.patchBusy === true || actions.modUpgradeBusy === true));
   const gameSections = element("div", "update-game-sections");
   const selectedCopies = selected ? [selected] : [];
-  if (selected && actions.onCheckInstalledUpdate !== undefined) {
+  if (selected && actions.customized) {
+    gameSections.append(element("p", "manual-mod-warning", "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. CEBG app updates and new installations remain available."));
+  }
+  if (selected && !actions.customized && actions.onCheckInstalledUpdate !== undefined) {
     gameSections.append(installedUpdateSection(selectedCopies, actions, installing || actions.patchBusy === true, true));
   }
-  if (selected && actions.onCheckPatches !== undefined) {
+  if (selected && !actions.customized && actions.onCheckPatches !== undefined) {
     gameSections.append(installPatchesSection(selectedCopies, actions, installing || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true, true));
   }
 

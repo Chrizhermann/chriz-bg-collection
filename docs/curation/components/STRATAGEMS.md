@@ -5,6 +5,11 @@ Listed at installed version **35.21**.
 
 ## UI/dependency notes
 
+- Our curated bundle includes 6840, 6850 and 8085, whose v35.21 prerequisites
+  require `fingrom.cre`, supplied by Ascension 2.1.0 component 0. Checking the
+  Ascension parent alone is insufficient: the SCS bundle requires the actual
+  rewritten final chapter selection. This does not apply to every upstream SCS
+  component independently. Verified in the September 28 selection audit.
 - Component `4240` is unavailable while Spell Revisions is selected. Keep it visible but
   disabled, with the UI note: **Unavailable with Spell Revisions.**
 - Component `4130` has the same visible restriction: its pinned installer explicitly

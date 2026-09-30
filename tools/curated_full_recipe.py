@@ -45,7 +45,7 @@ BG1NPC_NATIVE_ORDER = [
     240, 241, 150, 155, 160, 200,
 ]
 
-# Exact pinned Artisan chriz-v1.3.1 and Randomiser v8.1.1 TP2 order, restricted
+# Exact pinned Artisan v4.81a-dev.85928f9-chriz.1 and Randomiser v8.1.1 TP2 order, restricted
 # to offered choices. Re-audit a newly offered ID instead of guessing its position.
 NATIVE_RUN_ORDERS = {
     "artisanskitpack-main-bg2": [
@@ -55,6 +55,12 @@ NATIVE_RUN_ORDERS = {
         3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110,
         5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001,
     ],
+    "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 8204],
+    "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225],
+    "chriz-bg-modpack-bg2": [130, 400, 410, 430, 440, 450, 610, 611, 630],
+    # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
+    # Verify new source pins with tools/check_native_component_order.py.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],
 }
 
@@ -97,18 +103,18 @@ CATEGORY_BY_GROUP = {
 
 
 ARTIFACTS = {
-    "bardicwonders-v2.9c-balance.5.toml": """id = "bardicwonders-v2.9c-balance.5"
+    "bardicwonders-v2.9c-balance.6.toml": """id = "bardicwonders-v2.9c-balance.6"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.5"
+version = "2.9c-balance.6"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.5/Bardic-Wonders-v2.9c-balance.5.zip"
-reference = "v2.9c-balance.5"
-expected_filename = "Bardic-Wonders-v2.9c-balance.5.zip"
-expected_length = 5163697
-sha256 = "d8ac7353348989d2ca5336792f79bacf41db466ecce47d06f0ae601b986d1eec"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.6/Bardic-Wonders-v2.9c-balance.6.zip"
+reference = "v2.9c-balance.6"
+expected_filename = "Bardic-Wonders-v2.9c-balance.6.zip"
+expected_length = 5191057
+sha256 = "48b222eb7dd827c7541dea33129bd094ee81e28c33f33bdcb3bef81de197a59a"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -127,8 +133,8 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.5"
-reviewed_on = "2026-09-16"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.6"
+reviewed_on = "2026-09-29"
 """,
     "branwen-8.toml": """id = "branwen-8"
 name = "Branwen for BGII"
@@ -266,7 +272,7 @@ reviewed_on = "2026-09-08"
 
 
 MOD_SPECS = {
-    "bardicwonders": ("bardicwonders-v2.9c-balance.5", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
+    "bardicwonders": ("bardicwonders-v2.9c-balance.6", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
@@ -435,6 +441,18 @@ def _feature_blocks(root: Path, collection: dict) -> str:
             (other, "Choose one source for IWD casting graphics: IWDification or Tweaks Anthology.")
         )
 
+    # CDTweaks v18, setup-cdtweaks.tp2:1088-1195: every individual
+    # all-class stronghold rejects either Multiple Strongholds component.
+    # The individual strongholds do NOT conflict with each other.
+    for multiple in (1160, 1161):
+        for individual in range(1340, 1348):
+            pair = (f"feature:cdtweaks:component-{multiple}",
+                    f"feature:cdtweaks:component-{individual}")
+            for feature_id, other in (pair, pair[::-1]):
+                conflicts.setdefault(feature_id, []).append(
+                    (other, "Choose Multiple Strongholds or individual strongholds for all classes, not both.")
+                )
+
     blocks = [
         "[[features]]\n"
         'id = "mod:iwdification"\n'
@@ -463,7 +481,11 @@ def _feature_blocks(root: Path, collection: dict) -> str:
             raise ValueError(f"mixed decisions for {target.target_id}")
         category = CATEGORY_BY_GROUP.get(first.group, "npcs" if first.catalog in {"BG1NPC", "BRANWEN", "EVANDRA"} else "tweaks")
         requires: list[str] = []
-        if target.target_id == "feature:bardicwonders:component-1012":
+        if first.catalog == "BG1NPC":
+            # Every non-core component in BG1NPC v32 explicitly requires 0.
+            # Added romance/timing choices need the same gate as base features.
+            requires = ["feature:bg1npc:component-0"]
+        elif target.target_id == "feature:bardicwonders:component-1012":
             requires = ["feature:eeex:mandatory-components"]
         elif target.target_id == "feature:bardicwonders:component-3001":
             requires = ["feature:bardicwonders:component-1012"]
@@ -623,6 +645,8 @@ def _update_release_records(destination: Path, commit: str) -> None:
         "mod:evandra",
         "feature:artisanskitpack-npc:component-99001",
         "feature:chriz-bg-modpack:component-430",
+        "feature:chriz-bg-modpack:component-224",
+        "feature:chriz-bg-modpack:component-225",
     ]:
         pattern = re.compile(rf'(?ms)^\[\[omissions\]\]\nfeature_id = {re.escape(_q(feature_id))}\n.*?(?=^\[\[omissions\]\]|\Z)')
         limitations, count = pattern.subn("", limitations)
@@ -844,6 +868,27 @@ def _write_reconciliation(root: Path, destination: Path) -> None:
     (destination / "RECONCILIATION.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 
+def _validate_game_interface_order(collection: str) -> None:
+    """Keep full replacements between EEex and consumers of the final UI."""
+    parsed = tomllib.loads(collection)
+    positions = {run["run_id"]: index for index, run in enumerate(parsed["runs"])}
+    providers = [feature for feature in parsed["features"]
+                 if feature.get("choice_group") == "game-interface"]
+    if not providers:
+        raise ValueError("The production recipe must declare game interface choices")
+    for feature in providers:
+        if feature["decision"] != "optional":
+            raise ValueError("Game interface replacements must remain optional")
+        for component in feature["components"]:
+            position = positions[component["run_id"]]
+            if not (positions["eet-initialize-bg2"] < positions["eeex-bg2"] < position
+                    < positions["chriz-bg-modpack-ui-compat-bg2"]
+                    < positions["bubb-spell-menu-bg2"] < positions["stratagems-bg2"]
+                    < positions["eet-end-bg2"] < positions["hiddengameplayoptions-bg2"]
+                    < positions["buffbot-bg2"]):
+                raise ValueError(f"Review game interface order for {feature['id']}")
+
+
 def build_recipe(root: Path, destination: Path, commit: str) -> None:
     root = root.resolve()
     destination = destination.resolve()
@@ -851,12 +896,15 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     for directory in ["artifacts", "game-builds", "mods", "releases"]:
         shutil.copytree(root / "manifest" / directory, destination / directory, dirs_exist_ok=True)
     for obsolete in [
+        "artisans-kitpack-chriz-v1.5.0",
+        "artisans-kitpack-chriz-v1.6.0",
         "chriz-bg-rebalance-0.4.0",
         "chriz-sod-remix-0.6.4",
         "chriz-sod-remix-0.6.5",
         "chriz-sod-remix-0.6.6",
         "chriz-sod-remix-0.6.7",
         "chriz-sod-remix-0.6.10",
+        "chriz-sod-remix-0.6.11",
         "chriz-bg-rebalance-0.3.1",
         "chriz-bg-modpack-0.2.0-alpha.1",
         "chriz-bg-modpack-0.2.0-alpha.5",
@@ -864,6 +912,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         "bardicwonders-v2.9c-balance.2",
         "bardicwonders-v2.9c-balance.3",
         "bardicwonders-v2.9c-balance.4",
+        "bardicwonders-v2.9c-balance.5",
         "creator-full-private-extras-20260902",
     ]:
         (destination / "artifacts" / f"{obsolete}.toml").unlink(missing_ok=True)
@@ -961,13 +1010,26 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         ['requires = ["feature:cdtweaks:component-2170"]'],
     )
     base_collection = base_collection.rstrip() + "\n\n" + _feature_blocks(root, base)
+    for component in (224, 225):
+        base_collection = _replace_feature(
+            base_collection,
+            f"feature:chriz-bg-modpack:component-{component}",
+            {"readiness": '"ready"', "unavailable_reason": None,
+             "requires": '["feature:evandra:mandatory-components"]'},
+        )
     base_collection = _align_legacy_bg1npc_choices(base_collection)
+    _write_mods(root, destination)
+    from tools.evandra_defaults import integrate_evandra_defaults
+    base_collection = integrate_evandra_defaults(
+        base_collection,
+        tomllib.loads((destination / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8")),
+    )
     parsed_collection = tomllib.loads(base_collection)
     presentations = build_feature_presentations(parsed_collection, rows, curation_map)
     base_collection = apply_feature_presentations(base_collection, presentations)
+    _validate_game_interface_order(base_collection)
     (destination / "collection.toml").write_text(base_collection, encoding="utf-8", newline="\n")
 
-    _write_mods(root, destination)
     preset_path = destination / "presets/chris-recommended.toml"
     preset = preset_path.read_text(encoding="utf-8").rstrip()
     collection = tomllib.loads(base_collection)

@@ -1,0 +1,86 @@
+schema = 1
+evidence_kind = "release-intake-artifact-verification"
+verified_on = "2026-09-29"
+command = "chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh scratch path>"
+scope = "Fresh HTTPS acquisition, measured hash/length, production extraction and declared TP2 publication. No WeiDU installation or live-game acceptance."
+
+[[artifacts]]
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.8"
+source_reference = "v0.2.0-alpha.8"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.8/chriz-bg-modpack-v0.2.0-alpha.8.zip"
+actual_length = 1575997
+actual_sha256 = "8019d60d2d5c9e5b5961b73ddfcc65729d7feb819bc3e99f4134dd3058835989"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "infinity-ui-1.28"
+source_reference = "f755721ef88f2370f35ee8d342abacf25b48e200"
+immutable_source_url = "https://codeload.github.com/Renegade0/InfinityUI/zip/f755721ef88f2370f35ee8d342abacf25b48e200"
+actual_length = 256416874
+actual_sha256 = "4bb0b81414b4198b866c3e7f2473479c7d1ee1f1a1bacd15c0e98913d5b83055"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+source_reference = "74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+immutable_source_url = "https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
+actual_length = 211137765
+actual_sha256 = "9834a53322b7fe9d8923bfde36c0e6bc8bef54d730d32ac29286b80d6f08287e"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "leui-4.9.1"
+source_reference = "v4.9.1"
+immutable_source_url = "https://github.com/r-e-d/LeUI/releases/download/v4.9.1/lefreuts-enhanced-ui-bg2ee-skin-4.9.1.iemod"
+actual_length = 19549249
+actual_sha256 = "93f78e68f371e62acabbd22fb1f8eb84fa548f069e96f4c1fc2fe976ddd6644a"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "leui-bg1ee-4.9.1"
+source_reference = "v4.9.1"
+immutable_source_url = "https://github.com/r-e-d/LeUI-BG1EE/releases/download/v4.9.1/lefreuts-enhanced-ui-bg1ee-skin-4.9.1.iemod"
+actual_length = 22061365
+actual_sha256 = "d22adb826f6da924aca3ab46b772bf8813832b509aba0bfb1bbf113abacfcb74"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "leui-sod-4.9.1"
+source_reference = "v4.9.1"
+immutable_source_url = "https://github.com/r-e-d/LeUI-SoD/releases/download/v4.9.1/lefreuts-enhanced-ui-sod-skin-4.9.1.iemod"
+actual_length = 19539697
+actual_sha256 = "09de7721be81fc0df25564ec050d0f9187708fa061a3d69ac846f5f9bacfbbc0"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "dragonspear-ui-22.01.3"
+source_reference = "d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0"
+immutable_source_url = "https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0"
+actual_length = 60892281
+actual_sha256 = "81bf0403bc5f521a6c1204ecb0e913040cec2b06dbfcc822e5b6455b782d32f1"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.1"
+source_reference = "v4.81a-dev.85928f9-chriz.1"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.1/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.1.zip"
+actual_length = 89631846
+actual_sha256 = "6d954fab27b86c4a94b8fc06b2f8b5a34b9ae0b3f09cb03ce38de1d5ce80a73b"
+fresh_download = true
+fresh_extraction = true
+
+[[artifacts]]
+artifact_id = "chriz-bg-rebalance-0.7.0"
+source_reference = "v0.7.0"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.7.0/chriz-bg-rebalance-v0.7.0.zip"
+actual_length = 1733901
+actual_sha256 = "3aae59bc634671ad6a6565d5862c4db984584bd90094ecbf640dda338d665b87"
+fresh_download = true
+fresh_extraction = true

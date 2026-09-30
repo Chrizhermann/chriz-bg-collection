@@ -4,6 +4,7 @@ import type {
   FrozenReview,
   GameCandidate,
   InputValue,
+  ManualBreakpoint,
   NormalizedSelection,
   Route,
   SelectionEvaluation,
@@ -18,6 +19,7 @@ export interface AppState {
   readonly destinationPath: string;
   readonly destinationAutomatic: boolean;
   readonly selection: NormalizedSelection;
+  readonly manualBreakpoints: readonly ManualBreakpoint[];
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationRevision: number;
   readonly evaluationPending: boolean;
@@ -36,6 +38,7 @@ export type AppAction =
   | { readonly type: "set-features"; readonly changes: Readonly<Record<string, boolean>> }
   | { readonly type: "set-input"; readonly featureId: string; readonly inputId: string; readonly value: InputValue }
   | { readonly type: "reset-selection" }
+  | { readonly type: "set-manual-breakpoints"; readonly breakpoints: readonly ManualBreakpoint[] }
   | { readonly type: "restore-selection"; readonly selection: NormalizedSelection }
   | { readonly type: "evaluation-requested"; readonly revision: number }
   | { readonly type: "evaluation-resolved"; readonly revision: number; readonly evaluation: SelectionEvaluation }
@@ -54,6 +57,7 @@ export function initialState(): AppState {
     destinationPath: "",
     destinationAutomatic: true,
     selection: { platform: "windows", features: {}, inputs: {} },
+    manualBreakpoints: [],
     evaluation: null,
     evaluationRevision: 0,
     evaluationPending: false,
@@ -89,6 +93,8 @@ export function reduce(state: AppState, action: AppAction): AppState {
       } } };
     case "reset-selection":
       return { ...state, selection: { platform: state.selection.platform, features: {}, inputs: {} }, frozenReview: null };
+    case "set-manual-breakpoints":
+      return { ...state, manualBreakpoints: action.breakpoints, frozenReview: null };
     case "restore-selection":
       return { ...state, selection: action.selection, frozenReview: null };
     case "evaluation-requested":
@@ -132,6 +138,7 @@ export interface InstallationReadinessInput {
   readonly destination: DestinationEvaluation;
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationPending: boolean;
+  readonly manualBreakpoints?: readonly ManualBreakpoint[];
 }
 
 export function installationReadiness(input: InstallationReadinessInput): boolean {
@@ -141,5 +148,7 @@ export function installationReadiness(input: InstallationReadinessInput): boolea
     && input.bg2?.eligible === true
     && input.destination.safe
     && input.evaluation !== null
+    && (input.manualBreakpoints ?? []).every(anchor => input.evaluation?.manualCheckpointOptions?.some(option =>
+      option.runId === anchor.runId && option.component === anchor.component && option.unavailableReason === null))
     && !input.evaluationPending;
 }

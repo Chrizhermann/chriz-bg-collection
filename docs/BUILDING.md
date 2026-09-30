@@ -154,6 +154,38 @@ The production build enables Tauri updater artifacts. An authorized release buil
 storage; no contributor needs those credentials to compile or run normal tests. The public
 verification key in `tauri.conf.json` is deliberately public. It is not a private signing key.
 
+On Windows, an intentionally empty signing password can be lost through PowerShell's
+environment/native argument handling, leaving an unattended signer at a password prompt.
+If the setup was already built successfully, sign those existing bytes without rebuilding.
+For an empty-password key, this Node argument-array pattern preserves the explicit empty
+argument; it is also used by `tools/sign-patch-catalog.ps1`. From the repository root,
+replace the example paths with the external private-key file and completed setup:
+
+```powershell
+$cebgSigner = (Resolve-Path 'app/node_modules/@tauri-apps/cli/tauri.js').Path
+$cebgSigningKey = (Resolve-Path 'C:\ExternalSigning\cebg-updater.key').Path
+$cebgSetup = (Resolve-Path 'C:\BuildOutputs\Chriz Easy BG-setup.exe').Path
+$cebgSign = @'
+const { spawnSync } = require('node:child_process');
+const [cli, key, setup] = process.argv.slice(1);
+const child = spawnSync(process.execPath,
+  [cli, 'signer', 'sign', '--private-key-path', key, '--password', '', setup],
+  { stdio: 'inherit', windowsHide: true });
+if (child.error) { process.stderr.write(child.error.message); process.exit(1); }
+process.exit(child.status === null ? 1 : child.status);
+'@
+& node -e $cebgSign $cebgSigner $cebgSigningKey $cebgSetup
+if ($LASTEXITCODE -ne 0) { throw 'Tauri setup signing failed.' }
+```
+
+Pass only the key path, never its contents. Before distributing the setup, cryptographically
+verify its `.sig` against `plugins.updater.pubkey` in `app/src-tauri/tauri.conf.json`.
+The existing `package_config` test executable does this with
+`--ignored --exact built_update_signature_matches_the_bundled_public_key` and
+`CEBG_SIGNED_SETUP` pointing to the exact setup.
+Keep those setup bytes unchanged after signing. This creates a Tauri updater signature,
+not a Windows Authenticode signature.
+
 Three signing concerns are separate:
 
 - **Tauri updater signing** authenticates the final setup bytes to CEBG's updater. It does

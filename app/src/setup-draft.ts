@@ -1,4 +1,4 @@
-import type { BackendStatus, InputValue, NormalizedSelection } from "./contracts";
+import type { BackendStatus, InputValue, ManualBreakpoint, NormalizedSelection } from "./contracts";
 
 export const SETUP_DRAFT_STORAGE_KEY = "cebg.setup-draft";
 const MAX_STORED_LENGTH = 262_144;
@@ -14,6 +14,7 @@ export interface SetupDraft {
   readonly sourcePaths: { readonly bg1: string | null; readonly bg2: string | null };
   readonly selection: NormalizedSelection;
   readonly createDesktopShortcut: boolean;
+  readonly manualBreakpoints?: readonly ManualBreakpoint[];
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -53,7 +54,8 @@ function selection(value: unknown): value is NormalizedSelection {
 
 function validDraft(value: unknown): value is SetupDraft {
   if (!record(value) || !exactKeys(value, ["version", "recipeVersion", "profileId", "installationName",
-    "destinationPath", "destinationAutomatic", "sourcePaths", "selection", "createDesktopShortcut"])) return false;
+    "destinationPath", "destinationAutomatic", "sourcePaths", "selection", "createDesktopShortcut",
+    ...(Object.hasOwn(value, "manualBreakpoints") ? ["manualBreakpoints"] : [])])) return false;
   return value.version === 1
     && text(value.recipeVersion, 256) && value.recipeVersion.length > 0
     && (value.profileId === null || (text(value.profileId, 256) && identifier(value.profileId)))
@@ -63,7 +65,11 @@ function validDraft(value: unknown): value is SetupDraft {
     && record(value.sourcePaths) && exactKeys(value.sourcePaths, ["bg1", "bg2"])
     && [value.sourcePaths.bg1, value.sourcePaths.bg2].every(path => path === null || text(path))
     && selection(value.selection)
-    && typeof value.createDesktopShortcut === "boolean";
+    && typeof value.createDesktopShortcut === "boolean"
+    && (value.manualBreakpoints === undefined || (Array.isArray(value.manualBreakpoints)
+      && value.manualBreakpoints.length <= 1000 && value.manualBreakpoints.every(anchor => record(anchor)
+        && exactKeys(anchor, ["runId", "component"]) && text(anchor.runId, 256) && identifier(anchor.runId)
+        && typeof anchor.component === "number" && Number.isSafeInteger(anchor.component) && anchor.component >= 0)));
 }
 
 export function clearSetupDraft(completedDestination?: string): void {
@@ -126,6 +132,7 @@ export function saveSetupDraft(draft: SetupDraft): void {
         ])),
       },
       createDesktopShortcut: draft.createDesktopShortcut,
+      ...(draft.manualBreakpoints === undefined ? {} : { manualBreakpoints: draft.manualBreakpoints.map(({ runId, component }) => ({ runId, component })) }),
     };
     if (!validDraft(preferences)) return;
     const stored = JSON.stringify(preferences);

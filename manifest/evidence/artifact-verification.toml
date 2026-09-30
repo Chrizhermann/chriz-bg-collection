@@ -155,6 +155,7 @@ total_uncompressed_bytes = 55174685
 max_compression_ratio = 615
 
 [[artifacts]]
+# EET_gui publication was freshly reverified on 2026-09-29 with unchanged bytes.
 artifact_id = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
 immutable_source_url = "https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
 source_reference = "74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
@@ -163,12 +164,13 @@ actual_length = 211137765
 actual_sha256 = "9834a53322b7fe9d8923bfde36c0e6bc8bef54d730d32ac29286b80d6f08287e"
 wrapper_kind = "single-wrapper"
 wrapper_directory = "EET-74e91d72bca5d073fa11c1d088b90d7ff0c7105d"
-materialized_publish_roots = ["EET", "EET_end"]
+materialized_publish_roots = ["EET", "EET_end", "EET_gui"]
 declared_tp2_paths = [
   "EET/EET.tp2",
   "EET/other/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker/BGEE_to_EET_mod_checker.tp2",
   "EET/other/EET_modConverter/EET_modConverter/EET_modConverter.tp2",
   "EET_end/EET_end.tp2",
+  "EET_gui/EET_gui.tp2",
 ]
 fresh_download = true
 fresh_extraction = true
@@ -574,3 +576,115 @@ entry_count = 49
 max_entry_uncompressed_bytes = 1364992
 total_uncompressed_bytes = 2355002
 max_compression_ratio = 18
+
+[[artifacts]]
+# Fresh anonymous release download and production extraction verified 2026-09-29.
+artifact_id = "artisans-kitpack-chriz-v1.6.0"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/chriz-v1.6.0/ArtisansKitpack-Chriz-Balance-Patch-v1.6.0.zip"
+source_reference = "chriz-v1.6.0"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 89618772
+actual_sha256 = "61ada8dce80e885748cbd40f526f9e042aa1131825e9d4fbbd52e902b7906a75"
+wrapper_kind = "direct"
+materialized_publish_roots = ["ArtisansKitpack", "ArtisansKitpack_npc", "ArtisansKitpack_tweak"]
+declared_tp2_paths = ["ArtisansKitpack/ArtisansKitpack.TP2", "ArtisansKitpack_npc/ArtisansKitpack_npc.TP2", "ArtisansKitpack_tweak/ArtisansKitpack_tweak.TP2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 512
+
+[artifacts.observed_shape]
+max_depth = 7
+entry_count = 2992
+max_entry_uncompressed_bytes = 6142193
+total_uncompressed_bytes = 117985313
+max_compression_ratio = 432
+
+[[artifacts]]
+# Fresh anonymous release download and production extraction verified 2026-09-29.
+artifact_id = "bardicwonders-v2.9c-balance.6"
+immutable_source_url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.6/Bardic-Wonders-v2.9c-balance.6.zip"
+source_reference = "v2.9c-balance.6"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 5191057
+actual_sha256 = "48b222eb7dd827c7541dea33129bd094ee81e28c33f33bdcb3bef81de197a59a"
+wrapper_kind = "direct"
+materialized_publish_roots = ["BardicWonders"]
+declared_tp2_paths = ["BardicWonders/Setup-BardicWonders.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 512
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 834
+max_entry_uncompressed_bytes = 3311752
+total_uncompressed_bytes = 33010183
+max_compression_ratio = 432
+
+[[artifacts]]
+# Fresh anonymous release download and production extraction verified 2026-09-29.
+artifact_id = "chriz-sod-remix-0.6.12"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.12/chriz-sod-remix-v0.6.12.zip"
+source_reference = "v0.6.12"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 2959604
+actual_sha256 = "8c1a18debed45530d629efa19aa6c6d3b34317751d89683104b0c0306e67cd97"
+wrapper_kind = "direct"
+materialized_publish_roots = ["chriz-sod-remix", "setup-chriz-sod-remix.tp2"]
+declared_tp2_paths = ["chriz-sod-remix/setup-chriz-sod-remix.tp2", "setup-chriz-sod-remix.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 259
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 6226854
+max_compression_ratio = 16
+
+[[artifacts]]
+# Fresh anonymous release download and production extraction verified 2026-09-29.
+artifact_id = "buffbot-1.9.0"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.9.0/buffbot-v1.9.0.zip"
+source_reference = "v1.9.0"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 4259848
+actual_sha256 = "d44aad9a7756c17338044e4b94dc5de9ea285ac8af492454bdfd223b85b24c53"
+wrapper_kind = "direct"
+materialized_publish_roots = ["buffbot"]
+declared_tp2_paths = ["buffbot/setup-buffbot.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[artifacts.observed_shape]
+max_depth = 4
+entry_count = 47
+max_entry_uncompressed_bytes = 1364992
+total_uncompressed_bytes = 5205392
+max_compression_ratio = 7
