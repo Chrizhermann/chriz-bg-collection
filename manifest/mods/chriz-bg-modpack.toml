@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.8"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.10"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -129,3 +129,11 @@ name = "Hide unidentified item appearance until identification"
 [[components]]
 id = 640
 name = "Legacy UI translation helper compatibility"
+
+[[components]]
+id = 235
+name = "Baeloth: legal Sorcerer spells known"
+
+[[components]]
+id = 236
+name = "Edwin Red Wizard: removable amulet and corrected spell slots"

@@ -1,5 +1,11 @@
 # Alpha 19 Radar Fix candidate verification
 
+**October 7 follow-up:** the exact candidate passed the authorized installation,
+Play and details/path-copy Defender reproduction; see
+[results and remaining limits](defender-smoke-2026-10-07.md). Radar-off and approved
+Radar-on launch passed; declined consent remains untested. This does not change
+the candidate's bundled mod versions.
+
 The October 1 candidate is built and verified locally. It adds optional Radar
 launching with Windows consent to app **0.1.0-alpha.19**, retaining collection
 **0.1.0-alpha.18**. It is not published, manually launch-tested, or cleared by

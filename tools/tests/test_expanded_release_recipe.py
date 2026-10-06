@@ -81,11 +81,11 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.8")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.8.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.8")
-        self.assertEqual(artifact["source"]["expected_length"], 1575997)
-        self.assertEqual(artifact["source"]["sha256"], "8019d60d2d5c9e5b5961b73ddfcc65729d7feb819bc3e99f4134dd3058835989")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.10")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.10.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.10")
+        self.assertEqual(artifact["source"]["expected_length"], 1588239)
+        self.assertEqual(artifact["source"]["sha256"], "38a896adb08a6bfc76e011885e82667f613d47e49ce0c64fa87ccf3d2b57c7f6")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
         # Modpack also restores Evandra defaults and switches 610 to 611.
@@ -96,9 +96,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(self.preset[interval_controls], "on")
         self.assertEqual(selected - without_controls, {("hiddengameplayoptions-bg2", 38)})
         self.assertEqual(without_controls - selected, set())
-        self.assertEqual(len(without_controls), 453)
-        self.assertEqual(len(selected), 454)
-        self.assertEqual(len({run for run, _ in selected}), 50)
+        # October 7 adds seven Rebalance defaults and Edwin236's dedicated run.
+        self.assertEqual(len(without_controls), 461)
+        self.assertEqual(len(selected), 462)
+        self.assertEqual(len({run for run, _ in selected}), 51)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -190,7 +191,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_out = self.selected({feature_id: "off"})
         self.assertEqual(baseline - opted_out, {(run_id, 301)})
         self.assertEqual(opted_out - baseline, set())
-        self.assertEqual(len(opted_out), 453)
+        self.assertEqual(len(opted_out), 461)
         parent_off = self.selected({"mod:chriz-bg-rebalance": "off"})
         self.assertFalse(any(run == run_id for run, _ in parent_off))
         # Keep 301 selectable for either provider or standalone spell handling;
@@ -203,7 +204,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_and_excludes_bard_progression(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertNotIn((run_id, component), self.selected())

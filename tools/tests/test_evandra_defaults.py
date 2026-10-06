@@ -54,8 +54,8 @@ class EvandraDefaultTests(unittest.TestCase):
             raise AssertionError("Synthetic fixture could not identify the Modpack run")
         return text
 
-    def test_released_alpha8_catalogue_and_generated_delivery_are_ready(self):
-        self.assertEqual(self.modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.8")
+    def test_released_alpha9_catalogue_preserves_evandra_default_delivery(self):
+        self.assertEqual(self.modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.10")
         ids = [component["id"] for component in self.modpack["components"]]
         for component in (224, 225, 611, 630, 640):
             self.assertEqual(ids.count(component), 1)
@@ -213,8 +213,8 @@ class EvandraDefaultTests(unittest.TestCase):
             # The synthetic preset omission exercises recipe authoring, not archive or live acceptance.
             # The generator must preserve the real frozen catalogue and artifact bytes.
             self.assertEqual(
-                (output / "artifacts/chriz-bg-modpack-0.2.0-alpha.8.toml").read_bytes(),
-                (self.root / "manifest/artifacts/chriz-bg-modpack-0.2.0-alpha.8.toml").read_bytes(),
+                (output / "artifacts/chriz-bg-modpack-0.2.0-alpha.10.toml").read_bytes(),
+                (self.root / "manifest/artifacts/chriz-bg-modpack-0.2.0-alpha.10.toml").read_bytes(),
             )
 
 

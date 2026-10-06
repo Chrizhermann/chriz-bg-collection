@@ -125,15 +125,15 @@ class CatalogParserTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2] / "docs" / "curation" / "components"
         rows = load_catalogs(root)
 
-        self.assertEqual(len(rows), 1_213)
+        self.assertEqual(len(rows), 1_224)
         self.assertEqual(
             decision_totals(rows),
             {
                 Decision.EXCLUDED: 515,
                 # September 22 approval moves HGO 38 from optional to default.
-                Decision.OPTIONAL: 235,
+                Decision.OPTIONAL: 238,
                 # Approved Rebalance 111/301/302 defaults; Artisan 51010 is optional.
-                Decision.DEFAULT: 311,
+                Decision.DEFAULT: 319,
                 Decision.MANDATORY: 152,
             },
         )
@@ -356,13 +356,13 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_213)
+        self.assertEqual(result.mapped_rows, 1_224)
         self.assertEqual(result.excluded_rows, 515)
-        self.assertEqual(result.feature_rows + result.omission_rows, 698)
-        self.assertEqual(result.choice_groups, 73)
+        self.assertEqual(result.feature_rows + result.omission_rows, 709)
+        self.assertEqual(result.choice_groups, 74)
         self.assertEqual(result.optional_none_groups, 23)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1213", coverage_report(rows, result))
+        self.assertIn("rows=1224", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

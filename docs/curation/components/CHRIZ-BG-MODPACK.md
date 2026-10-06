@@ -1,13 +1,20 @@
 # CHRIZ-BG-MODPACK — components
 
-Refreshed for the pinned public release **v0.2.0-alpha.8**, retaining the choices
+Refreshed for the October 7 target **v0.2.0-alpha.9**, retaining the choices
 approved in the [September 16 candidate](../../alpha16-candidate-2026-09-16.md).
-48 current or historical entries; the collection exposes 31 and its recommended
-curated selection includes 25. Component `195` already includes the work from standalone component
+50 current or historical entries; the collection exposes 33 and its recommended
+curated selection includes 26. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
 ## Implementation status
+
+- Baeloth `235` is optional: legal Sorcerer spells known with or without SR,
+  applied after SR's NPC spellbooks (`60`). It does not enable a full Challenge Mode.
+- Edwin `236` is default only with Artisan's Red Wizard assignment `5102`.
+  It runs immediately after that assignment, before SR NPC spellbooks `60`,
+  and makes the amulet removable while leaving extra slots to the kit.
+  Other Edwin kits and saved actors are not rewritten by this fresh-install option.
 
 - Evandra `224` (Sorcerer) and `225` (owner-created portrait) are released and
   pinned independent defaults requiring Evandra core. They run after class and
@@ -57,6 +64,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
+| 235 | Baeloth: legal Sorcerer spells known | chriz-bg-modpack: NPC fixes |  | | optional |
+| 236 | Edwin Red Wizard: removable amulet and corrected spell slots | chriz-bg-modpack: NPC fixes |  | | default |
 | 100 | Aura + Safana: add Bard spells to CRE | chriz-bg-modpack: NPC fixes |  |  | |
 | 110 | Fade NPC: Fighter/Thief multiclass conversion | chriz-bg-modpack: NPC fixes |  |  | default |
 | 120 | Fade NPC: proficiency pips + amulet usability | chriz-bg-modpack: NPC fixes |  |  | |

@@ -1,6 +1,6 @@
 # CHRIZ-BG-REBALANCE — components
 
-The pinned target is public release **v0.7.0**. Christopher approved component
+The October 7 target is **v0.8.1**. Christopher approved component
 `301` as a recommended default on **2026-09-26**, based on earlier in-game testing;
 fix any issue in a follow-up rather than gating on more testing. The
 [September 16 candidate](../../alpha16-candidate-2026-09-16.md) approved dragon
@@ -10,13 +10,22 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-18 curated entries, 13 recommended selections. The release also contains bard
+27 curated entries, 20 recommended selections. The release also contains bard
 progression `420`/`421`; they remain outside the offered recipe and unselected.
 ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
+| 130 | EET elemental arrows: BG2 damage | Item balance |  | | default |
+| 200 | Hardiness: 40% physical resistance | Spell balance | Hardiness physical resistance | | default |
+| 201 | Hardiness: 30% physical resistance | Spell balance | Hardiness physical resistance | | optional |
+| 202 | Hardiness: 20% elemental and magic-damage resistance | Spell balance |  | | optional |
+| 210 | Spell Revisions Pierce Magic: bounded resistance reduction | Spell balance |  | | default |
+| 211 | Spell Revisions Spellstrike: short spell failure | Spell balance |  | | default |
+| 220 | Bracers of Blinding Strike: SR Improved Haste | Item balance |  | | default |
+| 310 | Party physical resistance: diminishing returns above 80%, maximum 90% | Combat balance |  | | default |
+| 320 | Combat cloud forms: replace damage immunity with 75% resistance | Combat balance |  | | default |
 | 100 | SCS: Telekinetic Storm — restore save vs. spell for half damage (+ bypass Mirror Image) | SCS adjustments |  | ✓ | mandatory |
 | 101 | SCS: Adventurer's Mart — restore the five Freedom scrolls (spell tweak orphaned in v35) | SCS adjustments |  | ✓ | default |
 | 110 | SCS: dragon melee delivery and death-protection rebalance | SCS adjustments |  |  | optional |
@@ -100,6 +109,17 @@ stay unselected.
 - Components `120` and `121` are now curated and selected. Current-version component `121`
   passed ambient delivery/accounting and the neutral-to-hostile urgent path; its older-EEex
   fallback remains a nonblocking compatibility check.
-- Revisit planned `200` only if it enters the real menu.
+- Hardiness `200` is the 40% physical-resistance default; `201` is an exclusive
+  30% alternative. Optional `202` adds 20% elemental/magic-damage resistance to
+  either physical choice. All require SR `65`; this is not magic resistance.
+- Pierce Magic `210` requires SR main and EEex; Spellstrike `211` and bracers
+  `220` require SR main. These are approved defaults, independently selectable.
+- Physical resistance `310` requires EEex: half effectiveness above 80%, capped
+  at 90%, for party members only. The unimplemented 95% alternative is not offered.
+- EET arrows `130` follows SCS `2000` and item writers. Cloud `320` replaces
+  cloud-granted damage immunity with 75% resistance; other values and scripted
+  escapes stay unchanged.
+- The offered batch follows TP2 declaration order, including its nonnumeric tail:
+  `...407, 408, 302, 310, 130, 220, 320`. Never sort component IDs numerically.
 - Recheck whether the final SCS release supersedes `100` or `101`, and refresh the source
   repository's stale component documentation before publishing.

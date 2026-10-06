@@ -403,6 +403,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "spell-rev-core-bg2",
             "artisanskitpack-main-bg2",
             "artisanskitpack-npc-bg2",
+            "chriz-bg-modpack-edwin-bg2",
             "iepbanters-bg2",
             "crossmodbg2-bg2",
             "artisanskitpack-tweak-early-bg2",
@@ -424,10 +425,11 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "chriz-bg-modpack-late-companions-bg2",
             "spell-rev-npc-spellbooks-bg2",
             "spell-rev-lightning-bg2",
+            "chriz-bg-modpack-baeloth-bg2",
             "buffbot-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..39]
+    assert!(manifest.collection.runs[6..40]
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);

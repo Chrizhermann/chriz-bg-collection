@@ -16,10 +16,12 @@ const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
     200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910,
 ];
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
-    100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302,
+    100, 101, 111, 120, 121, 200, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220,
+    320,
 ];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
-    100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302,
+    100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
+    310, 130, 220, 320,
 ];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
@@ -158,24 +160,24 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.7.1");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.1");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.7.1");
+    assert_eq!(artifact.version, "0.8.1");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.7.1/chriz-bg-rebalance-v0.7.1.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.1/chriz-bg-rebalance-v0.8.1-windows.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.7.1");
+    assert_eq!(artifact.source.reference, "v0.8.1");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.7.1.zip")
+        Some("chriz-bg-rebalance-v0.8.1-windows.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_734_037));
+    assert_eq!(artifact.source.expected_length, Some(1_753_775));
     assert_eq!(
         artifact.source.sha256,
-        "ba53f02e1b5542534412331dc2f33d78c4b3a19e2dd3dee60ef6a9755ef170ab"
+        "5d6cc9dfec8779e1e4534da686dc2f3849bcb795b24981c0930d95918efccf0c"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -272,6 +274,51 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 1
             ),
             (
+                "feature:chriz-bg-rebalance:component-130",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-200",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-201",
+                Decision::Optional,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-202",
+                Decision::Optional,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-210",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-211",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-220",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-310",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-320",
+                Decision::Default,
+                1
+            ),
+            (
                 "feature:chriz-bg-rebalance:tempus-bundle",
                 Decision::Default,
                 6
@@ -294,7 +341,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
     let no_tempus = evaluate(&manifest, &no_tempus).unwrap();
     assert_eq!(
         no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 111, 120, 121, 301, 302][..])
+        Some(&[100, 101, 111, 120, 121, 200, 210, 211, 301, 302, 310, 130, 220, 320][..])
     );
 
     let mut disabled = Selection::defaults("windows");
@@ -350,11 +397,137 @@ fn defaults_wing_buffet_spacing_with_scs_and_an_independent_optout() {
     let opted_out = evaluate(&manifest, &selection).unwrap();
     assert_eq!(
         opted_out.plan.components_for(run_id),
-        Some(&[100, 101, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302][..])
+        Some(
+            &[
+                100, 101, 120, 121, 200, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310,
+                130, 220, 320
+            ][..]
+        )
     );
 
     let mut no_scs = Selection::defaults("windows");
     no_scs.set_feature("mod:stratagems", false);
     let no_scs = evaluate(&manifest, &no_scs).unwrap();
     assert!(!no_scs.plan.components_for(run_id).unwrap().contains(&111));
+}
+
+#[test]
+fn hardiness_choices_are_exclusive_and_extra_protection_requires_a_physical_choice() {
+    const FORTY: &str = "feature:chriz-bg-rebalance:component-200";
+    const THIRTY: &str = "feature:chriz-bg-rebalance:component-201";
+    const EXTRA: &str = "feature:chriz-bg-rebalance:component-202";
+    const RUN: &str = "chriz-bg-rebalance-bg2";
+
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert!(baseline.view.control(FORTY).unwrap().selected);
+        assert!(!baseline.view.control(THIRTY).unwrap().selected);
+        assert!(!baseline.view.control(EXTRA).unwrap().selected);
+        assert!(manifest
+            .collection
+            .features
+            .iter()
+            .all(|feature| feature.id != "feature:chriz-bg-rebalance:component-311"));
+
+        for (forty, thirty, extra, expected) in [
+            (true, false, false, &[200][..]),
+            (false, true, false, &[201][..]),
+            (true, false, true, &[200, 202][..]),
+            (false, true, true, &[201, 202][..]),
+            (false, false, false, &[][..]),
+            (false, false, true, &[][..]),
+            (true, true, false, &[][..]),
+            (true, true, true, &[][..]),
+        ] {
+            let mut selection = baseline.normalized_selection.to_selection();
+            selection.set_feature(FORTY, forty);
+            selection.set_feature(THIRTY, thirty);
+            selection.set_feature(EXTRA, extra);
+            let result = evaluate(&manifest, &selection).unwrap();
+            let selected: Vec<_> = result
+                .plan
+                .components_for(RUN)
+                .unwrap_or_default()
+                .iter()
+                .copied()
+                .filter(|component| [200, 201, 202].contains(component))
+                .collect();
+            assert_eq!(
+                selected, expected,
+                "{directory}: 40%={forty}, 30%={thirty}, extra={extra}"
+            );
+            for (feature, component) in [(FORTY, 200), (THIRTY, 201), (EXTRA, 202)] {
+                assert_eq!(
+                    result.view.control(feature).unwrap().selected,
+                    expected.contains(&component),
+                    "{directory}: {feature} UI and installed plan must agree"
+                );
+            }
+        }
+
+        for disabled in [
+            "mod:spell-rev",
+            "feature:spell-rev:component-65",
+            "mod:chriz-bg-rebalance",
+        ] {
+            for physical in [FORTY, THIRTY] {
+                let mut selection = baseline.normalized_selection.to_selection();
+                selection.set_feature(FORTY, false);
+                selection.set_feature(THIRTY, false);
+                selection.set_feature(physical, true);
+                selection.set_feature(EXTRA, true);
+                selection.set_feature(disabled, false);
+                let result = evaluate(&manifest, &selection).unwrap();
+                assert!(result
+                    .plan
+                    .components_for(RUN)
+                    .unwrap_or_default()
+                    .iter()
+                    .all(|component| ![200, 201, 202].contains(component)));
+                for feature in [FORTY, THIRTY, EXTRA] {
+                    assert!(
+                        !result.view.control(feature).unwrap().selected,
+                        "{directory}: {feature} must not override disabled {disabled}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn approved_balance_defaults_respect_sr_and_eeex_prerequisites() {
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        let run = "chriz-bg-rebalance-bg2";
+        for component in [130, 200, 210, 211, 220, 310, 320] {
+            assert!(baseline
+                .plan
+                .components_for(run)
+                .unwrap()
+                .contains(&component));
+        }
+        let mut no_sr = baseline.normalized_selection.to_selection();
+        no_sr.set_feature("mod:spell-rev", false);
+        let no_sr = evaluate(&manifest, &no_sr).unwrap();
+        assert!(no_sr
+            .plan
+            .components_for(run)
+            .unwrap()
+            .iter()
+            .all(|component| ![200, 201, 202, 210, 211, 220].contains(component)));
+        assert!(no_sr.plan.components_for(run).unwrap().contains(&310));
+
+        let mut no_eeex = baseline.normalized_selection.to_selection();
+        no_eeex.set_feature("mod:eeex", false);
+        let no_eeex = evaluate(&manifest, &no_eeex).unwrap();
+        let components = no_eeex.plan.components_for(run).unwrap();
+        assert!(!components.contains(&210));
+        assert!(!components.contains(&310));
+        for independent in [130, 200, 211, 220, 320] {
+            assert!(components.contains(&independent));
+        }
+    }
 }

@@ -6,6 +6,7 @@ from io import StringIO
 from pathlib import Path
 import shutil
 import tempfile
+import tomllib
 import unittest
 
 from tools.evandra_defaults import main as check_defaults
@@ -14,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class EvandraPackageGateTests(unittest.TestCase):
-    def test_ready_bundled_alpha8_recipe_passes_the_publication_command(self):
+    def test_ready_bundled_recipe_passes_the_publication_command(self):
         recipe = ROOT / "recipes/curated-full-current"
         output, errors = StringIO(), StringIO()
         with redirect_stdout(output), redirect_stderr(errors):
@@ -32,10 +33,15 @@ class EvandraPackageGateTests(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / "recipes/curated-full-current" / relative, target)
             catalogue = recipe / "mods/chriz-bg-modpack.toml"
-            catalogue.write_text(catalogue.read_text(encoding="utf-8").replace(
-                'artifact_id = "chriz-bg-modpack-0.2.0-alpha.8"',
+            original = catalogue.read_text(encoding="utf-8")
+            current_pin = tomllib.loads(original)["artifact_id"]
+            self.assertNotEqual(current_pin, "chriz-bg-modpack-0.2.0-alpha.7")
+            catalogue.write_text(original.replace(
+                f'artifact_id = "{current_pin}"',
                 'artifact_id = "chriz-bg-modpack-0.2.0-alpha.7"',
             ), encoding="utf-8")
+            self.assertEqual(tomllib.loads(catalogue.read_text())["artifact_id"],
+                             "chriz-bg-modpack-0.2.0-alpha.7")
             output, errors = StringIO(), StringIO()
             with redirect_stdout(output), redirect_stderr(errors):
                 result = check_defaults(["--recipe", str(recipe)])

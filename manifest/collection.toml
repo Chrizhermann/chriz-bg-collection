@@ -205,6 +205,13 @@ components = [1101, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101,
 args = []
 
 [[runs]]
+run_id = "chriz-bg-modpack-edwin-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "main"
+components = [236]
+args = []
+
+[[runs]]
 run_id = "iepbanters-bg2"
 mod_id = "iepbanters"
 phase = "main"
@@ -306,7 +313,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320]
 args = []
 
 [[runs]]
@@ -349,6 +356,13 @@ run_id = "spell-rev-lightning-bg2"
 mod_id = "spell-rev"
 phase = "post-eet-end"
 components = [80, 81]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-baeloth-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [235]
 args = []
 
 [[runs]]
@@ -3598,6 +3612,130 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 302 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-130"
+title = "Elemental arrows: BG2 damage"
+description = "Use BG2 damage for elemental arrows throughout EET, including BG1 and SoD."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eet:mandatory-components", "feature:stratagems:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 130 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-200"
+title = "Hardiness: 40% physical resistance"
+description = "Restore 40% physical resistance. Extra elemental and magic-damage protection is a separate option."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:component-65"]
+choice_group = "sr-hardiness-physical-resistance"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-201", reason = "Choose either 40% or 30% physical resistance." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 200 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-201"
+title = "Hardiness: 30% physical resistance"
+description = "Use 30% physical resistance instead of 40%."
+category = "spells"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:component-65"]
+choice_group = "sr-hardiness-physical-resistance"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-200", reason = "Choose either 40% or 30% physical resistance." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 201 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-202"
+title = "Hardiness: also protect against elemental and magic damage"
+description = "Add 20% resistance to acid, cold, electricity, fire and magic damage. Does not grant magic resistance or poison resistance."
+category = "spells"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:component-65"]
+requires_any = ["feature:chriz-bg-rebalance:component-200", "feature:chriz-bg-rebalance:component-201"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 202 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-210"
+title = "Pierce Magic: limited resistance reduction"
+description = "Halve current magic resistance, removing at least 10 and at most 40 percentage points for 5 rounds. Recasting refreshes rather than stacks."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:mandatory-components", "feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 210 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-211"
+title = "Spellstrike: brief spellcasting disruption"
+description = "Add 15% arcane and divine spell failure for 2 rounds. Recasting refreshes rather than stacks."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 211 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-220"
+title = "Bracers of Blinding Strike: SR Improved Haste"
+description = "The bracers grant Spell Revisions Improved Haste (+1 attack per round) for 20 seconds instead of doubling attacks."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:spell-rev:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 220 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-310"
+title = "Party physical resistance: diminishing returns above 80%"
+description = "Resistance above 80% is half as effective, up to a maximum of 90%. Applies to party members, not enemies."
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 310 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-320"
+title = "Genie cloud forms can take damage"
+description = "Cloud-granted damage immunity becomes 75% resistance. Other resistance values and scripted escapes stay unchanged."
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 320 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-235"
+title = "Baeloth: normal Sorcerer spells known"
+description = "Limit Baeloth to a legal Sorcerer spell selection for his level, with or without Spell Revisions. An optional challenge choice."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-baeloth-bg2", component = 235 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-236"
+title = "Edwin: Red Wizard amulet and spell slots"
+description = "Let Red Wizard Edwin remove his amulet. Extra spell slots come from his kit, not the amulet."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:artisanskitpack-npc:component-5102"]
+components = [{ run_id = "chriz-bg-modpack-edwin-bg2", component = 236 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:tempus-bundle"

@@ -1,8 +1,8 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1213
-expected_choice_groups = 73
+expected_rows = 1224
+expected_choice_groups = 74
 expected_optional_none_groups = 23
 expected_fixed_groups = 10
 
@@ -3720,3 +3720,76 @@ catalog = "SIRENE_BG2"
 subgroup = "Choose an alternate portrait for Sirene?"
 options = ["SIRENE_BG2:2"]
 reason = "Only Christopher's curated portrait component remains exposed, so it is a fixed child rather than a choice."
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-130"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:130"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-200"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:200"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-201"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:201"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-202"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:202"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-210"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:210"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-211"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:211"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-220"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:220"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-310"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:310"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-320"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:320"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-235"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:235"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-236"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:236"]
+parent = "mod:chriz-bg-modpack"
+
+[[choice_groups]]
+id = "sr-hardiness-physical-resistance"
+catalog = "CHRIZ-BG-REBALANCE"
+subgroup = "Hardiness physical resistance"
+options = ["CHRIZ-BG-REBALANCE:200", "CHRIZ-BG-REBALANCE:201"]
+default = "CHRIZ-BG-REBALANCE:200"

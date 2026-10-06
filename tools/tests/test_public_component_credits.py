@@ -48,8 +48,8 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertIn(3354, actual["cdtweaks-bg2"])
         self.assertEqual(actual["chriz-bg-rebalance-bg2"].count(301), 1)
         self.assertTrue({420, 421}.isdisjoint(actual["chriz-bg-rebalance-bg2"]))
-        self.assertEqual(self.result["componentCount"], 454)
-        self.assertEqual(len(actual), 50)
+        self.assertEqual(self.result["componentCount"], 462)
+        self.assertEqual(len(actual), 51)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.
@@ -57,7 +57,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
         recipe_version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
         self.assertEqual(self.result["applicationVersion"], app_version)
         self.assertEqual(self.result["recipeVersion"], recipe_version)
-        self.assertEqual(recipe_version, "0.1.0-alpha.18")
+        self.assertEqual(recipe_version, "0.1.0-alpha.19")
         encoded = json.dumps(self.result).lower()
         for forbidden in ("artifact_id", "source_reference", "expected_filename", ".zip", ".iemod", "c:\\\\", "creator-full"):
             self.assertNotIn(forbidden, encoded)

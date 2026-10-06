@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.18"
+RECIPE_VERSION = "0.1.0-alpha.19"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -60,7 +60,9 @@ NATIVE_RUN_ORDERS = {
     "chriz-bg-modpack-bg2": [130, 400, 410, 430, 440, 450, 610, 611, 630],
     # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
     # Verify new source pins with tools/check_native_component_order.py.
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302],
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320],
+    "chriz-bg-modpack-edwin-bg2": [236],
+    "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],
 }
 

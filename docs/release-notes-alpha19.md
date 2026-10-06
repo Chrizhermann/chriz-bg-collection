@@ -1,236 +1,231 @@
 # Chriz Easy BG 0.1.0-alpha.19
 
-**October 1 release hold:** Defender quarantined an earlier installed candidate.
-Investigation and Microsoft analysis are pending; a successful package test is
-not evidence that the runtime alert is resolved. See [current handover](handover.md).
-The Radar launch correction is now in the verified local
-[October 1 Radar Fix candidate](package-acceptance-alpha19-radar-2026-10-01.md).
-That package has not been launched or cleared by Microsoft.
+**Prepared, not published:** app alpha.19 / collection alpha.19. Final owner
+packages and the public installer download must be verified before posting.
 
-Draft, not published. The fresh Test19 installation completed on September 30,
-and Christopher launched the game. The earlier failed attempt was superseded;
-do not direct him back to its recovery steps or require another full install.
+This update adds more UI choices, advanced install breakpoints, clearer progress,
+optional Radar launch, new balance options and updated mods. These notes cover
+everything since public app alpha.18 / collection alpha.16.
 
-The [Dragon and Order Fix package](package-acceptance-alpha19-dragon-order-2026-09-30.md)
-contains the dragon, component-order and resume corrections. The later
-[Selection Fix package](package-acceptance-alpha19-dragon-order-2026-09-30.md#selection-fix-addendum--latest-local-setup)
-adds the Customize focus fix without changing the recipe. Defender's logs identify
-the affected installed app as Dragon and Order Fix, not Selection Fix. Neither
-package includes the newer Radar consent correction. The October 1 candidate adds
-that correction and has passed final automated packaging checks. The
-remaining [short supervised checks](next-release-smoke-check.md) are still pending.
-The accepted BuffBot Apply/existing-save/Undo test does not need repeating.
+The new mod setup is for **fresh installations**. Updating CEBG leaves your current
+game and saves unchanged. The specific existing-game fixes below are separate.
 
-Current source uses collection **0.1.0-alpha.18**. Updating the CEBG app does not
-change your existing game or choices. The new collection changes apply to fresh
-installations unless an individual supported update is explicitly offered.
+## Installer and launcher
 
-## Short Discord draft
+### More choices
 
-**Not for posting yet:** finish the release decision and agreed manual check first.
-The copy below describes the intended release, not the older test installers.
+- Choose **Infinity UI++**, **Dragonspear UI++**, **LeUI** in BG1/BG2/SoD styles,
+  or **EET's SoD-style interface** for a new installation. The recommended
+  interface stays available. Known conflicting UI options are excluded, and the
+  needed LeUI/Dragonspear text compatibility fix is included automatically.
+- **Advanced install breakpoints:** experienced modders can choose several points
+  to pause after a component finishes, add their own mods, then review the changed
+  mod list before continuing. Normal installations have no extra pauses.
+  Manual changes disable CEBG game fixes and mod upgrades for that copy, but not
+  app updates. See the [manual-mod guide](manual-mods.md).
+- Mutually exclusive choices replace one another instead of allowing incompatible
+  selections, including the conflicting stronghold options.
+- Common customization choices are easier to find.
+- New installations need unique names. Existing entries can be renamed without
+  moving their game or save folders; old duplicate names are distinguished.
 
-Hi friends! This CEBG update brings a bunch of fixes and some more choices:
+### Clearer progress and results
 
-- More interfaces: Infinity UI++, Dragonspear UI++, LeUI and EET's SoD style.
-  Pick one for a new install; the current default stays available.
-- Optional install breakpoints for people who want to add their own mods.
-  This is an advanced option, not something you need for a normal install.
-- Evandra's Sorcerer conversion and portrait are now included by default when
-  you take her. BG1/SoD utility XP stays at BG1 values until you reach BG2;
-  the smooth XP curve is still an option.
-- Emotion/Courage/Hope no longer stack. Flail of the Ages +5 allows Haste, its
-  Slow gets a saving throw, and dragons use the longer Wing Buffet cooldown by default.
-- Optional generic unidentified-item visuals and talking while shapeshifted.
-- Updated Artisan, Bardic Wonders, SoD Remix and BuffBot, plus clearer progress,
-  update messages and installation names. You can choose whether Play starts Radar.
+- Updates has one compact installation selector at the top, shared by its
+  game-specific actions. Longer paths and technical explanations stay under Details.
+- Installation, update and backup stages show a progress bar when progress can be
+  measured, and a spinner otherwise. Backup progress uses bytes actually copied.
+- Completion, failure and Undo messages are more obvious and can be dismissed.
+  An app update is confirmed after restarting into the requested version.
+- Folder errors explain missing folders, permissions, locks or conflicting files.
+  Technical details remain expandable.
+- Installation removal shows the estimated folder size before confirmation.
+- Fixed update and Radar feedback being hidden for the initially selected game.
+- The Updates badge includes applicable fixes and recovery states alongside app,
+  collection and Radar notices, without automatically scanning games at startup.
 
-Updating CEBG does not replace your current modded game. The new setup is for
-fresh installs; existing games only get the specific supported fixes offered
-under Updates. Adding your own mods at a breakpoint disables game hotpatches
-and mod upgrades for that copy, but not CEBG app updates.
+### Radar is your choice
 
-Thanks for all the reports and patience! The extra interfaces and custom mod
-combinations are open for community testing, so please report anything weird.
-
-## Website summary draft
-
-**Hold with the download:** publish only after the final release is approved,
-and link to that exact package and the full changelog. Do not call the Defender
-issue resolved until we have evidence for that claim.
-
-Chriz Easy BG alpha.19 brings more interface choices, advanced pauses for adding
-your own mods, clearer installation and update progress, and an optional Radar
-launch checkbox. Collection alpha.18 refreshes the mod packages and includes
-Evandra's Sorcerer conversion and portrait by default when she is selected, story-based utility XP,
-Emotion and Flail of the Ages balance changes, and a longer dragon Wing Buffet
-cooldown. Generic unidentified-item visuals and talking while shapeshifted are
-optional. The collection changes are for new installations; updating the app
-leaves your existing game unchanged. Supported fixes for existing games are
-offered separately in Updates.
-
-## New-install collection changes
-
-- **Longer dragon Wing Buffet cooldown by default:** 18 seconds instead of 6.
-  Requires SCS Smarter Dragons and can still be switched off in Customize.
-- **Emotion, Courage and Hope no longer stack with each other.** Casting one
-  replaces the others; recasting refreshes it. This is on by default. The separate
-  bard progression alternatives remain optional and unselected.
-- **Flail of the Ages:** the +5 version now allows Haste while retaining its Free
-  Action protection. Slow allows a breath save at -2 for +3, -4 for either +4
-  version, and -6 for +5. Its damage, proc chance and Slow duration stay unchanged.
-- Updated Artisan's Kitpack, Bardic Wonders, SoD Remix and BuffBot packages. Fresh
-  installs use BuffBot 1.9.0; this does not expand the older-game update route below.
-- Optional **talking while shapeshifted** for Artisan's Shapeshifter/Hivemaster
-  forms. Other form restrictions stay in place. Off by default.
-- **Story-based utility XP** becomes the default: BG1-sized rewards throughout
-  BG1 and SoD, BG2-sized rewards from SoA onward. Uncapped character XP will not
-  unlock BG2 rewards early. The existing smooth XP-based curve remains an
-  optional, mutually exclusive alternative.
-- Evandra's **Sorcerer conversion and custom portrait** are included by default
-  when Evandra is selected. Each can be turned off independently. This does not
-  resolve the separately reported companion XP catch-up issue.
-- Optional **generic visuals for unidentified items**, using ordinary game art
-  by item category. Identifying an item reveals its usual appearance. This is
-  separate from item randomization and conflicts with its appearance-changing
-  option, not the ordinary randomizer.
-- Artisan's fork version now names both the upstream base and our revision:
-  **4.81a-dev.85928f9-chriz.1**. Older published releases have not been renamed.
-
-Modpack v0.2.0-alpha.8 is published, verified and integrated. The refreshed
-September 29 installer passed its combined checks/build and contains these
-additions; the older September 23 binary does not.
-
-## Choose your interface
-
-New installations can choose Infinity UI++, EET's SoD-style interface, LeUI's
-BG1/BG2/SoD variants or Dragonspear UI++. The recommended interface stays the
-default. The installer excludes known conflicting UI options and adds the
-required classic-UI text compatibility fix automatically. Existing installations
-are not switched to another interface. Broader gameplay testing of the optional
-interfaces is left to the community, rather than requiring a separate full test
-install for every skin.
+- Play has a **Start with Radar** checkbox, initially off and remembered separately
+  for each installation.
+- Radar can ask for its own Windows administrator approval without running all of
+  CEBG as administrator. Declining that request or a launch failure leaves the
+  game running and displays a message.
 
 ### Installation fixes
 
-- Fixed an error when changing Customize options, including the stronger SoD
-  bridge mages. The selected choice is retained and keyboard focus returns to
-  the changed control without displaying an internal selector error.
-- Apex Dragons supports both SCS difficulty systems. Valid alternative-interface
-  setups no longer fail its INI-only compatibility check. Dragon abilities and
-  difficulty thresholds are unchanged.
-- Fixed the expected install order for Flail of the Ages within BG Rebalance.
-  The installer now checks that recipe order against the actual mod source.
-  These fixes do not automatically recover an already-stopped installation.
-- When a mod partly installs, diagnostics distinguish missing components from
-  an unexpected component order without weakening the install-history checks.
-- Resuming or retrying starts only once, even if the action is pressed again
-  while it is starting. Resumed installs show their current phase, and cached
-  downloads no longer make an unrelated mod installation look 100% complete.
-  This follow-up is included in the September 30 Dragon and Order Fix setup;
-  leave any installation that is still running normally alone.
-- Alternative interfaces use the supported mod-launch method. Incorrect launch
-  settings are now caught before a new installation begins. Recovery of an
-  older failed installation still depends on its recorded failure and history;
-  installing the new app is not a blanket guarantee that Resume is safe.
-- Reusing the same download with a different required folder layout no longer
-  causes the EET cache mismatch. Download and extracted-file checks stay enabled.
-- Installer configuration failures explain what to do; internal details stay in
-  the expandable error section.
+- Fixed interval saves being installed but inactive because their settings went
+  into the wrong game profile. Missing settings now go into the installation's own
+  profile and are checked before completion. Existing preferences, including
+  deliberately disabling interval saves, are preserved.
+- Recommended installations include the interval-save settings menu. It follows
+  the chosen interval and stays inactive when interval saves are excluded.
+- Fixed the cache-layout error when the same download is needed in two different
+  folder layouts. Download and extracted-file checks remain enabled.
+- Alternative UIs use the supported mod-launch method. Invalid launch settings
+  are caught before installation starts.
+- Fixed the Customize error when changing choices such as the stronger SoD bridge
+  mages. The choice and keyboard focus are preserved.
+- Fixed the expected component order for Flail of the Ages in BG Rebalance.
+  Recipe order is checked against the mod source.
+- Apex Dragons accepts both supported SCS difficulty systems, including the one
+  used with alternative UIs. Its abilities and difficulty thresholds are unchanged.
+- Retry/Resume cannot start twice while an installation is already starting.
+  Resumed installations show the current phase; cached downloads no longer make
+  an unrelated install step appear finished.
+- Partial installations give more useful diagnostics for missing components and
+  unexpected order. Install-history checks stay enabled; these fixes do not
+  guarantee automatic recovery of every previously failed installation.
+- Corrected recipe validation, component catalog entries and old update records,
+  including the stale Red Wizard/Spell Revisions exclusion note and unused archive
+  records. Diagnostic exports include update and recovery details.
 
-## Fixes for your current game
+## Supported updates to existing games
 
-- Updates now offers **targeted fixes for a game you already installed with CEBG**,
-  instead of only a fresh installation. Pick the registered installation, check it
-  explicitly, and CEBG reports whether a fix applies.
-- The first fix restores the campaign class-table description links for the selected
-  Artisan's Kitpack kits (English, recorded Artisan `chriz-v1.3.0` components only).
-  It does not add kit mechanics, rewrite dialog.tlk, change saved characters or
-  upgrade the mod.
-- Backups of the affected files are always made. A full backup of the playable game
-  folder is recommended and selected by default; a profile/save snapshot is optional.
-  Sizes, free space and the backup location are shown before anything is written.
-- **Apply**, **Undo** and, after an interruption, **Restore** are separate actions,
-  each requiring the game to be closed. An interrupted fix blocks Play until the
-  installation is restored, with recovery guidance in My installs.
-- Your diagnostic export now includes the fix and recovery evidence.
+- Check installed mods without resetting your choices. CEBG offers only the
+  specific updates or repairs supported for that installation.
+- Eligible older games can update **BuffBot 1.8.3-alpha to 1.8.4-alpha** in place,
+  fixing unidentified items revealing their names in BuffBot. Saves, BuffBot
+  settings and other mods stay in place. This route does not jump to BuffBot
+  1.10.0 or upgrade the whole collection.
+- A separate repair restores campaign class-description links for eligible older
+  Artisan's Kitpack installations: English, recorded `chriz-v1.3.0` components.
+  It changes descriptions, not kit mechanics, dialog.tlk or saved characters.
+- Affected files are always backed up. A full game-folder backup is recommended
+  and initially selected; a profile/save copy is optional. Sizes, free space and
+  the backup destination are shown first.
+- **Apply**, **Undo** and interrupted-update recovery are separate actions. The
+  game must be closed; an interrupted repair blocks Play until recovery completes.
+- Fixed the BuffBot package check incorrectly rejecting the reviewed archive.
+  An undone update now says **Restored BuffBot 1.8.3-alpha**.
 
-## Installer
+These are specific supported operations, not a general update-all-mods feature.
+See the [supported update scope](existing-install-upgrades-2026-09-21.md).
 
-- Fixes interval saves being installed but left inactive because EET wrote their
-  settings to a different game profile. CEBG now adds missing settings to the
-  installation's own profile and checks them before reporting success. Existing
-  preferences, including explicitly turning interval saves off, are preserved.
-- New recommended installations include the interval-save settings menu. It follows
-  your chosen save interval and stays inactive if you exclude interval saves.
-- The Updates badge counts applicable fixes and recovery states alongside the
-  existing application, collection and Radar notices, without a startup scan.
-- Both bundled recipe profiles pass the release checks. Already-approved components
-  have complete catalog entries; older update records no longer repeat the same
-  changes or omit changed download identities.
-- Removes the incorrect Red Wizard / Spell Revisions exclusion note and unused
-  archive records. Those record corrections preserve the prior selections and order;
-  alpha.18 separately adds the approved Emotion default described above.
+## New-install collection
 
-## Update BuffBot without reinstalling your game
+### Spells, resistance and items
 
-- Compare the mods in an existing installation without resetting your choices.
-- Eligible installations can update **BuffBot 1.8.3-alpha to 1.8.4-alpha in the
-  same folder**. Unidentified items no longer reveal their names in BuffBot.
-- Your saves, BuffBot settings and other installed mods stay in place. Review the
-  update first; backups, Undo and recovery after an interruption are included.
-- This exact update was applied, checked in-game with an existing save, and undone
-  successfully. It does not upgrade the rest of the collection. See the
-  [supported scope](existing-install-upgrades-2026-09-21.md).
-- Fixed the package check that incorrectly rejected the original BuffBot downloads.
-  If only a check fails, CEBG makes clear that it did not apply an update.
+The following changes are selected by default when their required mods are selected.
 
-## Installer improvements
+- **Emotion: Courage and Hope do not stack.** Casting one replaces the other;
+  recasting refreshes it.
+- **Hardiness:** 40% physical resistance, without SR's extra damage resistances,
+  for both normal and Wish Hardiness. Customize offers a 30% alternative and a
+  separate optional 20% elemental/magic-damage resistance addition. That addition
+  is not Magic Resistance.
+- **Party physical resistance:** gains above 80% are halved, up to 90%.
+  90% before the adjustment becomes 85%; 100% becomes 90%. This applies separately to
+  physical damage types, not enemies, summons, elemental damage or Magic
+  Resistance. The proposed 95% alternative is not included.
+- **Pierce Magic:** halves current Magic Resistance for five rounds. The reduction
+  is rounded up and limited to 10–40 percentage points, without going below zero.
+  Recasting refreshes the original reduction rather than stacking. Lower
+  Resistance can still combine with it; protection removal is unchanged.
+- **Spellstrike:** 15% arcane and divine spell failure for two rounds, refreshing
+  rather than stacking with itself. Protection removal is unchanged; other
+  spell-failure effects can still combine with it.
+- **Flail of the Ages:** Slow allows a save vs. Breath: −2 for +3, −4 for either
+  +4 version, and −6 for +5. The +5 weapon keeps Free Action without blocking
+  Haste. Damage, chance to trigger Slow and Slow duration are unchanged.
+- **Bracers of Blinding Strike:** with SR, grant SR Improved Haste's +1 attack
+  per round instead of vanilla doubled APR. They retain one daily use and their
+  20-second duration.
+- **Elemental arrows:** BG1/EET elemental arrows use the BG2-style balance.
+- **Combat clouds:** covered genie and vampire cloud forms replace damage immunity
+  with 75% resistance. Other resistance values and open
+  damage channels, poison immunity, regeneration and duration remain. Normal
+  forms, quest protections and scripted death escapes are unchanged.
+- **Dragon Wing Buffet:** the longer 18-second cooldown is selected by default
+  instead of six seconds. It requires SCS Smarter Dragons and can be switched off.
+  The separate lethal-melee challenge remains optional and unchecked.
 
-- Choose whether **Play** also starts Radar. The checkbox starts off and remembers
-  your choice for each installation. Radar can request its own Windows approval;
-  declining it or a launch failure leaves the game running and shows a clear
-  message. The whole installer does not need administrator access for this.
-  Automated frontend and Windows-native checks pass. This correction still
-  needs a packaged, user-supervised launch check; it does not resolve the
-  separate Defender investigation.
+### Archer overhaul
 
-The improvements below predate the Radar correction and were included in the
-September 29 test installer. Public release and outstanding manual checks remain
-separate from package verification.
+- Manyshot's extra projectiles are replaced by **Aimed Shot** with EEex. From
+  level seven, one arrow or bolt gets 50% extra physical damage, then recharges
+  for six seconds. A miss spends the bonus. Mod-added bows and crossbows work too.
+- Farsighted, Sniper and Greater Called Shot are removed. Rapid Shot and
+  Hardiness remain.
+- **Called Shot** lasts ten seconds. Hits apply a saveable 25% movement slow for
+  two rounds, refreshing rather than stacking. Dexterity halving and APR
+  reduction are gone. From level 16, the activation also adds +2 missile damage.
 
-- A smaller installation selector at the top of Updates, shared by all game-specific
-  actions; longer paths and technical explanations stay available under Details.
-- Backups show verified bytes copied. Installation/update stages use a progress
-  bar when a total is known and a spinner otherwise, without guessing time left.
-- Obvious, dismissible completion, Undo and failure messages. App-update success
-  is confirmed after restarting into the requested version.
-- Unique names for new installations, with a display-only Rename option in My
-  installs. Existing folders and saves are not renamed. Old duplicate names are
-  distinguished in the selector.
-- Folder errors explain unavailable folders, permissions, locks or conflicting
-  files and preserve the exact operation/path in details.
-- Customize brings common changes forward and supports the recipe's typed choices.
-- **Advanced manual-mod pauses:** choose one or more completed-component boundaries,
-  install your own additions in the displayed managed folder, then review and
-  accept them before continuing. Normal installations have no extra pauses.
-  Adding manual mods disables game fixes and mod upgrades for that copy; app
-  updates remain available. See the [manual-mod guide](manual-mods.md).
-- Installation removal shows an estimated folder size before deletion; the
-  existing target checks and confirmation still apply.
-- Fixed hidden patch/Radar feedback for the initially selected installation.
+### Companions and progression
 
-The confusing history entry for an undone BuffBot update now reads
-**Restored BuffBot 1.8.3-alpha** in this candidate. The earlier diagnostic package
-used for the accepted Apply/Undo test did not have this clearer wording.
+- **Evandra's Sorcerer conversion and custom portrait** are independent defaults
+  when Evandra is selected. Starting spells match SR or vanilla, while her
+  stored level and XP are preserved for recruitment level-ups.
+- **Edwin with Artisan's Red Wizard:** his necklace can be removed and grants no
+  extra spell slots; the kit supplies the intended +2. The previously missed EET
+  Edwin variant receives the selected kit on new installations. Explicitly
+  different kits and saved actors are not overwritten.
+- **Optional Baeloth spellbook balance:** trims known spells to a legal Sorcerer
+  spread, with SR-aware or vanilla spell choices. It is unchecked by default;
+  this does not add the complete planned Challenge Mode.
+- **Story-based scroll, lock and trap XP** is the default: BG1 rewards throughout
+  BG1 and SoD, BG2 rewards from SoA onward. Removing the XP cap no longer unlocks
+  BG2 rewards early. This also corrects the BG1/SoD reward for level-16+ locks.
+- The existing smooth, protagonist-XP-based reward curve remains an optional,
+  mutually exclusive alternative. It is not party-average XP; neither choice
+  adds XP banking.
 
-## Notes
+### SoD Remix
 
-- CEBG updates itself; game fixes are separate and always ask first.
-- General multi-mod upgrades are not implemented yet. The first BuffBot-only
-  route above and targeted description fix are not a whole-collection upgrade.
-- Broader mod updates, collection-wide compatibility categories and additional
-  hotpatches are deferred; they are not requirements for this release.
-- Updater signing authenticates the setup to CEBG's own updater. It is not a Windows
-  Authenticode publisher signature, which this alpha still does not have.
-- Need help? See the [short troubleshooting and backup guide](troubleshooting.md).
+- The Boareskyr Bridge battle now has a collapse deadline: **10/8/7/6/5 unpaused
+  minutes** on Easy/Normal/Core/Hard/Insane, with five on Legacy of Bhaal.
+  Story Mode has no timer.
+- Warnings, rockfall sounds and short shakes mark the approaching deadline.
+  Defeat both mages and all four elementals to stop demolition; remaining guards
+  do not keep it going. Save/reload and retreat preserve the deadline.
+  Running out of time ends the game.
+- Extra Insane mage sequencers remain a separate, unchecked option.
+
+### Optional convenience changes
+
+- **Generic unidentified-item visuals** reuse ordinary game art by item category,
+  including cursed items. Identification restores the normal appearance. This
+  works independently of loot randomization, but cannot be combined with
+  Randomiser's cursed-appearance option.
+- **Talking while shapeshifted** for Artisan's Shapeshifter and Hivemaster forms.
+  Other restrictions and genuine Silence are unchanged. Off by default.
+- Legacy text compatibility is added automatically for LeUI and Dragonspear UI++.
+
+### BuffBot
+
+- Fresh installations use **BuffBot 1.10.0**, up from 1.8.4-alpha.
+- Identified carried items can expose their buff powers separately, including
+  secondary weapon powers and backpack equipment.
+- Its inventory-use preference can use supported powers directly or
+  equip/use/restore eligible gear. Interrupted equipment swaps have recovery
+  checks. This does not add automatic wand/scroll use or access to container
+  contents; equipment eligibility restrictions remain.
+- Includes the intervening spell-list refresh and compatibility fixes. The
+  supported older-game update route remains the separate 1.8.3-to-1.8.4 update.
+
+### Package versions
+
+- **BG Rebalance 0.8.1** includes the finished balance changes above.
+- **Modpack 0.2.0-alpha.10** includes Evandra, story XP, unidentified visuals,
+  legacy UI text, optional Baeloth balance and the Edwin correction.
+- **Artisan 4.81a-dev.85928f9-chriz.1** includes the Archer overhaul and optional
+  shifted talking. Fork versions now name the upstream base and patch revision;
+  older releases have not been renamed.
+- **Bardic Wonders 2.9c-balance.6** preserves the selected kit balance. Its separate
+  kit-specific spell-progression option is not selected by this update.
+- **SoD Remix 0.6.12**, up from 0.6.11, includes the bridge deadline above.
+- **BuffBot 1.10.0**, as described above.
+
+## Important notes
+
+- Further general mod updating, XP banking, a 95% physical-resistance option,
+  Entropy Shield/Dispelling Screen redesigns, instant trap detection, reduced NPC
+  chatter and new Fighter/Mystic Fire rebalancing remain later work.
+- The reported Fade/Evandra XP catch-up issues are not claimed fixed. Companion
+  changes for fresh installations do not automatically rewrite saved characters.
+- Extra interfaces and custom combinations are open for community testing.
+  Not every option or full campaign route has been playtested.
+- CEBG's updater signature is not a Windows Authenticode publisher signature.
+  Windows may still display an unknown-publisher warning. Download only from the
+  official release; do not disable Defender or add blanket exclusions.
+- Need help? See the [troubleshooting and backup guide](troubleshooting.md).

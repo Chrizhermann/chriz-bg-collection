@@ -1,0 +1,49 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-07"
+command = "chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh published ZIP>"
+scope = "Fresh public downloads passed the production artifact acquisition and extraction contracts. Measured ZIP hashes and native TP2 declaration order match both recipes. Owner release checks passed. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
+
+[[artifacts]]
+mod_id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.8.1"
+source_reference = "v0.8.1"
+source_commit = "09db97dc5cbd14f1b8bf7fe3af64f69bee313585"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.1/chriz-bg-rebalance-v0.8.1-windows.zip"
+actual_length = 1753775
+actual_sha256 = "5d6cc9dfec8779e1e4534da686dc2f3849bcb795b24981c0930d95918efccf0c"
+tp2_sha256 = "edf2a71b752f75355c5f7bd83bf54c8f0bfc25130bfee149baedd9b75070b125"
+native_components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 402, 403, 404, 405, 406, 407, 409, 408, 302, 420, 421, 310, 130, 220, 320]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.10"
+source_reference = "v0.2.0-alpha.10"
+source_commit = "210472d98cb0a66fc2003af886ce545af11e8d56"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.10/chriz-bg-modpack-v0.2.0-alpha.10.zip"
+actual_length = 1588239
+actual_sha256 = "38a896adb08a6bfc76e011885e82667f613d47e49ce0c64fa87ccf3d2b57c7f6"
+tp2_sha256 = "c0724070494e13e26fad1ce7d01c1c4d92286d6062722bb47acf5b45814d561d"
+native_components = [110, 130, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223, 224, 225, 235, 236, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "buffbot"
+artifact_id = "buffbot-1.10.0"
+source_reference = "v1.10.0"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.0/buffbot-v1.10.0.zip"
+actual_length = 4268920
+actual_sha256 = "cea6628cc6f00eeb3d296fe50f481f5c13ad4ea3530bc67716493d0a5b016f77"
+tp2_sha256 = "c8ee8c95a5fbee9a27569d9c896131c1c2cb8ddad75a929fbaed6b271500ec1f"
+native_components = [1, 0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

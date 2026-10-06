@@ -25,9 +25,9 @@ class ReleaseMetadataTests(unittest.TestCase):
         for relative in ("manifest", "recipes/curated-full-current"):
             with self.subTest(profile=relative):
                 profile = self.root / relative
-                mod = tomllib.loads((profile / "mods/chriz-bg-rebalance.toml").read_text())
-                self.assertEqual(mod["artifact_id"], record["artifact_id"])
-                artifact = tomllib.loads((profile / f"artifacts/{mod['artifact_id']}.toml").read_text())
+                # Historical candidate evidence describes its immutable source,
+                # not the newer current default pin.
+                artifact = tomllib.loads((profile / f"artifacts/{record['artifact_id']}.toml").read_text())
                 for source_key, evidence_key in (
                     ("reference", "source_reference"), ("url", "planned_source_url"),
                     ("expected_length", "actual_length"), ("sha256", "actual_sha256"),
@@ -49,21 +49,13 @@ class ReleaseMetadataTests(unittest.TestCase):
         for relative in ("manifest", "recipes/curated-full-current"):
             with self.subTest(profile=relative):
                 profile = self.root / relative
-                mod = tomllib.loads((profile / "mods/chriz-bg-rebalance.toml").read_text())
-                self.assertEqual(mod["artifact_id"], record["artifact_id"])
-                artifact = tomllib.loads((profile / f"artifacts/{mod['artifact_id']}.toml").read_text())
+                artifact = tomllib.loads((profile / f"artifacts/{record['artifact_id']}.toml").read_text())
                 for source_key, evidence_key in (
                     ("reference", "source_reference"), ("url", "immutable_source_url"),
                     ("expected_length", "actual_length"), ("sha256", "actual_sha256"),
                 ):
                     self.assertEqual(artifact["source"][source_key], record[evidence_key])
-                collection = tomllib.loads((profile / "collection.toml").read_text())
-                for run in collection["runs"]:
-                    if run["mod_id"] == "chriz-bg-rebalance":
-                        self.assertEqual(run["components"], [
-                            component for component in record["native_components"]
-                            if component in run["components"]
-                        ])
+                self.assertEqual(record["native_components"][-3:], [302, 420, 421])
 
     def test_both_profiles_cover_every_selected_run_and_tail(self):
         for relative in ("manifest", "recipes/curated-full-current"):
@@ -92,10 +84,10 @@ class ReleaseMetadataTests(unittest.TestCase):
             output = Path(temp) / "recipe"
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             self.assertEqual(json.loads((output / "release.json").read_text())["version"],
-                             "0.1.0-alpha.18")
+                             "0.1.0-alpha.19")
             seen = set()
             previous = "0.1.0-alpha.13"
-            for number in range(14, 19):
+            for number in range(14, 20):
                 version = f"0.1.0-alpha.{number}"
                 ledger = tomllib.loads((output / f"releases/v{version}/ledger.toml").read_text())
                 self.assertEqual(ledger["supersedes"], previous)

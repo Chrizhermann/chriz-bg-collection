@@ -85,6 +85,7 @@ fn authors_the_exact_spell_revisions_menu_and_split_run_order() {
     let late_companions = position("chriz-bg-modpack-late-companions-bg2");
     let late = position("spell-rev-npc-spellbooks-bg2");
     let lightning = position("spell-rev-lightning-bg2");
+    let baeloth = position("chriz-bg-modpack-baeloth-bg2");
     let buffbot = position("buffbot-bg2");
 
     assert_eq!(ascension + 1, early);
@@ -92,7 +93,8 @@ fn authors_the_exact_spell_revisions_menu_and_split_run_order() {
     assert_eq!(safana + 1, late_companions);
     assert_eq!(late_companions + 1, late);
     assert_eq!(late + 1, lightning);
-    assert_eq!(lightning + 1, buffbot);
+    assert_eq!(lightning + 1, baeloth);
+    assert_eq!(baeloth + 1, buffbot);
     assert_eq!(buffbot, runs.len() - 1);
     assert_eq!(runs[early].phase, Phase::Main);
     assert_eq!(runs[early].components, SPELL_REV_EARLY_COMPONENTS);

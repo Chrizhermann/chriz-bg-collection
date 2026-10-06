@@ -9,7 +9,7 @@ use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223,
-    224, 225, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640,
+    224, 225, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640, 235, 236,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -41,27 +41,27 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.8");
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.10");
     let artifact = &manifest.artifacts[artifact_id];
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.8");
+    assert_eq!(artifact.version, "0.2.0-alpha.10");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.8");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.10");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.8/chriz-bg-modpack-v0.2.0-alpha.8.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.10/chriz-bg-modpack-v0.2.0-alpha.10.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.8.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.10.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_575_997));
+    assert_eq!(artifact.source.expected_length, Some(1_588_239));
     assert_eq!(
         artifact.source.sha256,
-        "8019d60d2d5c9e5b5961b73ddfcc65729d7feb819bc3e99f4134dd3058835989"
+        "38a896adb08a6bfc76e011885e82667f613d47e49ce0c64fa87ccf3d2b57c7f6"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -91,13 +91,18 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     let late_companions = position("chriz-bg-modpack-late-companions-bg2");
     let spellbooks = position("spell-rev-npc-spellbooks-bg2");
     let lightning = position("spell-rev-lightning-bg2");
+    let baeloth = position("chriz-bg-modpack-baeloth-bg2");
+    let edwin = position("chriz-bg-modpack-edwin-bg2");
     let buffbot = position("buffbot-bg2");
     assert_eq!(remote + 1, modpack);
     assert_eq!(modpack + 1, safana);
     assert_eq!(safana + 1, late_companions);
     assert_eq!(late_companions + 1, spellbooks);
     assert_eq!(spellbooks + 1, lightning);
-    assert_eq!(lightning + 1, buffbot);
+    assert_eq!(lightning + 1, baeloth);
+    assert_eq!(baeloth + 1, buffbot);
+    assert_eq!(position("artisanskitpack-npc-bg2") + 1, edwin);
+    assert!(edwin < spellbooks);
     assert_eq!(buffbot, runs.len() - 1);
 
     let run = &runs[modpack];
@@ -113,9 +118,13 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     let late = &runs[late_companions];
     assert_eq!(late.phase, Phase::PostEetEnd);
     assert_eq!(late.components, [189, 620]);
+    assert_eq!(runs[edwin].phase, Phase::Main);
+    assert_eq!(runs[edwin].components, [236]);
+    assert_eq!(runs[baeloth].phase, Phase::PostEetEnd);
+    assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.8");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.10");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -168,7 +177,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.unavailable_reason.is_some(), "{id}");
     }
 
-    for component in [110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 611] {
+    for component in [
+        110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 236, 611,
+    ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -190,7 +201,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.selected, "{id}");
     }
 
-    for component in [222, 223, 610] {
+    for component in [222, 223, 235, 610] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -215,7 +226,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // The base manifest includes the approved SoD skip (910) added after alpha.10,
     // Red Wizard 5102 (c907b38), the Acton Balthis 25 opt-out (9c66cee) and the
     // September 16 intake (cb07eca), and September 26 Emotion exclusivity (301).
-    // Its plan is distinct from the 454-component curated runtime recipe.
+    // October 7 adds seven Rebalance defaults (130/200/210/211/220/310/320)
+    // and Edwin 236. Optional Baeloth 235, Hardiness 201/202 remain unselected.
+    // This 368-component base plan is distinct from the 462-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -223,7 +236,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        360
+        368
     );
 }
 
@@ -462,5 +475,51 @@ fn story_xp_is_default_and_appearance_is_an_independent_optional_choice() {
         ] {
             assert!(positions(earlier) < positions(run));
         }
+    }
+}
+
+#[test]
+fn edwin_follows_the_selected_conversion_and_baeloth_remains_an_optional_late_choice() {
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        let edwin_run = "chriz-bg-modpack-edwin-bg2";
+        let baeloth_run = "chriz-bg-modpack-baeloth-bg2";
+        assert_eq!(baseline.plan.components_for(edwin_run), Some(&[236][..]));
+        assert_eq!(baseline.plan.components_for(baeloth_run), None);
+
+        let mut challenge = baseline.normalized_selection.to_selection();
+        challenge.set_feature("feature:chriz-bg-modpack:component-235", true);
+        let challenge = evaluate(&manifest, &challenge).unwrap();
+        assert_eq!(challenge.plan.components_for(baeloth_run), Some(&[235][..]));
+
+        for disabled in [
+            "feature:artisanskitpack-npc:component-5102",
+            "mod:artisanskitpack-npc",
+            "mod:chriz-bg-modpack",
+        ] {
+            let mut selection = baseline.normalized_selection.to_selection();
+            selection.set_feature(disabled, false);
+            selection.set_feature("feature:chriz-bg-modpack:component-236", true);
+            let result = evaluate(&manifest, &selection).unwrap();
+            assert_eq!(
+                result.plan.components_for(edwin_run),
+                None,
+                "{directory}: {disabled}"
+            );
+        }
+
+        let position = |run_id: &str| {
+            manifest
+                .collection
+                .runs
+                .iter()
+                .position(|run| run.run_id == run_id)
+                .unwrap()
+        };
+        assert_eq!(position("artisanskitpack-npc-bg2") + 1, position(edwin_run));
+        assert!(position(edwin_run) < position("spell-rev-npc-spellbooks-bg2"));
+        assert!(position("spell-rev-npc-spellbooks-bg2") < position(baeloth_run));
+        assert!(position(baeloth_run) < position("buffbot-bg2"));
     }
 }
