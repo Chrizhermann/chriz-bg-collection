@@ -18,7 +18,7 @@ fn recipe() -> Manifest {
 fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     let manifest = recipe();
     let result = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
-    assert_eq!(result.plan.runs.len(), 50);
+    assert_eq!(result.plan.runs.len(), 51);
     assert_eq!(
         result
             .plan
@@ -26,7 +26,7 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        454 // September 29 adds Flail 302, Evandra 224/225 and Wing Buffet 111 defaults.
+        462 // October 7 adds seven Rebalance defaults and Edwin 236 in its own run.
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");
@@ -61,11 +61,16 @@ fn emotion_exclusivity_is_a_ready_default_with_an_independent_opt_out() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.7.1"
+        "chriz-bg-rebalance-0.8.1"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302][..])
+        Some(
+            &[
+                100, 101, 111, 120, 121, 200, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
+                310, 130, 220, 320,
+            ][..]
+        )
     );
 
     let mut selection = baseline.normalized_selection.to_selection();

@@ -111,3 +111,16 @@ remains in force. No further computer control is needed for source/package work.
   findings; 24 intake/metadata/expanded-recipe tests pass. Static evidence cites
   source commit `fd0806d3db056239b833e424411807bb11dd1aef`. The combined suite,
   package, final Defender scan and publication remain.
+
+### Final-package check continuation
+
+The native compile job `92a0067a-270c-4a89-9e8e-c5f062658482` completed with
+exit 0 and has been collected; do not rerun it on a delayed notification.
+The first final-package job `5f4e0758-9c68-43a0-a664-06f2e57af6d0` stopped before
+packaging at three stale assertions in two Rust targets: old curated totals,
+old Rebalance pin/batch, and pre-Baeloth tail adjacency. Exact expectations now
+cover 51 runs/462 components, the approved native batch, and explicit
+SR Lightning → Baeloth → BuffBot adjacency. Both affected targets then passed
+13/13 tests, with formatting/whitespace checks clean. No guard was relaxed.
+The full package flow continues with a new result directory
+`target/work/oct07-release-candidate-final`; the failed job's logs are retained.
