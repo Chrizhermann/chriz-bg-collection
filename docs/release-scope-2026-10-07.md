@@ -42,8 +42,8 @@ Fade/Evandra XP catch-up fixes; unresolved scroll reader-level policy.
 - [x] Owner releases published and downloaded hashes verified.
 - [x] Both shipped recipes, generator, defaults, dependencies and exclusions agree.
 - [x] New collection version and complete change ledger recorded.
-- [ ] Automated installer/recipe/package checks pass; failures investigated.
-- [ ] Final signed package scanned with Defender protections unchanged.
+- [x] Automated installer/recipe/package checks pass; failures investigated.
+- [x] Final signed package scanned with Defender protections unchanged.
 - [x] October 1 app: Radar-off launch checked with no existing Radar process.
 - [x] October 1 app: Radar approval launch checked; decline remains untested.
 - [x] Complete installer + collection changelog verified against shipped selection.
@@ -124,3 +124,10 @@ SR Lightning → Baeloth → BuffBot adjacency. Both affected targets then passe
 13/13 tests, with formatting/whitespace checks clean. No guard was relaxed.
 The full package flow continues with a new result directory
 `target/work/oct07-release-candidate-final`; the failed job's logs are retained.
+
+The corrected final job `c3b69ae8-6237-48d0-9a58-4c8f571786d3` completed exit 0:
+863 native tests, 396 frontend tests, 144 Python tests, formatting, Clippy,
+notices, package/resource checks, real updater signature/tamper checks and final
+Defender setup/extraction scans passed. See
+[exact package evidence](package-acceptance-alpha19-2026-10-07.md). Public assets,
+feed and website verification remain; source changes are frozen for this package.

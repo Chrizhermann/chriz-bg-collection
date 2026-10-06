@@ -44,8 +44,12 @@ unchanged. The helper leaves both publishing steps to the release owner.
 ## Antivirus reports during testing
 
 A clean archive scan or successful package test does not clear a later runtime
-detection. The September 30 alpha.19 quarantine is an open release-readiness
-issue; see [handover](handover.md) for the exact sample and investigation status.
+detection. The September 30 alpha.19 quarantine was assessed with the owner's
+approved October 7 reproduction and final package scans. Those checks found no
+new detection, and the owner authorized proceeding; see the
+[launch evidence](defender-smoke-2026-10-07.md) and
+[final package evidence](package-acceptance-alpha19-2026-10-07.md). The original
+alert's precise cause is not established, and future builds are not guaranteed.
 
 - Preserve the affected build and its hashes. Record the threat name, action,
   security-intelligence versions and launch sequence without publishing personal
