@@ -1,8 +1,11 @@
 # October 7 release checklist
 
-Christopher authorized finishing the approved mods, the CEBG release, a complete
-changelog, website publication and scoped test cleanup. This is the working
-checklist, not evidence that unfinished steps have passed.
+**Completed:** app/collection alpha.19, versioned downloads, ordinary alpha update
+feed, complete changelog and website are public and verified. The rebuildable
+compiler cache was removed; games, saves, backups and evidence were retained.
+Christopher authorized this release and scoped cleanup. Exact results and
+remaining testing limits are in [package acceptance](package-acceptance-alpha19-2026-10-07.md).
+The progress notes below are retained as historical context, not current blockers.
 
 ## Include
 
@@ -47,9 +50,9 @@ Fade/Evandra XP catch-up fixes; unresolved scroll reader-level policy.
 - [x] October 1 app: Radar-off launch checked with no existing Radar process.
 - [x] October 1 app: Radar approval launch checked; decline remains untested.
 - [x] Complete installer + collection changelog verified against shipped selection.
-- [ ] Versioned release assets verified before updating the alpha feed.
-- [ ] Website download, versions and changelog updated and checked live.
-- [ ] Only this session's disposable test artifacts cleaned; evidence retained.
+- [x] Versioned release assets verified before updating the alpha feed.
+- [x] Website download, versions and changelog updated and checked live.
+- [x] Rebuildable compiler cache removed; package/test evidence and games retained.
 
 ## Testing boundaries
 

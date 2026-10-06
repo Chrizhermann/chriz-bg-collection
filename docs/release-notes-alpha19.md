@@ -1,7 +1,7 @@
 # Chriz Easy BG 0.1.0-alpha.19
 
-**Prepared, not published:** app alpha.19 / collection alpha.19. Final owner
-packages and the public installer download must be verified before posting.
+**Published:** app alpha.19 / collection alpha.19.
+[Download and complete release notes](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.19).
 
 This update adds more UI choices, advanced install breakpoints, clearer progress,
 optional Radar launch, new balance options and updated mods. These notes cover

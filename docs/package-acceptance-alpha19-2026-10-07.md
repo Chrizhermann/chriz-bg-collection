@@ -67,5 +67,40 @@ a guarantee for future builds.
 
 ## Publication
 
-Versioned assets, alpha feed and website publication are pending verification.
-Do not replace this package's bytes under the same version after publication.
+[Alpha.19](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.19)
+is published as a prerelease, following the existing CEBG alpha convention.
+Source through `a23b811` was pushed to `codex/installer-v0-real-alpha` first.
+All seven versioned public assets were anonymously downloaded and matched local
+hashes: setup, signature, feed, checksums, component inventory, license and
+notices. The downloaded setup also passed the bundled-public-key signature test.
+
+The alpha channel was updated only after those checks. Its cache-busted anonymous
+download matches the exact feed hash above and announces app/recipe alpha.19.
+The first ordinary-URL request returned cached alpha.18/recipe alpha.16. A later
+ordinary-URL download now also returns app/recipe alpha.19 and matches the exact
+feed hash; CDN convergence is verified without replacing the artifact again.
+The [collection website](https://bg.chrizfader.org/collection) is published and
+verified live. Website [PR27](https://github.com/Chrizhermann/twitch-setup-chriz/pull/27)
+merged as `58f3b5668467642b42c5e3161514ccdd40367387` (content `2465e3a`).
+All 115 site tests, build, PR CI and merged-master CI passed; master run
+`37540148672`. Live content matches the reviewed source and displays app/recipe
+alpha.19. All six public routes return HTTP 200 with security headers. The setup
+downloaded through the live website's actual URL again matches 6,017,614 bytes
+and the setup hash above. Existing rules and non-collection content are unchanged.
+Desktop/mobile visual review was not performed; no style/runtime changes were
+made. The preview server was stopped and the website worktree is clean.
+
+Versioned assets are immutable. Hosted source CI is separate from the completed
+local checks and was still running when publication began.
+
+## Cleanup
+
+After all local Cargo processes exited, the exact non-linked
+`target/debug/incremental` directory was removed: **81,695 generated files,
+48,611,704,999 logical bytes (45.27 GiB)**. Cargo can regenerate that cache.
+The directory is absent; C: reported about 117.7 GiB free afterward. Logical
+file totals are not a measurement of physical space reclaimed.
+
+Release packages, signatures, input archives, download-verification copies,
+job logs, diagnostics, all game installs, saves and backups were retained.
+No other source worktree or unrelated temporary folder was deleted.

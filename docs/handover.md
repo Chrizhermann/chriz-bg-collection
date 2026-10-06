@@ -2,6 +2,25 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## October 7 — alpha.19 published; website and cleanup complete
+
+**App and collection alpha.19 are now public.** This supersedes older
+pending-owner/Radar notes. Modpack alpha.10, Rebalance0.8.1
+and BuffBot1.10.0 are pinned from freshly verified public downloads; the approved
+new defaults and optional Baeloth choice are included. Full local tests, final
+signed-package checks and Defender scans passed. Radar-off and user-approved
+Radar-on launch passed on the preceding app candidate; no stream saves were
+edited. The final rebuilt binary has separate scan/package evidence, not a new
+gameplay claim. See [exact results](package-acceptance-alpha19-2026-10-07.md) and
+[complete release notes](release-notes-alpha19.md).
+
+All seven versioned assets and the ordinary alpha update URL are verified.
+The website is live with the complete changelog; PR27 and master CI passed,
+and its real download matches the verified package. Existing rules are unchanged.
+The rebuildable compiler cache is removed (45.27 GiB logical file total), with
+all games/saves/backups/evidence retained. Older handover/planning work remains
+preserved; only this new top entry is included in the release commit.
+
 ## October 1 — final candidate packaged; publication still held
 
 The Radar Fix candidate completed automated checks and packaging at 04:09 KST
