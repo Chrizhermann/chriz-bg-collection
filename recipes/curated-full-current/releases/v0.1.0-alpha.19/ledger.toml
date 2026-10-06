@@ -1,0 +1,62 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.19"
+published_at = "2026-10-06T21:46:17Z"
+minimum_app_version = "0.1.0-alpha.19"
+supersedes = "0.1.0-alpha.18"
+
+[[changes]]
+id = "approved-hardiness-antimagic-and-resistance-defaults"
+title = "Hardiness, anti-magic and physical-resistance balance"
+summary = "New recommended installations use Hardiness with 40% physical resistance, bounded Pierce Magic resistance reduction, brief Spellstrike disruption, and half effectiveness above 80% party physical resistance with a 90% maximum. Hardiness 30% and extra elemental/magic-damage resistance are separate optional choices. Prerequisites are enforced; no 95% cap is offered."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.7.1",
+  "artifact:chriz-bg-rebalance-0.8.1",
+  "run:chriz-bg-rebalance-bg2",
+  "feature:feature:chriz-bg-rebalance:component-200",
+  "feature:feature:chriz-bg-rebalance:component-201",
+  "feature:feature:chriz-bg-rebalance:component-202",
+  "feature:feature:chriz-bg-rebalance:component-210",
+  "feature:feature:chriz-bg-rebalance:component-211",
+  "feature:feature:chriz-bg-rebalance:component-310",
+]
+
+[[changes]]
+id = "elemental-arrows-sr-bracers-and-damageable-clouds"
+title = "BG2 elemental arrows, corrected bracers and damageable clouds"
+summary = "Recommended new installations use BG2 elemental-arrow damage throughout EET. With Spell Revisions, Bracers of Blinding Strike grant +1 APR rather than doubled attacks. Supported combat cloud forms lose damage immunity in favor of 75% resistance while keeping lower resistances and scripted escapes. These changes do not patch existing games or saves."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:chriz-bg-rebalance:component-130",
+  "feature:feature:chriz-bg-rebalance:component-220",
+  "feature:feature:chriz-bg-rebalance:component-320",
+]
+
+[[changes]]
+id = "edwin-red-wizard-and-optional-baeloth-spell-limit"
+title = "Edwin correction and optional Baeloth balance"
+summary = "With Artisan's Red Wizard Edwin, his amulet is removable and extra slots come only from his kit. Optional Baeloth balance limits his spells known to a normal Sorcerer spread, with or without Spell Revisions. Edwin runs after his kit assignment and before SR NPC spellbooks; Baeloth runs after spellbook processing. Saved actors are not automatically rewritten."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.8",
+  "artifact:chriz-bg-modpack-0.2.0-alpha.10",
+  "run:chriz-bg-modpack-edwin-bg2",
+  "run:chriz-bg-modpack-baeloth-bg2",
+  "feature:feature:chriz-bg-modpack:component-235",
+  "feature:feature:chriz-bg-modpack:component-236",
+]
+
+[[changes]]
+id = "buffbot-1-10-0-fresh-install-pin"
+title = "BuffBot 1.10.0 for new installations"
+summary = "Fresh installations download BuffBot 1.10.0. Selected components stay unchanged. This does not expand the separately supported historical 1.8.3-to-1.8.4 update route for existing games."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.9.0",
+  "artifact:buffbot-1.10.0",
+]

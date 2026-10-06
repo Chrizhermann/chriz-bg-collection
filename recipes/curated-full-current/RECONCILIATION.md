@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 463 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 452.
+Engine-equivalent resolved-selection summary: 471 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 460.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -135,8 +135,8 @@ Engine-equivalent resolved-selection summary: 463 default/mandatory rows — con
 | `BG1UB:34` | default | `feature:bg1ub:component-34` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 34 |  |
 | `BGGO:0` | default | `feature:bggo:component-0` | selected for installation | bggo → bggo-3.6 3.6 (v3.6), component 0 |  |
 | `BUBB_SPELL_MENU_EXTENDED:0` | default | `feature:bubb-spell-menu-extended:component-0` | selected for installation | bubb-spell-menu → bubb-spell-menu-5.2 5.2 (v5.2), component 0 |  |
-| `BUFFBOT:1` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.9.0 1.9.0 (v1.9.0), component 1 |  |
-| `BUFFBOT:0` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.9.0 1.9.0 (v1.9.0), component 0 |  |
+| `BUFFBOT:1` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.10.0 1.10.0 (v1.10.0), component 1 |  |
+| `BUFFBOT:0` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.10.0 1.10.0 (v1.10.0), component 0 |  |
 | `C0WARLOCK:0` | default | `omission:warlock-unattended-answer` | deferred | No executable source selected | The hidden Contingency UI spell-learning prompt still needs Christopher's explicit Yes or No choice and an unattended script before this default can be installed. |
 | `CDTWEAKS:40` | default | `feature:cdtweaks:component-40` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 40 |  |
 | `CDTWEAKS:60` | default | `feature:cdtweaks:component-60` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 60 |  |
@@ -198,46 +198,54 @@ Engine-equivalent resolved-selection summary: 463 default/mandatory rows — con
 | `CDTWEAKS:4050` | default | `feature:cdtweaks:component-4050` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 4050 |  |
 | `CDTWEAKS:4061` | default | `feature:cdtweaks:component-4061` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 4061 |  |
 | `CDTWEAKS:4071` | default | `feature:cdtweaks:component-4071` | selected for installation | cdtweaks → cdtweaks-18 18 (v18), component 4071 |  |
-| `CHRIZ-BG-MODPACK:110` | default | `feature:chriz-bg-modpack:component-110` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 110 |  |
-| `CHRIZ-BG-MODPACK:130` | mandatory | `feature:chriz-bg-modpack:component-130` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 130 |  |
-| `CHRIZ-BG-MODPACK:140` | mandatory | `feature:chriz-bg-modpack:component-140` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 140 |  |
-| `CHRIZ-BG-MODPACK:170` | mandatory | `feature:chriz-bg-modpack:component-170` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 170 |  |
-| `CHRIZ-BG-MODPACK:188` | mandatory | `feature:chriz-bg-modpack:component-188` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 188 |  |
-| `CHRIZ-BG-MODPACK:189` | mandatory | `feature:chriz-bg-modpack:component-189` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 189 |  |
-| `CHRIZ-BG-MODPACK:190` | default | `feature:chriz-bg-modpack:component-190` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 190 |  |
-| `CHRIZ-BG-MODPACK:192` | default | `feature:chriz-bg-modpack:component-192` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 192 |  |
-| `CHRIZ-BG-MODPACK:193` | default | `feature:chriz-bg-modpack:component-193` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 193 |  |
-| `CHRIZ-BG-MODPACK:194` | default | `feature:chriz-bg-modpack:component-194` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 194 |  |
-| `CHRIZ-BG-MODPACK:195` | default | `feature:chriz-bg-modpack:component-195` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 195 |  |
-| `CHRIZ-BG-MODPACK:196` | default | `feature:chriz-bg-modpack:component-196` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 196 |  |
-| `CHRIZ-BG-MODPACK:197` | default | `feature:chriz-bg-modpack:component-197` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 197 |  |
-| `CHRIZ-BG-MODPACK:198` | default | `feature:chriz-bg-modpack:component-198` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 198 |  |
-| `CHRIZ-BG-MODPACK:199` | default | `feature:chriz-bg-modpack:component-199` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 199 |  |
-| `CHRIZ-BG-MODPACK:220` | default | `feature:chriz-bg-modpack:component-220` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 220 |  |
-| `CHRIZ-BG-MODPACK:221` | default | `feature:chriz-bg-modpack:component-221` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 221 |  |
-| `CHRIZ-BG-MODPACK:224` | default | `feature:chriz-bg-modpack:component-224` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 224 |  |
-| `CHRIZ-BG-MODPACK:225` | default | `feature:chriz-bg-modpack:component-225` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 225 |  |
-| `CHRIZ-BG-MODPACK:400` | mandatory | `feature:chriz-bg-modpack:component-400` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 400 | Requires feature:branwen:component-0. |
-| `CHRIZ-BG-MODPACK:410` | mandatory | `feature:chriz-bg-modpack:component-410` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 410 |  |
-| `CHRIZ-BG-MODPACK:430` | mandatory | `feature:chriz-bg-modpack:component-430` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 430 |  |
-| `CHRIZ-BG-MODPACK:440` | mandatory | `feature:chriz-bg-modpack:component-440` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 440 |  |
-| `CHRIZ-BG-MODPACK:450` | mandatory | `feature:chriz-bg-modpack:component-450` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 450 |  |
-| `CHRIZ-BG-MODPACK:611` | default | `feature:chriz-bg-modpack:component-611` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 611 |  |
-| `CHRIZ-BG-MODPACK:620` | default | `feature:chriz-bg-modpack:component-620` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 620 |  |
-| `CHRIZ-BG-MODPACK:640` | mandatory | `feature:chriz-bg-modpack:component-640` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.8 0.2.0-alpha.8 (v0.2.0-alpha.8), component 640 | Inactive under the recommended selection. |
-| `CHRIZ-BG-REBALANCE:100` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 100 |  |
-| `CHRIZ-BG-REBALANCE:101` | default | `feature:chriz-bg-rebalance:component-101` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 101 |  |
-| `CHRIZ-BG-REBALANCE:111` | default | `feature:chriz-bg-rebalance:component-111` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 111 |  |
-| `CHRIZ-BG-REBALANCE:120` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 120 |  |
-| `CHRIZ-BG-REBALANCE:121` | default | `feature:chriz-bg-rebalance:component-121` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 121 |  |
-| `CHRIZ-BG-REBALANCE:301` | default | `feature:chriz-bg-rebalance:component-301` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 301 |  |
-| `CHRIZ-BG-REBALANCE:302` | default | `feature:chriz-bg-rebalance:component-302` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 302 |  |
-| `CHRIZ-BG-REBALANCE:400` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 400 |  |
-| `CHRIZ-BG-REBALANCE:401` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 401 |  |
-| `CHRIZ-BG-REBALANCE:404` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 404 |  |
-| `CHRIZ-BG-REBALANCE:405` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 405 |  |
-| `CHRIZ-BG-REBALANCE:407` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 407 |  |
-| `CHRIZ-BG-REBALANCE:408` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.7.1 0.7.1 (v0.7.1), component 408 |  |
+| `CHRIZ-BG-MODPACK:236` | default | `feature:chriz-bg-modpack:component-236` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 236 |  |
+| `CHRIZ-BG-MODPACK:110` | default | `feature:chriz-bg-modpack:component-110` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 110 |  |
+| `CHRIZ-BG-MODPACK:130` | mandatory | `feature:chriz-bg-modpack:component-130` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 130 |  |
+| `CHRIZ-BG-MODPACK:140` | mandatory | `feature:chriz-bg-modpack:component-140` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 140 |  |
+| `CHRIZ-BG-MODPACK:170` | mandatory | `feature:chriz-bg-modpack:component-170` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 170 |  |
+| `CHRIZ-BG-MODPACK:188` | mandatory | `feature:chriz-bg-modpack:component-188` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 188 |  |
+| `CHRIZ-BG-MODPACK:189` | mandatory | `feature:chriz-bg-modpack:component-189` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 189 |  |
+| `CHRIZ-BG-MODPACK:190` | default | `feature:chriz-bg-modpack:component-190` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 190 |  |
+| `CHRIZ-BG-MODPACK:192` | default | `feature:chriz-bg-modpack:component-192` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 192 |  |
+| `CHRIZ-BG-MODPACK:193` | default | `feature:chriz-bg-modpack:component-193` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 193 |  |
+| `CHRIZ-BG-MODPACK:194` | default | `feature:chriz-bg-modpack:component-194` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 194 |  |
+| `CHRIZ-BG-MODPACK:195` | default | `feature:chriz-bg-modpack:component-195` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 195 |  |
+| `CHRIZ-BG-MODPACK:196` | default | `feature:chriz-bg-modpack:component-196` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 196 |  |
+| `CHRIZ-BG-MODPACK:197` | default | `feature:chriz-bg-modpack:component-197` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 197 |  |
+| `CHRIZ-BG-MODPACK:198` | default | `feature:chriz-bg-modpack:component-198` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 198 |  |
+| `CHRIZ-BG-MODPACK:199` | default | `feature:chriz-bg-modpack:component-199` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 199 |  |
+| `CHRIZ-BG-MODPACK:220` | default | `feature:chriz-bg-modpack:component-220` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 220 |  |
+| `CHRIZ-BG-MODPACK:221` | default | `feature:chriz-bg-modpack:component-221` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 221 |  |
+| `CHRIZ-BG-MODPACK:224` | default | `feature:chriz-bg-modpack:component-224` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 224 |  |
+| `CHRIZ-BG-MODPACK:225` | default | `feature:chriz-bg-modpack:component-225` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 225 |  |
+| `CHRIZ-BG-MODPACK:400` | mandatory | `feature:chriz-bg-modpack:component-400` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 400 | Requires feature:branwen:component-0. |
+| `CHRIZ-BG-MODPACK:410` | mandatory | `feature:chriz-bg-modpack:component-410` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 410 |  |
+| `CHRIZ-BG-MODPACK:430` | mandatory | `feature:chriz-bg-modpack:component-430` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 430 |  |
+| `CHRIZ-BG-MODPACK:440` | mandatory | `feature:chriz-bg-modpack:component-440` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 440 |  |
+| `CHRIZ-BG-MODPACK:450` | mandatory | `feature:chriz-bg-modpack:component-450` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 450 |  |
+| `CHRIZ-BG-MODPACK:611` | default | `feature:chriz-bg-modpack:component-611` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 611 |  |
+| `CHRIZ-BG-MODPACK:620` | default | `feature:chriz-bg-modpack:component-620` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 620 |  |
+| `CHRIZ-BG-MODPACK:640` | mandatory | `feature:chriz-bg-modpack:component-640` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.10 0.2.0-alpha.10 (v0.2.0-alpha.10), component 640 | Inactive under the recommended selection. |
+| `CHRIZ-BG-REBALANCE:130` | default | `feature:chriz-bg-rebalance:component-130` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 130 |  |
+| `CHRIZ-BG-REBALANCE:200` | default | `feature:chriz-bg-rebalance:component-200` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 200 |  |
+| `CHRIZ-BG-REBALANCE:210` | default | `feature:chriz-bg-rebalance:component-210` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 210 |  |
+| `CHRIZ-BG-REBALANCE:211` | default | `feature:chriz-bg-rebalance:component-211` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 211 |  |
+| `CHRIZ-BG-REBALANCE:220` | default | `feature:chriz-bg-rebalance:component-220` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 220 |  |
+| `CHRIZ-BG-REBALANCE:310` | default | `feature:chriz-bg-rebalance:component-310` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 310 |  |
+| `CHRIZ-BG-REBALANCE:320` | default | `feature:chriz-bg-rebalance:component-320` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 320 |  |
+| `CHRIZ-BG-REBALANCE:100` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 100 |  |
+| `CHRIZ-BG-REBALANCE:101` | default | `feature:chriz-bg-rebalance:component-101` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 101 |  |
+| `CHRIZ-BG-REBALANCE:111` | default | `feature:chriz-bg-rebalance:component-111` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 111 |  |
+| `CHRIZ-BG-REBALANCE:120` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 120 |  |
+| `CHRIZ-BG-REBALANCE:121` | default | `feature:chriz-bg-rebalance:component-121` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 121 |  |
+| `CHRIZ-BG-REBALANCE:301` | default | `feature:chriz-bg-rebalance:component-301` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 301 |  |
+| `CHRIZ-BG-REBALANCE:302` | default | `feature:chriz-bg-rebalance:component-302` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 302 |  |
+| `CHRIZ-BG-REBALANCE:400` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 400 |  |
+| `CHRIZ-BG-REBALANCE:401` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 401 |  |
+| `CHRIZ-BG-REBALANCE:404` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 404 |  |
+| `CHRIZ-BG-REBALANCE:405` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 405 |  |
+| `CHRIZ-BG-REBALANCE:407` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 407 |  |
+| `CHRIZ-BG-REBALANCE:408` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 408 |  |
 | `CHRIZ-SOD-REMIX:100` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.12 0.6.12 (v0.6.12), component 100 |  |
 | `CHRIZ-SOD-REMIX:110` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.12 0.6.12 (v0.6.12), component 110 |  |
 | `CHRIZ-SOD-REMIX:115` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.12 0.6.12 (v0.6.12), component 115 |  |

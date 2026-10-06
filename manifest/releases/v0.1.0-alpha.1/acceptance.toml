@@ -455,6 +455,28 @@ date = "2026-09-20"
 status = "accepted"
 scope = "Static recipe source, component, and order assertions only; not live game acceptance."
 
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-edwin-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "fd0806d3db056239b833e424411807bb11dd1aef"
+test_artifact = "tools/tests/test_oct07_release_recipe.py"
+date = "2026-10-07"
+status = "accepted"
+scope = "Six static intake/selection tests and 35 native recipe tests passed: released artifact, dependency, selection and component order only. Not a combined game installation or gameplay acceptance."
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-baeloth-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "fd0806d3db056239b833e424411807bb11dd1aef"
+test_artifact = "tools/tests/test_oct07_release_recipe.py"
+date = "2026-10-07"
+status = "accepted"
+scope = "Six static intake/selection tests and 35 native recipe tests passed: released artifact, opt-in selection and post-spellbook component order only. Not a combined game installation or gameplay acceptance."
+
 # This remains intentionally pending. Static checks do not turn it into live acceptance.
 [[evidence]]
 subject_kind = "release"

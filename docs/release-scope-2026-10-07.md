@@ -40,7 +40,7 @@ Fade/Evandra XP catch-up fixes; unresolved scroll reader-level policy.
 
 - [x] Owner changes combined without losing unrelated work; focused checks pass.
 - [x] Owner releases published and downloaded hashes verified.
-- [ ] Both shipped recipes, generator, defaults, dependencies and exclusions agree.
+- [x] Both shipped recipes, generator, defaults, dependencies and exclusions agree.
 - [x] New collection version and complete change ledger recorded.
 - [ ] Automated installer/recipe/package checks pass; failures investigated.
 - [ ] Final signed package scanned with Defender protections unchanged.
@@ -107,5 +107,7 @@ remains in force. No further computer control is needed for source/package work.
   are authored. Default expansion: 462 components in 51 runs. Frontend 396 tests,
   typecheck and build pass. Native compilation completed exit 0; 35 focused Rust
   recipe tests and six October intake/selection Python tests passed. Independent
-  recipe review found no blockers. The combined suite, package, final Defender
-  scan and publication remain.
+  recipe review found no blockers. Both public-alpha profiles validate with zero
+  findings; 24 intake/metadata/expanded-recipe tests pass. Static evidence cites
+  source commit `fd0806d3db056239b833e424411807bb11dd1aef`. The combined suite,
+  package, final Defender scan and publication remain.
