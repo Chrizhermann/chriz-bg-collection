@@ -2,6 +2,162 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## October 12 — straightforward work started and Claude handover
+
+Christopher approved starting the clearly settled tasks. Emotion's normal default,
+the existing Blade/Battleluck delivery, and SoD relocated-item identification now
+have completed local deliveries: Emotion/SoD source fixes are checked, and Bardic
+has a normal installable candidate. Nothing from this batch is published or
+applied to the game. Read the
+[dispatch and current reservations](plans/2026-10-12-bg-work-overview.md#october-12-implementation-dispatch)
+before editing those areas. The
+[Claude continuation handover](plans/2026-10-12-claude-continuation-handover.md)
+gives the independent next steps and outstanding questions. No new gameplay
+decisions, live-game changes, release/publication or cleanup are authorized by
+this preparation. The audit-only note immediately below describes the earlier pass.
+
+## October 12 — cross-repository work overview
+
+Start with the [current BG work overview](plans/2026-10-12-bg-work-overview.md)
+for next-work planning. It reconciles the nine requested mod repositories,
+CEBG, relevant worktrees, current GitHub work and adjacent projects. Older
+“pending release” paragraphs below are historical; alpha.19 already shipped.
+
+Important corrections: reader-level scroll430 is fully implemented in the local
+combined Modpack candidate at1eadb92, alongside recruitment237/238 and banking;
+it is not still only a partial hook. Bard ceilings are released in their owning
+mods but unselected in the public recipe. New Blade/Battleluck and SoD recruitment/
+finale work are local, unreleased candidates. Full potion uniqueness remains
+unfinished. The Randomizer owner now has a persistent Mode1 playtest, separate
+from normal public packaging. A substantial configurable-SR branch and older
+companion-stat work must be preserved during cleanup.
+
+This was an audit/planning request: only coordination documentation changed.
+No games, source implementation, owner assignments or GitHub state changed.
+Suggested parallel batches and Christopher's remaining decisions are in the overview.
+
+## October 12 — Garithos XP banking and bard ceilings installed
+
+Christopher approved installing now and testing in his current run; the open
+dual-class rule is deferred, not a blocker for this run or cancelled work.
+Appended Modpack650 (BG1/SoD banking; no651), Rebalance420/421 and Bardic3010 to
+`C:\Users\chris\Games\Chriz Easy BG\game`. All installs exited0; the 445 existing
+component identities/order and previous330,163 TLK strings are preserved.
+Latest save `000000990-NEXT IRON THRONE LOSERS` is backed up and hash-unchanged.
+Existing XP/levels are retained by adoption; bard capacity updates through the
+next normal level-up, not a load-time spellbook rewrite. Eldoth's Jester caps at7.
+Sources are local development additions, not a public release/default change.
+Game not launched. Startup, XP award/save/reload/transition and bard level-up
+checks remain open, alongside deferred dual rules and bank-removal recovery.
+Full record, backup and continuing checklist:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct12-xp-bard-ceilings\README.md`.
+
+## October 12 — BG2 / CEBG cloud saves disabled
+
+At Christopher's request, Steam Cloud for BG2:EE (app 257350) is now disabled.
+Verified disabled again in a fresh Steam API session. The current Garithos
+profile's `Baldur.lua` also explicitly sets `Cloud Saves Enabled` to `0` so its
+legacy setting cannot override Steam's opt-out. No saves deleted or edited,
+no game launched, and other Steam games / OneDrive settings are unchanged.
+Configuration backup and application record:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct12-disable-cloud`.
+
+## October 12 — temple donation backlog and pathfinding installed
+
+Added the temple donation helper to the backlog: show the exact cost of the next
+reputation point and make that donation convenient, without changing prices.
+Pathfinding Redux 0.1.10-preview now supplies the requested out-of-combat-only
+mode. Christopher subsequently requested installation and confirmed the game closed.
+Installed into `C:\Users\chris\Games\Chriz Easy BG\game`: WeiDU exit 0, all 444
+prior component rows retained in order, one new component appended. Game/EEex/loader
+executables, dialog.tlk and the newest original save are hash-unchanged.
+Backup: `repair-backups\oct12-pathfinding-ooc` beside the game. Prepared package
+and application record: `C:\tmp\cebg-pathfinding-ooc-20261012`.
+Component 0, `OutOfCombatOnly=1`, `EnemyPrototype=0`; no public recipe/default change.
+The exact current EEex 1.2 / BG2EE 2.7.3 pairing still needs startup/play confirmation.
+See the [October 12 scope](plans/2026-10-09-next-patch-batch.md#october-12-additions)
+and private preparation README. Game was not launched; startup/playtest is pending.
+
+## October 11 — spell and bard design/research started
+
+Christopher requested design/research and open questions for the new SR/Bardic/
+Artisan balance list. Existing relevant owner chats received bounded briefs;
+Blade belongs to Bardic, with Artisan checking interactions only. See the
+[full scope and owner IDs](plans/2026-10-09-next-patch-batch.md#october-11--spell-and-bard-design-assignments).
+No new implementation, game/save changes, labs, publication or installer-default
+changes are authorized by this request. Entropy Shield/party Dispelling Screen
+AI research is reopened; unrelated Time Stop/potion recovery is not reassigned.
+
+## October 9 — next patch batch planning
+
+Latest scope correction: Christopher wants practical hobby-mod delivery for the
+default setup, with a short test and documented limitations—not exhaustive
+engine/compatibility projects. Both owners received this correction. See the
+[current practical scope](plans/2026-10-09-next-patch-batch.md#practical-hobby-mod-scope--latest-october-9-direction)
+before interpreting the older detailed acceptance lists as release prerequisites.
+He subsequently clarified that he will test himself later: no new game copies
+or agent-run game tests now. Smaller tests do not mean a smaller requested
+feature; the six-potion trial is not completion of the potion component.
+
+Owner checkpoint: Fade/Evandra recruitment XP is implemented locally with
+automated checks, awaiting integration/native acceptance. XP banking is active;
+scroll hook work has a continuation brief, and the potion owner has resumed its
+prototype after finding defects in the first draft. See the batch plan's
+[delivery checkpoint](plans/2026-10-09-next-patch-batch.md#october-9-owner-checkpoint-and-continuation).
+[Pathfinding Redux](plans/2026-10-09-next-patch-batch.md#pathfinding-redux--on-hold-because-of-allied-pass-through)
+is on hold: Christopher rejects unavoidable ally pass-through, and the release's
+other improvements also stop when that feature is disabled. Nothing installed.
+
+XP-cap banking is now promoted from deferred work: Christopher requested design
+and assignment for an October 10 review candidate. The
+[implementation brief](plans/2026-10-09-campaign-xp-banking.md) defines optional
+BG1/SoD caps, optional SoA cap, per-character saved banking, data-preservation
+checks and the required XP-hook proof. Nothing is installed or released by this
+assignment; owner delivery and integration remain pending.
+
+Christopher approved planning the broader Challenge Mode grouping, Fade/Evandra
+recruitment XP, reader-level scroll casting and potion-effect non-stacking before
+owner execution. Existing normal defaults stay, except the already agreed
+Emotion/Baeloth policy. See the [current batch plan](plans/2026-10-09-next-patch-batch.md)
+for source findings, outstanding choices, ownership and acceptance boundaries.
+The settled Modpack XP/scroll work and two Rebalance potion variants have now
+been assigned to their existing owner chats for local implementation and automated
+checks. No current-game changes, game launches, recipe changes or new release
+authority. Challenge Mode grouping is still planned, not yet implemented.
+The completed Garithos reminder has now been deleted, not merely paused.
+
+## October 9 — Garithos current-game repairs applied after stream
+
+Christopher approved correcting the three read-only audit findings after his
+stream and identified a new latest save. Game and InfinityLoader were closed
+throughout. The selected source was `000000984-HUMANS ARE SE BEST`, saved
+October9 at03:27:38KST in the `Chriz Easy BG - ec2c39f8d9c3` profile.
+
+- Added private tail `CBR_GARITHOS_SPELLS:0` to
+  `C:\Users\chris\Games\Chriz Easy BG\game`: normal/Wish Hardiness now40%
+  physical-only, and Spellstrike now15% arcane/divine failure for2rounds,
+  refreshing rather than stacking. Uses unchanged public Rebalance0.8.1
+  mechanics. Only four SPLs changed; Spell Shield and Pierce Magic unchanged.
+  WeiDU exit0; outputs match tested copies, all442 prior installed rows and
+  all330158 prior TLK records/sound metadata retained; two descriptions appended.
+- Published a separate **`000000985-HUMANS ARE SE BEST - fixed`** save. Original984
+  and all older saves are untouched. Edwin's nine inherited permanent+2 slot
+  grants become+1, giving base+2 including specialization (currently6/4/3).
+  One duplicate prepared spell per accessible level removed; all distinct
+  selections, known spells, base slots, other effects and all50 other saved
+  actors preserved. The other save files are identical; old Cloud identity
+  metadata was not copied to the new local slot. No cloud operations performed.
+
+Backup: `C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct09-garithos`.
+Private scripts/results: `target/work/oct09-garithos-repair`. Five copied-resource
+spell cases plus23 canonical transformation checks and8 independent save checks
+passed, including pointer/section validation, byte-preservation and idempotency.
+No game launch or native playtest. Edwin dismissal/rejoin/respec or explicit
+level1 CLAB replay was not validated; do not additionally apply `C0REDW4` to this
+repaired actor. The private spell transaction is tied to reviewed capture hashes;
+canonical generic-layout limitations were not silently relaxed. No release,
+recipe or public component changes. The requested4:30reminder is paused.
+
 ## October 7 — alpha.19 published; website and cleanup complete
 
 **App and collection alpha.19 are now public.** This supersedes older
@@ -20,6 +176,301 @@ and its real download matches the verified package. Existing rules are unchanged
 The rebuildable compiler cache is removed (45.27 GiB logical file total), with
 all games/saves/backups/evidence retained. Older handover/planning work remains
 preserved; only this new top entry is included in the release commit.
+
+## October 7 — authorized Defender reproduction passed, cleanup completed
+
+Christopher authorized autonomous app/game testing and cleanup, superseding the
+older user-clicks-only instruction for this test. The exact October 1 Radar Fix
+setup/app passed current-definition Defender scans, installed successfully, and
+launched **Test19** through the real Play button. Opening installation details
+and selecting/copying its path did not reproduce the shutdown. No new Defender
+1116/1117 events through 06:04 KST; protections remained enabled. Game, loader and
+CEBG exited; the temporary installed app was uninstalled successfully. Original
+stream game/saves, candidate packages and backups were not edited or deleted.
+
+Read [the bounded test result](defender-smoke-2026-10-07.md) before claiming full
+acceptance: elevated pre-existing Radar could not be closed; new Radar UAC
+approve/decline paths were not tested; exclusion inspection was access-denied.
+Steam Cloud automatically imported 30 saves into Test19 despite its separate
+local profile. No save was loaded or manually saved/deleted; the imported copies
+remain intentionally, since cloud deletion semantics were not tested.
+
+The October 1 app alpha.19 / recipe alpha.18 candidate still lacks newer owner
+work. Public integration is still required for ready resistance310, Hardiness
+200/201/202, anti-magic210/211, clouds320, public bracers wiring and BuffBot1.10.0.
+Baeloth235 now exists in Modpack's `codex/baeloth-known-spells` (3d3381f); the
+older statement below that implementation is absent is stale. It remains an
+optional planned-Challenge choice, not an unconditional default. Edwin/EET
+arrows also need owner/public follow-through. Do not publish the old candidate
+claiming it includes private stream repairs. No release or channel update today.
+
+## October 6 — Pierce Magic and damageable cloud forms applied privately
+
+Christopher requested the newly approved Pierce Magic balance in his stream
+game and the same concise website treatment as the physical-resistance rule.
+Owner source: BG Rebalance `codex/sr-antimagic-research`, commit `48938d1`,
+unpublished `v0.8.1-dev`, component **210**. It halves current Magic Resistance,
+rounding the reduction up and bounding it to 10–40 percentage points (zero
+floor), for five rounds. Recasts refresh the original amount; Lower Resistance
+can combine with it. Protection removal and Spell Shield interception remain.
+
+Applied through new private tail `CBR_SR_ANTIMAGIC:210` to
+`C:\Users\chris\Games\Chriz Easy BG\game`, with the game/loader closed. WeiDU
+exit 0; all 440 previous log rows retained exactly. Only `SPWI608.SPL`,
+`SPWI608B.SPL`, and `M_CBRPM.lua` changed in override, matching the copied-game
+fixture byte-for-byte. TLK gained one private description at 330155; all 330,155
+old entries, including sound metadata, were preserved. Saves untouched; no game
+launch. Backup/evidence:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-pierce-magic`.
+Independent review and 37 runtime-model/WeiDU checks passed; native gameplay
+acceptance remains. Old already-active Pierce Magic effects in saves must expire.
+**Spellstrike 211 was not applied** by this request; neither were Hardiness,
+Pierce Shield, Lower Resistance or Entropy Shield. Owner 211 is separately
+implemented/approved, not evidence of being installed here.
+
+Website owner published and verified the short numbered rule:
+“Pierce Magic: halves Magic Resistance for five rounds (10–40 percentage points;
+no stacking).” Existing rules and collapsed Small notes retained; 114 tests pass.
+No owner mod release or CEBG recipe/preset change occurred. Next-patch integration
+must use an eventual immutable owner release, not copy this private adapter into
+the collection; see the owner's `docs/handovers/2026-10-06-sr-antimagic-collection.md`.
+
+Christopher chose **75%** for damageable combat clouds. BG Rebalance component
+**320**, label `cbr_damageable_combat_clouds`, is now implemented in the
+physical-resistance worktree and applied privately as `CBR_CLOUD_FORMS:0`.
+SR/SCS genies, known EE/SoD combat clouds, Ascension's combat Bodhi form and SCS
+tactical vampire mist are covered. Existing 100% damage-resistance setters become
+75%; lower values/open channels, poison immunity, regeneration and duration stay.
+Cloud-added MR100 is neutralized; the isolated vampire combat donor has MR0.
+These are flat cloud-form values, not a max-with-natural-resistance floor.
+Normal-form creatures/items, quest protections and scripted death escapes stay
+untouched; no animation-wide sweep or save editing.
+
+27 new real-WeiDU tests + 23 related regressions and independent review passed.
+Applied with game/loader closed, exit 0; all 441 preceding WeiDU rows and 330,156
+old TLK entries/sound metadata retained. Nine outputs match the captured fixture
+exactly; two new SR summon descriptions appended. Backup/evidence:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-cloud-forms`.
+Owner research: `research/2026-10-06-damageable-cloud-forms.md`. No combat test,
+owner release, recipe/preset change or cloud website publication yet. Next-patch
+integration must collect the owner's eventual release (including coordination
+with the separate SR anti-magic branch), not copy the private adapter into CEBG.
+
+## October 6 — party physical-resistance component prepared separately
+
+Christopher approved **half effectiveness above 80%**, with a normal maximum
+of 90% and a requested optional 95% variant. Owner: **chriz-bg-rebalance**,
+branch `codex/physical-resistance-softcap`, checkout
+`C:\src\private\chriz-bg-rebalance\.worktrees\bard-progression-release-20260920`.
+Prepared source is committed locally as `7777870`; not pushed or released.
+Unreleased component **310** implements the 90% variant through EEex:
+90 becomes 85, 100 becomes 90; party roster only, independently for the four
+physical damage types. No enemies, summons, elemental/magic resistance,
+Stoneskin or weapon-immunity changes.
+
+**311 is reserved, not implemented or offered.** Read-only engine inspection
+proved physical resistance is truncated at 100 both during opcode handling
+and final stat limiting, before the normal EEex callback. Thus merely setting
+95 as the Lua ceiling cannot deliver the approved 110 -> 95 behavior.
+Christopher was asked whether to defer this alternative or tackle the deeper
+engine work; decision pending. Do not silently change the approved curve.
+28 focused Lua/WeiDU fixture checks pass. Full owner suite: 423 tests, 422 pass
+and one existing optional dragon-capture test skipped, exit 0. Independent code
+review found no blocker for 310; native in-game acceptance remains.
+See the owner research note `research/2026-10-06-physical-resistance-softcap.md`.
+
+No CEBG pin, preset or release changed. After owner review/release, wire 310
+into the normal selection; do not claim it is already in the default installer.
+Hardiness 40%/30% is separate parallel work in the owner's `sr-hardiness`
+worktree. The latest owner decision is 40% physical only by default, a 30%
+alternative, and separately optional 20% elemental/magic-damage resistance.
+Do not apply that work as part of the two repairs below.
+
+Later October 6: Christopher explicitly confirmed the game closed and approved
+the **90% cap plus Bracers of Blinding Strike SR-haste fix** for the stream game.
+The cap is now installed through a new private `CBR_PHYSICAL_CAP:0` tail entry,
+using unchanged component-310 mechanics and allocated state 241. WeiDU exit 0;
+all 437 earlier log rows and dialog.tlk preserved exactly; no save edits or game
+launch. The private adapter matches the public component in a disposable fixture;
+29 focused tests pass. Backup and verification:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\cap`.
+The bracers repair is also now applied as `CBR_SR_BRACERS:0`, after the BuffBot
+update below. Its new self-only SR helper grants +1 APR for 20 seconds, preserving
+the one daily charge and installed Tempus links. Fourteen existing haste spells
+receive only reciprocal exclusion guards; Wish's actual haste effect is unchanged.
+All 439 earlier log rows and TLK remain exact, and the only 16 changed resources
+match the tested outputs byte-for-byte. Full copied-resource sweep: 6,747 spells;
+9 focused WeiDU tests pass, including repeat/rollback. Independent review found
+no blocker for this captured installation. Backup/verification:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\bracers`.
+No game launched or saves edited. Previously active item effects in a save are
+not rewritten; test the bracers' next activation. Runtime acceptance remains.
+Canonical library/private adapter and research note are in the same BG Rebalance
+physical-resistance worktree; public component/recipe wiring is still next-patch
+work, not delivered CEBG updater support.
+Source, private adapters and evidence notes are committed locally as `9078d11`
+on `codex/physical-resistance-softcap`; nothing pushed or released. The combined
+focused suite now passes all 38 tests.
+
+SR research was explicitly dispatched to **Review Hardiness changes**
+(`01a10da6-02db-7842-94a5-23a4fff5618d`): compare vanilla and installed Pierce
+Magic/Shield, Lower Resistance and Spellstrike, plus a separate Entropy Shield
+review of existing nerfs (including Tactics Remix). No nerf values approved.
+Installed-file evidence identifies **Pierce Magic**, not Pierce Shield, as the
+two-round MR-zero spell. Neither is authorized for live changes yet.
+
+Christopher additionally requested the website rule and newest BuffBot in his
+current game. Website publication was dispatched to **Build interactive BG run
+page** (`01a061fe-a68c-74b1-8272-5bfa9251a731`), using one short numbered rule:
+“Party physical resistance: gains above 80% are halved, up to 90%.”
+The website owner completed publication and verified it live; all 114 website
+tests passed and the existing rules/collapsed notes were preserved.
+
+**BuffBot v1.10.0 is now applied** to the stream game as a private
+`CBR_BUFFBOT_110:0` tail entry. The normal Latest release ZIP was verified against
+SHA256 `cea6628cc6f00eeb3d296fe50f481f5c13ad4ea3530bc67716493d0a5b016f77`.
+Twelve runtime/menu files and the English catalog changed; BfBot5e.lua is new.
+Innate/Mp modules and all packaged graphic assets were already byte-identical.
+The catalog retains all 177 old keys unchanged and adds four. Existing eight
+F12 string references, TLK, loader, original mod sources, presets and saves stay
+untouched. All 438 preceding log rows remain exact. The installed payload matches
+the disposable-fixture output and released files, exit 0. Backups/verification:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\buffbot`.
+This is a private runtime update, not a CEBG pin/update-receipt migration. The
+original BuffBot log rows truthfully retain 1.8.4; the new tail records 1.10.0.
+No in-game test was run. Release owner reports 652 automated tests passed and
+explicitly deferred live item-action acceptance; do not turn that into a claim
+of runtime verification on the stream game's 2.7.3 executable.
+
+## October 4 — Microsoft recheck and stream rules audit
+
+Both Microsoft cases were opened live in the authenticated browser today:
+original `907e4c7d-555b-4016-b5b0-2cee51e79467` and diagnostic follow-up
+`af423c35-59b1-4625-920d-b056e5161435`. Both still display **In progress / Pending**.
+Both show the same analyst response: no positive detection/telemetry, closure
+without further action, and a request for diagnostic CAB data. The follow-up
+already contains that CAB. Do not describe this as a fresh clearance or as an
+assurance that investigation is actively progressing. The original submitted
+executable is still the different Selection Fix build. No new submission,
+email reply, scan, quarantine restore, or Defender setting change was made.
+Next useful follow-up is clarification that the requested diagnostics are
+already in the second case; obtain approval of the exact email before sending.
+
+Rules-page source is prepared on website branch `codex/stream-rules-oct04`,
+checkout `C:\Users\chris\.codex\worktrees\bg-rules-oct04\twitch-setup-chriz`.
+Christopher rejected the initial lengthy mod-guide approach during preview.
+The three short additions now belong directly in the numbered rules list (17–19):
+“Emotion: Courage and Hope do not stack.”, “Flail of the Ages: Slow now allows a
+save vs. Breath.”, and “Elemental arrows: Like in BG2.” Christopher explicitly
+rejected moving these into a separate notes section and deleting the existing
+small notes. Those smaller audit notes are restored underneath in a “Small notes”
+disclosure, with shortened copy. Utility XP and the rejected Tempus entry remain
+omitted. Do not turn ordinary mod features into numbered run rules. The older
+overbroad prebuff claim has also been corrected.
+**Baeloth's legal-spell nerf is not installed and is omitted from active rules.**
+Follow-up located the owner design on Modpack `codex/companion-spellbooks`,
+`docs/companion-spellbooks.md`: SR/non-SR picks are prepared, but the document
+explicitly says no component exists; no implementation/tests were found in the
+registered Modpack worktrees. Christopher says the prior personal nerf was in
+EE Keeper and now wants the installer feature in planned Challenge Mode. This
+supersedes that older design's collection-default proposal. See the updated
+challenge-mode outlook before resuming the existing owner work.
+**XP banking is not implemented; CDTweaks 2090 still removes the XP cap.**
+Story utility XP is separate from caps/banking. No game or save files changed.
+All 114 website tests and the production build pass after the placement correction.
+The refreshed browser shows 19 numbered rules and the restored, working Small
+notes disclosure underneath.
+Latest October 4 copy review: notes remain collapsed on fresh page load. Artisan
+and Bardic are described as broad toned-down balance versions, not cherry-picked
+ability examples. Companion conversions and save-migration caveats are removed.
+Dragons retain a death-save warning; SR notes cover Improved Haste/celestials and
+prominent Malison/Horrid Wilting/Spell Immunity changes; Telekinetic Storm stays
+identified separately and the restored classic Lightning Bolt is attributed to
+our SR adjustment. Prebuffing is described simply as improved reliability.
+The user's scroll-level concern revealed a genuine policy/default mismatch:
+CDTweaks 2170 is overridden by Modpack 430's CL15-for-all-readers workaround.
+It is not just a wording error. See the October 4 next-work index entry; no game
+or recipe edits made. The scroll claim is omitted from website copy.
+Baeloth implementation was explicitly requested from the existing Modpack owner
+chat (`01a0b92c-da6d-7701-8d51-b0df1a17fe08`); code delivery remains pending.
+A full source-grounded current/upcoming SoD Remix summary was requested from
+`Rework Belifid’s end fight` (`01a0e4cd-cca5-76e0-bb08-9ebbbe82ad30`) for a future
+dedicated subsection. The approved rules wording is “SoD Remix is included.”; don't
+present unreleased owner designs as active stream behavior.
+Christopher approved publication on October 4. Website PR #21 is merged as
+`2be99b820762191c2a3e7d30d59176f0343a8900`; GitHub's site checks and Cloudflare
+Workers Builds deployment both succeeded. The public content at
+`https://bg.chrizfader.org/rules` now has all 19 rules and the exact approved
+“SoD Remix is included.” note. The disclosure remains closed by default.
+This publication changes only the website, not the installer release or game.
+Microsoft follow-up route check: the case page still has no case-reply form;
+the analyst directs replies to their email. Correction after Christopher's
+challenge: personal Gmail IS connected through the separate Gmail plugin;
+get_profile verified christopher.hermann01@gmail.com. The previous check only
+listed the work account in Google Workspace Multi and incorrectly generalized
+that result. Gmail searches (including Spam/Trash) for both case IDs, analyst
+wording and recent Microsoft senders have not located an analyst email; they
+did find the September 30 WDSI account-connection notice. Do not confuse a failed
+message lookup with a missing connection. The diagnostic case was rechecked:
+still In progress/Pending with the same request for a CAB already attached there.
+No mail sent. Obtain the actual reply address before preparing a follow-up, and
+get approval of the exact draft before sending.
+
+## October 3 — approved stream-install repairs applied
+
+Christopher confirmed the game was closed and explicitly approved applying the
+prepared fixes to `C:\Users\chris\Games\Chriz Easy BG\game`, including Flail of
+the Ages, story-stage utility XP, and Evandra's permanent conversion/portrait.
+This is a private current-install repair, **not a new CEBG release or general
+updater support**. The original collection receipt/version remains unchanged.
+
+Installed as seven new tail components, without uninstalling existing mods:
+
+- Rebalance v0.7.1's 301/302 mechanics in a private source/backup namespace:
+  existing IWDification Emotion Courage/Hope refresh/replace each other; Flail
+  Slow has Breath saves -2/-4/-6 by tier, and +5 retains Free Action but allows Haste.
+- Modpack alpha.8's 224/225: permanent Evandra Sorcerer starting templates and
+  the owner's portrait. Her personal portrait was already byte-identical; no
+  saved actor or level/XP was rewritten.
+- Red Wizard Edwin: both amulets movable and grant no slots; remove inherited
+  source-less +2 CRE grants, add the prior C0REDW4 kit +1 grant (native specialist
+  +1 plus kit +1 = +2 total). All 11 templates covered, including EDWIN7_, which
+  had missed the selected Artisan kit conversion. No further kit rebalance.
+- SCS-style elemental arrows, adapted for EET: AROW04 acid 1d3, AROW09 cold 1d2,
+  AROW08/AROWKC fire 1d2 and no +2 attack/physical bonus. Original saves and SCS
+  troll helpers retained; other special arrows unchanged. SCS 35.21 component
+  3017 itself rejects EET, whose imported resources retain BG1-strength arrows.
+- Story XP replaces the progressive runtime: 610's startup becomes an inert
+  backed-up stub, and the four unchanged published 611 runtime files load instead.
+  610's original log row/config/modules remain; no fake native611 row. BG1-sized
+  rewards through SoD, native BG2 rewards from SoA; no retroactive XP edits.
+
+All five WeiDU invocations exited 0. Before live application, the combined
+sequence passed on a private copy of this install's resources; the final changed
+live resources and TLK match those tested outputs exactly. All **330,147 old TLK
+strings and metadata are preserved**, with eight appended strings. All 430 old
+WeiDU component identities/order remain, with seven new rows. Original UI.MENU
+(including Fade's race joke), XPBONUS, loader configuration and engine.lua are
+unchanged. WeiDU's en_US -> en_us config casing normalization was identified and
+the original exact weidu.conf restored. No game launch or in-engine acceptance.
+
+Backup and durable verification:
+`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct03-current-game-fixes`.
+Preparation, adapters, fixture reports and logs:
+`target/work/oct03-current-game-fixes` (ignored/private; never publish captured
+game resources). Cleanup of the resource-only `content-fixture` copy was blocked
+by tool policy before deletion; it remains (roughly 6.3 GB). Do not route around
+that refusal. Retain the repair backup, original mod backups, adapter sources
+and reports independently of any later authorized test-copy cleanup.
+Do not re-run the apply command: these components are already installed.
+
+**Still separate:** existing-save Edwin permanent slot grants require inspecting
+the specific saved actor; template/CLAB changes do not retrofit that state.
+The now-movable amulet is a resource change, but already-equipped cached effects
+may need unequip/re-equip. No saves were inspected/edited. XP-cap banking remains
+undeveloped/off by default; Fade/Evandra XP catch-up is not solved by the class
+conversion. Carry the uncovered Edwin/EET omissions into the owning mod's future
+release rather than assuming this private patch updates public defaults.
 
 ## October 1 — final candidate packaged; publication still held
 
@@ -46,10 +497,22 @@ submitted Selection Fix sample and requested the affected machine's support CAB.
 This does **not** clear the different Dragon and Order Fix executable identified
 in the incident logs. Christopher approved sending the existing diagnostic CAB
 and the correction. The follow-up form is prepared with the original submission
-ID, corrected affected hash and diagnostic context; final CAPTCHA/Submit was
-handed to Christopher. **No follow-up receipt has yet been confirmed.** The
-private preparation record is under ignored `target/work/oct01-defender-submission`.
-Do not claim the diagnostic submission succeeded or repeat it without checking.
+ID, corrected affected hash and diagnostic context. Christopher completed the
+CAPTCHA and Submit; the diagnostic CAB receipt is verified, submitted at
+October 1 14:44:16 as displayed by the portal. Rechecked live on **October 3**:
+status **In progress**, final determination **Pending**. The generic analyst reply
+reports no positive detection/telemetry and requests a support CAB, despite this
+submission already containing that CAB. It says no further action will be taken
+without the requested diagnostics; do not interpret the status badge as confirmed
+active investigation or clearance. The automated cloud scan labels the CAB
+`Trojan:Script/Wacatac.C!ml`; the client scan says **No malware detected**.
+These are not a completed analyst verdict on CEBG or evidence identifying the
+original quarantine trigger. A clarification that this case already contains the
+requested diagnostics is the useful next step; no clarification was sent during
+the October 3 read-only check.
+The private submission ID and receipt details are recorded under ignored
+`target/work/oct01-defender-submission`. No further user submission action is
+needed. Do not upload a duplicate or claim the app has been cleared.
 No new reproduction, quarantine restore or antivirus setting change was made.
 Public downloads, updater channel, website and Discord announcement remain held
 until the incident is assessed and Christopher chooses how to proceed.

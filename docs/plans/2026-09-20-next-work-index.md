@@ -1,9 +1,86 @@
 # Next work after the accepted patch pilot
 
+**Current status entry point, October 12:** use the
+[cross-repository BG work overview](2026-10-12-bg-work-overview.md).
+This file retains historical checkpoints and designs; many rows below calling
+UI choices, breakpoints, balance changes or releases “pending” were completed
+in public alpha.19. The new overview distinguishes those from the actual next batch.
+
+Execution follow-up: the [Claude handover](2026-10-12-claude-continuation-handover.md)
+identifies the independent next steps. The overview's dated dispatch table tracks
+the Emotion-default, Blade/Battleluck and SoD-identification workers; check their
+reservations before assigning overlapping work.
+
 Status checkpoint: September 20. This is a navigation index, not a new release
 promise or authorization to implement every idea at once. Historical plans retain
 their original snapshots; the latest release/acceptance evidence takes precedence.
 Game-content work stays in its owning mod repository; CEBG owns integration and UX.
+
+## October 13 additions
+
+- [ ] Review Degrodel running away with the Helm of Balduran after Christopher
+  brings it to him. Check the dialogue/escape and item-transfer behavior before
+  deciding the fix; intended quest behavior versus a mod interaction is not yet
+  established. Recorded for later, not investigated or changed in the game.
+
+## October 12 additions
+
+- [ ] For later: all kinds of spiders should be immune to all kinds of webs,
+  including mod-added variants. Recorded only; no game changes.
+- Temple donation QoL: show the exact gold needed for the next reputation point,
+  with a convenient exact-amount donation action. Backlog only; no price nerf approved.
+- Pathfinding Redux 0.1.10's out-of-combat-only mode installed into Garithos with
+  explicit approval. Native playtest pending; public inclusion undecided.
+  See [scope and preparation](2026-10-09-next-patch-batch.md#october-12-additions).
+
+## October 9 batch planning
+
+XP-cap banking has now also been promoted to active design/owner execution,
+with an October 10 candidate target, not a release guarantee. See the
+[XP banking brief](2026-10-09-campaign-xp-banking.md). This supersedes its earlier
+deferred label; optional/off-by-default and no current-game changes still apply.
+
+Current discussion and owner briefs: [Challenge Mode and gameplay fixes](2026-10-09-next-patch-batch.md).
+Christopher approved planning Challenge Mode's broader component inventory,
+Fade/Evandra XP catch-up, reader-level scrolls and potion-effect non-stacking.
+He confirmed keeping existing normal defaults except the agreed Emotion/Baeloth
+policy. Owner source checks identify concrete XP/scroll issues; remaining balance
+choices and execution status are in the new plan. Older unreleased labels below
+must be checked against the completed October 7 alpha.19 release.
+
+## Next release — October 7 approved addition
+
+- [x] Make **Emotion: Courage and Hope do not stack** (BG Rebalance 301)
+  optional and **off by default** in the normal recommended setup. Keep it
+  individually selectable in Customize and select it within the planned
+  [Challenge Mode](2026-09-13-challenge-mode-outlook.md) when that group is available.
+  The default change need not wait for the full Challenge Mode feature. Update
+  selection checks and the next release's changelog to match. This supersedes
+  the September 29 default recommendation below for future releases only:
+  published alpha.19 and Christopher's current stream installation stay unchanged.
+  Implemented locally October 12 in both profiles, with focused selection and
+  validation checks passing. [Delivery](2026-10-12-emotion-default-delivery.md).
+  Not published; full Challenge grouping and the next release's final changelog
+  remain separate work. No game changes.
+- [ ] Group **Baeloth: normal Sorcerer spells known** (Modpack 235) alongside
+  Emotion in the planned Challenge Mode choices. Reconfirmed October 7: select
+  it with Challenge Mode, keep it individually selectable, and leave it off in
+  normal recommended defaults. The component already ships as an optional choice
+  in alpha.19; this is grouping work, not a missing gameplay implementation.
+  Preserve its SR/non-SR spell choices. No current-release or game changes.
+
+## Earlier checkpoints
+
+October 6 cloud follow-through: **75% chosen, implemented and applied privately**.
+Owner BG Rebalance component320 covers known SR/SCS/EE/SoD/Ascension combat
+clouds, including isolated SCS tactical vampire mist. Normal-form data, poison,
+regeneration, timings, quest protections and scripted death escapes are preserved.
+Cloud-form flat setters become75 (not a natural-resistance floor); cloud MR100
+is neutralized, with MR0 in the private vampire donor. 27 WeiDU +23 related tests
+and captured-resource checks passed. No combat acceptance or public release yet.
+Next step: integrate the owner release into the next CEBG patch, not its private
+adapter. Evidence/scope: owner's `research/2026-10-06-damageable-cloud-forms.md`
+and collection handover; backup `repair-backups/oct06-cloud-forms` beside the game.
 
 September 29 late request: [less mod-NPC chatter](2026-09-29-companion-chatter.md).
 Preserve quest dialogue; review optional banter/interjections per companion,
@@ -26,6 +103,100 @@ The dialogue change has no separate manual-test gate by Christopher's decision.
 Historical packaged counts below predate these additions and recipe alpha.18.
 
 ## Current priority
+
+**October 6 — next patch and stream balance follow-through:**
+
+- Party physical resistance: approved half effectiveness above 80%, capped at
+  90%. Owner component 310 is implemented; the private stream adapter is applied.
+  Ship through the owner release and CEBG integration, not a copied implementation
+  in this repository. The requested 95% alternative remains unavailable until
+  native truncation can be handled correctly; do not offer a non-working checkbox.
+- Bracers of Blinding Strike: replace their vanilla double-APR activation with
+  SR Improved Haste, retaining self-only targeting, 20 seconds and one daily use.
+  Applied privately to the current game with explicit approval; BG Rebalance
+  library/adapter passes captured-resource tests and review. Next-patch public
+  component/recipe integration remains. SR non-stacking and Tempus links retained.
+- Hardiness: collect the independent owner component (40% physical default,
+  30% alternative, separate optional 20% elemental/magic-damage extension).
+  Not part of the current two-repair game authorization.
+- Pierce Magic **210**: approved owner source `48938d1`, applied privately to
+  the stream game on October 6. Half current MR; reduction 10–40 points, rounded
+  up, zero floor, five rounds, fixed-amount refresh without stacking. Spell Shield
+  and protection stripping preserved. Short website rule published. Integrate
+  through the eventual owner release and collection pin/preset, not private-tail
+  redistribution. Independent Spellstrike **211** is prepared/approved in the
+  owner chat (15% failure for two rounds), but was NOT applied in this request.
+  Neither is already a released CEBG component; Pierce Shield is unchanged.
+- Entropy Shield: SR chat asked to delegate separate source-backed research,
+  including Tactics Remix and public source availability. Discuss options before
+  implementing; preserve the distinction from Dispelling Screen.
+- BuffBot: published v1.10.0 is now applied privately to the stream game, with
+  unchanged presets/TLK references. Carry the released version through the next
+  owner-pin review; do not mistake the private tail for a CEBG collection upgrade.
+  The short physical-resistance website rule was also dispatched to its owner.
+
+**October 4 — scroll caster-level mismatch:** Christopher wants direct scrolls
+to scale with the reader's caster level, including a working non-caster/UAI path.
+The current stream and curated default select CDTweaks 2170 followed by Modpack
+430. Component 430 rewrites eligible scroll item effects to fixed CL15 for ALL
+readers, not only non-casters; its current label/description hides that tradeoff.
+Read-only inspection found 318 CL15 cast effects plus 14 deliberately fixed CL10
+exceptions in the stream's override scrolls. All nine inspected Modpack worktrees
+retain the same implementation. Owner source: `chriz-bg-modpack/lib/cbm_uai_caster_level.tpa`.
+June's `docs/2026-06-06-uai-caster-level.md` records CL15 as a compromise based on
+EEex 0.11 constraints, not proof that per-user scaling is impossible under the
+currently installed EEex 1.2. Reassess in Modpack, preserve true-caster scaling,
+define/test the non-caster fallback and correct CEBG copy/default integration.
+The fixed-level claim is omitted from the rules page. No gameplay, installed files
+or recipe defaults were changed during this diagnosis; implementation remains
+separate from the newly dispatched Baeloth work.
+
+**October 4 — Baeloth implementation dispatched:** Christopher explicitly asked
+the existing Modpack owner chat `Review Dynaheir and Baeloth spells`
+(`01a0b92c-da6d-7701-8d51-b0df1a17fe08`) to implement the agreed SR/non-SR plan.
+Message sent with independently selectable Challenge Mode placement, known-spell
+scope, focused automated checks, and no game/save mutation or release authority.
+Do not redispatch or list the component as delivered until the owner reports it.
+
+**October 3 follow-up — stream repairs applied with explicit approval:** Emotion
+301, Flail 302, Evandra 224/225, Red Wizard Edwin resources/starting templates,
+EET-adapted SCS elemental arrows, and a progressive-to-story utility-XP migration
+are now installed and binary-verified in the existing stream game. This supersedes
+the capture-only boundary for those items below, not for XP-cap banking or save
+editing. No saves changed and no in-engine test was run. See
+[repair evidence and limitations](../handover.md#october-3--approved-stream-install-repairs-applied).
+Edwin's existing-save permanent grants remain separate; his source/default fixes
+and EET arrow availability need owner/recipe follow-through for future installs.
+
+**October 3 — later additions, including possible current-game application:**
+
+- **No beneficial Emotion stacking:** BG Rebalance 301 is already prepared for
+  the installed IWDification Courage/Hope spells; casting one replaces the other
+  and recasting refreshes it. Christopher wants this considered for his current
+  stream game too, not just the next-run recipe. Check the effective spells,
+  existing active effects and correct installation placement before applying;
+  prepared component status is not approval or proof of a safe in-place update.
+  See [the component record](../curation/components/CHRIZ-BG-REBALANCE.md).
+- **Campaign XP caps with banking:** make campaign-cap choices configurable,
+  including regular BG1/SoD caps and a separately optional SoA cap, while retaining
+  excess earned XP rather than losing it. This component should be optional and
+  **off by default in CEBG**; do not change the installer's existing XP defaults.
+  Christopher has not decided whether to enable the SoA cap in his current
+  stream installation. Intended interpretation: banked XP becomes usable when
+  the campaign cap rises or is lifted. Confirm the exact release rules and
+  handling of characters already above a cap before implementation.
+  This is separate from story-based scroll/lock/trap reward amounts. Assess
+  existing-game compatibility and persistence across saves/campaign transitions;
+  feasibility and implementation are not yet verified.
+
+Both are notes for later. No game/save edit, component installation or new
+release inclusion is authorized by this capture.
+
+**October 3 — next-run check: Edwin's missing fixes.** Christopher reports that
+Edwin is still missing fixes in the stream setup. Identify the intended fixes and
+check their presence in both the current stream install and the proposed next-run
+installation before calling companion fixes complete. Exact missing fixes and
+cause are not yet established. Capture only; no game or save changes authorized.
 
 **September 29 — high-priority follow-up:** Fade reportedly does not catch up in
 experience; Evandra also fails to reach the expected **1,250,000 XP**, despite
@@ -127,6 +298,7 @@ final packaged-file inspection, user-supervised review and publication authoriza
 
 | Area | Recorded next work and boundary | Existing record |
 |---|---|---|
+| Genie cloud forms | Approved75% implemented as BG Rebalance320 and applied privately October6. Known combat forms covered; poison/regen/death escapes retained. 27 cloud +23 related tests pass; combat untested. Owner release and next-patch CEBG integration remain. | October6 handover and owner `research/2026-10-06-damageable-cloud-forms.md`. |
 | Flail of the Ages balance | September 29: Rebalance 302 implemented for next-release default. Retain +5 Free Action but allow Haste/Improved Haste; Slow saves vs breath at -2 (+3), -4 (all +4 variants), -6 (+5). Thirteen disposable real-WeiDU tests pass; owner release/pin integration and live acceptance pending. Prominent website/item-description note required. | [Captured design and boundaries](2026-09-28-flail-free-action-and-dispelling-screen.md#1-flail-of-the-ages-rebalance) |
 | Utility XP | September 29: Modpack 611 implemented for campaign-based default, with BG1-sized awards through SoD and BG2-sized awards from SoA/ToB. Existing 610 smooth/protagonist-XP mode stays unchanged as an exclusive optional alternative. Party-average redesign deferred. Owner reports 376 offline checks passing; Christopher approved EE Fixpack's 155-XP correction for high-level BG1/SoD locks. Branch reconciliation, release and collection integration remain. | [Current decision and owner routing](../handover.md#september-29--approved-fork-refresh-story-xp-and-flail-delivery) |
 | General Free Action / Haste | Separate policy discussion: permit beneficial Haste while retaining harmful-impairment protection. Reuse an existing compatible tweak if suitable; optional/default and scope undecided. The cause of reported cleric Free Action behavior is unverified. | [Separate Free Action policy](2026-09-28-flail-free-action-and-dispelling-screen.md#2-wider-free-action--haste-policy--separate-discussion) |
@@ -158,11 +330,15 @@ final packaged-file inspection, user-supervised review and publication authoriza
 
 ## Documentation gaps / refresh before resuming
 
-- **Baeloth:** collection docs mark the new work deferred, but no detailed owning-mod
-  handoff or current implementation/acceptance record was found here. The user's
-  proposal is legal sorcerer spell counts with deliberate SR/non-SR choices; obtain
-  the Modpack owner's current plan before creating duplicate work. The companion
-  ownership decision above records the conversation, not verified owner delivery.
+- **Baeloth — owner plan found October 4:** Modpack branch
+  `codex/companion-spellbooks`, `docs/companion-spellbooks.md`, under local checkout
+  `C:\Users\chris\.codex\worktrees\companion-spellbooks\chriz-bg-modpack`.
+  Legal counts and SR/non-SR selections are designed, but no component number,
+  implementation or tests exist yet; alpha.8 excludes it. Christopher now wants
+  it in planned **Challenge Mode**, superseding the older collection-default
+  proposal. Earlier personal EE Keeper changes are not installer delivery.
+  Resume the existing owner work, then integrate the released component; see
+  [Challenge Mode](2026-09-13-challenge-mode-outlook.md). Do not duplicate its design.
 - **Poison XP:** the handover is the only focused record found; capture the exact
   poison source and repro when this is picked up rather than inventing a diagnosis.
 - **Modding lookup wiki:** explicitly deferred; no separate scope document found.

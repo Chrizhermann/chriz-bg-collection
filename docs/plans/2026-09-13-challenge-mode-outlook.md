@@ -23,12 +23,41 @@ mod checkboxes, with multiple individually explained component choices beneath
 it. Do not hide it among advanced settings or make it an indivisible bundle.
 This is future UI scope, not a change to the current install or release candidate.
 
+October 7 approved next-release policy: **Emotion: Courage and Hope do not stack**
+(existing BG Rebalance component 301) belongs in Challenge Mode, not the normal
+recommended defaults. Make it optional and unchecked in the next release, retain
+its individual Customize choice, and select it when the Challenge Mode group is
+introduced. Do not delay the default change until the whole mode exists. Reuse the
+existing component without changing its mechanics. Published alpha.19 and the
+current stream installation retain their existing selection. This entry records
+the decision only; implementation is queued in the
+[next-release list](2026-09-20-next-work-index.md#next-release--october-7-approved-addition).
+
+October 4 clarification, reaffirmed October 7: include **Baeloth: standard
+sorcerer spells known** alongside Emotion as an
+individually selectable part of planned Challenge Mode. Companion gameplay code
+stays in `chriz-bg-modpack`. This supersedes the older owner's collection-default
+proposal; do not silently add it to the normal recommended setup. Christopher
+recalls applying the earlier personal change through EE Keeper, which is not an
+installed component or evidence of a released implementation.
+
+October 7 released status supersedes the earlier design-only snapshot:
+**Modpack 235** now ships as an optional, unchecked choice in CEBG alpha.19
+(Modpack alpha.10). Select this existing component with Challenge Mode, retain
+its individual choice and SR/non-SR spell selection, and keep it off in normal
+defaults. The remaining task is grouping, not gameplay implementation. The
+original owner design is `docs/companion-spellbooks.md`; do not duplicate it.
+This follow-up records next-release work only, with no changes to the published
+release, saves or current game.
+
 ## Complete rule inventory
 
 | Source | Rule / requested change | Preparation and boundary for later work |
 |---|---|---|
 | New request | Challenge-oriented SoD changes | Source inventory on September 13 identifies implemented optional SoD 257: two Insane bridge sequencers, requiring regular bridge 256. The final split has offline installer checks but awaits native acceptance. Reuse it through the next-release intake; this is not implementation of the full rules below. |
 | New request | Stronger dragons | Reuse BG Rebalance's existing dragon work, not a second implementation. Check its then-current release and SCS/EEex prerequisites. |
+| October 7 addition | Emotion: Courage and Hope do not stack | Reuse BG Rebalance 301. Next release: off in normal defaults, individually selectable; selected within Challenge Mode when available. Published alpha.19 and the current stream game stay unchanged. |
+| October 4 addition, reaffirmed October 7 | Baeloth has a legal sorcerer starting spellbook | Reuse released Modpack 235, already optional in alpha.19. Group alongside Emotion and select with Challenge Mode; keep individually selectable and off in normal defaults. Preserve SR/non-SR spell choices and unrelated traits. No current-game changes. |
 | 1 | No exploits | Keep as player guidance unless a specific exploit has a small, safe fix. No blanket detection project. |
 | 2 + new request | No using wands; original rule allows selling them. Requested enforcement: remove all wands and replace them with scrolls | Inventory the actual collection's sources and agree replacement spells/counts later. The new replacement approach changes the original selling allowance/economy; preserve this distinction instead of silently equating the two. Protect quest dependencies and scripted users. |
 | 3 + new request | No traps; Skull Trap only after combat starts. Untriggered Skull Traps explode automatically after one round | Treat party trap-setting separately from world traps/enemy encounters. Include kit/HLA trap sources in the audit. Keep both Skull Trap requirements: the timer alone does not enforce combat-only casting. Verify the actual SR/non-SR spell variants later. |
