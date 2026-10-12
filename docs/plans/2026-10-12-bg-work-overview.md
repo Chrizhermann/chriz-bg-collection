@@ -59,19 +59,24 @@ Nothing below is published, merged into a release, or installed into a game.
 
 | Work | Status | Where |
 |---|---|---|
-| Modpack v0.2.0-alpha.11 (237/238 recruitment XP, reader-level 430, experimental banking 650/651) | **Local candidate, packaged.** 2,561 tests pass. Unpublished; needs a Defender scan before publication | `codex/campaign-scroll-integration` @ `1f0e8db`; ZIP in `C:\Users\chris\.codex\artifacts\next-batch-20261013\modpack` |
+| Modpack v0.2.0-alpha.11 (237/238 recruitment XP, reader-level 430, experimental banking 650/651) | **Being integrated** with Degrodel 660, the banking start fix, Banked XP display and the vanilla dual rule; archive to be rebuilt. Unpublished; needs a Defender scan before publication | `claude/alpha11-integration` (Modpack `.worktrees/alpha11-integration`), base `1f0e8db` |
+| Banking 650 never started in a real game | **Fixed.** Found in Christopher's own game log: EEex writes its stats-hook relay call as `40 E8` (REX prefix); the startup check accepted only `E8`. Confirmed from his crash dumps; a Codex check of the same dumps found no other failing native check. When banking cannot start, 620 Imoen XP and 237/238 catch-up now keep pre-650 behavior | Modpack `claude/xp-relay-fix` @ `05150f2` |
+| No-bank dual between level thresholds | **Implemented as decided (vanilla):** the retired level's threshold counts (Fighter 7: 64,000), the rest is discarded; 97,000 room under 161,000 | Modpack `claude/xp-dual-vanilla` |
 | Flail PR7 → Rebalance v0.8.2 | **Regression fixed and pushed** to [PR7](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/7) @ `c5a9169`. Local package built; merge/release wait for Christopher | `...\next-batch-20261013\rebalance` |
 | SoD Remix v0.6.13 (177/198/285 plus relocated-loot identification) | **Consolidated and packaged locally.** The 16 known component-115 fixture failures are tracked in [issue 27](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/27) | `claude/sod-integration-oct13` @ `fd97c3d`; `...\next-batch-20261013\sod` |
 | Bard ceilings 420/421 + Bardic 3010 | **Wired, default** | CEBG `74e9aae`, `1f1b633` |
 | Intake notes, changelog drafts, Challenge Mode design | **Written** with the decisions | CEBG `600b9be` |
-| Degrodel: let him go or fight him (new Modpack component) | **In progress** | Modpack `claude/degrodel-fight` |
-| "Banked XP" on the character record | **In progress** (Codex) | Modpack `claude/xp-bank-display` |
-| Challenge Mode choice at the top of the installer | **Approved; next CEBG implementation** | CEBG |
-| Combined test install | **Waiting** for disk cleanup and Christopher's go | — |
+| Degrodel: let him go or fight him (Modpack 660) | **Done; default in CEBG.** The extra challenge layer is Christopher's own design, later a Challenge Mode member | Modpack `claude/degrodel-fight` @ `b19db7c` |
+| "Banked XP" on the character record | **Done** (Codex, reviewed); in-game rendering still unverified | Modpack `claude/xp-bank-display` @ `f5d4436` |
+| Challenge Mode choice at the top of the installer | **Done**, plus three review fixes | CEBG `f7e1c6f`, `9f2d46c` |
+| Streamer's plain BG2 start screen | **Diagnosed:** LeUI detects EET from a profile key or "Trilogy" in the game name; CEBG's isolated profile and name hide both. Fix approach waits for Christopher. Side finding: EET writes Cheats/Debug Mode into the standard EET profile during install | scratch diagnostics only |
+| Engine CLI tests fail while any `weidu.exe` runs | **Tracked** | [issue 9](https://github.com/Chrizhermann/chriz-bg-collection/issues/9) |
+| Combined test install | **Approved**, disk cleaned; waits for the alpha.11 archive and Christopher's OK to launch the game in a lab | — |
 
-Waiting for Christopher: the no-bank dual-class rule, the extra Degrodel fight
-layer (and whether it is normal or Challenge Mode), whether SoD 177/198/285 are
-mandatory or default, and the publication order.
+Decided 13 October: SoD 177/198/285 mandatory; vanilla dual rule; Degrodel 660
+default with Christopher designing the extra layer. Waiting for Christopher: the
+streamer fix approach, a lab game launch, the optional one-file fix for his
+current game, and the publication order.
 
 ## The useful answer
 
