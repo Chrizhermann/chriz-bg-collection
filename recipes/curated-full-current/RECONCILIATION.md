@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 470 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 459.
+Engine-equivalent resolved-selection summary: 473 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 462.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -108,6 +108,7 @@ Engine-equivalent resolved-selection summary: 470 default/mandatory rows — con
 | `BARDICWONDERS:2005` | default | `feature:bardicwonders:component-2005` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.6 2.9c-balance.6 (v2.9c-balance.6), component 2005 |  |
 | `BARDICWONDERS:2006` | default | `feature:bardicwonders:component-2006` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.6 2.9c-balance.6 (v2.9c-balance.6), component 2006 |  |
 | `BARDICWONDERS:3001` | default | `feature:bardicwonders:component-3001` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.6 2.9c-balance.6 (v2.9c-balance.6), component 3001 |  |
+| `BARDICWONDERS:3010` | default | `feature:bardicwonders:component-3010` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.6 2.9c-balance.6 (v2.9c-balance.6), component 3010 |  |
 | `BG1NPC:0` | default | `feature:bg1npc:component-0` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 0 |  |
 | `BG1NPC:10` | default | `feature:bg1npc:component-10` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 10 |  |
 | `BG1NPC:90` | default | `feature:bg1npc:component-90` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 90 |  |
@@ -245,6 +246,8 @@ Engine-equivalent resolved-selection summary: 470 default/mandatory rows — con
 | `CHRIZ-BG-REBALANCE:405` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 405 |  |
 | `CHRIZ-BG-REBALANCE:407` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 407 |  |
 | `CHRIZ-BG-REBALANCE:408` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 408 |  |
+| `CHRIZ-BG-REBALANCE:420` | default | `feature:chriz-bg-rebalance:bard-spell-ceilings` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 420 |  |
+| `CHRIZ-BG-REBALANCE:421` | default | `feature:chriz-bg-rebalance:bard-spell-ceilings` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 421 |  |
 | `CHRIZ-SOD-REMIX:100` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.12 0.6.12 (v0.6.12), component 100 |  |
 | `CHRIZ-SOD-REMIX:110` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.12 0.6.12 (v0.6.12), component 110 |  |
 | `CHRIZ-SOD-REMIX:115` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.12 0.6.12 (v0.6.12), component 115 |  |

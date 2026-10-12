@@ -14,9 +14,9 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-29 curated entries, 19 recommended selections for the next release. Bard spell-level
-ceilings `420`/`421` are offered as one optional, unchecked choice; whether it becomes a
-default is **pending Christopher's choice** (see below).
+29 curated entries, 21 recommended selections for the next release. Bard spell-level
+ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
+2026-10-13)** (see below).
 ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
 
@@ -49,8 +49,8 @@ default is **pending Christopher's choice** (see below).
 | 407 | EEex variant: exactly +1/2 attack while wielding a specialized weapon (recommended) | Class and kit revisions | Cleric of Tempus: weapon specialization grants extra attacks | ✓ | default |
 | 409 | Cleric of Tempus: EEex specialization APR — re-ship the listener (migration repair for the v0.1.0 runaway-APR build) | Class and kit revisions |  |  | |
 | 408 | Cleric of Tempus: updated kit and ability descriptions | Class and kit revisions |  | ✓ | default |
-| 420 | EEex: independent kit spell-progression provider | Class and kit revisions |  |  | optional |
-| 421 | Bard progression: IWD through level 7; Blade and Skald use original progression through level 6 | Class and kit revisions |  |  | optional |
+| 420 | EEex: independent kit spell-progression provider | Class and kit revisions |  |  | default |
+| 421 | Bard progression: IWD through level 7; Blade and Skald use original progression through level 6 | Class and kit revisions |  |  | default |
 
 ## Atomic Tempus UI behavior
 
@@ -81,7 +81,7 @@ default is **pending Christopher's choice** (see below).
   `401` family. The atomic bundle guarantees that chain. Component `401` supports either
   SR or non-SR spell mappings, but must inspect the final installed resources.
 
-## Bard spell-level ceilings — default pending Christopher's choice
+## Bard spell-level ceilings — default (Christopher's decision, 2026-10-13)
 
 - `420` (provider) and `421` (base bard policy) form one atomic choice,
   **Bard spell-level ceilings**: Bard and Jester reach 7th-level spells at bard
@@ -89,13 +89,10 @@ default is **pending Christopher's choice** (see below).
   the new capacity at their next normal level-up.
 - Bardic Wonders `3010` extends it to Bardic Wonders kits and requires this choice
   (see `BARDICWONDERS.md`). Deselecting Bardic Wonders leaves `420`/`421` valid.
-- Both are offered **optional and unchecked** until Christopher decides whether they
-  become defaults. This is not a recommendation either way. To make it a default,
-  change the Decision of `420`, `421` and Bardic Wonders `3010` to `default`, set
-  `feature:chriz-bg-rebalance:bard-spell-ceilings` to `"on"` in
-  `manifest/presets/chris-recommended.toml`, regenerate the curated recipe and update
-  the tests that pin the opt-in state (the new run then also needs release-tail
-  approval and static evidence in the next release records).
+- Both are **default (Christopher's decision, 2026-10-13)**: checked in the
+  recommended preset and still deselectable. `3010` is selected whenever Bardic
+  Wonders and the base ceilings are selected. Its late run carries its own
+  release-tail approval and static evidence in the curated profile's release gate.
 - Order follows the v0.8.1 TP2: `...408, 302, 420, 421, 310, 130, 220, 320` in the
   existing post-EET-end run.
 

@@ -695,6 +695,13 @@ def _update_release_records(destination: Path, commit: str) -> None:
         '  "buffbot-bg2",',
         '  "klatu-armor-thieving-bg2",\n  "buffbot-bg2",',
     )
+    # Bard spell-level ceilings (default, Christopher 2026-10-13) add Bardic
+    # Wonders 3010 in its own late run directly after the Rebalance run.
+    limitations = _replace_once(
+        limitations,
+        '  "chriz-bg-rebalance-bg2",',
+        '  "chriz-bg-rebalance-bg2",\n  "bardicwonders-progression-bg2",',
+    )
     limitations = _replace_once(
         limitations,
         'reason = "The Branwen Spiritual Hammer repair is not enabled in the frozen alpha recipe."\n'
@@ -759,6 +766,20 @@ test_artifact = "tools/tests/test_klatu_armor_recipe.py"
 date = "2026-09-08"
 status = "accepted"
 scope = "Focused static source pin, component, optional-selection, credits, and late-order assertions only; not live game acceptance."
+"""
+    # The run and its order/dependency tests were introduced in 74e9aae.
+    acceptance += """
+
+[[evidence]]
+subject_kind = "run"
+subject_id = "bardicwonders-progression-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "74e9aaee63b7ca0862ecee6f7af42642e8d21fed"
+test_artifact = "tools/tests/test_expanded_release_recipe.py"
+date = "2026-10-13"
+status = "accepted"
+scope = "Focused static source pin, component, dependency, stale-selection and late-order assertions only; not live game acceptance."
 """
     for run_id in CURATED_SCOPED_BASE_RUNS:
         acceptance += f"""

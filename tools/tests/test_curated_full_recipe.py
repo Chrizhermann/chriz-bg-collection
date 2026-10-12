@@ -321,9 +321,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # defaults and two separately ordered companion components.
                 # October 12 implements the agreed next-release Emotion301 opt-in;
                 # all other semantic selections, dependencies and order stay intact.
-                # October 13 offers optional, unchecked bard spell-level ceilings
+                # October 13 adds default bard spell-level ceilings
                 # (Rebalance 420/421 plus Bardic Wonders 3010 in its own late run).
-                "5fc0697c1f4c8ddc778184dd658d207b722d765e87eede022f1138aad36a147d",
+                "a0efef56c11eb8f67fe32b2e325b2b719fc6c254616235af26de5f7480ab1577",
             )
 
             legacy_bg1npc_groups = {
@@ -512,11 +512,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bardic_artifact["archive"]["tp2_paths"],
                 ["BardicWonders/Setup-BardicWonders.tp2"],
             )
-            # The optional 3010 progression adapter is offered only in its own late
-            # run, unchecked; existing choices and their native TP2 order are unchanged.
+            # The default 3010 progression adapter runs only in its own late run;
+            # existing choices and their native TP2 order are unchanged.
             self.assertIn(3010, [component["id"] for component in bardic["components"]])
             self.assertEqual(runs["bardicwonders-progression-bg2"]["components"], [3010])
-            self.assertFalse(baseline_effective["feature:bardicwonders:component-3010"])
+            self.assertTrue(baseline_effective["feature:bardicwonders:component-3010"])
             self.assertEqual(
                 runs["bardicwonders-bg2"]["components"],
                 [

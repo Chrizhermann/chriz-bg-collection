@@ -16,7 +16,8 @@ const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
     200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910,
 ];
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
-    100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320,
+    100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130,
+    220, 320,
 ];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
     100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
@@ -319,7 +320,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
             ),
             (
                 "feature:chriz-bg-rebalance:bard-spell-ceilings",
-                Decision::Optional,
+                Decision::Default,
                 2
             ),
             (
@@ -345,7 +346,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
     let no_tempus = evaluate(&manifest, &no_tempus).unwrap();
     assert_eq!(
         no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 111, 120, 121, 200, 210, 211, 302, 310, 130, 220, 320][..])
+        Some(&[100, 101, 111, 120, 121, 200, 210, 211, 302, 420, 421, 310, 130, 220, 320][..])
     );
 
     let mut disabled = Selection::defaults("windows");
@@ -403,8 +404,8 @@ fn defaults_wing_buffet_spacing_with_scs_and_an_independent_optout() {
         opted_out.plan.components_for(run_id),
         Some(
             &[
-                100, 101, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 310, 130,
-                220, 320
+                100, 101, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421,
+                310, 130, 220, 320
             ][..]
         )
     );
@@ -537,19 +538,20 @@ fn approved_balance_defaults_respect_sr_and_eeex_prerequisites() {
 }
 
 #[test]
-fn bard_spell_ceilings_are_an_unchecked_eeex_choice_in_both_profiles() {
+fn bard_spell_ceilings_are_a_default_eeex_choice_in_both_profiles() {
     const BASE: &str = "feature:chriz-bg-rebalance:bard-spell-ceilings";
     const RUN: &str = "chriz-bg-rebalance-bg2";
+    const BARDIC: &str = "bardicwonders-progression-bg2";
     for directory in ["manifest", "recipes/curated-full-current"] {
         let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
         let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
         assert_eq!(
-            manifest.presets["chris-recommended"].selections[BASE], "off",
+            manifest.presets["chris-recommended"].selections[BASE], "on",
             "{directory}"
         );
         let control = baseline.view.control(BASE).unwrap();
-        assert_eq!(control.decision, Decision::Optional, "{directory}");
-        assert!(!control.selected && control.interactive, "{directory}");
+        assert_eq!(control.decision, Decision::Default, "{directory}");
+        assert!(control.selected && control.interactive, "{directory}");
         assert_eq!(control.requires, ["feature:eeex:mandatory-components"]);
         assert_eq!(
             baseline.plan.components_for(RUN),
@@ -557,26 +559,34 @@ fn bard_spell_ceilings_are_an_unchecked_eeex_choice_in_both_profiles() {
             "{directory}"
         );
 
+        // Opting out removes exactly 420/421 (and the dependent Bardic adapter run).
         let mut selection = baseline.normalized_selection.to_selection();
-        selection.set_feature(BASE, true);
-        let enabled = evaluate(&manifest, &selection).unwrap();
-        let mut expected = BG_REBALANCE_COMPONENTS.to_vec();
-        let after_flail = expected.iter().position(|c| *c == 302).unwrap() + 1;
-        expected.splice(after_flail..after_flail, [420, 421]);
+        selection.set_feature(BASE, false);
+        let opted_out = evaluate(&manifest, &selection).unwrap();
+        let expected = BG_REBALANCE_COMPONENTS
+            .iter()
+            .copied()
+            .filter(|c| ![420, 421].contains(c))
+            .collect::<Vec<_>>();
         assert_eq!(
-            enabled.plan.components_for(RUN),
+            opted_out.plan.components_for(RUN),
             Some(&expected[..]),
             "{directory}"
         );
-        let mut others = enabled.plan.clone();
+        assert_eq!(opted_out.plan.components_for(BARDIC), None, "{directory}");
+        let mut others = opted_out.plan.clone();
         others.runs.retain(|run| run.run_id != RUN);
         let mut baseline_others = baseline.plan.clone();
-        baseline_others.runs.retain(|run| run.run_id != RUN);
+        baseline_others
+            .runs
+            .retain(|run| run.run_id != RUN && run.run_id != BARDIC);
         assert_eq!(others, baseline_others, "{directory}");
 
-        selection.set_feature("mod:eeex", false);
-        let no_eeex = evaluate(&manifest, &selection).unwrap();
+        let mut no_eeex = baseline.normalized_selection.to_selection();
+        no_eeex.set_feature("mod:eeex", false);
+        let no_eeex = evaluate(&manifest, &no_eeex).unwrap();
         let components = no_eeex.plan.components_for(RUN).unwrap();
         assert!(!components.contains(&420) && !components.contains(&421));
+        assert_eq!(no_eeex.plan.components_for(BARDIC), None, "{directory}");
     }
 }

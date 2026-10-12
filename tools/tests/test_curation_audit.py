@@ -131,11 +131,11 @@ class CatalogParserTests(unittest.TestCase):
             {
                 Decision.EXCLUDED: 515,
                 # September 22 approval moves HGO 38 from optional to default.
-                # October 12 moves Emotion 301 back to optional; October 13 offers
-                # bard ceilings Rebalance 420/421 and Bardic Wonders 3010 as optional.
-                Decision.OPTIONAL: 242,
+                # October 12 moves Emotion 301 back to optional.
+                Decision.OPTIONAL: 239,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
-                Decision.DEFAULT: 318,
+                # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults.
+                Decision.DEFAULT: 321,
                 Decision.MANDATORY: 152,
             },
         )

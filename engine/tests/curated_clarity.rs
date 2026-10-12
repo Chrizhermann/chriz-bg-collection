@@ -18,7 +18,7 @@ fn recipe() -> Manifest {
 fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     let manifest = recipe();
     let result = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
-    assert_eq!(result.plan.runs.len(), 51);
+    assert_eq!(result.plan.runs.len(), 52);
     assert_eq!(
         result
             .plan
@@ -26,7 +26,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        461 // Next-release policy removes Emotion 301 from October 7's defaults.
+        // Next-release policy removes Emotion 301 from October 7's defaults;
+        // October 13 default bard ceilings add 420/421 and Bardic 3010.
+        464
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");
@@ -73,8 +75,8 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
-                100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 310,
-                130, 220, 320,
+                100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420,
+                421, 310, 130, 220, 320,
             ][..]
         )
     );
@@ -409,7 +411,7 @@ fn repaired_bg1npc_groups_replace_only_the_authored_alternative() {
 }
 
 #[test]
-fn bard_spell_ceilings_are_unchecked_and_gate_the_bardic_kit_adapter() {
+fn bard_spell_ceilings_are_default_and_gate_the_bardic_kit_adapter() {
     const BASE: &str = "feature:chriz-bg-rebalance:bard-spell-ceilings";
     const ADAPTER: &str = "feature:bardicwonders:component-3010";
     const REBALANCE: &str = "chriz-bg-rebalance-bg2";
@@ -421,34 +423,48 @@ fn bard_spell_ceilings_are_unchecked_and_gate_the_bardic_kit_adapter() {
             .is_some_and(|components| components.contains(&component))
     };
 
-    // Default pending Christopher's choice: offered, ready, optional and off.
-    let base = baseline.view.control(BASE).unwrap();
-    assert_eq!(base.decision, Decision::Optional);
-    assert_eq!(base.readiness, Readiness::Ready);
-    assert!(!base.selected && base.interactive);
-    let adapter = baseline.view.control(ADAPTER).unwrap();
-    assert_eq!(adapter.decision, Decision::Optional);
-    assert_eq!(adapter.readiness, Readiness::Ready);
+    // Default (Christopher's decision, 2026-10-13): both checked and deselectable.
+    for id in [BASE, ADAPTER] {
+        let control = baseline.view.control(id).unwrap();
+        assert_eq!(control.decision, Decision::Default, "{id}");
+        assert_eq!(control.readiness, Readiness::Ready, "{id}");
+        assert!(control.selected && control.interactive, "{id}");
+    }
+    assert!(has(&baseline.plan, REBALANCE, 420) && has(&baseline.plan, REBALANCE, 421));
+
+    // Opting out of both removes exactly 420/421 and the 3010 run.
+    let mut neither = baseline.normalized_selection.to_selection();
+    neither.set_feature(BASE, false);
+    neither.set_feature(ADAPTER, false);
+    let neither = evaluate(&manifest, &neither).unwrap();
+    let mut expected = baseline.plan.clone();
+    expected.runs.retain(|run| run.run_id != BARDIC);
+    expected
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == REBALANCE)
+        .unwrap()
+        .components
+        .retain(|c| ![420, 421].contains(c));
+    assert_eq!(neither.plan, expected);
+
+    // A stale selection of only the adapter cannot install 3010 without 420/421.
+    let mut adapter_only = neither.normalized_selection.to_selection();
+    adapter_only.set_feature(ADAPTER, true);
+    let adapter_only = evaluate(&manifest, &adapter_only).unwrap();
+    assert_eq!(adapter_only.plan, neither.plan);
+    let adapter = adapter_only.view.control(ADAPTER).unwrap();
     assert!(!adapter.selected && !adapter.interactive);
     assert_eq!(
         adapter.unavailable_reason.as_deref(),
         Some("Requires Bard spell-level ceilings.")
     );
-    assert!(!has(&baseline.plan, REBALANCE, 420) && !has(&baseline.plan, REBALANCE, 421));
-    assert_eq!(baseline.plan.components_for(BARDIC), None);
-
-    // A stale selection of only the adapter cannot install 3010 without 420/421.
-    let mut adapter_only = baseline.normalized_selection.to_selection();
-    adapter_only.set_feature(ADAPTER, true);
-    let adapter_only = evaluate(&manifest, &adapter_only).unwrap();
-    assert_eq!(adapter_only.plan, baseline.plan);
-    assert!(!adapter_only.view.control(ADAPTER).unwrap().selected);
 
     // The base choice alone adds exactly 420 then 421 after Flail 302.
-    let mut base_only = baseline.normalized_selection.to_selection();
+    let mut base_only = neither.normalized_selection.to_selection();
     base_only.set_feature(BASE, true);
     let base_only = evaluate(&manifest, &base_only).unwrap();
-    let mut expected = baseline.plan.clone();
+    let mut expected = neither.plan.clone();
     let rebalance = &mut expected
         .runs
         .iter_mut()
@@ -461,9 +477,7 @@ fn bard_spell_ceilings_are_unchecked_and_gate_the_bardic_kit_adapter() {
     assert!(base_only.view.control(ADAPTER).unwrap().interactive);
 
     // Both add 3010 in its own late run immediately after the Rebalance run.
-    let mut both = base_only.normalized_selection.to_selection();
-    both.set_feature(ADAPTER, true);
-    let both = evaluate(&manifest, &both).unwrap();
+    let both = baseline;
     assert_eq!(both.plan.components_for(BARDIC), Some(&[3010][..]));
     let position = |id: &str| {
         both.plan

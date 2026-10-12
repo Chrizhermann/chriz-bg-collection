@@ -98,9 +98,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(without_controls - selected, set())
         # October 7 adds seven Rebalance defaults and Edwin236's dedicated run;
         # the next-release policy removes only Emotion301 from normal defaults.
-        self.assertEqual(len(without_controls), 460)
-        self.assertEqual(len(selected), 461)
-        self.assertEqual(len({run for run, _ in selected}), 51)
+        # October 13 default bard ceilings add 420/421 and Bardic 3010's own run.
+        self.assertEqual(len(without_controls), 463)
+        self.assertEqual(len(selected), 464)
+        self.assertEqual(len({run for run, _ in selected}), 52)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -193,7 +194,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 461)
+        self.assertEqual(len(baseline), 464)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -210,13 +211,13 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
                 self.assertIn(provider, self.features)
                 self.assertIn((run_id, 301), self.selected({provider: "off", feature_id: "on"}))
 
-    def test_emotion_run_keeps_source_order_and_leaves_bard_ceilings_unselected(self):
+    def test_emotion_run_keeps_source_order_including_default_bard_ceilings(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
                          [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
-            self.assertNotIn((run_id, component), self.selected())
+            self.assertIn((run_id, component), self.selected())
         for provider in ("iwdification-bg2", "stratagems-bg2", "spell-rev-core-bg2"):
             self.assertLess(self.positions[provider], self.positions[run_id])
         for later in ("cdtweaks-spell-save-penalties-bg2", "chriz-bg-modpack-bg2"):
@@ -228,18 +229,17 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
                          ("chriz-bg-modpack-bg2", 430)):
             self.assertIn(identity, selected)
 
-    def test_bard_spell_ceilings_are_optional_off_and_gate_the_bardic_adapter(self):
+    def test_bard_spell_ceilings_are_default_and_gate_the_bardic_adapter(self):
         base = "feature:chriz-bg-rebalance:bard-spell-ceilings"
         adapter = "feature:bardicwonders:component-3010"
         rebalance_run = "chriz-bg-rebalance-bg2"
         bardic_run = "bardicwonders-progression-bg2"
-        # Default pending Christopher's choice: both offered, optional and off.
+        # Default (Christopher's decision, 2026-10-13): both checked and deselectable.
         for feature_id in (base, adapter):
-            self.assertEqual(self.features[feature_id]["decision"], "optional")
+            self.assertEqual(self.features[feature_id]["decision"], "default")
             self.assertEqual(self.features[feature_id]["readiness"], "ready")
             self.assertEqual(self.features[feature_id]["category"], "kits")
-            self.assertNotEqual(self.preset.get(feature_id, "off"), "on")
-        self.assertEqual(self.preset[base], "off")
+            self.assertEqual(self.preset[feature_id], "on")
         self.assertEqual(self.features[base]["parent"], "mod:chriz-bg-rebalance")
         self.assertEqual(self.features[base]["requires"], ["feature:eeex:mandatory-components"])
         self.assertEqual(self.features[base]["components"], [
@@ -266,18 +266,20 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
                         "bardicwonders-dialogue-patch-bg2", "cdtweaks-bg2", "eeex-bg2"):
             self.assertLess(self.positions[earlier], self.positions[bardic_run])
 
-        baseline = self.selected()
+        both = self.selected()
         ceilings = {(rebalance_run, 420), (rebalance_run, 421)}
-        self.assertFalse(ceilings & baseline)
-        self.assertNotIn((bardic_run, 3010), baseline)
-        # The base choice alone installs exactly 420/421.
-        base_only = self.selected({base: "on"})
-        self.assertEqual(base_only - baseline, ceilings)
-        self.assertEqual(baseline - base_only, set())
-        # Both together add 3010 too.
-        both = self.selected({base: "on", adapter: "on"})
-        self.assertEqual(both - baseline, ceilings | {(bardic_run, 3010)})
-        self.assertEqual(baseline - both, set())
+        adapter_identity = {(bardic_run, 3010)}
+        self.assertTrue(ceilings | adapter_identity <= both)
+        # Opting out of both removes exactly 420/421/3010 and nothing else.
+        neither = self.selected({base: "off", adapter: "off"})
+        self.assertEqual(both - neither, ceilings | adapter_identity)
+        self.assertEqual(neither - both, set())
+        # Opting out of only the adapter keeps exactly 420/421.
+        base_only = self.selected({adapter: "off"})
+        self.assertEqual(base_only - neither, ceilings)
+        self.assertEqual(both - base_only, adapter_identity)
+        # A stale adapter selection without the base choice installs nothing extra.
+        self.assertEqual(self.selected({base: "off"}), neither)
         # 3010 is never installed without 420/421, EEex or Bardic Wonders.
         for missing in ({base: "off"}, {"mod:chriz-bg-rebalance": "off"}, {"mod:eeex": "off"},
                         {"mod:bardicwonders": "off"}):

@@ -229,7 +229,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // October 7 adds seven Rebalance defaults (130/200/210/211/220/310/320)
     // and Edwin 236. Optional Baeloth 235, Hardiness 201/202 remain unselected.
     // Next-release Emotion 301 opt-in policy removes one default from each plan.
-    // This 367-component base plan is distinct from the 461-component curated plan.
+    // October 13 default bard ceilings add Rebalance 420/421 (and Bardic 3010
+    // in the curated plan only).
+    // This 369-component base plan is distinct from the 464-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -237,7 +239,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        367
+        369
     );
 }
 

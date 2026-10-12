@@ -533,6 +533,18 @@ scope = "Focused static source pin, component, optional-selection, credits, and 
 
 [[evidence]]
 subject_kind = "run"
+subject_id = "bardicwonders-progression-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "74e9aaee63b7ca0862ecee6f7af42642e8d21fed"
+test_artifact = "tools/tests/test_expanded_release_recipe.py"
+date = "2026-10-13"
+status = "accepted"
+scope = "Focused static source pin, component, dependency, stale-selection and late-order assertions only; not live game acceptance."
+
+
+[[evidence]]
+subject_kind = "run"
 subject_id = "srcb-rr-compat-bg2"
 kind = "static-test"
 repository = "Chrizhermann/chriz-bg-collection"
