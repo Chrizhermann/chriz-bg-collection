@@ -128,3 +128,16 @@ refresh not stack). Changes components 1001/2008; no new components.
 Still open: the no-bank dual-class rule for 650, and the extra Degrodel fight
 layer (new Modpack component in progress: let Degrodel leave as in vanilla, or
 refuse the helm and fight him with his servants).
+
+## Notes for the release integrator
+
+- **Challenge Mode needs a new app.** The recipe now carries
+  `[[feature_groups]]` (`f7e1c6f`). Older apps reject unknown recipe fields, so
+  the release that ships this recipe must set `minimum_app_version` to the app
+  version containing `f7e1c6f`.
+- **Wording:** SoD Remix 257's description still says "This is not the full
+  planned Challenge Mode." Now that 257 is a Challenge Mode member, reword it
+  at the next recipe regeneration.
+- **Degrodel 660** (Modpack `claude/degrodel-fight` @ `b19db7c`, unreleased)
+  is not in the alpha.11 candidate. Fold it into alpha.11 or ship it later;
+  its extra fight layer is still Christopher's choice.
