@@ -644,6 +644,8 @@ pub struct EvaluateBuildResponse {
     /// Number of currently selected visible controls.
     pub selected_choice_count: usize,
     pub manual_checkpoint_options: Vec<bg_engine::manual_checkpoint::CheckpointComponent>,
+    /// Derived feature-group states (on/off/mixed); the authored groups are in `view.groups`.
+    pub groups: Vec<bg_engine::recipe_view::FeatureGroupEvaluation>,
 }
 
 impl NativeBridge {
@@ -2511,6 +2513,7 @@ fn project_evaluation(
         plan,
         selected_choice_count,
         manual_checkpoint_options,
+        groups: evaluation.groups,
     }
 }
 

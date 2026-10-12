@@ -106,6 +106,14 @@ pub const RULE_FEATURE_INPUTS: &str = "feature-inputs";
 pub const RULE_PROMPT_INPUT_REFERENCES: &str = "prompt-input-references";
 /// Rule requiring visible blocked features to explain why they are unavailable.
 pub const RULE_FEATURE_READINESS: &str = "feature-readiness";
+/// Rule requiring feature group ids to be unique kebab-case identifiers.
+pub const RULE_FEATURE_GROUP_IDS: &str = "feature-group-ids";
+/// Rule requiring feature groups to have a title, a description, and members.
+pub const RULE_FEATURE_GROUP_CONTENT: &str = "feature-group-content";
+/// Rule requiring group members to be unique, existing, and in at most one group.
+pub const RULE_FEATURE_GROUP_MEMBERS: &str = "feature-group-members";
+/// Rule requiring group members to be independent optional features.
+pub const RULE_FEATURE_GROUP_MEMBER_DECISIONS: &str = "feature-group-member-decisions";
 
 /// Runs the currently defined recipe validation rules in stable order.
 pub fn validate(manifest: &Manifest) -> Vec<Finding> {
@@ -136,6 +144,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_feature_inputs(manifest, &mut findings);
     check_prompt_input_references(manifest, &mut findings);
     check_feature_readiness(manifest, &mut findings);
+    check_feature_groups(manifest, &mut findings);
     findings
 }
 
@@ -1495,6 +1504,118 @@ fn check_feature_readiness(manifest: &Manifest, findings: &mut Vec<Finding>) {
                     format!(
                         "feature {:?} conflict with {:?} must provide an unavailable reason",
                         feature.id, conflict.feature_id
+                    ),
+                );
+            }
+        }
+    }
+}
+
+fn is_kebab_case_id(value: &str) -> bool {
+    !value.is_empty()
+        && value.split('-').all(|part| {
+            !part.is_empty()
+                && part
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        })
+}
+
+fn check_feature_groups(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    let features = manifest
+        .collection
+        .features
+        .iter()
+        .map(|feature| (feature.id.as_str(), feature))
+        .collect::<BTreeMap<_, _>>();
+    let mut group_ids = BTreeSet::new();
+    let mut member_owner = BTreeMap::<&str, &str>::new();
+    for group in &manifest.collection.feature_groups {
+        if !is_kebab_case_id(&group.id) {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_IDS,
+                format!(
+                    "feature group id {:?} must be lowercase kebab-case (a-z, 0-9 and single hyphens)",
+                    group.id
+                ),
+            );
+        }
+        if !group_ids.insert(group.id.as_str()) {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_IDS,
+                format!("feature group id {:?} is declared more than once", group.id),
+            );
+        }
+        for (field, value) in [("title", &group.title), ("description", &group.description)] {
+            if value.trim().is_empty() {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_CONTENT,
+                    format!("feature group {:?} must have a nonempty {field}", group.id),
+                );
+            }
+        }
+        if group.members.is_empty() {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_CONTENT,
+                format!("feature group {:?} must list at least one member", group.id),
+            );
+        }
+        let mut members = BTreeSet::new();
+        for member in &group.members {
+            if !members.insert(member.as_str()) {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBERS,
+                    format!(
+                        "feature group {:?} lists member {member:?} more than once",
+                        group.id
+                    ),
+                );
+                continue;
+            }
+            if let Some(owner) = member_owner.insert(member.as_str(), group.id.as_str()) {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBERS,
+                    format!(
+                        "feature {member:?} belongs to both feature groups {owner:?} and {:?}",
+                        group.id
+                    ),
+                );
+            }
+            let Some(feature) = features.get(member.as_str()) else {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBERS,
+                    format!(
+                        "feature group {:?} references unknown feature {member:?}",
+                        group.id
+                    ),
+                );
+                continue;
+            };
+            if feature.decision != Decision::Optional {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBER_DECISIONS,
+                    format!(
+                        "feature group {:?} member {member:?} must be an optional feature, not {}",
+                        group.id,
+                        format!("{:?}", feature.decision).to_lowercase()
+                    ),
+                );
+            }
+            if feature.choice_group.is_some() {
+                error(
+                    findings,
+                    RULE_FEATURE_GROUP_MEMBER_DECISIONS,
+                    format!(
+                        "feature group {:?} member {member:?} cannot belong to a choice group",
+                        group.id
                     ),
                 );
             }

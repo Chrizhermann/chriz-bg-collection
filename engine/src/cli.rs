@@ -49,7 +49,9 @@ use crate::receipt::{
     ReceiptOutcome, ReceiptStore, ReceiptVersions, RunAttemptReceipt, RunReceipt, RunTiming,
     SourceGameReceipt, WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
 };
-use crate::recipe_view::{evaluate, SelectionEvaluation};
+use crate::recipe_view::{
+    evaluate, feature_group_changes, FeatureGroupState, FeatureGroupTarget, SelectionEvaluation,
+};
 use crate::registry::ManagedInstallRegistry;
 use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::session::{
@@ -180,6 +182,8 @@ pub struct ValidationReport {
 /// Raw semantic overrides parsed from repeatable CLI options.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelectionOverrides {
+    /// `group-id=on|off` values, expanded into member features before `features` apply.
+    pub groups: Vec<String>,
     /// `feature-id=on|off` values.
     pub features: Vec<String>,
     /// `feature-id/input-id=<typed-value>` values.
@@ -554,7 +558,7 @@ pub fn plan_recipe(
             ),
         )
     })?;
-    let choices = selection_choices(&manifest, preset_id, overrides)?;
+    let choices = selection_choices(&manifest, preset_id, platform, overrides)?;
     let evaluation = evaluate(
         &manifest,
         &Selection {
@@ -694,7 +698,12 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
                 .join("\n"),
         ));
     }
-    let choices = selection_choices(&manifest, &request.preset, &request.overrides)?;
+    let choices = selection_choices(
+        &manifest,
+        &request.preset,
+        &request.platform,
+        &request.overrides,
+    )?;
     let evaluation = evaluate(
         &manifest,
         &Selection {
@@ -4090,7 +4099,27 @@ fn validate_direct_directory(path: &Path, label: &str) -> Result<(), CliError> {
 
 /// Stable phase labels used by human CLI output.
 pub fn human_plan_lines(report: &PlanReport) -> Vec<String> {
-    report
+    let groups = report.evaluation.groups.iter().map(|group| {
+        let title = report
+            .evaluation
+            .view
+            .groups
+            .iter()
+            .find(|view| view.id == group.id)
+            .map_or(group.id.as_str(), |view| view.title.as_str());
+        let state = match group.state {
+            FeatureGroupState::On => "on",
+            FeatureGroupState::Off => "off",
+            FeatureGroupState::Mixed => "mixed",
+        };
+        format!(
+            "Group {} ({title}): {state}, {} of {} available selected",
+            group.id,
+            group.selected_members.len(),
+            group.available_members.len()
+        )
+    });
+    let runs = report
         .evaluation
         .plan
         .runs
@@ -4112,20 +4141,49 @@ pub fn human_plan_lines(report: &PlanReport) -> Vec<String> {
                 run.mod_id,
                 components
             )
-        })
-        .collect()
+        });
+    groups.chain(runs).collect()
 }
 
 /// Return preset choices with CLI overrides applied; useful to freeze new campaigns.
 fn selection_choices(
     manifest: &Manifest,
     preset_id: &str,
+    platform: &str,
     overrides: &SelectionOverrides,
 ) -> Result<BTreeMap<String, String>, CliError> {
     let preset = manifest.presets.get(preset_id).ok_or_else(|| {
         CliError::new("invalid_selection", format!("unknown preset {preset_id:?}"))
     })?;
     let mut choices = preset.selections.clone();
+    // Groups expand first, against the preset plus earlier groups, so explicit `--feature`
+    // overrides below always win for an individual member.
+    for authored in &overrides.groups {
+        let (id, value) = split_assignment(authored, "group override")?;
+        let target = match value {
+            "on" => FeatureGroupTarget::On,
+            "off" => FeatureGroupTarget::Off,
+            _ => {
+                return Err(CliError::new(
+                    "invalid_selection",
+                    format!("group override {authored:?} must use on or off"),
+                ))
+            }
+        };
+        let changes = feature_group_changes(
+            manifest,
+            &Selection {
+                platform: platform.to_owned(),
+                choices: choices.clone(),
+            },
+            id,
+            target,
+        )
+        .map_err(|error| CliError::new("invalid_selection", error.to_string()))?;
+        for (feature_id, selected) in changes {
+            choices.insert(feature_id, if selected { "on" } else { "off" }.to_owned());
+        }
+    }
     for authored in &overrides.features {
         let (id, value) = split_assignment(authored, "feature override")?;
         if !matches!(value, "on" | "off" | "true" | "false") {
@@ -4347,8 +4405,13 @@ mod tests {
     fn frozen_recipe_fixture() -> FrozenCliRecipe {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest");
         let manifest = Manifest::load(&root).expect("load frozen-recipe manifest fixture");
-        let choices = selection_choices(&manifest, "recommended", &SelectionOverrides::default())
-            .expect("select frozen-recipe fixture");
+        let choices = selection_choices(
+            &manifest,
+            "recommended",
+            "windows",
+            &SelectionOverrides::default(),
+        )
+        .expect("select frozen-recipe fixture");
         let evaluation = evaluate(
             &manifest,
             &Selection {

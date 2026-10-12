@@ -1,4 +1,4 @@
-import type { FeatureControl, SelectionEvaluation } from "./contracts";
+import type { FeatureControl, FeatureGroup, SelectionEvaluation } from "./contracts";
 
 export type ChoiceControl = FeatureControl;
 
@@ -127,4 +127,21 @@ export function bulkCategoryChanges(e: SelectionEvaluation, category: string, se
     retained.push(candidate);
   }
   return changes;
+}
+
+/**
+ * Member changes for one click on a feature-group control. Mirrors the engine's
+ * `feature_group_changes`: from on, every member is deselected; from off or mixed,
+ * every currently available member is selected. Unavailable members are never forced on
+ * and no other feature is touched.
+ */
+export function featureGroupChanges(group: FeatureGroup): Record<string, boolean> {
+  return group.state === "on"
+    ? Object.fromEntries(group.members.map(id => [id, false]))
+    : Object.fromEntries(group.availableMembers.map(id => [id, true]));
+}
+
+/** Feature group that owns each member feature (validation allows at most one). */
+export function featureGroupsByMember(evaluation: SelectionEvaluation): Map<string, FeatureGroup> {
+  return new Map((evaluation.featureGroups ?? []).flatMap(group => group.members.map(id => [id, group] as const)));
 }

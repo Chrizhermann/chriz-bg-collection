@@ -1,6 +1,17 @@
 schema = 2
 game_build = "2.7.3.0"
 
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Stricter rules for players who want a harder game. Turns on every Challenge Mode change at once; you can still switch each one on or off under its own mod."
+members = [
+  "feature:chriz-bg-rebalance:component-301",
+  "feature:chriz-bg-modpack:component-235",
+  "feature:chriz-bg-rebalance:component-110",
+  "feature:chriz-sod-remix:component-257",
+]
+
 [[runs]]
 run_id = "dlcmerger-bg1"
 mod_id = "dlcmerger"

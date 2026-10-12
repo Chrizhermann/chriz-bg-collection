@@ -4,7 +4,8 @@ import { persistDisclosure } from "../components/disclosure";
 import { gameInterfaceSelector } from "../components/game-interface";
 import { manualBreakpointEditor, invalidBreakpoints, type ManualBreakpointEditorModel } from "../components/manual-checkpoints";
 import { featureInputs, type InputChange } from "../components/feature-inputs";
-import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, type ExclusiveChoiceGroup } from "../customization";
+import { featureGroupCard } from "../components/feature-group-card";
+import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, featureGroupsByMember, type ExclusiveChoiceGroup } from "../customization";
 
 export interface SetupViewState {
   search: string;
@@ -75,6 +76,9 @@ export function setupScreen(
     header.append(notice);
   }
   page.append(header);
+  // Feature groups (Challenge Mode) are the first choice on the page, above common changes.
+  if (batch) for (const group of evaluation.featureGroups ?? []) page.append(featureGroupCard(evaluation, group, batch.change));
+  const groupByMember = featureGroupsByMember(evaluation);
   const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
   const interfaceGroup = exclusiveGroups.find(group => group.id === "game-interface");
   const bundles = batch ? commonBundles(evaluation) : [];
@@ -278,6 +282,8 @@ export function setupScreen(
       const description = element("p", undefined, control.description);
       description.id = descriptionId;
       copy.append(label, badge);
+      const featureGroup = groupByMember.get(control.id);
+      if (featureGroup) copy.append(element("span", "badge feature-group-badge", featureGroup.title));
       if (control.readiness !== "ready") copy.append(element("span", `badge ${control.readiness}`, control.readiness === "blocked" ? "Unavailable" : "Experimental"));
       if (hasDistinctDescription) copy.append(description);
       if (control.inputs.length) copy.append(featureInputs(control, batch?.input, inputValidity));
@@ -292,7 +298,7 @@ export function setupScreen(
       if (control.sourceLabel || control.groupLabel) {
         copy.append(element("p", "control-source", [control.groupLabel ? `Group: ${control.groupLabel}` : "", control.sourceLabel ? `Source: ${control.sourceLabel}` : ""].filter(Boolean).join(". ")));
       }
-      rows.push({ element: row, text: `${control.title} ${control.description} ${control.sourceLabel ?? ""} ${control.groupLabel ?? ""}`.toLocaleLowerCase() });
+      rows.push({ element: row, text: `${control.title} ${control.description} ${control.sourceLabel ?? ""} ${control.groupLabel ?? ""} ${featureGroup?.title ?? ""}`.toLocaleLowerCase() });
     });
     groups.append(section);
     filterable.push({ group: section, category, rows });

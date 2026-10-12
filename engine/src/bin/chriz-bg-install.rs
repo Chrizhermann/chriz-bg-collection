@@ -97,6 +97,9 @@ struct PlanArgs {
     preset: String,
     #[arg(long, default_value = "windows")]
     platform: String,
+    /// Switch a feature group as `group-id=on|off`; applied before `--feature`.
+    #[arg(long = "group")]
+    groups: Vec<String>,
     /// Override one semantic feature as `id=on|off`.
     #[arg(long = "feature")]
     features: Vec<String>,
@@ -108,6 +111,7 @@ struct PlanArgs {
 impl PlanArgs {
     fn overrides(&self) -> SelectionOverrides {
         SelectionOverrides {
+            groups: self.groups.clone(),
             features: self.features.clone(),
             inputs: self.inputs.clone(),
             manual_breakpoints: Vec::new(),
@@ -167,6 +171,10 @@ struct InstallArgs {
     cache: PathBuf,
     #[arg(long, default_value = "windows")]
     platform: String,
+    /// Switch a feature group as `group-id=on|off`; applied before `--feature`.
+    #[arg(long = "group")]
+    groups: Vec<String>,
+    /// Override one semantic feature as `id=on|off`.
     #[arg(long = "feature")]
     features: Vec<String>,
     #[arg(long = "input")]
@@ -267,6 +275,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     "preset": report.preset,
                     "normalized_selection": report.evaluation.normalized_selection,
                     "findings": report.evaluation.findings,
+                    "groups": report.evaluation.groups,
                     "plan": report.evaluation.plan,
                 }));
             } else {
@@ -336,6 +345,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                 preset: args.preset.clone(),
                 platform: args.platform.clone(),
                 overrides: SelectionOverrides {
+                    groups: args.groups.clone(),
                     features: args.features.clone(),
                     inputs: args.inputs.clone(),
                     manual_breakpoints: args.manual_breakpoints.clone(),

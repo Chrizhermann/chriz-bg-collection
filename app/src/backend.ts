@@ -7,6 +7,7 @@ import type {
   CommandErrorPayload,
   DestinationEvaluation,
   FeatureControl,
+  FeatureGroup,
   FixtureOptions,
   FrozenReview,
   Freshness,
@@ -139,11 +140,29 @@ type FeatureControlWire = Omit<FeatureControl, "unavailableReason" | "sourceLabe
   readonly requires_any?: readonly string[];
 };
 
+type FeatureGroupWire = {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly members: readonly string[];
+};
+
+type FeatureGroupStateWire = {
+  readonly id: string;
+  readonly state: FeatureGroup["state"];
+  readonly selected_members: readonly string[];
+  readonly available_members: readonly string[];
+  readonly unavailable_members: readonly { readonly feature_id: string; readonly reason: string }[];
+  readonly disabled_reason?: string | null;
+};
+
 type SelectionEvaluationWire = {
   readonly manual_checkpoint_options?: readonly ManualCheckpointOption[];
+  readonly groups?: readonly FeatureGroupStateWire[];
   readonly view: {
     readonly categories: readonly string[];
     readonly controls: readonly FeatureControlWire[];
+    readonly groups?: readonly FeatureGroupWire[];
   };
   readonly normalized_selection: NormalizedSelection;
   readonly findings: readonly {
@@ -311,9 +330,30 @@ function projectCandidate(candidate: GameCandidateWire): GameCandidate {
   return candidate;
 }
 
+function projectFeatureGroups(evaluation: SelectionEvaluationWire): FeatureGroup[] {
+  const states = new Map((evaluation.groups ?? []).map(state => [state.id, state]));
+  return (evaluation.view.groups ?? []).flatMap((group) => {
+    const state = states.get(group.id);
+    if (!state) return [];
+    return [{
+      id: group.id,
+      title: group.title,
+      description: group.description,
+      members: group.members,
+      state: state.state,
+      selectedMembers: state.selected_members,
+      availableMembers: state.available_members,
+      unavailableMembers: state.unavailable_members.map(member => ({ featureId: member.feature_id, reason: member.reason })),
+      disabledReason: state.disabled_reason ?? null,
+    }];
+  });
+}
+
 function projectEvaluation(evaluation: SelectionEvaluationWire): SelectionEvaluation {
+  const featureGroups = projectFeatureGroups(evaluation);
   return {
     ...(evaluation.manual_checkpoint_options === undefined ? {} : { manualCheckpointOptions: evaluation.manual_checkpoint_options }),
+    ...(featureGroups.length === 0 ? {} : { featureGroups }),
     view: {
       categories: evaluation.view.categories,
       controls: evaluation.view.controls.map((control) => {

@@ -8,7 +8,8 @@ import unittest
 from pathlib import Path
 
 from tools.curated_full_recipe import (
-    _effective_features, _preserve_native_run_orders, _validate_game_interface_order, build_recipe,
+    _effective_features, _preserve_native_run_orders, _validate_feature_groups, _validate_game_interface_order,
+    build_recipe,
 )
 from tools.public_component_credits import build_public_component_credits
 
@@ -306,6 +307,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
                     for feature in collection["features"]
                 ],
                 "preset": preset["selections"],
+                "feature_groups": collection.get("feature_groups", []),
             }
             semantic_digest = hashlib.sha256(
                 json.dumps(semantic_recipe, sort_keys=True).encode()
@@ -323,7 +325,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # all other semantic selections, dependencies and order stay intact.
                 # October 13 adds default bard spell-level ceilings
                 # (Rebalance 420/421 plus Bardic Wonders 3010 in its own late run).
-                "a0efef56c11eb8f67fe32b2e325b2b719fc6c254616235af26de5f7480ab1577",
+                # October 13 (later) adds the approved Challenge Mode feature group,
+                # now part of this digest; runs, features and the preset are unchanged.
+                "0c5ab03d8b844b77b393659817701d1eafbffafa648dd21ec22b6b2959fbbedc",
             )
 
             legacy_bg1npc_groups = {
@@ -1061,6 +1065,38 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertIn("`CHRIZ-BG-MODPACK:611` | default", report)
             self.assertIn("`CHRIZ-SOD-REMIX:290` | mandatory", report)
             self.assertIn("`CHRIZ-SOD-REMIX:910` | mandatory", report)
+
+
+    def test_challenge_mode_group_is_carried_unchanged_and_never_preselected(self) -> None:
+        base = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "curated"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
+        self.assertEqual(collection["feature_groups"], base["feature_groups"])
+        [group] = collection["feature_groups"]
+        self.assertEqual(group["id"], "challenge-mode")
+        self.assertEqual(group["members"], [
+            "feature:chriz-bg-rebalance:component-301",
+            "feature:chriz-bg-modpack:component-235",
+            "feature:chriz-bg-rebalance:component-110",
+            "feature:chriz-sod-remix:component-257",
+        ])
+        features = {feature["id"]: feature for feature in collection["features"]}
+        for member in group["members"]:
+            self.assertEqual(features[member]["decision"], "optional", member)
+            self.assertNotIn("choice_group", features[member], member)
+            self.assertIn(preset.get(member, "off"), {"off"}, member)
+        self.assertNotIn("challenge-mode", preset)
+
+    def test_feature_group_guard_rejects_dropped_or_altered_groups(self) -> None:
+        base = {"feature_groups": [{"id": "challenge-mode", "title": "Challenge Mode", "description": "Harder.", "members": ["a"]}]}
+        _validate_feature_groups(base, {"features": [{"id": "a"}], **base})
+        with self.assertRaisesRegex(ValueError, "carried unchanged"):
+            _validate_feature_groups(base, {"features": [{"id": "a"}]})
+        with self.assertRaisesRegex(ValueError, "absent from the curated recipe"):
+            _validate_feature_groups(base, {"features": [], **base})
 
 
 if __name__ == "__main__":

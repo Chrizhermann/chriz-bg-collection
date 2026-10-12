@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{EngineError, Result};
 use crate::manifest::{
-    ComponentRef, Decision, Feature, InputSpec, InputValue, PromptAnswer, Readiness,
+    ComponentRef, Decision, Feature, FeatureGroup, InputSpec, InputValue, PromptAnswer, Readiness,
 };
 use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::Manifest;
@@ -70,6 +70,31 @@ pub struct FeatureControl {
     pub inputs: Vec<InputControl>,
 }
 
+/// Authored player-facing feature group, projected for display.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroupView {
+    /// Stable kebab-case group id.
+    pub id: String,
+    /// Player-facing title, also used to mark each member control.
+    pub title: String,
+    /// Player-facing explanation.
+    pub description: String,
+    /// Member feature ids in authored order.
+    pub members: Vec<String>,
+}
+
+impl From<&FeatureGroup> for FeatureGroupView {
+    fn from(group: &FeatureGroup) -> Self {
+        Self {
+            id: group.id.clone(),
+            title: group.title.clone(),
+            description: group.description.clone(),
+            members: group.members.clone(),
+        }
+    }
+}
+
 /// Ordered engine projection rendered by the frontend.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -78,6 +103,9 @@ pub struct RecipeView {
     pub categories: Vec<String>,
     /// Visible controls in authored feature order.
     pub controls: Vec<FeatureControl>,
+    /// Authored feature groups in recipe order; omitted when the recipe has none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub groups: Vec<FeatureGroupView>,
 }
 
 impl RecipeView {
@@ -127,6 +155,57 @@ pub struct SelectionFinding {
     pub message: String,
 }
 
+/// Derived state of one feature group; never stored, always computed from its members.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FeatureGroupState {
+    /// Every currently available member is selected, and at least one member is available.
+    On,
+    /// No member is selected.
+    Off,
+    /// Some, but not all, available members are selected.
+    Mixed,
+}
+
+/// Requested group switch, expanded into ordinary member feature changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FeatureGroupTarget {
+    /// Select every currently available member.
+    On,
+    /// Deselect every member.
+    Off,
+}
+
+/// A group member that cannot currently be selected, with the ordinary feature reason.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UnavailableGroupMember {
+    /// Member feature id.
+    pub feature_id: String,
+    /// Player-facing reason, identical to the member control's unavailable reason.
+    pub reason: String,
+}
+
+/// Evaluated state of one authored feature group under the current selection.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroupEvaluation {
+    /// Stable group id.
+    pub id: String,
+    /// Derived on/off/mixed state.
+    pub state: FeatureGroupState,
+    /// Members whose effective state is selected, in authored order.
+    pub selected_members: Vec<String>,
+    /// Members that can currently be selected, in authored order.
+    pub available_members: Vec<String>,
+    /// Members whose requirements are unmet, in authored order.
+    pub unavailable_members: Vec<UnavailableGroupMember>,
+    /// Why the group control is disabled; present only when no member is available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disabled_reason: Option<String>,
+}
+
 /// Complete engine result consumed by the setup and review screens.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -139,6 +218,17 @@ pub struct SelectionEvaluation {
     pub findings: Vec<SelectionFinding>,
     /// Exact component-level installation plan.
     pub plan: InstallPlan,
+    /// Derived feature-group states in recipe order; omitted when the recipe has none.
+    /// Deliberately separate from the normalized selection so groups never alter its digest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub groups: Vec<FeatureGroupEvaluation>,
+}
+
+impl SelectionEvaluation {
+    /// Looks up one evaluated feature group by id.
+    pub fn group(&self, id: &str) -> Option<&FeatureGroupEvaluation> {
+        self.groups.iter().find(|group| group.id == id)
+    }
 }
 
 /// One rendered output matcher and answer line.
@@ -345,16 +435,136 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
         inputs,
     };
     let plan = build_plan(manifest, &effective, &normalized_selection)?;
+    let groups = manifest
+        .collection
+        .feature_groups
+        .iter()
+        .map(|group| evaluate_group(group, &controls))
+        .collect();
 
     Ok(SelectionEvaluation {
         view: RecipeView {
             categories,
             controls,
+            groups: manifest
+                .collection
+                .feature_groups
+                .iter()
+                .map(FeatureGroupView::from)
+                .collect(),
         },
         normalized_selection,
         findings,
         plan,
+        groups,
     })
+}
+
+/// Expands a group switch into member feature changes under `selection`.
+///
+/// `on` selects every member that is available under the current selection; members whose
+/// requirements are unmet are left unchanged and never forced on. `off` deselects every member.
+/// No non-member feature is ever changed; the caller applies the result as ordinary feature
+/// choices, so later individual feature choices still take precedence.
+pub fn feature_group_changes(
+    manifest: &Manifest,
+    selection: &Selection,
+    group_id: &str,
+    target: FeatureGroupTarget,
+) -> Result<BTreeMap<String, bool>> {
+    let Some(index) = manifest
+        .collection
+        .feature_groups
+        .iter()
+        .position(|group| group.id == group_id)
+    else {
+        let valid = manifest
+            .collection
+            .feature_groups
+            .iter()
+            .map(|group| group.id.as_str())
+            .collect::<Vec<_>>();
+        return Err(EngineError::InvalidSelection(if valid.is_empty() {
+            format!("unknown feature group {group_id:?}; this recipe defines no feature groups")
+        } else {
+            format!(
+                "unknown feature group {group_id:?}; valid groups: {}",
+                valid.join(", ")
+            )
+        }));
+    };
+    let group = &manifest.collection.feature_groups[index];
+    match target {
+        FeatureGroupTarget::Off => Ok(group
+            .members
+            .iter()
+            .map(|member| (member.clone(), false))
+            .collect()),
+        FeatureGroupTarget::On => {
+            let evaluation = evaluate(manifest, selection)?;
+            let state = &evaluation.groups[index];
+            if let Some(reason) = &state.disabled_reason {
+                return Err(EngineError::InvalidSelection(format!(
+                    "feature group {group_id:?} cannot be turned on: {reason}"
+                )));
+            }
+            Ok(state
+                .available_members
+                .iter()
+                .map(|member| (member.clone(), true))
+                .collect())
+        }
+    }
+}
+
+fn evaluate_group(group: &FeatureGroup, controls: &[FeatureControl]) -> FeatureGroupEvaluation {
+    let mut selected_members = Vec::new();
+    let mut available_members = Vec::new();
+    let mut unavailable_members = Vec::new();
+    for member in &group.members {
+        // Validation guarantees that every member is a visible optional feature.
+        let Some(control) = controls.iter().find(|control| control.id == *member) else {
+            continue;
+        };
+        if control.selected {
+            selected_members.push(member.clone());
+        }
+        if control.interactive && control.unavailable_reason.is_none() {
+            available_members.push(member.clone());
+        } else {
+            unavailable_members.push(UnavailableGroupMember {
+                feature_id: member.clone(),
+                reason: control
+                    .unavailable_reason
+                    .clone()
+                    .unwrap_or_else(|| "Unavailable with the current choices.".to_owned()),
+            });
+        }
+    }
+    let state = if selected_members.is_empty() {
+        FeatureGroupState::Off
+    } else if available_members
+        .iter()
+        .all(|member| selected_members.contains(member))
+    {
+        FeatureGroupState::On
+    } else {
+        FeatureGroupState::Mixed
+    };
+    let disabled_reason = available_members.is_empty().then(|| {
+        format!(
+            "No {} change is available with the current choices.",
+            group.title
+        )
+    });
+    FeatureGroupEvaluation {
+        id: group.id.clone(),
+        state,
+        selected_members,
+        available_members,
+        unavailable_members,
+        disabled_reason,
+    }
 }
 
 /// Renders one component's prompt steps without writing to stdin or starting a process.

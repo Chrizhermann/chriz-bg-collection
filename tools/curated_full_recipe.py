@@ -931,6 +931,18 @@ def _validate_game_interface_order(collection: str) -> None:
                 raise ValueError(f"Review game interface order for {feature['id']}")
 
 
+def _validate_feature_groups(base: dict, collection: dict) -> None:
+    """Feature groups are authored once in manifest/collection.toml and copied unchanged."""
+    groups = collection.get("feature_groups", [])
+    if groups != base.get("feature_groups", []):
+        raise ValueError("feature groups must be carried unchanged from manifest/collection.toml")
+    features = {feature["id"] for feature in collection["features"]}
+    for group in groups:
+        missing = [member for member in group["members"] if member not in features]
+        if missing:
+            raise ValueError(f"feature group {group['id']} names features absent from the curated recipe: {missing}")
+
+
 def build_recipe(root: Path, destination: Path, commit: str) -> None:
     root = root.resolve()
     destination = destination.resolve()
@@ -1078,6 +1090,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     presentations = build_feature_presentations(parsed_collection, rows, curation_map)
     base_collection = apply_feature_presentations(base_collection, presentations)
     _validate_game_interface_order(base_collection)
+    _validate_feature_groups(base, tomllib.loads(base_collection))
     (destination / "collection.toml").write_text(base_collection, encoding="utf-8", newline="\n")
 
     preset_path = destination / "presets/chris-recommended.toml"

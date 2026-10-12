@@ -883,6 +883,7 @@ fn unknown_feature_and_input_overrides_are_rejected_by_semantic_id() {
     let recipe = recipe.to_str().unwrap();
     for (flag, value, expected) in [
         ("--feature", "missing-feature=off", "missing-feature"),
+        ("--group", "missing-group=on", "missing-group"),
         (
             "--input",
             "missing-feature/value=integer:2",
@@ -893,6 +894,227 @@ fn unknown_feature_and_input_overrides_are_rejected_by_semantic_id() {
         assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
         assert!(stderr(&output).contains(expected), "{}", stderr(&output));
     }
+}
+
+/// Fixture recipe with three optional `challenge-mode` members owning every fixture component.
+fn recipe_with_feature_group(temp: &TempDir) -> PathBuf {
+    let recipe = temp.path().join("recipe");
+    copy_tree(&fixture_recipe(), &recipe);
+    let collection = recipe.join("collection.toml");
+    let mut text = fs::read_to_string(&collection).unwrap();
+    text.push_str(
+        r#"
+
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Fixture challenge rules."
+members = ["challenge-a", "challenge-b", "challenge-c"]
+
+[[features]]
+id = "challenge-a"
+title = "Challenge A"
+description = "Fixture challenge A"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg1", component = 0 }]
+
+[[features]]
+id = "challenge-b"
+title = "Challenge B"
+description = "Fixture challenge B"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg1", component = 2 }]
+
+[[features]]
+id = "challenge-c"
+title = "Challenge C"
+description = "Fixture challenge C"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg2", component = 0 }]
+"#,
+    );
+    fs::write(collection, text).unwrap();
+    recipe
+}
+
+fn planned_components(response: &Value) -> Vec<(String, Vec<u64>)> {
+    response["plan"]["runs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|run| {
+            (
+                run["run_id"].as_str().unwrap().to_owned(),
+                run["components"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|component| component.as_u64().unwrap())
+                    .collect(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn plan_group_switch_expands_members_before_feature_overrides() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_feature_group(&temp);
+    let recipe = recipe.to_str().unwrap();
+    let plan = |extra: &[&str]| {
+        let mut args = vec!["--json", "plan", recipe, "--preset", "recommended"];
+        args.extend_from_slice(extra);
+        let output = run(&args);
+        assert!(output.status.success(), "{extra:?}: {}", stderr(&output));
+        json_stdout(&output)
+    };
+
+    let off = plan(&[]);
+    assert!(planned_components(&off).is_empty());
+    assert_eq!(off["groups"][0]["id"], "challenge-mode");
+    assert_eq!(off["groups"][0]["state"], "off");
+
+    let on = plan(&["--group", "challenge-mode=on"]);
+    assert_eq!(
+        planned_components(&on),
+        vec![
+            ("eefixpack-bg1".to_owned(), vec![0, 2]),
+            ("eefixpack-bg2".to_owned(), vec![0]),
+        ]
+    );
+    assert_eq!(on["groups"][0]["state"], "on");
+    assert_eq!(on["normalized_selection"]["features"]["challenge-a"], true);
+    assert!(on["normalized_selection"]["features"]
+        .get("challenge-mode")
+        .is_none());
+
+    // `--feature` wins over the group for one member, wherever it appears on the command line.
+    for args in [
+        [
+            "--group",
+            "challenge-mode=on",
+            "--feature",
+            "challenge-b=off",
+        ],
+        [
+            "--feature",
+            "challenge-b=off",
+            "--group",
+            "challenge-mode=on",
+        ],
+    ] {
+        let mixed = plan(&args);
+        assert_eq!(
+            planned_components(&mixed),
+            vec![
+                ("eefixpack-bg1".to_owned(), vec![0]),
+                ("eefixpack-bg2".to_owned(), vec![0]),
+            ],
+            "{args:?}"
+        );
+        assert_eq!(mixed["groups"][0]["state"], "mixed");
+        assert_eq!(
+            mixed["groups"][0]["selected_members"],
+            serde_json::json!(["challenge-a", "challenge-c"])
+        );
+    }
+
+    let kept = plan(&[
+        "--group",
+        "challenge-mode=off",
+        "--feature",
+        "challenge-c=on",
+    ]);
+    assert_eq!(
+        planned_components(&kept),
+        vec![("eefixpack-bg2".to_owned(), vec![0])]
+    );
+
+    // Later group switches see earlier ones.
+    let toggled = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--group",
+        "challenge-mode=off",
+    ]);
+    assert!(planned_components(&toggled).is_empty());
+
+    let human = run(&[
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+    ]);
+    assert!(human.status.success(), "{}", stderr(&human));
+    assert!(
+        stdout(&human)
+            .contains("Group challenge-mode (Challenge Mode): on, 3 of 3 available selected"),
+        "{}",
+        stdout(&human)
+    );
+}
+
+#[test]
+fn unknown_or_malformed_group_switches_are_rejected() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_feature_group(&temp);
+    let recipe = recipe.to_str().unwrap();
+    let output = run(&[
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "hard-mode=on",
+    ]);
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let error = stderr(&output);
+    assert!(
+        error.contains("unknown feature group \"hard-mode\""),
+        "{error}"
+    );
+    assert!(error.contains("valid groups: challenge-mode"), "{error}");
+
+    for value in [
+        "challenge-mode=true",
+        "challenge-mode=mixed",
+        "challenge-mode",
+    ] {
+        let output = run(&["plan", recipe, "--preset", "recommended", "--group", value]);
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{value}: {}",
+            stderr(&output)
+        );
+        assert!(
+            stderr(&output).contains("group override"),
+            "{}",
+            stderr(&output)
+        );
+    }
+
+    let output = run(&[
+        "--json",
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "hard-mode=on",
+    ]);
+    assert_eq!(output.status.code(), Some(1));
+    let response = json_stdout(&output);
+    assert_eq!(response["ok"], false);
+    assert_eq!(response["error"]["code"], "invalid_selection");
 }
 
 #[test]

@@ -530,6 +530,23 @@ pub struct Feature {
     pub inputs: Vec<InputSpec>,
 }
 
+/// A player-facing group of optional features that can be switched together.
+///
+/// Group state is always derived from the member features' selections and is never stored in
+/// selections, presets, or receipts; members remain individually selectable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroup {
+    /// Stable kebab-case group id.
+    pub id: String,
+    /// Player-facing title, also used to mark each member.
+    pub title: String,
+    /// Player-facing explanation shown with the group control.
+    pub description: String,
+    /// Member feature ids in player-facing order.
+    pub members: Vec<String>,
+}
+
 /// Minimal preset metadata loaded from `presets/<id>.toml`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -556,4 +573,8 @@ pub struct Collection {
     /// Player-facing semantic features in authored display order.
     #[serde(default)]
     pub features: Vec<Feature>,
+    /// Optional player-facing feature groups. Omitted when empty so recipes without groups
+    /// serialize, and therefore freeze and digest, exactly as before groups existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub feature_groups: Vec<FeatureGroup>,
 }

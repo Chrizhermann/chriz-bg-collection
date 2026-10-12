@@ -1,7 +1,8 @@
 # Challenge Mode group
 
 13 October 2026. Christopher approved the group and its behavior the same day
-(below); it is not implemented yet. It covers the small first group and how
+(below). Implemented in the installer on 13 October (recipe `[[feature_groups]]`,
+engine state, CLI `--group`, desktop card); the website step is still open. It covers the small first group and how
 its control behaves. The full rule list stays in the
 [Challenge Mode outlook](2026-09-13-challenge-mode-outlook.md#complete-rule-inventory).
 

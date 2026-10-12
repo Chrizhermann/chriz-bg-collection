@@ -1003,6 +1003,55 @@ fn evaluate_build_keeps_semantic_controls_and_exposes_explicit_advanced_pause_op
 }
 
 #[test]
+fn evaluate_build_projects_the_challenge_mode_group_and_its_derived_state() {
+    let bridge = NativeBridge::new(workspace_root().join("manifest"), "chris-recommended");
+    let members = [
+        "feature:chriz-bg-rebalance:component-301",
+        "feature:chriz-bg-modpack:component-235",
+        "feature:chriz-bg-rebalance:component-110",
+        "feature:chriz-sod-remix:component-257",
+    ];
+    let evaluate = |features: &[(&str, bool)]| {
+        bridge
+            .evaluate_build(&NormalizedSelection {
+                platform: "windows".to_owned(),
+                features: features
+                    .iter()
+                    .map(|(id, selected)| ((*id).to_owned(), *selected))
+                    .collect(),
+                inputs: Default::default(),
+            })
+            .expect("evaluate build")
+    };
+
+    let recommended = evaluate(&[]);
+    assert_eq!(recommended.view.groups.len(), 1);
+    assert_eq!(recommended.view.groups[0].id, "challenge-mode");
+    assert_eq!(recommended.view.groups[0].members, members);
+    assert_eq!(recommended.groups.len(), 1);
+    let serialized = serde_json::to_value(&recommended).expect("serialize evaluation");
+    assert_eq!(serialized["groups"][0]["state"], "off");
+    assert_eq!(
+        serialized["groups"][0]["available_members"],
+        serde_json::json!(members)
+    );
+    assert_eq!(serialized["view"]["groups"][0]["title"], "Challenge Mode");
+    // The derived state never becomes a stored selection key.
+    assert!(!recommended
+        .normalized_selection
+        .features
+        .contains_key("challenge-mode"));
+
+    let mixed = evaluate(&[(members[3], true)]);
+    let serialized = serde_json::to_value(&mixed).expect("serialize evaluation");
+    assert_eq!(serialized["groups"][0]["state"], "mixed");
+    assert_eq!(
+        serialized["groups"][0]["selected_members"],
+        serde_json::json!([members[3]])
+    );
+}
+
+#[test]
 fn manual_breakpoint_missing_from_selection_is_rejected_before_source_or_destination_work() {
     let bridge = NativeBridge::new(workspace_root().join("manifest"), "chris-recommended");
     let selection = NormalizedSelection {

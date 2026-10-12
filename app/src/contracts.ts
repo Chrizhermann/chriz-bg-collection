@@ -138,8 +138,29 @@ export interface PhaseSummary {
   readonly detail: string;
 }
 
+export type FeatureGroupState = "on" | "off" | "mixed";
+
+export interface UnavailableGroupMember {
+  readonly featureId: string;
+  readonly reason: string;
+}
+
+/** An authored feature group plus its state, derived by the engine from member selections. */
+export interface FeatureGroup {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly members: readonly string[];
+  readonly state: FeatureGroupState;
+  readonly selectedMembers: readonly string[];
+  readonly availableMembers: readonly string[];
+  readonly unavailableMembers: readonly UnavailableGroupMember[];
+  readonly disabledReason: string | null;
+}
+
 export interface SelectionEvaluation {
   readonly manualCheckpointOptions?: readonly ManualCheckpointOption[];
+  readonly featureGroups?: readonly FeatureGroup[];
   readonly view: RecipeView;
   readonly normalizedSelection: NormalizedSelection;
   readonly findings: readonly SelectionFinding[];
