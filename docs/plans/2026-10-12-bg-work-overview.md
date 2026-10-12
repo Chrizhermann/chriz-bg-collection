@@ -51,6 +51,28 @@ All three dispatched tasks have now completed their bounded local delivery.
 No worker from this dispatch still holds an edit reservation. Release integration
 and the remaining player checks are not finished by those deliveries.
 
+## October 13 continuation (Claude)
+
+Christopher's decisions from 13 October are recorded in the
+[intake notes](2026-10-13-next-batch-intake.md#decisions-christopher-13-october-2026).
+Nothing below is published, merged into a release, or installed into a game.
+
+| Work | Status | Where |
+|---|---|---|
+| Modpack v0.2.0-alpha.11 (237/238 recruitment XP, reader-level 430, experimental banking 650/651) | **Local candidate, packaged.** 2,561 tests pass. Unpublished; needs a Defender scan before publication | `codex/campaign-scroll-integration` @ `1f0e8db`; ZIP in `C:\Users\chris\.codex\artifacts\next-batch-20261013\modpack` |
+| Flail PR7 → Rebalance v0.8.2 | **Regression fixed and pushed** to [PR7](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/7) @ `c5a9169`. Local package built; merge/release wait for Christopher | `...\next-batch-20261013\rebalance` |
+| SoD Remix v0.6.13 (177/198/285 plus relocated-loot identification) | **Consolidated and packaged locally.** The 16 known component-115 fixture failures are tracked in [issue 27](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/27) | `claude/sod-integration-oct13` @ `fd97c3d`; `...\next-batch-20261013\sod` |
+| Bard ceilings 420/421 + Bardic 3010 | **Wired, default** | CEBG `74e9aae`, `1f1b633` |
+| Intake notes, changelog drafts, Challenge Mode design | **Written** with the decisions | CEBG `600b9be` |
+| Degrodel: let him go or fight him (new Modpack component) | **In progress** | Modpack `claude/degrodel-fight` |
+| "Banked XP" on the character record | **In progress** (Codex) | Modpack `claude/xp-bank-display` |
+| Challenge Mode choice at the top of the installer | **Approved; next CEBG implementation** | CEBG |
+| Combined test install | **Waiting** for disk cleanup and Christopher's go | — |
+
+Waiting for Christopher: the no-bank dual-class rule, the extra Degrodel fight
+layer (and whether it is normal or Challenge Mode), whether SoD 177/198/285 are
+mandatory or default, and the publication order.
+
 ## The useful answer
 
 There is enough nearly finished work for a worthwhile combined update. The best
@@ -170,9 +192,9 @@ There is **no agreed polished in-game display**. Current implementation provides
 cap/release notices and `CBMBank_Status()` in the cheat console. That is useful
 for testing, not a finished player-facing interface.
 
-Suggested small design, **not yet approved/implemented**: show “Banked XP: N”
-with the character's XP information; a tooltip/details view explains the current
-cap and when the bank unlocks. Keep normal XP and bank separate. Start with the
+**Approved 13 October, implementation in progress:** show “Banked XP: N”
+in the character record where XP is shown; a tooltip/details view explains the
+current cap and when the bank unlocks. Keep normal XP and bank separate. Start with the
 default UI; establish how the same information remains accessible with the
 supported alternative UIs before promising identical placement everywhere.
 Avoid constant per-award spam or creating a whole new progression screen.
@@ -189,10 +211,12 @@ is no longer the full story. The combined source is clean at1eadb92 on
 
 ### Preserved later work
 
-- **Degrodel and the Helm of Balduran — October13 report.** Christopher reports
-  that Degrodel runs away with the helmet when it is brought to him. Review
-  dialogue/escape and item-transfer behavior before choosing a fix; cause and
-  intended behavior are unverified. Backlog only, no game changes.
+- **Degrodel and the Helm of Balduran — now active (October 13).** Vanilla
+  design, not a bug: at the hand-in Degrodel takes the helm, pays 5,000 gold,
+  summons his servants and teleports away. Christopher wants a dialogue choice:
+  let him go as now, or keep the helm and fight him together with his servants,
+  slightly spicier but not much tougher. The base choice is in progress in
+  Modpack `claude/degrodel-fight`; the extra fight layer waits for his pick.
 - Less companion chatter: start with Fade's selected comment-only interjections;
   preserve quests, romances/friendship progression and player-initiated talks.
   Concrete reduction list/strength needs approval. Evandra's shared story timers
@@ -691,10 +715,11 @@ Do not recycle an unrelated owner chat to fill an available agent slot.
 1. Luck60s, Bless60s, Aid120s with current bonuses, druidCC level5—or different choices?
 2. Entropy: normal dispels only, or also removable by Breach? Keep separate Spell
    Shield protection? Permit appropriate enemies to swap a fifth-level spell for Screen?
-3. Initial Challenge Mode optional membership beyond Emotion/Baeloth. Existing
-   normal Flail/arrows/physical-cap defaults remain unchanged, as already decided.
-4. XP display placement; public banking stays optional. Decide the no-bank dual
-   arithmetic before claiming general dual-class support, not before Garithos plays.
+3. ~~Initial Challenge Mode membership~~ Decided 13 October: a top-level choice
+   for all Challenge Mode components, off by default; see the October 13 section.
+4. ~~XP display placement~~ Decided 13 October: in the character record next to
+   XP. Still open: the no-bank dual arithmetic, before claiming general
+   dual-class support (not before Garithos plays).
 5. After trying it: include out-of-combat Pathfinding as an optional public choice?
 
 **Can wait:** less-chatter reduction strength/list; Fighter/Mystic Fire changes;
