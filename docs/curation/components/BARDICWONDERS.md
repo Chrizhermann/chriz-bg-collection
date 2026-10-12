@@ -2,7 +2,9 @@
 
 Listed at reference version **—**; refreshed for Chris's fork release
 **v2.9c-balance.4** (`37d3e5ab13d3b3520afb3246fa02de125a970b72`).
-26 entries, 21 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
+Row `3010` comes from the pinned release **v2.9c-balance.6**
+(`7db986160fcc5f466ecb8730eabd6bb226ee71c2`); it did not exist in the reference install.
+27 entries, 21 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
 
@@ -18,6 +20,12 @@ Listed at reference version **—**; refreshed for Chris's fork release
   shared HLA corrections described in its release README. The complete release has
   not been validated in live combat; Symphony's intended one-round party
   invisibility remains a known issue.
+- `3010` extends Rebalance's bard spell-level ceilings to Bardic Wonders kits: Dancer
+  stops at 6th-level spells, Kapellmeister and Darkbloom reach 8th (bard level 29), the
+  other Bardic Wonders bard kits reach 7th (bard level 21). Kits that are not installed
+  are skipped. It requires EEex and Rebalance `420`/`421`, and installs late, after the
+  Rebalance run. Optional and unchecked; **default pending Christopher's choice**
+  together with Rebalance `420`/`421` (see `CHRIZ-BG-REBALANCE.md`).
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
@@ -47,3 +55,4 @@ Listed at reference version **—**; refreshed for Chris's fork release
 | 2010 | Bardic Wonders: 3e Alignment for Bards (any non-lawful) | Tweaks & Additions |  |  | |
 | 2011 | Bardic Wonders: Bard Casting Level Begins from 2nd level | Tweaks & Additions |  |  | |
 | 3001 | Bardic Wonders: Patch Dialogue Class Checks for: Gallant, Mage/Bard and Fighter/Mage/Bard (install late) | Patches |  | ✓ | default |
+| 3010 | Bardic Wonders: Kit-specific bard spell progression (EEex; install late) | Patches |  |  | optional |

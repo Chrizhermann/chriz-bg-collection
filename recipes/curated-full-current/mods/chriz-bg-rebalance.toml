@@ -113,3 +113,11 @@ name = "Party physical resistance: diminishing returns above 80%, maximum 90%"
 [[components]]
 id = 320
 name = "Combat cloud forms: replace damage immunity with 75% resistance"
+
+[[components]]
+id = 420
+name = "EEex: independent kit spell-progression provider"
+
+[[components]]
+id = 421
+name = "Bard progression: IWD through level 7; Blade and Skald use original progression through level 6"

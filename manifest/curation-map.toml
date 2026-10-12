@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1224
+expected_rows = 1227
 expected_choice_groups = 74
 expected_optional_none_groups = 23
 expected_fixed_groups = 10
@@ -890,6 +890,11 @@ rows = ["BARDICWONDERS:2006"]
 id = "feature:bardicwonders:component-3001"
 kind = "feature"
 rows = ["BARDICWONDERS:3001"]
+
+[[targets]]
+id = "feature:bardicwonders:component-3010"
+kind = "feature"
+rows = ["BARDICWONDERS:3010"]
 
 [[targets]]
 id = "feature:bg1npc:component-0"
@@ -3773,6 +3778,12 @@ parent = "mod:chriz-bg-rebalance"
 id = "feature:chriz-bg-rebalance:component-320"
 kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:320"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:bard-spell-ceilings"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:420", "CHRIZ-BG-REBALANCE:421"]
 parent = "mod:chriz-bg-rebalance"
 
 [[targets]]

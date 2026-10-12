@@ -20,7 +20,7 @@ const BG_REBALANCE_COMPONENTS: &[u32] = &[
 ];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
     100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
-    310, 130, 220, 320,
+    420, 421, 310, 130, 220, 320,
 ];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
@@ -318,6 +318,11 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 1
             ),
             (
+                "feature:chriz-bg-rebalance:bard-spell-ceilings",
+                Decision::Optional,
+                2
+            ),
+            (
                 "feature:chriz-bg-rebalance:tempus-bundle",
                 Decision::Default,
                 6
@@ -528,5 +533,50 @@ fn approved_balance_defaults_respect_sr_and_eeex_prerequisites() {
         for independent in [130, 200, 211, 220, 320] {
             assert!(components.contains(&independent));
         }
+    }
+}
+
+#[test]
+fn bard_spell_ceilings_are_an_unchecked_eeex_choice_in_both_profiles() {
+    const BASE: &str = "feature:chriz-bg-rebalance:bard-spell-ceilings";
+    const RUN: &str = "chriz-bg-rebalance-bg2";
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            manifest.presets["chris-recommended"].selections[BASE], "off",
+            "{directory}"
+        );
+        let control = baseline.view.control(BASE).unwrap();
+        assert_eq!(control.decision, Decision::Optional, "{directory}");
+        assert!(!control.selected && control.interactive, "{directory}");
+        assert_eq!(control.requires, ["feature:eeex:mandatory-components"]);
+        assert_eq!(
+            baseline.plan.components_for(RUN),
+            Some(BG_REBALANCE_COMPONENTS),
+            "{directory}"
+        );
+
+        let mut selection = baseline.normalized_selection.to_selection();
+        selection.set_feature(BASE, true);
+        let enabled = evaluate(&manifest, &selection).unwrap();
+        let mut expected = BG_REBALANCE_COMPONENTS.to_vec();
+        let after_flail = expected.iter().position(|c| *c == 302).unwrap() + 1;
+        expected.splice(after_flail..after_flail, [420, 421]);
+        assert_eq!(
+            enabled.plan.components_for(RUN),
+            Some(&expected[..]),
+            "{directory}"
+        );
+        let mut others = enabled.plan.clone();
+        others.runs.retain(|run| run.run_id != RUN);
+        let mut baseline_others = baseline.plan.clone();
+        baseline_others.runs.retain(|run| run.run_id != RUN);
+        assert_eq!(others, baseline_others, "{directory}");
+
+        selection.set_feature("mod:eeex", false);
+        let no_eeex = evaluate(&manifest, &selection).unwrap();
+        let components = no_eeex.plan.components_for(RUN).unwrap();
+        assert!(!components.contains(&420) && !components.contains(&421));
     }
 }

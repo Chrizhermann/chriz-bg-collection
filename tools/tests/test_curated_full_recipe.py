@@ -57,7 +57,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         run_id = "chriz-bg-rebalance-bg2"
         runs = tomllib.loads(collection)["runs"]
         run = next(run for run in runs if run["run_id"] == run_id)
-        self.assertEqual(run["components"][-6:], [408, 302, 310, 130, 220, 320])
+        self.assertEqual(run["components"][-8:], [408, 302, 420, 421, 310, 130, 220, 320])
         # Regression: sorting numerical IDs recreated the September 30 failure.
         sorted_source = collection.replace(
             f"components = {run['components']}",
@@ -321,7 +321,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # defaults and two separately ordered companion components.
                 # October 12 implements the agreed next-release Emotion301 opt-in;
                 # all other semantic selections, dependencies and order stay intact.
-                "bbeacd7a54e64afc6e8a62313c218e129e07898a4e5448530993b500a3b96172",
+                # October 13 offers optional, unchecked bard spell-level ceilings
+                # (Rebalance 420/421 plus Bardic Wonders 3010 in its own late run).
+                "5fc0697c1f4c8ddc778184dd658d207b722d765e87eede022f1138aad36a147d",
             )
 
             legacy_bg1npc_groups = {
@@ -510,9 +512,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bardic_artifact["archive"]["tp2_paths"],
                 ["BardicWonders/Setup-BardicWonders.tp2"],
             )
-            # Refreshing the fork must not enable the optional 3010 progression
-            # adapter or change existing choices and their native TP2 order.
-            self.assertNotIn(3010, [component["id"] for component in bardic["components"]])
+            # The optional 3010 progression adapter is offered only in its own late
+            # run, unchecked; existing choices and their native TP2 order are unchanged.
+            self.assertIn(3010, [component["id"] for component in bardic["components"]])
+            self.assertEqual(runs["bardicwonders-progression-bg2"]["components"], [3010])
+            self.assertFalse(baseline_effective["feature:bardicwonders:component-3010"])
             self.assertEqual(
                 runs["bardicwonders-bg2"]["components"],
                 [
@@ -598,7 +602,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 for feature in collection["features"]
                 if feature["id"].startswith("feature:bardicwonders:")
             ]
-            self.assertEqual(len(bardic_features), 20)
+            self.assertEqual(len(bardic_features), 21)
             self.assertTrue(
                 all(feature["parent"] == "mod:bardicwonders" for feature in bardic_features)
             )
@@ -987,7 +991,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertTrue(all(f"feature:chriz-bg-rebalance:component-{id_}" not in features for id_ in (420, 421)))
         run = next(run for run in collection["runs"] if run["run_id"] == "chriz-bg-rebalance-bg2")
         self.assertEqual(run["phase"], "post-eet-end")
-        self.assertEqual(run["components"][-6:], [408, 302, 310, 130, 220, 320])
+        self.assertEqual(run["components"][-8:], [408, 302, 420, 421, 310, 130, 220, 320])
 
     def test_shifted_dialogue_is_optional_and_requires_either_kit_without_eeex(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))

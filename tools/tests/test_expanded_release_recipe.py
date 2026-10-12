@@ -210,10 +210,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
                 self.assertIn(provider, self.features)
                 self.assertIn((run_id, 301), self.selected({provider: "off", feature_id: "on"}))
 
-    def test_emotion_run_keeps_source_order_and_excludes_bard_progression(self):
+    def test_emotion_run_keeps_source_order_and_leaves_bard_ceilings_unselected(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertNotIn((run_id, component), self.selected())
@@ -227,6 +227,68 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
                          ("cdtweaks-spell-save-penalties-bg2", 2312),
                          ("chriz-bg-modpack-bg2", 430)):
             self.assertIn(identity, selected)
+
+    def test_bard_spell_ceilings_are_optional_off_and_gate_the_bardic_adapter(self):
+        base = "feature:chriz-bg-rebalance:bard-spell-ceilings"
+        adapter = "feature:bardicwonders:component-3010"
+        rebalance_run = "chriz-bg-rebalance-bg2"
+        bardic_run = "bardicwonders-progression-bg2"
+        # Default pending Christopher's choice: both offered, optional and off.
+        for feature_id in (base, adapter):
+            self.assertEqual(self.features[feature_id]["decision"], "optional")
+            self.assertEqual(self.features[feature_id]["readiness"], "ready")
+            self.assertEqual(self.features[feature_id]["category"], "kits")
+            self.assertNotEqual(self.preset.get(feature_id, "off"), "on")
+        self.assertEqual(self.preset[base], "off")
+        self.assertEqual(self.features[base]["parent"], "mod:chriz-bg-rebalance")
+        self.assertEqual(self.features[base]["requires"], ["feature:eeex:mandatory-components"])
+        self.assertEqual(self.features[base]["components"], [
+            {"run_id": rebalance_run, "component": 420},
+            {"run_id": rebalance_run, "component": 421},
+        ])
+        self.assertEqual(self.features[adapter]["parent"], "mod:bardicwonders")
+        self.assertEqual(self.features[adapter]["requires"],
+                         [base, "feature:eeex:mandatory-components"])
+        self.assertEqual(self.features[adapter]["components"],
+                         [{"run_id": bardic_run, "component": 3010}])
+
+        # 420 precedes 421 in the existing Rebalance run; 3010 has its own late run
+        # immediately after it, behind every other Bardic Wonders run.
+        components = self.runs[rebalance_run]["components"]
+        self.assertLess(components.index(302), components.index(420))
+        self.assertLess(components.index(420), components.index(421))
+        self.assertLess(components.index(421), components.index(310))
+        self.assertEqual(self.runs[bardic_run]["phase"], "post-eet-end")
+        self.assertEqual(self.runs[bardic_run]["mod_id"], "bardicwonders")
+        self.assertEqual(self.runs[bardic_run]["components"], [3010])
+        self.assertEqual(self.positions[bardic_run], self.positions[rebalance_run] + 1)
+        for earlier in ("bardicwonders-bg2", "bardicwonders-garrick-bg2",
+                        "bardicwonders-dialogue-patch-bg2", "cdtweaks-bg2", "eeex-bg2"):
+            self.assertLess(self.positions[earlier], self.positions[bardic_run])
+
+        baseline = self.selected()
+        ceilings = {(rebalance_run, 420), (rebalance_run, 421)}
+        self.assertFalse(ceilings & baseline)
+        self.assertNotIn((bardic_run, 3010), baseline)
+        # The base choice alone installs exactly 420/421.
+        base_only = self.selected({base: "on"})
+        self.assertEqual(base_only - baseline, ceilings)
+        self.assertEqual(baseline - base_only, set())
+        # Both together add 3010 too.
+        both = self.selected({base: "on", adapter: "on"})
+        self.assertEqual(both - baseline, ceilings | {(bardic_run, 3010)})
+        self.assertEqual(baseline - both, set())
+        # 3010 is never installed without 420/421, EEex or Bardic Wonders.
+        for missing in ({base: "off"}, {"mod:chriz-bg-rebalance": "off"}, {"mod:eeex": "off"},
+                        {"mod:bardicwonders": "off"}):
+            with self.subTest(missing=missing):
+                selected = self.selected({base: "on", adapter: "on", **missing})
+                self.assertNotIn((bardic_run, 3010), selected)
+        # Deselecting Bardic Wonders leaves the base ceilings valid.
+        no_bardic = self.selected({base: "on", adapter: "on", "mod:bardicwonders": "off"})
+        self.assertTrue(ceilings <= no_bardic)
+        self.assertFalse(any(run.startswith("bardicwonders-") for run, _ in no_bardic))
+        self.assertFalse(ceilings & self.selected({base: "on", "mod:eeex": "off"}))
 
 
 if __name__ == "__main__":

@@ -407,3 +407,107 @@ fn repaired_bg1npc_groups_replace_only_the_authored_alternative() {
         assert_eq!(changed.plan, expected);
     }
 }
+
+#[test]
+fn bard_spell_ceilings_are_unchecked_and_gate_the_bardic_kit_adapter() {
+    const BASE: &str = "feature:chriz-bg-rebalance:bard-spell-ceilings";
+    const ADAPTER: &str = "feature:bardicwonders:component-3010";
+    const REBALANCE: &str = "chriz-bg-rebalance-bg2";
+    const BARDIC: &str = "bardicwonders-progression-bg2";
+    let manifest = recipe();
+    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let has = |plan: &bg_engine::resolve::InstallPlan, run: &str, component: u32| {
+        plan.components_for(run)
+            .is_some_and(|components| components.contains(&component))
+    };
+
+    // Default pending Christopher's choice: offered, ready, optional and off.
+    let base = baseline.view.control(BASE).unwrap();
+    assert_eq!(base.decision, Decision::Optional);
+    assert_eq!(base.readiness, Readiness::Ready);
+    assert!(!base.selected && base.interactive);
+    let adapter = baseline.view.control(ADAPTER).unwrap();
+    assert_eq!(adapter.decision, Decision::Optional);
+    assert_eq!(adapter.readiness, Readiness::Ready);
+    assert!(!adapter.selected && !adapter.interactive);
+    assert_eq!(
+        adapter.unavailable_reason.as_deref(),
+        Some("Requires Bard spell-level ceilings.")
+    );
+    assert!(!has(&baseline.plan, REBALANCE, 420) && !has(&baseline.plan, REBALANCE, 421));
+    assert_eq!(baseline.plan.components_for(BARDIC), None);
+
+    // A stale selection of only the adapter cannot install 3010 without 420/421.
+    let mut adapter_only = baseline.normalized_selection.to_selection();
+    adapter_only.set_feature(ADAPTER, true);
+    let adapter_only = evaluate(&manifest, &adapter_only).unwrap();
+    assert_eq!(adapter_only.plan, baseline.plan);
+    assert!(!adapter_only.view.control(ADAPTER).unwrap().selected);
+
+    // The base choice alone adds exactly 420 then 421 after Flail 302.
+    let mut base_only = baseline.normalized_selection.to_selection();
+    base_only.set_feature(BASE, true);
+    let base_only = evaluate(&manifest, &base_only).unwrap();
+    let mut expected = baseline.plan.clone();
+    let rebalance = &mut expected
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == REBALANCE)
+        .unwrap()
+        .components;
+    let after_flail = rebalance.iter().position(|c| *c == 302).unwrap() + 1;
+    rebalance.splice(after_flail..after_flail, [420, 421]);
+    assert_eq!(base_only.plan, expected);
+    assert!(base_only.view.control(ADAPTER).unwrap().interactive);
+
+    // Both add 3010 in its own late run immediately after the Rebalance run.
+    let mut both = base_only.normalized_selection.to_selection();
+    both.set_feature(ADAPTER, true);
+    let both = evaluate(&manifest, &both).unwrap();
+    assert_eq!(both.plan.components_for(BARDIC), Some(&[3010][..]));
+    let position = |id: &str| {
+        both.plan
+            .runs
+            .iter()
+            .position(|run| run.run_id == id)
+            .unwrap_or_else(|| panic!("missing selected run {id}"))
+    };
+    assert_eq!(position(BARDIC), position(REBALANCE) + 1);
+    for earlier in [
+        "eeex-bg2",
+        "bardicwonders-bg2",
+        "bardicwonders-garrick-bg2",
+        "bardicwonders-dialogue-patch-bg2",
+        "cdtweaks-bg2",
+    ] {
+        assert!(position(earlier) < position(BARDIC), "{earlier}");
+    }
+    let mut without_adapter = both.plan.clone();
+    without_adapter.runs.retain(|run| run.run_id != BARDIC);
+    assert_eq!(without_adapter, base_only.plan);
+
+    // Deselecting Bardic Wonders keeps 420/421 and drops every Bardic run.
+    let mut no_bardic = both.normalized_selection.to_selection();
+    no_bardic.set_feature("mod:bardicwonders", false);
+    let no_bardic = evaluate(&manifest, &no_bardic).unwrap();
+    assert!(has(&no_bardic.plan, REBALANCE, 420) && has(&no_bardic.plan, REBALANCE, 421));
+    assert!(no_bardic.view.control(BASE).unwrap().selected);
+    assert!(!no_bardic
+        .plan
+        .runs
+        .iter()
+        .any(|run| run.mod_id == "bardicwonders"));
+
+    // Removing the base choice, Rebalance or EEex removes the adapter too.
+    for disabled in [BASE, "mod:chriz-bg-rebalance", "mod:eeex"] {
+        let mut selection = both.normalized_selection.to_selection();
+        selection.set_feature(disabled, false);
+        let result = evaluate(&manifest, &selection).unwrap();
+        assert_eq!(result.plan.components_for(BARDIC), None, "{disabled}");
+        assert!(!has(&result.plan, REBALANCE, 420), "{disabled}");
+        assert!(
+            !result.view.control(ADAPTER).unwrap().selected,
+            "{disabled}"
+        );
+    }
+}

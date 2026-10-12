@@ -60,7 +60,7 @@ NATIVE_RUN_ORDERS = {
     "chriz-bg-modpack-bg2": [130, 400, 410, 430, 440, 450, 610, 611, 630],
     # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
     # Verify new source pins with tools/check_native_component_order.py.
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320],
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],
@@ -355,6 +355,17 @@ components = [1012, 3001]
 args = []
 
 """,
+    # Bardic Wonders 3010 registers its kits with Rebalance 420/421 and refreshes
+    # kit descriptions, so it runs right after the Rebalance run and therefore
+    # after every Bardic kit run.
+    "after-rebalance": """[[runs]]
+run_id = "bardicwonders-progression-bg2"
+mod_id = "bardicwonders"
+phase = "post-eet-end"
+components = [3010]
+args = []
+
+""",
     "before-buffbot": """[[runs]]
 run_id = "klatu-armor-thieving-bg2"
 mod_id = "klatu"
@@ -380,6 +391,8 @@ def _run_for(row: RowKey) -> str:
             return "bardicwonders-garrick-bg2"
         if row.component_id in {1012, 3001}:
             return "bardicwonders-dialogue-patch-bg2"
+        if row.component_id == 3010:
+            return "bardicwonders-progression-bg2"
         return "bardicwonders-bg2"
     if row.catalog == "CDTWEAKS":
         return "cdtweaks-spell-save-penalties-bg2" if row.component_id in {2310, 2311, 2312} else "cdtweaks-bg2"
@@ -491,6 +504,12 @@ def _feature_blocks(root: Path, collection: dict) -> str:
             requires = ["feature:eeex:mandatory-components"]
         elif target.target_id == "feature:bardicwonders:component-3001":
             requires = ["feature:bardicwonders:component-1012"]
+        elif target.target_id == "feature:bardicwonders:component-3010":
+            # Setup-BardicWonders.tp2 3010 needs EEex and CBRSPVER.2DA from
+            # Rebalance 420, and refreshes descriptions that 421 registers.
+            requires = ["feature:chriz-bg-rebalance:bard-spell-ceilings", "feature:eeex:mandatory-components"]
+            # Show the kit adapter beside the base ceilings and the Bardic kits.
+            category = "kits"
         elif target.target_id == "feature:evandra:component-1":
             requires = ["feature:evandra:mandatory-components"]
         components = [
@@ -957,6 +976,14 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         if base_collection.count(marker) != 1:
             raise ValueError(f"collection marker is not unique: {marker}")
         base_collection = base_collection.replace(marker, block + marker, 1)
+    rebalance_runs = list(re.finditer(
+        r'(?ms)^\[\[runs\]\]\nrun_id = "chriz-bg-rebalance-bg2"\n.*?(?=^\[\[runs\]\])',
+        base_collection,
+    ))
+    if len(rebalance_runs) != 1:
+        raise ValueError("Bardic kit spell progression needs one Rebalance run followed by another run")
+    rebalance_end = rebalance_runs[0].end()
+    base_collection = base_collection[:rebalance_end] + run_blocks["after-rebalance"] + base_collection[rebalance_end:]
 
     # RANDOMISER.md explicitly keeps the fresh-stack run after SCS. Leave the
     # earlier Tweaks/IWDification insertions in place; move only Randomiser's run.

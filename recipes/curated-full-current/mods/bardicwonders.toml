@@ -86,3 +86,7 @@ name = "Bardic Wonders: Bard Song Overhead Visual Effect"
 [[components]]
 id = 3001
 name = "Bardic Wonders: Patch Dialogue Class Checks for: Gallant, Mage/Bard and Fighter/Mage/Bard (install late)"
+
+[[components]]
+id = 3010
+name = "Bardic Wonders: Kit-specific bard spell progression (EEex; install late)"

@@ -313,7 +313,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320]
 args = []
 
 [[runs]]
@@ -3715,6 +3715,20 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 320 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:bard-spell-ceilings"
+title = "Bard spell-level ceilings"
+description = "Bards and Jesters follow the Icewind Dale bard progression up to 7th-level spells, unlocked at bard level 21. Blades and Skalds keep the original progression, capped at 6th level. Requires EEex. Existing characters gain the new spell capacity at their next level-up."
+category = "kits"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components"]
+components = [
+  { run_id = "chriz-bg-rebalance-bg2", component = 420 },
+  { run_id = "chriz-bg-rebalance-bg2", component = 421 },
+]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-235"

@@ -54,6 +54,7 @@ TITLE_OVERRIDES = {
     RowKey("CDTWEAKS", 3198): "Four times as many hostile rest encounters",
     RowKey("CDTWEAKS", 3320): "Keep resale prices from falling with shop stock",
     RowKey("KLATU", 2150): "Use thief skills in armor",
+    RowKey("BARDICWONDERS", 3010): "Bard spell-level ceilings: Bardic Wonders kits",
 }
 
 DESCRIPTION_OVERRIDES = {
@@ -168,6 +169,12 @@ DESCRIPTION_OVERRIDES = {
     RowKey("CDTWEAKS", 4140): (
         "Stops automatic assignment of Beamdog's Advanced AI scripts to party members. "
         "You can still assign scripts yourself; enemy AI is unchanged."
+    ),
+    RowKey("BARDICWONDERS", 3010): (
+        "Extends the bard spell-level ceilings to Bardic Wonders kits: Dancers stop at 6th-level spells, "
+        "Kapellmeisters and Darkbloom reach 8th at bard level 29, and the other new bard kits reach 7th "
+        "at bard level 21. Kits that are not installed are skipped. Requires EEex. "
+        "Existing characters gain the new spell capacity at their next level-up."
     ),
     RowKey("KLATU", 2150): (
         "No added skill penalties. Allows ordinary thieving and stealth in armor while "
