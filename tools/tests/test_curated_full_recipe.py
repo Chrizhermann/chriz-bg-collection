@@ -319,7 +319,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # September 30 corrects Rebalance302 to its native TP2 position after408.
                 # October 7 adds approved Hardiness/anti-magic/items/resistance
                 # defaults and two separately ordered companion components.
-                "af5ab387b075aac8a44f798f02138b647c72c43bfd87d607805ecee763270cb6",
+                # October 12 implements the agreed next-release Emotion301 opt-in;
+                # all other semantic selections, dependencies and order stay intact.
+                "bbeacd7a54e64afc6e8a62313c218e129e07898a4e5448530993b500a3b96172",
             )
 
             legacy_bg1npc_groups = {
@@ -966,7 +968,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
                             features[f"feature:hiddengameplayoptions:component-{component}"]["conflicts"]
                         })
 
-    def test_flail_default_is_independent_of_eeex_and_keeps_emotion_selected(self) -> None:
+    def test_flail_default_is_independent_of_eeex_and_emotion_optin(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))
         preset = tomllib.loads((self.root / "manifest/presets/chris-recommended.toml").read_text())["selections"]
         id_ = "feature:chriz-bg-rebalance:component-302"
@@ -975,7 +977,10 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertEqual(features[id_].get("requires", []), [])
         defaults = _effective_features(collection, preset)
         self.assertTrue(defaults[id_])
-        self.assertTrue(defaults["feature:chriz-bg-rebalance:component-301"])
+        self.assertFalse(defaults["feature:chriz-bg-rebalance:component-301"])
+        self.assertTrue(_effective_features(collection, {
+            **preset, "feature:chriz-bg-rebalance:component-301": "on",
+        })[id_])
         self.assertTrue(_effective_features(collection, {**preset, "mod:eeex": "off"})[id_])
         self.assertFalse(_effective_features(collection, {**preset, id_: "off"})[id_])
         self.assertFalse(_effective_features(collection, {**preset, "mod:chriz-bg-rebalance": "off"})[id_])

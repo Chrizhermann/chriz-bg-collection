@@ -96,9 +96,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(self.preset[interval_controls], "on")
         self.assertEqual(selected - without_controls, {("hiddengameplayoptions-bg2", 38)})
         self.assertEqual(without_controls - selected, set())
-        # October 7 adds seven Rebalance defaults and Edwin236's dedicated run.
-        self.assertEqual(len(without_controls), 461)
-        self.assertEqual(len(selected), 462)
+        # October 7 adds seven Rebalance defaults and Edwin236's dedicated run;
+        # the next-release policy removes only Emotion301 from normal defaults.
+        self.assertEqual(len(without_controls), 460)
+        self.assertEqual(len(selected), 461)
         self.assertEqual(len({run for run, _ in selected}), 51)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -175,23 +176,31 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertLess(self.positions["stratagems-bg2"], self.positions["chriz-bg-rebalance-bg2"])
         self.assertEqual(self.collection["runs"][-1]["run_id"], "buffbot-bg2")
 
-    def test_emotion_exclusivity_is_default_with_an_independent_optout(self):
+    def test_emotion_exclusivity_is_optional_with_an_independent_optin(self):
         feature_id = "feature:chriz-bg-rebalance:component-301"
         run_id = "chriz-bg-rebalance-bg2"
         feature = self.features[feature_id]
-        self.assertEqual(feature["decision"], "default")
+        self.assertEqual(feature["decision"], "optional")
         self.assertEqual(feature["readiness"], "ready")
         self.assertEqual(feature["parent"], "mod:chriz-bg-rebalance")
         self.assertEqual(feature.get("requires", []), [])
         self.assertEqual(feature.get("requires_any", []), [])
         self.assertEqual(feature["components"], [{"run_id": run_id, "component": 301}])
-        self.assertEqual(self.preset[feature_id], "on")
+        self.assertEqual(self.preset[feature_id], "off")
 
         baseline = self.selected()
-        opted_out = self.selected({feature_id: "off"})
-        self.assertEqual(baseline - opted_out, {(run_id, 301)})
-        self.assertEqual(opted_out - baseline, set())
-        self.assertEqual(len(opted_out), 461)
+        self.assertNotIn((run_id, 301), baseline)
+        opted_in = self.selected({feature_id: "on"})
+        self.assertEqual(opted_in - baseline, {(run_id, 301)})
+        self.assertEqual(baseline - opted_in, set())
+        self.assertEqual(len(baseline), 461)
+        self.assertEqual(self.selected({feature_id: "off"}), baseline)
+        baeloth = "feature:chriz-bg-modpack:component-235"
+        self.assertEqual(self.features[baeloth]["decision"], "optional")
+        self.assertEqual(self.preset.get(baeloth, "off"), "off")
+        self.assertNotIn(("chriz-bg-modpack-baeloth-bg2", 235), baseline)
+        for component in (111, 130, 200, 210, 211, 220, 302, 310, 320):
+            self.assertIn((run_id, component), baseline)
         parent_off = self.selected({"mod:chriz-bg-rebalance": "off"})
         self.assertFalse(any(run == run_id for run, _ in parent_off))
         # Keep 301 selectable for either provider or standalone spell handling;
@@ -199,7 +208,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         for provider in ("mod:spell-rev", "mod:iwdification", "mod:stratagems"):
             with self.subTest(provider=provider):
                 self.assertIn(provider, self.features)
-                self.assertIn((run_id, 301), self.selected({provider: "off"}))
+                self.assertIn((run_id, 301), self.selected({provider: "off", feature_id: "on"}))
 
     def test_emotion_run_keeps_source_order_and_excludes_bard_progression(self):
         run_id = "chriz-bg-rebalance-bg2"

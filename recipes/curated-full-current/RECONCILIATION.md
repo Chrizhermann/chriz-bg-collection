@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 471 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 460.
+Engine-equivalent resolved-selection summary: 470 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 459.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -238,7 +238,6 @@ Engine-equivalent resolved-selection summary: 471 default/mandatory rows — con
 | `CHRIZ-BG-REBALANCE:111` | default | `feature:chriz-bg-rebalance:component-111` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 111 |  |
 | `CHRIZ-BG-REBALANCE:120` | mandatory | `feature:chriz-bg-rebalance:mandatory-components` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 120 |  |
 | `CHRIZ-BG-REBALANCE:121` | default | `feature:chriz-bg-rebalance:component-121` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 121 |  |
-| `CHRIZ-BG-REBALANCE:301` | default | `feature:chriz-bg-rebalance:component-301` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 301 |  |
 | `CHRIZ-BG-REBALANCE:302` | default | `feature:chriz-bg-rebalance:component-302` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 302 |  |
 | `CHRIZ-BG-REBALANCE:400` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 400 |  |
 | `CHRIZ-BG-REBALANCE:401` | default | `feature:chriz-bg-rebalance:tempus-bundle` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.1 0.8.1 (v0.8.1), component 401 |  |

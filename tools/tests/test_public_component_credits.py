@@ -46,9 +46,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(controls_feature["components"], [{"run_id": "hiddengameplayoptions-bg2", "component": 38}])
         self.assertEqual(actual["hiddengameplayoptions-bg2"].count(38), 1)
         self.assertIn(3354, actual["cdtweaks-bg2"])
-        self.assertEqual(actual["chriz-bg-rebalance-bg2"].count(301), 1)
+        self.assertNotIn(301, actual["chriz-bg-rebalance-bg2"])
         self.assertTrue({420, 421}.isdisjoint(actual["chriz-bg-rebalance-bg2"]))
-        self.assertEqual(self.result["componentCount"], 462)
+        self.assertEqual(self.result["componentCount"], 461)
         self.assertEqual(len(actual), 51)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

@@ -3598,7 +3598,7 @@ id = "feature:chriz-bg-rebalance:component-301"
 title = "Emotion, Courage and Hope don't stack"
 description = "Casting either Emotion removes the other from each target; the latest wins and recasting refreshes."
 category = "spells"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 301 }]

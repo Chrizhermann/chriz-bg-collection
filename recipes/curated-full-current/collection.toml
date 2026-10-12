@@ -4319,7 +4319,7 @@ description = "Casting either Emotion removes the other from each target; the la
 category = "spells"
 source_label = "BG Rebalance"
 group_label = "Cross-cutting audits"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 301 }]

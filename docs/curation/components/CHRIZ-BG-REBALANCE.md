@@ -1,6 +1,10 @@
 # CHRIZ-BG-REBALANCE — components
 
-The October 7 target is **v0.8.1**. Christopher approved component
+The October 7 target is **v0.8.1**. For the next release, Christopher moved
+component `301` out of normal defaults into the planned Challenge Mode choices.
+It stays available, but unchecked; all other existing defaults stay unchanged.
+The historical September/October release decisions below still describe those
+released versions. Christopher approved component
 `301` as a recommended default on **2026-09-26**, based on earlier in-game testing;
 fix any issue in a follow-up rather than gating on more testing. The
 [September 16 candidate](../../alpha16-candidate-2026-09-16.md) approved dragon
@@ -10,7 +14,7 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-27 curated entries, 20 recommended selections. The release also contains bard
+27 curated entries, 19 recommended selections for the next release. The release also contains bard
 progression `420`/`421`; they remain outside the offered recipe and unselected.
 ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
@@ -32,7 +36,7 @@ progression `420`/`421`; they remain outside the offered recipe and unselected.
 | 111 | SCS: dragon wing-buffet spacing rebalance | SCS adjustments |  |  | default |
 | 120 | SCS + Spell Revisions: repair false weapon-protection semantics | SCS adjustments |  | ✓ | mandatory |
 | 121 | EEex + SCS: ambient caster readiness and one honest first-contact defense | SCS adjustments |  | ✓ | default |
-| 301 | Emotion, Courage / Emotion, Hope — mutually exclusive beneficial emotions | Cross-cutting audits |  |  | default |
+| 301 | Emotion, Courage / Emotion, Hope — mutually exclusive beneficial emotions | Cross-cutting audits |  |  | optional |
 | 302 | Flail of the Ages — tiered Slow saves and haste-compatible +5 | Item balance |  |  | default |
 | 400 | Cleric of Tempus: weapon training — axe, longsword, crossbow, and two-pip mastery | Class and kit revisions |  | ✓ | default |
 | 401 | Cleric of Tempus: Holy Power — automatic semantic detection (recommended) | Class and kit revisions | Cleric of Tempus: Holy Power compatibility | ✓ | default |
@@ -74,7 +78,14 @@ progression `420`/`421`; they remain outside the offered recipe and unselected.
   `401` family. The atomic bundle guarantees that chain. Component `401` supports either
   SR or non-SR spell mappings, but must inspect the final installed resources.
 
-## Emotion default — September 26 decision
+## Emotion — optional for the next release
+
+The October 9 decision supersedes the September 26 default: `301` remains an
+independent, ready option and is off in the normal recommended preset. Baeloth's
+separate challenge choice also remains optional/off. The broader Challenge Mode
+group is separate work; this change does not move any other default.
+
+### Historical September 26 release decision
 
 Component `301` replaces the other beneficial Emotion on each target; the latest
 wins and recasting refreshes. In the collection it rebuilds IWDification's Courage

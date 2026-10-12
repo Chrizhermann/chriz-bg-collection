@@ -228,7 +228,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // September 16 intake (cb07eca), and September 26 Emotion exclusivity (301).
     // October 7 adds seven Rebalance defaults (130/200/210/211/220/310/320)
     // and Edwin 236. Optional Baeloth 235, Hardiness 201/202 remain unselected.
-    // This 368-component base plan is distinct from the 462-component curated plan.
+    // Next-release Emotion 301 opt-in policy removes one default from each plan.
+    // This 367-component base plan is distinct from the 461-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -236,7 +237,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        368
+        367
     );
 }
 

@@ -16,8 +16,7 @@ const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
     200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910,
 ];
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
-    100, 101, 111, 120, 121, 200, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220,
-    320,
+    100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 310, 130, 220, 320,
 ];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
     100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
@@ -265,7 +264,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
             ),
             (
                 "feature:chriz-bg-rebalance:component-301",
-                Decision::Default,
+                Decision::Optional,
                 1
             ),
             (
@@ -341,7 +340,7 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
     let no_tempus = evaluate(&manifest, &no_tempus).unwrap();
     assert_eq!(
         no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 111, 120, 121, 200, 210, 211, 301, 302, 310, 130, 220, 320][..])
+        Some(&[100, 101, 111, 120, 121, 200, 210, 211, 302, 310, 130, 220, 320][..])
     );
 
     let mut disabled = Selection::defaults("windows");
@@ -399,8 +398,8 @@ fn defaults_wing_buffet_spacing_with_scs_and_an_independent_optout() {
         opted_out.plan.components_for(run_id),
         Some(
             &[
-                100, 101, 120, 121, 200, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 310,
-                130, 220, 320
+                100, 101, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 310, 130,
+                220, 320
             ][..]
         )
     );

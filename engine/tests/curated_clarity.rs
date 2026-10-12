@@ -26,7 +26,7 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        462 // October 7 adds seven Rebalance defaults and Edwin 236 in its own run.
+        461 // Next-release policy removes Emotion 301 from October 7's defaults.
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");
@@ -44,14 +44,20 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
 }
 
 #[test]
-fn emotion_exclusivity_is_a_ready_default_with_an_independent_opt_out() {
+fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     let manifest = recipe();
     let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     let feature_id = "feature:chriz-bg-rebalance:component-301";
     let control = baseline.view.control(feature_id).unwrap();
-    assert_eq!(control.decision, Decision::Default);
+    assert_eq!(control.decision, Decision::Optional);
     assert_eq!(control.readiness, Readiness::Ready);
-    assert!(control.selected && control.interactive);
+    assert!(!control.selected && control.interactive);
+    let baeloth = baseline
+        .view
+        .control("feature:chriz-bg-modpack:component-235")
+        .unwrap();
+    assert_eq!(baeloth.decision, Decision::Optional);
+    assert!(!baeloth.selected && baeloth.interactive);
     let feature = manifest
         .collection
         .features
@@ -67,15 +73,15 @@ fn emotion_exclusivity_is_a_ready_default_with_an_independent_opt_out() {
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
-                100, 101, 111, 120, 121, 200, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
-                310, 130, 220, 320,
+                100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 310,
+                130, 220, 320,
             ][..]
         )
     );
 
     let mut selection = baseline.normalized_selection.to_selection();
-    selection.set_feature(feature_id, false);
-    let disabled = evaluate(&manifest, &selection).unwrap();
+    selection.set_feature(feature_id, true);
+    let enabled = evaluate(&manifest, &selection).unwrap();
     let mut expected = baseline.plan.clone();
     expected
         .runs
@@ -83,10 +89,10 @@ fn emotion_exclusivity_is_a_ready_default_with_an_independent_opt_out() {
         .find(|run| run.run_id == "chriz-bg-rebalance-bg2")
         .unwrap()
         .components
-        .retain(|component| *component != 301);
-    assert_eq!(disabled.plan, expected);
+        .insert(8, 301);
+    assert_eq!(enabled.plan, expected);
 
-    let mut selection = baseline.normalized_selection.to_selection();
+    let mut selection = enabled.normalized_selection.to_selection();
     selection.set_feature("mod:chriz-bg-rebalance", false);
     let parent_disabled = evaluate(&manifest, &selection).unwrap();
     assert!(parent_disabled.normalized_selection.features[feature_id]);
