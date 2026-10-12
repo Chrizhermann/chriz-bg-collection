@@ -130,15 +130,14 @@ export function bulkCategoryChanges(e: SelectionEvaluation, category: string, se
 }
 
 /**
- * Member changes for one click on a feature-group control. Mirrors the engine's
- * `feature_group_changes`: from on, every member is deselected; from off or mixed,
- * every currently available member is selected. Unavailable members are never forced on
- * and no other feature is touched.
+ * Member changes that switch a feature group on (`on` true) or off. Mirrors the engine's
+ * `feature_group_changes`: on selects every currently available member, off deselects every
+ * member. Unavailable members are never forced on and no other feature is touched.
  */
-export function featureGroupChanges(group: FeatureGroup): Record<string, boolean> {
-  return group.state === "on"
-    ? Object.fromEntries(group.members.map(id => [id, false]))
-    : Object.fromEntries(group.availableMembers.map(id => [id, true]));
+export function featureGroupChanges(group: FeatureGroup, on: boolean): Record<string, boolean> {
+  return on
+    ? Object.fromEntries(group.availableMembers.map(id => [id, true]))
+    : Object.fromEntries(group.members.map(id => [id, false]));
 }
 
 /** Feature group that owns each member feature (validation allows at most one). */

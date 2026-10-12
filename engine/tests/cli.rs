@@ -1062,6 +1062,233 @@ fn plan_group_switch_expands_members_before_feature_overrides() {
     );
 }
 
+/// Fixture recipe whose preset switches the default `gate` off, with `challenge-c` requiring
+/// `gate`; `members` names the `challenge-mode` members among `challenge-a` and `challenge-c`.
+fn recipe_with_gated_group(temp: &TempDir, members: &[&str]) -> PathBuf {
+    let recipe = temp.path().join("recipe");
+    copy_tree(&fixture_recipe(), &recipe);
+    let collection = recipe.join("collection.toml");
+    let mut text = fs::read_to_string(&collection).unwrap();
+    let members = members
+        .iter()
+        .map(|member| format!("{member:?}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    text.push_str(&format!(
+        r#"
+
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Fixture challenge rules."
+members = [{members}]
+
+[[features]]
+id = "gate"
+title = "Gate"
+description = "Fixture prerequisite"
+category = "difficulty"
+decision = "default"
+readiness = "ready"
+components = [{{ run_id = "eefixpack-bg1", component = 0 }}]
+
+[[features]]
+id = "challenge-a"
+title = "Challenge A"
+description = "Fixture challenge A"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{{ run_id = "eefixpack-bg1", component = 2 }}]
+
+[[features]]
+id = "challenge-c"
+title = "Challenge C"
+description = "Fixture challenge C"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+requires = ["gate"]
+components = [{{ run_id = "eefixpack-bg2", component = 0 }}]
+"#
+    ));
+    fs::write(collection, text).unwrap();
+    let preset = recipe.join("presets/recommended.toml");
+    let mut text = fs::read_to_string(&preset).unwrap();
+    text.push_str("\n[selections]\ngate = \"off\"\n");
+    fs::write(preset, text).unwrap();
+    recipe
+}
+
+#[test]
+fn plan_group_switch_sees_an_explicit_prerequisite_override() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_gated_group(&temp, &["challenge-a", "challenge-c"]);
+    let recipe = recipe.to_str().unwrap();
+    let plan = |extra: &[&str]| {
+        let mut args = vec!["--json", "plan", recipe, "--preset", "recommended"];
+        args.extend_from_slice(extra);
+        let output = run(&args);
+        assert!(output.status.success(), "{extra:?}: {}", stderr(&output));
+        json_stdout(&output)
+    };
+
+    // Without the prerequisite the group selects only the available member.
+    let gated = plan(&["--group", "challenge-mode=on"]);
+    assert_eq!(
+        planned_components(&gated),
+        vec![("eefixpack-bg1".to_owned(), vec![2])]
+    );
+
+    // An explicit prerequisite override is visible to the group, wherever it appears.
+    for args in [
+        ["--group", "challenge-mode=on", "--feature", "gate=on"],
+        ["--feature", "gate=on", "--group", "challenge-mode=on"],
+    ] {
+        let on = plan(&args);
+        assert_eq!(
+            planned_components(&on),
+            vec![
+                ("eefixpack-bg1".to_owned(), vec![0, 2]),
+                ("eefixpack-bg2".to_owned(), vec![0]),
+            ],
+            "{args:?}"
+        );
+        assert_eq!(on["groups"][0]["state"], "on", "{args:?}");
+        assert_eq!(
+            on["normalized_selection"]["features"]["challenge-c"], true,
+            "{args:?}"
+        );
+    }
+
+    // An explicit member choice still wins over the group.
+    let member_off = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--feature",
+        "gate=on",
+        "--feature",
+        "challenge-c=off",
+    ]);
+    assert_eq!(
+        planned_components(&member_off),
+        vec![("eefixpack-bg1".to_owned(), vec![0, 2])]
+    );
+    assert_eq!(member_off["groups"][0]["state"], "mixed");
+}
+
+#[test]
+fn plan_group_whose_only_member_needs_an_explicit_prerequisite_turns_on() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_gated_group(&temp, &["challenge-c"]);
+    let recipe = recipe.to_str().unwrap();
+
+    let disabled = run(&[
+        "--json",
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+    ]);
+    assert_eq!(disabled.status.code(), Some(1), "{}", stderr(&disabled));
+    assert_eq!(json_stdout(&disabled)["error"]["code"], "invalid_selection");
+
+    let output = run(&[
+        "--json",
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+        "--feature",
+        "gate=on",
+    ]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    let on = json_stdout(&output);
+    assert_eq!(
+        planned_components(&on),
+        vec![
+            ("eefixpack-bg1".to_owned(), vec![0]),
+            ("eefixpack-bg2".to_owned(), vec![0]),
+        ]
+    );
+    assert_eq!(on["groups"][0]["state"], "on");
+}
+
+#[test]
+fn install_group_switch_sees_an_explicit_prerequisite_override() {
+    // `install` shares the plan's selection expansion. With the prerequisite switched on, the
+    // group's only member is available, so selection and planning succeed and install reaches
+    // the source-game freshness guard, which the deliberately modified BG1 copy then trips.
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_gated_group(&temp, &["challenge-c"]);
+    use_production_invocation_mode(&recipe);
+    copy_tree(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(GAME_FIXTURES)
+            .join("profiles"),
+        &recipe.join("game-builds"),
+    );
+    let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
+    let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
+    fs::write(bg1.join("setup-dirty.exe"), b"modified").expect("add modified-game residue");
+    let cache = temp.path().join("cache");
+    fs::create_dir(&cache).expect("create cache root");
+    // Each attempt gets its own managed root and app data, so one guarded attempt's campaign
+    // state or registry entry cannot affect another.
+    let install = |attempt: &str, extra: &[&str]| {
+        let managed = temp.path().join(format!("managed-{attempt}"));
+        let app_data = temp.path().join(format!("app-data-{attempt}"));
+        fs::create_dir(&app_data).expect("create app-data root");
+        let mut args = install_args(&recipe, &bg1, &bg2, &managed, &cache);
+        args.extend_from_slice(extra);
+        let output = cli()
+            .env("LOCALAPPDATA", &app_data)
+            .args(&args)
+            .output()
+            .expect("run guarded install");
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{extra:?}: {}",
+            stderr(&output)
+        );
+        assert!(!managed.join("bg1").exists(), "{extra:?}");
+        assert!(!managed.join("game").exists(), "{extra:?}");
+        json_stdout(&output)
+    };
+
+    let disabled = install("gated", &["--group", "challenge-mode=on"]);
+    assert_eq!(disabled["error"]["code"], "invalid_selection", "{disabled}");
+    assert!(
+        disabled["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("cannot be turned on"),
+        "{disabled}"
+    );
+
+    for (attempt, args) in [
+        (
+            "group-first",
+            ["--group", "challenge-mode=on", "--feature", "gate=on"],
+        ),
+        (
+            "feature-first",
+            ["--feature", "gate=on", "--group", "challenge-mode=on"],
+        ),
+    ] {
+        let enabled = install(attempt, &args);
+        assert_eq!(
+            enabled["error"]["code"], "source_not_fresh",
+            "{args:?}: {enabled}"
+        );
+    }
+}
+
 #[test]
 fn unknown_or_malformed_group_switches_are_rejected() {
     let temp = fixture_tempdir();

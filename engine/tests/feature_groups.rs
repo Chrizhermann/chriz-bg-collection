@@ -16,7 +16,8 @@ use bg_engine::recipe_view::{
 use bg_engine::resolve::Selection;
 use bg_engine::validate::{
     validate, Finding, Severity, RULE_FEATURE_GROUP_CONTENT, RULE_FEATURE_GROUP_IDS,
-    RULE_FEATURE_GROUP_MEMBERS, RULE_FEATURE_GROUP_MEMBER_DECISIONS,
+    RULE_FEATURE_GROUP_MEMBERS, RULE_FEATURE_GROUP_MEMBER_CONFLICTS,
+    RULE_FEATURE_GROUP_MEMBER_DECISIONS,
 };
 use bg_engine::Manifest;
 
@@ -440,6 +441,49 @@ fn members_must_be_optional_and_outside_choice_groups() {
     );
 }
 
+fn add_conflict(manifest: &mut Manifest, owner: &str, other: &str) {
+    manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == owner)
+        .unwrap()
+        .conflicts
+        .push(bg_engine::manifest::Conflict {
+            feature_id: other.to_owned(),
+            reason: format!("Incompatible with {other}."),
+        });
+}
+
+#[test]
+fn members_must_not_conflict_with_each_other() {
+    let expected =
+        "feature group \"challenge-mode\" members \"a\" and \"b\" conflict with each other";
+    for directions in [
+        &[("a", "b")][..],
+        &[("b", "a")][..],
+        &[("a", "b"), ("b", "a")][..],
+    ] {
+        let mut manifest = grouped_manifest();
+        for (owner, other) in directions {
+            add_conflict(&mut manifest, owner, other);
+        }
+        let conflicts = group_errors(&validate(&manifest))
+            .into_iter()
+            .filter(|(rule, _)| *rule == RULE_FEATURE_GROUP_MEMBER_CONFLICTS)
+            .collect::<Vec<_>>();
+        assert_eq!(conflicts.len(), 1, "{directions:?}: {conflicts:?}");
+        assert!(conflicts[0].1.contains(expected), "{conflicts:?}");
+        assert!(bg_engine::validate::check(&manifest).is_err());
+    }
+
+    // A conflict with a feature outside the group stays an ordinary per-feature rule.
+    let mut manifest = grouped_manifest();
+    add_conflict(&mut manifest, "a", "gate");
+    add_conflict(&mut manifest, "gate", "b");
+    assert_eq!(group_errors(&validate(&manifest)), Vec::new());
+}
+
 #[test]
 fn presets_and_selections_cannot_name_a_group() {
     let mut manifest = grouped_manifest();
@@ -599,7 +643,7 @@ fn on_selects_only_available_members_and_off_deselects_every_member() {
     }
     // `c` stays unavailable and unselected; it is never forced on.
     assert!(!after_on.view.control("c").unwrap().selected);
-    assert_eq!(after_on.normalized_selection.features["c"], false);
+    assert!(!after_on.normalized_selection.features["c"]);
 }
 
 #[test]

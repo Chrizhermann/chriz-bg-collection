@@ -74,8 +74,13 @@ export function featureGroupCard(
       event.preventDefault();
     });
   } else {
+    // The checkbox's own state is the requested target: a click on "off" or "mixed" checks it
+    // and a click on "on" unchecks it. Reading it at click time (not the rendered group state)
+    // keeps rapid clicks made before the next evaluation re-renders the card in step with the
+    // last action.
     checkbox.addEventListener("change", () => {
-      void change(featureGroupChanges(group), checkbox.id);
+      checkbox.setAttribute("aria-checked", String(checkbox.checked));
+      void change(featureGroupChanges(group, checkbox.checked), checkbox.id);
     });
   }
 

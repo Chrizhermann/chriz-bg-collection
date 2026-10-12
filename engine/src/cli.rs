@@ -182,7 +182,8 @@ pub struct ValidationReport {
 /// Raw semantic overrides parsed from repeatable CLI options.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelectionOverrides {
-    /// `group-id=on|off` values, expanded into member features before `features` apply.
+    /// `group-id=on|off` values, expanded into member features after `features` apply; a group
+    /// never overwrites a feature chosen explicitly in `features`.
     pub groups: Vec<String>,
     /// `feature-id=on|off` values.
     pub features: Vec<String>,
@@ -4156,8 +4157,24 @@ fn selection_choices(
         CliError::new("invalid_selection", format!("unknown preset {preset_id:?}"))
     })?;
     let mut choices = preset.selections.clone();
-    // Groups expand first, against the preset plus earlier groups, so explicit `--feature`
-    // overrides below always win for an individual member.
+    // Explicit `--feature` overrides apply first, so group expansion sees them: a prerequisite
+    // switched on by `--feature` makes a dependent member available to `--group ...=on`.
+    let mut explicit_features = BTreeSet::new();
+    for authored in &overrides.features {
+        let (id, value) = split_assignment(authored, "feature override")?;
+        if !matches!(value, "on" | "off" | "true" | "false") {
+            return Err(CliError::new(
+                "invalid_selection",
+                format!(
+                    "feature override {authored:?} must use on/off (true/false are accepted aliases)"
+                ),
+            ));
+        }
+        choices.insert(id.to_owned(), value.to_owned());
+        explicit_features.insert(id.to_owned());
+    }
+    // Groups then expand in command-line order against that state plus earlier groups. A group
+    // never overwrites a feature chosen explicitly, so `--feature` always wins for a member.
     for authored in &overrides.groups {
         let (id, value) = split_assignment(authored, "group override")?;
         let target = match value {
@@ -4181,20 +4198,10 @@ fn selection_choices(
         )
         .map_err(|error| CliError::new("invalid_selection", error.to_string()))?;
         for (feature_id, selected) in changes {
-            choices.insert(feature_id, if selected { "on" } else { "off" }.to_owned());
+            if !explicit_features.contains(&feature_id) {
+                choices.insert(feature_id, if selected { "on" } else { "off" }.to_owned());
+            }
         }
-    }
-    for authored in &overrides.features {
-        let (id, value) = split_assignment(authored, "feature override")?;
-        if !matches!(value, "on" | "off" | "true" | "false") {
-            return Err(CliError::new(
-                "invalid_selection",
-                format!(
-                    "feature override {authored:?} must use on/off (true/false are accepted aliases)"
-                ),
-            ));
-        }
-        choices.insert(id.to_owned(), value.to_owned());
     }
     for authored in &overrides.inputs {
         let (id, value) = split_assignment(authored, "input override")?;

@@ -114,6 +114,8 @@ pub const RULE_FEATURE_GROUP_CONTENT: &str = "feature-group-content";
 pub const RULE_FEATURE_GROUP_MEMBERS: &str = "feature-group-members";
 /// Rule requiring group members to be independent optional features.
 pub const RULE_FEATURE_GROUP_MEMBER_DECISIONS: &str = "feature-group-member-decisions";
+/// Rule forbidding conflicts between members of one feature group, in either direction.
+pub const RULE_FEATURE_GROUP_MEMBER_CONFLICTS: &str = "feature-group-member-conflicts";
 
 /// Runs the currently defined recipe validation rules in stable order.
 pub fn validate(manifest: &Manifest) -> Vec<Finding> {
@@ -1619,6 +1621,34 @@ fn check_feature_groups(manifest: &Manifest, findings: &mut Vec<Finding>) {
                     ),
                 );
             }
+        }
+        // Switching a group on requests every member at once; conflicting members would then
+        // disable each other and leave the group off with no way to turn it on.
+        let mut conflicting_pairs = BTreeSet::new();
+        for member in &members {
+            let Some(feature) = features.get(member) else {
+                continue;
+            };
+            for conflict in &feature.conflicts {
+                let other = conflict.feature_id.as_str();
+                if other != *member && members.contains(other) {
+                    conflicting_pairs.insert(if *member < other {
+                        (*member, other)
+                    } else {
+                        (other, *member)
+                    });
+                }
+            }
+        }
+        for (first, second) in conflicting_pairs {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_MEMBER_CONFLICTS,
+                format!(
+                    "feature group {:?} members {first:?} and {second:?} conflict with each other; switching the group on would disable both",
+                    group.id
+                ),
+            );
         }
     }
 }

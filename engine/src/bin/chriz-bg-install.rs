@@ -97,7 +97,7 @@ struct PlanArgs {
     preset: String,
     #[arg(long, default_value = "windows")]
     platform: String,
-    /// Switch a feature group as `group-id=on|off`; applied before `--feature`.
+    /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
     #[arg(long = "group")]
     groups: Vec<String>,
     /// Override one semantic feature as `id=on|off`.
@@ -171,7 +171,7 @@ struct InstallArgs {
     cache: PathBuf,
     #[arg(long, default_value = "windows")]
     platform: String,
-    /// Switch a feature group as `group-id=on|off`; applied before `--feature`.
+    /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
     #[arg(long = "group")]
     groups: Vec<String>,
     /// Override one semantic feature as `id=on|off`.

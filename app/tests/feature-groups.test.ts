@@ -121,6 +121,19 @@ describe("Challenge Mode card", () => {
     }
   });
 
+  it("follows the checkbox on rapid clicks before the card is re-rendered", () => {
+    const change = vi.fn();
+    const checkbox = groupCheckbox(render(evaluate({}), change));
+    fireEvent.click(checkbox);
+    fireEvent.click(checkbox);
+    expect(change.mock.calls.map(([changes]) => changes)).toEqual([
+      Object.fromEntries(MEMBERS.map(id => [id, true])),
+      Object.fromEntries(MEMBERS.map(id => [id, false])),
+    ]);
+    expect(checkbox.checked).toBe(false);
+    expect(checkbox.getAttribute("aria-checked")).toBe("false");
+  });
+
   it("shows an unavailable member with its reason and never selects it", () => {
     const evaluation = evaluate({ [SCS]: false });
     const change = vi.fn();
@@ -132,7 +145,7 @@ describe("Challenge Mode card", () => {
     const sent = change.mock.calls[0]![0] as Record<string, boolean>;
     expect(sent).toEqual({ [EMOTION]: true, [BAELOTH]: true, [BRIDGE]: true });
     expect(DRAGONS in sent).toBe(false);
-    expect(featureGroupChanges(evaluation.featureGroups![0]!)).toEqual(sent);
+    expect(featureGroupChanges(evaluation.featureGroups![0]!, true)).toEqual(sent);
   });
 
   it("is disabled with a reason when no member is available", () => {
@@ -184,7 +197,48 @@ class GroupBackend extends FixtureBackend {
   }
 }
 
+/** Holds evaluations once `hold` is set, so several clicks happen before any result renders. */
+class DelayedGroupBackend extends FixtureBackend {
+  readonly requests: NormalizedSelection[] = [];
+  readonly pending: Array<() => void> = [];
+  hold = false;
+  override async evaluateBuild(selection: NormalizedSelection): Promise<SelectionEvaluation> {
+    this.requests.push(selection);
+    const evaluation = evaluate(selection.features);
+    if (!this.hold) return evaluation;
+    return new Promise(resolve => this.pending.push(() => resolve(evaluation)));
+  }
+}
+
 describe("Challenge Mode in the app", () => {
+  it("keeps the last action when the group is switched on and off before evaluation finishes", async () => {
+    const backend = new DelayedGroupBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const handle = await mountApp(root, backend);
+    await handle.navigate("setup");
+    const user = userEvent.setup();
+    const before = backend.requests.length;
+    backend.hold = true;
+
+    await user.click(groupCheckbox(root));
+    await user.click(groupCheckbox(root));
+    await waitFor(() => expect(backend.requests).toHaveLength(before + 2));
+    expect(backend.requests[before]?.features).toMatchObject(Object.fromEntries(MEMBERS.map(id => [id, true])));
+    expect(backend.requests.at(-1)?.features).toMatchObject(Object.fromEntries(MEMBERS.map(id => [id, false])));
+
+    backend.hold = false;
+    for (const release of backend.pending.splice(0)) release();
+    await waitFor(() => expect(groupCheckbox(root).getAttribute("aria-checked")).toBe("false"));
+    expect(groupCheckbox(root).checked).toBe(false);
+    expect(groupCheckbox(root).indeterminate).toBe(false);
+    for (const id of MEMBERS) {
+      expect((document.getElementById(`feature-${id}`) as HTMLInputElement).checked, id).toBe(false);
+    }
+    root.remove();
+  });
+
+
   it("applies the group in one evaluation, keeps member changes out of Also adjusted, and turns mixed after a hand change", async () => {
     const backend = new GroupBackend();
     const root = document.createElement("div");
