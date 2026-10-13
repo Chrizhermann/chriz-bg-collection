@@ -1,6 +1,9 @@
 //! The uninstaller's removal of application data, through the real app executable and, when
 //! Tauri's NSIS compiler is available, through the real uninstaller hook.
-#![cfg(windows)]
+//!
+//! Only development builds of the app are run: they remove nothing but the folders a test
+//! declares. A release build would remove the real application data of whoever runs the tests.
+#![cfg(all(windows, debug_assertions))]
 
 use std::fs;
 use std::path::{Path, PathBuf};
