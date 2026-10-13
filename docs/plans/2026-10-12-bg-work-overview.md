@@ -74,13 +74,15 @@ the disposable lab test.
 | Engine CLI tests fail while any `weidu.exe` runs | **Tracked** | [issue 9](https://github.com/Chrizhermann/chriz-bg-collection/issues/9) |
 | Recipe intake for the next release (Modpack alpha.11 and SoD v0.6.13 rows: 430 last, 237/238 and 660 default, 650/651 optional, SoD 177/198/285 mandatory) | **Done on a pending branch.** Python 155 passed, engine 793, app 99, UI 410. One test stays red by design until Modpack alpha.11 is published and pinned (the October 7 pin check); do not merge before publication. SoD's pin has the same gap (177/198/285) without a test | CEBG `claude/next-release-intake-20261013` @ `650a438` |
 | Playtest recipe tool | **Fixed:** it forced optional Rebalance 110 on in every local recipe; curated choices now stay as curated. Bardic Wonders can be a local source | CEBG `d00cb67` |
-| Combined test install | **Installing** in `C:\Users\chris\CEBG-Tests\Combined-20261013`: Recommended + Challenge Mode + banking 650, 55 runs / 475 components, four local candidates. The game launch waits for Christopher | [checklist](2026-10-13-combined-test-checklist.md); `target/combined-playtest-20261013` |
+| Combined test install | **Installed**, all runs succeeded, in `C:\Users\chris\CEBG-Tests\Combined-20261013-b`: Recommended + Challenge Mode + banking 650, EET desktop shortcut off, 474 components, four local candidates. 430's scroll analysis on this real SR install: no errors. The game launch waits for Christopher. Two stopped attempts can be deleted (see the checklist) | [checklist](2026-10-13-combined-test-checklist.md); `target/combined-playtest-20261013` |
+| EET desktop shortcut (EET 100) | **Finding.** It fails when the installer runs from a shell with `NoDefaultCurrentDirectoryInExePath=1` (EET runs a bare `shortcut.bat`). When it works, every install replaces the Desktop `EET.lnk` (today it points at Chriz Easy BG Test 19) | lab attempt 1 log |
 
 Decided 13 October: SoD 177/198/285 mandatory; vanilla dual rule; Degrodel 660
 default with Christopher designing the extra layer. Waiting for Christopher: the
 streamer fix approach, a lab game launch, the optional one-file fix for his
-current game, and the publication order (Modpack alpha.11, SoD v0.6.13,
-Rebalance v0.8.2 via PR7, Bardic balance.7).
+current game, the publication order (Modpack alpha.11, SoD v0.6.13,
+Rebalance v0.8.2 via PR7, Bardic balance.7), and whether EET's desktop
+shortcut stays a Recommended default.
 
 ## The useful answer
 

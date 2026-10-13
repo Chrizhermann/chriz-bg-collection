@@ -1,20 +1,24 @@
 # Combined test — October 13 batch
 
-Installing in a disposable lab since 13 October (approved after the disk
+Installed in a disposable lab on 13 October (approved after the disk
 cleanup). The first game start waits for Christopher's go. No existing game,
 save or stream install is touched.
 
 ## The build
 
-- One fresh SR-enabled EET installation at
-  `C:\Users\chris\CEBG-Tests\Combined-20261013`, installed with the CLI from a
+- One fresh SR-enabled EET installation, "CEBG Lab 2026-10-13 B", at
+  `C:\Users\chris\CEBG-Tests\Combined-20261013-b`, installed with the CLI from a
   frozen local recipe: the pending [recipe intake](2026-10-13-next-batch-intake.md)
   (branch `claude/next-release-intake-20261013`) plus the playtest-tool fix,
   merged on lab branch `claude/lab-20261013`. Sources, recipe and logs are in
   the ignored `target/combined-playtest-20261013/`.
 - Selection: Chris's Recommended, **Challenge Mode on** (his stream setup) and
-  **banking 650 on** so it can be tested (651 stays off): 55 runs, 475
-  components.
+  **banking 650 on** so it can be tested (651 stays off). EET's desktop
+  shortcut is off: it would replace the Desktop `EET.lnk`, which points at
+  Chriz Easy BG Test 19. Result: 55 runs, 474 components (27 BG1 + 447 BG2).
+- Start the game with `InfinityLoader.exe` in the game folder (EEex). Steam's
+  `steam_api64.dll` is renamed `.bgse-disabled`; the game has its own profile
+  name, so saves stay separate.
 - Four unpublished candidates enter as hash-pinned local archives through the
   verified manual intake. Every other mod uses its published pin.
 
@@ -28,6 +32,19 @@ save or stream install is touched.
 - Checked before installing: the four archives' TP2 component order matches
   the lab recipe, the recipe validates with no findings, and every Challenge
   Mode member resolves on.
+- Install result: every run succeeded and the final verification passed.
+  Degrodel 660 found the hand-in in the installed dialog (state 7, four
+  servants). Scroll casting 430 analysed this real Spell Revisions install:
+  470 scrolls, no errors; the standard learning and protection scrolls
+  classify as expected, and one third-party scroll (`TTSCRL01`) keeps its
+  normal behavior because learning and casting share an ability.
+- Two earlier attempts stopped and are not used: `Combined-20261013` (15.9 GB,
+  stopped at EET's desktop shortcut; its profile folder
+  `OneDrive\Documents\CEBG Lab 2026-10-13 - c2f5148bcdbf` holds only a marker)
+  and `Combined-20261013-r2` (empty, name already taken). All can be deleted.
+- The installation writes EET's install state into the standard EET profile, as
+  every EET install does; it ended in the normal finished state (2). Its Cheats
+  and Debug Mode were already on before this test.
 
 ## Short player checks
 
