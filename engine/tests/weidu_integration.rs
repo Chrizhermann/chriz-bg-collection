@@ -236,9 +236,10 @@ fn staged_root_argument_survives_eet_style_path_sanitization() {
         ),
         Reconciliation::ProvenDone
     );
+    // Compare with the fixture as checked out: its line endings follow the local Git settings.
     assert_eq!(
         fs::read(harness.game.override_dir().join("tmpathok.txt")).unwrap(),
-        b"EET-style path accepted\n"
+        fs::read(fixture_root().join("testmod/path-result.txt")).unwrap()
     );
 }
 
