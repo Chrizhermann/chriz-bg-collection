@@ -135,8 +135,8 @@ impl RunnerControlHandle {
         }
     }
 
-    /// Whether cancellation was requested, for work outside a runner that waits on others,
-    /// such as another download or extraction of the same cache entry.
+    /// Whether cancellation was requested, for work outside a runner, such as a download or
+    /// extraction that must not start, or must stop waiting for another one of the same entry.
     pub fn cancel_requested(&self) -> bool {
         self.state
             .lock()
