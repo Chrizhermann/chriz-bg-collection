@@ -109,7 +109,7 @@ public key. The mutable `alpha/latest.json` channel was then updated and anonymo
 checked: app alpha.13, recipe alpha.12, exact versioned setup URL/signature.
 The previously tested updater harness also passed download/tamper acceptance on the
 same setup bytes before publication. A hash-verified public copy is available at
-`C:\Users\chris\Downloads\Chriz Easy BG_0.1.0-alpha.13_x64-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG_0.1.0-alpha.13_x64-setup.exe`.
 
 The existing **Build interactive BG run page** task received the verified URL/hash,
 versions, unchanged component inventory and precise fix/acceptance limits, with the

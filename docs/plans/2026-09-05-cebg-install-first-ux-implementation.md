@@ -83,8 +83,8 @@ git commit -m "engine: freeze player-facing installation names"
 Test a pure default constructor with an injected home directory:
 
 ```rust
-let defaults = installation_defaults(Path::new(r"C:\Users\Chris"), "Chriz Easy BG")?;
-assert_eq!(defaults.path, r"C:\Users\Chris\Games\Chriz Easy BG");
+let defaults = installation_defaults(Path::new(r"%USERPROFILE%"), "Chriz Easy BG")?;
+assert_eq!(defaults.path, r"%USERPROFILE%\Games\Chriz Easy BG");
 ```
 
 Test that candidate, destination, managed-install, receipt, and launcher display fields turn
@@ -161,7 +161,7 @@ expect(queryByText(root, "Campaigns")).toBeNull();
 expect(getByRole(root, "heading", { name: "Install Chriz Easy BG" })).toBeTruthy();
 expect(getByLabelText(root, "Install name")).toHaveValue("Chriz Easy BG");
 expect(getByLabelText(root, "Install location")).toHaveValue(
-  "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+  "%USERPROFILE%\\Games\\Chriz Easy BG",
 );
 expect(getByText(root, "Needs attention")).toBeTruthy();
 expect(getByRole(root, "button", { name: "Install Chriz Easy BG" })).toBeDisabled();

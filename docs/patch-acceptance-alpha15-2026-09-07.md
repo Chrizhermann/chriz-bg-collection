@@ -58,7 +58,7 @@ feed replaced and fetched from its normal URL: app alpha.15, collection alpha.13
 and the expected immutable setup URL. Existing versioned assets were not changed.
 
 A verified setup copy is at
-`C:\Users\chris\Downloads\Chriz Easy BG_0.1.0-alpha.15_x64-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG_0.1.0-alpha.15_x64-setup.exe`.
 The installed desktop app was not replaced or restarted by this task. The website
 owner received the verified release tuple and deployment instructions. No Discord,
 forum or email announcement was sent on Christopher's behalf.

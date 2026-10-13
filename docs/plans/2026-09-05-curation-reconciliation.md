@@ -12,7 +12,7 @@ That historical replay is not a curated full collection and must not be offered 
 as one. Bristlelick's syntax error is incidental: the mod was explicitly dropped already.
 
 The source catalogs were not lost. Do not ask Christopher to repeat the curation.
-The failed root `C:\Users\chris\Games\CEBG-Full-20260905` and its frozen evidence are
+The failed root `%USERPROFILE%\Games\CEBG-Full-20260905` and its frozen evidence are
 historical test evidence only. Do not rewrite their identity or modify the stream install.
 
 ## Authoritative inputs

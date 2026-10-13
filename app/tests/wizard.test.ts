@@ -53,7 +53,7 @@ class ShortcutCompletionBackend extends FixtureBackend {
       this.failNextShortcut = false;
       return Promise.reject(new Error("Desktop access denied"));
     }
-    return Promise.resolve({ path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" });
+    return Promise.resolve({ path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk" });
   }
 }
 
@@ -200,7 +200,7 @@ describe("Chriz Easy BG application flow", () => {
 
       override createDesktopShortcut(installId: string) {
         this.shortcuts.push(installId);
-        return Promise.resolve({ path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" });
+        return Promise.resolve({ path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk" });
       }
     }
     const backend = new ExistingInstallBackend();

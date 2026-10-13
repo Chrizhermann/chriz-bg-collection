@@ -18,7 +18,7 @@ Set-StrictMode -Version Latest
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$runRoot = 'C:\Users\chris\Games\ChrizEasyBG-No-SR-Test'
+$runRoot = Join-Path $env:USERPROFILE 'Games\ChrizEasyBG-No-SR-Test'
 $gameRoot = Join-Path $runRoot 'game'
 $recoveryId = 'tempus-v032-20260907'
 $recoveryRoot = Join-Path $runRoot ".chriz\recoveries\$recoveryId"
@@ -26,7 +26,7 @@ $stepRoot = Join-Path $runRoot '.chriz\attempts\attempt-e6b6f3a5aacc11891051\ste
 $terminalReceipt = Join-Path $runRoot '.chriz\attempts\terminal-0000000214-224d39cd2de6c8d1\receipt.json'
 $oldArchiveHash = '729be99e91f9fa2c9044783bf300998b987011a390f407e8cd0b6d4e9dc507bb'
 $oldArchiveLength = 1364012L
-$oldArchive = "C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection\sha256\72\$oldArchiveHash.archive"
+$oldArchive = "$env:LOCALAPPDATA\dev.chrizhermann.bgcollection\sha256\72\$oldArchiveHash.archive"
 $replacementVersion = '0.3.2'
 $replacementReference = 'v0.3.2'
 $replacementUrl = 'https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.3.2/chriz-bg-rebalance-v0.3.2.zip'
@@ -528,7 +528,7 @@ try {
             $mod = $frozen.mods.($run.mod_id)
             $artifact = $frozen.artifacts.($run.artifact_id)
             $archiveHash = $artifact.source.sha256
-            $archivePath = "C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection\sha256\$($archiveHash.Substring(0,2))\$archiveHash.archive"
+            $archivePath = "$env:LOCALAPPDATA\dev.chrizhermann.bgcollection\sha256\$($archiveHash.Substring(0,2))\$archiveHash.archive"
             Assert-DirectPath $archivePath $false
             if ((Get-Item -LiteralPath $archivePath).Length -ne $artifact.source.expected_length -or (Hash $archivePath) -ne $archiveHash) {
                 throw "Remaining artifact identity changed: $($run.artifact_id)"

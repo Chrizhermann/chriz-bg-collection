@@ -6,12 +6,12 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$runRoot = 'C:\Users\chris\Games\CEBG-Curated-20260905-r5'
+$runRoot = Join-Path $env:USERPROFILE 'Games\CEBG-Curated-20260905-r5'
 $gameRoot = Join-Path $runRoot 'game'
 $recoveryRoot = Join-Path $runRoot '.chriz\recoveries\modpack-alpha5-20260906'
 $stepRoot = Join-Path $runRoot '.chriz\attempts\attempt-aba3cbb32e1956c690b8\steps\0110-22791e178261b9e3\attempt-0001'
 $oldArchiveHash = '16453c1e9d1ff76a1e697426cda33d1b6cac3243d7310f7fda6d90410fca243c'
-$oldArchive = 'C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection\sha256\16\' + $oldArchiveHash + '.archive'
+$oldArchive = "$env:LOCALAPPDATA\dev.chrizhermann.bgcollection\sha256\16\" + $oldArchiveHash + '.archive'
 $newArchiveHash = '2278c839f60e019bedba355cb794176a052d24b68db2851248af926580840b33'
 $newArchive = Join-Path $PSScriptRoot '..\target\alpha9-source-verification\chriz-bg-modpack-v0.2.0-alpha.5.zip'
 $toolHash = 'ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a'
@@ -218,7 +218,7 @@ try {
         $publication = Get-Content -LiteralPath (Game-Path '.chriz-bg-collection/publication-manifest.json') -Raw | ConvertFrom-Json
         $derivedEvidence = @()
         $srHash = $frozen.artifacts.'spell-rev-4.21-chriz.3'.source.sha256
-        $srArchive = 'C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection\sha256\' + $srHash.Substring(0,2) + '\' + $srHash + '.archive'
+        $srArchive = "$env:LOCALAPPDATA\dev.chrizhermann.bgcollection\sha256\" + $srHash.Substring(0,2) + '\' + $srHash + '.archive'
         if ((Hash $srArchive) -ne $srHash) { throw 'SR cache identity changed' }
         foreach ($run in $runs) {
             if ($run.args.Count -ne 0 -or $run.prompt_scripts.Count -ne 0) { throw 'This supervised continuation supports only these prompt-free runs' }
@@ -235,7 +235,7 @@ try {
             $mod = $frozen.mods.($run.mod_id)
             $artifact = $frozen.artifacts.($run.artifact_id)
             $archiveHash = $artifact.source.sha256
-            $archivePath = 'C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection\sha256\' + $archiveHash.Substring(0,2) + '\' + $archiveHash + '.archive'
+            $archivePath = "$env:LOCALAPPDATA\dev.chrizhermann.bgcollection\sha256\" + $archiveHash.Substring(0,2) + '\' + $archiveHash + '.archive'
             if ((Hash $archivePath) -ne $archiveHash) { throw 'Remaining artifact cache identity changed' }
             if ($mod.language -ne 0 -or $mod.invocation_mode -ne 'setup-name') { throw 'Unexpected remaining invocation mode/language' }
             $toolPath = Game-Path ([IO.Path]::GetFileNameWithoutExtension($mod.tp2) + '.exe')

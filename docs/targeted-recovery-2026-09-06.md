@@ -23,7 +23,7 @@ in the subsequent managed-completion slice linked above.
 - R6 PID 47680 was deliberately stopped at 2026-09-06T01:38:53+09:00 during
   `stage:bg2`, ledger 73. BG1 staging had completed; no WeiDU child existed (only
   the Windows console host). No mod installation had started. Do not resume r6.
-- Recover existing `C:\Users\chris\Games\CEBG-Curated-20260905-r5` in place.
+- Recover existing `%USERPROFILE%\Games\CEBG-Curated-20260905-r5` in place.
   No game clone, source restaging, or replay of the first 383 active BG2 components.
 - The known 14 modpack entries remain exactly at the top of the stack. The two
   failed components 170/192 already rolled back according to their process output.
@@ -59,7 +59,7 @@ in the subsequent managed-completion slice linked above.
 - Cleanup of stopped r6 was attempted once after exact-target checks were included
   in the command, but the tool rejected the entire command before execution. **No
   deletion or proposed ZIP creation happened.** Do not retry this rejected target by
-  another route. `C:\Users\chris\CEBG-Tests\CEBG-Curated-20260906-r6` remains the
+  another route. `%USERPROFILE%\CEBG-Tests\CEBG-Curated-20260906-r6` remains the
   stopped disposable copy; logs are already retained under worktree `target/`.
 
 ## Evidence and product limits
