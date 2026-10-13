@@ -506,7 +506,10 @@ fn installation_defaults_use_the_injected_home_without_creating_directories() {
 
     let windows_defaults = installation_defaults(Path::new(r"C:\Users\Player"))
         .expect("project Windows installation defaults");
-    assert_eq!(windows_defaults.path, r"C:\Users\Player\Games\Chriz Easy BG");
+    assert_eq!(
+        windows_defaults.path,
+        r"C:\Users\Player\Games\Chriz Easy BG"
+    );
 }
 
 #[test]
