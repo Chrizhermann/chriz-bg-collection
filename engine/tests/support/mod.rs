@@ -4,4 +4,5 @@
 //! items unused by a particular crate must not trip dead-code lints.
 #![allow(dead_code)]
 
+pub mod environment;
 pub mod fakegame;

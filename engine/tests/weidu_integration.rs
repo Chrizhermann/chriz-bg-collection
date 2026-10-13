@@ -22,6 +22,7 @@ use bg_engine::weidu::verify::{reconcile, ExpectedRun, Reconciliation};
 use pelite::image::IMAGE_FILE_MACHINE_AMD64;
 use pelite::pe64::{Pe, PeFile};
 use sha2::{Digest, Sha256};
+use support::environment::ScopedEnvVar;
 use support::fakegame::FakeGame;
 use tempfile::TempDir;
 use walkdir::WalkDir;
@@ -499,6 +500,49 @@ fn tested_explicit_relative_tp2_mode_runs_without_becoming_the_default() {
     );
     harness.assert_protected_unchanged();
     harness.assert_override_publications(&["tmfolder.txt"]);
+}
+
+#[test]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+fn at_now_runs_a_bare_batch_name_from_the_game_folder_even_if_the_parent_disables_that_search() {
+    // EET's desktop shortcut failed this way when the installer started from a shell that sets
+    // this variable (Claude Code's does): cmd.exe then skipped the game folder for `shortcut.bat`.
+    let _parent = ScopedEnvVar::set("NoDefaultCurrentDirectoryInExePath", "1");
+    let harness = Harness::new();
+    let components = [60];
+    let invocation = harness.invocation(
+        "bare-name",
+        InvocationMode::SetupName,
+        &components,
+        Vec::new(),
+    );
+
+    let evidence = harness.run_sync(invocation, "bare-name");
+
+    assert_eq!(
+        evidence.outcome,
+        RunOutcome::Exited { code: 0 },
+        "real WeiDU output:\n{}\ndebug log:\n{}",
+        evidence.output,
+        evidence.debug
+    );
+    assert_eq!(
+        reconcile(
+            &evidence.before_log,
+            &evidence.after_log,
+            &evidence.output,
+            &expected_run(&components, 0),
+        ),
+        Reconciliation::ProvenDone
+    );
+    harness.assert_protected_unchanged();
+    harness.assert_override_publications(&["tmbare.txt"]);
+    assert_eq!(
+        fs::read_to_string(harness.game.override_dir().join("tmbare.txt"))
+            .unwrap()
+            .trim(),
+        "bare batch ran"
+    );
 }
 
 fn fixture_root() -> PathBuf {

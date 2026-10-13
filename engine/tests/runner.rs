@@ -1,3 +1,5 @@
+mod support;
+
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -461,6 +463,56 @@ fn shared_control_handle_cancels_and_joins_the_complete_process_tree() {
             .windows(b"child-spawned".len())
             .any(|window| window == b"child-spawned"),
         "cancellation discarded the durable raw process log"
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn bare_batch_name_runs_from_the_working_directory_even_if_the_parent_disables_that_search() {
+    // Some shells (Claude Code's, for one) set this variable; while it exists, with any value,
+    // cmd.exe skips the current directory for bare command names, so EET's
+    // `AT_NOW ~shortcut.bat~` failed. Set it here so the result does not depend on the shell
+    // that started cargo. Other tests in this file run absolute programs and do not depend on it.
+    let _parent =
+        support::environment::ScopedEnvVar::set("NoDefaultCurrentDirectoryInExePath", "1");
+    let temp = TempDir::new().unwrap();
+    fs::write(
+        temp.path().join("cebg-bare-name.bat"),
+        "@echo off\r\necho bare-batch-ran\r\n",
+    )
+    .unwrap();
+    let raw_log = temp.path().join("bare-name-output.log");
+    let request = RunnerRequest {
+        invocation: Invocation {
+            // WeiDU passes AT_NOW commands to cmd.exe, with the game folder as working directory.
+            program: PathBuf::from(
+                std::env::var_os("COMSPEC").expect("locate Windows command interpreter"),
+            ),
+            cwd: temp.path().to_path_buf(),
+            args: ["/d", "/c", "cebg-bare-name.bat"]
+                .into_iter()
+                .map(OsString::from)
+                .collect(),
+            prompts: vec![],
+            debug_path: temp.path().join("weidu.debug.log"),
+            identity_digest: "bare-name-test".to_owned(),
+        },
+        step_id: "install:bare-name".to_owned(),
+        output_log: raw_log.clone(),
+        silence_threshold: Duration::from_secs(10),
+    };
+    let (sink, _events) = ChannelSink::unbounded();
+    let (_controls, control_rx) = crossbeam_channel::unbounded();
+
+    let outcome = run(request, control_rx, sink);
+
+    let stderr = fs::read_to_string(raw_log.with_file_name("stderr.log")).unwrap();
+    assert_eq!(outcome, RunOutcome::Exited { code: 0 }, "stderr: {stderr}");
+    assert_eq!(
+        fs::read_to_string(raw_log.with_file_name("stdout.log"))
+            .unwrap()
+            .trim_end(),
+        "bare-batch-ran"
     );
 }
 
