@@ -2,6 +2,28 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## October 14 — app alpha.21 published (installer fixes)
+
+**App alpha.21 is public** as a prerelease and on the alpha updater channel; the
+bundled collection stays alpha.20. It fixes the streamer's stuck resumed install
+("could not inspect extraction marker"): damaged downloads and unpacked mods are
+rebuilt automatically, and files that are only locked or busy stop the step without
+being deleted. Installations whose folder CEBG can no longer prove can now be
+**removed from the list** without deleting anything; a deleted or disconnected
+download cache no longer blocks deleting a proven installation. Three independent
+reviews preceded the release; full local tests, signed-package checks and Defender
+scans passed; this binary was not launched. See
+[exact results](package-acceptance-alpha21-2026-10-14.md) and
+[release notes](release-notes-alpha21.md).
+
+The collection website still shows alpha.20 and waits for Christopher's approval.
+Next version: long-path-safe cleanup of CEBG's application data (the uninstaller's
+"Delete the application data" leaves very long paths behind), cancellable waits on a
+stuck cache lock, a journal-cleanup error after a successful removal, and campaign
+availability when the download cache is gone. The engine CLI test in
+[issue 9](https://github.com/Chrizhermann/chriz-bg-collection/issues/9) failed once
+more while other sessions were active; it passed in the release run.
+
 ## October 13 — alpha.20 and its website published
 
 **App and collection alpha.20 are now public** as a prerelease and on the alpha
