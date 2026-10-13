@@ -12,6 +12,7 @@ use zip::{CompressionMethod, ZipArchive};
 #[cfg(windows)]
 use widestring::WideCString;
 
+use super::damaged::{damaged_entry_reason, path_is_present, set_aside, CacheRepair};
 use super::AcquireError;
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -154,6 +155,20 @@ pub fn extract_archive(
     extraction_cache: &Path,
     requirements: &ArchiveRequirements,
 ) -> Result<ExtractedArtifact, AcquireError> {
+    extract_archive_reporting_repair(archive_path, extraction_cache, requirements)
+        .map(|(extracted, _repair)| extracted)
+}
+
+/// [`extract_archive`], also reporting a damaged published extraction that was replaced.
+///
+/// A published extraction that no longer validates (missing or unreadable marker, changed,
+/// missing or added files) is never used. It is set aside and the verified archive is
+/// extracted again under the same identity.
+pub fn extract_archive_reporting_repair(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
     validate_limits(&requirements.limits)?;
     let expected_roots = normalize_expected_paths(&requirements.expected_roots, "root")?;
     let expected_tp2_paths =
@@ -248,8 +263,18 @@ pub fn extract_archive(
         .join(&digest[..2])
         .join(&digest)
         .join(&contract_sha256);
-    if final_root.exists() {
-        return validate_published_extraction(final_root, &identity);
+    let mut repair = None;
+    if path_is_present(&final_root) {
+        match validate_published_extraction(final_root.clone(), &identity) {
+            Ok(extracted) => return Ok((extracted, None)),
+            Err(error) => {
+                let Some(reason) = damaged_entry_reason(&error, &[final_root.as_path()]) else {
+                    return Err(error);
+                };
+                set_aside(extraction_cache, &final_root, &digest)?;
+                repair = Some(CacheRepair { reason });
+            }
+        }
     }
 
     let (entries, wrapper_directory) = match requirements.format {
@@ -318,9 +343,11 @@ pub fn extract_archive(
     })?;
     match fs::rename(&temporary, &final_root) {
         Ok(()) => {}
+        // A concurrent request published first; its entry is validated, never repaired again.
         Err(_source) if final_root.exists() => {
             let _ = fs::remove_dir_all(&temporary);
-            return validate_published_extraction(final_root, &identity);
+            return validate_published_extraction(final_root, &identity)
+                .map(|extracted| (extracted, repair));
         }
         Err(source) => {
             let _ = fs::remove_dir_all(&temporary);
@@ -332,14 +359,17 @@ pub fn extract_archive(
         }
     }
 
-    Ok(ExtractedArtifact {
-        root: final_root,
-        artifact_sha256: digest,
-        extraction_contract_sha256: contract_sha256,
-        wrapper_directory,
-        expected_roots,
-        expected_tp2_paths,
-    })
+    Ok((
+        ExtractedArtifact {
+            root: final_root,
+            artifact_sha256: digest,
+            extraction_contract_sha256: contract_sha256,
+            wrapper_directory,
+            expected_roots,
+            expected_tp2_paths,
+        },
+        repair,
+    ))
 }
 
 fn extraction_contract_sha256(

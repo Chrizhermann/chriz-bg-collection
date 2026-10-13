@@ -2111,6 +2111,98 @@ fn resume_retains_first_acquisition_after_a_lost_cache_is_redownloaded_via_a_new
     );
 }
 
+/// The published extraction of `bytes` beneath the fixture's extraction cache.
+#[cfg(windows)]
+fn published_extraction(fixture: &ExecutableFixture, bytes: &[u8]) -> PathBuf {
+    let digest = sha256_bytes(bytes);
+    let parent = fixture
+        .cache
+        .join("extracted/sha256-v3")
+        .join(&digest[..2])
+        .join(&digest);
+    let entries = fs::read_dir(&parent)
+        .expect("read published extraction contracts")
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 1, "{entries:?}");
+    entries.into_iter().next().unwrap()
+}
+
+/// The reported failure: a player deleted CEBG's cache folders by hand between attempts and
+/// a published extraction survived without its marker. Resuming must rebuild it from the
+/// verified archive and record the repair, not stop at "could not inspect extraction marker".
+#[cfg(windows)]
+#[test]
+fn resume_rebuilds_a_partially_deleted_extraction_and_records_the_repair() {
+    let fixture = executable_fixture();
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    let failed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("execute first synthetic attempt");
+    assert_eq!(failed.status.code(), Some(1), "{}", stderr(&failed));
+    assert_eq!(
+        json_stdout(&failed)["status"]["step_id"],
+        "install:eefixpack-bg1"
+    );
+
+    // Both resumed install steps extract the WeiDU tool again before running it.
+    let tool = published_extraction(&fixture, &fixture.tool_archive);
+    let extraction_marker = tool.join(".chriz-bg-extraction.json");
+    fs::remove_file(&extraction_marker).expect("remove extraction marker");
+    assert!(tool.join("weidu.exe").is_file());
+
+    let resumed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume synthetic campaign");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+    assert!(extraction_marker.is_file());
+
+    let repairs = fixture.managed.join(".chriz/evidence/cache-repairs");
+    let repaired = fs::read_dir(&repairs)
+        .expect("read recorded cache repairs")
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(repaired, ["weidu"]);
+    let records = fs::read_dir(repairs.join("weidu"))
+        .expect("read recorded WeiDU cache repairs")
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 1, "{records:?}");
+    let bytes = fs::read(&records[0]).expect("read cache repair record");
+    let record: Value = serde_json::from_slice(&bytes).expect("parse cache repair record");
+    assert_eq!(record["cache"], "extraction");
+    assert_eq!(record["artifact_id"], "weidu");
+    assert_eq!(
+        record["artifact_sha256"],
+        sha256_bytes(&fixture.tool_archive)
+    );
+    let reason = record["reason"].as_str().unwrap();
+    assert!(
+        reason.contains("inspect extraction marker")
+            && reason.contains(".chriz-bg-extraction.json"),
+        "{reason}"
+    );
+    assert!(
+        !reason.contains(&*fixture.cache.to_string_lossy()),
+        "{reason}"
+    );
+}
+
 #[cfg(windows)]
 #[test]
 fn completed_mock_weidu_without_process_result_is_proven_on_resume_without_rerunning() {

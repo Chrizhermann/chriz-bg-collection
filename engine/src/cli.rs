@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::acquire::{
-    extract_archive, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
-    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, DownloadRequest,
-    ExtractedArtifact, MaterializationRequest, DEFAULT_DOWNLOAD_ATTEMPTS,
+    extract_archive_reporting_repair, materialize, provide_manual_archive, ArchiveFormat,
+    ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
+    DownloadRequest, ExtractedArtifact, MaterializationRequest, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
@@ -100,6 +100,9 @@ const EVIDENCE_DIRECTORY: &str = "evidence";
 /// acquisition evidence, or that were downloaded anew. Stored as
 /// `<category>/<artifact-id>/<digest>.json`.
 const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
+/// Damaged download or extraction cache entries that were set aside and rebuilt. Stored as
+/// `<category>/<artifact-id>/<digest>.json`.
+const CACHE_REPAIRS_EVIDENCE: &str = "cache-repairs";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
 const INVOCATION_FILE: &str = "invocation.json";
@@ -111,6 +114,22 @@ const STDERR_FILE: &str = "stderr.log";
 const DEBUG_LOG_FILE: &str = "weidu.debug.log";
 const WEIDU_SILENCE_THRESHOLD: Duration = Duration::from_secs(5 * 60);
 static CAMPAIGN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+/// Which derived cache held a damaged entry.
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum CacheRepairKind {
+    Download,
+    Extraction,
+}
+
+#[derive(Serialize)]
+struct CacheRepairRecord<'a> {
+    cache: CacheRepairKind,
+    artifact_id: &'a str,
+    artifact_sha256: &'a str,
+    reason: &'a str,
+}
 
 type InterruptHandler = Box<dyn FnMut() + Send + 'static>;
 
@@ -2175,6 +2194,14 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                         )
                     })
                     .map_err(step_error)?;
+                if let Some(repair) = &acquired.repaired {
+                    self.record_cache_repair(
+                        CacheRepairKind::Download,
+                        &artifact.id,
+                        &acquired.metadata.sha256,
+                        repair,
+                    )?;
+                }
                 let outcome = match acquired.disposition {
                     CacheDisposition::Hit => ArtifactCacheOutcome::Hit,
                     CacheDisposition::Downloaded => ArtifactCacheOutcome::Downloaded,
@@ -2269,7 +2296,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn extract(&self, artifact: &Artifact) -> Result<ExtractedArtifact, StepFailure> {
         let (archive, _) = self.acquire_archive(artifact)?;
-        let extracted = extract_archive(
+        let (extracted, repair) = extract_archive_reporting_repair(
             &archive,
             &self.created.cache_root.join("extracted"),
             &ArchiveRequirements {
@@ -2298,6 +2325,14 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             },
         )
         .map_err(step_error)?;
+        if let Some(repair) = &repair {
+            self.record_cache_repair(
+                CacheRepairKind::Extraction,
+                &artifact.id,
+                &extracted.artifact_sha256,
+                repair,
+            )?;
+        }
         let wrapper_ok = match artifact.archive.root_rule {
             ArchiveRootRule::Direct => extracted.wrapper_directory.is_none(),
             ArchiveRootRule::SingleWrapper => extracted.wrapper_directory.is_some(),
@@ -2385,6 +2420,31 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             Path::new(ARTIFACT_REACQUISITIONS_EVIDENCE).join(&observed.id),
             &digest,
             observed,
+        )
+    }
+
+    /// Keep a record of a damaged download or extraction cache entry that was set aside and
+    /// rebuilt from the verified archive, so a later diagnosis can see it happened. Each
+    /// distinct record is stored once, named by its own digest.
+    fn record_cache_repair(
+        &self,
+        cache: CacheRepairKind,
+        artifact_id: &str,
+        artifact_sha256: &str,
+        repair: &CacheRepair,
+    ) -> Result<(), StepFailure> {
+        validate_cli_identifier(artifact_id, "artifact id").map_err(StepFailure::new)?;
+        let record = CacheRepairRecord {
+            cache,
+            artifact_id,
+            artifact_sha256,
+            reason: &repair.reason,
+        };
+        let digest = sha256_bytes(&serde_json::to_vec(&record).map_err(step_error)?);
+        self.persist_named_evidence(
+            Path::new(CACHE_REPAIRS_EVIDENCE).join(artifact_id),
+            &digest,
+            &record,
         )
     }
 

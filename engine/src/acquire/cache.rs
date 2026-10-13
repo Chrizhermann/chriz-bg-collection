@@ -9,6 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::events::{EngineEvent, EventSink, Stream};
 
+use super::damaged::{damaged_entry_reason, path_is_present, set_aside, CacheRepair};
 use super::http::{validate_download_url, HttpClient, HttpResponse};
 use super::{AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest};
 
@@ -92,9 +93,10 @@ impl ArtifactCache {
         validate_download_url(&request.url)?;
         let paths = self.paths(request, &digest);
 
+        let mut repaired = None;
         {
             let _guard = acquire_digest_lock(&paths.lock)?;
-            if let Some(hit) = verified_cache_entry(&paths, &digest, request.expected_length)? {
+            if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
                 sink.emit(EngineEvent::StepProgress {
                     id: request.request_id.clone(),
                     done: request.expected_length,
@@ -138,10 +140,10 @@ impl ArtifactCache {
         };
 
         let _guard = acquire_digest_lock(&paths.lock)?;
-        if let Some(hit) = verified_cache_entry(&paths, &digest, request.expected_length)? {
+        if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
             remove_if_exists(&paths.partial)?;
             remove_if_exists(&paths.partial_state)?;
-            return Ok(hit);
+            return Ok(AcquiredArtifact { repaired, ..hit });
         }
         publish(&paths, request, &metadata)?;
         Ok(AcquiredArtifact {
@@ -149,7 +151,36 @@ impl ArtifactCache {
             metadata_path: paths.metadata,
             metadata,
             disposition: CacheDisposition::Downloaded,
+            repaired,
         })
+    }
+
+    /// A verified cache hit, or `None` when the object must be downloaded. Called with the
+    /// digest lock held. A damaged entry is set aside so the download can replace it; the
+    /// first repair of this call is reported.
+    fn usable_cache_entry(
+        &self,
+        paths: &CachePaths,
+        digest: &str,
+        request: &DownloadRequest,
+        repaired: &mut Option<CacheRepair>,
+    ) -> Result<Option<AcquiredArtifact>, AcquireError> {
+        match verified_cache_entry(paths, digest, request.expected_length) {
+            Ok(hit) => Ok(hit),
+            Err(error) => {
+                let owned = [paths.archive.as_path(), paths.metadata.as_path()];
+                let Some(reason) = damaged_entry_reason(&error, &owned) else {
+                    return Err(error);
+                };
+                for entry in owned {
+                    if path_is_present(entry) {
+                        set_aside(&self.root, entry, digest)?;
+                    }
+                }
+                repaired.get_or_insert(CacheRepair { reason });
+                Ok(None)
+            }
+        }
     }
 
     fn paths(&self, request: &DownloadRequest, digest: &str) -> CachePaths {
@@ -683,6 +714,7 @@ fn verified_cache_entry(
         metadata_path: paths.metadata.clone(),
         metadata,
         disposition: CacheDisposition::Hit,
+        repaired: None,
     }))
 }
 

@@ -79,6 +79,11 @@ Deleting `WeiDU.log`, the receipt or the cache does not repair a failed mod step
 and can remove useful evidence. A component missing from the log tells us where
 to look, not why it failed.
 
+CEBG checks every reused download and unpacked mod copy before using it. If one
+is damaged, for example after a manual deletion that Windows could not finish,
+CEBG sets it aside and downloads or unpacks it again, then records that in the
+installation's evidence. You never need to delete cache folders by hand.
+
 ## An installation appears missing or incomplete
 
 First check that you selected the right installation and that its drive is

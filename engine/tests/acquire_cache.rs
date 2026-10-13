@@ -73,6 +73,128 @@ fn a_cache_hit_is_rehashed_and_does_not_touch_the_network() {
     assert_eq!(std::fs::read(second.archive_path).unwrap(), bytes);
 }
 
+/// Download once, damage the published entry with `damage`, then acquire again from a fresh
+/// server. The damaged entry must be set aside, downloaded anew and reported for `reason`.
+fn assert_damaged_entry_is_downloaded_again(
+    name: &str,
+    damage: impl FnOnce(&std::path::Path, &std::path::Path),
+    reason: &[&str],
+) {
+    static BYTES: &[u8] = b"artifact that is damaged after publication";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let (sink, _) = ChannelSink::unbounded();
+    let (url, server) = one_shot_server(BYTES);
+    let first = cache
+        .acquire(&request(&format!("{name}-first"), url, BYTES), &sink)
+        .unwrap();
+    server.join().unwrap();
+    damage(&first.archive_path, &first.metadata_path);
+
+    let (url, server) = one_shot_server(BYTES);
+    let second = cache
+        .acquire(&request(&format!("{name}-second"), url, BYTES), &sink)
+        .unwrap();
+    server.join().unwrap();
+
+    let repair = second.repaired.expect("damaged entry must be reported");
+    assert!(
+        reason.iter().all(|part| repair.reason.contains(part)),
+        "unexpected repair reason: {}",
+        repair.reason
+    );
+    assert_eq!(second.disposition, CacheDisposition::Downloaded);
+    assert_eq!(second.archive_path, first.archive_path);
+    assert_eq!(std::fs::read(&second.archive_path).unwrap(), BYTES);
+    let damaged = temp.path().join("cache/damaged");
+    assert!(!damaged.exists() || std::fs::read_dir(damaged).unwrap().next().is_none());
+
+    let third = cache
+        .acquire(
+            &request(
+                &format!("{name}-third"),
+                "https://network-must-not-be-used.invalid/archive".to_owned(),
+                BYTES,
+            ),
+            &sink,
+        )
+        .unwrap();
+    assert_eq!(third.disposition, CacheDisposition::Hit);
+    assert_eq!(third.repaired, None);
+}
+
+#[test]
+fn a_cache_entry_missing_its_archive_is_downloaded_again() {
+    assert_damaged_entry_is_downloaded_again(
+        "missing-archive",
+        |archive, _metadata| std::fs::remove_file(archive).unwrap(),
+        &["archive and metadata must both exist"],
+    );
+}
+
+#[test]
+fn a_cache_entry_missing_its_metadata_is_downloaded_again() {
+    assert_damaged_entry_is_downloaded_again(
+        "missing-metadata",
+        |_archive, metadata| std::fs::remove_file(metadata).unwrap(),
+        &["archive and metadata must both exist"],
+    );
+}
+
+#[test]
+fn a_cache_entry_with_changed_archive_bytes_is_downloaded_again() {
+    assert_damaged_entry_is_downloaded_again(
+        "changed-archive",
+        |archive, _metadata| std::fs::write(archive, b"changed").unwrap(),
+        &["metadata/file mismatch"],
+    );
+}
+
+#[test]
+fn a_cache_entry_with_unreadable_metadata_is_downloaded_again() {
+    assert_damaged_entry_is_downloaded_again(
+        "unreadable-metadata",
+        |_archive, metadata| std::fs::write(metadata, b"{ truncated").unwrap(),
+        &["unreadable cache record", ".json"],
+    );
+}
+
+/// An archive another program holds open cannot be proven damaged; it stays in place.
+#[cfg(windows)]
+#[test]
+fn a_cache_entry_that_cannot_be_read_is_kept() {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    let bytes = b"artifact held open by another program";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let (sink, _) = ChannelSink::unbounded();
+    let (url, server) = one_shot_server(bytes);
+    let first = cache
+        .acquire(&request("locked-first", url, bytes), &sink)
+        .unwrap();
+    server.join().unwrap();
+    let exclusive = std::fs::OpenOptions::new()
+        .read(true)
+        .share_mode(0)
+        .open(&first.archive_path)
+        .unwrap();
+
+    let result = cache.acquire(
+        &request(
+            "locked-second",
+            "https://network-must-not-be-used.invalid/archive".to_owned(),
+            bytes,
+        ),
+        &sink,
+    );
+
+    assert!(matches!(result, Err(AcquireError::Io { .. })), "{result:?}");
+    drop(exclusive);
+    assert!(!temp.path().join("cache/damaged").exists());
+    assert_eq!(std::fs::read(&first.archive_path).unwrap(), bytes);
+}
+
 #[test]
 fn hash_mismatch_never_publishes_a_cache_object() {
     let bytes = b"wrong artifact";

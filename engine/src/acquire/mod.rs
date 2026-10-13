@@ -7,16 +7,18 @@ use thiserror::Error;
 
 mod archive;
 mod cache;
+mod damaged;
 mod http;
 mod inspect;
 mod manual;
 mod materialize;
 
 pub use archive::{
-    extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
-    ExtractedArtifact,
+    extract_archive, extract_archive_reporting_repair, ArchiveFormat, ArchiveLimits, ArchiveMode,
+    ArchiveRequirements, ExtractedArtifact,
 };
 pub use cache::ArtifactCache;
+pub use damaged::CacheRepair;
 pub use http::validate_redirect_target;
 pub use inspect::{download_for_inspection, QuarantinedDownload};
 pub use manual::{provide_manual_archive, publish_manual_archive, VerifiedManualArchive};
@@ -85,6 +87,8 @@ pub struct AcquiredArtifact {
     pub metadata: ArtifactMetadata,
     /// Whether this call downloaded or reused the object.
     pub disposition: CacheDisposition,
+    /// A damaged cache entry that this call set aside before downloading the object again.
+    pub repaired: Option<CacheRepair>,
 }
 
 /// Failure while validating, transferring, or publishing an immutable artifact.

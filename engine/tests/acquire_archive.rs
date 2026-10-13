@@ -3,7 +3,8 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use bg_engine::acquire::{
-    extract_archive, AcquireError, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
+    extract_archive, extract_archive_reporting_repair, AcquireError, ArchiveFormat, ArchiveLimits,
+    ArchiveMode, ArchiveRequirements, ExtractedArtifact,
 };
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
@@ -510,8 +511,38 @@ fn leaves_both_legacy_digest_only_extraction_namespaces_untouched() {
     }
 }
 
+/// Extract again and require that the damaged published entry was replaced for `reason`.
+/// The rebuilt entry must equal a fresh extraction and must be a plain cache hit afterwards.
+fn assert_rebuilt(
+    archive: &Path,
+    cache: &Path,
+    request: &ArchiveRequirements,
+    original: &ExtractedArtifact,
+    reason: &[&str],
+) {
+    let (rebuilt, repair) = extract_archive_reporting_repair(archive, cache, request).unwrap();
+    let repair = repair.expect("damaged extraction must be reported as repaired");
+    assert!(
+        reason.iter().all(|part| repair.reason.contains(part)),
+        "unexpected repair reason: {}",
+        repair.reason
+    );
+    assert!(
+        !repair.reason.contains(&*cache.to_string_lossy()),
+        "repair reason must not contain the cache location: {}",
+        repair.reason
+    );
+    assert_eq!(&rebuilt, original);
+    assert_eq!(
+        extract_archive_reporting_repair(archive, cache, request).unwrap(),
+        (rebuilt, None)
+    );
+    let damaged = cache.join("damaged");
+    assert!(!damaged.exists() || std::fs::read_dir(damaged).unwrap().next().is_none());
+}
+
 #[test]
-fn cache_hit_rejects_a_matching_tree_and_marker_record_outside_publish_roots() {
+fn cache_hit_rebuilds_a_tree_and_marker_record_outside_publish_roots() {
     let temp = TempDir::new().unwrap();
     let archive = temp.path().join("valid.zip");
     write_zip(
@@ -538,17 +569,20 @@ fn cache_hit_rejects_a_matching_tree_and_marker_record_outside_publish_roots() {
             }));
     });
 
-    let error = extract_archive(&archive, &cache, &request).unwrap_err();
-
-    assert!(matches!(
-        error,
-        AcquireError::CorruptCache { message, .. }
-            if message.contains("outside declared publish roots")
-    ));
+    assert_rebuilt(
+        &archive,
+        &cache,
+        &request,
+        &extracted,
+        &["outside declared publish roots"],
+    );
+    assert!(!extracted.root.join("MOD-LIVE").exists());
+    let marker = std::fs::read_to_string(extracted.root.join(".chriz-bg-extraction.json")).unwrap();
+    assert!(!marker.contains("MOD-LIVE"));
 }
 
 #[test]
-fn cache_hit_requires_every_declared_tp2_to_be_a_recorded_regular_file() {
+fn cache_hit_rebuilds_a_missing_declared_tp2() {
     let temp = TempDir::new().unwrap();
     let archive = temp.path().join("valid.zip");
     write_zip(
@@ -571,17 +605,21 @@ fn cache_hit_requires_every_declared_tp2_to_be_a_recorded_regular_file() {
         });
     });
 
-    let error = extract_archive(&archive, &cache, &request).unwrap_err();
-
-    assert!(matches!(
-        error,
-        AcquireError::CorruptCache { message, .. }
-            if message.contains("expected TP2") && message.contains("setup-mod.tp2")
-    ));
+    assert_rebuilt(
+        &archive,
+        &cache,
+        &request,
+        &extracted,
+        &["expected TP2", "setup-mod.tp2"],
+    );
+    assert_eq!(
+        std::fs::read(extracted.root.join("mod/setup-mod.tp2")).unwrap(),
+        TP2
+    );
 }
 
 #[test]
-fn cache_hit_requires_every_publish_root_to_own_a_recorded_regular_file() {
+fn cache_hit_rebuilds_a_publish_root_without_a_recorded_regular_file() {
     let temp = TempDir::new().unwrap();
     let archive = temp.path().join("multiple-roots.zip");
     write_zip(
@@ -606,13 +644,17 @@ fn cache_hit_requires_every_publish_root_to_own_a_recorded_regular_file() {
         });
     });
 
-    let error = extract_archive(&archive, &cache, &request).unwrap_err();
-
-    assert!(matches!(
-        error,
-        AcquireError::CorruptCache { message, .. }
-            if message.contains("publish root") && message.contains("extra")
-    ));
+    assert_rebuilt(
+        &archive,
+        &cache,
+        &request,
+        &extracted,
+        &["publish root", "extra"],
+    );
+    assert_eq!(
+        std::fs::read(extracted.root.join("extra/readme.txt")).unwrap(),
+        DATA
+    );
 }
 
 #[test]
@@ -788,7 +830,7 @@ fn changed_tp2_contract_is_checked_against_the_archive() {
 }
 
 #[test]
-fn cache_hit_rejects_modified_payload_and_contract_marker_without_rebuilding() {
+fn cache_hit_never_uses_a_modified_payload_or_contract_marker() {
     let temp = TempDir::new().unwrap();
     let archive = temp.path().join("tampered.zip");
     let (request, _) = write_multi_root_archive(&archive);
@@ -796,21 +838,145 @@ fn cache_hit_rejects_modified_payload_and_contract_marker_without_rebuilding() {
     let extracted = extract_archive(&archive, &payload_cache, &request).unwrap();
     let payload = extracted.root.join("mod/setup-mod.tp2");
     std::fs::write(&payload, b"modified payload").unwrap();
-    assert!(matches!(
-        extract_archive(&archive, &payload_cache, &request),
-        Err(AcquireError::CorruptCache { .. })
-    ));
-    assert_eq!(std::fs::read(payload).unwrap(), b"modified payload");
+    assert_rebuilt(
+        &archive,
+        &payload_cache,
+        &request,
+        &extracted,
+        &["setup-mod.tp2", "no longer matches"],
+    );
+    assert_eq!(std::fs::read(payload).unwrap(), TP2);
 
     let marker_cache = temp.path().join("marker-cache");
     let extracted = extract_archive(&archive, &marker_cache, &request).unwrap();
     edit_extraction_marker(&extracted.root, |marker| {
         marker["contract_sha256"] = serde_json::json!("0".repeat(64));
     });
-    assert!(matches!(
-        extract_archive(&archive, &marker_cache, &request),
-        Err(AcquireError::CorruptCache { .. })
-    ));
+    assert_rebuilt(
+        &archive,
+        &marker_cache,
+        &request,
+        &extracted,
+        &["does not match the requested archive layout"],
+    );
+}
+
+/// The reported case: the published directory survived a partial manual deletion, but its
+/// marker and some payload files did not.
+#[test]
+fn cache_hit_rebuilds_a_partially_deleted_extraction_without_its_marker() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("partially-deleted.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/lib/deep/data.txt", DATA, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    std::fs::remove_file(extracted.root.join(".chriz-bg-extraction.json")).unwrap();
+    std::fs::remove_file(extracted.root.join("mod/setup-mod.tp2")).unwrap();
+
+    assert_rebuilt(
+        &archive,
+        &cache,
+        &request,
+        &extracted,
+        &["inspect extraction marker", ".chriz-bg-extraction.json"],
+    );
+    assert_eq!(
+        std::fs::read(extracted.root.join("mod/setup-mod.tp2")).unwrap(),
+        TP2
+    );
+    assert_eq!(
+        std::fs::read(extracted.root.join("mod/lib/deep/data.txt")).unwrap(),
+        DATA
+    );
+}
+
+#[test]
+fn cache_hit_rebuilds_an_unreadable_marker_and_a_root_that_is_not_a_directory() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("unreadable-marker.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let request = requirements(&archive);
+
+    let marker_cache = temp.path().join("marker-cache");
+    let extracted = extract_archive(&archive, &marker_cache, &request).unwrap();
+    std::fs::write(
+        extracted.root.join(".chriz-bg-extraction.json"),
+        b"{ truncated",
+    )
+    .unwrap();
+    assert_rebuilt(
+        &archive,
+        &marker_cache,
+        &request,
+        &extracted,
+        &["unreadable cache record", ".chriz-bg-extraction.json"],
+    );
+
+    let file_cache = temp.path().join("file-cache");
+    let extracted = extract_archive(&archive, &file_cache, &request).unwrap();
+    std::fs::remove_dir_all(&extracted.root).unwrap();
+    std::fs::write(&extracted.root, b"not a directory").unwrap();
+    assert_rebuilt(
+        &archive,
+        &file_cache,
+        &request,
+        &extracted,
+        &["not a regular directory"],
+    );
+    assert!(extracted.root.is_dir());
+}
+
+/// A file another program holds open cannot be proven damaged, so the entry stays in place
+/// and the step fails instead of discarding something that may still be in use.
+#[cfg(windows)]
+#[test]
+fn cache_hit_keeps_an_entry_whose_files_cannot_be_read() {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("locked.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    let payload = extracted.root.join("mod/setup-mod.tp2");
+    let exclusive = std::fs::OpenOptions::new()
+        .read(true)
+        .share_mode(0)
+        .open(&payload)
+        .unwrap();
+
+    let error = extract_archive_reporting_repair(&archive, &cache, &request).unwrap_err();
+
+    assert!(matches!(error, AcquireError::Io { .. }), "{error:?}");
+    drop(exclusive);
+    assert!(!cache.join("damaged").exists());
+    assert_eq!(std::fs::read(&payload).unwrap(), TP2);
+    assert_eq!(
+        extract_archive_reporting_repair(&archive, &cache, &request).unwrap(),
+        (extracted, None)
+    );
 }
 
 #[test]
@@ -979,7 +1145,7 @@ fn public_mode_rejects_zero_hashes_and_self_extracting_executables() {
 }
 
 #[test]
-fn rejects_a_content_addressed_extraction_that_gained_unrecorded_files() {
+fn rebuilds_a_content_addressed_extraction_that_gained_unrecorded_files() {
     let temp = TempDir::new().unwrap();
     let archive = temp.path().join("valid.zip");
     write_zip(
@@ -994,5 +1160,12 @@ fn rejects_a_content_addressed_extraction_that_gained_unrecorded_files() {
     let extracted = extract_archive(&archive, &cache, &request).unwrap();
     std::fs::write(extracted.root.join("mod/injected.txt"), b"not verified").unwrap();
 
-    assert!(extract_archive(&archive, &cache, &request).is_err());
+    assert_rebuilt(
+        &archive,
+        &cache,
+        &request,
+        &extracted,
+        &["unrecorded extracted file", "mod/injected.txt"],
+    );
+    assert!(!extracted.root.join("mod/injected.txt").exists());
 }
