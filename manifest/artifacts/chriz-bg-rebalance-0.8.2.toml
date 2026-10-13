@@ -1,0 +1,32 @@
+id = "chriz-bg-rebalance-0.8.2"
+name = "CHRIZ-BG-REBALANCE"
+version = "0.8.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.2/chriz-bg-rebalance-v0.8.2-windows.zip"
+reference = "v0.8.2"
+expected_filename = "chriz-bg-rebalance-v0.8.2-windows.zip"
+expected_length = 1757530
+sha256 = "1577243caa0e503c1946ce4fa803952c87a6c4ccb1530141665e2b1d933661f1"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["chriz-bg-rebalance", "setup-chriz-bg-rebalance.tp2"]
+tp2_paths = ["setup-chriz-bg-rebalance.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 128
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-rebalance"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.2"
+reviewed_on = "2026-10-13"

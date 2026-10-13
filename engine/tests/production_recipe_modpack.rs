@@ -43,27 +43,27 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.10");
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.11");
     let artifact = &manifest.artifacts[artifact_id];
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.10");
+    assert_eq!(artifact.version, "0.2.0-alpha.11");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.10");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.11");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.10/chriz-bg-modpack-v0.2.0-alpha.10.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.11/chriz-bg-modpack-v0.2.0-alpha.11.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.10.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.11.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_588_239));
+    assert_eq!(artifact.source.expected_length, Some(10_445_075));
     assert_eq!(
         artifact.source.sha256,
-        "38a896adb08a6bfc76e011885e82667f613d47e49ce0c64fa87ccf3d2b57c7f6"
+        "1ab6fe05b282dd3d5badcbd25f41af3e15ea966c110298aed71c39c855c7fa18"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -135,7 +135,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.10");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.11");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");

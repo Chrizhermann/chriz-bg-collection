@@ -1,0 +1,124 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.20"
+published_at = "2026-10-13T12:57:20Z"
+minimum_app_version = "0.1.0-alpha.20"
+supersedes = "0.1.0-alpha.19"
+
+[[changes]]
+id = "challenge-mode-emotion-optional"
+title = "Challenge Mode; Emotion's no-stack rule becomes optional"
+summary = "Emotion: Courage and Hope do not stack is now unchecked and part of Challenge Mode; its effect is unchanged. Challenge Mode switches its members on or off together, and each stays individually adjustable. The SoD Insane bridge option's description changes wording only."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:chriz-bg-rebalance:component-301",
+  "feature:feature:chriz-sod-remix:component-257",
+]
+
+[[changes]]
+id = "eet-desktop-shortcut-optional"
+title = "EET's desktop shortcut is optional"
+summary = "EET: Create desktop shortcut is now unchecked. EET's shortcut starts the game without EEex and replaces an existing EET.lnk on the desktop; the installer's own shortcut starts the game correctly."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:eet:component-100",
+]
+
+[[changes]]
+id = "bard-spell-level-ceilings-default"
+title = "Bard spell-level ceilings"
+summary = "Recommended new installations limit Blades, Skalds and Dancers to 6th-level spells. Other bards, Jesters included, reach 7th at bard level 21; Kapellmeisters and Darkbloom reach 8th at bard level 29. Bardic Wonders kits are covered when Bardic Wonders is installed. Requires EEex; existing characters gain the capacity at their next level-up."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:chriz-bg-rebalance:bard-spell-ceilings",
+  "feature:feature:bardicwonders:component-3010",
+  "run:chriz-bg-rebalance-bg2",
+  "run:bardicwonders-progression-bg2",
+]
+
+[[changes]]
+id = "bardic-balance-7-blade-and-battleluck"
+title = "Bardic Wonders Blade and Battleluck"
+summary = "Bardic Wonders balance.7: with the Blade Overhaul, Blades may put two weapon slots into the listed swords, daggers, axes, spears and halberds, and Two-Weapon Style stops at three. Battleluck lasts five rounds, affects the caster and allies within 30 feet, and refreshes instead of stacking."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:bardicwonders-v2.9c-balance.6",
+  "artifact:bardicwonders-v2.9c-balance.7",
+]
+
+[[changes]]
+id = "flail-of-ages-modded-flail-compatibility"
+title = "Flail of the Ages works with modded flails"
+summary = "Rebalance 0.8.2: the Flail of the Ages Slow save and Haste-compatible +5 also work when other mods change the flails. The balance is unchanged; helpers that cannot be identified safely stop the installation with a reason."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.2",
+]
+
+[[changes]]
+id = "fade-evandra-catch-up-xp"
+title = "Fade and Evandra catch-up XP"
+summary = "On their first recruitment in Shadows of Amn, Fade and Evandra are raised to the highest protagonist XP threshold reached (125,000 to 1,250,000). It never lowers XP, pays once and cannot be farmed."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.11",
+  "feature:feature:chriz-bg-modpack:component-237",
+  "feature:feature:chriz-bg-modpack:component-238",
+  "run:chriz-bg-modpack-late-companions-bg2",
+]
+
+[[changes]]
+id = "reader-level-scroll-casting"
+title = "Scrolls use the reader's caster level"
+summary = "Replaces the fixed Use Any Item scroll level. Casters use their active caster level of the scroll's type; other legitimate readers use half their highest active class level, minimum 1. Requires EEex. It is now a recommended default instead of mandatory and installs in its own final run, after every spell and item change."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.11",
+  "feature:feature:chriz-bg-modpack:component-430",
+  "run:chriz-bg-modpack-bg2",
+  "run:chriz-bg-modpack-scrolls-bg2",
+]
+
+[[changes]]
+id = "degrodel-keep-helm-and-fight"
+title = "Degrodel: keep the Helm of Balduran and fight"
+summary = "You can hand the Helm of Balduran over as before, or keep it: Degrodel then stays and fights with the same servants, and the quest closes with a short journal note. No extra difficulty is added."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.11",
+  "feature:feature:chriz-bg-modpack:component-660",
+  "run:chriz-bg-modpack-bg2",
+]
+
+[[changes]]
+id = "campaign-xp-banking-experimental"
+title = "Experimental campaign XP banking"
+summary = "Optional and unchecked. BG1 stops usable XP at 161,000 and SoD at 500,000; further XP is banked and released in a later campaign. An optional addition caps Shadows of Amn at 2,950,000. Requires EEex. Not yet played through in game; removing the component or EEex does not pay out banked XP."
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.11",
+  "feature:feature:chriz-bg-modpack:component-650",
+  "feature:feature:chriz-bg-modpack:component-651",
+  "run:chriz-bg-modpack-campaign-xp-bg2",
+]
+
+[[changes]]
+id = "sod-remix-0-6-13-companions-and-finale"
+title = "SoD Remix 0.6.13: early companions, Korlasz report and Avernus"
+summary = "Part of SoD Remix: Skie can join before the first rest and eleven BG1 companions can be recruited around the palace, the Elfsong, Tiax's cell and the Coast Way camp. Liia accepts the Korlasz report after the first night. A one-way Avernus portal skips the lift and its waves, and the final battle gets bounded changes. Relocated jailbreak and camp-chest loot keeps its original identified state."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-sod-remix-0.6.13",
+  "feature:feature:chriz-sod-remix:mandatory-components",
+  "run:chriz-sod-remix-bg2",
+]

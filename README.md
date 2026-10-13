@@ -8,17 +8,13 @@ The goal is a polished experience for players, not another expert-only mod manag
 finds supported clean games, starts with the recommended collection choices, builds a
 separate installation, verifies the result, and reopens later as a simple launcher.
 
-## Current development status (2026-09-26)
+## Current development status (2026-10-13)
 
-This branch prepares Windows app **0.1.0-alpha.19** with collection
-**0.1.0-alpha.18**. It adds the supported BuffBot update and description fix,
-clearer progress/results, unique installation names and Customize improvements.
-The new recipe makes BG Rebalance's Courage/Hope exclusivity a recommended default;
-see the [alpha.18 recipe note](docs/recipe-alpha18-2026-09-26.md).
-Source checks pass; the September 23 review package predates the September 26
-default-selection feedback correction. Publication and final package review remain
-separate. See the [release checklist](docs/plans/2026-09-22-release-readiness.md)
-and [candidate changelog](docs/release-notes-alpha19.md).
+App and collection **0.1.0-alpha.19** are published. This branch prepares app and
+collection **0.1.0-alpha.20**: Challenge Mode, the Lefreut interface fix, resumable
+re-downloads, and the October 13 Modpack, SoD Remix, BG Rebalance and Bardic Wonders
+releases. Source checks pass; the signed package and its publication are still
+pending. See the [candidate changelog](docs/release-notes-alpha20.md).
 
 Get the installer and guide from [the collection page](https://bg.chrizfader.org/collection),
 or [public releases](https://github.com/Chrizhermann/chriz-easy-bg/releases).

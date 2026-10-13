@@ -38,10 +38,10 @@ save or stream install is touched.
   470 scrolls, no errors; the standard learning and protection scrolls
   classify as expected, and one third-party scroll (`TTSCRL01`) keeps its
   normal behavior because learning and casting share an ability.
-- Two earlier attempts stopped and are not used: `Combined-20261013` (15.9 GB,
-  stopped at EET's desktop shortcut; its profile folder
-  `OneDrive\Documents\CEBG Lab 2026-10-13 - c2f5148bcdbf` holds only a marker)
-  and `Combined-20261013-r2` (empty, name already taken). All can be deleted.
+- Two earlier attempts stopped and are not used. `Combined-20261013-r2` and the
+  first attempt's profile folder are already gone. `Combined-20261013` (17 GB,
+  stopped at EET's desktop shortcut) is still there; Christopher approved deleting
+  it on 13 October and removes it himself.
 - The installation writes EET's install state into the standard EET profile, as
   every EET install does; it ended in the normal finished state (2). Its Cheats
   and Debug Mode were already on before this test.

@@ -1,8 +1,8 @@
 """October 13 next-release intake: Modpack v0.2.0-alpha.11 and SoD Remix v0.6.13 rows.
 
 Static recipe, selection, dependency and order checks for both recipe profiles only.
-The artifact pins stay on the published alpha.10/v0.6.12 releases until the owners
-publish; nothing here is a game installation or gameplay acceptance.
+The artifact pins follow the October 13 publications (alpha.11 / v0.6.13); nothing
+here is a game installation or gameplay acceptance.
 """
 
 from pathlib import Path
@@ -237,11 +237,81 @@ class Oct13IntakeTests(unittest.TestCase):
         names = {component["id"]: component["name"] for component in mod["components"]}
         self.assertEqual(names[430], "Scrolls: use the reader's active caster level, or half their active class level")
         self.assertTrue({237, 238, 650, 651, 660} <= names.keys())
-        # The intake changes catalogs only; publication moves the pins later.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.10")
+        # The owners published both releases on October 13; the pins follow them.
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.11")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-        self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.12")
+        self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.13")
         self.assertTrue({177, 198, 285} <= {component["id"] for component in sod["components"]})
+
+    def test_alpha20_ledger_covers_the_intake_for_new_installations(self):
+        authored = ROOT / "manifest/releases/v0.1.0-alpha.20/ledger.toml"
+        generated = self.output / "releases/v0.1.0-alpha.20/ledger.toml"
+        self.assertEqual(generated.read_bytes(), authored.read_bytes())
+        ledger = tomllib.loads(authored.read_text(encoding="utf-8"))
+        self.assertEqual(ledger["version"], "0.1.0-alpha.20")
+        self.assertEqual(ledger["supersedes"], "0.1.0-alpha.19")
+        # The recipe adds [[feature_groups]] (Challenge Mode), which alpha.19 apps cannot read.
+        self.assertEqual(ledger["minimum_app_version"], "0.1.0-alpha.20")
+        collection = self.profiles["curated"][1]
+        self.assertTrue(collection["feature_groups"])
+        covered = {address for change in ledger["changes"] for address in change["covers"]}
+        for feature in (
+            "chriz-bg-modpack:component-237", "chriz-bg-modpack:component-238",
+            "chriz-bg-modpack:component-430", "chriz-bg-modpack:component-650",
+            "chriz-bg-modpack:component-651", "chriz-bg-modpack:component-660",
+            "chriz-bg-rebalance:bard-spell-ceilings", "chriz-bg-rebalance:component-301",
+            "bardicwonders:component-3010", "eet:component-100",
+            "chriz-sod-remix:mandatory-components",
+        ):
+            self.assertIn(f"feature:feature:{feature}", covered)
+        for run in (SCROLLS_RUN, CAMPAIGN_RUN, LATE_RUN, SOD_RUN, "bardicwonders-progression-bg2"):
+            self.assertIn(f"run:{run}", covered)
+        evidence = tomllib.loads((ROOT / "manifest/evidence/release-intake-20261013.toml").read_text(encoding="utf-8"))
+        for record in evidence["artifacts"]:
+            self.assertIn(f"artifact:{record['artifact_id']}", covered)
+        # Fresh-install recipe changes only; existing games and saves are not patched.
+        self.assertEqual({change["save_applicability"] for change in ledger["changes"]}, {"next-playthrough"})
+        banking = next(change for change in ledger["changes"] if change["id"] == "campaign-xp-banking-experimental")
+        self.assertEqual(banking["urgency"], "optional")
+
+    def test_published_intake_matches_current_pins_and_native_order(self):
+        evidence = tomllib.loads((ROOT / "manifest/evidence/release-intake-20261013.toml").read_text(encoding="utf-8"))
+        self.assertEqual(evidence["verified_on"], "2026-10-13")
+        self.assertEqual({record["mod_id"] for record in evidence["artifacts"]},
+                         {"chriz-bg-modpack", "chriz-sod-remix", "chriz-bg-rebalance", "bardicwonders"})
+        # The checked-in curated recipe and a fresh generation must both carry the pins.
+        directories = {
+            "manifest": [ROOT / "manifest"],
+            "recipes/curated-full-current": [ROOT / "recipes/curated-full-current", self.output],
+        }
+        for record in evidence["artifacts"]:
+            for flag in ("fresh_download", "fresh_extraction", "published_release_verified",
+                         "native_component_order_verified"):
+                self.assertIs(record[flag], True, (record["mod_id"], flag))
+            self.assertTrue(record["recipe_profiles"])
+            for name, profiles in directories.items():
+                for profile in profiles:
+                    with self.subTest(profile=str(profile), mod=record["mod_id"]):
+                        mod_path = profile / f"mods/{record['mod_id']}.toml"
+                        if name not in record["recipe_profiles"]:
+                            # A curated-only fork never leaks into the fallback recipe.
+                            pinned = mod_path.is_file() and tomllib.loads(
+                                mod_path.read_text(encoding="utf-8"))["artifact_id"] == record["artifact_id"]
+                            self.assertFalse(pinned)
+                            continue
+                        mod = tomllib.loads(mod_path.read_text(encoding="utf-8"))
+                        self.assertEqual(mod["artifact_id"], record["artifact_id"])
+                        artifact = tomllib.loads(
+                            (profile / f"artifacts/{record['artifact_id']}.toml").read_text(encoding="utf-8"))
+                        for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
+                                              ("url", "immutable_source_url"), ("reference", "source_reference")):
+                            self.assertEqual(artifact["source"][key], record[measured])
+                        collection = tomllib.loads((profile / "collection.toml").read_text(encoding="utf-8"))
+                        runs = [run for run in collection["runs"] if run["mod_id"] == record["mod_id"]]
+                        self.assertTrue(runs)
+                        for run in runs:
+                            self.assertEqual(run["components"], [c for c in record["native_components"]
+                                                                 if c in run["components"]], run["run_id"])
 
 
 if __name__ == "__main__":

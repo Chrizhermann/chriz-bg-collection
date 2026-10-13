@@ -41,25 +41,25 @@ fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
     assert_eq!(
         manifest.mods["chriz-sod-remix"].artifact_id,
-        "chriz-sod-remix-0.6.12"
+        "chriz-sod-remix-0.6.13"
     );
-    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.12"];
-    assert_eq!(artifact.version, "0.6.12");
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.13"];
+    assert_eq!(artifact.version, "0.6.13");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.12/chriz-sod-remix-v0.6.12.zip"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.13/chriz-sod-remix-v0.6.13.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.12");
+    assert_eq!(artifact.source.reference, "v0.6.13");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-sod-remix-v0.6.12.zip")
+        Some("chriz-sod-remix-v0.6.13.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(2_959_604));
+    assert_eq!(artifact.source.expected_length, Some(3_010_880));
     assert_eq!(
         artifact.source.sha256,
-        "8c1a18debed45530d629efa19aa6c6d3b34317751d89683104b0c0306e67cd97"
+        "9253fbb295919b38c3958c6b581b663564a7f1760776d3cb8d5602ffe11d732a"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -163,24 +163,24 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.1");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.2");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.8.1");
+    assert_eq!(artifact.version, "0.8.2");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.1/chriz-bg-rebalance-v0.8.1-windows.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.2/chriz-bg-rebalance-v0.8.2-windows.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.8.1");
+    assert_eq!(artifact.source.reference, "v0.8.2");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.8.1-windows.zip")
+        Some("chriz-bg-rebalance-v0.8.2-windows.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_753_775));
+    assert_eq!(artifact.source.expected_length, Some(1_757_530));
     assert_eq!(
         artifact.source.sha256,
-        "5d6cc9dfec8779e1e4534da686dc2f3849bcb795b24981c0930d95918efccf0c"
+        "1577243caa0e503c1946ce4fa803952c87a6c4ccb1530141665e2b1d933661f1"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

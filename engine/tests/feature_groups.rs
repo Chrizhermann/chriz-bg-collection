@@ -222,18 +222,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned on October 13 when EET's desktop shortcut (EET 100) became an
     // unchecked option, and for the October 13 intake (Modpack alpha.11 / SoD
     // Remix v0.6.13 rows); the group still changes nothing but the group table.
+    // The plans changed again only for the published October 13 artifact pins
+    // (Modpack alpha.11, SoD 0.6.13, Rebalance 0.8.2, Bardic balance.7): with the
+    // previous pins restored, both plans reproduce their earlier digests.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "2088ab998856c0b83abdbc8afb3c39fd6ca5eafb60fa459041e646872b8da564",
             "fc2fa9d5e7c32c8b2264f5b24d01dbe4242ee47c6a5fcf9b86ba4f74508138f3",
-            "c6f81e58afd69c54845d682e7d136df2f4d1754cd310dfeb717cc596e6603fc2",
+            "4f826817ed305388f42269771df13a7a847379e2452653f2d239af944d1f86cf",
         ),
         (
             "../recipes/curated-full-current",
             "7921b38ae60c08c53c5f7c8f97ab5cdf6a437a4b01cdda585bfff59cc1a58ca0",
             "56271d3d028381a5a246fe3a9db561ddd20d41d00f833168a774612154e7c104",
-            "d74ac8362ac601b484d8d6b96391196f9cbacd7474a005ff5286f0c9d2a78849",
+            "88677b07bf666f20fe7fc90460ba0714c99189513d2bda5bb4f39dde00481a86",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

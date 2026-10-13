@@ -23,7 +23,7 @@ from tools.curation_audit import Decision, RowKey, load_catalogs, load_curation_
 from tools.recipe_presentation import apply_feature_presentations, build_feature_presentations
 
 
-RECIPE_VERSION = "0.1.0-alpha.19"
+RECIPE_VERSION = "0.1.0-alpha.20"
 RECIPE_LABEL = "CEBG curated full setup"
 ADDED_CATALOGS = {
     "BARDICWONDERS",
@@ -109,18 +109,18 @@ CATEGORY_BY_GROUP = {
 
 
 ARTIFACTS = {
-    "bardicwonders-v2.9c-balance.6.toml": """id = "bardicwonders-v2.9c-balance.6"
+    "bardicwonders-v2.9c-balance.7.toml": """id = "bardicwonders-v2.9c-balance.7"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.6"
+version = "2.9c-balance.7"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.6/Bardic-Wonders-v2.9c-balance.6.zip"
-reference = "v2.9c-balance.6"
-expected_filename = "Bardic-Wonders-v2.9c-balance.6.zip"
-expected_length = 5191057
-sha256 = "48b222eb7dd827c7541dea33129bd094ee81e28c33f33bdcb3bef81de197a59a"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.7/Bardic-Wonders-v2.9c-balance.7.zip"
+reference = "v2.9c-balance.7"
+expected_filename = "Bardic-Wonders-v2.9c-balance.7.zip"
+expected_length = 5189060
+sha256 = "f1c83c3fd35643b913fd300ada2b218b17ef46fb29e3c43344fc183f3617e46c"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -139,8 +139,8 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.6"
-reviewed_on = "2026-09-29"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.7"
+reviewed_on = "2026-10-13"
 """,
     "branwen-8.toml": """id = "branwen-8"
 name = "Branwen for BGII"
@@ -278,7 +278,7 @@ reviewed_on = "2026-09-08"
 
 
 MOD_SPECS = {
-    "bardicwonders": ("bardicwonders-v2.9c-balance.6", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
+    "bardicwonders": ("bardicwonders-v2.9c-balance.7", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
     "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),

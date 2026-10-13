@@ -55,8 +55,20 @@ and the remaining player checks are not finished by those deliveries.
 
 Christopher's decisions from 13 October are recorded in the
 [intake notes](2026-10-13-next-batch-intake.md#decisions-christopher-13-october-2026).
-Nothing below is published or merged into a release. The only installation is
-the disposable lab test.
+**Evening update:** Christopher approved releasing the important fixes. The four
+owner releases are published (below); each fresh public download was verified.
+CEBG alpha.20 is prepared on `claude/cebg-release-20261013` but **not built or
+published**: the updater signing key is missing from this PC (see the end of this
+section). The only game installation is still the disposable lab test.
+
+| Published 13 October | Release | Source commit |
+|---|---|---|
+| Modpack v0.2.0-alpha.11 | [release](https://github.com/Chrizhermann/chriz-bg-modpack/releases/tag/v0.2.0-alpha.11), ZIP `1ab6fe05…` | `d9db957` (PR 9) |
+| SoD Remix v0.6.13 | [release](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/tag/v0.6.13), ZIP `9253fbb2…` | `d1a5117` (PR 28) |
+| BG Rebalance v0.8.2 | [release](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.2), ZIP `1577243c…` | `1161b8a` (PR 7) |
+| Bardic Wonders v2.9c-balance.7 | [release](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.7), ZIP `f1c83c3f…` | `1dd77f8` (PR 8) |
+
+The table below is the earlier working state of that day.
 
 | Work | Status | Where |
 |---|---|---|
@@ -78,11 +90,25 @@ the disposable lab test.
 | EET desktop shortcut (EET 100) | **Finding.** It fails when the installer runs from a shell with `NoDefaultCurrentDirectoryInExePath=1` (EET runs a bare `shortcut.bat`). When it works, every install replaces the Desktop `EET.lnk` (today it points at Chriz Easy BG Test 19) | lab attempt 1 log |
 
 Decided 13 October: SoD 177/198/285 mandatory; vanilla dual rule; Degrodel 660
-default with Christopher designing the extra layer. Waiting for Christopher: the
-streamer fix approach, a lab game launch, the optional one-file fix for his
-current game, the publication order (Modpack alpha.11, SoD v0.6.13,
-Rebalance v0.8.2 via PR7, Bardic balance.7), and whether EET's desktop
-shortcut stays a Recommended default.
+default with Christopher designing the extra layer; EET's desktop shortcut
+unchecked; release the important fixes now (Modpack, SoD, Rebalance, Bardic,
+then CEBG).
+
+Done since: LeUI's start screen (the streamer's report) is fixed in CEBG `21bacc0`:
+the installer writes EET's installation state into each install's own profile, and
+existing installations get it at their next Play from the installer. LeUI was never
+a default; the interface dropdown defaults to the recommended interface.
+
+CEBG alpha.20 (app and collection) on `claude/cebg-release-20261013`: the intake
+and installer branches merged; the four releases above pinned with fresh download,
+extraction and native-order evidence (`manifest/evidence/release-intake-20261013.toml`);
+release ledger and [release notes](../release-notes-alpha20.md) written. Signing,
+packaging, Defender scan and publication wait for the updater key: it is no longer at
+`C:\ExternalSigning` or the developer signing folder. Christopher needs to restore it
+or say where it is. No key will be created or rotated without him.
+
+Still waiting for Christopher: the updater key, a lab game launch, and the optional
+one-file fix for his current game.
 
 ## The useful answer
 

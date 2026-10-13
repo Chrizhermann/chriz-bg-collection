@@ -97,11 +97,11 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.10")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.10.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.10")
-        self.assertEqual(artifact["source"]["expected_length"], 1588239)
-        self.assertEqual(artifact["source"]["sha256"], "38a896adb08a6bfc76e011885e82667f613d47e49ce0c64fa87ccf3d2b57c7f6")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.11")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.11.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.11")
+        self.assertEqual(artifact["source"]["expected_length"], 10445075)
+        self.assertEqual(artifact["source"]["sha256"], "1ab6fe05b282dd3d5badcbd25f41af3e15ea966c110298aed71c39c855c7fa18")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
         # Modpack also restores Evandra defaults and switches 610 to 611.

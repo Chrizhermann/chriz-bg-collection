@@ -92,6 +92,9 @@ class OctoberReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(evidence["verified_on"], "2026-10-07")
         self.assertEqual({record["mod_id"] for record in evidence["artifacts"]},
                          {"chriz-bg-rebalance", "chriz-bg-modpack", "buffbot"})
+        # The October 13 published intake supersedes these pins (test_oct13_intake_recipe);
+        # their pinned files stay exactly as verified here.
+        superseded = {"chriz-bg-rebalance", "chriz-bg-modpack"}
         for profile in (self.root / "manifest", self.output):
             collection = tomllib.loads((profile / "collection.toml").read_text())
             for record in evidence["artifacts"]:
@@ -99,12 +102,15 @@ class OctoberReleaseRecipeTests(unittest.TestCase):
                     self.assertTrue(record["fresh_download"])
                     self.assertTrue(record["published_release_verified"])
                     self.assertTrue(record["native_component_order_verified"])
-                    mod = tomllib.loads((profile / f"mods/{record['mod_id']}.toml").read_text())
-                    self.assertEqual(mod["artifact_id"], record["artifact_id"])
                     artifact = tomllib.loads((profile / f"artifacts/{record['artifact_id']}.toml").read_text())
                     for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
                                           ("url", "immutable_source_url"), ("reference", "source_reference")):
                         self.assertEqual(artifact["source"][key], record[measured])
+                    mod = tomllib.loads((profile / f"mods/{record['mod_id']}.toml").read_text())
+                    if record["mod_id"] in superseded:
+                        self.assertNotEqual(mod["artifact_id"], record["artifact_id"])
+                        continue
+                    self.assertEqual(mod["artifact_id"], record["artifact_id"])
                     for run in collection["runs"]:
                         if run["mod_id"] == record["mod_id"]:
                             self.assertEqual(run["components"], [c for c in record["native_components"]
