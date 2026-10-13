@@ -284,27 +284,7 @@ pub fn initial_preflight_with(
     }
 
     let cache = validate_cache_root(&frozen.cache_root)?;
-    if is_creator_protected_destination(&cache) {
-        return Err(PreflightError::CacheNotWritable {
-            path: cache,
-            source: io::Error::new(
-                io::ErrorKind::PermissionDenied,
-                "cache root is inside a protected creator reference path",
-            ),
-        });
-    }
-    if path_is_under(&cache, &bg1)
-        || path_is_under(&bg1, &cache)
-        || path_is_under(&cache, &bg2)
-        || path_is_under(&bg2, &cache)
-        || path_is_under(&cache, &target)
-        || path_is_under(&target, &cache)
-    {
-        return Err(PreflightError::CacheNotWritable {
-            path: cache,
-            source: io::Error::other("cache root overlaps a source game or managed target"),
-        });
-    }
+    check_cache_root_placement(&cache, &bg1, &bg2, &target)?;
     host.probe_directory_writable(&writable_root)
         .map_err(|source| PreflightError::DestinationNotWritable {
             path: writable_root.clone(),
@@ -443,6 +423,39 @@ pub fn recheck_staging_target_before_mutation_with(
     };
     check_processes_under(&target, host)?;
     probe_existing_tlks(&target, language, host)
+}
+
+/// Refuses a download cache at `cache` inside a protected creator reference path, or overlapping
+/// a read-only source game or the managed `target`. Only paths are compared, so a deleted cache
+/// can be checked before it is created again.
+pub(crate) fn check_cache_root_placement(
+    cache: &Path,
+    bg1: &Path,
+    bg2: &Path,
+    target: &Path,
+) -> Result<(), PreflightError> {
+    if is_creator_protected_destination(cache) {
+        return Err(PreflightError::CacheNotWritable {
+            path: cache.to_path_buf(),
+            source: io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "cache root is inside a protected creator reference path",
+            ),
+        });
+    }
+    if path_is_under(cache, bg1)
+        || path_is_under(bg1, cache)
+        || path_is_under(cache, bg2)
+        || path_is_under(bg2, cache)
+        || path_is_under(cache, target)
+        || path_is_under(target, cache)
+    {
+        return Err(PreflightError::CacheNotWritable {
+            path: cache.to_path_buf(),
+            source: io::Error::other("cache root overlaps a source game or managed target"),
+        });
+    }
+    Ok(())
 }
 
 /// True only for either protected creator reference root or one of its descendants.
@@ -905,7 +918,7 @@ fn absolute_path(path: &Path) -> io::Result<PathBuf> {
     }
 }
 
-fn paths_equal(left: &Path, right: &Path) -> bool {
+pub(crate) fn paths_equal(left: &Path, right: &Path) -> bool {
     #[cfg(windows)]
     {
         windows_path_key(left) == windows_path_key(right)

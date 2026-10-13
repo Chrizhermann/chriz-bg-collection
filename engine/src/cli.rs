@@ -890,7 +890,7 @@ fn resume_campaign_internal<S: EventSink + Sync>(
             ),
         )
     })?;
-    recreate_deleted_cache_root(&store)?;
+    recreate_deleted_cache_root(&store, &managed_root, expected_install_id)?;
     let replay = store.replay().map_err(|error| {
         CliError::new(
             "resume_unavailable",
@@ -901,6 +901,16 @@ fn resume_campaign_internal<S: EventSink + Sync>(
         )
     })?;
     let created = replay.created().clone();
+    let frozen = resumable_frozen_recipe(&created, &managed_root, expected_install_id)?;
+    execute_frozen_campaign(created, frozen, sink, controls)
+}
+
+/// The frozen recipe of a campaign that this request may resume.
+fn resumable_frozen_recipe(
+    created: &CampaignCreated,
+    managed_root: &Path,
+    expected_install_id: Option<&str>,
+) -> Result<FrozenCliRecipe, CliError> {
     if expected_install_id.is_some_and(|expected| expected != created.install_id) {
         return Err(CliError::new(
             "resume_identity_mismatch",
@@ -917,30 +927,67 @@ fn resume_campaign_internal<S: EventSink + Sync>(
                 format!("frozen recipe payload is not a supported CLI snapshot: {error}"),
             )
         })?;
-    validate_frozen_cli_recipe(&created, &frozen)?;
-    execute_frozen_campaign(created, frozen, sink, controls)
+    validate_frozen_cli_recipe(created, &frozen)?;
+    Ok(frozen)
 }
 
 /// Creates the campaign's download cache again at its recorded path when that folder no longer
 /// exists, for example after it was deleted by hand or by the uninstaller, so that resuming
 /// downloads again whatever is missing. Anything else at that path is left for the usual
 /// campaign checks to report, and nothing is ever removed.
-fn recreate_deleted_cache_root(store: &SessionStore) -> Result<(), CliError> {
+///
+/// Only a campaign that this request may resume gets its cache back, and nothing is created
+/// unless the recorded path still leads through direct folders to itself, so that no link that
+/// replaced one of its folders is followed, and the campaign checks would accept a cache there.
+fn recreate_deleted_cache_root(
+    store: &SessionStore,
+    managed_root: &Path,
+    expected_install_id: Option<&str>,
+) -> Result<(), CliError> {
     // A campaign that cannot be read is reported by the full replay that follows.
     let Ok(replay) = store.replay_for_inspection() else {
         return Ok(());
     };
-    let cache_root = &replay.created().cache_root;
+    let created = replay.created();
+    let cache_root = &created.cache_root;
     match fs::symlink_metadata(cache_root) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         _ => return Ok(()),
     }
-    if cache_root
-        .components()
-        .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
+    let frozen = resumable_frozen_recipe(created, managed_root, expected_install_id)?;
+    let unavailable = |reason: String| {
+        CliError::new(
+            "resume_unavailable",
+            format!(
+                "the download cache {} was deleted and cannot be created there again: {reason}",
+                cache_root.display()
+            ),
+        )
+    };
+    if !cache_root.is_absolute()
+        || cache_root
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
     {
-        return Ok(());
+        return Err(unavailable(
+            "its recorded path is not a full path".to_owned(),
+        ));
     }
+    let resolved = prospective_direct_path(cache_root, "download cache")
+        .map_err(|error| unavailable(error.to_string()))?;
+    if !crate::preflight::paths_equal(&resolved, cache_root) {
+        return Err(unavailable(format!(
+            "its path now leads to {}",
+            resolved.display()
+        )));
+    }
+    crate::preflight::check_cache_root_placement(
+        &resolved,
+        &frozen.bg1.root,
+        &frozen.bg2.root,
+        managed_root,
+    )
+    .map_err(|error| unavailable(error.to_string()))?;
     fs::create_dir_all(cache_root).map_err(|error| {
         CliError::new(
             "resume_unavailable",
@@ -4697,6 +4744,87 @@ mod tests {
             let error = validate_frozen_cli_recipe(&created, &rejected)
                 .expect_err("unsupported frozen schema must fail closed");
             assert_eq!(error.code(), "resume_unavailable");
+        }
+    }
+
+    /// A deleted download cache is created again only for a campaign that this request may
+    /// resume, only where its recorded path still leads to itself, and only where the campaign
+    /// checks accept a cache. Refusals create nothing, also not where a link points.
+    #[cfg(windows)]
+    #[test]
+    fn a_deleted_download_cache_is_created_again_only_where_the_campaign_may_use_it() {
+        use crate::session::{SessionEvent, SessionStore};
+
+        for case in [
+            "valid",
+            "linked-parent",
+            "linked-ancestor",
+            "other-install",
+            "inside-source",
+            "inside-managed",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = std::fs::canonicalize(temp.path()).unwrap();
+            let managed = root.join("managed");
+            let elsewhere = root.join("elsewhere");
+            let mut frozen = frozen_recipe_fixture();
+            frozen.bg1.root = root.join("bg1-source");
+            frozen.bg2.root = root.join("bg2-source");
+            let parent = match case {
+                "inside-source" => frozen.bg1.root.clone(),
+                "inside-managed" => managed.clone(),
+                "linked-ancestor" => root.join("downloads").join("nested"),
+                _ => root.join("downloads"),
+            };
+            std::fs::create_dir_all(&managed).unwrap();
+            std::fs::create_dir_all(parent.join("cache")).unwrap();
+            let mut created =
+                created_for_frozen_recipe(&frozen, serde_json::to_vec(&frozen).unwrap());
+            created.managed_root = managed.clone();
+            created.cache_root = parent.join("cache");
+            created.staged_bg1 = managed.join("bg1");
+            created.staged_bg2 = managed.join("game");
+            let store =
+                SessionStore::create(&managed, SessionEvent::Created(Box::new(created.clone())))
+                    .unwrap();
+            // The cache is deleted; this test moves it away instead.
+            std::fs::rename(&created.cache_root, root.join("deleted-cache")).unwrap();
+            if case.starts_with("linked") {
+                // A folder on the cache's path is replaced with a link that leads elsewhere.
+                std::fs::create_dir_all(elsewhere.join("nested")).unwrap();
+                std::fs::rename(root.join("downloads"), root.join("old-downloads")).unwrap();
+                let output = std::process::Command::new("cmd.exe")
+                    .args(["/c", "mklink", "/J"])
+                    .arg(root.join("downloads"))
+                    .arg(&elsewhere)
+                    .output()
+                    .unwrap();
+                assert!(output.status.success(), "{output:?}");
+            }
+            let expected_install_id = if case == "other-install" {
+                "install-other"
+            } else {
+                created.install_id.as_str()
+            };
+
+            let result =
+                super::recreate_deleted_cache_root(&store, &managed, Some(expected_install_id));
+
+            if case == "valid" {
+                result.expect("create the deleted cache again");
+                assert!(created.cache_root.is_dir());
+                continue;
+            }
+            let error = result.expect_err(case);
+            let code = if case == "other-install" {
+                "resume_identity_mismatch"
+            } else {
+                "resume_unavailable"
+            };
+            assert_eq!(error.code(), code, "{case}: {error}");
+            assert!(!created.cache_root.exists(), "{case}");
+            assert!(!elsewhere.join("cache").exists(), "{case}");
+            assert!(!elsewhere.join("nested").join("cache").exists(), "{case}");
         }
     }
 
