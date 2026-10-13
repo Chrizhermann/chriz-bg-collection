@@ -27,8 +27,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
             .map(|run| run.components.len())
             .sum::<usize>(),
         // Next-release policy removes Emotion 301 from October 7's defaults;
-        // October 13 default bard ceilings add 420/421 and Bardic 3010.
-        464
+        // October 13 default bard ceilings add 420/421 and Bardic 3010;
+        // EET's desktop shortcut (EET 100) becomes an unchecked option.
+        463
     );
     let tail = result.plan.runs.last().unwrap();
     assert_eq!(tail.mod_id, "buffbot");

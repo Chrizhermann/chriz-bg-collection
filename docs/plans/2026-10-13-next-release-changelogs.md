@@ -27,6 +27,10 @@ unchanged.
 
 - **Emotion: Courage and Hope do not stack** is now **Optional** (alpha.19:
   Default). It is now part of Challenge Mode; its effect is unchanged.
+- **EET: Create desktop shortcut** is now **Optional** (alpha.19: Default).
+  EET's shortcut starts the game without EEex and replaces any existing
+  `EET.lnk` on the desktop; the installer's own shortcut starts the game
+  correctly.
 
 ### New choices
 

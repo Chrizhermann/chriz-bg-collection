@@ -47,6 +47,22 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(len(identities), len(set(identities)))
         self.assertEqual(len(approved_list), len(approved))
 
+    def test_eet_desktop_shortcut_is_an_unchecked_option(self):
+        # EET 100 starts Baldur.exe directly (no EEex) and replaces any Desktop EET.lnk.
+        feature_id, run_id = "feature:eet:component-100", "eet-initialize-bg2"
+        feature = self.features[feature_id]
+        self.assertEqual(feature["decision"], "optional")
+        self.assertEqual(feature["readiness"], "ready")
+        self.assertEqual(feature["components"], [{"run_id": run_id, "component": 100}])
+        self.assertEqual(self.preset[feature_id], "off")
+        self.assertEqual(self.runs[run_id]["components"], [0, 100])
+        baseline = self.selected()
+        self.assertIn((run_id, 0), baseline)
+        self.assertNotIn((run_id, 100), baseline)
+        opted_in = self.selected({feature_id: "on"})
+        self.assertEqual(opted_in - baseline, {(run_id, 100)})
+        self.assertEqual(baseline - opted_in, set())
+
     def test_classic_lightning_is_default_with_real_exclusive_nonbounce_alternative(self):
         classic, alternative = "feature:spell-rev:component-80", "feature:spell-rev:component-81"
         self.assertIn(("spell-rev-lightning-bg2", 80), self.selected())
@@ -98,9 +114,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(without_controls - selected, set())
         # October 7 adds seven Rebalance defaults and Edwin236's dedicated run;
         # the next-release policy removes only Emotion301 from normal defaults.
-        # October 13 default bard ceilings add 420/421 and Bardic 3010's own run.
-        self.assertEqual(len(without_controls), 463)
-        self.assertEqual(len(selected), 464)
+        # October 13 default bard ceilings add 420/421 and Bardic 3010's own run;
+        # EET's desktop shortcut (EET 100) becomes an unchecked option.
+        self.assertEqual(len(without_controls), 462)
+        self.assertEqual(len(selected), 463)
         self.assertEqual(len({run for run, _ in selected}), 52)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -194,7 +211,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 464)
+        self.assertEqual(len(baseline), 463)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

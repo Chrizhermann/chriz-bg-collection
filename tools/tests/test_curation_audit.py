@@ -132,10 +132,12 @@ class CatalogParserTests(unittest.TestCase):
                 Decision.EXCLUDED: 515,
                 # September 22 approval moves HGO 38 from optional to default.
                 # October 12 moves Emotion 301 back to optional.
-                Decision.OPTIONAL: 239,
+                # October 13 makes EET's desktop shortcut (EET 100) optional.
+                Decision.OPTIONAL: 240,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
-                # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults.
-                Decision.DEFAULT: 321,
+                # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
+                # EET 100 (desktop shortcut) leaves the defaults.
+                Decision.DEFAULT: 320,
                 Decision.MANDATORY: 152,
             },
         )

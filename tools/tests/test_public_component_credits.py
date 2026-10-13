@@ -50,7 +50,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # October 13 default bard ceilings add Rebalance 420/421 and Bardic 3010's late run.
         self.assertTrue({420, 421} <= set(actual["chriz-bg-rebalance-bg2"]))
         self.assertEqual(actual["bardicwonders-progression-bg2"], [3010])
-        self.assertEqual(self.result["componentCount"], 464)
+        # October 13: EET's desktop shortcut (EET 100) is no longer selected by default.
+        self.assertNotIn(100, actual["eet-initialize-bg2"])
+        self.assertEqual(self.result["componentCount"], 463)
         self.assertEqual(len(actual), 52)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

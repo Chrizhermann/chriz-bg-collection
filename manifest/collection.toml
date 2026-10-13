@@ -722,7 +722,7 @@ id = "feature:eet:component-100"
 title = "Create desktop shortcut"
 description = "Create EET's desktop shortcut."
 category = "core"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:eet"
 components = [{ run_id = "eet-initialize-bg2", component = 100 }]

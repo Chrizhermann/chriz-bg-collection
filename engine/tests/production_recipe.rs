@@ -347,10 +347,8 @@ fn recommended_defaults_resolve_the_core_spine_but_keep_bg1npc_160_visible_and_o
         Some(BG1NPC_RESOLVED_COMPONENTS)
     );
     assert_eq!(plan.components_for("eefixpack-bg2"), Some(&[0, 2][..]));
-    assert_eq!(
-        plan.components_for("eet-initialize-bg2"),
-        Some(&[0, 100][..])
-    );
+    // EET's desktop shortcut (100) is an unchecked option since October 13.
+    assert_eq!(plan.components_for("eet-initialize-bg2"), Some(&[0][..]));
     assert_eq!(plan.components_for("eet-end-bg2"), Some(&[0][..]));
 
     let blocked = evaluation

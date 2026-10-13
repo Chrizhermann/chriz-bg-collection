@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 473 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 462.
+Engine-equivalent resolved-selection summary: 472 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 461.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -301,7 +301,6 @@ Engine-equivalent resolved-selection summary: 473 default/mandatory rows — con
 | `EEFIXPACK:0` | mandatory | `feature:eefixpack:mandatory-components` | selected for installation | eefixpack → eefixpack-beta2 Beta 2 (Beta_2), component 0 |  |
 | `EEFIXPACK:2` | mandatory | `feature:eefixpack:mandatory-components` | selected for installation | eefixpack → eefixpack-beta2 Beta 2 (Beta_2), component 2 |  |
 | `EET:0` | mandatory | `feature:eet:mandatory-components` | selected for installation | eet → eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d 74e91d72bca5d073fa11c1d088b90d7ff0c7105d (74e91d72bca5d073fa11c1d088b90d7ff0c7105d), component 0 |  |
-| `EET:100` | default | `feature:eet:component-100` | selected for installation | eet → eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d 74e91d72bca5d073fa11c1d088b90d7ff0c7105d (74e91d72bca5d073fa11c1d088b90d7ff0c7105d), component 100 |  |
 | `EET_END:0` | mandatory | `feature:eet-end:mandatory-components` | selected for installation | eet-end → eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d 74e91d72bca5d073fa11c1d088b90d7ff0c7105d (74e91d72bca5d073fa11c1d088b90d7ff0c7105d), component 0 |  |
 | `EVANDRA:0` | mandatory | `feature:evandra:mandatory-components` | selected for installation | evandra → evandra-2.2-windows 2.2 (2.2-windows), component 0 |  |
 | `EVANDRA:1` | default | `feature:evandra:component-1` | selected for installation | evandra → evandra-2.2-windows 2.2 (2.2-windows), component 1 |  |

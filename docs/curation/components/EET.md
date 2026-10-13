@@ -10,14 +10,16 @@ reviewed on 2026-09-01 is v14.1; it does not contain all of that work.
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
 | 0 | EET core (resource importation) |  |  | ✓ | mandatory |
-| 100 | Create desktop shortcut |  |  | ✓ | default |
+| 100 | Create desktop shortcut |  |  | ✓ | optional |
 
 ## Collection behavior
 
 - Core `0` requires a BG2EE target plus a BGEE+SoD source. BP-BGT Worldmap must not be
   installed before it.
-- Shortcut `100` requires core `0` and is unavailable on macOS. It stays a checked-by-
-  default option rather than part of the mandatory merge.
+- Shortcut `100` requires core `0` and is unavailable on macOS. It is an unchecked
+  option (Christopher, 2026-10-13): EET's shortcut starts `Baldur.exe` directly, so
+  it skips EEex, and every install that selects it replaces the Desktop `EET.lnk`.
+  The CEBG app offers its own launcher shortcut instead.
 - EET and EET_END must always resolve from the same archive and exact commit.
 
 ## Release and acceptance follow-up

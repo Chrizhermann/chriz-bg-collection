@@ -873,7 +873,7 @@ description = "Create EET's desktop shortcut."
 category = "core"
 source_label = "Enhanced Edition Trilogy"
 group_label = "Core"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:eet"
 components = [{ run_id = "eet-initialize-bg2", component = 100 }]

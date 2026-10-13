@@ -327,7 +327,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # (Rebalance 420/421 plus Bardic Wonders 3010 in its own late run).
                 # October 13 (later) adds the approved Challenge Mode feature group,
                 # now part of this digest; runs, features and the preset are unchanged.
-                "0c5ab03d8b844b77b393659817701d1eafbffafa648dd21ec22b6b2959fbbedc",
+                # October 13 makes EET's desktop shortcut (EET 100) an unchecked option.
+                "7e86b15a5a207ea16bb91a258bdf2b8262958afff7aa3b1cc73f51638591addc",
             )
 
             legacy_bg1npc_groups = {
