@@ -75,6 +75,27 @@ Christopher's answers:
   230–234 ([PR 11](https://github.com/Chrizhermann/chriz-bg-modpack/pull/11), `eb578ff`: Rasaad,
   Dorn, Eldoth, Garrick, Quayle). CEBG does not select 230–234; that is
   Christopher's curation call.
+- **Streamer's second failure (alpha.20):** the resumed install stopped at the
+  first DLC Merger unpack on every retry ("could not inspect extraction marker").
+  A manual deletion of CEBG's cache folders had left the unpacked folder without its
+  marker, and CEBG treated any damaged cache entry as a permanent failure. He got a
+  one-line workaround (remove the `extracted` cache folder, then Retry). Fixed on this
+  release line in `0835256`: damaged unpacked copies and downloads are set aside and
+  rebuilt from the verified archive, and each repair is recorded in the installation's
+  evidence. 915 engine tests pass. It reaches players only with a new app release,
+  which needs Christopher's go-ahead.
+- **Bardic Wonders issues 2–5:** merged as
+  [PR 9](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/pull/9)
+  (`11bb4fc`), unreleased. Priest-spell copies and Darkbloom resolve spells by
+  `SPELL.IDS` name, the Gallant gets New Bard Spells in either order, and Symphony's
+  end trigger is documented as broken. Open for Christopher: Symphony's song-end
+  behaviour, kit text naming Spell Revisions spells, and when to lift the Darkbloom
+  SR warning.
+- **Item Randomiser Mode 1 packaging:** done locally as component 1500 with a
+  reproducible release ZIP (branch `claude/randomiser-packaging`, not pushed; the
+  branch carries 49 unpublished runtime commits). Open for Christopher: whether to
+  publish it, version and timing, how players avoid needing Python, the default
+  configuration, and the name and placement.
 - **Potion uniqueness and Heroism family:** not done. The October 9 lab
   prototype covers six potion families in tests only, has never run in a game and
   is not installable; Heroism's spell side is missing.
@@ -150,7 +171,9 @@ October 14 as PR 10 (`58eb765`); CI ran the full set, including the
 `capstone`/`pefile` modules that this PC lacks.
 
 Still waiting for Christopher (as of October 14): whether to clean the remaining
-home-folder paths above, and whether to finish potion uniqueness.
+home-folder paths above; whether to finish potion uniqueness; whether to release
+the cache repair fix as a new app version; the Bardic and Item Randomiser decisions
+listed in the October 14 section.
 
 ## The useful answer
 
