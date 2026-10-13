@@ -98,7 +98,7 @@ check. Broader curse designs, frequency controls and release timing remain separ
 Christopher subsequently approved implementation, prioritizing feature completeness,
 code quality and the default setup. Work is isolated in Modpack branch
 `codex/unidentified-item-appearance`, checkout
-`C:\Users\chris\.codex\worktrees\modpack-compatible-presets\chriz-bg-modpack`.
+`%USERPROFILE%\.codex\worktrees\modpack-compatible-presets\chriz-bg-modpack`.
 
 - Component **630**, label **cbm_unidentified_appearance**, marker **CBMID.MRK**.
 - Presentation-only EEex hooks cover native item icons/dragging, ground art and

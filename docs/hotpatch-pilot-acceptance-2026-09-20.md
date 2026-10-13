@@ -15,7 +15,7 @@ not newer Assassin mechanics, every mod, or a public hotpatch release.
   or save edit. The second cycle's separate isolated-profile harness and subsequent
   user-run native acceptance are recorded below; original saves were not edited.
 - Full independent backup:
-  `C:\Users\chris\Games\CEBG-Backups\RC-20260903-before-kit-links-20260920`.
+  `%USERPROFILE%\Games\CEBG-Backups\RC-20260903-before-kit-links-20260920`.
   Its `game` child contains 166,410 files / 12,099,587,163 bytes (~11.27 GiB).
   Copy reported zero failures; the complete relative-path/size/mtime manifest
   matched the source before patching, and protected/affected files were hash-checked.

@@ -22,7 +22,7 @@ for free signing are separate conclusions.
 - Public distribution repository: `Chrizhermann/chriz-easy-bg`. Its current source
   tree contains only README.md; public release downloads are not public source.
 - Existing coordinating worktree:
-  `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
+  `%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - This handover is initially a local file in that worktree; read it by absolute path
   if it has not yet been committed into your checkout.
 
@@ -35,7 +35,7 @@ this project uses Chrizhermann, not the work account.
 ## Preserve the active test and release workflow
 
 Christopher reports a full alpha.13 UI installation is running. The suggested path
-was `C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907`; its actual use/completion
+was `%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907`; its actual use/completion
 has not been independently checked. Do not touch the running app, installer test,
 game sources, archives, downloads/cache, receipts or saves. No desktop takeover,
 install/reinstall, runtime replacement, updater-feed edit, or another full game run.

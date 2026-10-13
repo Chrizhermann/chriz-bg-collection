@@ -6,7 +6,7 @@ The original failed attempt remains immutable history.
 
 ## Actual completion
 
-- Root: `C:\Users\chris\Games\CEBG-Curated-20260905-r5`.
+- Root: `%USERPROFILE%\Games\CEBG-Curated-20260905-r5`.
 - Install: `install-e6325c7c98451ad4901e`; recovery: `modpack-alpha5-20260906`.
 - Completion: 2026-09-06 02:35:58 KST (`1788629758053` epoch milliseconds).
 - Separate `kind: supervised_recovery` receipt: `.chriz/install-receipt.json`.
@@ -17,7 +17,7 @@ The original failed attempt remains immutable history.
   alpha.1; earlier Bardic stays balance.2. This is not the pure alpha.9 recipe.
 - Only missing game finalization was `game/engine.lua`: patched/read back to the
   already-reserved `CEBG Curated r5 - 8803ccf86178`. BG1 and ownership marker matched.
-- Save folder: `C:\Users\chris\OneDrive\Documents\CEBG Curated r5 - 8803ccf86178`.
+- Save folder: `%USERPROFILE%\OneDrive\Documents\CEBG Curated r5 - 8803ccf86178`.
 - Launch: `game/InfinityLoader.exe`. Completed registry record now exists under
   `LOCALAPPDATA\Chriz BG Collection\managed-installs`; existing same-id logic hides
   the original incomplete campaign card without deleting its history.

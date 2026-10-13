@@ -13,7 +13,7 @@ Microsoft. The earlier Defender incident remains open.
 
 ## Local setup and identity
 
-`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`
+`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`
 
 The matching updater signature is alongside it with `.sig` appended. The setup
 is 6,015,101 bytes. Verified SHA-256 values:

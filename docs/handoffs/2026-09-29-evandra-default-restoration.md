@@ -7,7 +7,7 @@ no game, save, release or installer executable was changed for this repair.
 
 ## Owner source
 
-Checkout: `C:\Users\chris\.codex\worktrees\modpack-compatible-presets\chriz-bg-modpack`
+Checkout: `%USERPROFILE%\.codex\worktrees\modpack-compatible-presets\chriz-bg-modpack`
 (existing `codex/unidentified-item-appearance` branch; preserve committed 630).
 
 - **224:** trueclass Sorcerer for `rh#eva` and `rh#ev25`, not the vampire template.

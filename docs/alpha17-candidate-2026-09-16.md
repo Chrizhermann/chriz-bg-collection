@@ -47,7 +47,7 @@ public installer/update-channel publication is separate.
 
 ## Local package
 
-- User copy: `C:\Users\chris\Downloads\Chriz-Easy-BG-0.1.0-alpha.17-setup.exe`
+- User copy: `%USERPROFILE%\Downloads\Chriz-Easy-BG-0.1.0-alpha.17-setup.exe`
 - Build: `target/x86_64-pc-windows-msvc/release/bundle/nsis/Chriz Easy BG_0.1.0-alpha.17_x64-setup.exe`
 - Size: **5,573,696 bytes**.
 - SHA-256: `92d6d93ad8ce9422df59486d62ee0ee94f2dae9adff0b453fe0c9034d07115d7`.

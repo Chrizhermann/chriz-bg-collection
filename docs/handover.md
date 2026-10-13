@@ -58,7 +58,7 @@ Suggested parallel batches and Christopher's remaining decisions are in the over
 Christopher approved installing now and testing in his current run; the open
 dual-class rule is deferred, not a blocker for this run or cancelled work.
 Appended Modpack650 (BG1/SoD banking; no651), Rebalance420/421 and Bardic3010 to
-`C:\Users\chris\Games\Chriz Easy BG\game`. All installs exited0; the 445 existing
+`%USERPROFILE%\Games\Chriz Easy BG\game`. All installs exited0; the 445 existing
 component identities/order and previous330,163 TLK strings are preserved.
 Latest save `000000990-NEXT IRON THRONE LOSERS` is backed up and hash-unchanged.
 Existing XP/levels are retained by adoption; bard capacity updates through the
@@ -67,7 +67,7 @@ Sources are local development additions, not a public release/default change.
 Game not launched. Startup, XP award/save/reload/transition and bard level-up
 checks remain open, alongside deferred dual rules and bank-removal recovery.
 Full record, backup and continuing checklist:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct12-xp-bard-ceilings\README.md`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct12-xp-bard-ceilings\README.md`.
 
 ## October 12 — BG2 / CEBG cloud saves disabled
 
@@ -77,7 +77,7 @@ profile's `Baldur.lua` also explicitly sets `Cloud Saves Enabled` to `0` so its
 legacy setting cannot override Steam's opt-out. No saves deleted or edited,
 no game launched, and other Steam games / OneDrive settings are unchanged.
 Configuration backup and application record:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct12-disable-cloud`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct12-disable-cloud`.
 
 ## October 12 — temple donation backlog and pathfinding installed
 
@@ -85,7 +85,7 @@ Added the temple donation helper to the backlog: show the exact cost of the next
 reputation point and make that donation convenient, without changing prices.
 Pathfinding Redux 0.1.10-preview now supplies the requested out-of-combat-only
 mode. Christopher subsequently requested installation and confirmed the game closed.
-Installed into `C:\Users\chris\Games\Chriz Easy BG\game`: WeiDU exit 0, all 444
+Installed into `%USERPROFILE%\Games\Chriz Easy BG\game`: WeiDU exit 0, all 444
 prior component rows retained in order, one new component appended. Game/EEex/loader
 executables, dialog.tlk and the newest original save are hash-unchanged.
 Backup: `repair-backups\oct12-pathfinding-ooc` beside the game. Prepared package
@@ -151,7 +151,7 @@ throughout. The selected source was `000000984-HUMANS ARE SE BEST`, saved
 October9 at03:27:38KST in the `Chriz Easy BG - ec2c39f8d9c3` profile.
 
 - Added private tail `CBR_GARITHOS_SPELLS:0` to
-  `C:\Users\chris\Games\Chriz Easy BG\game`: normal/Wish Hardiness now40%
+  `%USERPROFILE%\Games\Chriz Easy BG\game`: normal/Wish Hardiness now40%
   physical-only, and Spellstrike now15% arcane/divine failure for2rounds,
   refreshing rather than stacking. Uses unchanged public Rebalance0.8.1
   mechanics. Only four SPLs changed; Spell Shield and Pierce Magic unchanged.
@@ -165,7 +165,7 @@ October9 at03:27:38KST in the `Chriz Easy BG - ec2c39f8d9c3` profile.
   actors preserved. The other save files are identical; old Cloud identity
   metadata was not copied to the new local slot. No cloud operations performed.
 
-Backup: `C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct09-garithos`.
+Backup: `%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct09-garithos`.
 Private scripts/results: `target/work/oct09-garithos-repair`. Five copied-resource
 spell cases plus23 canonical transformation checks and8 independent save checks
 passed, including pointer/section validation, byte-preservation and idempotency.
@@ -232,13 +232,13 @@ floor), for five rounds. Recasts refresh the original amount; Lower Resistance
 can combine with it. Protection removal and Spell Shield interception remain.
 
 Applied through new private tail `CBR_SR_ANTIMAGIC:210` to
-`C:\Users\chris\Games\Chriz Easy BG\game`, with the game/loader closed. WeiDU
+`%USERPROFILE%\Games\Chriz Easy BG\game`, with the game/loader closed. WeiDU
 exit 0; all 440 previous log rows retained exactly. Only `SPWI608.SPL`,
 `SPWI608B.SPL`, and `M_CBRPM.lua` changed in override, matching the copied-game
 fixture byte-for-byte. TLK gained one private description at 330155; all 330,155
 old entries, including sound metadata, were preserved. Saves untouched; no game
 launch. Backup/evidence:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-pierce-magic`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct06-pierce-magic`.
 Independent review and 37 runtime-model/WeiDU checks passed; native gameplay
 acceptance remains. Old already-active Pierce Magic effects in saves must expire.
 **Spellstrike 211 was not applied** by this request; neither were Hardiness,
@@ -267,7 +267,7 @@ untouched; no animation-wide sweep or save editing.
 Applied with game/loader closed, exit 0; all 441 preceding WeiDU rows and 330,156
 old TLK entries/sound metadata retained. Nine outputs match the captured fixture
 exactly; two new SR summon descriptions appended. Backup/evidence:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-cloud-forms`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct06-cloud-forms`.
 Owner research: `research/2026-10-06-damageable-cloud-forms.md`. No combat test,
 owner release, recipe/preset change or cloud website publication yet. Next-patch
 integration must collect the owner's eventual release (including coordination
@@ -310,7 +310,7 @@ using unchanged component-310 mechanics and allocated state 241. WeiDU exit 0;
 all 437 earlier log rows and dialog.tlk preserved exactly; no save edits or game
 launch. The private adapter matches the public component in a disposable fixture;
 29 focused tests pass. Backup and verification:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\cap`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\cap`.
 The bracers repair is also now applied as `CBR_SR_BRACERS:0`, after the BuffBot
 update below. Its new self-only SR helper grants +1 APR for 20 seconds, preserving
 the one daily charge and installed Tempus links. Fourteen existing haste spells
@@ -319,7 +319,7 @@ All 439 earlier log rows and TLK remain exact, and the only 16 changed resources
 match the tested outputs byte-for-byte. Full copied-resource sweep: 6,747 spells;
 9 focused WeiDU tests pass, including repeat/rollback. Independent review found
 no blocker for this captured installation. Backup/verification:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\bracers`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\bracers`.
 No game launched or saves edited. Previously active item effects in a save are
 not rewritten; test the bracers' next activation. Runtime acceptance remains.
 Canonical library/private adapter and research note are in the same BG Rebalance
@@ -352,7 +352,7 @@ The catalog retains all 177 old keys unchanged and adds four. Existing eight
 F12 string references, TLK, loader, original mod sources, presets and saves stay
 untouched. All 438 preceding log rows remain exact. The installed payload matches
 the disposable-fixture output and released files, exit 0. Backups/verification:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\buffbot`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct06-resistance-bracers\buffbot`.
 This is a private runtime update, not a CEBG pin/update-receipt migration. The
 original BuffBot log rows truthfully retain 1.8.4; the new tail records 1.10.0.
 No in-game test was run. Release owner reports 652 automated tests passed and
@@ -374,7 +374,7 @@ Next useful follow-up is clarification that the requested diagnostics are
 already in the second case; obtain approval of the exact email before sending.
 
 Rules-page source is prepared on website branch `codex/stream-rules-oct04`,
-checkout `C:\Users\chris\.codex\worktrees\bg-rules-oct04\twitch-setup-chriz`.
+checkout `%USERPROFILE%\.codex\worktrees\bg-rules-oct04\twitch-setup-chriz`.
 Christopher rejected the initial lengthy mod-guide approach during preview.
 The three short additions now belong directly in the numbered rules list (17–19):
 “Emotion: Courage and Hope do not stack.”, “Flail of the Ages: Slow now allows a
@@ -436,7 +436,7 @@ get approval of the exact draft before sending.
 ## October 3 — approved stream-install repairs applied
 
 Christopher confirmed the game was closed and explicitly approved applying the
-prepared fixes to `C:\Users\chris\Games\Chriz Easy BG\game`, including Flail of
+prepared fixes to `%USERPROFILE%\Games\Chriz Easy BG\game`, including Flail of
 the Ages, story-stage utility XP, and Evandra's permanent conversion/portrait.
 This is a private current-install repair, **not a new CEBG release or general
 updater support**. The original collection receipt/version remains unchanged.
@@ -472,7 +472,7 @@ unchanged. WeiDU's en_US -> en_us config casing normalization was identified and
 the original exact weidu.conf restored. No game launch or in-engine acceptance.
 
 Backup and durable verification:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct03-current-game-fixes`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct03-current-game-fixes`.
 Preparation, adapters, fixture reports and logs:
 `target/work/oct03-current-game-fixes` (ignored/private; never publish captured
 game resources). Cleanup of the resource-only `content-fixture` copy was blocked
@@ -497,7 +497,7 @@ that Radar is source-only or final packaging is pending. App version remains
 **0.1.0-alpha.19**, bundled collection **0.1.0-alpha.18**.
 
 Local setup:
-`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`.
 Its adjacent `.sig` is verified against the app's updater public key. This is
 not Windows publisher signing or a Defender clearance. See the exact hashes,
 test counts and limits in [candidate verification](package-acceptance-alpha19-radar-2026-10-01.md).
@@ -581,7 +581,7 @@ the behavior in a controlled environment with separate live-test authorization.
 Evaluate Windows publisher-signing separately; it is no guarantee.
 [Microsoft developer guidance](https://learn.microsoft.com/en-us/defender-xdr/developer-faq).
 
-The user reused `C:\Users\chris\Games\Chriz Easy BG Test 19` for a **new successful
+The user reused `%USERPROFILE%\Games\Chriz Easy BG Test 19` for a **new successful
 installation**, ID `install-6a5411d310041f2ae2c1`, completion at 08:56 local.
 Do not confuse it with the earlier failed attempt. Its game/loader/WeiDU.log
 remain present. Radar **2.5.2.0** is also present at
@@ -724,7 +724,7 @@ including updater-signature verification; all 223 bundled resources matched.
 The packaged executable matched the compiled app with only the expected NSIS
 marker change. The Downloads setup and signature hashes were rechecked after
 completion. Verified setup, superseding Dragon and Order Fix for the fresh test:
-`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Selection Fix 2026-09-30-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Selection Fix 2026-09-30-setup.exe`.
 Size 6,027,850 bytes; SHA-256:
 `614e71cfc4416dc0a71e2bb2eb4616b0f96a33ba889796ab8cc1f628f569620f`.
 See the [package verification addendum](package-acceptance-alpha19-dragon-order-2026-09-30.md#selection-fix-addendum--latest-local-setup).
@@ -736,7 +736,7 @@ of this replacement is still his next step.
 ## September 30 — corrected dragon/order setup ready; Test19 recovery still separate
 
 Verified local setup:
-`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Dragon and Order Fix 2026-09-30-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Dragon and Order Fix 2026-09-30-setup.exe`.
 Still app alpha.19 / collection alpha.18. SHA-256:
 `3d94c594470486030e3792f94c22ef42bc7cc68e9b2894969fb3c653ace8c6f9`.
 [Package verification](package-acceptance-alpha19-dragon-order-2026-09-30.md)
@@ -846,7 +846,7 @@ package evidence below remains specific to the earlier delivered binary.
 ## September 30 — Infinity launch failure: corrected package ready; user retry next
 
 **Use the new verified local setup:**
-`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
 It is still app alpha.19 / collection alpha.18. Setup SHA-256:
 `b17421335809b1f5b9c26a4475c1194875bbb86e3f6669860fc2e9b85bb19738`.
 See [complete package evidence](package-acceptance-alpha19-2026-09-30.md).
@@ -909,7 +909,7 @@ password explicitly through Node argv, signed the already-built setup and exited
 0. Four package tests and all 221 offline resource checks passed; both Downloads
 hashes were independently rechecked. No job was rerun and no game install started.
 The finished output is:
-`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
 The current live WeiDU.log and failed attempt's before.log both hash to
 `7890d5bd4df56bcb585ecbac6c8a0d0dfa6a02bde104b41ca670713976d7be0d`.
 The extra 34 focused Python cases and the expanded retry matrix passed. Diagnostics
@@ -963,7 +963,7 @@ Emotion component-list assertion was corrected and the affected case rerun.
 Formatting and scoped diff checks pass. New recommended counts are 454 curated /
 360 base components; earlier package counts below describe the unchanged EXE.
 
-Read-only inspection of `C:\Users\chris\Games\Chriz Easy BG Test 19` confirmed its
+Read-only inspection of `%USERPROFILE%\Games\Chriz Easy BG Test 19` confirmed its
 frozen selections already enable `111`, Infinity UI++, Evandra core, and Modpack
 `224`/`225` (Sorcerer/portrait). Evandra acquisition completed using the verified
 manual archive cached on September 16; no repeat file prompt was needed.
@@ -1038,7 +1038,7 @@ inspection matched all 221 bundled resources and the packaged executable; the
 Downloads setup/signature hashes were independently rechecked. Unchanged Python
 and Evandra-gate results above remain valid. Exact results and hashes are in the
 [September 29 package record](package-acceptance-alpha19-2026-09-29.md).
-Verified installer: `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Combined Test 2026-09-29-setup.exe`.
+Verified installer: `%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Combined Test 2026-09-29-setup.exe`.
 It contains app alpha.19 / curated collection alpha.18. No app/setup/game was
 launched; public CEBG release/feed/website are unchanged. Do not rerun either job.
 
@@ -1250,7 +1250,7 @@ current companion himself in EE Keeper; do not edit his running game or saves.
 Later September 29, Christopher explicitly authorized the portrait replacement
 only. Restored the old custom BMP into the stream game's `override/rh#eval.bmp`
 and verified its hash; retained the original at
-`C:\Users\chris\Games\Chriz Easy BG\portrait-backups\evandra-20260929-032318\rh#eval.bmp`.
+`%USERPROFILE%\Games\Chriz Easy BG\portrait-backups\evandra-20260929-032318\rh#eval.bmp`.
 No save, CRE, TLK, or gameplay state was edited. In-game visual confirmation is
 pending reload/restart. This local repair does not implement recipe delivery.
 He wants her **starting level-10 spellbook**, then to select the later spells
@@ -1477,7 +1477,7 @@ the BuffBot 1.8.3-to-1.8.4 update himself in the diagnostic app, accepted gamepl
 then used Undo. The installation is now back on **1.8.3-alpha**. The earlier Apply
 disk checks confirmed successful installation of both components and
 the expected new artifact. Transaction: `.chriz/mod-upgrades/v1/01790071515151257500`
-inside `C:\Users\chris\Games\ChrizEasyBG-No-SR-Test`.
+inside `%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test`.
 All 96 current update-file hashes, 96 affected-file backup hashes and 59 unchanged
 guard hashes match. Original receipt and dialog.tlk are unchanged; all 400 other
 active WeiDU rows match the pre-update log exactly. The prepared-journal hash is
@@ -1547,7 +1547,7 @@ FreshCopyRequired. The UI's generic "folder unavailable" explanation is misleadi
 **Proven cause: Windows redirects agent-side file reads to Codex's private AppData
 copy.** Opening the apparently normal No-SR record and querying its actual file
 handle with GetFinalPathNameByHandle resolves to:
-`C:\Users\chris\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Local\Chriz BG Collection\managed-installs\install-c9dc8c3e0e0b0a3476e0.json`.
+`%USERPROFILE%\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Local\Chriz BG Collection\managed-installs\install-c9dc8c3e0e0b0a3476e0.json`.
 The normal user-opened CEBG process cannot see that completion record. This is why
 helper checks and earlier agent-launched app checks contradicted Christopher's UI.
 Do not claim a refresh or reinstall of the game fixes this. Package-identity API,
@@ -1749,7 +1749,7 @@ and interval-save fix below. See [package path/hashes and acceptance limits](pac
 No setup/app/game was launched and public alpha.18 remains unchanged.
 
 Proposed supervised target: the already registered
-`C:\Users\chris\Games\ChrizEasyBG-No-SR-Test`, whose completed receipt matches the
+`%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test`, whose completed receipt matches the
 registry and whose final two WeiDU rows are BuffBot 1.8.3 components 1 then 0.
 Remaining eligibility is untested. Christopher approved continuing but will drive
 the app himself; guide his checks and inspect results without clicking for him.
@@ -1763,8 +1763,8 @@ CEBG restored its private profile name without initializing the settings there.
 
 With no game process running, added only `IntervalSaveEnabled=1` and
 `IntervalSaveCombat=0` to
-`C:\Users\chris\OneDrive\Documents\Chriz Easy BG - ec2c39f8d9c3\Baldur.lua`.
-Original backup: `C:\Users\chris\Games\CEBG-Backups\Baldur-before-interval-save-fix-20260922.lua`.
+`%USERPROFILE%\OneDrive\Documents\Chriz Easy BG - ec2c39f8d9c3\Baldur.lua`.
+Original backup: `%USERPROFILE%\Games\CEBG-Backups\Baldur-before-interval-save-fix-20260922.lua`.
 No saves, mod resources, WeiDU.log or dialog.tlk changed. The settings-menu mod was
 **not** added to this existing game. No game launch or timed-save test was performed.
 
@@ -2194,7 +2194,7 @@ saves, frozen recipes or source games were changed. The stale migration/stub
 documentation has been corrected in `COLLECTION_TAIL_FIXES.md`.
 
 Reference-only handoff package:
-`C:\Users\chris\Documents\Codex\2026-09-09\kivan-quest-fix\KIVAN_QUEST_FIX-v1.0-verified.zip`,
+`%USERPROFILE%\Documents\Codex\2026-09-09\kivan-quest-fix\KIVAN_QUEST_FIX-v1.0-verified.zip`,
 verified SHA256 `7fc3769c0c18e32305c1ceefb9727b27a5331edb1165f04c786bb1c0eb035d23`.
 Its `verification.json` records four passing installer cases, not new native
 playtest acceptance. Do not use this local ZIP as a public dependency.
@@ -2210,10 +2210,10 @@ uninstall/replay was needed. Corrected SoD 256 and all ten remaining frozen runs
 completed, including dragons, Safana 189, Imoen 620, SR 60/80, Klatu 2150 and
 BuffBot 1/0. BG Radar Overlay **2.5.2.0** is also installed from official Latest.
 
-Keep `C:\Users\chris\CEBG-Tests\Combined-20260908` for Christopher's testing.
+Keep `%USERPROFILE%\CEBG-Tests\Combined-20260908` for Christopher's testing.
 Launch `game\InfinityLoader.exe`; Radar is
 `game\BG Radar Overlay\BG Radar Overlay.exe`. The isolated save folder is
-`C:\Users\chris\OneDrive\Documents\CEBG Combined Playtest 2026-09-08 - c2a832a75741`.
+`%USERPROFILE%\OneDrive\Documents\CEBG Combined Playtest 2026-09-08 - c2a832a75741`.
 **Native launch/gameplay acceptance is still pending.** This is a local experimental
 snapshot, not a public recipe release or a stream-install update. The source and
 stream games remain untouched. No installation worker remains active.
@@ -2242,7 +2242,7 @@ outstanding. Next: use the disposable checkpoints in
 ## Combined playtest completion authorization and execution history — 2026-09-09
 
 Christopher explicitly requested: **"then finish the installation."** Retain
-`C:\Users\chris\CEBG-Tests\Combined-20260908` and all 391 completed components.
+`%USERPROFILE%\CEBG-Tests\Combined-20260908` and all 391 completed components.
 Apply only the verified SoD 256 source fix below, append that missing component,
 then execute the ten untouched frozen runs through BuffBot (446 total). Do not
 rollback/replay the 34 successful SoD siblings or start a new installation.
@@ -2296,7 +2296,7 @@ reactivated when a recovery worker starts.
 ## Combined playtest stopped; targeted recovery assessed — 2026-09-09
 
 The 446-component local test stopped at **01:49 +09:00** in SoD Remix 256. No
-installer process remains. Preserve `C:\Users\chris\CEBG-Tests\Combined-20260908`;
+installer process remains. Preserve `%USERPROFILE%\CEBG-Tests\Combined-20260908`;
 **do not delete it or start another full installation**. Current active rows:
 27 BG1 + 364 BG2 = **391**. EET, SCS, modpack continuity and EET_end completed;
 the ten later runs (including dragons, Safana/Imoen, Lightning, Klatu and BuffBot)
@@ -2354,7 +2354,7 @@ Authoring validation has zero findings. Focused source/recipe tests pass; genera
 archives are deterministic. Public recipe/feed and stream remain unchanged.
 
 One hidden CLI installation started at **2026-09-08 22:54:18 +09:00**, PID **60364**,
-managed root `C:\Users\chris\CEBG-Tests\Combined-20260908`, preset
+managed root `%USERPROFILE%\CEBG-Tests\Combined-20260908`, preset
 `chris-recommended`, unique name/save profile `CEBG Combined Playtest 2026-09-08`.
 It reuses `C:\CEBG-creator-full-cache`; seven local ZIPs and Evandra's existing
 official EXE use the normal verified manual intake. CDTweaks/IWDification archives
@@ -2447,7 +2447,7 @@ Published app remains alpha.15 / collection alpha.13. See
 ## Alpha.15 published; no-SR installation recovered — 2026-09-07
 
 Christopher approved publishing BG Rebalance v0.3.2, updating the collection pin,
-and recovering `C:\Users\chris\Games\ChrizEasyBG-No-SR-Test` without a full restart.
+and recovering `%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test` without a full restart.
 The original alpha.12 recipe failed only Rebalance 401; its seven successful
 siblings form the exact top tail after 372 BG2 components. Use the existing
 supervised recovery lineage, not a rewritten ledger or an unsafe Resume bypass.
@@ -2470,7 +2470,7 @@ The no-SR two-hour follow-up is paused because its failure was inspected already
 
 ## Overnight installation succeeded and retained — 2026-09-07, 07:57 KST
 
-`C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` completed successfully:
+`%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907` completed successfully:
 43 actual WeiDU runs, all 434 frozen components, BG1 27 / BG2 407 exact final log
 rows and hashes verified. SoD Remix's 32 components and BuffBot 1/0 are installed.
 No restart/deletion or repetition of the five completed pre-EET runs occurred.
@@ -2521,7 +2521,7 @@ existing `chriz-easy-bg` downloads/updater. Authenticode enrollment remains sepa
   Signed public setup/download verified; live alpha update feed points to it.
   Collection **alpha.12**, all 434 recommended components/pins, and user selections
   are unchanged. Build source commit: `5610783590ad49b24101d5d3a6a85b018abadb7e`.
-- Christopher's exact `C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` installation
+- Christopher's exact `%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907` installation
   resumed at EET attempt 2 with the new release engine. Ledger 156 proves EET
   completed; EET components 0/100 are recorded. Main mods are now installing.
   Five prior successful runs were preserved. Nothing was deleted or restarted.
@@ -2779,7 +2779,7 @@ The overnight `creator-full-current` recipe bypassed recorded curation; it is in
 the curated collection. **Do not repair Bristlelick or resume that selection.** Curation
 files are intact. Restore them as the authority, preserve deferred mod work, check changed
 ordering against mod documentation/source. **Fresh r6 is running** at
-`C:\Users\chris\CEBG-Tests\CEBG-Curated-20260906-r6` with recipe **alpha.9**.
+`%USERPROFILE%\CEBG-Tests\CEBG-Curated-20260906-r6` with recipe **alpha.9**.
 Released modpack **alpha.5** fixes both r5 failures (170 Xan / 192 Viconia), with
 public-component installation, repeat and uninstall checks on the actual captured r5
 input resources. Bardic Wonders **balance.3** is also pinned. Both packages were
@@ -2789,7 +2789,7 @@ all 30 approved SoD components remain, Aura and 290 remain deferred. No new comp
 or utility-XP defaults were invented. See the [current acceptance record](curated-full-acceptance-2026-09-05.md)
 for the exact worker, startup retry and checkpoints. Full integration is not yet proven.
 
-R5 remains read-only terminal evidence at `C:\Users\chris\Games\CEBG-Curated-20260905-r5`,
+R5 remains read-only terminal evidence at `%USERPROFILE%\Games\CEBG-Curated-20260905-r5`,
 installation `install-e6325c7c98451ad4901e`. Ledger 222 is `fresh_copy_required`;
 14 other modpack components succeeded and the previous 383 WeiDU rows were unchanged.
 The [resolved owning-repo handoff](handoffs/2026-09-06-modpack-xan-viconia.md) retains
@@ -2820,7 +2820,7 @@ Christopher is now deleting those copies manually. Do not race his cleanup or as
 folder still exists. No agent workaround deletion is allowed; the agent removed nothing.
 
 Christopher requested a separate destination for future tests. Use
-`C:\Users\chris\CEBG-Tests\<unique-run-name>` for NEW agent-owned disposable installations,
+`%USERPROFILE%\CEBG-Tests\<unique-run-name>` for NEW agent-owned disposable installations,
 not the user's normal Games folder or any folder directly under C:. Christopher rejected
 the earlier root-level proposal; it was not created or used. Keep frozen r5 where it is; no move,
 rename or restart is implied. Public/player install defaults are unchanged. This separation

@@ -180,7 +180,7 @@ game, updater apply, or publication was launched. Background job results:
 interactive update acceptance.
 
 Read-only checks found a promising existing registered test target:
-`C:\Users\chris\Games\ChrizEasyBG-No-SR-Test`, install ID
+`%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test`, install ID
 `install-c9dc8c3e0e0b0a3476e0`. Its completed supervised-recovery receipt matches
 the registry SHA-256, and BuffBot 1.8.3 components 1 then 0 are its last two active
 WeiDU rows. This is not yet full adapter eligibility: its normal checks for source

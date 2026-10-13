@@ -122,7 +122,7 @@ default, selection or general companion respec was added in this pass.
 group, so users cannot choose these UIs in the current package.** Do not call
 preview recipes shipped integration.
 
-Owning checkout: `C:\Users\chris\.codex\worktrees\cebg-ui-options\chriz-bg-collection`.
+Owning checkout: `%USERPROFILE%\.codex\worktrees\cebg-ui-options\chriz-bg-collection`.
 Sources: `tools/ui_providers/catalog.toml`, `tools/prepare_ui_preview_recipe.py`,
 `docs/plans/2026-09-22-parallel-ui-and-clarity.md`.
 

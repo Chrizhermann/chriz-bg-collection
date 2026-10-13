@@ -47,7 +47,7 @@ each other in combat.
 Verified release downloaded and prepared outside the game at
 `C:\tmp\cebg-pathfinding-ooc-20261012`; its README records source/hash, selected
 settings, installation/undo steps and a short user playtest. Target remains
-`C:\Users\chris\Games\Chriz Easy BG\game`. Its executable matches the release's
+`%USERPROFILE%\Games\Chriz Easy BG\game`. Its executable matches the release's
 BG2EE 2.7.3 profile. Installed EEex is 1.2.0; upstream's published 2.7.3 test used
 1.3.0, so startup with this exact pairing remains unverified.
 
@@ -55,7 +55,7 @@ BG2EE 2.7.3 profile. Installed EEex is 1.2.0; upstream's published 2.7.3 test us
 confirmed the game closed. Installed component 0 with the above settings;
 WeiDU exit 0. All 444 preceding component identities/order retained, one row added.
 Game/EEex/loader executable, dialog.tlk and original latest-save hashes unchanged.
-Backup: `C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct12-pathfinding-ooc`.
+Backup: `%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct12-pathfinding-ooc`.
 Only the previously blank loader log setting changed in existing configuration.
 No EEex upgrade, save edit, game launch, public recipe edit or publication.
 Installed; user startup/movement check pending.
@@ -318,7 +318,7 @@ CEBG recipe changes or replacing native acceptance with simulated test claims.
   checks, 10 public-surface/release checks and six copied-source install/uninstall
   fixtures. Natural in-game recruitment remains untested. This is for actors
   not yet created in the save, not a repair of existing saved companions. Source:
-  `C:\Users\chris\.codex\worktrees\modpack-release-alpha6\chriz-bg-modpack\docs\recruitment-xp.md`.
+  `%USERPROFILE%\.codex\worktrees\modpack-release-alpha6\chriz-bg-modpack\docs\recruitment-xp.md`.
 - **XP banking:** locally implemented accounting now includes the agreed dual
   split, storage and cap-hook prototypes (480 focused checks reported passing).
   Real engine integration, coherent save/identity handling and actual deferred
@@ -334,7 +334,7 @@ CEBG recipe changes or replacing native acceptance with simulated test claims.
   banking, preserving targeting,
   reflection and charges. The settled fallback is half the highest active class
   level, rounded down, minimum one; ignore dormant dual-class levels. Source:
-  `C:\Users\chris\.codex\worktrees\modpack-release-alpha6\chriz-bg-modpack\research\2026-10-09-scroll-caster-levels.md`.
+  `%USERPROFILE%\.codex\worktrees\modpack-release-alpha6\chriz-bg-modpack\research\2026-10-09-scroll-caster-levels.md`.
 - **Potion uniqueness:** the original-effect replacement now implements both
   policy modes for a narrow direct-effect subset (106 offline checks and 44
   connected instruction cases reported passing). Broad/linked coverage,
@@ -344,7 +344,7 @@ CEBG recipe changes or replacing native acceptance with simulated test claims.
   rather than treating this prototype milestone as delivery. Its handover records
   the confirmed exception: repeat Heroism/Power bonuses
   are ignored until expiry; refresh other types only where safe. Source:
-  `C:\Users\chris\.codex\worktrees\potion-uniqueness-20261009\chriz-bg-rebalance\docs\handovers\2026-10-09-potion-uniqueness.md`.
+  `%USERPROFILE%\.codex\worktrees\potion-uniqueness-20261009\chriz-bg-rebalance\docs\handovers\2026-10-09-potion-uniqueness.md`.
 - **Wish:** the requested source/design check exists in the potion worktree's
   `research/2026-10-09-wish-sr-haste-design.md`. Player and enemy Wish paths need
   an explicit scope decision before implementation; no new authority inferred.
@@ -508,11 +508,11 @@ checks remain pending. The between-threshold unbanked-dual rule and safe bank
 removal/migration remain deferred work; no dual-class experiment is requested for
 Garithos. Public integration and the rest of this batch are not completed by this
 private install. Detailed continuing checklist:
-`C:\Users\chris\Games\Chriz Easy BG\repair-backups\oct12-xp-bard-ceilings\README.md`.
+`%USERPROFILE%\Games\Chriz Easy BG\repair-backups\oct12-xp-bard-ceilings\README.md`.
 
 ### Garithos installed ceilings — October 11 read-only check (historical)
 
-Target: `C:\Users\chris\Games\Chriz Easy BG\game`. This check made no game or
+Target: `%USERPROFILE%\Games\Chriz Easy BG\game`. This check made no game or
 save changes. Bardic provider/policy/adapter 420/421/3010 are absent from WeiDU.log;
 CBRSPKIT/CBRSPVER/CBRSPAPI resources are absent. CDTweaks 2270 is installed and the
 effective MXSPLBRD grants seventh-level spells at bard level 21 and eighth-level

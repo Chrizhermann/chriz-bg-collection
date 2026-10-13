@@ -6,7 +6,7 @@ game install or save change was made. Public pins wait for each owner's
 publication; then record the published URL and the SHA-256 of the published
 asset, not of these local files.
 
-Local archives live under `C:\Users\chris\.codex\artifacts\next-batch-20261013\`
+Local archives live under `%USERPROFILE%\.codex\artifacts\next-batch-20261013\`
 (Bardic: `...\bardic-blade-battleluck-20261012\`). They are private build outputs,
 not distribution sources.
 

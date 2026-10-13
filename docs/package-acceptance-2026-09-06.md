@@ -10,7 +10,7 @@ PowerShell supplied the existing private key by path and an explicitly empty pas
 key bytes were read or printed. The single normal build command was:
 
 ```powershell
-$env:TAURI_SIGNING_PRIVATE_KEY = 'C:\Users\chris\AppData\Local\Chriz Easy BG Developer\signing\cebg-updater.key'
+$env:TAURI_SIGNING_PRIVATE_KEY = "$env:USERPROFILE\AppData\Local\Chriz Easy BG Developer\signing\cebg-updater.key"
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ''
 npm run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis
 ```

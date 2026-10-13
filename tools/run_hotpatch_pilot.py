@@ -23,7 +23,7 @@ from tools.hotpatch_pilot import (ADAPTER, PINS, TABLES, WEIDU_SHA256, Unsupport
 
 GAME = Path('C:/BG-EET-RC-20260903/game')
 STATE = GAME.parent / '.chriz/patches/kit-links-pilot-v1'
-BACKUP = Path('C:/Users/chris/Games/CEBG-Backups/RC-20260903-before-kit-links-20260920/game')
+BACKUP = Path.home() / 'Games/CEBG-Backups/RC-20260903-before-kit-links-20260920/game'
 OWNER = Path('C:/src/private/The-Artisan-s-Kitpack-Chriz-Balance-Patch/live-patch') / ADAPTER
 TOOL = GAME.parent / '.chriz/extracted/chriz-bg-rebalance-v0.3.0/chriz-bg-rebalance-v0.3.0/weidu.exe'
 ORIGINAL_LOG = '37a828a8a628abe9acbc26cd6062f005e1d7317e772373e895179665067435d4'

@@ -36,7 +36,7 @@ The Emotion source and generated recipe are checked, but are not a new published
 collection. Give the next candidate its proper version; do not overwrite alpha.19.
 
 Bardic candidate and exact delivery record are in
-`C:\Users\chris\.codex\artifacts\bardic-blade-battleluck-20261012`:
+`%USERPROFILE%\.codex\artifacts\bardic-blade-battleluck-20261012`:
 `Bardic-Wonders-v2.9c-balance.7-rc.1.zip` and `DELIVERY.md`.
 The archive is a normal full installable mod, not a late save repair. It is
 unpublished; CEBG still pins balance.6. Source remains in the named owner worktree.
@@ -86,7 +86,7 @@ The table below is the earlier working state of that day.
 | Engine CLI tests fail while any `weidu.exe` runs | **Tracked** | [issue 9](https://github.com/Chrizhermann/chriz-bg-collection/issues/9) |
 | Recipe intake for the next release (Modpack alpha.11 and SoD v0.6.13 rows: 430 last, 237/238 and 660 default, 650/651 optional, SoD 177/198/285 mandatory) | **Done on a pending branch.** Python 155 passed, engine 793, app 99, UI 410. One test stays red by design until Modpack alpha.11 is published and pinned (the October 7 pin check); do not merge before publication. SoD's pin has the same gap (177/198/285) without a test | CEBG `claude/next-release-intake-20261013` @ `650a438` |
 | Playtest recipe tool | **Fixed:** it forced optional Rebalance 110 on in every local recipe; curated choices now stay as curated. Bardic Wonders can be a local source | CEBG `d00cb67` |
-| Combined test install | **Installed**, all runs succeeded, in `C:\Users\chris\CEBG-Tests\Combined-20261013-b`: Recommended + Challenge Mode + banking 650, EET desktop shortcut off, 474 components, four local candidates. 430's scroll analysis on this real SR install: no errors. The game launch waits for Christopher. Two stopped attempts can be deleted (see the checklist) | [checklist](2026-10-13-combined-test-checklist.md); `target/combined-playtest-20261013` |
+| Combined test install | **Installed**, all runs succeeded, in `%USERPROFILE%\CEBG-Tests\Combined-20261013-b`: Recommended + Challenge Mode + banking 650, EET desktop shortcut off, 474 components, four local candidates. 430's scroll analysis on this real SR install: no errors. The game launch waits for Christopher. Two stopped attempts can be deleted (see the checklist) | [checklist](2026-10-13-combined-test-checklist.md); `target/combined-playtest-20261013` |
 | EET desktop shortcut (EET 100) | **Finding.** It fails when the installer runs from a shell with `NoDefaultCurrentDirectoryInExePath=1` (EET runs a bare `shortcut.bat`). When it works, every install replaces the Desktop `EET.lnk` (today it points at Chriz Easy BG Test 19) | lab attempt 1 log |
 
 Decided 13 October: SoD 177/198/285 mandatory; vanilla dual rule; Degrodel 660
@@ -550,7 +550,7 @@ The small public issue list does not capture this work.
   saved assignments, shops and several quest deliveries, eight cursed appearances
   restored per save, extra Spell Shield scroll options and shop multipliers.
   A persistent **Configure Randomiser / Apply for next game** playtest is now
-  prepared at `C:\Users\chris\Games\EET-IR-Mode1-20260922`; its owner checked
+  prepared at `%USERPROFILE%\Games\EET-IR-Mode1-20260922`; its owner checked
   cold startup and reload. Start BG1/use the provided test save; direct SoD/BG2/ToB
   starts remain unsupported. No need to create another copy merely for this preview.
 - Preserve the agreed configurable pools, proficiency compatibility, cursed-item
@@ -796,25 +796,25 @@ call the prototype complete, and do not hold all completed work for it.
 ## 16. Ownership and evidence map
 
 CEBG active worktree is
-`C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
+`%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 The current chat's `4d39` checkout is an old detached curation snapshot and is
 **not** the release integration branch. Preserve its existing user edits.
 
 | Work | Current source / existing chat |
 |---|---|
-| Modpack XP/scroll/recruitment | Consolidated source `C:\Users\chris\.codex\worktrees\campaign-xp-banking\chriz-bg-modpack`, branch `codex/campaign-scroll-integration`; older source `C:\Users\chris\.codex\worktrees\modpack-release-alpha6\chriz-bg-modpack`; chat **Review Dynaheir and Baeloth spells**, `01a0b92c-da6d-7701-8d51-b0df1a17fe08` |
-| Older companion stats | `C:\Users\chris\.codex\worktrees\companion-spellbooks\chriz-bg-modpack` |
-| Potion/Time Stop histories | `C:\Users\chris\.codex\worktrees\potion-uniqueness-20261009\chriz-bg-rebalance`; chat **Research Time Stop Haste hooks**, `01a0da17-c8c5-70c0-8029-88c652da7272`; preserve both scopes separately |
+| Modpack XP/scroll/recruitment | Consolidated source `%USERPROFILE%\.codex\worktrees\campaign-xp-banking\chriz-bg-modpack`, branch `codex/campaign-scroll-integration`; older source `%USERPROFILE%\.codex\worktrees\modpack-release-alpha6\chriz-bg-modpack`; chat **Review Dynaheir and Baeloth spells**, `01a0b92c-da6d-7701-8d51-b0df1a17fe08` |
+| Older companion stats | `%USERPROFILE%\.codex\worktrees\companion-spellbooks\chriz-bg-modpack` |
+| Potion/Time Stop histories | `%USERPROFILE%\.codex\worktrees\potion-uniqueness-20261009\chriz-bg-rebalance`; chat **Research Time Stop Haste hooks**, `01a0da17-c8c5-70c0-8029-88c652da7272`; preserve both scopes separately |
 | Small spell design | `C:\src\private\chriz-bg-rebalance\.worktrees\sr-antimagic-research`; chat **Review Hardiness changes**, `01a10da6-02db-7842-94a5-23a4fff5618d` |
 | Entropy/Screen | `C:\src\private\chriz-spell-revisions-patch\docs\plans\2026-10-11-entropy-shield-and-screen-design.md`; **Find Entropy Shield counters**, `01a0df45-df6a-7cb1-9e6a-0f70435f4419` |
-| Bardic new work | `C:\Users\chris\.codex\worktrees\bard-spell-blade-followup\Bardic-Wonders-Chriz-Balance-Patch`; original audit chat **We had some commits in the past days. Check if we need to m…**, `01a07fe8-2fd5-79d3-bb42-4fef15d27fb8` |
+| Bardic new work | `%USERPROFILE%\.codex\worktrees\bard-spell-blade-followup\Bardic-Wonders-Chriz-Balance-Patch`; original audit chat **We had some commits in the past days. Check if we need to m…**, `01a07fe8-2fd5-79d3-bb42-4fef15d27fb8` |
 | Artisan | `C:\src\private\The-Artisan-s-Kitpack-Chriz-Balance-Patch`; archer worktree retains Mystic Fire plan; **Compare Archer balance**, `01a0c7fa-4c66-79f3-9255-b3fcb0e6a452` |
-| SoD recruitment | `C:\Users\chris\.codex\worktrees\early-sod-companions\chriz-sod-rebalance`; **Plan BG1 companion recruitment**, `01a10596-3537-7e91-9d1e-478d749ffd38` |
-| SoD finale | `C:\Users\chris\.codex\worktrees\avernus-finale\chriz-sod-rebalance`; **Rework Belifid’s end fight**, `01a0e4cd-cca5-76e0-bb08-9ebbbe82ad30` |
-| Randomizer | `C:\Users\chris\.codex\worktrees\mode1-postinstall-profiles\bgee-itemrandomiser-fix`; **Fix randomizer proficiency conflict**, `01a0bb24-3c8e-77b2-849a-b3d3b0300eb0`; owner just delivered persistent Mode1 playtest |
-| Script engine | `C:\Users\chris\.codex\worktrees\ff18\chriz-bg-script-engine`; **Begin script engine Task 1**, `01a042de-9380-7a52-9275-11f87682075e`; active owner |
+| SoD recruitment | `%USERPROFILE%\.codex\worktrees\early-sod-companions\chriz-sod-rebalance`; **Plan BG1 companion recruitment**, `01a10596-3537-7e91-9d1e-478d749ffd38` |
+| SoD finale | `%USERPROFILE%\.codex\worktrees\avernus-finale\chriz-sod-rebalance`; **Rework Belifid’s end fight**, `01a0e4cd-cca5-76e0-bb08-9ebbbe82ad30` |
+| Randomizer | `%USERPROFILE%\.codex\worktrees\mode1-postinstall-profiles\bgee-itemrandomiser-fix`; **Fix randomizer proficiency conflict**, `01a0bb24-3c8e-77b2-849a-b3d3b0300eb0`; owner just delivered persistent Mode1 playtest |
+| Script engine | `%USERPROFILE%\.codex\worktrees\ff18\chriz-bg-script-engine`; **Begin script engine Task 1**, `01a042de-9380-7a52-9275-11f87682075e`; active owner |
 | BuffBot items | **Add equipped item actives**, `01a10db2-9078-7903-b8da-f45d055bf376`; released work, remaining gameplay check |
-| Website | **Build interactive BG run page**, `01a061fe-a68c-74b1-8272-5bfa9251a731`; released content reference `C:\Users\chris\.codex\worktrees\bg-release-oct07\twitch-setup-chriz` |
+| Website | **Build interactive BG run page**, `01a061fe-a68c-74b1-8272-5bfa9251a731`; released content reference `%USERPROFILE%\.codex\worktrees\bg-release-oct07\twitch-setup-chriz` |
 
 Before deletion/branch cleanup, preserve dirty/untracked/ignored work and establish
 which commits are merged. A stale checkout is not necessarily disposable. Never

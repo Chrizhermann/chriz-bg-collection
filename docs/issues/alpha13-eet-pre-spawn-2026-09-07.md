@@ -1,7 +1,7 @@
 # Alpha.13 EET pre-spawn stop — 2026-09-07
 
 Christopher supplied a screenshot from his alpha.13 test. Read-only inspection of
-`C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` established:
+`%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907` established:
 
 - Ledger 145–152 records successful BG1 EE Fixpack, BG1 UB, BG1 NPC Project and BG2
   EE Fixpack; DLC Merger also completed. All five invoked mod runs exited 0.

@@ -332,7 +332,7 @@ final packaged-file inspection, user-supervised review and publication authoriza
 
 - **Baeloth — owner plan found October 4:** Modpack branch
   `codex/companion-spellbooks`, `docs/companion-spellbooks.md`, under local checkout
-  `C:\Users\chris\.codex\worktrees\companion-spellbooks\chriz-bg-modpack`.
+  `%USERPROFILE%\.codex\worktrees\companion-spellbooks\chriz-bg-modpack`.
   Legal counts and SR/non-SR selections are designed, but no component number,
   implementation or tests exist yet; alpha.8 excludes it. Christopher now wants
   it in planned **Challenge Mode**, superseding the older collection-default

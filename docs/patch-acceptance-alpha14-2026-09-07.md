@@ -40,7 +40,7 @@ with the existing audit task.
 ## Real installation continuation
 
 The old failed app closed normally. The freshly built release engine resumed
-`C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` after its native registry ID,
+`%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907` after its native registry ID,
 root and frozen recipe digest matched the ledger. At 06:37 KST, ledger 155 began
 EET attempt 2 and EET imported resources. No completed mod run was repeated and
 no cleanup/redownload/new installation was performed. This is the same engine used
@@ -78,7 +78,7 @@ the independent generator check and all 42 Python tests passed.
   alpha.14/recipe alpha.12 with the correct versioned setup and signature. No old
   versioned release was overwritten.
 - A verified public copy is at
-  `C:\Users\chris\Downloads\Chriz Easy BG_0.1.0-alpha.14_x64-setup.exe`.
+  `%USERPROFILE%\Downloads\Chriz Easy BG_0.1.0-alpha.14_x64-setup.exe`.
   Attempted unattended app-setup execution was rejected by the tool environment
   before execution; it was not retried through another route. Host app remains
   alpha.13, closed, while the separately rebuilt patched engine continues the game

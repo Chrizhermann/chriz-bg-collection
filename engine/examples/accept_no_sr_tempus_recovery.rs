@@ -16,12 +16,19 @@ use std::{
 const REPLACEMENT_SHA256: &str = "25480a8e597d316d3cf1799f641971f3b6edb113eea24da7f45a8dd70b0a9ef4";
 const REPLACEMENT_LENGTH: u64 = 1_369_825;
 
+/// The owner's recovered installation lives under their Windows profile.
+fn user_profile() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    Ok(PathBuf::from(
+        std::env::var_os("USERPROFILE").ok_or("USERPROFILE is not set")?,
+    ))
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arguments: Vec<_> = std::env::args().skip(1).collect();
     if arguments.len() > 1 || arguments.first().is_some_and(|arg| arg != "--apply") {
         return Err("usage: accept_no_sr_tempus_recovery [--apply]".into());
     }
-    let root = fs::canonicalize(r"C:\Users\chris\Games\ChrizEasyBG-No-SR-Test")?;
+    let root = fs::canonicalize(user_profile()?.join(r"Games\ChrizEasyBG-No-SR-Test"))?;
     let replay = SessionStore::open(&root)?.replay()?;
     let created = replay.created();
     if created.install_id != "install-c9dc8c3e0e0b0a3476e0"

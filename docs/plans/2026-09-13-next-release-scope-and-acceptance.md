@@ -147,7 +147,7 @@ regular SoD bridge as the default and 257 as the existing opt-in challenge choic
 
 Use the retained isolated game where its installed source actually matches the
 feature. **Do not rebuild it just to test another character.** Launch path:
-`C:\Users\chris\CEBG-Tests\Combined-20260908\game\InfinityLoader.exe`.
+`%USERPROFILE%\CEBG-Tests\Combined-20260908\game\InfinityLoader.exe`.
 Keep its separate Documents profile; never run destructive experiments in the
 stream game. Use fresh actors/appropriate pre-event saves for grants and area edits.
 

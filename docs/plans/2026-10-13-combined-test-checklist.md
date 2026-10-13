@@ -7,7 +7,7 @@ save or stream install is touched.
 ## The build
 
 - One fresh SR-enabled EET installation, "CEBG Lab 2026-10-13 B", at
-  `C:\Users\chris\CEBG-Tests\Combined-20261013-b`, installed with the CLI from a
+  `%USERPROFILE%\CEBG-Tests\Combined-20261013-b`, installed with the CLI from a
   frozen local recipe: the pending [recipe intake](2026-10-13-next-batch-intake.md)
   (branch `claude/next-release-intake-20261013`) plus the playtest-tool fix,
   merged on lab branch `claude/lab-20261013`. Sources, recipe and logs are in

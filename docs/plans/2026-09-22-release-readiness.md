@@ -236,12 +236,12 @@ is verified. This draft deliberately omits work still in progress.
 September 22 agent-visible directory check, limited to the named test/backup
 locations; no files were deleted or moved and no full size/hash scan was run:
 
-- `C:\Users\chris\Games\CEBG-Tests` exists; no immediate child installation
+- `%USERPROFILE%\Games\CEBG-Tests` exists; no immediate child installation
   directories were returned. This is not a scan of other test locations.
-- `C:\Users\chris\Games\CEBG-Backups` contains
+- `%USERPROFILE%\Games\CEBG-Backups` contains
   `RC-20260903-before-kit-links-20260920`. Review after the RC patch work is closed;
   it is not approved for removal by this inventory.
-- `C:\Users\chris\Games\ChrizEasyBG-No-SR-Test` and
+- `%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test` and
   `C:\BG-EET-RC-20260903\game` still exist. Keep them and the update/recovery
   backups until the lead/user selects the copies to retire.
 

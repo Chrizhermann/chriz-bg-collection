@@ -8,7 +8,7 @@ research project or a fresh installation for every component.
 
 Use this CEBG worktree:
 
-`C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`
+`%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`
 
 Branch: `codex/installer-v0-real-alpha`. The `4d39` checkout used by the earlier
 chat is an old detached snapshot, not the integration branch.
@@ -32,7 +32,7 @@ October 12 dispatch section. Consume completed changes rather than rebuild them.
 | Task | Current handover status | Owner and working area | Finish condition |
 |---|---|---|---|
 | Emotion default | Implemented locally; reservation released | Native worker `/root/emotion_default`, active CEBG worktree | Emotion301 optional/off, Baeloth235 still off, other defaults unchanged. [Delivery note](2026-10-12-emotion-default-delivery.md) records passing focused checks and both recipe validations. Ready for next-release integration, not published. |
-| Blade and Battleluck | Local candidate ready; reservation released | Existing Bardic chat `01a07fe8-2fd5-79d3-bb42-4fef15d27fb8`, `C:\Users\chris\.codex\worktrees\bard-spell-blade-followup\Bardic-Wonders-Chriz-Balance-Patch` | Normal installable `v2.9c-balance.7-rc.1` package prepared, installer/archive checks pass. Brief player check remains. No Heroism or old song/spin/parry backlog. |
+| Blade and Battleluck | Local candidate ready; reservation released | Existing Bardic chat `01a07fe8-2fd5-79d3-bb42-4fef15d27fb8`, `%USERPROFILE%\.codex\worktrees\bard-spell-blade-followup\Bardic-Wonders-Chriz-Balance-Patch` | Normal installable `v2.9c-balance.7-rc.1` package prepared, installer/archive checks pass. Brief player check remains. No Heroism or old song/spin/parry backlog. |
 | SoD relocated-item identification | Implemented locally; reservation released | Native worker `/root/sod_loot_identification`, isolated `codex/relocated-loot-identification-oct12` branch under `C:\src\private\chriz-sod-rebalance\.worktrees\relocated-loot-identification-oct12` | Components170/900 no longer force identification, preserving original identification and existing inventory data. Focused WeiDU checks pass. No new treasure placement. |
 
 All three workers above completed before this handover was delivered; their edit
@@ -41,7 +41,7 @@ to Christopher/Claude. Keep one current owner/status per task. If another owner'
 inspect its delivery note/diff or ask the coordinator; elapsed time alone is not
 evidence that its files are free.
 
-Bardic delivery: `C:\Users\chris\.codex\artifacts\bardic-blade-battleluck-20261012\DELIVERY.md`.
+Bardic delivery: `%USERPROFILE%\.codex\artifacts\bardic-blade-battleluck-20261012\DELIVERY.md`.
 The adjacent `Bardic-Wonders-v2.9c-balance.7-rc.1.zip` is the unpublished candidate;
 SHA256 `d3425e82452d8862372e716f7ee68ba2d9fa24e4c4c7bb43969955d35d206879`.
 Its five changed/added runtime files match the source candidate; untouched release
@@ -58,7 +58,7 @@ Korlasz/camp-chest rewards, not every other loot path or existing saved inventor
 
 Use:
 
-`C:\Users\chris\.codex\worktrees\campaign-xp-banking\chriz-bg-modpack`
+`%USERPROFILE%\.codex\worktrees\campaign-xp-banking\chriz-bg-modpack`
 
 Branch `codex/campaign-scroll-integration`, audit baseline `1eadb92`.
 This already combines recruitment 237/238, replacement reader-level scroll 430
@@ -100,10 +100,10 @@ rewrite the reviewed mechanism. PR merge and publication remain separate actions
 ### 3. Consolidate the two finished SoD features locally
 
 Recruitment source:
-`C:\Users\chris\.codex\worktrees\early-sod-companions\chriz-sod-rebalance`
+`%USERPROFILE%\.codex\worktrees\early-sod-companions\chriz-sod-rebalance`
 
 Finale source:
-`C:\Users\chris\.codex\worktrees\avernus-finale\chriz-sod-rebalance`
+`%USERPROFILE%\.codex\worktrees\avernus-finale\chriz-sod-rebalance`
 
 Both start from public `v0.6.12` / `b2af832` and contain uncommitted feature work.
 Read their `docs/design/wave1/11-early-bg1-companions.md` and

@@ -4,7 +4,7 @@ Status: **implemented locally and checked; next-release WIP, not published**.
 Owner: Codex `emotion_default` worker; implementation is complete and no worker
 is retaining an edit lock. Coordination/release integration remains with the lead.
 
-Worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
+Worktree: `%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 
 ## Result
 

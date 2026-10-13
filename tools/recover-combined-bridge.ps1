@@ -11,7 +11,7 @@ Set-StrictMode -Version Latest
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$runRoot = 'C:\Users\chris\CEBG-Tests\Combined-20260908'
+$runRoot = Join-Path $env:USERPROFILE 'CEBG-Tests\Combined-20260908'
 $gameRoot = Join-Path $runRoot 'game'
 $recoveryId = 'sod-256-append-20260909'
 $recoveryRoot = Join-Path $runRoot ".chriz\recoveries\$recoveryId"

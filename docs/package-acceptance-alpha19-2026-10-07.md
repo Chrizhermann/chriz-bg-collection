@@ -14,7 +14,7 @@ preserved and excluded from these source commits.
 - Extracted app SHA256: `a659cd5073cb54770ef8066ae26d16b459b4099cb1de03db17a40880fd6cd23a`.
 - All **231 bundled resources** matched source bytes. The packaged app differed
   from the compiler output only by Tauri's expected NSIS bundle marker.
-- Verified copy: `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Release 2026-10-07-setup.exe`.
+- Verified copy: `%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Release 2026-10-07-setup.exe`.
 
 ## Automated checks
 

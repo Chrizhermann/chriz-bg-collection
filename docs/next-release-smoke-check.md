@@ -10,7 +10,7 @@ are not yet recorded as accepted; do not infer that they failed either.
 
 Defender subsequently quarantined the CEBG app. That incident is unresolved.
 The Radar checkbox/consent fix is now packaged and verified in
-`C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`.
+`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`.
 See [candidate verification](package-acceptance-alpha19-radar-2026-10-01.md).
 Do not restore quarantine, change antivirus protection or
 launch a live check without Christopher's agreement. See the

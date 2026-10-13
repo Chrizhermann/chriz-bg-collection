@@ -13,18 +13,25 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const ROOT: &str = r"C:\Users\chris\CEBG-Tests\Combined-20260908";
+const ROOT: &str = r"CEBG-Tests\Combined-20260908";
 const RECIPE_SHA256: &str = "40712587d45b8361d9be1393bc5125a851dbd358b44a7a7aff620af822868a3d";
 const FIXED_SHA256: &str = "453906a1157bdccfcf4778eafe86c891061bb5acf4a2f254afda94ec5b44fdeb";
 const FIXED_LENGTH: u64 = 558_607;
 const FIXED_COMMIT: &str = "29e123a79b9f03334ab88ce93e28c300b287a8e0";
+
+/// The owner's recovered installation lives under their Windows profile.
+fn user_profile() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    Ok(PathBuf::from(
+        std::env::var_os("USERPROFILE").ok_or("USERPROFILE is not set")?,
+    ))
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arguments: Vec<_> = std::env::args().skip(1).collect();
     if arguments.len() > 1 || arguments.first().is_some_and(|arg| arg != "--apply") {
         return Err("usage: accept_combined_bridge_recovery [--apply]".into());
     }
-    let root = fs::canonicalize(ROOT)?;
+    let root = fs::canonicalize(user_profile()?.join(ROOT))?;
     let replay = SessionStore::open(&root)?.replay()?;
     let created = replay.created();
     if created.install_id != "install-d976d775d15d76c8bdc0"

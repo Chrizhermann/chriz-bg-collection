@@ -19,7 +19,7 @@ Assembly is complete: **446 components / 50 runs**, retaining every one of the
 435-component baseline selections and adding eleven intended experimental
 components. Seven hash-pinned local source archives use ordinary verified manual
 intake; existing official downloads are reused. Run location:
-`C:\Users\chris\CEBG-Tests\Combined-20260908`. Source lock, frozen development
+`%USERPROFILE%\CEBG-Tests\Combined-20260908`. Source lock, frozen development
 recipe and worker logs are under ignored `target/combined-playtest-20260908/`.
 The receipt uses a local recipe digest, not a public release identity. Installation
 is complete: **446/446 (27 BG1 + 419 BG2)**, including BuffBot; BG Radar Overlay

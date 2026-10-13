@@ -9,8 +9,8 @@ were not changed by this source/build repair.
 ## Exact candidate
 
 - App: **0.1.0-alpha.19**; bundled curated collection: **0.1.0-alpha.18**.
-- Source: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
-- Setup: `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
+- Source: `%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
+- Setup: `%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - UI Resume Fix 2026-09-30-setup.exe`.
 - Signature: the same path with `.sig` appended.
 - Setup size: **6,023,677 bytes**.
 - Setup SHA-256: `b17421335809b1f5b9c26a4475c1194875bbb86e3f6669860fc2e9b85bb19738`.

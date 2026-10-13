@@ -439,12 +439,12 @@ def build_all(args: argparse.Namespace) -> list[dict[str, object]]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--modpack-root", type=Path, default=Path(r"C:\Users\chris\.codex\worktrees\modpack-combined-playtest\chriz-bg-modpack"))
+    parser.add_argument("--modpack-root", type=Path, default=Path.home() / ".codex" / "worktrees" / "modpack-combined-playtest" / "chriz-bg-modpack")
     parser.add_argument("--sod-root", type=Path, default=Path(r"C:\src\private\chriz-sod-rebalance\.worktrees\issue-14-bridge-finale"))
-    parser.add_argument("--artisan-root", type=Path, default=Path(r"C:\Users\chris\.codex\worktrees\9666\The-Artisan-s-Kitpack-Chriz-Balance-Patch"))
-    parser.add_argument("--artisan-overlay-root", type=Path, default=Path(r"C:\Users\chris\.codex\worktrees\5f1b\The-Artisan-s-Kitpack-Chriz-Balance-Patch"))
+    parser.add_argument("--artisan-root", type=Path, default=Path.home() / ".codex" / "worktrees" / "9666" / "The-Artisan-s-Kitpack-Chriz-Balance-Patch")
+    parser.add_argument("--artisan-overlay-root", type=Path, default=Path.home() / ".codex" / "worktrees" / "5f1b" / "The-Artisan-s-Kitpack-Chriz-Balance-Patch")
     parser.add_argument("--spell-rev-root", type=Path, default=Path(r"C:\src\private\chriz-spell-revisions-patch"))
-    parser.add_argument("--dragon-root", type=Path, default=Path(r"C:\Users\chris\.codex\worktrees\a947\chriz-bg-rebalance"))
+    parser.add_argument("--dragon-root", type=Path, default=Path.home() / ".codex" / "worktrees" / "a947" / "chriz-bg-rebalance")
     parser.add_argument("--safana-archive", type=Path, default=Path("target/combined-playtest-20260908/inputs/SafanaBG2-v05.zip"))
     parser.add_argument("--output", type=Path, default=Path("target/combined-playtest-20260908/sources"))
     return parser.parse_args()

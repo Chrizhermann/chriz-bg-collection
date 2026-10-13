@@ -75,7 +75,7 @@ installation and user saves remain untouched.
 
 ## Exact evidence
 
-- Root: `C:\Users\chris\Games\CEBG-Curated-20260905-r5`.
+- Root: `%USERPROFILE%\Games\CEBG-Curated-20260905-r5`.
 - Install: `install-e6325c7c98451ad4901e`.
 - Attempt: `attempt-aba3cbb32e1956c690b8`.
 - Terminal: `terminal-0000000222-277ba8822bcb84fe`.

@@ -52,7 +52,7 @@ confirmed active. A tested accounting model and offline native-hook evidence
 exist, but there is still no selectable banking component. The owner is
 continuing runtime integration, persistence and the approved dual-class behavior
 below. Current source of implementation status:
-`C:\Users\chris\.codex\worktrees\campaign-xp-banking\chriz-bg-modpack\research\2026-10-09-campaign-xp-banking.md`.
+`%USERPROFILE%\.codex\worktrees\campaign-xp-banking\chriz-bg-modpack\research\2026-10-09-campaign-xp-banking.md`.
 
 Delegate a separate native worker/worktree within the existing Modpack owner chat
 so XP banking can progress alongside companion XP and scroll work. One owner must

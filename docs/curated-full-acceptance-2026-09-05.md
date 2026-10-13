@@ -25,7 +25,7 @@ owning-repo modpack fixes are released and pinned; Bardic balance.3 is also incl
 Full installation acceptance is still pending. This is not a claim that the game or
 new native package has been tested.
 
-- Root: `C:\Users\chris\CEBG-Tests\CEBG-Curated-20260906-r6`.
+- Root: `%USERPROFILE%\CEBG-Tests\CEBG-Curated-20260906-r6`.
 - Worker PID `47680`, started `2026-09-06T01:15:42.2792485+09:00`. Check executable
   and start time before trusting this PID; never start a concurrent resume.
 - Executable: `target/full-install-20260906-r6/chriz-bg-install.exe`, SHA-256
@@ -35,7 +35,7 @@ new native package has been tested.
 - Logs: `target/curated-r6-install-retry1.stdout.log` and `.stderr.log`.
   Human progress goes to stderr; nonempty stderr alone does not mean failure.
 - Initial PID `34316` (01:08:08) stopped at freeze because the new parent
-  `C:\Users\chris\CEBG-Tests` did not exist. No game copy/install or managed root
+  `%USERPROFILE%\CEBG-Tests` did not exist. No game copy/install or managed root
   was created. Original `target/curated-r6-install.*.log` retained. Created only
   the approved parent directory and restarted into the still-absent same r6 root,
   with separate logs. This was a launch prerequisite, not a mod failure or a
@@ -49,7 +49,7 @@ new native package has been tested.
   Both actual files match the ledger identities. Read only newest small records for
   progress; do not dump record zero (large embedded payload).
 - Same read-only clean Steam BG:EE+SoD / BG2:EE 2.7.3 sources and existing cache
-  `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`; 261.34 GB free
+  `%USERPROFILE%\AppData\Local\dev.chrizhermann.bgcollection`; 261.34 GB free
   before launch. No old-folder deletion or stream-game mutation was performed.
 - Preset `chris-recommended`; **43 runs / 430 components**. Comparing every resolved
   run field except `artifact_id` proves identical selections, order, arguments,
@@ -88,7 +88,7 @@ successfully: the recipe expected the root TP2 alias, whereas setup-name WeiDU l
 the byte-identical nested TP2. The immutable failure remains; no seal was removed.
 See [the bounded diagnosis and correction](handoffs/2026-09-05-sod-tp2-identity.md).
 
-- Root: `C:\Users\chris\Games\CEBG-Curated-20260905-r5`.
+- Root: `%USERPROFILE%\Games\CEBG-Curated-20260905-r5`.
 - Install ID: `install-e6325c7c98451ad4901e`; attempt `attempt-aba3cbb32e1956c690b8`.
 - Frozen recipe `0.1.0-alpha.8`, SHA-256
   `cb220e5de749a779ec0e87337534fd803c11805375011e4b2856984120b4da34`.
@@ -123,7 +123,7 @@ verified. Frozen alpha.7 retains the exact curated component choices; app alpha.
 also fixes the misleading Retry action for structured `fresh_copy_required` receipts
 (65 frontend tests/typecheck passed, commit `a7bd8cf`).
 
-- Root: `C:\Users\chris\Games\CEBG-Curated-20260905-r4`.
+- Root: `%USERPROFILE%\Games\CEBG-Curated-20260905-r4`.
 - Install ID: `install-83f1bf87d5eb83425ed7`.
 - Attempt ID: `attempt-06284c52f0b43b3c6f2d`.
 - Frozen recipe SHA-256:
@@ -135,7 +135,7 @@ also fixes the misleading Retry action for structured `fresh_copy_required` rece
   `target/full-install-20260905-r4/chriz-bg-install.exe` in the active worktree below.
   Verify executable/start time before relying on this PID. Do not start another resume.
 - Logs: `target/curated-r4-install.stdout.log`, `target/curated-r4-install.stderr.log`.
-- Cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
+- Cache: `%USERPROFILE%\AppData\Local\dev.chrizhermann.bgcollection`.
 - Sources: clean Steam BG:EE+SoD and BG2:EE 2.7.3; both remain read-only.
 - Final checkpoint: ledger 216, `fresh_copy_required` after SoD; worker exited.
   Inspect only the newest ledger records for progress; record zero is a large frozen payload.
@@ -160,16 +160,16 @@ Install this latest verified add-on only after the new game's completed receipt 
 
 ### Historical r3/package snapshot (not the current run)
 
-- Worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
+- Worktree: `%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - Frozen recipe: `recipes/curated-full-current`, preset `chris-recommended`,
   recipe version `0.1.0-alpha.6`; signed app alpha.7 is packaged and installed locally.
 - Selection comes from curation and later approvals, never a replay of historical logs.
   See [the approved reconciliation plan](plans/2026-09-05-curation-reconciliation.md).
 - The replacement installation **is stopped: SoD Remix 120 needs an owning-repo fix**.
-  Target: `C:\Users\chris\Games\CEBG-Curated-20260905-r3`.
+  Target: `%USERPROFILE%\Games\CEBG-Curated-20260905-r3`.
   Install id: `install-c117933c9f2de8edc020`.
   Recipe SHA-256: `e5ced746536e989e7482834b0f2bb40e18bc1fba595ac13a7e27112c96c2563a`.
-  App cache: `C:\Users\chris\AppData\Local\dev.chrizhermann.bgcollection`.
+  App cache: `%USERPROFILE%\AppData\Local\dev.chrizhermann.bgcollection`.
   Former CLI PID: `33316` (exited), executable
   `target/full-install-20260905-r4/chriz-bg-install.exe`. This fresh attempt honestly has
   no originating desktop-app version; launcher rediscovery remains part of acceptance.
@@ -410,7 +410,7 @@ or quarantine legacy-replay resume affordances; profile selection itself is alre
 
 ## Boundaries and cleanup inventory
 
-Future NEW agent test installations belong under `C:\Users\chris\CEBG-Tests\<unique-run-name>`
+Future NEW agent test installations belong under `%USERPROFILE%\CEBG-Tests\<unique-run-name>`
 (user requested a different destination and no folders directly under C:). The earlier
 `C:\CEBG-Tests` proposal was never created or used. Do not relocate any
 existing blocked target there, and do not move/restart the active r5 installation. Keep
@@ -428,12 +428,12 @@ Seven cleanup targets were rejected by the tool policy before execution. Do not 
 those deletions by another route, and do not report them as removed:
 
 - `C:\CEBG-Full-20260905` (`install-daea3ea2007ad86185b2`).
-- `C:\Users\chris\Games\CEBG-alpha-test-20260905` (`install-3e091429c2b2d8889c15`).
-- `C:\Users\chris\Games\CEBG-Curated-20260905` (`install-66c8b55f3690bda2e3a5`).
-- `C:\Users\chris\Games\CEBG-Curated-20260905-r2` (`install-55cd391fcb89a92eac0c`).
-- `C:\Users\chris\Games\CEBG-Curated-20260905-r3` (`install-c117933c9f2de8edc020`).
-- `C:\Users\chris\Games\CEBG-Curated-20260905-r4` (`install-83f1bf87d5eb83425ed7`).
-- `C:\Users\chris\Games\CEBG-Full-20260905` (`install-8a3cab271f29d2c47f61`).
+- `%USERPROFILE%\Games\CEBG-alpha-test-20260905` (`install-3e091429c2b2d8889c15`).
+- `%USERPROFILE%\Games\CEBG-Curated-20260905` (`install-66c8b55f3690bda2e3a5`).
+- `%USERPROFILE%\Games\CEBG-Curated-20260905-r2` (`install-55cd391fcb89a92eac0c`).
+- `%USERPROFILE%\Games\CEBG-Curated-20260905-r3` (`install-c117933c9f2de8edc020`).
+- `%USERPROFILE%\Games\CEBG-Curated-20260905-r4` (`install-83f1bf87d5eb83425ed7`).
+- `%USERPROFILE%\Games\CEBG-Full-20260905` (`install-8a3cab271f29d2c47f61`).
 
 Christopher explicitly requested removal of the seven obsolete copies after the inventory
 found approximately 106.14 GB of files. Normal PowerShell deletion was attempted again
@@ -451,9 +451,9 @@ assume all seven still exist. The root-level location is not established as the 
 the tool restriction: the earlier r2/r3-only command, entirely inside the user directory,
 was also rejected. Future destination separation is organizational, not a permission fix.
 
-The separate invalid legacy full run `C:\Users\chris\Games\CEBG-Full-20260905`
+The separate invalid legacy full run `%USERPROFILE%\Games\CEBG-Full-20260905`
 (`install-8a3cab271f29d2c47f61`) remains historical evidence, not the corrected run.
-Preserve the user's earlier `C:\Users\chris\Games\Chriz Easy BG` root.
+Preserve the user's earlier `%USERPROFILE%\Games\Chriz Easy BG` root.
 Never delete a broad game directory, source, cache or workspace as test cleanup.
 
 No public repository creation, push, tag, release publication, private archive upload or

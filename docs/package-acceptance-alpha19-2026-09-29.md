@@ -11,8 +11,8 @@ UI/gameplay acceptance and is not the older September 23 alpha.19 binary.
 ## Candidate identity
 
 - App: **0.1.0-alpha.19**; bundled curated collection: **0.1.0-alpha.18**.
-- Active source checkout: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
-- User installer: `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Combined Test 2026-09-29-setup.exe`.
+- Active source checkout: `%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
+- User installer: `%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Combined Test 2026-09-29-setup.exe`.
 - Updater signature: the same filename with `.sig` appended.
 - Setup size: **5,952,159 bytes**.
 - Setup SHA-256: `4f987dd21bea492d3bea943f3522567b26530b3b440b88a3e1e715633f481d00`.

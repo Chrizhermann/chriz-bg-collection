@@ -49,7 +49,7 @@ selection behavior was already correct.
 - Evidence helper: `target/work/verify-feedback-package-sep23.ps1`; verified
   extraction remains in the final job's `extracted/` directory.
 - New, non-overwriting copies of the setup and signature were hash-verified at
-  `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Review 2026-09-23-setup.exe`
+  `%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Review 2026-09-23-setup.exe`
   and its adjacent `.sig`. Older Downloads packages were not replaced or removed.
 
 **Ready for Christopher's finishing UI review.** The package was not installed,
@@ -69,7 +69,7 @@ restored the record with the narrowly scoped user-run helper, then confirmed the
 normal app recognized it and offered the BuffBot update.
 
 He applied BuffBot **1.8.3-alpha to 1.8.4-alpha** to
-`C:\Users\chris\Games\ChrizEasyBG-No-SR-Test`, transaction
+`%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test`, transaction
 `01790071515151257500`, and reported **"its fine, it works"** after the requested
 existing-save/gameplay check. This narrow update's Apply and user gameplay checks
 are accepted; do not repeat gameplay testing merely to restate that result.
@@ -111,7 +111,7 @@ BuffBot source fingerprints and distinct read-only preview error wording.
 - Signature SHA-256:
   `4b79f92d02fcfe2bd9339f575ff2c528efa664a34ce6591e2f34dc68844139f4`.
 - Verified copies replace the earlier candidate in Downloads:
-  `C:\Users\chris\Downloads\Chriz Easy BG_0.1.0-alpha.19_x64-setup.exe`
+  `%USERPROFILE%\Downloads\Chriz Easy BG_0.1.0-alpha.19_x64-setup.exe`
   and its adjacent `.sig`. Build output uses the same bundle path below.
 
 At this build's completion it was **not installed or published**; the corrected
@@ -153,7 +153,7 @@ is not Windows Authenticode publisher signing. Public alpha.18 assets and the li
 update feed were not changed; no publication is authorized by these local builds.
 
 The existing test target is
-`C:\Users\chris\Games\ChrizEasyBG-No-SR-Test`. Its completed receipt matches the
+`%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test`. Its completed receipt matches the
 registry. BuffBot 1.8.3 components 1 then 0 were the final entries before this test;
 they were updated to 1.8.4 and are now restored to 1.8.3 after the successful Undo.
 The [update acceptance flow](existing-install-upgrades-2026-09-21.md) has completed

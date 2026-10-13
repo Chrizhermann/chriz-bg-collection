@@ -12,7 +12,7 @@ stay unchanged.
 
 ## Exact deliverable
 
-- Setup: `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Dragon and Order Fix 2026-09-30-setup.exe`.
+- Setup: `%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Dragon and Order Fix 2026-09-30-setup.exe`.
 - Signature: the same path with `.sig` appended.
 - Size: **6,025,583 bytes**.
 - Setup SHA-256: `3d94c594470486030e3792f94c22ef42bc7cc68e9b2894969fb3c653ace8c6f9`.
@@ -94,7 +94,7 @@ IDs, selection semantics, saved choices or installation safeguards.
 
 The latest verified local installer supersedes the Dragon and Order Fix setup:
 
-- Setup: `C:\Users\chris\Downloads\Chriz Easy BG alpha19 - Selection Fix 2026-09-30-setup.exe`.
+- Setup: `%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Selection Fix 2026-09-30-setup.exe`.
 - Signature: the same path with `.sig` appended.
 - Size: **6,027,850 bytes**.
 - Setup SHA-256: `614e71cfc4416dc0a71e2bb2eb4616b0f96a33ba889796ab8cc1f628f569620f`.
