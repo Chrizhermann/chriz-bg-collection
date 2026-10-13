@@ -96,8 +96,9 @@ const LEGACY_DISPLAY_NAME: &str = "Chriz BG Collection";
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
 const EVIDENCE_DIRECTORY: &str = "evidence";
-/// Later, accepted acquisitions of an artifact whose final URL or cache outcome differ from its
-/// write-once first acquisition evidence. Stored as `<category>/<artifact-id>/<digest>.json`.
+/// Later, accepted acquisitions of an artifact whose final URL differs from its write-once first
+/// acquisition evidence, or that were downloaded anew. Stored as
+/// `<category>/<artifact-id>/<digest>.json`.
 const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
@@ -3977,11 +3978,12 @@ fn inferred_success_exit_code(statuses: &[DebugStatus]) -> Option<i32> {
 /// How a later acquisition of an artifact relates to its accepted first acquisition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum LaterAcquisition {
-    /// Exactly the first acquisition evidence.
+    /// The first acquisition evidence itself, or a cache hit on that same download: routine
+    /// reuse that adds no provenance and is not recorded.
     Identical,
     /// The same pinned archive from the same authored source, observed with a different final
-    /// URL (signed single-use redirects) and/or cache outcome (cache hit, or a re-download
-    /// after the download cache was lost).
+    /// URL (signed single-use redirects) or acquired anew (a re-download after the download
+    /// cache was lost).
     Reacquired,
 }
 
@@ -3996,7 +3998,13 @@ fn retain_first_acquisition_receipt(
     first: &ArtifactReceipt,
     observed: &ArtifactReceipt,
 ) -> Result<LaterAcquisition, StepFailure> {
-    if first == observed {
+    let cache_hit_on_first_download = first.cache_outcome == ArtifactCacheOutcome::Downloaded
+        && observed.cache_outcome == ArtifactCacheOutcome::Hit
+        && ArtifactReceipt {
+            cache_outcome: ArtifactCacheOutcome::Downloaded,
+            ..observed.clone()
+        } == *first;
+    if first == observed || cache_hit_on_first_download {
         return Ok(LaterAcquisition::Identical);
     }
     let same_archive = first.id == observed.id
@@ -4610,12 +4618,24 @@ mod tests {
     }
 
     #[test]
+    fn cache_hit_on_the_first_download_is_routine_reuse() {
+        let first = downloaded_artifact_receipt();
+        let reused = ArtifactReceipt {
+            cache_outcome: ArtifactCacheOutcome::Hit,
+            ..first.clone()
+        };
+
+        assert_eq!(
+            retain_first_acquisition_receipt(&first, &reused).unwrap(),
+            LaterAcquisition::Identical
+        );
+    }
+
+    #[test]
     fn same_archive_from_the_same_source_is_accepted_whatever_its_final_url_or_cache_outcome() {
         use ArtifactCacheOutcome::{Downloaded, Hit};
         let signed = "https://release-assets.githubusercontent.invalid/test-mod.zip?sig=2";
         for (first_outcome, later_outcome, later_final_url) in [
-            // Cache entry reused later in the same campaign.
-            (Downloaded, Hit, None),
             // Cache lost and re-downloaded through a new single-use signed redirect.
             (Downloaded, Downloaded, Some(signed)),
             (Hit, Downloaded, None),
