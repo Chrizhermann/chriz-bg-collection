@@ -9,7 +9,8 @@ Since the September 16 intake the public recipe already carries this content.
 Keep its published archive pins wherever its component catalogue covers the
 requested runs. Frozen archives are needed only for missing content or an
 explicit --local-source override; their component coverage is checked before
-the destination is published. Existing curated runs and features are retained.
+the destination is published. Existing curated runs, features and their preset
+selections are retained.
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ REQUIRED_SOURCE_IDS = (
     "chriz-bg-rebalance",
     "srcb-rr-compat",
     "safana-in-amn",
+    "bardicwonders",
 )
 
 SOURCE_MODS = {
@@ -49,6 +51,7 @@ SOURCE_MODS = {
     "chriz-bg-rebalance": ("chriz-bg-rebalance",),
     "srcb-rr-compat": ("srcb-rr-compat",),
     "safana-in-amn": ("safana",),
+    "bardicwonders": ("bardicwonders",),
 }
 
 PRE_CONTINUITY_COMPONENTS = (110, 140, 170, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223)
@@ -409,7 +412,8 @@ name = {_quote(component_name)}
     path.write_text(text, encoding="utf-8", newline="\n")
 
 
-def _write_collection(destination: Path) -> None:
+def _write_collection(destination: Path) -> set[str]:
+    """Return the playtest features the base lacked; curated ones stay as they are."""
     path = destination / "collection.toml"
     collection = path.read_text(encoding="utf-8").replace("\r\n", "\n")
     collection = _merge_run_components(collection, "chriz-sod-remix-bg2", [135, 256, 265])
@@ -455,6 +459,7 @@ readiness = "ready"
         collection = collection.rstrip() + "\n\n" + "\n".join(missing)
     tomllib.loads(collection)
     path.write_text(collection, encoding="utf-8", newline="\n")
+    return {_block_feature_id(feature) for feature in missing}
 
 
 def _block_feature_id(block: str) -> str:
@@ -464,7 +469,7 @@ def _block_feature_id(block: str) -> str:
     return match.group(1)
 
 
-def _write_preset(destination: Path) -> None:
+def _write_preset(destination: Path, added: set[str]) -> None:
     path = destination / "presets/chris-recommended.toml"
     text = path.read_text(encoding="utf-8").rstrip()
     selections = [
@@ -474,9 +479,12 @@ def _write_preset(destination: Path) -> None:
         "feature:chriz-bg-modpack:component-620", "feature:chriz-bg-rebalance:component-110",
         "feature:chriz-bg-rebalance:component-111",
     ]
-    for selection in selections:
-        # The base preset already selects most of this content; force the playtest
-        # value in place rather than appending a second, invalid key.
+    # Select only the playtest features this tool had to add. A feature the base
+    # already curates keeps its preset value: 110, for example, is now an
+    # optional Challenge Mode member and must not be forced on.
+    for selection in (selection for selection in selections if selection in added):
+        # An older preset may still name an added feature; set it in place
+        # rather than appending a second, invalid key.
         pattern = rf'(?m)^{re.escape(_quote(selection))} = "[^"]*"$'
         replaced, count = re.subn(pattern, f'{_quote(selection)} = "on"', text, count=1)
         text = replaced if count else text + f'\n{_quote(selection)} = "on"'
@@ -563,8 +571,7 @@ def build_recipe(root: Path, sources_json: Path | None, destination: Path, *, lo
     with tempfile.TemporaryDirectory(prefix="combined-recipe-", dir=destination.parent) as temp_dir:
         staged = Path(temp_dir) / "recipe"
         shutil.copytree(base, staged)
-        _write_collection(staged)
-        _write_preset(staged)
+        _write_preset(staged, _write_collection(staged))
         needed = _needed_sources(base, staged, local_sources or set())
         if needed and sources_json is None:
             raise ValueError(f"frozen sources are required for {', '.join(sorted(needed))}; supply --sources")
