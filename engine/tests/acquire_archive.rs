@@ -1262,6 +1262,54 @@ fn a_stop_ends_the_wait_for_an_extraction_lock_that_is_never_released() {
     );
 }
 
+/// An extraction that the user stopped does not start, even when no other extraction holds its
+/// lock, and leaves the lock free for the next build.
+#[test]
+fn a_stopped_extraction_does_not_start_on_a_free_entry() {
+    use fs4::fs_std::FileExt;
+
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("stopped-before-start.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+
+    let lock_path =
+        match extract_archive_with_stop(&archive, &cache, &request, &StopSignal::new(|| true)) {
+            Err(AcquireError::Stopped { lock }) => lock,
+            other => panic!("expected a stopped extraction, got {other:?}"),
+        };
+    assert!(!published_archive_parent(&cache, &request.artifact_sha256).exists());
+    let lock = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .unwrap();
+    assert!(
+        lock.try_lock_exclusive().unwrap(),
+        "a stopped extraction must release its lock"
+    );
+    FileExt::unlock(&lock).unwrap();
+
+    let (extracted, repair) = extract_archive_reporting_repair(&archive, &cache, &request).unwrap();
+    assert_eq!(repair, None);
+    assert_eq!(
+        lock_path,
+        cache.join("locks").join(format!(
+            "{}.{}.lock",
+            extracted.artifact_sha256, extracted.extraction_contract_sha256
+        ))
+    );
+    assert!(extracted.root.join("mod/setup-mod.tp2").is_file());
+}
+
 #[test]
 fn concurrent_requests_repair_a_damaged_entry_exactly_once() {
     let temp = TempDir::new().unwrap();

@@ -179,8 +179,9 @@ pub fn extract_archive_reporting_repair(
     )
 }
 
-/// [`extract_archive_reporting_repair`], giving up with [`AcquireError::Stopped`] when `stop`
-/// reports that the user stopped while another extraction of the same identity holds its lock.
+/// [`extract_archive_reporting_repair`], giving up with [`AcquireError::Stopped`] instead of
+/// extracting once `stop` reports that the user stopped, also while another extraction of the
+/// same identity holds its lock.
 pub fn extract_archive_with_stop(
     archive_path: &Path,
     extraction_cache: &Path,

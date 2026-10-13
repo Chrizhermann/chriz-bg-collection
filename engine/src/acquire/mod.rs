@@ -36,7 +36,8 @@ pub const DEFAULT_DOWNLOAD_ATTEMPTS: u32 = 5;
 /// Whether the user stopped the operation that is acquiring or extracting an artifact.
 ///
 /// Waiting for another download or extraction of the same cache entry has no time limit,
-/// because that work may still be progressing; this signal ends such a wait instead.
+/// because that work may still be progressing; this signal ends such a wait instead, and keeps
+/// a stopped operation from starting a download or extraction.
 #[derive(Clone, Default)]
 pub struct StopSignal(Option<Arc<dyn Fn() -> bool + Send + Sync>>);
 
@@ -302,11 +303,9 @@ pub enum AcquireError {
     /// The system clock is earlier than the Unix epoch.
     #[error("system clock is earlier than the Unix epoch")]
     InvalidClock,
-    /// The user stopped while another download or extraction of the same file held its lock.
-    #[error(
-        "stopped by the user while another download or unpacking of the same file was still \
-         in progress (lock `{lock}`)"
-    )]
+    /// The user stopped before a download or extraction took the lock of its cache entry, either
+    /// while another download or extraction of the same file held it or before it started.
+    #[error("stopped by the user before this download or unpacking could start (lock `{lock}`)")]
     Stopped {
         /// Lock file of the cache entry that was being waited for.
         lock: PathBuf,

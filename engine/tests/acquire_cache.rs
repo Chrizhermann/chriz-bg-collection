@@ -628,6 +628,87 @@ fn a_stop_ends_the_wait_to_publish_a_finished_download() {
         .exists());
 }
 
+/// A download that the user stopped does not start, even when no other download holds its cache
+/// entry. The network is never contacted and the entry is left free.
+#[test]
+fn a_stopped_download_does_not_start_on_a_free_entry() {
+    use fs4::fs_std::FileExt;
+
+    let bytes = b"artifact a stopped build must not download";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let (sink, _) = ChannelSink::unbounded();
+    let download = request(
+        "stopped-before-start",
+        "https://network-must-not-be-used.invalid/archive".to_owned(),
+        bytes,
+    );
+    let lock_path = temp
+        .path()
+        .join("cache/locks")
+        .join(format!("{}.lock", download.expected_sha256));
+
+    match cache.acquire_with_stop(&download, &sink, &StopSignal::new(|| true)) {
+        Err(AcquireError::Stopped { lock }) => assert_eq!(lock, lock_path),
+        other => panic!("expected a stopped download, got {other:?}"),
+    }
+    let lock = open_entry_lock(&lock_path);
+    assert!(
+        lock.try_lock_exclusive().unwrap(),
+        "a stopped download must release its cache entry"
+    );
+    FileExt::unlock(&lock).unwrap();
+    let digest = &download.expected_sha256;
+    assert!(!temp
+        .path()
+        .join(format!("cache/sha256/{}/{digest}.archive", &digest[..2]))
+        .exists());
+}
+
+/// Stop still wins when the other download releases the cache entry right after the user
+/// stopped: the waiting download does not start.
+#[test]
+fn a_stop_wins_over_a_download_lock_released_at_the_same_time() {
+    use fs4::fs_std::FileExt;
+
+    let bytes = b"artifact another program stops downloading as the user stops";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let (sink, _) = ChannelSink::unbounded();
+    let download = request(
+        "stopped-on-release",
+        "https://network-must-not-be-used.invalid/archive".to_owned(),
+        bytes,
+    );
+    let lock_path = temp
+        .path()
+        .join("cache/locks")
+        .join(format!("{}.lock", download.expected_sha256));
+    let lock = open_entry_lock(&lock_path);
+    lock.lock_exclusive().unwrap();
+    let (stopped, stop) = stoppable();
+
+    let result = thread::scope(|scope| {
+        let waiting = scope.spawn(|| cache.acquire_with_stop(&download, &sink, &stop));
+        thread::sleep(Duration::from_millis(400));
+        let waited = !waiting.is_finished();
+        stopped.store(true, Ordering::SeqCst);
+        FileExt::unlock(&lock).unwrap();
+        assert!(waited, "the request must wait for the lock");
+        waiting.join().unwrap()
+    });
+
+    match result {
+        Err(AcquireError::Stopped { lock }) => assert_eq!(lock, lock_path),
+        other => panic!("expected a stopped download, got {other:?}"),
+    }
+    let digest = &download.expected_sha256;
+    assert!(!temp
+        .path()
+        .join(format!("cache/sha256/{}/{digest}.archive", &digest[..2]))
+        .exists());
+}
+
 #[test]
 fn concurrent_requests_for_one_digest_publish_one_verified_object() {
     let bytes = b"one digest from two requests";

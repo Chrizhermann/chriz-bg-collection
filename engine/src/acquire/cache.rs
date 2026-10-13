@@ -86,8 +86,9 @@ impl ArtifactCache {
         self.acquire_with_stop(request, sink, &StopSignal::never())
     }
 
-    /// [`Self::acquire`], giving up with [`AcquireError::Stopped`] when `stop` reports that the
-    /// user stopped while another download of the same artifact holds its cache entry.
+    /// [`Self::acquire`], giving up with [`AcquireError::Stopped`] instead of downloading or
+    /// publishing once `stop` reports that the user stopped, also while another download of the
+    /// same artifact holds its cache entry.
     pub fn acquire_with_stop(
         &self,
         request: &DownloadRequest,
