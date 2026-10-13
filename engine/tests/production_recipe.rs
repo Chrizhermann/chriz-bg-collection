@@ -966,9 +966,7 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
             .or_else(|| {
                 (record.artifact_id == historical_artisan.id).then_some(&historical_artisan)
             })
-            .or_else(|| {
-                (record.artifact_id == historical_bardic.id).then_some(&historical_bardic)
-            })
+            .or_else(|| (record.artifact_id == historical_bardic.id).then_some(&historical_bardic))
             .unwrap_or_else(|| panic!("unknown evidence artifact {}", record.artifact_id));
         let (expected_host, expected_wrapper, expected_shape) = expected_observations
             .get(record.artifact_id.as_str())

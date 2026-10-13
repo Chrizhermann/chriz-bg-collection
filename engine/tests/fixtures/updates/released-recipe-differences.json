@@ -159,5 +159,36 @@
       "artifact:chriz-bg-modpack-0.2.0-alpha.6",
       "artifact:chriz-bg-modpack-0.2.0-alpha.7"
     ]
+  },
+  {
+    "version": "0.1.0-alpha.20",
+    "from_commit": "f07e77a",
+    "to_commit": "e0b5116",
+    "subjects": [
+      "artifact:bardicwonders-v2.9c-balance.6",
+      "artifact:bardicwonders-v2.9c-balance.7",
+      "artifact:chriz-bg-modpack-0.2.0-alpha.11",
+      "artifact:chriz-bg-rebalance-0.8.2",
+      "artifact:chriz-sod-remix-0.6.13",
+      "feature:feature:bardicwonders:component-3010",
+      "feature:feature:chriz-bg-modpack:component-237",
+      "feature:feature:chriz-bg-modpack:component-238",
+      "feature:feature:chriz-bg-modpack:component-430",
+      "feature:feature:chriz-bg-modpack:component-650",
+      "feature:feature:chriz-bg-modpack:component-651",
+      "feature:feature:chriz-bg-modpack:component-660",
+      "feature:feature:chriz-bg-rebalance:bard-spell-ceilings",
+      "feature:feature:chriz-bg-rebalance:component-301",
+      "feature:feature:chriz-sod-remix:component-257",
+      "feature:feature:chriz-sod-remix:mandatory-components",
+      "feature:feature:eet:component-100",
+      "run:bardicwonders-progression-bg2",
+      "run:chriz-bg-modpack-bg2",
+      "run:chriz-bg-modpack-campaign-xp-bg2",
+      "run:chriz-bg-modpack-late-companions-bg2",
+      "run:chriz-bg-modpack-scrolls-bg2",
+      "run:chriz-bg-rebalance-bg2",
+      "run:chriz-sod-remix-bg2"
+    ]
   }
 ]

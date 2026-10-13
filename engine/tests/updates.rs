@@ -375,6 +375,31 @@ fn alpha18_records_emotion_default_and_stronghold_selection_fix_for_new_installs
 }
 
 #[test]
+fn alpha20_requires_the_feature_group_app_and_waits_for_the_next_playthrough() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let ledger = load_release(
+        &root.join("recipes/curated-full-current/releases/v0.1.0-alpha.20/ledger.toml"),
+    )
+    .unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.0-alpha.20/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0-alpha.19"));
+    // The recipe adds [[feature_groups]] (Challenge Mode), which alpha.19 apps cannot read.
+    let old_app = classify_updates("0.1.0-alpha.19", "0.1.0-alpha.19", &[ledger.clone()]).unwrap();
+    assert_eq!(old_app.disposition, UpdateDisposition::AppUpdateRequired);
+    assert_eq!(
+        old_app.minimum_app_version.as_deref(),
+        Some("0.1.0-alpha.20")
+    );
+    let new_app = classify_updates("0.1.0-alpha.19", "0.1.0-alpha.20", &[ledger]).unwrap();
+    assert_eq!(new_app.latest_version.as_deref(), Some("0.1.0-alpha.20"));
+    assert_eq!(
+        new_app.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+}
+
+#[test]
 fn coverage_error_names_uncovered_subject() {
     let differences = vec![RecipeDifference {
         subject: "run:missing".to_owned(),
