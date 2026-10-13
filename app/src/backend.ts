@@ -968,7 +968,7 @@ export class FixtureBackend implements Backend {
   launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {
     return Promise.resolve({ installId, radar: {
       state: startRadar ? "started" : "not-requested", detail: null, technicalDetail: null,
-    } });
+    }, gameSettings: { state: "unchanged", technicalDetail: null } });
   }
 
   async previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {

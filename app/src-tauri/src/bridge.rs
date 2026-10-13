@@ -27,7 +27,7 @@ use bg_engine::preflight::is_creator_protected_destination;
 use bg_engine::recipe_view::{FeatureControl, NormalizedSelection, RecipeView, SelectionFinding};
 use bg_engine::registry::{
     CampaignAvailability, InstallAvailability, ManagedCampaignCard, ManagedInstallCard,
-    ManagedInstallRegistry,
+    ManagedInstallRecord, ManagedInstallRegistry,
 };
 use bg_engine::resolve::InstallPlan;
 use bg_engine::weidu::runner::RunnerControlHandle;
@@ -40,7 +40,9 @@ use crate::updates::{
     UpdateCenterResponse,
 };
 
+mod game_settings;
 mod radar_launch;
+pub use game_settings::{GameSettingsResponse, GameSettingsState};
 pub use radar_launch::{
     LaunchInstallResponse, RadarLaunchResponse, RadarLaunchState, RadarProcessOutcome,
 };
@@ -96,6 +98,9 @@ pub trait BridgeEngine: Send + Sync {
         sink: &SequencedEventSink,
         controls: &RunnerControlHandle,
     ) -> Result<CampaignReport, CliError>;
+    /// Brings a completed installation's isolated game profile up to date with the
+    /// settings its installed components need. Returns whether the profile changed.
+    fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String>;
 }
 
 /// Operating-system actions kept behind the native bridge's validated identity boundary.
@@ -224,6 +229,16 @@ impl BridgeEngine for SystemBridgeEngine {
     ) -> Result<CampaignReport, CliError> {
         resume_campaign_controlled_expected(managed_root, expected_install_id, sink, controls)
     }
+
+    fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
+        bg_engine::stage::repair_installed_profile_settings(
+            &record.managed_root,
+            &record.install_id,
+            &record.engine_name,
+            &record.managed_save_root,
+        )
+        .map_err(|error| error.to_string())
+    }
 }
 
 struct DiscovererBridgeEngine {
@@ -276,6 +291,10 @@ impl BridgeEngine for DiscovererBridgeEngine {
     ) -> Result<CampaignReport, CliError> {
         self.system
             .resume(managed_root, expected_install_id, sink, controls)
+    }
+
+    fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
+        self.system.repair_profile_settings(record)
     }
 }
 
@@ -1372,6 +1391,10 @@ impl NativeBridge {
                 ),
             )
         })?;
+        // Installations made before the installer seeded a setting get it before the
+        // game reads its profile. Playing never depends on it.
+        let game_settings =
+            GameSettingsResponse::from_repair(self.engine.repair_profile_settings(&record));
         self.system
             .launch(&record.launch_path, working_directory)
             .map_err(|error| {
@@ -1395,6 +1418,7 @@ impl NativeBridge {
         Ok(LaunchInstallResponse {
             install_id: install_id.to_owned(),
             radar,
+            game_settings,
         })
     }
 

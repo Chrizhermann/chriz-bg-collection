@@ -268,6 +268,17 @@ export function homeScreen(
     if (radar.detail) notice.append(element("p", undefined, radar.detail));
     if (radar.technicalDetail) notice.append(errorDetails(radar.technicalDetail));
     card.append(notice);
+    const { gameSettings } = launchState.feedback;
+    if (gameSettings.state === "failed") {
+      const settings = element("div", "shortcut-feedback warning");
+      settings.setAttribute("role", "alert");
+      settings.append(
+        element("strong", undefined, "The game's settings file couldn't be updated."),
+        element("p", undefined, "Lefreut's interfaces need this update to offer the trilogy campaigns. Close the game, then use Play again to retry."),
+      );
+      if (gameSettings.technicalDetail) settings.append(errorDetails(gameSettings.technicalDetail));
+      card.append(settings);
+    }
   }
   if (actions.remove) {
     const removal = actionButton("Delete / remove installation…", () => actions.remove!(selected.id), "danger-quiet");

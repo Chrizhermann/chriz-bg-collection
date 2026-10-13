@@ -1,33 +1,99 @@
-//! Seed only known, installed-component defaults in the final isolated profile.
+//! Seed only known, installed-component settings in the final isolated profile.
 //!
-//! EET changes engine_name while installing. CDTweaks can consequently write its
-//! enable flags into EET's shared profile, which CEBG intentionally does not use.
-//! Never copy that profile: it can contain another playthrough's preferences.
+//! EET changes engine_name while installing. CDTweaks and EET itself consequently
+//! write their settings into EET's shared profile, which CEBG intentionally does not
+//! use. Never copy that profile: it can contain another playthrough's preferences.
+//! Instead, the few settings an installed component relies on are reproduced here.
 
 use super::*;
 use crate::weidu::log::parse_active_entries;
 
-const DEFAULTS: [(&str, &str); 2] = [("IntervalSaveEnabled", "1"), ("IntervalSaveCombat", "0")];
+/// How an existing value of a seeded key is treated.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Ownership {
+    /// A player preference: any recognized value is kept; only a missing key is seeded.
+    Preference,
+    /// Installation state that the component's own installer records. It is set to the
+    /// installed state, as that installer would have done in its own profile.
+    InstallState,
+}
 
-fn settings_error(path: &Path, reason: impl Into<String>) -> EngineError {
-    EngineError::GameIdentity {
-        path: path.to_owned(),
-        reason: format!("interval-save settings: {}", reason.into()),
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Setting {
+    label: &'static str,
+    section: &'static str,
+    key: &'static str,
+    value: &'static str,
+    ownership: Ownership,
+}
+
+impl Setting {
+    fn assignment(&self) -> String {
+        format!(
+            "SetPrivateProfileString('{}','{}','{}')",
+            self.section, self.key, self.value
+        )
     }
 }
 
-fn interval_saves_installed(layout: &ManagedLayout) -> Result<bool> {
-    let path = layout.game_root().join("WeiDU.log");
+const INTERVAL_SAVES: &str = "interval-save settings";
+const EET_STATE: &str = "EET installation state";
+const PROFILE: &str = "profile settings";
+
+fn settings_error(path: &Path, label: &str, reason: impl Into<String>) -> EngineError {
+    EngineError::GameIdentity {
+        path: path.to_owned(),
+        reason: format!("{label}: {}", reason.into()),
+    }
+}
+
+/// The settings that the installed components in `game_root` rely on.
+fn required_settings(game_root: &Path) -> Result<Vec<Setting>> {
+    let path = game_root.join("WeiDU.log");
     let Some(bytes) = read_optional_regular(&path)? else {
-        return Ok(false);
+        return Ok(Vec::new());
     };
     // Annotations can use the mod's legacy encoding; active component identities
     // are ASCII and must parse even when the description is not UTF-8.
     let entries = parse_active_entries(&String::from_utf8_lossy(&bytes))
-        .map_err(|error| settings_error(&path, error.to_string()))?;
-    Ok(entries.iter().any(|entry| {
-        entry.tp2_key == "cdtweaks/setup-cdtweaks.tp2" && (3350..=3357).contains(&entry.component)
-    }))
+        .map_err(|error| settings_error(&path, PROFILE, error.to_string()))?;
+    let installed = |tp2: &str, components: std::ops::RangeInclusive<u32>| {
+        entries
+            .iter()
+            .any(|entry| entry.tp2_key == tp2 && components.contains(&entry.component))
+    };
+    let mut settings = Vec::new();
+    if installed("cdtweaks/setup-cdtweaks.tp2", 3350..=3357) {
+        for (key, value) in [("IntervalSaveEnabled", "1"), ("IntervalSaveCombat", "0")] {
+            settings.push(Setting {
+                label: INTERVAL_SAVES,
+                section: "Script",
+                key,
+                value,
+                ownership: Ownership::Preference,
+            });
+        }
+    }
+    // EET core records 1 and EET_end (any of its components) raises it to 2. Lefreut's
+    // interface offers the trilogy campaigns only with this state or EET's own engine
+    // name, and CEBG renames the engine for its isolated profile.
+    let eet_state = if installed("eet_end/eet_end.tp2", 0..=u32::MAX) {
+        Some("2")
+    } else if installed("eet/eet.tp2", 0..=0) {
+        Some("1")
+    } else {
+        None
+    };
+    if let Some(value) = eet_state {
+        settings.push(Setting {
+            label: EET_STATE,
+            section: "Program Options",
+            key: "EET Installation State",
+            value,
+            ownership: Ownership::InstallState,
+        });
+    }
+    Ok(settings)
 }
 
 fn read_optional_regular(path: &Path) -> Result<Option<Vec<u8>>> {
@@ -44,7 +110,7 @@ fn read_optional_regular(path: &Path) -> Result<Option<Vec<u8>>> {
     };
     ensure_direct_file(path)?;
     if hard_link_count(path, &metadata)? != 1 {
-        return Err(settings_error(path, "file has another hard link"));
+        return Err(settings_error(path, PROFILE, "file has another hard link"));
     }
     fs::read(path).map(Some).map_err(|source| EngineError::Io {
         path: path.into(),
@@ -89,38 +155,76 @@ fn assignment(line: &str) -> Option<(&str, &str, &str)> {
     (tail.is_empty() || tail.starts_with("--")).then_some((section, key, value))
 }
 
-fn missing_defaults(path: &Path, bytes: &[u8]) -> Result<Vec<(&'static str, &'static str)>> {
+/// What must change so the profile holds every required setting.
+#[derive(Debug, Default)]
+struct Changes {
+    /// Whole assignment lines (byte ranges without their line ending) to rewrite.
+    replace: Vec<(Range<usize>, Setting)>,
+    append: Vec<Setting>,
+}
+
+impl Changes {
+    fn first(&self) -> Option<&Setting> {
+        self.replace
+            .first()
+            .map(|(_, setting)| setting)
+            .or(self.append.first())
+    }
+}
+
+fn changes(path: &Path, bytes: &[u8], settings: &[Setting]) -> Result<Changes> {
+    let label = settings.first().map_or(PROFILE, |setting| setting.label);
     let content = std::str::from_utf8(bytes)
-        .map_err(|_| settings_error(path, "Baldur.lua is not UTF-8; left unchanged"))?;
-    let mut present = [false; 2];
+        .map_err(|_| settings_error(path, label, "Baldur.lua is not UTF-8; left unchanged"))?;
+    let mut assignments: Vec<Vec<(Range<usize>, &str)>> = vec![Vec::new(); settings.len()];
+    let mut offset = if content.starts_with('\u{feff}') {
+        '\u{feff}'.len_utf8()
+    } else {
+        0
+    };
     let mut block_comment = false;
-    for line in content.trim_start_matches('\u{feff}').lines() {
-        let line = line.trim();
-        // Engine-written Baldur.lua has no block comments. Don't infer defaults
+    for full_line in content[offset..].split_inclusive('\n') {
+        let text = full_line.strip_suffix('\n').unwrap_or(full_line);
+        let text = text.strip_suffix('\r').unwrap_or(text);
+        let range = offset..offset + text.len();
+        offset += full_line.len();
+        let line = text.trim();
+        // Engine-written Baldur.lua has no block comments. Don't infer settings
         // from a manually commented-out example or an arbitrary Lua program.
         if line.starts_with("--[") {
             block_comment = true;
         }
-        for (index, (key, _)) in DEFAULTS.iter().enumerate() {
-            if !line.contains(key) {
+        for (index, setting) in settings.iter().enumerate() {
+            if !line.contains(setting.key) {
                 continue;
             }
             if block_comment {
                 return Err(settings_error(
                     path,
-                    format!("cannot interpret {key} in a block comment"),
+                    setting.label,
+                    format!("cannot interpret {} in a block comment", setting.key),
                 ));
             }
             if line.starts_with("--") {
                 continue;
             }
             match assignment(line) {
-                Some(("Script", actual, "0" | "1")) if actual == *key => present[index] = true,
-                Some((section, actual, _)) if section != "Script" || actual != *key => {}
-                _ => {
+                Some((section, key, value)) if section == setting.section && key == setting.key => {
+                    if setting.ownership == Ownership::Preference && !matches!(value, "0" | "1") {
+                        return Err(settings_error(
+                            path,
+                            setting.label,
+                            format!("cannot interpret {}; left unchanged", setting.key),
+                        ));
+                    }
+                    assignments[index].push((range.clone(), value));
+                }
+                Some(_) => {}
+                None => {
                     return Err(settings_error(
                         path,
-                        format!("cannot interpret {key}; left unchanged"),
+                        setting.label,
+                        format!("cannot interpret {}; left unchanged", setting.key),
                     ))
                 }
             }
@@ -129,44 +233,78 @@ fn missing_defaults(path: &Path, bytes: &[u8]) -> Result<Vec<(&'static str, &'st
             block_comment = false;
         }
     }
-    Ok(DEFAULTS
-        .into_iter()
-        .enumerate()
-        .filter_map(|(index, pair)| (!present[index]).then_some(pair))
-        .collect())
+
+    let mut changes = Changes::default();
+    for (setting, found) in settings.iter().zip(assignments) {
+        match (setting.ownership, found.as_slice()) {
+            (_, []) => changes.append.push(*setting),
+            (Ownership::Preference, _) => {}
+            (Ownership::InstallState, found)
+                if found.iter().all(|(_, value)| *value == setting.value) => {}
+            (Ownership::InstallState, [(range, _)]) => {
+                changes.replace.push((range.clone(), *setting));
+            }
+            (Ownership::InstallState, _) => {
+                return Err(settings_error(
+                    path,
+                    setting.label,
+                    format!(
+                        "{} is assigned more than once with different values; left unchanged",
+                        setting.key
+                    ),
+                ))
+            }
+        }
+    }
+    Ok(changes)
 }
 
-pub(super) fn ensure_profile_settings(
-    layout: &ManagedLayout,
-    identity: &ReservedSaveIdentity,
-) -> Result<()> {
-    verify_reserved_save_identity(layout, identity)?;
-    if !interval_saves_installed(layout)? {
-        return Ok(());
-    }
-    let path = identity.save_root.join("Baldur.lua");
-    let before = read_optional_regular(&path)?;
-    let bytes = before.as_deref().unwrap_or_default();
-    let missing = missing_defaults(&path, bytes)?;
-    if missing.is_empty() {
-        return Ok(());
-    }
-    let newline = if bytes.windows(2).any(|pair| pair == b"\r\n") {
+fn apply(content: &str, changes: &Changes) -> Vec<u8> {
+    let newline = if content.contains("\r\n") {
         "\r\n"
     } else {
         "\n"
     };
-    let mut after = bytes.to_vec();
-    if !after.is_empty() && !after.ends_with(b"\n") {
-        after.extend_from_slice(newline.as_bytes());
+    let mut replace = changes.replace.clone();
+    replace.sort_by_key(|(range, _)| range.start);
+    let mut after = String::with_capacity(content.len() + 128);
+    let mut cursor = 0;
+    for (range, setting) in replace {
+        after.push_str(&content[cursor..range.start]);
+        after.push_str(&setting.assignment());
+        cursor = range.end;
     }
-    for (key, value) in missing {
-        after.extend_from_slice(
-            format!("SetPrivateProfileString('Script','{key}','{value}'){newline}").as_bytes(),
-        );
+    after.push_str(&content[cursor..]);
+    if !changes.append.is_empty() {
+        if !after.is_empty() && !after.ends_with('\n') {
+            after.push_str(newline);
+        }
+        for setting in &changes.append {
+            after.push_str(&setting.assignment());
+            after.push_str(newline);
+        }
     }
+    after.into_bytes()
+}
+
+/// Writes the settings that `game_root`'s installed components need into the profile
+/// in `save_root`. Returns whether the profile changed.
+fn ensure_settings(game_root: &Path, save_root: &Path) -> Result<bool> {
+    let settings = required_settings(game_root)?;
+    if settings.is_empty() {
+        return Ok(false);
+    }
+    let path = save_root.join("Baldur.lua");
+    let before = read_optional_regular(&path)?;
+    let bytes = before.as_deref().unwrap_or_default();
+    let changes = changes(&path, bytes, &settings)?;
+    if changes.first().is_none() {
+        return Ok(false);
+    }
+    // `changes` succeeded, so the content is UTF-8.
+    let after = apply(std::str::from_utf8(bytes).unwrap_or_default(), &changes);
     let mut temporary =
-        tempfile::NamedTempFile::new_in(&identity.save_root).map_err(|source| EngineError::Io {
+        tempfile::NamedTempFile::new_in(save_root).map_err(|source| EngineError::Io {
             path: path.clone(),
             source,
         })?;
@@ -181,7 +319,8 @@ pub(super) fn ensure_profile_settings(
     if read_optional_regular(&path)? != before {
         return Err(settings_error(
             &path,
-            "file changed while preparing defaults; retry when the game is closed",
+            PROFILE,
+            "file changed while preparing settings; retry when the game is closed",
         ));
     }
     temporary.persist(&path).map_err(|error| EngineError::Io {
@@ -191,30 +330,101 @@ pub(super) fn ensure_profile_settings(
     if read_optional_regular(&path)?.as_deref() != Some(after.as_slice()) {
         return Err(settings_error(
             &path,
+            PROFILE,
             "written settings did not match read-back",
         ));
     }
+    Ok(true)
+}
+
+fn verify_settings(game_root: &Path, save_root: &Path) -> Result<()> {
+    let settings = required_settings(game_root)?;
+    if settings.is_empty() {
+        return Ok(());
+    }
+    let path = save_root.join("Baldur.lua");
+    let bytes = read_optional_regular(&path)?.unwrap_or_default();
+    if let Some(setting) = changes(&path, &bytes, &settings)?.first() {
+        return Err(settings_error(
+            &path,
+            setting.label,
+            "required settings are missing or outdated in the isolated game profile",
+        ));
+    }
+    Ok(())
+}
+
+pub(super) fn ensure_profile_settings(
+    layout: &ManagedLayout,
+    identity: &ReservedSaveIdentity,
+) -> Result<()> {
+    verify_reserved_save_identity(layout, identity)?;
+    ensure_settings(layout.game_root(), &identity.save_root)?;
     verify_profile_settings(layout, identity)
 }
 
 /// Check the final isolated profile before declaring an installation successful.
-/// An explicit user value of 0 is valid; only missing required keys are a defect.
+/// An explicit user preference such as an interval-save value of 0 is valid; only
+/// missing settings and outdated installation state are defects.
 pub fn verify_profile_settings(
     layout: &ManagedLayout,
     identity: &ReservedSaveIdentity,
 ) -> Result<()> {
     verify_reserved_save_identity(layout, identity)?;
-    if !interval_saves_installed(layout)? {
-        return Ok(());
+    verify_settings(layout.game_root(), &identity.save_root)
+}
+
+/// Brings a completed installation's isolated profile up to date with the settings
+/// its installed components need, for installations made before a setting was
+/// seeded. Only a save folder that still carries this installation's ownership
+/// marker is changed. Returns whether the profile changed.
+pub fn repair_installed_profile_settings(
+    managed_root: &Path,
+    install_id: &str,
+    engine_name: &str,
+    save_root: &Path,
+) -> Result<bool> {
+    let root = canonical_direct_directory(managed_root)
+        .map_err(|error| folder_context("check installation folder", managed_root, error))?;
+    let game_root = root.join("game");
+    if read_engine_name(&game_root)? != engine_name {
+        return Err(EngineError::GameIdentity {
+            path: game_root.join("engine.lua"),
+            reason: "the game's engine_name differs from its installation record".to_owned(),
+        });
     }
-    let path = identity.save_root.join("Baldur.lua");
-    let bytes = read_optional_regular(&path)?.unwrap_or_default();
-    let missing = missing_defaults(&path, &bytes)?;
-    if !missing.is_empty() {
-        return Err(settings_error(
-            &path,
-            "required settings are missing from the isolated game profile",
+    let identity = SaveIdentity {
+        engine_name: engine_name.to_owned(),
+        save_root: save_root.to_path_buf(),
+        marker: SaveOwner {
+            schema: SAVE_OWNER_SCHEMA,
+            install_id: install_id.to_owned(),
+            managed_root: identity_path(&root)?,
+            engine_name: engine_name.to_owned(),
+        },
+    };
+    if save_root.file_name().and_then(|name| name.to_str()) != Some(engine_name) {
+        return Err(save_root_collision(
+            &identity,
+            "save folder name differs from the game's engine_name",
         ));
     }
-    Ok(())
+    let metadata = fs::symlink_metadata(save_root)
+        .map_err(|source| io_failure("check save folder", save_root, source))?;
+    reject_reparse(save_root, &metadata)?;
+    if !metadata.is_dir() {
+        return Err(save_root_collision(
+            &identity,
+            "save folder is not a directory",
+        ));
+    }
+    if read_save_owner(&identity)? != identity.marker {
+        return Err(save_root_collision(
+            &identity,
+            "ownership marker belongs to a different managed installation",
+        ));
+    }
+    let changed = ensure_settings(&game_root, save_root)?;
+    verify_settings(&game_root, save_root)?;
+    Ok(changed)
 }

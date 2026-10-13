@@ -14,8 +14,9 @@ function installation(id = "one", overrides: Partial<ManagedInstallation> = {}):
 }
 
 function result(installId: string, state: LaunchInstallResult["radar"]["state"], detail: string | null = null,
-  technicalDetail: string | null = null): LaunchInstallResult {
-  return { installId, radar: { state, detail, technicalDetail } };
+  technicalDetail: string | null = null,
+  gameSettings: LaunchInstallResult["gameSettings"] = { state: "unchanged", technicalDetail: null }): LaunchInstallResult {
+  return { installId, radar: { state, detail, technicalDetail }, gameSettings };
 }
 
 function deferred<T>() {
@@ -112,6 +113,30 @@ describe("optional Radar launch", () => {
     expect(getByRole(root, "alert").textContent).toContain("Game started, but Radar couldn't start.");
     // jsdom lacks the canvas API required by axe's visual contrast rule.
     expect((await axe.run(root, { rules: { "color-contrast": { enabled: false } } })).violations).toEqual([]);
+  });
+
+  it("reports a game-settings update failure without claiming the game didn't start", async () => {
+    const backend = new LaunchBackend();
+    backend.launchResult = Promise.resolve(result("one", "not-requested", null, null,
+      { state: "failed", technicalDetail: "Baldur.lua is not UTF-8; left unchanged" }));
+    const { root, user } = await mount(backend);
+    await user.click(play(root));
+    await waitFor(() => expect(getByRole(root, "alert").textContent).toContain("The game's settings file couldn't be updated."));
+    expect(getByRole(root, "status").textContent).toBe("Game started.");
+    expect(getByRole(root, "alert").textContent).toContain("Lefreut's interfaces need this update");
+    expect(getByRole(root, "alert").textContent).toContain("Baldur.lua is not UTF-8; left unchanged");
+    expect(play(root).disabled).toBe(false);
+    // jsdom lacks the canvas API required by axe's visual contrast rule.
+    expect((await axe.run(root, { rules: { "color-contrast": { enabled: false } } })).violations).toEqual([]);
+  });
+
+  it.each(["unchanged", "updated"] as const)("shows no settings notice when the check %s the profile", async (state) => {
+    const backend = new LaunchBackend();
+    backend.launchResult = Promise.resolve(result("one", "not-requested", null, null, { state, technicalDetail: null }));
+    const { root, user } = await mount(backend);
+    await user.click(play(root));
+    await waitFor(() => expect(getByRole(root, "status").textContent).toBe("Game started."));
+    expect(queryByRole(root, "alert")).toBeNull();
   });
 
   it("accepts only a stored explicit true value", async () => {

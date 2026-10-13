@@ -16,7 +16,7 @@ use crate::games::GameRole;
 mod folder_diagnostics;
 mod profile_settings;
 use folder_diagnostics::{context as folder_context, io_failure, with_cleanup_failure};
-pub use profile_settings::verify_profile_settings;
+pub use profile_settings::{repair_installed_profile_settings, verify_profile_settings};
 
 /// The fixed on-disk roots owned by one managed EET installation.
 #[derive(Debug, Clone, PartialEq, Eq)]

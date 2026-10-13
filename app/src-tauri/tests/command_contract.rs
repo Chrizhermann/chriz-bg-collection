@@ -218,6 +218,8 @@ struct FakeBridgeEngine {
     review_recipe_digest: Mutex<String>,
     install_release: Condvar,
     install_released: Mutex<bool>,
+    profile_repairs: Mutex<Vec<String>>,
+    profile_repair_result: Mutex<Result<bool, String>>,
 }
 
 impl FakeBridgeEngine {
@@ -232,6 +234,8 @@ impl FakeBridgeEngine {
             review_recipe_digest: Mutex::new("aa".repeat(32)),
             install_release: Condvar::new(),
             install_released: Mutex::new(false),
+            profile_repairs: Mutex::new(Vec::new()),
+            profile_repair_result: Mutex::new(Ok(false)),
         }
     }
 
@@ -408,6 +412,14 @@ fn publish_started_campaign_with_payload(
 }
 
 impl BridgeEngine for FakeBridgeEngine {
+    fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
+        self.profile_repairs
+            .lock()
+            .unwrap()
+            .push(record.install_id.clone());
+        self.profile_repair_result.lock().unwrap().clone()
+    }
+
     fn discover(&self, _recipe: &Path) -> Result<Vec<GameCandidate>, bg_engine::cli::CliError> {
         Ok(vec![
             candidate(
@@ -1862,6 +1874,7 @@ struct RadarLaunchFixture {
     _temp: TempDir,
     managed: PathBuf,
     bridge: NativeBridge,
+    engine: Arc<FakeBridgeEngine>,
     system: Arc<RecordingBridgeSystem>,
 }
 
@@ -1876,18 +1889,20 @@ impl RadarLaunchFixture {
         publish_started_campaign(&app_data, &managed, &cache, "radar-fixture");
         publish_managed_install(&app_data, &managed, "radar-fixture");
         let system = Arc::new(RecordingBridgeSystem::default());
+        let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
         let bridge = NativeBridge::with_engine_and_system(
             recipe,
             "recommended",
             cache,
             app_data,
-            Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+            engine.clone(),
             system.clone(),
         );
         Self {
             _temp: temp,
             managed: managed.canonicalize().unwrap(),
             bridge,
+            engine,
             system,
         }
     }
@@ -1949,6 +1964,42 @@ impl RadarLaunchFixture {
 }
 
 #[test]
+fn launch_brings_game_settings_up_to_date_and_never_blocks_playing() {
+    for (outcome, expected) in [
+        (
+            Ok(true),
+            json!({"state": "updated", "technicalDetail": null}),
+        ),
+        (
+            Err("Baldur.lua is not UTF-8; left unchanged".to_owned()),
+            json!({"state": "failed", "technicalDetail": "Baldur.lua is not UTF-8; left unchanged"}),
+        ),
+    ] {
+        let fixture = RadarLaunchFixture::new();
+        *fixture.engine.profile_repair_result.lock().unwrap() = outcome;
+        assert!(fixture
+            .bridge
+            .launch_install("not-a-registry-id", false)
+            .is_err());
+        assert!(fixture.engine.profile_repairs.lock().unwrap().is_empty());
+
+        let result = fixture
+            .bridge
+            .launch_install("radar-fixture", false)
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(result).unwrap()["gameSettings"],
+            expected
+        );
+        assert_eq!(
+            fixture.engine.profile_repairs.lock().unwrap().as_slice(),
+            ["radar-fixture"]
+        );
+        fixture.assert_game_launched_once();
+    }
+}
+
+#[test]
 fn radar_launch_opt_out_ignores_even_an_invalid_radar_installation() {
     let fixture = RadarLaunchFixture::new();
     fixture.install_radar();
@@ -1966,6 +2017,7 @@ fn radar_launch_opt_out_ignores_even_an_invalid_radar_installation() {
         json!({
             "installId": "radar-fixture",
             "radar": {"state": "not-requested", "detail": null, "technicalDetail": null},
+            "gameSettings": {"state": "unchanged", "technicalDetail": null},
         }),
     );
     fixture.assert_game_launched_once();
@@ -1985,6 +2037,7 @@ fn radar_launch_opt_in_starts_only_the_verified_overlay_after_the_game() {
         json!({
             "installId": "radar-fixture",
             "radar": {"state": "started", "detail": null, "technicalDetail": null},
+            "gameSettings": {"state": "unchanged", "technicalDetail": null},
         }),
     );
     fixture.assert_game_launched_once();

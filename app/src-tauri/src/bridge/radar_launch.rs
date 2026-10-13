@@ -4,14 +4,16 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use super::BridgeSystem;
+use super::{BridgeSystem, GameSettingsResponse};
 
-/// A successful game launch and the independently requested overlay outcome.
+/// A successful game launch, the independently requested overlay outcome and the
+/// game-settings check that preceded the launch.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchInstallResponse {
     pub install_id: String,
     pub radar: RadarLaunchResponse,
+    pub game_settings: GameSettingsResponse,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]

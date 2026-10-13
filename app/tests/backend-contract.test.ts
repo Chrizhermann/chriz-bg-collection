@@ -421,7 +421,8 @@ describe("native command adapter", () => {
           return { path: "D:\\Diagnostics\\install-ready.zip" };
         case "launch_install":
           expect(args).toEqual({ installId: "install-ready", startRadar: false });
-          return { installId: "install-ready", radar: { state: "not-requested", detail: null, technicalDetail: null } };
+          return { installId: "install-ready", radar: { state: "not-requested", detail: null, technicalDetail: null },
+            gameSettings: { state: "unchanged", technicalDetail: null } };
         case "open_install_folder":
           expect(args).toEqual({ installId: "install-ready" });
           return null;
@@ -464,6 +465,7 @@ describe("native command adapter", () => {
     });
     await expect(backend.launchInstall("install-ready", false)).resolves.toEqual({
       installId: "install-ready", radar: { state: "not-requested", detail: null, technicalDetail: null },
+      gameSettings: { state: "unchanged", technicalDetail: null },
     });
     await expect(backend.openInstallFolder("install-ready")).resolves.toBeUndefined();
     await expect(backend.createDesktopShortcut("install-ready")).resolves.toEqual({

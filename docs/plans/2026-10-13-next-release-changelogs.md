@@ -17,6 +17,16 @@ Built on the development branch, not released yet:
   ([design](2026-10-13-challenge-mode-group.md)). Members today: Emotion,
   Courage and Hope don't stack; Baeloth's normal Sorcerer spells; lethal dragon
   melee; SoD's Insane bridge sequencers.
+- **Lefreut's interfaces offer the trilogy campaigns.** With any of the three
+  Lefreut interfaces, the start screen showed only Shadows of Amn, Throne of
+  Bhaal and the Black Pits. Lefreut's interface learns that the game is EET
+  from a setting EET's installer writes into its own profile, which an
+  installer-made game doesn't use. The installer now writes it into the game's
+  own profile. Existing installations get it the next time you press Play in
+  the installer; launching from another shortcut first leaves it unchanged.
+- **Resuming an installation** no longer stops when a mod is downloaded again
+  and its link now redirects to a different address, as long as the file is
+  identical.
 
 ## Collection changelog
 

@@ -326,6 +326,11 @@ export interface LaunchInstallResult {
     readonly detail: string | null;
     readonly technicalDetail: string | null;
   };
+  /** Installer-owned profile settings checked before the launch; never blocks playing. */
+  readonly gameSettings: {
+    readonly state: "unchanged" | "updated" | "failed";
+    readonly technicalDetail: string | null;
+  };
 }
 
 export interface InstallationRemovalPreview {
