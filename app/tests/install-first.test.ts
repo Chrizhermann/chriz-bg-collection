@@ -107,7 +107,7 @@ describe("CEBG install-first experience", () => {
     expect(details.filter((item) => item.tagName === "DETAILS").every((item) => !(item as HTMLDetailsElement).open)).toBe(true);
 
     expect((getByLabelText(root, "Install name") as HTMLInputElement).value).toBe("Chriz Easy BG");
-    expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("C:\\Users\\Chris\\Games\\Chriz Easy BG");
+    expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("C:\\Users\\Player\\Games\\Chriz Easy BG");
     expect(getByText(root, /original games stay unchanged/i)).toBeTruthy();
     expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
   });
@@ -250,7 +250,7 @@ describe("CEBG install-first experience", () => {
     releaseFreeze();
     await waitFor(() => expect(getByRole(root, "heading", { level: 1, name: "Installation progress" })).toBeTruthy());
     expect(backend.freezeCalls).toHaveLength(1);
-    expect(backend.freezeCalls[0]).toMatchObject({ name: "Chriz Easy BG", path: "C:\\Users\\Chris\\Games\\Chriz Easy BG", bg1: "bg1", bg2: "bg2" });
+    expect(backend.freezeCalls[0]).toMatchObject({ name: "Chriz Easy BG", path: "C:\\Users\\Player\\Games\\Chriz Easy BG", bg1: "bg1", bg2: "bg2" });
     expect(backend.startCalls).toBe(1);
   });
 
@@ -306,7 +306,7 @@ describe("CEBG install-first experience", () => {
 
     await user.selectOptions(source, "second");
     await user.selectOptions(getByRole(root, "combobox", { name: "Baldur's Gate source" }), "bg1");
-    resolvers.get("second")?.({ path: "C:\\Users\\Chris\\Games\\Chriz Easy BG", safe: false, title: "Stale rejection", detail: "This result is stale." });
+    resolvers.get("second")?.({ path: "C:\\Users\\Player\\Games\\Chriz Easy BG", safe: false, title: "Stale rejection", detail: "This result is stale." });
 
     await waitFor(() => expect(getByText(root, "Ready to install")).toBeTruthy());
     expect(queryByText(root, "Stale rejection")).toBeNull();
@@ -323,7 +323,7 @@ describe("CEBG install-first experience", () => {
     await user.clear(name);
     await user.type(name, "My BG");
     fireEvent.change(name);
-    await waitFor(() => expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("C:\\Users\\Chris\\Games\\My BG"));
+    await waitFor(() => expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("C:\\Users\\Player\\Games\\My BG"));
 
     const location = getByLabelText(root, "Install location") as HTMLInputElement;
     await user.clear(location);
@@ -342,6 +342,6 @@ describe("CEBG install-first experience", () => {
     expect(validateInstallationName("   ")).toMatch(/enter/i);
     expect(validateInstallationName(".")).toMatch(/folder/i);
     expect(validateInstallationName("Ordinary — 이름")).toBeNull();
-    expect(automaticInstallationPath("C:\\Users\\Chris\\Games\\Chriz Easy BG", "Ordinary — 이름")).toBe("C:\\Users\\Chris\\Games\\Ordinary — 이름");
+    expect(automaticInstallationPath("C:\\Users\\Player\\Games\\Chriz Easy BG", "Ordinary — 이름")).toBe("C:\\Users\\Player\\Games\\Ordinary — 이름");
   });
 });

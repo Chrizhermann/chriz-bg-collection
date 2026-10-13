@@ -49,7 +49,7 @@ roadmap draft and presentation (task `01a061fe-a68c-74b1-8272-5bfa9251a731`).
 Coordination request sent; no new task or public deployment was created here.
 
 The website owner has now completed its dormant draft:
-[collection-roadmap.draft.json](C:/Users/chris/.codex/worktrees/a021/twitch-setup-chriz/bg-site/content/collection-roadmap.draft.json).
+[collection-roadmap.draft.json](~/.codex/worktrees/a021/twitch-setup-chriz/bg-site/content/collection-roadmap.draft.json).
 It contains 16 compact Available/In progress/Planned items, owner-reviewed
 boundaries and an internal missing-facts list. Owner reports JSON/schema,
 unique-ID, public HTTPS-link and 47 site-test checks passed. The current site

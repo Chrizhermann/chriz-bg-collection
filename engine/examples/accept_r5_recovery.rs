@@ -13,12 +13,19 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// The owner's recovered installation lives under their Windows profile.
+fn user_profile() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    Ok(PathBuf::from(
+        std::env::var_os("USERPROFILE").ok_or("USERPROFILE is not set")?,
+    ))
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arguments: Vec<_> = std::env::args().skip(1).collect();
     if arguments.len() > 1 || arguments.first().is_some_and(|arg| arg != "--apply") {
         return Err("usage: accept_r5_recovery [--apply]".into());
     }
-    let root = fs::canonicalize(r"C:\Users\chris\Games\CEBG-Curated-20260905-r5")?;
+    let root = fs::canonicalize(user_profile()?.join(r"Games\CEBG-Curated-20260905-r5"))?;
     let replay = SessionStore::open(&root)?.replay()?;
     let created = replay.created();
     if created.install_id != "install-e6325c7c98451ad4901e"

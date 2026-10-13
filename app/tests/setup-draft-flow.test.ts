@@ -147,7 +147,7 @@ describe("setup drafts across application restarts", () => {
     saveSetupDraft({ ...savedDraft(), destinationAutomatic: true });
     const { root } = await open();
     fireEvent.change(getByLabelText(root, "Install name"), { target: { value: "Next adventure" } });
-    await waitFor(() => expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("C:\\Users\\Chris\\Games\\Next adventure"));
+    await waitFor(() => expect((getByLabelText(root, "Install location") as HTMLInputElement).value).toBe("C:\\Users\\Player\\Games\\Next adventure"));
   });
 
   it("validates a saved alternate profile against that profile's recipe version", async () => {

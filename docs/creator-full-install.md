@@ -74,7 +74,7 @@ Use a new managed root. Never target a source game or any `C:\Games\...` referen
   --preset creator-full `
   --bg1 "C:\Program Files (x86)\Steam\steamapps\common\Baldur's Gate Enhanced Edition" `
   --bg2 "C:\Program Files (x86)\Steam\steamapps\common\Baldur's Gate II Enhanced Edition" `
-  --managed-root 'C:\Users\chris\Games\CEBG-Full-20260905' `
+  --managed-root "$env:USERPROFILE\Games\CEBG-Full-20260905" `
   --cache 'C:\CEBG-creator-full-cache'
 ```
 

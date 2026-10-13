@@ -5,7 +5,7 @@ Live entry point for anyone (user, future agent) picking up work on this repo.
 ## Alpha.15 published; no-SR installation recovered — 2026-09-07
 
 Christopher approved publishing BG Rebalance v0.3.2, updating the collection pin,
-and recovering `C:\Users\chris\Games\ChrizEasyBG-No-SR-Test` without a full restart.
+and recovering `%USERPROFILE%\Games\ChrizEasyBG-No-SR-Test` without a full restart.
 The original alpha.12 recipe failed only Rebalance 401; its seven successful
 siblings form the exact top tail after 372 BG2 components. Use the existing
 supervised recovery lineage, not a rewritten ledger or an unsafe Resume bypass.
@@ -28,7 +28,7 @@ The no-SR two-hour follow-up is paused because its failure was inspected already
 
 ## Overnight installation succeeded and retained — 2026-09-07, 07:57 KST
 
-`C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` completed successfully:
+`%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907` completed successfully:
 43 actual WeiDU runs, all 434 frozen components, BG1 27 / BG2 407 exact final log
 rows and hashes verified. SoD Remix's 32 components and BuffBot 1/0 are installed.
 No restart/deletion or repetition of the five completed pre-EET runs occurred.
@@ -79,7 +79,7 @@ existing `chriz-easy-bg` downloads/updater. Authenticode enrollment remains sepa
   Signed public setup/download verified; live alpha update feed points to it.
   Collection **alpha.12**, all 434 recommended components/pins, and user selections
   are unchanged. Build source commit: `5610783590ad49b24101d5d3a6a85b018abadb7e`.
-- Christopher's exact `C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` installation
+- Christopher's exact `%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907` installation
   resumed at EET attempt 2 with the new release engine. Ledger 156 proves EET
   completed; EET components 0/100 are recorded. Main mods are now installing.
   Five prior successful runs were preserved. Nothing was deleted or restarted.
@@ -337,7 +337,7 @@ The overnight `creator-full-current` recipe bypassed recorded curation; it is in
 the curated collection. **Do not repair Bristlelick or resume that selection.** Curation
 files are intact. Restore them as the authority, preserve deferred mod work, check changed
 ordering against mod documentation/source. **Fresh r6 is running** at
-`C:\Users\chris\CEBG-Tests\CEBG-Curated-20260906-r6` with recipe **alpha.9**.
+`%USERPROFILE%\CEBG-Tests\CEBG-Curated-20260906-r6` with recipe **alpha.9**.
 Released modpack **alpha.5** fixes both r5 failures (170 Xan / 192 Viconia), with
 public-component installation, repeat and uninstall checks on the actual captured r5
 input resources. Bardic Wonders **balance.3** is also pinned. Both packages were
@@ -347,7 +347,7 @@ all 30 approved SoD components remain, Aura and 290 remain deferred. No new comp
 or utility-XP defaults were invented. See the [current acceptance record](curated-full-acceptance-2026-09-05.md)
 for the exact worker, startup retry and checkpoints. Full integration is not yet proven.
 
-R5 remains read-only terminal evidence at `C:\Users\chris\Games\CEBG-Curated-20260905-r5`,
+R5 remains read-only terminal evidence at `%USERPROFILE%\Games\CEBG-Curated-20260905-r5`,
 installation `install-e6325c7c98451ad4901e`. Ledger 222 is `fresh_copy_required`;
 14 other modpack components succeeded and the previous 383 WeiDU rows were unchanged.
 The [resolved owning-repo handoff](handoffs/2026-09-06-modpack-xan-viconia.md) retains
@@ -378,7 +378,7 @@ Christopher is now deleting those copies manually. Do not race his cleanup or as
 folder still exists. No agent workaround deletion is allowed; the agent removed nothing.
 
 Christopher requested a separate destination for future tests. Use
-`C:\Users\chris\CEBG-Tests\<unique-run-name>` for NEW agent-owned disposable installations,
+`%USERPROFILE%\CEBG-Tests\<unique-run-name>` for NEW agent-owned disposable installations,
 not the user's normal Games folder or any folder directly under C:. Christopher rejected
 the earlier root-level proposal; it was not created or used. Keep frozen r5 where it is; no move,
 rename or restart is implied. Public/player install defaults are unchanged. This separation

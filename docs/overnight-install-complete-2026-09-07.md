@@ -1,6 +1,6 @@
 # Overnight installation completion — 2026-09-07
 
-The existing `C:\Users\chris\Games\CEBG-Tests\Alpha13-20260907` copy completed at
+The existing `%USERPROFILE%\Games\CEBG-Tests\Alpha13-20260907` copy completed at
 **07:57:05 KST**, after continuing with the alpha.14 recovery engine at 06:37.
 Nothing was deleted or restarted. The successful copy is retained for Christopher.
 

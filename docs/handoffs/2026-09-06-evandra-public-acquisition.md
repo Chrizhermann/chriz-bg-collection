@@ -4,7 +4,7 @@
 
 Christopher approved an upfront manual download **or Skip Evandra** while automatic
 official acquisition remains blocked. He downloaded the official Windows release
-to `C:\Users\chris\Downloads\evandra-v2.2.exe`. Requesting the Linux ZIP was unnecessary;
+to `%USERPROFILE%\Downloads\evandra-v2.2.exe`. Requesting the Linux ZIP was unnecessary;
 the Windows self-extractor can be unpacked without executing it.
 
 - File: 13,430,253 bytes; SHA-256

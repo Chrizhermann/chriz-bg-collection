@@ -50,15 +50,15 @@ No rebuild or test-copy/profile cleanup starts yet. Component 290 remains separa
 After native acceptance, the owning SoD task configured only the retained disposable
 clone's `engine.lua` to use the unique profile name `CEBG SoD120 v065 Test`, and created
 fresh finalized-EET/SoD/console configuration at
-`C:\Users\chris\OneDrive\Documents\CEBG SoD120 v065 Test\Baldur.lua`.
+`%USERPROFILE%\OneDrive\Documents\CEBG SoD120 v065 Test\Baldur.lua`.
 The collection verified those paths/configuration exist. At preparation no game had been
 launched and no existing saves were imported or modified. This supersedes the earlier compatible-seed
 discussion: use a **new disposable SoD character** in this separate profile.
 
-Launch only `C:\Users\chris\Games\CEBG-SOD120-v065-test\game\InfinityLoader.exe`,
+Launch only `%USERPROFILE%\Games\CEBG-SOD120-v065-test\game\InfinityLoader.exe`,
 with all other Baldur/InfinityLoader games closed. The exact short staging and pass/fail
 instructions are in
-`C:\Users\chris\Documents\Codex\2026-09-05\chriz-sod-remix-v0.6.5-rc\LIVE-TEST.md`.
+`%USERPROFILE%\Documents\Codex\2026-09-05\chriz-sod-remix-v0.6.5-rc\LIVE-TEST.md`.
 They exercise one-Essence refusal, two-Essence consumption/text/XP, no cinematic/travel,
 and dormant state after save/reload. Component 290 and the unfinished collection tail
 are outside this test. Retain both this test game directory and its unique profile until
@@ -67,7 +67,7 @@ Publication is ready but still awaits Christopher's explicit decision in the SoD
 
 ## Focused native repair acceptance PASSED (2026-09-05)
 
-The collection created only `C:\Users\chris\Games\CEBG-SOD120-v065-test\game`, a
+The collection created only `%USERPROFILE%\Games\CEBG-SOD120-v065-test\game`, a
 disposable copy of frozen r3's game directory (not its managed `.chriz` state). Robocopy
 copied 161,404 files / 11.326 GiB with zero failures or mismatches; code 1 means files
 were copied successfully. No Baldur/InfinityLoader process was running.
@@ -125,7 +125,7 @@ checks, plus Christopher's exact remaining live-test steps. The focused new-code
 check is now recorded above; in-game acceptance remains unclaimed.
 
 Executable-bearing local release candidate:
-`C:\Users\chris\Documents\Codex\2026-09-05\sod-remix-v0.6.5-rc-3b21d6f-r2\chriz-sod-remix-v0.6.5.zip`.
+`%USERPROFILE%\Documents\Codex\2026-09-05\sod-remix-v0.6.5-rc-3b21d6f-r2\chriz-sod-remix-v0.6.5.zip`.
 SHA-256 `1113b9e6fd0f2929fce187a1a693b253b30b34da80c48850c9741333847d891e`
 was independently checked by the collection task. The owning task reports 106 packaged
 files with extraction/manifest/hash validation. Nothing is pushed/tagged/released; do not
@@ -168,7 +168,7 @@ do not attribute the difference to EET_END.
 
 ## Exact reproduction evidence (read-only)
 
-- Managed root: `C:\Users\chris\Games\CEBG-Curated-20260905-r3`
+- Managed root: `%USERPROFILE%\Games\CEBG-Curated-20260905-r3`
 - Install ID: `install-c117933c9f2de8edc020`
 - Frozen recipe: alpha.6, SHA-256
   `e5ced746536e989e7482834b0f2bb40e18bc1fba595ac13a7e27112c96c2563a`

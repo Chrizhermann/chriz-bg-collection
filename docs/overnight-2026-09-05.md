@@ -15,7 +15,7 @@ another round of cosmetic refactoring. Preserve all older curation/owning-reposi
 
 ## Workspace and scope
 
-- Active worktree: `C:\Users\chris\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
+- Active worktree: `%USERPROFILE%\.codex\worktrees\installer-v0-real-alpha\chriz-bg-collection`.
 - Branch: `codex/installer-v0-real-alpha`; do not work in stale `4d39`.
 - The existing stream installation and all `C:\Games` references remain untouched.
 - Both clean Steam 2.7.3 sources now pass detection. The older BG1-dirty handover is stale.
@@ -70,7 +70,7 @@ with `End_of_file`; the verified failed receipt says the exact EET run is retrya
 There is no successful final installation receipt yet.
 
 Root cause is the Windows path passed to EET, not missing SoD data: CEBG passed the
-canonical `\\?\C:\Users\chris\Games\CEBG-Full-20260905\bg1` as a typed staged-root
+canonical `\\?\%USERPROFILE%\Games\CEBG-Full-20260905\bg1` as a typed staged-root
 argument. EET `lib/bgee_dir.tph` strips `?` and replaces backslashes, corrupting the
 prefix before its movie-file check. The expected `movies/sodcin05.wbm` exists. The focused
 Rust invocation fix now renders ordinary drive/UNC syntax only at the mod-script argument
@@ -124,7 +124,7 @@ recipe. Do not silently patch materialized mod files to resume this frozen recip
 this incomplete test copy as evidence for now; it is not ready for gameplay acceptance.
 Radar installation, full receipt/log acceptance, and game smoke checks remain pending.
 
-- Recommended alpha: `C:\Users\chris\Games\CEBG-alpha-test-20260905`,
+- Recommended alpha: `%USERPROFILE%\Games\CEBG-alpha-test-20260905`,
   install id `install-3e091429c2b2d8889c15`.
   Logs: `target/real-install-20260905/resume-release.log` (current), earlier `resume.log`.
   Uses an isolated copied optimized driver, not `target/debug`, so builds cannot lock it.
@@ -146,7 +146,7 @@ Radar installation, full receipt/log acceptance, and game smoke checks remain pe
   its obsolete frozen recipe. Its generated folder and matching campaign registry JSON
   still exist: the cleanup command was rejected by the tool safety policy. Do not claim
   they were deleted or bypass that rejection. Download cache is reusable and should stay.
-- Corrected full target: `C:\Users\chris\Games\CEBG-Full-20260905`.
+- Corrected full target: `%USERPROFILE%\Games\CEBG-Full-20260905`.
   Install id: `install-8a3cab271f29d2c47f61`; active log:
   `target/full-install-20260905-r3/resume.log`. Copied optimized driver:
   `target/full-install-20260905-r3/chriz-bg-install.exe`.
