@@ -385,7 +385,12 @@ fn alpha20_requires_the_feature_group_app_and_waits_for_the_next_playthrough() {
     assert_eq!(ledger, source);
     assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0-alpha.19"));
     // The recipe adds [[feature_groups]] (Challenge Mode), which alpha.19 apps cannot read.
-    let old_app = classify_updates("0.1.0-alpha.19", "0.1.0-alpha.19", &[ledger.clone()]).unwrap();
+    let old_app = classify_updates(
+        "0.1.0-alpha.19",
+        "0.1.0-alpha.19",
+        std::slice::from_ref(&ledger),
+    )
+    .unwrap();
     assert_eq!(old_app.disposition, UpdateDisposition::AppUpdateRequired);
     assert_eq!(
         old_app.minimum_app_version.as_deref(),
