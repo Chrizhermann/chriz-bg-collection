@@ -2,7 +2,7 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## October 14 — app alpha.21 published (installer fixes)
+## October 14 — app alpha.21 and its website published (installer fixes)
 
 **App alpha.21 is public** as a prerelease and on the alpha updater channel; the
 bundled collection stays alpha.20. It fixes the streamer's stuck resumed install
@@ -16,7 +16,7 @@ scans passed; this binary was not launched. See
 [exact results](package-acceptance-alpha21-2026-10-14.md) and
 [release notes](release-notes-alpha21.md).
 
-The collection website still shows alpha.20 and waits for Christopher's approval.
+The collection website shows alpha.21 (website PR 29, verified live).
 Next version: long-path-safe cleanup of CEBG's application data (the uninstaller's
 "Delete the application data" leaves very long paths behind), cancellable waits on a
 stuck cache lock, a journal-cleanup error after a successful removal, and campaign

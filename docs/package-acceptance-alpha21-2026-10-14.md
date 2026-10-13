@@ -106,5 +106,15 @@ signature test.
 The alpha channel was updated only after those checks; the previous alpha.20 feed
 was saved locally for rollback. Both a cache-busted and an ordinary anonymous
 download of the channel feed match the exact feed hash above and announce app
-alpha.21 with collection alpha.20. The collection website still shows alpha.20;
-updating it waits for the owner's approval. Versioned assets are immutable.
+alpha.21 with collection alpha.20. Versioned assets are immutable.
+
+After the owner approved it, the [collection website](https://bg.chrizfader.org/collection)
+was updated and verified live. Website PR 29 merged as `37064d7` (content
+`a607a59`); its 115 site tests, static build, PR CI and merged-master CI passed.
+The live content file matches the merged commit byte for byte and shows app
+alpha.21 / collection alpha.20 with the setup hash above. The current run,
+collection, rules, voicepacks, WeiDU log and links routes return HTTP 200 with
+security headers; the root redirects. The setup downloaded through the live
+website's link matches 6,101,746 bytes and the setup hash above. A local preview
+showed no console errors and no horizontal overflow at 375 px width. Run rules and
+other non-collection content are unchanged.

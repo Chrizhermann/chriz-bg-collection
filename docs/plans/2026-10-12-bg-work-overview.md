@@ -86,7 +86,7 @@ Christopher's answers:
   "Remove from list" for installations whose folder can no longer be proven, after
   three independent reviews; see the
   [alpha.21 package verification](../package-acceptance-alpha21-2026-10-14.md).
-  The website still shows alpha.20 (needs his approval). Next version: long-path-safe
+  The website shows alpha.21 (website PR 29, verified live). Next version: long-path-safe
   cleanup of CEBG's application data, cancellable waits on a stuck cache lock, a
   journal-cleanup error after a successful removal, and campaign availability when
   the download cache is gone.
@@ -177,8 +177,7 @@ October 14 as PR 10 (`58eb765`); CI ran the full set, including the
 `capstone`/`pefile` modules that this PC lacks.
 
 Still waiting for Christopher (as of October 14): whether to clean the remaining
-home-folder paths above; whether to finish potion uniqueness; whether to update the
-website to app alpha.21 (the cache repair fix is released); the Bardic and Item
+home-folder paths above; whether to finish potion uniqueness; the Bardic and Item
 Randomiser decisions listed in the October 14 section.
 
 ## The useful answer
