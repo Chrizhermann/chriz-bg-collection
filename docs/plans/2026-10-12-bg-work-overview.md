@@ -55,11 +55,12 @@ and the remaining player checks are not finished by those deliveries.
 
 Christopher's decisions from 13 October are recorded in the
 [intake notes](2026-10-13-next-batch-intake.md#decisions-christopher-13-october-2026).
-Nothing below is published, merged into a release, or installed into a game.
+Nothing below is published or merged into a release. The only installation is
+the disposable lab test.
 
 | Work | Status | Where |
 |---|---|---|
-| Modpack v0.2.0-alpha.11 (237/238 recruitment XP, reader-level 430, experimental banking 650/651) | **Being integrated** with Degrodel 660, the banking start fix, Banked XP display and the vanilla dual rule; archive to be rebuilt. Unpublished; needs a Defender scan before publication | `claude/alpha11-integration` (Modpack `.worktrees/alpha11-integration`), base `1f0e8db` |
+| Modpack v0.2.0-alpha.11 (237/238 recruitment XP, reader-level 430, experimental banking 650/651, Degrodel 660) | **Integrated and packaged locally** with the banking start fix, Banked XP display and the vanilla dual rule. Full suite: 2,750 passed, 3 optional checks skipped (they read private local game files; the real-SR scroll check runs against the new lab). Release checks pass; reproducible archive `71abd5fd…`. Unpublished; needs a Defender scan before publication | `claude/alpha11-integration` @ `f38d7db`; `...\next-batch-20261013\modpack-integrated` |
 | Banking 650 never started in a real game | **Fixed.** Found in Christopher's own game log: EEex writes its stats-hook relay call as `40 E8` (REX prefix); the startup check accepted only `E8`. Confirmed from his crash dumps; a Codex check of the same dumps found no other failing native check. When banking cannot start, 620 Imoen XP and 237/238 catch-up now keep pre-650 behavior | Modpack `claude/xp-relay-fix` @ `05150f2` |
 | No-bank dual between level thresholds | **Implemented as decided (vanilla):** the retired level's threshold counts (Fighter 7: 64,000), the rest is discarded; 97,000 room under 161,000 | Modpack `claude/xp-dual-vanilla` |
 | Flail PR7 → Rebalance v0.8.2 | **Regression fixed and pushed** to [PR7](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/7) @ `c5a9169`. Local package built; merge/release wait for Christopher | `...\next-batch-20261013\rebalance` |
@@ -71,12 +72,15 @@ Nothing below is published, merged into a release, or installed into a game.
 | Challenge Mode choice at the top of the installer | **Done**, plus three review fixes | CEBG `f7e1c6f`, `9f2d46c` |
 | Streamer's plain BG2 start screen | **Diagnosed:** LeUI detects EET from a profile key or "Trilogy" in the game name; CEBG's isolated profile and name hide both. Fix approach waits for Christopher. Side finding: EET writes Cheats/Debug Mode into the standard EET profile during install | scratch diagnostics only |
 | Engine CLI tests fail while any `weidu.exe` runs | **Tracked** | [issue 9](https://github.com/Chrizhermann/chriz-bg-collection/issues/9) |
-| Combined test install | **Approved**, disk cleaned; waits for the alpha.11 archive and Christopher's OK to launch the game in a lab | — |
+| Recipe intake for the next release (Modpack alpha.11 and SoD v0.6.13 rows: 430 last, 237/238 and 660 default, 650/651 optional, SoD 177/198/285 mandatory) | **Done on a pending branch.** Python 155 passed, engine 793, app 99, UI 410. One test stays red by design until Modpack alpha.11 is published and pinned (the October 7 pin check); do not merge before publication. SoD's pin has the same gap (177/198/285) without a test | CEBG `claude/next-release-intake-20261013` @ `650a438` |
+| Playtest recipe tool | **Fixed:** it forced optional Rebalance 110 on in every local recipe; curated choices now stay as curated. Bardic Wonders can be a local source | CEBG `d00cb67` |
+| Combined test install | **Installing** in `C:\Users\chris\CEBG-Tests\Combined-20261013`: Recommended + Challenge Mode + banking 650, 55 runs / 475 components, four local candidates. The game launch waits for Christopher | [checklist](2026-10-13-combined-test-checklist.md); `target/combined-playtest-20261013` |
 
 Decided 13 October: SoD 177/198/285 mandatory; vanilla dual rule; Degrodel 660
 default with Christopher designing the extra layer. Waiting for Christopher: the
 streamer fix approach, a lab game launch, the optional one-file fix for his
-current game, and the publication order.
+current game, and the publication order (Modpack alpha.11, SoD v0.6.13,
+Rebalance v0.8.2 via PR7, Bardic balance.7).
 
 ## The useful answer
 

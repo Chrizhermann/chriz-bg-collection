@@ -1,22 +1,22 @@
 # Next release — changelog drafts
 
 13 October 2026. These are drafts for the release after app/collection alpha.19.
-Labels: **Default** = selected in Chris's Recommended; **Optional** = offered,
-unchecked; **Pending** = waiting for Christopher's choice. Items only enter the
+Labels: **Mandatory** = always installed with its mod; **Default** = selected
+in Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting
+for Christopher's choice. Items only enter the
 final notes once their owner release is published and pinned. Version the next
 release properly; never republish over alpha.19.
 
 ## Installer changelog
 
-No installer or launcher behavior has changed since alpha.19. The changes so
-far are collection recipe data and their tests.
-
-Planned (approved 13 October, not built yet):
+Built on the development branch, not released yet:
 
 - **Challenge Mode** choice at the top of the installer. It switches every
   Challenge Mode component on or off at once; each one can still be changed on
   its own and is marked as part of Challenge Mode. Off by default
-  ([design](2026-10-13-challenge-mode-group.md)).
+  ([design](2026-10-13-challenge-mode-group.md)). Members today: Emotion,
+  Courage and Hope don't stack; Baeloth's normal Sorcerer spells; lethal dragon
+  melee; SoD's Insane bridge sequencers.
 
 ## Collection changelog
 
@@ -26,7 +26,7 @@ unchanged.
 ### Changed default
 
 - **Emotion: Courage and Hope do not stack** is now **Optional** (alpha.19:
-  Default). It is a planned Challenge Mode member; its effect is unchanged.
+  Default). It is now part of Challenge Mode; its effect is unchanged.
 
 ### New choices
 
@@ -41,17 +41,22 @@ unchanged.
 - **Campaign XP banking** — **Experimental, Optional.**
   BG1 stops usable XP at 161,000 and SoD at 500,000. Further XP is banked and
   released in a later campaign. An optional addition caps SoA at 2,950,000.
-  Known limits: a no-bank dual class between level thresholds is blocked for
-  now, the bank shows only in notices and a console command (a character-record
-  display is in progress), and removing the component does not pay out banked
-  XP.
-- **SoD: early BG1 companions** — **Default.** Skie can join before the first
+  The character record's Class tab shows the bank. A dual class without
+  banked XP follows the unmodded rule. If banking cannot start on a game
+  version, it stays off and Imoen's and Fade/Evandra's XP work as without it.
+  Known limits: not yet played through in game; removing the component or
+  EEex does not pay out banked XP.
+- **Degrodel: keep the Helm of Balduran and fight him** — **Default.** You can
+  hand the helm over as before, or keep it: Degrodel then stays and fights with
+  the same servants, and the quest closes with a short journal note. No extra
+  difficulty is added.
+- **SoD: early BG1 companions** — **Mandatory** (part of SoD Remix). Skie can join before the first
   rest. Eleven BG1 companions can be recruited around the palace, the
   Elfsong, Tiax's cell and the Coast Way camp. Imported companions keep
   their build; known deaths are respected.
-- **SoD: report Korlasz to Liia later** — **Default.** Liia accepts the report
+- **SoD: report Korlasz to Liia later** — **Mandatory** (part of SoD Remix). Liia accepts the report
   after the first night for the same once-only reward.
-- **SoD: Avernus portal and a fairer final battle** — **Default.** A one-way
+- **SoD: Avernus portal and a fairer final battle** — **Mandatory** (part of SoD Remix). A one-way
   portal skips the lift and its waves. Belhifet and Hephernaan get bounded
   fight changes and a capped number of devils. The confrontation and victory
   are unchanged.
