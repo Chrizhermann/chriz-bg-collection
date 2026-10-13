@@ -938,7 +938,8 @@ fn resumable_frozen_recipe(
 ///
 /// Only a campaign that this request may resume gets its cache back, and nothing is created
 /// unless the recorded path still leads through direct folders to itself, so that no link that
-/// replaced one of its folders is followed, and the campaign checks would accept a cache there.
+/// replaced one of its folders is followed, its source games can be inspected, and the campaign
+/// checks would accept a cache there.
 fn recreate_deleted_cache_root(
     store: &SessionStore,
     managed_root: &Path,
@@ -981,13 +982,14 @@ fn recreate_deleted_cache_root(
             resolved.display()
         )));
     }
-    crate::preflight::check_cache_root_placement(
-        &resolved,
-        &frozen.bg1.root,
-        &frozen.bg2.root,
-        managed_root,
-    )
-    .map_err(|error| unavailable(error.to_string()))?;
+    // The source games are checked as recorded and where they are now, as resuming checks them
+    // next: a source folder that moved behind a link must not receive the cache either.
+    let bg1 = inspect_frozen_source(&frozen.profiles, &frozen.bg1)?;
+    let bg2 = inspect_frozen_source(&frozen.profiles, &frozen.bg2)?;
+    for (bg1_root, bg2_root) in [(&frozen.bg1.root, &frozen.bg2.root), (&bg1.root, &bg2.root)] {
+        crate::preflight::check_cache_root_placement(&resolved, bg1_root, bg2_root, managed_root)
+            .map_err(|error| unavailable(error.to_string()))?;
+    }
     fs::create_dir_all(cache_root).map_err(|error| {
         CliError::new(
             "resume_unavailable",
@@ -4749,12 +4751,22 @@ mod tests {
 
     /// A deleted download cache is created again only for a campaign that this request may
     /// resume, only where its recorded path still leads to itself, and only where the campaign
-    /// checks accept a cache. Refusals create nothing, also not where a link points.
+    /// checks accept a cache, also next to source games that moved behind a link. Refusals
+    /// create nothing, also not where a link points.
     #[cfg(windows)]
     #[test]
     fn a_deleted_download_cache_is_created_again_only_where_the_campaign_may_use_it() {
         use crate::session::{SessionEvent, SessionStore};
 
+        let link = |link: &Path, target: &Path| {
+            let output = std::process::Command::new("cmd.exe")
+                .args(["/c", "mklink", "/J"])
+                .arg(link)
+                .arg(target)
+                .output()
+                .unwrap();
+            assert!(output.status.success(), "{output:?}");
+        };
         for case in [
             "valid",
             "linked-parent",
@@ -4762,21 +4774,32 @@ mod tests {
             "other-install",
             "inside-source",
             "inside-managed",
+            "linked-source",
+            "source-behind-link",
         ] {
             let temp = tempfile::tempdir().unwrap();
             let root = std::fs::canonicalize(temp.path()).unwrap();
             let managed = root.join("managed");
             let elsewhere = root.join("elsewhere");
             let mut frozen = frozen_recipe_fixture();
-            frozen.bg1.root = root.join("bg1-source");
+            frozen.bg1.root = match case {
+                "linked-source" => root.join("old-bg1"),
+                "source-behind-link" => root.join("games").join("bg1"),
+                _ => root.join("bg1-source"),
+            };
             frozen.bg2.root = root.join("bg2-source");
             let parent = match case {
                 "inside-source" => frozen.bg1.root.clone(),
                 "inside-managed" => managed.clone(),
                 "linked-ancestor" => root.join("downloads").join("nested"),
+                "source-behind-link" => root.join("downloads").join("bg1"),
                 _ => root.join("downloads"),
             };
             std::fs::create_dir_all(&managed).unwrap();
+            std::fs::create_dir_all(&frozen.bg2.root).unwrap();
+            if !matches!(case, "linked-source" | "source-behind-link") {
+                std::fs::create_dir_all(&frozen.bg1.root).unwrap();
+            }
             std::fs::create_dir_all(parent.join("cache")).unwrap();
             let mut created =
                 created_for_frozen_recipe(&frozen, serde_json::to_vec(&frozen).unwrap());
@@ -4789,17 +4812,19 @@ mod tests {
                     .unwrap();
             // The cache is deleted; this test moves it away instead.
             std::fs::rename(&created.cache_root, root.join("deleted-cache")).unwrap();
-            if case.starts_with("linked") {
-                // A folder on the cache's path is replaced with a link that leads elsewhere.
-                std::fs::create_dir_all(elsewhere.join("nested")).unwrap();
-                std::fs::rename(root.join("downloads"), root.join("old-downloads")).unwrap();
-                let output = std::process::Command::new("cmd.exe")
-                    .args(["/c", "mklink", "/J"])
-                    .arg(root.join("downloads"))
-                    .arg(&elsewhere)
-                    .output()
-                    .unwrap();
-                assert!(output.status.success(), "{output:?}");
+            match case {
+                "linked-parent" | "linked-ancestor" => {
+                    // A folder on the cache's path is replaced with a link that leads elsewhere.
+                    std::fs::create_dir_all(elsewhere.join("nested")).unwrap();
+                    std::fs::rename(root.join("downloads"), root.join("old-downloads")).unwrap();
+                    link(&root.join("downloads"), &elsewhere);
+                }
+                // The BG1 game moved to the folder that held the cache, and its recorded folder
+                // now links there.
+                "linked-source" => link(&frozen.bg1.root, &root.join("downloads")),
+                // A folder above the BG1 game links to the folder that holds it and the cache.
+                "source-behind-link" => link(&root.join("games"), &root.join("downloads")),
+                _ => {}
             }
             let expected_install_id = if case == "other-install" {
                 "install-other"
@@ -4816,10 +4841,10 @@ mod tests {
                 continue;
             }
             let error = result.expect_err(case);
-            let code = if case == "other-install" {
-                "resume_identity_mismatch"
-            } else {
-                "resume_unavailable"
+            let code = match case {
+                "other-install" => "resume_identity_mismatch",
+                "linked-source" => "game_inspection_failed",
+                _ => "resume_unavailable",
             };
             assert_eq!(error.code(), code, "{case}: {error}");
             assert!(!created.cache_root.exists(), "{case}");
