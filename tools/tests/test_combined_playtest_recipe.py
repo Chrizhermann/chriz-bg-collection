@@ -27,6 +27,7 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             "chriz-bg-rebalance": (["chriz-bg-rebalance", "setup-chriz-bg-rebalance.tp2"], ["setup-chriz-bg-rebalance.tp2"]),
             "srcb-rr-compat": (["SRCB_RR_COMPAT"], ["SRCB_RR_COMPAT/setup-SRCB_RR_COMPAT.tp2"]),
             "safana-in-amn": (["Safana"], ["Safana/Safana.tp2"]),
+            "bardicwonders": (["BardicWonders"], ["BardicWonders/Setup-BardicWonders.tp2"]),
         }
         sources = []
         for index, source_id in enumerate(REQUIRED_SOURCE_IDS):
@@ -141,23 +142,12 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             self.assertLess(sod.index(180), sod.index(175))
             self.assertLess(sod.index(260), sod.index(265))
 
-            selected_additions = {
-                "feature:spell-rev:component-80",
-                "feature:srcb-rr-compat:component-0",
-                "feature:chriz-bg-modpack:component-189",
-                "feature:chriz-bg-modpack:component-199",
-                "feature:chriz-bg-modpack:component-620",
-                "feature:chriz-bg-rebalance:component-110",
-                "feature:chriz-bg-rebalance:component-111",
-                "mod:safana",
-                "feature:safana:mandatory-components",
-            }
-            self.assertTrue(all(preset.get(feature) == "on" for feature in selected_additions))
+            # The base curates every playtest feature now, so Chris's Recommended
+            # stays exactly as curated: optional 110 (Challenge Mode) is not forced on.
+            base_preset = tomllib.loads((base / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
+            self.assertEqual(preset, base_preset)
+            self.assertNotEqual(preset.get("feature:chriz-bg-rebalance:component-110"), "on")
             self.assertFalse(any("bristlelick" in key or "aura" in key for key, value in preset.items() if value == "on"))
-            self.assertEqual(
-                {key for key, value in preset.items() if value == "on" and "safana" in key.lower()},
-                {"mod:safana", "feature:safana:mandatory-components"},
-            )
             self.assertIn("LOCAL", (output / "LOCAL-ONLY.md").read_text(encoding="utf-8"))
             self.assertFalse((output / "release.json").exists())
 
@@ -216,6 +206,62 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
                 self.assertTrue(mod["artifact_id"].startswith("local-playtest-"))
                 self.assertEqual(mod["components"][0]["id"], 0)
             self.assertFalse((old_base / "mods/safana.toml").exists())
+
+    def test_older_base_selects_only_the_playtest_features_it_lacked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            old_root = temp / "old-base"
+            old_base = old_root / "recipes/curated-full-current"
+            shutil.copytree(self.root / "recipes/curated-full-current", old_base)
+            feature = "feature:chriz-bg-modpack:component-620"
+            collection_path = old_base / "collection.toml"
+            collection = collection_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+            collection, count = re.subn(rf'(?ms)^\[\[features\]\]\nid = "{re.escape(feature)}"\n.*?(?=^\[\[|\Z)', "", collection)
+            self.assertEqual(count, 1)
+            collection_path.write_text(collection, encoding="utf-8")
+            preset_path = old_base / "presets/chris-recommended.toml"
+            preset_text = preset_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+            preset_text, count = re.subn(rf'(?m)^"{re.escape(feature)}" = "[^"]*"\n', "", preset_text)
+            self.assertEqual(count, 1)
+            preset_path.write_text(preset_text, encoding="utf-8")
+            old_preset = tomllib.loads(preset_text)["selections"]
+
+            output = temp / "recipe"
+            build_recipe(old_root, None, output)
+            features = {item["id"] for item in tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))["features"]}
+            preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
+            self.assertIn(feature, features)
+            self.assertEqual(preset, {**old_preset, feature: "on"})
+
+    def test_bardic_local_override_pins_only_bardic(self) -> None:
+        base = self.root / "recipes/curated-full-current"
+        requested = sorted({
+            component
+            for run in tomllib.loads((base / "collection.toml").read_text(encoding="utf-8"))["runs"]
+            if run["mod_id"] == "bardicwonders"
+            for component in run["components"]
+        })
+        self.assertTrue(requested)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            output = temp / "recipe"
+            build_recipe(self.root, self._sources(temp), output, local_sources={"bardicwonders"})
+            mod = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
+            self.assertTrue(mod["artifact_id"].startswith("local-playtest-bardicwonders-"))
+            artifact = tomllib.loads((output / "artifacts" / f"{mod['artifact_id']}.toml").read_text(encoding="utf-8"))
+            self.assertEqual(artifact["archive"]["tp2_paths"], ["BardicWonders/Setup-BardicWonders.tp2"])
+            for path in (base / "mods").glob("*.toml"):
+                if path.name != "bardicwonders.toml":
+                    self.assertEqual(path.read_bytes(), (output / "mods" / path.name).read_bytes())
+            lock = json.loads((output / "combined-playtest-sources.json").read_text(encoding="utf-8"))
+            self.assertEqual([source["id"] for source in lock["sources"]], ["bardicwonders"])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            sources = self._sources(temp, {"bardicwonders": {requested[-1]}})
+            with self.assertRaisesRegex(ValueError, rf"cannot prove component coverage for 'bardicwonders'.*{requested[-1]}"):
+                build_recipe(self.root, sources, temp / "recipe", local_sources={"bardicwonders"})
+            self.assertFalse((temp / "recipe").exists())
 
     def test_missing_catalogue_component_requires_a_compatible_local_source(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
