@@ -89,7 +89,9 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
         protected_paths: vec![app_data.to_path_buf()],
     };
     reject_broad_root(root)?;
-    direct_ancestors(root)?;
+    // The root itself may have been replaced by a link; it is inspected below without being
+    // followed, and such a folder is never deleted.
+    direct_ancestors(root.parent().unwrap_or(root))?;
     for other in installs
         .iter()
         .map(|card| (&card.record.install_id, &card.record.managed_root))
@@ -139,9 +141,9 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
         }
         plan = journal;
     } else {
-        let replay = match SessionStore::open(root).and_then(|store| store.replay()) {
+        let replay = match SessionStore::open(root).and_then(|store| store.replay_ownership()) {
             Ok(replay) => replay,
-            Err(error) if records_unusable(&error) => {
+            Err(error) if records_unusable(&error, root) => {
                 return Ok(unlisted(
                     plan,
                     Some(identity),
@@ -250,6 +252,10 @@ fn execute_with(
             "Installation changed since confirmation. Review removal again.",
         ));
     }
+    // Inspected before anything changes, so that cleaning it up below can never follow a link
+    // out of application data.
+    let journal = journal_path(app_data, &current.install_id);
+    journal_present(&journal)?;
     if current.action == RemovalAction::Delete {
         recheck_staging_target_before_mutation_with(&current.managed_root, "en_US", host)
             .map_err(failure)?;
@@ -270,8 +276,7 @@ fn execute_with(
         }
     }
     .map_err(failure)?;
-    let journal = journal_path(app_data, &current.install_id);
-    if journal.exists() {
+    if journal_present(&journal)? {
         fs::remove_file(&journal).map_err(|e| io_at(&journal, e))?;
     }
     Ok(())
@@ -286,12 +291,20 @@ fn unlisted(mut plan: RemovalPlan, directory_identity: Option<u64>, reason: &str
     plan
 }
 
-/// Whether reading a folder's install records failed because they are missing or damaged,
+/// Whether reading the install records in `root` failed because they are missing or damaged,
 /// rather than being unreadable for the moment, for example locked or denied by a security
-/// product. Only the former can turn a deletion into removing the entry from the list.
-fn records_unusable(error: &(dyn std::error::Error + 'static)) -> bool {
+/// product, or because something outside the folder is missing. Only the former can turn a
+/// deletion into removing the entry from the list.
+fn records_unusable(error: &(dyn std::error::Error + 'static), root: &Path) -> bool {
     let mut current = Some(error);
     while let Some(error) = current {
+        if let Some(crate::error::EngineError::Io { path, source }) =
+            error.downcast_ref::<crate::error::EngineError>()
+        {
+            if source.kind() != io::ErrorKind::NotFound || !path.starts_with(root) {
+                return false;
+            }
+        }
         if error
             .downcast_ref::<io::Error>()
             .is_some_and(|io| io.kind() != io::ErrorKind::NotFound)
@@ -309,18 +322,27 @@ fn journal_path(app_data: &Path, id: &str) -> PathBuf {
         .join(format!("{id}.json"))
 }
 
-fn read_journal(path: &Path) -> Result<Option<RemovalPlan>, RemovalError> {
+/// Whether a removal journal exists at `path`. A linked or special journal, or one reached
+/// through a link, is refused, so that reading or removing it never leaves application data.
+fn journal_present(path: &Path) -> Result<bool, RemovalError> {
     direct_ancestors(path)?;
     match fs::symlink_metadata(path) {
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(error) => Err(io_at(path, error)),
         Ok(metadata) if !metadata.is_file() || reparse(&metadata) => {
             Err(failure("Unsafe removal journal."))
         }
-        Ok(_) => serde_json::from_slice(&fs::read(path).map_err(|e| io_at(path, e))?)
-            .map(Some)
-            .map_err(failure),
+        Ok(_) => Ok(true),
     }
+}
+
+fn read_journal(path: &Path) -> Result<Option<RemovalPlan>, RemovalError> {
+    if !journal_present(path)? {
+        return Ok(None);
+    }
+    serde_json::from_slice(&fs::read(path).map_err(|e| io_at(path, e))?)
+        .map(Some)
+        .map_err(failure)
 }
 
 fn persist_journal(app_data: &Path, plan: &RemovalPlan) -> Result<(), RemovalError> {
@@ -840,6 +862,78 @@ mod tests {
             preview(&f.app, "fixture-removal").unwrap().action,
             RemovalAction::Delete
         );
+    }
+    /// Shared downloads are not part of an installation: a user who deleted CEBG's cache folder
+    /// can still delete a proven installation, and the recorded cache path stays protected.
+    #[test]
+    fn deleted_shared_cache_does_not_block_deleting_a_proven_installation() {
+        let f = fixture();
+        fs::remove_dir_all(&f.cache).unwrap();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Delete);
+        assert!(plan.protected_paths.contains(&f.cache));
+        run(&f, &plan).unwrap();
+        assert!(!f.root.exists());
+        assert!(f.source.join("original.txt").exists());
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    /// A directory junction on Windows and a symbolic link elsewhere; both are disposable.
+    fn link_directory(link: &Path, target: &Path) {
+        #[cfg(windows)]
+        {
+            let output = std::process::Command::new("cmd.exe")
+                .args(["/c", "mklink", "/J"])
+                .arg(link)
+                .arg(target)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target, link).unwrap();
+    }
+    /// Cleaning up a journal must never follow a link out of application data. The check runs
+    /// before anything changes, so the entry also stays.
+    #[test]
+    fn a_linked_journal_folder_is_refused_before_anything_changes() {
+        let f = fixture();
+        let outside = f._temp.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        fs::write(outside.join("fixture-removal.json"), "not a journal").unwrap();
+        link_directory(&f.app.join("installation-removals"), &outside);
+        fs::rename(&f.root, f._temp.path().join("moved")).unwrap();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Forget);
+
+        let error = run(&f, &plan).unwrap_err();
+
+        assert!(
+            error.to_string().contains("Refusing linked/reparse path"),
+            "{error}"
+        );
+        assert_eq!(
+            fs::read_to_string(outside.join("fixture-removal.json")).unwrap(),
+            "not a journal"
+        );
+        assert_eq!(registered_campaigns(&f), 1);
+    }
+    /// A registered folder replaced by a link is never followed or deleted, but its entry can
+    /// leave the list.
+    #[test]
+    fn a_root_replaced_by_a_link_is_only_unlisted_without_following_it() {
+        let f = fixture();
+        fs::rename(&f.root, f._temp.path().join("moved")).unwrap();
+        link_directory(&f.root, &f.source);
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Unlist);
+        run(&f, &plan).unwrap();
+        assert!(f.source.join("original.txt").exists());
+        assert!(reparse(&fs::symlink_metadata(&f.root).unwrap()));
+        assert_eq!(registered_campaigns(&f), 0);
     }
     #[test]
     fn a_path_that_is_no_longer_a_folder_is_only_unlisted() {

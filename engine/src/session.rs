@@ -180,7 +180,11 @@ impl SessionReplay {
 
     /// Verify that every consequential current input still equals the frozen identity.
     pub fn validate_resume(&self, expected: &CampaignCreated) -> Result<()> {
-        let expected = normalize_created(expected.clone(), &self.created.managed_root)?;
+        let expected = normalize_created(
+            expected.clone(),
+            &self.created.managed_root,
+            CacheRoot::Required,
+        )?;
         compare_identity("install id", &self.created.install_id, &expected.install_id)?;
         compare_identity("attempt id", &self.created.attempt_id, &expected.attempt_id)?;
         compare_identity(
@@ -263,7 +267,7 @@ impl SessionStore {
                 "the first campaign event must be Created",
             ));
         };
-        let created = normalize_created(*created, &canonical_root)?;
+        let created = normalize_created(*created, &canonical_root, CacheRoot::Required)?;
         let store = Self::paths(canonical_root);
         match fs::create_dir(&store.state_root) {
             Ok(()) => {}
@@ -372,6 +376,15 @@ impl SessionStore {
         self.replay_unlocked()
     }
 
+    /// [`Self::replay`] for proving which installation owns this folder, for example before
+    /// deleting it. Everything inside the folder is verified as usual, but the shared cache
+    /// recorded at creation may be gone: deleted downloads must not make an installation
+    /// impossible to remove. The recorded cache path is kept as it was recorded.
+    pub fn replay_ownership(&self) -> Result<SessionReplay> {
+        let _guard = self.acquire_lock()?;
+        self.replay_unlocked_with(CacheRoot::MayBeMissing)
+    }
+
     fn paths(managed_root: PathBuf) -> Self {
         let state_root = managed_root.join(STATE_DIRECTORY);
         Self {
@@ -458,6 +471,10 @@ impl SessionStore {
     }
 
     fn replay_unlocked(&self) -> Result<SessionReplay> {
+        self.replay_unlocked_with(CacheRoot::Required)
+    }
+
+    fn replay_unlocked_with(&self, cache: CacheRoot) -> Result<SessionReplay> {
         validate_directory(&self.ledger_root)?;
         let mut finals = BTreeMap::<u64, PathBuf>::new();
         for entry in fs::read_dir(&self.ledger_root).map_err(|source| EngineError::Io {
@@ -536,7 +553,7 @@ impl SessionStore {
 
         let created = match &records[0].event {
             SessionEvent::Created(created) => {
-                normalize_created(created.as_ref().clone(), &self.managed_root)?
+                normalize_created(created.as_ref().clone(), &self.managed_root, cache)?
             }
             _ => {
                 return Err(ledger_error(
@@ -570,9 +587,19 @@ impl SessionStore {
     }
 }
 
+/// Whether a replay requires the campaign's shared cache folder to exist.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CacheRoot {
+    /// Creating, resuming and checking a campaign use the cache, so it must still exist.
+    Required,
+    /// Proving ownership of the folder does not use the cache, which may have been deleted.
+    MayBeMissing,
+}
+
 fn normalize_created(
     mut created: CampaignCreated,
     canonical_managed_root: &Path,
+    cache: CacheRoot,
 ) -> Result<CampaignCreated> {
     validate_identifier(&created.install_id, "install id", canonical_managed_root)?;
     validate_identifier(&created.attempt_id, "attempt id", canonical_managed_root)?;
@@ -585,7 +612,16 @@ fn normalize_created(
         ));
     }
     created.managed_root = event_managed_root;
-    created.cache_root = canonical_directory(&created.cache_root, "cache root")?;
+    created.cache_root = match canonical_directory(&created.cache_root, "cache root") {
+        Err(EngineError::Io { source, .. })
+            if cache == CacheRoot::MayBeMissing
+                && source.kind() == std::io::ErrorKind::NotFound
+                && created.cache_root.is_absolute() =>
+        {
+            created.cache_root
+        }
+        result => result?,
+    };
     if created.staged_bg1 != canonical_managed_root.join("bg1") {
         return Err(identity_mismatch(
             "staged BG1 path",
