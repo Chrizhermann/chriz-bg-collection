@@ -29,6 +29,7 @@ fn the_uninstaller_hook_asks_the_app_to_remove_its_application_data() {
     let hooks = fs::read_to_string(crate_root.join(hooks)).expect("read NSIS installer hooks");
 
     assert!(hooks.contains("!macro NSIS_HOOK_PREUNINSTALL"));
+    assert!(hooks.contains("!macro NSIS_HOOK_POSTUNINSTALL"));
     assert!(hooks.contains(&format!(
         r#"ExecWait '"$INSTDIR\${{MAINBINARYNAME}}.exe" {REMOVE_APPLICATION_DATA} "${{BUNDLEID}}"' $0"#
     )));

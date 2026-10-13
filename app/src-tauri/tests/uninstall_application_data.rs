@@ -229,8 +229,9 @@ fn data_that_stays_in_use_is_reported() {
     profile.assert_untouched_outside();
 }
 
-/// The uninstaller around the hook: the template's own deletion of the application data runs
-/// after `NSIS_HOOK_PREUNINSTALL`, against the disposable profile instead of the real folders.
+/// The uninstaller around the hooks. Like the template, it runs `NSIS_HOOK_PREUNINSTALL`, its own
+/// cleanup for "Delete the application data", then `NSIS_HOOK_POSTUNINSTALL`, but against the
+/// disposable profile and a registry key of its own instead of the real folders and keys.
 const HARNESS: &str = r#"Unicode true
 !include LogicLib.nsh
 !include FileFunc.nsh
@@ -241,6 +242,7 @@ SilentInstall silent
 !define MAINBINARYNAME "chriz-bg-app"
 !define PRODUCTNAME "Chriz Easy BG"
 !define BUNDLEID "dev.chrizhermann.bgcollection"
+!define MANUPRODUCTKEY "${MANUKEY}\${PRODUCTNAME}"
 Var DeleteAppDataCheckboxState
 Var UpdateMode
 ; The template closes a running app here. The test records that the hook asked for it.
@@ -257,12 +259,48 @@ Section
   ${GetOptions} $R0 "/UPDATE=" $UpdateMode
   ${GetOptions} $R0 "/ROAMING=" $R1
   ${GetOptions} $R0 "/LOCAL=" $R2
+  ClearErrors
+  ${GetOptions} $R0 "/RELINK=" $R3
+  ${If} ${Errors}
+    StrCpy $R3 ""
+  ${EndIf}
+  ; What the installer recorded.
+  WriteRegStr SHCTX "${MANUPRODUCTKEY}" "" "$INSTDIR"
+  WriteRegStr HKCU "${MANUPRODUCTKEY}" "Installer Language" "1033"
   !insertmacro NSIS_HOOK_PREUNINSTALL
+  ${If} $R3 != ""
+    ; Another program creates the folder again, with a junction, after the app removed it.
+    CreateDirectory "$R2\${BUNDLEID}"
+    ExecWait '"$SYSDIR\cmd.exe" /c mklink /J "$R2\${BUNDLEID}\z-linked-game" "$R3"'
+  ${EndIf}
   ${If} $DeleteAppDataCheckboxState = 1
   ${AndIf} $UpdateMode <> 1
+    DeleteRegKey SHCTX "${MANUPRODUCTKEY}"
+    DeleteRegKey /ifempty SHCTX "${MANUKEY}"
+    DeleteRegValue HKCU "${MANUPRODUCTKEY}" "Installer Language"
+    DeleteRegKey /ifempty HKCU "${MANUPRODUCTKEY}"
+    DeleteRegKey /ifempty HKCU "${MANUKEY}"
+    SetShellVarContext current
     RmDir /r "$R1\${BUNDLEID}"
     RmDir /r "$R2\${BUNDLEID}"
   ${EndIf}
+  !insertmacro NSIS_HOOK_POSTUNINSTALL
+  ; Reports whether the installer's registry entries are left, then removes the test's key.
+  StrCpy $7 "removed"
+  ClearErrors
+  ReadRegStr $8 SHCTX "${MANUPRODUCTKEY}" ""
+  ${IfNot} ${Errors}
+    StrCpy $7 "kept"
+  ${EndIf}
+  ClearErrors
+  ReadRegStr $8 HKCU "${MANUPRODUCTKEY}" "Installer Language"
+  ${IfNot} ${Errors}
+    StrCpy $7 "kept"
+  ${EndIf}
+  FileOpen $9 "$EXEDIR\registry.txt" w
+  FileWrite $9 $7
+  FileClose $9
+  DeleteRegKey HKCU "${MANUKEY}"
 SectionEnd
 "#;
 
@@ -278,60 +316,107 @@ fn the_uninstaller_hook_removes_application_data_through_the_app_and_never_follo
     let script = temp.path().join("harness.nsi");
     let harness = temp.path().join("harness.exe");
     fs::write(&script, HARNESS).unwrap();
+    // A registry key of this test's own, which the harness removes again.
+    let registry_key = format!(
+        r"Software\cebg-uninstall-hook-test-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
     let compiled = finish(
         Command::new(&makensis)
             .arg("-V2")
             .arg(format!("-DOUT={}", harness.display()))
             .arg(format!("-DHOOKS={}", hooks.display()))
+            .arg(format!("-DMANUKEY={registry_key}"))
             .arg(&script),
     );
     assert!(compiled.status.success(), "{compiled:?}");
 
-    let run = |profile: &Profile, install: &Path, checked: &str, update: &str| {
-        let closed = temp.path().join("closed-app.txt");
-        let _ = fs::remove_file(&closed);
-        let output = finish(
-            Command::new(&harness)
+    // Returns whom the hook asked to close, and whether the installer's registry entries
+    // were removed.
+    let run =
+        |profile: &Profile, install: &Path, checked: &str, update: &str, relink: Option<&Path>| {
+            let closed = temp.path().join("closed-app.txt");
+            let registry = temp.path().join("registry.txt");
+            let _ = fs::remove_file(&closed);
+            let _ = fs::remove_file(&registry);
+            use std::os::windows::process::CommandExt;
+
+            // NSIS options take a quoted value, but an option that is quoted as a whole, as
+            // `arg` quotes a path with spaces, is not found.
+            let path = |name: &str, path: &Path| format!(r#"/{name}="{}""#, path.display());
+            let mut command = Command::new(&harness);
+            command
                 .env(TEST_PARENTS, profile.parents())
-                .arg(format!("/INSTDIR={}", install.display()))
+                .raw_arg(path("INSTDIR", install))
                 .arg(format!("/CHECKED={checked}"))
                 .arg(format!("/UPDATE={update}"))
-                .arg(format!("/ROAMING={}", profile.roaming.display()))
-                .arg(format!("/LOCAL={}", profile.local.display())),
-        );
-        assert!(output.status.success(), "{output:?}");
-        fs::read_to_string(closed).ok()
-    };
+                .raw_arg(path("ROAMING", &profile.roaming))
+                .raw_arg(path("LOCAL", &profile.local));
+            if let Some(target) = relink {
+                command.raw_arg(path("RELINK", target));
+            }
+            let output = finish(&mut command);
+            assert!(output.status.success(), "{output:?}");
+            (
+                fs::read_to_string(closed).ok(),
+                fs::read_to_string(registry).unwrap(),
+            )
+        };
     let installed = temp.path().join("installed");
     fs::create_dir(&installed).unwrap();
     fs::copy(APP, installed.join("chriz-bg-app.exe")).unwrap();
+    let asked = Some("chriz-bg-app.exe|Chriz Easy BG\r\n".to_owned());
 
     let profile = Profile::new();
     assert_eq!(
-        run(&profile, &installed, "1", "0").as_deref(),
-        Some("chriz-bg-app.exe|Chriz Easy BG\r\n")
+        run(&profile, &installed, "1", "0", None),
+        (asked.clone(), "removed".to_owned())
     );
     profile.assert_removed();
 
     // Unchecked, or uninstalling for an update: nothing is removed and the app is not asked.
     let profile = Profile::new();
-    assert_eq!(run(&profile, &installed, "0", "0"), None);
+    assert_eq!(
+        run(&profile, &installed, "0", "0", None),
+        (None, "kept".to_owned())
+    );
     profile.assert_kept();
-    assert_eq!(run(&profile, &installed, "1", "1"), None);
+    assert_eq!(
+        run(&profile, &installed, "1", "1", None),
+        (None, "kept".to_owned())
+    );
     profile.assert_kept();
 
     // When the app cannot remove everything, RMDir /r never runs on what is left, so the
-    // junction to the game folder is not followed.
+    // junction to the game folder is not followed. The registry entries are removed.
     let held_file = profile.held_file();
     let held = hold(&held_file);
-    run(&profile, &installed, "1", "0");
+    let (_, registry) = run(&profile, &installed, "1", "0", None);
     drop(held);
+    assert_eq!(registry, "removed");
     assert!(held_file.is_file());
     assert!(fs::symlink_metadata(profile.local.join(IDENTIFIER).join("z-linked-game")).is_ok());
     profile.assert_untouched_outside();
 
+    // Nor after the app removed everything, when another program creates the folder again with
+    // a junction to the game folder.
+    let profile = Profile::new();
+    let game = profile.game_save.parent().unwrap().to_path_buf();
+    assert_eq!(
+        run(&profile, &installed, "1", "0", Some(&game)),
+        (asked, "removed".to_owned())
+    );
+    assert!(fs::symlink_metadata(profile.local.join(IDENTIFIER).join("z-linked-game")).is_ok());
+    assert!(fs::symlink_metadata(profile.roaming.join(IDENTIFIER)).is_err());
+    profile.assert_untouched_outside();
+
     // The same holds when the app cannot run at all.
     let profile = Profile::new();
-    run(&profile, &temp.path().join("missing"), "1", "0");
+    let (_, registry) = run(&profile, &temp.path().join("missing"), "1", "0", None);
+    assert_eq!(registry, "removed");
     profile.assert_kept();
 }
