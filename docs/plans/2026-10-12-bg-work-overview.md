@@ -58,8 +58,10 @@ Christopher's decisions from 13 October are recorded in the
 **Evening update:** Christopher approved releasing the important fixes. The four
 owner releases and [CEBG alpha.20](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.20)
 (app and collection) are published; each fresh public download was verified, and
-the alpha updater channel now offers alpha.20. The website still shows alpha.19
-and waits for Christopher. The only game installation is still the disposable lab test.
+the alpha updater channel now offers alpha.20. After Christopher's go-ahead the
+[collection website](https://bg.chrizfader.org/collection) shows alpha.20 (PR 28,
+verified live), and public docs and local tools no longer contain his home-folder
+path. The only game installation is still the disposable lab test.
 
 | Published 13 October | Release | Source commit |
 |---|---|---|
@@ -107,8 +109,8 @@ updater key was found on this PC; the setup was signed with it by path (no key
 created, copied or rotated), packaged, Defender-scanned and published. Exact
 record: [alpha.20 package verification](../package-acceptance-alpha20-2026-10-13.md).
 
-Still waiting for Christopher: the website update, a lab game launch, and the
-optional one-file fix for his current game.
+Still waiting for Christopher: a lab game launch and the optional one-file fix for
+his current game.
 
 ## The useful answer
 

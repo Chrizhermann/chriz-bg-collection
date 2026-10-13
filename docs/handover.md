@@ -2,7 +2,7 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## October 13 — alpha.20 published; website waits for Christopher
+## October 13 — alpha.20 and its website published
 
 **App and collection alpha.20 are now public** as a prerelease and on the alpha
 updater channel. Modpack 0.2.0-alpha.11, SoD Remix 0.6.13, BG Rebalance 0.8.2 and
@@ -15,8 +15,9 @@ scans passed; this binary was not launched. See
 [exact results](package-acceptance-alpha20-2026-10-13.md) and
 [complete release notes](release-notes-alpha20.md).
 
-All seven versioned assets and the alpha update URL are verified. The website
-still shows alpha.19; updating it waits for Christopher. Current coordination:
+All seven versioned assets and the alpha update URL are verified. The collection
+website shows alpha.20 (website PR 28, verified live). Public docs and local tools
+now write the owner's home folder as `%USERPROFILE%`. Current coordination:
 [work overview](plans/2026-10-12-bg-work-overview.md#october-13-continuation-claude).
 
 ## October 12 — straightforward work started and Claude handover

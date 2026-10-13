@@ -81,6 +81,14 @@ was saved locally for rollback. Both a cache-busted and an ordinary anonymous
 download of the channel feed match the exact feed hash above and announce
 app/recipe alpha.20.
 
-The [collection website](https://bg.chrizfader.org/collection) still shows
-alpha.19; its update waits for the owner's approval. Versioned assets are
-immutable.
+After the owner approved it, the [collection website](https://bg.chrizfader.org/collection)
+was updated and verified live. Website PR 28 merged as `ef0ad67` (content
+`cfddf70`); its 115 site tests, static build, PR CI and merged-master CI (run
+`38409529541`) passed. The live content file matches the merged commit byte for
+byte and shows app/recipe alpha.20 with the setup hash above. The collection,
+rules, voicepacks, logs and links routes return HTTP 200 with security headers;
+the root redirects. The setup downloaded through the live website's link matches
+6,091,998 bytes and the setup hash above. A local preview showed no console errors
+and no horizontal overflow at 375 px width; a full desktop/mobile visual review was
+not performed. Run rules and other non-collection content are unchanged.
+Versioned assets are immutable.
