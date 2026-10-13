@@ -145,6 +145,8 @@ class EvandraDefaultTests(unittest.TestCase):
         skipped = _effective_features(collection, {**preset, "mod:evandra": "off"})
         self.assertEqual({key for key in defaults if defaults[key] != skipped[key]}, {
             "mod:evandra", EVANDRA_CORE, "feature:evandra:component-1", *DEFAULT_FEATURE_IDS,
+            # October 13: Evandra's recruitment XP 238 also follows her core.
+            "feature:chriz-bg-modpack:component-238",
         })
         next(f for f in collection["features"] if f["id"] == EVANDRA_CORE)["readiness"] = "blocked"
         state = _effective_features(collection, preset)

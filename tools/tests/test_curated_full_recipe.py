@@ -43,7 +43,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertTrue(defaults["feature:evandra:component-1"])
             skipped = _effective_features(collection, {**baseline, "mod:evandra": "off"})
             changes = {key for key in defaults if defaults[key] != skipped[key]}
-            self.assertEqual(changes, {"mod:evandra", "feature:evandra:mandatory-components", "feature:evandra:component-1", "feature:chriz-bg-modpack:component-224", "feature:chriz-bg-modpack:component-225"})
+            self.assertEqual(changes, {"mod:evandra", "feature:evandra:mandatory-components", "feature:evandra:component-1", "feature:chriz-bg-modpack:component-224", "feature:chriz-bg-modpack:component-225", "feature:chriz-bg-modpack:component-238"})
             self.assertFalse(skipped["feature:evandra:mandatory-components"])
             self.assertFalse(skipped["feature:evandra:component-1"])
 
@@ -328,7 +328,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # October 13 (later) adds the approved Challenge Mode feature group,
                 # now part of this digest; runs, features and the preset are unchanged.
                 # October 13 makes EET's desktop shortcut (EET 100) an unchecked option.
-                "7e86b15a5a207ea16bb91a258bdf2b8262958afff7aa3b1cc73f51638591addc",
+                # October 13 intake (Modpack alpha.11 / SoD Remix v0.6.13 candidates):
+                # default reader-level scrolls 430 in its own final run, default
+                # Fade/Evandra recruitment XP 237/238 and Degrodel 660, optional
+                # experimental campaign XP caps 650/651 in their own run, mandatory
+                # SoD 177/198/285, and SoD 257's reworded description.
+                "0e297b32a5f9aa71fd15581b9c8409bb547e7a5cfea8542657a71d1ac7eeab06",
             )
 
             legacy_bg1npc_groups = {
@@ -464,7 +469,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 sod_artifact["source"]["sha256"],
                 "8c1a18debed45530d629efa19aa6c6d3b34317751d89683104b0c0306e67cd97",
             )
-            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910])
+            # October 13 adds mandatory v0.6.13 rows 177, 198 and 285 in native TP2 order.
+            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
@@ -559,7 +565,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
             prompt = next(component for component in bardic["components"] if component["id"] == 1008)["prompts"][0]
             self.assertEqual(prompt["answer"]["value"], {"kind": "integer", "value": 2})
             self.assertEqual(features["feature:chriz-bg-modpack:component-400"]["requires"], ["feature:branwen:component-0", "mod:spell-rev"])
-            self.assertEqual(features["feature:chriz-bg-modpack:component-430"]["requires"], ["feature:cdtweaks:component-2170"])
+            # Alpha.11's reader-level scroll policy needs EEex, not Tweaks Anthology 2170.
+            self.assertEqual(features["feature:chriz-bg-modpack:component-430"]["requires"], ["feature:eeex:mandatory-components"])
             self.assertEqual(
                 features["feature:chriz-bg-modpack:component-610"]["requires"],
                 ["feature:eeex:mandatory-components", "mod:eet-end"],

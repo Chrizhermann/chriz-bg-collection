@@ -62,8 +62,13 @@ fn offers_remote_console_as_an_experimental_advanced_tool_before_buffbot() {
         position("safana-bg2") + 1,
         position("chriz-bg-modpack-late-companions-bg2")
     );
+    // October 13: the optional campaign XP caps run directly after the late companions.
     assert_eq!(
         position("chriz-bg-modpack-late-companions-bg2") + 1,
+        position("chriz-bg-modpack-campaign-xp-bg2")
+    );
+    assert_eq!(
+        position("chriz-bg-modpack-campaign-xp-bg2") + 1,
         position("spell-rev-npc-spellbooks-bg2")
     );
     assert_eq!(

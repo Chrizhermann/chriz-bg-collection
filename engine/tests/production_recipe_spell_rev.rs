@@ -83,19 +83,24 @@ fn authors_the_exact_spell_revisions_menu_and_split_run_order() {
     let modpack = position("chriz-bg-modpack-bg2");
     let safana = position("safana-bg2");
     let late_companions = position("chriz-bg-modpack-late-companions-bg2");
+    let campaign_xp = position("chriz-bg-modpack-campaign-xp-bg2");
     let late = position("spell-rev-npc-spellbooks-bg2");
     let lightning = position("spell-rev-lightning-bg2");
     let baeloth = position("chriz-bg-modpack-baeloth-bg2");
     let buffbot = position("buffbot-bg2");
+    let scrolls = position("chriz-bg-modpack-scrolls-bg2");
 
     assert_eq!(ascension + 1, early);
     assert_eq!(modpack + 1, safana);
     assert_eq!(safana + 1, late_companions);
-    assert_eq!(late_companions + 1, late);
+    assert_eq!(late_companions + 1, campaign_xp);
+    assert_eq!(campaign_xp + 1, late);
     assert_eq!(late + 1, lightning);
     assert_eq!(lightning + 1, baeloth);
     assert_eq!(baeloth + 1, buffbot);
-    assert_eq!(buffbot, runs.len() - 1);
+    // Modpack scroll policy 430 follows every spell writer, including SR's late runs.
+    assert_eq!(buffbot + 1, scrolls);
+    assert_eq!(scrolls, runs.len() - 1);
     assert_eq!(runs[early].phase, Phase::Main);
     assert_eq!(runs[early].components, SPELL_REV_EARLY_COMPONENTS);
     assert_eq!(runs[late].phase, Phase::PostEetEnd);

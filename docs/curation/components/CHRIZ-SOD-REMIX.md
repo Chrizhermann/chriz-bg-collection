@@ -1,8 +1,12 @@
 # CHRIZ-SOD-REMIX — components
 
 Pinned public release **v0.6.11** from `Chrizhermann/chriz-sod-rebalance`.
-This catalog has 40 current or historical entries; the recommended EET setup installs
-37 components. The [September 16 candidate](../../alpha16-candidate-2026-09-16.md)
+This catalog has 43 current or historical entries; the recommended EET setup installs
+40 components. Rows `177`, `198` and `285` come from the unpublished **v0.6.13**
+candidate (October 13 intake, see
+[next batch intake](../../plans/2026-10-13-next-batch-intake.md)); they join the
+mandatory bundle and the recipe pin moves to v0.6.13 only when it is published.
+Existing-save repairs `176` and `291` and alternative `901` stay out of the recipe. The [September 16 candidate](../../alpha16-candidate-2026-09-16.md)
 approved normal components `115`, `135`, `256`, `265`, and `266` in the mandatory bundle,
 with `257` optional and unchecked. Component `901` remains the unselected alternative
 to `900`, and component `291` is a repair-only tail for existing `290` installations.
@@ -17,6 +21,10 @@ The Dev marks below retain their historical scope and do not certify the new add
   row marked `mandatory` below in TP2 source order. This extends the reviewed setup with
   the accepted victory ending `290`, treasure choice `900`, and accepted EET SoD skip
   `910`; exclude repair `291` and alternative `901`.
+- New-start components `177` (report Korlasz to Liia after the first night; needs `175`
+  and `180`), `198` (early BG1 companion recruitment and camp follow-up; needs `110` and
+  `197`) and `285` (Avernus portal and a bounded final battle) are mandatory bundle rows,
+  in TP2 order after `175`, `197` and `280` respectively.
 - Extra Challenge `257` is unchecked and depends on the mandatory bundle, including
   revised bridge `256`. It adds the Insane bridge sequencers without removing the
   normal bridge improvements when disabled. Component `266` separately limits the
@@ -69,11 +77,13 @@ The Dev marks below retain their historical scope and do not certify the new add
 | 170 | SoD remix: prologue - the Korlasz jailbreak | Chapter pass - prologue |  | ✓ | mandatory |
 | 180 | SoD remix: prologue - celebration and Caelar's proclamation | Chapter pass - prologue |  | ✓ | mandatory |
 | 175 | SoD remix: prologue - the XP ledger: Liia's reward after the jailbreak | Chapter pass - prologue |  | ✓ | mandatory |
+| 177 | SoD remix: prologue - report Korlasz to Liia after the first night | Chapter pass - prologue |  |  | mandatory |
 | 185 | SoD remix: prologue - Entar Silvershield removed (stays dead) | Chapter pass - prologue |  | ✓ | mandatory |
 | 190 | SoD remix: prologue - Skie's second-night bedroom visit removed | Chapter pass - prologue |  | ✓ | mandatory |
 | 195 | SoD remix: prologue - assassination and poison references scrubbed | Chapter pass - prologue |  | ✓ | mandatory |
 | 210 | SoD remix: Coast Way Forest removed - Rasaad recruits at the camp | Chapter pass - Coast Way |  | ✓ | mandatory |
 | 197 | SoD remix: prologue - Skie: talk-to-join recruit at the palace, SoD plot removed | Chapter pass - prologue |  | ✓ | mandatory |
+| 198 | SoD remix: early BG1 companion recruitment and camp follow-up | Chapter pass - prologue |  |  | mandatory |
 | 187 | SoD remix: prologue - the assassination night-set never spawns | Chapter pass - prologue |  | ✓ | mandatory |
 | 200 | SoD remix: Coast Way Crossing - fewer spiders, fairer bridge fight | Chapter pass - Coast Way |  | ✓ | mandatory |
 | 215 | SoD remix: the XP ledger - Coast Way Forest removal compensated | Chapter pass - Coast Way |  | ✓ | mandatory |
@@ -91,6 +101,7 @@ The Dev marks below retain their historical scope and do not certify the new add
 | 266 | SoD remix: finite Shadow Aspect Mislead | Chapter pass - the coalition camp |  |  | mandatory |
 | 270 | SoD remix: Kanaglym - fewer undead | Chapter pass - the coalition camp |  | ✓ | mandatory |
 | 280 | SoD remix: no party dispel at the basement reveal | Chapter pass - the coalition camp |  | ✓ | mandatory |
+| 285 | SoD remix: Avernus portal and a fairer final battle | Chapter pass - the coalition camp |  |  | mandatory |
 | 290 | SoD remix: end after the playable victory celebration | Chapter pass - victory ending |  |  | mandatory |
 | 291 | Repair an existing component 290 EET handoff | Chapter pass - victory ending |  |  | excluded |
 | 900 | Collected in the camp chest at the Coast Way crossing | Chapter pass - Coast Way | SoD remix: treasure from removed content | ✓ | mandatory |

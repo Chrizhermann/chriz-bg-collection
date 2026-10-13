@@ -220,19 +220,20 @@ fn recipe_without_groups_serializes_and_digests_exactly_as_before() {
 fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // (recipe, collection JSON without the group, Recommended selection, plan)
     // Re-pinned on October 13 when EET's desktop shortcut (EET 100) became an
-    // unchecked option; the group still changes nothing but the group table.
+    // unchecked option, and for the October 13 intake (Modpack alpha.11 / SoD
+    // Remix v0.6.13 rows); the group still changes nothing but the group table.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "ef46cbbf782f0227700de687f6a0458d5f4d34b5ef9bb8cb7febd1f158ff44df",
-            "e05a3b7b66dfb3e36f4bc7fd4c8b16bc4062ebcf46bd1b65f99db25fe04ce904",
-            "c4120113d1fcbd49ba4506cf0726bc28bcf14ead425ed57fd1dc3193c99c505f",
+            "2088ab998856c0b83abdbc8afb3c39fd6ca5eafb60fa459041e646872b8da564",
+            "fc2fa9d5e7c32c8b2264f5b24d01dbe4242ee47c6a5fcf9b86ba4f74508138f3",
+            "c6f81e58afd69c54845d682e7d136df2f4d1754cd310dfeb717cc596e6603fc2",
         ),
         (
             "../recipes/curated-full-current",
-            "fbeda247dcbc44123032889895c0c04935dfd354576c3cca39c25a4fba46d1ab",
-            "42c11f1bf2d28da76bbda4a899f22518ebca0dff8dd05e69b74ea2bfd0c85ca8",
-            "5ab70740262beab486d8593b32b50b32cbe950c6fb5256f822c38590d3352f3c",
+            "7921b38ae60c08c53c5f7c8f97ab5cdf6a437a4b01cdda585bfff59cc1a58ca0",
+            "56271d3d028381a5a246fe3a9db561ddd20d41d00f833168a774612154e7c104",
+            "d74ac8362ac601b484d8d6b96391196f9cbacd7474a005ff5286f0c9d2a78849",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

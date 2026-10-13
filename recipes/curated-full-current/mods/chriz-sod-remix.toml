@@ -59,6 +59,10 @@ id = 175
 name = "SoD remix: prologue - the XP ledger: Liia's reward after the jailbreak"
 
 [[components]]
+id = 177
+name = "SoD remix: prologue - report Korlasz to Liia after the first night"
+
+[[components]]
 id = 185
 name = "SoD remix: prologue - Entar Silvershield removed (stays dead)"
 
@@ -77,6 +81,10 @@ name = "SoD remix: Coast Way Forest removed - Rasaad recruits at the camp"
 [[components]]
 id = 197
 name = "SoD remix: prologue - Skie: talk-to-join recruit at the palace, SoD plot removed"
+
+[[components]]
+id = 198
+name = "SoD remix: early BG1 companion recruitment and camp follow-up"
 
 [[components]]
 id = 187
@@ -145,6 +153,10 @@ name = "SoD remix: Kanaglym - fewer undead"
 [[components]]
 id = 280
 name = "SoD remix: no party dispel at the basement reveal"
+
+[[components]]
+id = 285
+name = "SoD remix: Avernus portal and a fairer final battle"
 
 [[components]]
 id = 290

@@ -366,7 +366,7 @@ args = []
 run_id = "chriz-sod-remix-bg2"
 mod_id = "chriz-sod-remix"
 phase = "post-eet-end"
-components = [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 185, 190, 195, 210, 197, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 290, 900, 910]
+components = [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910]
 args = []
 
 [[runs]]
@@ -401,7 +401,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 400, 410, 430, 440, 450, 610, 611, 630]
+components = [130, 400, 410, 440, 450, 610, 611, 630, 660]
 args = []
 
 [[runs]]
@@ -415,7 +415,14 @@ args = []
 run_id = "chriz-bg-modpack-late-companions-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [189, 620]
+components = [189, 237, 238, 620]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-campaign-xp-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [650, 651]
 args = []
 
 [[runs]]
@@ -458,6 +465,13 @@ run_id = "buffbot-bg2"
 mod_id = "buffbot"
 phase = "post-eet-end"
 components = [1, 0]
+args = []
+
+[[runs]]
+run_id = "chriz-bg-modpack-scrolls-bg2"
+mod_id = "chriz-bg-modpack"
+phase = "post-eet-end"
+components = [430]
 args = []
 
 [[features]]
@@ -4251,11 +4265,13 @@ components = [
   { run_id = "chriz-sod-remix-bg2", component = 170 },
   { run_id = "chriz-sod-remix-bg2", component = 180 },
   { run_id = "chriz-sod-remix-bg2", component = 175 },
+  { run_id = "chriz-sod-remix-bg2", component = 177 },
   { run_id = "chriz-sod-remix-bg2", component = 185 },
   { run_id = "chriz-sod-remix-bg2", component = 190 },
   { run_id = "chriz-sod-remix-bg2", component = 195 },
   { run_id = "chriz-sod-remix-bg2", component = 210 },
   { run_id = "chriz-sod-remix-bg2", component = 197 },
+  { run_id = "chriz-sod-remix-bg2", component = 198 },
   { run_id = "chriz-sod-remix-bg2", component = 187 },
   { run_id = "chriz-sod-remix-bg2", component = 200 },
   { run_id = "chriz-sod-remix-bg2", component = 215 },
@@ -4272,6 +4288,7 @@ components = [
   { run_id = "chriz-sod-remix-bg2", component = 266 },
   { run_id = "chriz-sod-remix-bg2", component = 270 },
   { run_id = "chriz-sod-remix-bg2", component = 280 },
+  { run_id = "chriz-sod-remix-bg2", component = 285 },
   { run_id = "chriz-sod-remix-bg2", component = 290 },
   { run_id = "chriz-sod-remix-bg2", component = 900 },
   { run_id = "chriz-sod-remix-bg2", component = 910 },
@@ -4792,16 +4809,16 @@ components = [{ run_id = "chriz-bg-modpack-bg2", component = 410 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-430"
-title = "Give Use Any Item scrolls a fair caster level"
-description = "Correct non-caster scroll scaling after Tweaks Anthology's character-level scroll component."
-category = "fixes"
+title = "Scrolls cast at the reader's own caster level"
+description = "Arcane and divine scrolls use the reader's caster level of that type; other readers, such as Use Any Item users, use half their highest class level, minimum 1. Requires EEex."
+category = "rules"
 source_label = "Collection fixes and NPC defaults"
 group_label = "chriz-bg-modpack: Spell fixes"
-decision = "mandatory"
+decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-modpack"
-components = [{ run_id = "chriz-bg-modpack-bg2", component = 430 }]
-requires = ["feature:cdtweaks:component-2170"]
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-scrolls-bg2", component = 430 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-440"
@@ -4872,6 +4889,18 @@ parent = "mod:chriz-bg-modpack"
 requires = ["feature:eeex:mandatory-components", "mod:eet-end"]
 conflicts = [{ feature_id = "feature:randomiser:component-570", reason = "Turn off Randomiser's cursed-item appearance before enabling this helper. Ordinary loot randomization can stay enabled." }]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 630 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-660"
+title = "Degrodel: refuse to hand over the Helm of Balduran and fight him"
+description = "Adds a choice when Degrodel asks for the helm. Handing it over keeps the normal reward and ending. Refusing makes Degrodel and his servants attack; you keep the helm and the quest ends with a journal note. No extra difficulty is added."
+category = "quests"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 660 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-640"
@@ -5067,9 +5096,61 @@ requires = ["feature:eeex:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 620 }]
 
 [[features]]
+id = "feature:chriz-bg-modpack:component-237"
+title = "Raise Fade's XP when she first joins in Shadows of Amn"
+description = "On her first SoA recruitment, raise Fade to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000. Never lowers XP and pays only once."
+category = "npcs"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:fade:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 237 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-238"
+title = "Raise Evandra's XP when she first joins in Shadows of Amn"
+description = "On her first SoA recruitment, raise Evandra to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000. Never lowers XP and pays only once."
+category = "npcs"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:evandra:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 238 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-650"
+title = "Campaign XP caps with banked XP (experimental)"
+description = "BG1 stops usable XP at 161,000 and SoD at 500,000; XP earned above the cap is banked and becomes usable when a later campaign allows it. Banked XP shows on the character record. Not yet tested in a full playthrough; don't remove it from a run that has banked XP."
+category = "rules"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 650 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-651"
+title = "Also cap Shadows of Amn at 2,950,000 XP (experimental)"
+description = "With campaign XP caps on, also limit usable XP in Shadows of Amn; the rest stays banked until Throne of Bhaal."
+category = "rules"
+source_label = "Collection fixes and NPC defaults"
+group_label = "chriz-bg-modpack: Gameplay tweaks"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:chriz-bg-modpack:component-650"]
+components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 651 }]
+
+[[features]]
 id = "feature:chriz-sod-remix:component-257"
 title = "Extra Challenge: Insane bridge sequencers"
-description = "Add the implemented harder sequencer behaviour to the revised SoD bridge encounter on Insane. Optional and unchecked; the normal revised bridge is already included. This is not the full planned Challenge Mode."
+description = "Add the implemented harder sequencer behaviour to the revised SoD bridge encounter on Insane. Optional and unchecked; the normal revised bridge is already included."
 category = "difficulty"
 source_label = "Include CHRIZ-SOD-REMIX"
 group_label = "Chapter pass - the road north"

@@ -18,7 +18,8 @@ fn recipe() -> Manifest {
 fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     let manifest = recipe();
     let result = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
-    assert_eq!(result.plan.runs.len(), 52);
+    // The October 13 intake moves Modpack scroll policy 430 into its own final run.
+    assert_eq!(result.plan.runs.len(), 53);
     assert_eq!(
         result
             .plan
@@ -29,11 +30,16 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // Next-release policy removes Emotion 301 from October 7's defaults;
         // October 13 default bard ceilings add 420/421 and Bardic 3010;
         // EET's desktop shortcut (EET 100) becomes an unchecked option.
-        463
+        // The October 13 intake adds Modpack 237/238/660 and SoD 177/198/285.
+        469
     );
-    let tail = result.plan.runs.last().unwrap();
-    assert_eq!(tail.mod_id, "buffbot");
-    assert_eq!(tail.components, vec![1, 0]);
+    // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
+    let (tail, rest) = result.plan.runs.split_last().unwrap();
+    assert_eq!(tail.run_id, "chriz-bg-modpack-scrolls-bg2");
+    assert_eq!(tail.components, vec![430]);
+    let buffbot = rest.last().unwrap();
+    assert_eq!(buffbot.mod_id, "buffbot");
+    assert_eq!(buffbot.components, vec![1, 0]);
     assert!(result
         .view
         .controls
@@ -323,11 +329,19 @@ fn armor_qol_is_optional_and_keeps_the_original_install_when_disabled() {
     selection.set_feature("feature:klatu:component-2150", false);
     let changed = evaluate(&manifest, &selection).unwrap();
     let mut expected = baseline.plan.runs;
-    let klatu = expected.remove(expected.len() - 2);
+    // Klatu runs right before BuffBot; only the Modpack scroll policy follows BuffBot.
+    let klatu = expected.remove(expected.len() - 3);
     assert_eq!(klatu.run_id, "klatu-armor-thieving-bg2");
     assert_eq!(klatu.components, vec![2150]);
     assert_eq!(changed.plan.runs, expected);
-    assert_eq!(changed.plan.runs.last().unwrap().mod_id, "buffbot");
+    assert_eq!(
+        changed.plan.runs[changed.plan.runs.len() - 2].mod_id,
+        "buffbot"
+    );
+    assert_eq!(
+        changed.plan.runs.last().unwrap().run_id,
+        "chriz-bg-modpack-scrolls-bg2"
+    );
 
     let findings = bg_engine::release_validate::validate_public_alpha(&manifest).unwrap();
     assert!(findings.is_empty(), "{findings:#?}");

@@ -218,7 +218,7 @@ fn recommended_preset_explicitly_keeps_every_default_core_control_desired() {
 }
 
 #[test]
-fn eet_end_is_the_core_tail_anchor_and_buffbot_is_absolute_last() {
+fn eet_end_is_the_core_tail_anchor_and_only_the_scroll_policy_follows_buffbot() {
     let manifest = recipe();
     let last_before_post_eet = manifest
         .collection
@@ -228,9 +228,14 @@ fn eet_end_is_the_core_tail_anchor_and_buffbot_is_absolute_last() {
         .expect("one run before post-EET tail");
     assert_eq!(last_before_post_eet.run_id, "eet-end-bg2");
     assert_eq!(last_before_post_eet.mod_id, "eet-end");
-    let last = manifest.collection.runs.last().expect("one run");
-    assert_eq!(last.run_id, "buffbot-bg2");
-    assert_eq!(last.mod_id, "buffbot");
+    // Modpack scroll policy 430 hashes the final scrolls and the spells they cast,
+    // so its own run follows BuffBot and every other spell/item writer (October 13).
+    let (last, rest) = manifest.collection.runs.split_last().expect("one run");
+    assert_eq!(last.run_id, "chriz-bg-modpack-scrolls-bg2");
+    assert_eq!(last.components, [430]);
+    let buffbot = rest.last().expect("BuffBot before the scroll policy");
+    assert_eq!(buffbot.run_id, "buffbot-bg2");
+    assert_eq!(buffbot.mod_id, "buffbot");
 }
 
 #[test]

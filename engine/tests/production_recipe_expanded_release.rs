@@ -77,7 +77,13 @@ fn authors_the_six_runs_exactly() {
         ),
         (CONTINUITY, "chriz-bg-modpack", Phase::Main, &[199]),
         (SAFANA, "safana", Phase::PostEetEnd, &[0]),
-        (LATE, "chriz-bg-modpack", Phase::PostEetEnd, &[189, 620]),
+        // October 13 adds Fade/Evandra recruitment XP 237/238 in TP2 order.
+        (
+            LATE,
+            "chriz-bg-modpack",
+            Phase::PostEetEnd,
+            &[189, 237, 238, 620],
+        ),
         (LIGHTNING, "spell-rev", Phase::PostEetEnd, &[80, 81]),
     ];
     for (run_id, mod_id, phase, components) in expected {
@@ -103,7 +109,8 @@ fn recommended_preset_resolves_the_reviewed_components() {
     );
     assert_eq!(plan.components_for(CONTINUITY), Some(&[199][..]));
     assert_eq!(plan.components_for(SAFANA), Some(&[0][..]));
-    assert_eq!(plan.components_for(LATE), Some(&[189, 620][..]));
+    // Evandra's 238 needs her core, which only the generated full recipe supplies.
+    assert_eq!(plan.components_for(LATE), Some(&[189, 237, 620][..]));
     assert_eq!(plan.components_for(LIGHTNING), Some(&[80][..]));
 }
 
@@ -185,9 +192,11 @@ fn install_order_keeps_the_reviewed_anchors() {
     assert!(at(LATE) < at("spell-rev-npc-spellbooks-bg2"));
     assert!(at("spell-rev-npc-spellbooks-bg2") < at(LIGHTNING));
     assert!(at(LIGHTNING) < at("buffbot-bg2"));
+    // Only the Modpack scroll policy 430 follows BuffBot (October 13 intake).
+    assert_eq!(at("buffbot-bg2") + 1, at("chriz-bg-modpack-scrolls-bg2"));
     assert_eq!(
         manifest.collection.runs.last().unwrap().run_id,
-        "buffbot-bg2"
+        "chriz-bg-modpack-scrolls-bg2"
     );
 }
 

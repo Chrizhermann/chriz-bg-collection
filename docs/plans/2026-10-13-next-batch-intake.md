@@ -135,9 +135,36 @@ refuse the helm and fight him with his servants).
   `[[feature_groups]]` (`f7e1c6f`). Older apps reject unknown recipe fields, so
   the release that ships this recipe must set `minimum_app_version` to the app
   version containing `f7e1c6f`.
-- **Wording:** SoD Remix 257's description still says "This is not the full
-  planned Challenge Mode." Now that 257 is a Challenge Mode member, reword it
-  at the next recipe regeneration.
+- **Wording:** done in the recipe intake below; SoD Remix 257 no longer says
+  "This is not the full planned Challenge Mode."
 - **Degrodel 660** (Modpack `claude/degrodel-fight` @ `b19db7c`, unreleased)
   is not in the alpha.11 candidate. Fold it into alpha.11 or ship it later;
   its extra fight layer is still Christopher's choice.
+
+## Recipe intake on this branch (October 13)
+
+The Modpack and SoD Remix rows above are wired into both recipe profiles
+(`manifest/` and the generated `recipes/curated-full-current/`), superseding
+the open questions in *Decisions* as follows. Artifact pins, limits and the
+alpha.19 release records are unchanged; publication moves the pins.
+
+- Modpack: `chriz-bg-modpack-bg2` is `[130, 400, 410, 440, 450, 610, 611, 630, 660]`;
+  late companions `[189, 237, 238, 620]`; new run `chriz-bg-modpack-campaign-xp-bg2`
+  `[650, 651]` right after it; new final run `chriz-bg-modpack-scrolls-bg2` `[430]`
+  after BuffBot. 430 is a default needing EEex (2170 dropped); 237, 238 and
+  Degrodel 660 are defaults; 650/651 are optional, experimental and unchecked.
+  In the narrower fallback profile 238 is optional and blocked (no Evandra core);
+  the generator makes it a default requiring Evandra's core in the curated recipe.
+- SoD Remix: 177, 198 and 285 are mandatory bundle rows in TP2 order; 176, 291
+  and 901 stay out.
+- Release gate: the scrolls run has a tail approval; its static evidence is a
+  separate follow-up commit that names the intake commit. The October 7 intake
+  evidence (alpha.10 native order) cannot cover the new Modpack components until
+  alpha.11 (with 660) is published and pinned, so
+  `test_published_intake_matches_current_pins_and_native_order` stays red until then.
+  This work therefore lives on `claude/next-release-intake-20261013`; do not merge it
+  before Modpack v0.2.0-alpha.11 is published, freshly verified and pinned. SoD Remix
+  has the same gap: the pinned v0.6.12 archive lacks 177, 198 and 285.
+- Order was checked against the alpha11-integration and v0.6.13 TP2 files and the
+  local candidate archives (`modpack-integrated` contains 660); re-run
+  `tools/check_native_component_order.py` against the published archives.

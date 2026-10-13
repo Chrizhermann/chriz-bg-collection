@@ -52,8 +52,11 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(actual["bardicwonders-progression-bg2"], [3010])
         # October 13: EET's desktop shortcut (EET 100) is no longer selected by default.
         self.assertNotIn(100, actual["eet-initialize-bg2"])
-        self.assertEqual(self.result["componentCount"], 463)
-        self.assertEqual(len(actual), 52)
+        # The October 13 intake adds Modpack 237/238/660 and SoD 177/198/285 and
+        # moves scroll policy 430 into its own final run.
+        self.assertEqual(actual["chriz-bg-modpack-scrolls-bg2"], [430])
+        self.assertEqual(self.result["componentCount"], 469)
+        self.assertEqual(len(actual), 53)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

@@ -12,6 +12,7 @@ approved_tail_runs = [
   "spell-rev-npc-spellbooks-bg2",
   "chriz-bg-modpack-baeloth-bg2",
   "buffbot-bg2",
+  "chriz-bg-modpack-scrolls-bg2",
 ]
 
 [[omissions]]
@@ -62,13 +63,6 @@ approved_by = "Christopher"
 approved_on = "2026-09-04"
 reason = "The Branwen Spiritual Hammer repair is not enabled in the frozen alpha recipe."
 user_facing_limitation = "Branwen's Spell Revisions Spiritual Hammer repair is unavailable in this alpha."
-
-[[omissions]]
-feature_id = "feature:chriz-bg-modpack:component-430"
-approved_by = "Christopher"
-approved_on = "2026-09-04"
-reason = "The repair requires Tweaks Anthology component 2170, which is not available in the alpha recipe."
-user_facing_limitation = "Use Any Item scroll caster-level repair is unavailable because its required Tweaks component is not installed."
 
 [[omissions]]
 feature_id = "feature:chriz-bg-modpack:component-640"

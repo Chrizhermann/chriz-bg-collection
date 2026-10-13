@@ -126,7 +126,8 @@ class CombinedPlaytestRecipeTests(unittest.TestCase):
             self.assertLess(order["spell-rev-lightning-bg2"], order["klatu-armor-thieving-bg2"])
             self.assertLess(order["spell-rev-lightning-bg2"], order["buffbot-bg2"])
             self.assertEqual(by_run["chriz-bg-modpack-continuity-bg2"]["components"], [199])
-            self.assertEqual(by_run["chriz-bg-modpack-late-companions-bg2"]["components"], [189, 620])
+            # October 13 adds Fade and Evandra recruitment XP 237/238 in TP2 order.
+            self.assertEqual(by_run["chriz-bg-modpack-late-companions-bg2"]["components"], [189, 237, 238, 620])
             self.assertLess(order["chriz-bg-modpack-pre-continuity-bg2"], order["chriz-bg-modpack-continuity-bg2"])
             self.assertEqual(order["chriz-bg-modpack-continuity-bg2"] + 1, order["eet-end-bg2"])
             self.assertGreater(order["chriz-bg-modpack-late-companions-bg2"], order["eet-end-bg2"])

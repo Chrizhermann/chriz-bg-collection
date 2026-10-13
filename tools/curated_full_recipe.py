@@ -57,7 +57,11 @@ NATIVE_RUN_ORDERS = {
     ],
     "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 8204],
     "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225],
-    "chriz-bg-modpack-bg2": [130, 400, 410, 430, 440, 450, 610, 611, 630],
+    # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
+    # Degrodel 660 is declared after 640 and before the campaign XP pair 650/651.
+    "chriz-bg-modpack-bg2": [130, 400, 410, 440, 450, 610, 611, 630, 660],
+    "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 620],
+    "chriz-bg-modpack-campaign-xp-bg2": [650, 651],
     # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
     # Verify new source pins with tools/check_native_component_order.py.
     "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320],
@@ -665,7 +669,6 @@ def _update_release_records(destination: Path, commit: str) -> None:
     for feature_id in [
         "mod:evandra",
         "feature:artisanskitpack-npc:component-99001",
-        "feature:chriz-bg-modpack:component-430",
         "feature:chriz-bg-modpack:component-224",
         "feature:chriz-bg-modpack:component-225",
     ]:
@@ -1065,12 +1068,6 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
         {"readiness": '"ready"', "unavailable_reason": None},
         ['requires = ["feature:branwen:component-0", "mod:spell-rev"]'],
     )
-    base_collection = _replace_feature(
-        base_collection,
-        "feature:chriz-bg-modpack:component-430",
-        {"readiness": '"ready"', "unavailable_reason": None},
-        ['requires = ["feature:cdtweaks:component-2170"]'],
-    )
     base_collection = base_collection.rstrip() + "\n\n" + _feature_blocks(root, base)
     for component in (224, 225):
         base_collection = _replace_feature(
@@ -1079,6 +1076,15 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
             {"readiness": '"ready"', "unavailable_reason": None,
              "requires": '["feature:evandra:mandatory-components"]'},
         )
+    # Evandra's recruitment XP 238 is a default whenever Evandra is selected
+    # (Christopher, 2026-10-13). Only this generated recipe supplies her verified
+    # core; the narrower fallback keeps it optional and blocked, so it needs no omission.
+    base_collection = _replace_feature(
+        base_collection,
+        "feature:chriz-bg-modpack:component-238",
+        {"decision": '"default"', "readiness": '"ready"', "unavailable_reason": None,
+         "requires": '["feature:evandra:mandatory-components"]'},
+    )
     base_collection = _align_legacy_bg1npc_choices(base_collection)
     _write_mods(root, destination)
     from tools.evandra_defaults import integrate_evandra_defaults

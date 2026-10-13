@@ -9,7 +9,7 @@ use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223,
-    224, 225, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640, 235, 236,
+    224, 225, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640, 235, 236, 237, 238, 660, 650, 651,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -21,13 +21,15 @@ const PRE_CONTINUITY_COMPONENTS: &[u32] = &[
 
 const CONTINUITY_COMPONENTS: &[u32] = &[199];
 
-const POST_EET_END_COMPONENTS: &[u32] = &[130, 400, 410, 430, 440, 450, 610, 611, 630];
+/// The October 13 intake (Modpack alpha.11 candidate) moves scroll policy 430 into
+/// its own final run and adds Degrodel 660 after 630 in TP2 order.
+const POST_EET_END_COMPONENTS: &[u32] = &[130, 400, 410, 440, 450, 610, 611, 630, 660];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
     110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221,
 ];
 
-const RECOMMENDED_COMPONENTS: &[u32] = &[130, 410, 440, 450, 611];
+const RECOMMENDED_COMPONENTS: &[u32] = &[130, 410, 440, 450, 611, 660];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -89,21 +91,26 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     let modpack = position("chriz-bg-modpack-bg2");
     let safana = position("safana-bg2");
     let late_companions = position("chriz-bg-modpack-late-companions-bg2");
+    let campaign_xp = position("chriz-bg-modpack-campaign-xp-bg2");
     let spellbooks = position("spell-rev-npc-spellbooks-bg2");
     let lightning = position("spell-rev-lightning-bg2");
     let baeloth = position("chriz-bg-modpack-baeloth-bg2");
     let edwin = position("chriz-bg-modpack-edwin-bg2");
     let buffbot = position("buffbot-bg2");
+    let scrolls = position("chriz-bg-modpack-scrolls-bg2");
     assert_eq!(remote + 1, modpack);
     assert_eq!(modpack + 1, safana);
     assert_eq!(safana + 1, late_companions);
-    assert_eq!(late_companions + 1, spellbooks);
+    assert_eq!(late_companions + 1, campaign_xp);
+    assert_eq!(campaign_xp + 1, spellbooks);
     assert_eq!(spellbooks + 1, lightning);
     assert_eq!(lightning + 1, baeloth);
     assert_eq!(baeloth + 1, buffbot);
+    // 430 hashes the final scrolls and spells at install time, so it runs last.
+    assert_eq!(buffbot + 1, scrolls);
     assert_eq!(position("artisanskitpack-npc-bg2") + 1, edwin);
     assert!(edwin < spellbooks);
-    assert_eq!(buffbot, runs.len() - 1);
+    assert_eq!(scrolls, runs.len() - 1);
 
     let run = &runs[modpack];
     assert_eq!(run.phase, Phase::PostEetEnd);
@@ -117,7 +124,11 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(continuity.components, CONTINUITY_COMPONENTS);
     let late = &runs[late_companions];
     assert_eq!(late.phase, Phase::PostEetEnd);
-    assert_eq!(late.components, [189, 620]);
+    assert_eq!(late.components, [189, 237, 238, 620]);
+    assert_eq!(runs[campaign_xp].phase, Phase::PostEetEnd);
+    assert_eq!(runs[campaign_xp].components, [650, 651]);
+    assert_eq!(runs[scrolls].phase, Phase::PostEetEnd);
+    assert_eq!(runs[scrolls].components, [430]);
     assert_eq!(runs[edwin].phase, Phase::Main);
     assert_eq!(runs[edwin].components, [236]);
     assert_eq!(runs[baeloth].phase, Phase::PostEetEnd);
@@ -165,7 +176,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     assert_eq!(parent.readiness, Readiness::Ready);
     assert!(parent.selected);
 
-    for component in [400, 430] {
+    // Evandra's recruitment XP 238 needs her core, which only the generated full
+    // recipe supplies; this narrower fallback keeps it optional and blocked.
+    for component in [400, 238] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -177,8 +190,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.unavailable_reason.is_some(), "{id}");
     }
 
+    // October 13: reader-level scrolls 430 (EEex, no longer TA 2170), Fade's
+    // recruitment XP 237 and Degrodel 660 are deselectable defaults.
     for component in [
-        110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 236, 611,
+        110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 236, 237, 430, 611, 660,
     ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
@@ -212,6 +227,30 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(!control.selected, "{id}");
     }
 
+    // Campaign XP caps 650/651 ship experimental, optional and unchecked.
+    for component in [650, 651] {
+        let id = format!("feature:chriz-bg-modpack:component-{component}");
+        let control = evaluation
+            .view
+            .control(&id)
+            .unwrap_or_else(|| panic!("missing control {id}"));
+        assert_eq!(control.decision, Decision::Optional, "{id}");
+        assert_eq!(control.readiness, Readiness::Experimental, "{id}");
+        assert!(!control.selected, "{id}");
+    }
+    assert_eq!(
+        evaluation
+            .plan
+            .components_for("chriz-bg-modpack-scrolls-bg2"),
+        Some(&[430][..])
+    );
+    assert_eq!(
+        evaluation
+            .plan
+            .components_for("chriz-bg-modpack-campaign-xp-bg2"),
+        None
+    );
+
     let utility_xp = manifest
         .collection
         .features
@@ -231,7 +270,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // Next-release Emotion 301 opt-in policy removes one default from each plan.
     // October 13 default bard ceilings add Rebalance 420/421 (and Bardic 3010
     // in the curated plan only). EET's desktop shortcut (100) leaves both plans.
-    // This 368-component base plan is distinct from the 463-component curated plan.
+    // The October 13 intake adds Modpack 237/430/660 and SoD 177/198/285 here
+    // (Evandra's 238 only in the curated plan).
+    // This 374-component base plan is distinct from the 469-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -239,7 +280,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        368
+        374
     );
 }
 

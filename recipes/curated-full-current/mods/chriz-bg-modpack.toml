@@ -100,7 +100,7 @@ name = "Yeslick and Keldorn Dispel Magic: hostile-only, correctly scaled dispels
 
 [[components]]
 id = 430
-name = "Use Any Item: fair fixed caster level for non-caster scroll use"
+name = "Scrolls: use the reader's active caster level, or half their active class level"
 
 [[components]]
 id = 440
@@ -137,3 +137,23 @@ name = "Baeloth: legal Sorcerer spells known"
 [[components]]
 id = 236
 name = "Edwin Red Wizard: removable amulet and corrected spell slots"
+
+[[components]]
+id = 237
+name = "Fade: first-recruitment SoA XP catch-up (new recruitment actors)"
+
+[[components]]
+id = 238
+name = "Evandra: first-recruitment SoA XP catch-up (new recruitment actors)"
+
+[[components]]
+id = 660
+name = "Degrodel: hand over the Helm of Balduran or keep it and fight him"
+
+[[components]]
+id = 650
+name = "Campaign XP caps - keep excess XP for later (BG1/SoD; experimental)"
+
+[[components]]
+id = 651
+name = "Campaign XP caps - also cap SoA until ToB (requires 650; experimental)"
