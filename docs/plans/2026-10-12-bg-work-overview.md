@@ -68,9 +68,13 @@ Christopher's answers:
   configurable SR, the script engine and Item Randomiser Mode 2.
 - **Approved and started (Claude):** Bardic Wonders issues 2–5; Modpack
   companion stat choices 230–234 (stranded alpha.6 work); packaging the Item
-  Randomiser Mode 1 runtime for CEBG; the Modpack release-builder fix as
-  [Modpack PR 10](https://github.com/Chrizhermann/chriz-bg-modpack/pull/10), whose CI also runs the
-  `capstone`/`pefile` tests.
+  Randomiser Mode 1 runtime for CEBG; the Modpack release-builder fix.
+- **Merged to Modpack `main`, unreleased:** the release-builder fix
+  ([PR 10](https://github.com/Chrizhermann/chriz-bg-modpack/pull/10), `58eb765`; its CI also ran
+  the `capstone`/`pefile` tests) and the optional companion stat components
+  230–234 ([PR 11](https://github.com/Chrizhermann/chriz-bg-modpack/pull/11), `eb578ff`: Rasaad,
+  Dorn, Eldoth, Garrick, Quayle). CEBG does not select 230–234; that is
+  Christopher's curation call.
 - **Potion uniqueness and Heroism family:** not done. The October 9 lab
   prototype covers six potion families in tests only, has never run in a game and
   is not installable; Heroism's spell side is missing.
@@ -139,13 +143,11 @@ updater key was found on this PC; the setup was signed with it by path (no key
 created, copied or rotated), packaged, Defender-scanned and published. Exact
 record: [alpha.20 package verification](../package-acceptance-alpha20-2026-10-13.md).
 
-Modpack release builder (local branch `claude/release-build-committed-bytes`,
-unpushed): the alpha.11 ZIP built on this PC differed from CI's build only in one
-manifest's line endings. Release builds now package only committed bytes. A local
-build now matches CI's `1f78a001…` exactly. Local CI-equivalent checks pass,
-except 14 scroll-runtime test modules that need `capstone`/`pefile`, which are not
-installed on this PC. It ships with the next Modpack release PR, whose CI runs
-those modules.
+Modpack release builder: the alpha.11 ZIP built on this PC differed from CI's
+build only in one manifest's line endings. Release builds now package only
+committed bytes, and a local build matches CI's `1f78a001…` exactly. Merged on
+October 14 as PR 10 (`58eb765`); CI ran the full set, including the
+`capstone`/`pefile` modules that this PC lacks.
 
 Still waiting for Christopher (as of October 14): whether to clean the remaining
 home-folder paths above, and whether to finish potion uniqueness.
