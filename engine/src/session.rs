@@ -385,6 +385,16 @@ impl SessionStore {
         self.replay_unlocked_with(ReplayPurpose::Ownership)
     }
 
+    /// [`Self::replay`] for showing or checking a campaign without using its downloads, for
+    /// example whether it can be resumed. A shared cache that no longer exists at its recorded
+    /// path, for example after it was deleted by hand or by the uninstaller, is tolerated:
+    /// resuming creates it again and downloads what is missing. Anything else at that path,
+    /// such as a file or a link, must still be a usable folder.
+    pub fn replay_for_inspection(&self) -> Result<SessionReplay> {
+        let _guard = self.acquire_lock()?;
+        self.replay_unlocked_with(ReplayPurpose::Inspection)
+    }
+
     fn paths(managed_root: PathBuf) -> Self {
         let state_root = managed_root.join(STATE_DIRECTORY);
         Self {
@@ -593,6 +603,9 @@ enum ReplayPurpose {
     /// Creating, resuming and checking a campaign, which use its recorded folders: the shared
     /// cache must still be a usable folder.
     Use,
+    /// Showing or checking a campaign without using its downloads: a shared cache that no
+    /// longer exists at its recorded path is tolerated, because resuming recreates it.
+    Inspection,
     /// Proving which installation owns this folder, which does not use the shared cache: it may
     /// have been deleted or replaced, or be on a drive that is not connected, and its recorded
     /// path is kept as recorded. Records made for a folder that no longer exists belong to a
@@ -633,6 +646,13 @@ fn normalize_created(
         Ok(cache_root) => cache_root,
         // Creation records a canonical absolute path; only that shape is kept unresolved.
         Err(_) if purpose == ReplayPurpose::Ownership && created.cache_root.is_absolute() => {
+            created.cache_root
+        }
+        Err(EngineError::Io { source, .. })
+            if purpose == ReplayPurpose::Inspection
+                && source.kind() == std::io::ErrorKind::NotFound
+                && created.cache_root.is_absolute() =>
+        {
             created.cache_root
         }
         Err(error) => return Err(error),

@@ -1325,6 +1325,71 @@ fn restart_lists_and_resumes_only_a_verified_indexed_campaign() {
     assert_eq!(unknown.unwrap_err().code, "managed_install_unknown");
 }
 
+/// The download cache was deleted by hand or by the uninstaller. Interrupted and paused builds
+/// keep their status and stay resumable, because resuming recreates the cache.
+#[test]
+fn a_deleted_download_cache_keeps_interrupted_and_paused_builds_resumable() {
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    publish_started_campaign(
+        &app_data,
+        &root.join("interrupted"),
+        &cache,
+        "install-interrupted",
+    );
+    let paused =
+        publish_started_campaign(&app_data, &root.join("paused"), &cache, "install-paused");
+    paused
+        .append(SessionEvent::StepStarted {
+            step_id: "checkpoint:manual-bg1-after-fixture".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    fs::rename(&cache, root.join("deleted-cache")).unwrap();
+    let engine = Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2")));
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        &cache,
+        app_data,
+        engine.clone(),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let cards = bridge.list_managed_installations().unwrap();
+
+    assert_eq!(cards.len(), 2);
+    assert!(cards.iter().all(|card| card.resumable), "{cards:?}");
+    let status = |id: &str| {
+        cards
+            .iter()
+            .find(|card| card.id == id)
+            .unwrap()
+            .status
+            .clone()
+    };
+    assert_eq!(
+        status("install-interrupted"),
+        "Build interrupted — ready to resume"
+    );
+    assert_eq!(status("install-paused"), "Paused for your mods");
+    let (resume_tx, resume_rx) = mpsc::channel();
+    bridge
+        .resume_build("install-interrupted", move |event| {
+            let _ = resume_tx.send(event);
+        })
+        .expect("queue resume");
+    assert!(matches!(
+        resume_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("resumed campaign event")
+            .event,
+        EngineEvent::CampaignStarted { resumed: true, .. }
+    ));
+}
+
 #[test]
 fn restart_keeps_stale_and_fresh_copy_campaigns_visible_but_not_resumable() {
     let (_temp, recipe) = recipe_with_profiles();

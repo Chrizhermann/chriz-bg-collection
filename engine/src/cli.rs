@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -889,6 +889,7 @@ fn resume_campaign_internal<S: EventSink + Sync>(
             ),
         )
     })?;
+    recreate_deleted_cache_root(&store)?;
     let replay = store.replay().map_err(|error| {
         CliError::new(
             "resume_unavailable",
@@ -919,12 +920,44 @@ fn resume_campaign_internal<S: EventSink + Sync>(
     execute_frozen_campaign(created, frozen, sink, controls)
 }
 
+/// Creates the campaign's download cache again at its recorded path when that folder no longer
+/// exists, for example after it was deleted by hand or by the uninstaller, so that resuming
+/// downloads again whatever is missing. Anything else at that path is left for the usual
+/// campaign checks to report, and nothing is ever removed.
+fn recreate_deleted_cache_root(store: &SessionStore) -> Result<(), CliError> {
+    // A campaign that cannot be read is reported by the full replay that follows.
+    let Ok(replay) = store.replay_for_inspection() else {
+        return Ok(());
+    };
+    let cache_root = &replay.created().cache_root;
+    match fs::symlink_metadata(cache_root) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        _ => return Ok(()),
+    }
+    if cache_root
+        .components()
+        .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
+    {
+        return Ok(());
+    }
+    fs::create_dir_all(cache_root).map_err(|error| {
+        CliError::new(
+            "resume_unavailable",
+            format!(
+                "could not create the download cache {} again: {error}",
+                cache_root.display()
+            ),
+        )
+    })
+}
+
 fn open_manual_campaign(
     managed_root: &Path,
     expected_install_id: &str,
 ) -> Result<(SessionReplay, FrozenCliRecipe), CliError> {
+    // A paused campaign can be checked without its downloads; resuming recreates the cache.
     let replay = SessionStore::open(managed_root)
-        .and_then(|store| store.replay())
+        .and_then(|store| store.replay_for_inspection())
         .map_err(|error| CliError::new("manual_checkpoint_unavailable", error.to_string()))?;
     if replay.created().install_id != expected_install_id || replay.fresh_copy_required().is_some()
     {

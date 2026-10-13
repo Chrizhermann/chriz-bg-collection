@@ -343,7 +343,7 @@ fn check_unused(
 fn legacy_campaign_name(root: &Path) -> String {
     // The frozen display name is read only. No ledger/receipt migration is needed.
     let frozen_name = SessionStore::open(root)
-        .and_then(|store| store.replay())
+        .and_then(|store| store.replay_for_inspection())
         .ok()
         .and_then(|replay| {
             serde_json::from_slice::<serde_json::Value>(&replay.created().recipe_payload).ok()

@@ -321,6 +321,47 @@ fn moved_or_corrupt_started_campaigns_remain_visible_but_stale() {
     );
 }
 
+/// A download cache deleted by hand or by the uninstaller does not make an interrupted build
+/// look moved or changed: resuming creates it again.
+#[test]
+fn a_deleted_download_cache_keeps_a_started_campaign_resumable() {
+    let temp = TempDir::new().unwrap();
+    let registry = ManagedInstallRegistry::open_or_create(&temp.path().join("app-data")).unwrap();
+    let (created, _store) = create_started_campaign(temp.path(), "install-no-cache");
+    registry.publish_campaign(&created).unwrap();
+    std::fs::rename(&created.cache_root, temp.path().join("deleted-cache")).unwrap();
+
+    let listed = registry.list_campaigns().unwrap();
+
+    assert_eq!(listed[0].availability, CampaignAvailability::Resumable);
+    assert_eq!(
+        inspect_campaign_availability(&listed[0].record).unwrap(),
+        None
+    );
+    assert!(!created.cache_root.exists());
+}
+
+/// Only a cache folder that no longer exists is tolerated. Anything else in its place cannot
+/// be used or recreated, so the campaign still cannot be resumed.
+#[test]
+fn a_download_cache_replaced_by_a_file_still_blocks_resuming() {
+    let temp = TempDir::new().unwrap();
+    let registry = ManagedInstallRegistry::open_or_create(&temp.path().join("app-data")).unwrap();
+    let (created, _store) = create_started_campaign(temp.path(), "install-file-cache");
+    registry.publish_campaign(&created).unwrap();
+    std::fs::rename(&created.cache_root, temp.path().join("moved-cache")).unwrap();
+    std::fs::write(&created.cache_root, b"not a folder").unwrap();
+
+    assert_eq!(
+        registry.list_campaigns().unwrap()[0].availability,
+        CampaignAvailability::Stale
+    );
+    let reason = inspect_campaign_availability(&registry.list_campaigns().unwrap()[0].record)
+        .unwrap_err()
+        .to_string();
+    assert!(reason.contains("cache root"), "{reason}");
+}
+
 #[test]
 fn a_fresh_copy_seal_is_visible_but_never_resumable() {
     let temp = TempDir::new().unwrap();

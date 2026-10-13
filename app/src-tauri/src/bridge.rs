@@ -3240,7 +3240,7 @@ fn project_managed_campaign(
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let path = display_windows_path(&card.record.managed_root)?;
     let manual_pause = bg_engine::session::SessionStore::open(&card.record.managed_root)
-        .and_then(|store| store.replay())
+        .and_then(|store| store.replay_for_inspection())
         .ok()
         .is_some_and(|replay| {
             replay

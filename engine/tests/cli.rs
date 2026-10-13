@@ -21,7 +21,7 @@ use bg_engine::lock::TargetLock;
 use bg_engine::receipt::{
     ArtifactCacheOutcome, ArtifactReceipt, InstallReceipt, ReceiptOutcome, RECEIPT_SCHEMA_VERSION,
 };
-use bg_engine::registry::ManagedInstallRegistry;
+use bg_engine::registry::{CampaignAvailability, ManagedInstallRegistry};
 use bg_engine::session::SessionStore;
 use bg_engine::weidu::runner::RunnerControlHandle;
 use serde_json::Value;
@@ -2109,6 +2109,96 @@ fn resume_retains_first_acquisition_after_a_lost_cache_is_redownloaded_via_a_new
         records[0].file_stem().and_then(|stem| stem.to_str()),
         Some(sha256_bytes(&serde_json::to_vec(&later).unwrap()).as_str())
     );
+}
+
+/// The whole download cache was deleted between attempts, by hand or by the uninstaller.
+/// The interrupted build stays resumable, and resuming creates the cache again at its recorded
+/// path instead of stopping before the build continues.
+#[cfg(windows)]
+#[test]
+fn resume_recreates_a_deleted_download_cache() {
+    let fixture = executable_fixture();
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    let failed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("execute first synthetic attempt");
+    assert_eq!(failed.status.code(), Some(1), "{}", stderr(&failed));
+    fs::rename(&fixture.cache, fixture._temp.path().join("deleted-cache"))
+        .expect("move the download cache away");
+    let registry =
+        ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))
+            .expect("open campaign registry");
+    assert_eq!(
+        registry.list_campaigns().unwrap()[0].availability,
+        CampaignAvailability::Resumable
+    );
+
+    // The fixture's download addresses are unreachable, so stop the resumed step at its first
+    // check before it needs the tool archive: everything before it ran with the cache missing.
+    let stopped = executable_command(&fixture)
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            "invocation-build:install:eefixpack-bg1",
+        )
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume without a download cache");
+    assert_eq!(stopped.status.code(), Some(1), "{}", stdout(&stopped));
+    let stopped = json_stdout(&stopped);
+    assert_eq!(stopped["status"]["step_id"], "install:eefixpack-bg1");
+    assert!(stopped["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|event| event["type"] == "campaign_started" && event["resumed"] == true));
+    assert!(fixture.cache.is_dir());
+
+    // What a resume downloads again, fetched here from the fixture server.
+    let cache = ArtifactCache::open(&fixture.cache).expect("open recreated cache");
+    let (sink, _events) = ChannelSink::unbounded();
+    for (path, bytes) in [
+        ("/eefixpack.zip", &fixture.payload),
+        ("/weidu.zip", &fixture.tool_archive),
+    ] {
+        cache
+            .acquire(
+                &DownloadRequest {
+                    request_id: format!("refetch{}", path.replace(['/', '.'], "-")),
+                    url: format!("{}{path}", fixture._server.base_url),
+                    expected_length: bytes.len() as u64,
+                    expected_sha256: sha256_bytes(bytes),
+                    redirect_hosts: Vec::new(),
+                    max_attempts: 1,
+                },
+                &sink,
+            )
+            .expect("download fixture archive again");
+    }
+    let resumed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume synthetic campaign");
+
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+    assert!(fixture
+        .managed
+        .join(".chriz/install-receipt.json")
+        .is_file());
+    assert_eq!(registry.list().unwrap().len(), 1);
 }
 
 /// The published extraction of `bytes` beneath the fixture's extraction cache.

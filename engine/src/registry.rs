@@ -548,12 +548,13 @@ fn campaign_availability(record: &ManagedCampaignRecord) -> CampaignAvailability
 /// Returns `None` for a resumable campaign, its permanent seal for a campaign
 /// requiring a fresh copy, or the exact failed availability check for a stale
 /// campaign. The record's schema is validated separately when the registry reads it.
+/// A deleted download cache does not make a campaign stale: resuming recreates it.
 pub fn inspect_campaign_availability(
     record: &ManagedCampaignRecord,
 ) -> Result<Option<FreshCopySeal>, RegistryError> {
     validate_direct_directory(&record.managed_root)?;
     let replay = SessionStore::open(&record.managed_root)
-        .and_then(|store| store.replay())
+        .and_then(|store| store.replay_for_inspection())
         .map_err(|error| {
             RegistryError::InvalidRecord(format!(
                 "campaign ledger at {} is unavailable: {error}",
