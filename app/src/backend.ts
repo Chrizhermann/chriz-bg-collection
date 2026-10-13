@@ -978,7 +978,7 @@ export class FixtureBackend implements Backend {
     this.#removalTokens.set(token, install.id);
     return { installId, displayName: install.name, managedRoot: install.path,
       action: install.status.toLowerCase().includes("folder moved") || install.status.toLowerCase().includes("not found") ? "forget" : "delete",
-      preservedSavePath: "C:\\Users\\Chris\\Documents\\Chriz Easy BG", confirmationToken: token };
+      preservedSavePath: "C:\\Users\\Player\\Documents\\Chriz Easy BG", confirmationToken: token };
   }
 
   async removeInstallation(installId: string, confirmationToken: string): Promise<void> {
