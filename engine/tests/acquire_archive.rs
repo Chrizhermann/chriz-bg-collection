@@ -979,6 +979,273 @@ fn cache_hit_keeps_an_entry_whose_files_cannot_be_read() {
     );
 }
 
+/// A marker that cannot be read at the moment, here because another program locks it, is not
+/// proof of damage either, even though it could be opened.
+#[cfg(windows)]
+#[test]
+fn cache_hit_keeps_an_entry_whose_marker_cannot_be_read() {
+    use fs4::fs_std::FileExt;
+
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("locked-marker.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    let marker = File::open(extracted.root.join(".chriz-bg-extraction.json")).unwrap();
+    marker.lock_exclusive().unwrap();
+
+    let error = extract_archive_reporting_repair(&archive, &cache, &request).unwrap_err();
+
+    assert!(
+        matches!(
+            error,
+            AcquireError::Io {
+                action: "read extraction marker",
+                ..
+            }
+        ),
+        "{error:?}"
+    );
+    FileExt::unlock(&marker).unwrap();
+    drop(marker);
+    assert!(!cache.join("damaged").exists());
+    assert_eq!(
+        extract_archive_reporting_repair(&archive, &cache, &request).unwrap(),
+        (extracted, None)
+    );
+}
+
+/// Denies everyone the right to list a directory until dropped, as an access-control change
+/// or a security product might. The owner can always restore it.
+#[cfg(windows)]
+struct DenyListing<'a>(&'a Path);
+
+#[cfg(windows)]
+impl<'a> DenyListing<'a> {
+    fn new(directory: &'a Path) -> Self {
+        let output = std::process::Command::new("icacls")
+            .arg(directory)
+            .args(["/deny", "*S-1-1-0:(RD)"])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        Self(directory)
+    }
+}
+
+#[cfg(windows)]
+impl Drop for DenyListing<'_> {
+    fn drop(&mut self) {
+        let _ = std::process::Command::new("icacls")
+            .arg(self.0)
+            .args(["/remove:d", "*S-1-1-0"])
+            .output();
+    }
+}
+
+/// A directory that cannot be listed at the moment is not proof of damage: the entry is kept
+/// and the step fails until the directory can be read again.
+#[cfg(windows)]
+#[test]
+fn cache_hit_keeps_an_entry_whose_directories_cannot_be_listed() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("unlisted.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/lib/deep/data.txt", DATA, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    let library = extracted.root.join("mod/lib");
+
+    let denied = DenyListing::new(&library);
+    let error = extract_archive_reporting_repair(&archive, &cache, &request).unwrap_err();
+    drop(denied);
+
+    assert!(
+        matches!(
+            &error,
+            AcquireError::Io {
+                action: "list published extraction",
+                source,
+                ..
+            } if source.kind() == std::io::ErrorKind::PermissionDenied
+        ),
+        "{error:?}"
+    );
+    assert!(!cache.join("damaged").exists());
+    assert_eq!(std::fs::read(library.join("deep/data.txt")).unwrap(), DATA);
+    assert_eq!(
+        extract_archive_reporting_repair(&archive, &cache, &request).unwrap(),
+        (extracted, None)
+    );
+}
+
+/// A link inside a published extraction makes it damaged. Setting it aside removes the link
+/// itself and never what it points to, and the reason names it relative to the extraction.
+#[cfg(windows)]
+#[test]
+fn cache_hit_rebuilds_an_entry_with_a_directory_link_without_following_it() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("linked.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    let outside = temp.path().join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    std::fs::write(outside.join("keep.txt"), b"outside the cache").unwrap();
+    // A junction needs no privilege, unlike a symbolic link.
+    let output = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(extracted.root.join("mod").join("linked"))
+        .arg(&outside)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_rebuilt(
+        &archive,
+        &cache,
+        &request,
+        &extracted,
+        &["non-regular extracted path `mod/linked`"],
+    );
+    assert!(!extracted.root.join("mod/linked").exists());
+    assert_eq!(
+        std::fs::read(outside.join("keep.txt")).unwrap(),
+        b"outside the cache"
+    );
+}
+
+/// The lock that serializes validation, repair and publication of one extraction identity.
+fn extraction_lock(cache: &Path, extracted: &ExtractedArtifact) -> File {
+    std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(cache.join("locks").join(format!(
+            "{}.{}.lock",
+            extracted.artifact_sha256, extracted.extraction_contract_sha256
+        )))
+        .unwrap()
+}
+
+/// A request that finds an entry damaged validates it again under the identity lock. While
+/// another request holds that lock to republish the entry, this one waits and then uses the
+/// replacement; it never sets aside an entry it has not validated.
+#[test]
+fn a_damaged_entry_is_validated_again_under_its_lock_before_it_is_set_aside() {
+    use fs4::fs_std::FileExt;
+
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("serialized-repair.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    let marker = extracted.root.join(".chriz-bg-extraction.json");
+    let held_marker = temp.path().join("held-marker.json");
+    std::fs::rename(&marker, &held_marker).unwrap();
+
+    let lock = extraction_lock(&cache, &extracted);
+    lock.lock_exclusive().unwrap();
+    std::thread::scope(|scope| {
+        let waiting = scope.spawn(|| extract_archive_reporting_repair(&archive, &cache, &request));
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        assert!(!waiting.is_finished(), "the request must wait for the lock");
+        assert!(extracted.root.join("mod/setup-mod.tp2").is_file());
+        assert!(!cache.join("damaged").exists());
+
+        // The lock holder republishes a valid entry before releasing the lock.
+        std::fs::rename(&held_marker, &marker).unwrap();
+        FileExt::unlock(&lock).unwrap();
+        assert_eq!(waiting.join().unwrap().unwrap(), (extracted.clone(), None));
+    });
+    assert!(!cache.join("damaged").exists());
+}
+
+#[test]
+fn concurrent_requests_repair_a_damaged_entry_exactly_once() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("concurrent-repair.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/lib/deep/data.txt", DATA, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    std::fs::remove_file(extracted.root.join(".chriz-bg-extraction.json")).unwrap();
+    std::fs::remove_file(extracted.root.join("mod/setup-mod.tp2")).unwrap();
+
+    let barrier = std::sync::Barrier::new(4);
+    let results = std::thread::scope(|scope| {
+        let workers = (0..4)
+            .map(|_| {
+                scope.spawn(|| {
+                    barrier.wait();
+                    extract_archive_reporting_repair(&archive, &cache, &request)
+                })
+            })
+            .collect::<Vec<_>>();
+        workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap().unwrap())
+            .collect::<Vec<_>>()
+    });
+
+    assert!(results.iter().all(|(artifact, _)| *artifact == extracted));
+    let repairs = results
+        .iter()
+        .filter_map(|(_, repair)| repair.as_ref())
+        .collect::<Vec<_>>();
+    assert_eq!(repairs.len(), 1, "{repairs:?}");
+    assert!(repairs[0].reason.contains("inspect extraction marker"));
+    assert_eq!(
+        extract_archive_reporting_repair(&archive, &cache, &request).unwrap(),
+        (extracted, None)
+    );
+    let damaged = cache.join("damaged");
+    assert!(!damaged.exists() || std::fs::read_dir(damaged).unwrap().next().is_none());
+}
+
 #[test]
 fn populated_cache_still_rejects_noncanonical_duplicate_and_ambiguous_requests() {
     let temp = TempDir::new().unwrap();

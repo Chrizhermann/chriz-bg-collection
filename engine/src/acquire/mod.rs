@@ -8,6 +8,7 @@ use thiserror::Error;
 mod archive;
 mod cache;
 mod damaged;
+mod entry_lock;
 mod http;
 mod inspect;
 mod manual;

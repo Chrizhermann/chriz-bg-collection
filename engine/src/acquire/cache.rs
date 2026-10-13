@@ -3,13 +3,13 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use fs4::fs_std::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::events::{EngineEvent, EventSink, Stream};
 
-use super::damaged::{damaged_entry_reason, path_is_present, set_aside, CacheRepair};
+use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
+use super::entry_lock::lock_entry;
 use super::http::{validate_download_url, HttpClient, HttpResponse};
 use super::{AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest};
 
@@ -54,14 +54,6 @@ struct CachePaths {
     lock: PathBuf,
 }
 
-struct DigestLock(File);
-
-impl Drop for DigestLock {
-    fn drop(&mut self) {
-        let _ = FileExt::unlock(&self.0);
-    }
-}
-
 impl ArtifactCache {
     /// Open or create a cache rooted at `root`.
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, AcquireError> {
@@ -95,7 +87,7 @@ impl ArtifactCache {
 
         let mut repaired = None;
         {
-            let _guard = acquire_digest_lock(&paths.lock)?;
+            let _guard = lock_entry(&paths.lock)?;
             if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
                 sink.emit(EngineEvent::StepProgress {
                     id: request.request_id.clone(),
@@ -139,7 +131,7 @@ impl ArtifactCache {
                 .as_secs(),
         };
 
-        let _guard = acquire_digest_lock(&paths.lock)?;
+        let _guard = lock_entry(&paths.lock)?;
         if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
             remove_if_exists(&paths.partial)?;
             remove_if_exists(&paths.partial_state)?;
@@ -173,7 +165,7 @@ impl ArtifactCache {
                     return Err(error);
                 };
                 for entry in owned {
-                    if path_is_present(entry) {
+                    if entry_is_present(entry)? {
                         set_aside(&self.root, entry, digest)?;
                     }
                 }
@@ -649,33 +641,13 @@ fn sync_file(path: &Path) -> Result<(), AcquireError> {
         })
 }
 
-fn acquire_digest_lock(path: &Path) -> Result<DigestLock, AcquireError> {
-    let file = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(path)
-        .map_err(|source| AcquireError::Io {
-            action: "open digest lock",
-            path: path.to_path_buf(),
-            source,
-        })?;
-    file.lock_exclusive().map_err(|source| AcquireError::Io {
-        action: "acquire digest lock",
-        path: path.to_path_buf(),
-        source,
-    })?;
-    Ok(DigestLock(file))
-}
-
 fn verified_cache_entry(
     paths: &CachePaths,
     digest: &str,
     expected_length: u64,
 ) -> Result<Option<AcquiredArtifact>, AcquireError> {
-    let archive_exists = paths.archive.exists();
-    let metadata_exists = paths.metadata.exists();
+    let archive_exists = entry_is_present(&paths.archive)?;
+    let metadata_exists = entry_is_present(&paths.metadata)?;
     if !archive_exists && !metadata_exists {
         return Ok(None);
     }
@@ -685,28 +657,34 @@ fn verified_cache_entry(
             message: "archive and metadata must both exist".to_owned(),
         });
     }
-    let file = File::open(&paths.metadata).map_err(|source| AcquireError::Io {
-        action: "open cache metadata",
+    // Read before parsing so that a read failure keeps its I/O kind: only a record that was
+    // read completely and does not parse proves damage.
+    let bytes = fs::read(&paths.metadata).map_err(|source| AcquireError::Io {
+        action: "read cache metadata",
         path: paths.metadata.clone(),
         source,
     })?;
     let metadata: ArtifactMetadata =
-        serde_json::from_reader(file).map_err(|source| AcquireError::Metadata {
+        serde_json::from_slice(&bytes).map_err(|source| AcquireError::Metadata {
             path: paths.metadata.clone(),
             message: source.to_string(),
         })?;
     let (actual_length, actual_digest) = hash_file(&paths.archive)?;
-    if metadata.sha256 != digest
-        || metadata.length != expected_length
-        || actual_digest != digest
-        || actual_length != expected_length
-    {
+    if metadata.sha256 != digest || actual_digest != digest || metadata.length != actual_length {
         return Err(AcquireError::CorruptCache {
             digest: digest.to_owned(),
             message: format!(
                 "metadata/file mismatch (metadata {} bytes {}, file {} bytes {})",
                 metadata.sha256, metadata.length, actual_digest, actual_length
             ),
+        });
+    }
+    // The entry is consistent and holds the requested digest, so a different length is an
+    // error in the request. The shared entry stays for requests that pin it correctly.
+    if actual_length != expected_length {
+        return Err(AcquireError::LengthMismatch {
+            expected: expected_length,
+            actual: actual_length,
         });
     }
     Ok(Some(AcquiredArtifact {

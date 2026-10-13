@@ -195,6 +195,249 @@ fn a_cache_entry_that_cannot_be_read_is_kept() {
     assert_eq!(std::fs::read(&first.archive_path).unwrap(), bytes);
 }
 
+/// Metadata that cannot be read at the moment, here because another program locks it, is not
+/// proof of damage although it could be opened. Both files stay for the next request.
+#[cfg(windows)]
+#[test]
+fn a_cache_entry_whose_metadata_cannot_be_read_is_kept() {
+    use fs4::fs_std::FileExt;
+
+    let bytes = b"artifact whose metadata is locked by another program";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let (sink, _) = ChannelSink::unbounded();
+    let (url, server) = one_shot_server(bytes);
+    let first = cache
+        .acquire(&request("locked-metadata-first", url, bytes), &sink)
+        .unwrap();
+    server.join().unwrap();
+    let locked = std::fs::File::open(&first.metadata_path).unwrap();
+    locked.lock_exclusive().unwrap();
+
+    let result = cache.acquire(
+        &request(
+            "locked-metadata-second",
+            "https://network-must-not-be-used.invalid/archive".to_owned(),
+            bytes,
+        ),
+        &sink,
+    );
+
+    assert!(
+        matches!(
+            result,
+            Err(AcquireError::Io {
+                action: "read cache metadata",
+                ..
+            })
+        ),
+        "{result:?}"
+    );
+    FileExt::unlock(&locked).unwrap();
+    drop(locked);
+    assert!(!temp.path().join("cache/damaged").exists());
+    let hit = cache
+        .acquire(
+            &request(
+                "locked-metadata-third",
+                "https://network-must-not-be-used.invalid/archive".to_owned(),
+                bytes,
+            ),
+            &sink,
+        )
+        .unwrap();
+    assert_eq!(hit.disposition, CacheDisposition::Hit);
+    assert_eq!(hit.repaired, None);
+}
+
+/// Archive and metadata agree, so a request pinning the same digest with another length is
+/// wrong. It fails without evicting the entry that other requests share.
+#[test]
+fn a_request_with_a_wrong_length_keeps_a_valid_shared_entry() {
+    let bytes = b"artifact pinned with two different lengths";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let (sink, _) = ChannelSink::unbounded();
+    let (url, server) = one_shot_server(bytes);
+    let first = cache
+        .acquire(&request("length-first", url, bytes), &sink)
+        .unwrap();
+    server.join().unwrap();
+    let mut wrong = request(
+        "length-wrong",
+        "https://network-must-not-be-used.invalid/archive".to_owned(),
+        bytes,
+    );
+    wrong.expected_length += 1;
+
+    let result = cache.acquire(&wrong, &sink);
+
+    assert!(
+        matches!(
+            result,
+            Err(AcquireError::LengthMismatch { expected, actual })
+                if expected == bytes.len() as u64 + 1 && actual == bytes.len() as u64
+        ),
+        "{result:?}"
+    );
+    assert!(!temp.path().join("cache/damaged").exists());
+    assert_eq!(std::fs::read(&first.archive_path).unwrap(), bytes);
+    let hit = cache
+        .acquire(
+            &request(
+                "length-correct",
+                "https://network-must-not-be-used.invalid/archive".to_owned(),
+                bytes,
+            ),
+            &sink,
+        )
+        .unwrap();
+    assert_eq!(hit.disposition, CacheDisposition::Hit);
+    assert_eq!(hit.repaired, None);
+}
+
+/// Damage that appears while a download runs is found by the check under the digest lock
+/// before publication, set aside and reported.
+#[test]
+fn damage_that_appears_during_a_download_is_repaired_before_publication() {
+    static BYTES: &[u8] = b"artifact damaged by another program during its download";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let digest = sha256(BYTES);
+    let metadata = temp
+        .path()
+        .join("cache/sha256")
+        .join(&digest[..2])
+        .join(format!("{digest}.json"));
+    let server = Server::http("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/archive", server.server_addr().to_ip().unwrap());
+    let (requested, request_seen) = std::sync::mpsc::channel();
+    let (release, released) = std::sync::mpsc::channel::<()>();
+    let server = thread::spawn(move || {
+        let incoming = server
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap()
+            .expect("download request");
+        requested.send(()).unwrap();
+        released.recv().unwrap();
+        incoming
+            .respond(Response::new(
+                StatusCode(200),
+                vec![Header::from_bytes("ETag", "\"cache-v1\"").unwrap()],
+                Cursor::new(BYTES),
+                Some(BYTES.len()),
+                None,
+            ))
+            .unwrap();
+    });
+
+    let acquired = thread::scope(|scope| {
+        let download = scope.spawn(|| {
+            let (sink, _) = ChannelSink::unbounded();
+            cache.acquire(&request("during-download", url, BYTES), &sink)
+        });
+        request_seen
+            .recv_timeout(Duration::from_secs(5))
+            .expect("the download started");
+        // Half of an entry, as an interrupted publication by another program would leave it.
+        std::fs::create_dir_all(metadata.parent().unwrap()).unwrap();
+        std::fs::write(&metadata, b"{}").unwrap();
+        release.send(()).unwrap();
+        download.join().unwrap().unwrap()
+    });
+    server.join().unwrap();
+
+    assert_eq!(acquired.disposition, CacheDisposition::Downloaded);
+    let repair = acquired.repaired.expect("damage must be reported");
+    assert!(
+        repair
+            .reason
+            .contains("archive and metadata must both exist"),
+        "{}",
+        repair.reason
+    );
+    assert_eq!(std::fs::read(&acquired.archive_path).unwrap(), BYTES);
+    let (sink, _) = ChannelSink::unbounded();
+    let hit = cache
+        .acquire(
+            &request(
+                "after-download",
+                "https://network-must-not-be-used.invalid/archive".to_owned(),
+                BYTES,
+            ),
+            &sink,
+        )
+        .unwrap();
+    assert_eq!(hit.disposition, CacheDisposition::Hit);
+}
+
+/// When only part of a damaged entry could be set aside, the next request finds the rest
+/// damaged too and completes the repair.
+#[cfg(windows)]
+#[test]
+fn an_entry_left_partly_set_aside_is_repaired_by_the_next_request() {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    const FILE_SHARE_READ: u32 = 0x1;
+    static BYTES: &[u8] = b"artifact whose metadata cannot be moved at first";
+    let temp = TempDir::new().unwrap();
+    let cache = ArtifactCache::open(temp.path().join("cache")).unwrap();
+    let (sink, _) = ChannelSink::unbounded();
+    let (url, server) = one_shot_server(BYTES);
+    let first = cache
+        .acquire(&request("partly-first", url, BYTES), &sink)
+        .unwrap();
+    server.join().unwrap();
+    std::fs::write(&first.archive_path, b"changed").unwrap();
+    // Another program reads the metadata and does not allow it to be moved meanwhile.
+    let reader = std::fs::OpenOptions::new()
+        .read(true)
+        .share_mode(FILE_SHARE_READ)
+        .open(&first.metadata_path)
+        .unwrap();
+
+    let result = cache.acquire(
+        &request(
+            "partly-second",
+            "https://network-must-not-be-used.invalid/archive".to_owned(),
+            BYTES,
+        ),
+        &sink,
+    );
+
+    assert!(
+        matches!(
+            result,
+            Err(AcquireError::Io {
+                action: "set aside damaged cache entry",
+                ..
+            })
+        ),
+        "{result:?}"
+    );
+    drop(reader);
+    assert!(!first.archive_path.exists());
+    assert!(first.metadata_path.exists());
+
+    let (url, server) = one_shot_server(BYTES);
+    let repaired = cache
+        .acquire(&request("partly-third", url, BYTES), &sink)
+        .unwrap();
+    server.join().unwrap();
+    let repair = repaired
+        .repaired
+        .expect("the remaining half must be repaired");
+    assert!(
+        repair
+            .reason
+            .contains("archive and metadata must both exist"),
+        "{}",
+        repair.reason
+    );
+    assert_eq!(repaired.disposition, CacheDisposition::Downloaded);
+    assert_eq!(std::fs::read(&repaired.archive_path).unwrap(), BYTES);
+}
+
 #[test]
 fn hash_mismatch_never_publishes_a_cache_object() {
     let bytes = b"wrong artifact";

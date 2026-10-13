@@ -82,7 +82,10 @@ to look, not why it failed.
 CEBG checks every reused download and unpacked mod copy before using it. If one
 is damaged, for example after a manual deletion that Windows could not finish,
 CEBG sets it aside and downloads or unpacks it again, then records that in the
-installation's evidence. You never need to delete cache folders by hand.
+installation's evidence. You never need to delete cache folders by hand. If a
+file is only unreadable for the moment, for example while another program scans
+or holds it, CEBG deletes nothing and stops the step instead; retry once that
+program is done.
 
 ## An installation appears missing or incomplete
 

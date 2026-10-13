@@ -12,7 +12,8 @@ use zip::{CompressionMethod, ZipArchive};
 #[cfg(windows)]
 use widestring::WideCString;
 
-use super::damaged::{damaged_entry_reason, path_is_present, set_aside, CacheRepair};
+use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
+use super::entry_lock::lock_entry;
 use super::AcquireError;
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -163,7 +164,8 @@ pub fn extract_archive(
 ///
 /// A published extraction that no longer validates (missing or unreadable marker, changed,
 /// missing or added files) is never used. It is set aside and the verified archive is
-/// extracted again under the same identity.
+/// extracted again under the same identity. Validation, repair and publication of one
+/// identity are serialized across processes by a lock in `<extraction_cache>/locks`.
 pub fn extract_archive_reporting_repair(
     archive_path: &Path,
     extraction_cache: &Path,
@@ -263,8 +265,18 @@ pub fn extract_archive_reporting_repair(
         .join(&digest[..2])
         .join(&digest)
         .join(&contract_sha256);
+    let locks = extraction_cache.join("locks");
+    fs::create_dir_all(&locks).map_err(|source| AcquireError::Io {
+        action: "create extraction lock directory",
+        path: locks.clone(),
+        source,
+    })?;
+    // Held until this identity is validated or republished. A request that finds the entry
+    // damaged has validated it under the lock, so it can never set aside a replacement that
+    // another request published in the meantime, and identical requests extract only once.
+    let _lock = lock_entry(&locks.join(format!("{digest}.{contract_sha256}.lock")))?;
     let mut repair = None;
-    if path_is_present(&final_root) {
+    if entry_is_present(&final_root)? {
         match validate_published_extraction(final_root.clone(), &identity) {
             Ok(extracted) => return Ok((extracted, None)),
             Err(error) => {
@@ -343,7 +355,8 @@ pub fn extract_archive_reporting_repair(
     })?;
     match fs::rename(&temporary, &final_root) {
         Ok(()) => {}
-        // A concurrent request published first; its entry is validated, never repaired again.
+        // Another publisher that does not take the identity lock, such as an older CEBG
+        // version sharing this cache, published first; its entry is validated, never repaired.
         Err(_source) if final_root.exists() => {
             let _ = fs::remove_dir_all(&temporary);
             return validate_published_extraction(final_root, &identity)
@@ -1458,13 +1471,15 @@ fn validate_published_extraction(
             message: "extraction marker is not a regular file".to_owned(),
         });
     }
-    let marker_file = File::open(&marker_path).map_err(|source| AcquireError::Io {
-        action: "open extraction marker",
+    // Read before parsing so that a read failure keeps its I/O kind: only a marker that was
+    // read completely and does not parse proves damage.
+    let marker_bytes = fs::read(&marker_path).map_err(|source| AcquireError::Io {
+        action: "read extraction marker",
         path: marker_path.clone(),
         source,
     })?;
     let marker: ExtractionMarker =
-        serde_json::from_reader(marker_file).map_err(|source| AcquireError::Metadata {
+        serde_json::from_slice(&marker_bytes).map_err(|source| AcquireError::Metadata {
             path: marker_path,
             message: source.to_string(),
         })?;
@@ -1546,16 +1561,16 @@ fn validate_published_extraction(
         });
     }
     for entry in WalkDir::new(&root).min_depth(1).follow_links(false) {
-        let entry = entry.map_err(|error| AcquireError::CorruptCache {
-            digest: digest.to_owned(),
-            message: error.to_string(),
-        })?;
+        let entry = entry.map_err(|error| listing_error(&root, digest, error))?;
         if entry.file_type().is_symlink()
             || (!entry.file_type().is_file() && !entry.file_type().is_dir())
         {
             return Err(AcquireError::CorruptCache {
                 digest: digest.to_owned(),
-                message: format!("non-regular extracted path `{}`", entry.path().display()),
+                message: format!(
+                    "non-regular extracted path `{}`",
+                    display_relative(&root, entry.path())
+                ),
             });
         }
         if entry.file_type().is_dir() {
@@ -1631,6 +1646,35 @@ pub(super) fn verify_extracted_artifact(artifact: &ExtractedArtifact) -> Result<
         });
     }
     Ok(())
+}
+
+/// A failure to list a published extraction keeps its I/O kind, so that only a path of the
+/// extraction that no longer exists can prove damage. Without link following, walkdir has no
+/// other kind of failure.
+fn listing_error(root: &Path, digest: &str, error: walkdir::Error) -> AcquireError {
+    let path = error
+        .path()
+        .map_or_else(|| root.to_path_buf(), Path::to_path_buf);
+    match error.into_io_error() {
+        Some(source) => AcquireError::Io {
+            action: "list published extraction",
+            path,
+            source,
+        },
+        None => AcquireError::CorruptCache {
+            digest: digest.to_owned(),
+            message: "published extraction contains a link loop".to_owned(),
+        },
+    }
+}
+
+/// `path` relative to the extraction root, for messages that must not reveal the cache location.
+fn display_relative(root: &Path, path: &Path) -> String {
+    match path.strip_prefix(root) {
+        Ok(relative) => portable_path(relative)
+            .unwrap_or_else(|_| relative.to_string_lossy().replace('\\', "/")),
+        Err(_) => "a path outside the extraction".to_owned(),
+    }
 }
 
 fn portable_path(path: &Path) -> Result<String, String> {
