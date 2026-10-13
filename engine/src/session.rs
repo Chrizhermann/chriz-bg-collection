@@ -183,7 +183,7 @@ impl SessionReplay {
         let expected = normalize_created(
             expected.clone(),
             &self.created.managed_root,
-            CacheRoot::Required,
+            ReplayPurpose::Use,
         )?;
         compare_identity("install id", &self.created.install_id, &expected.install_id)?;
         compare_identity("attempt id", &self.created.attempt_id, &expected.attempt_id)?;
@@ -267,7 +267,7 @@ impl SessionStore {
                 "the first campaign event must be Created",
             ));
         };
-        let created = normalize_created(*created, &canonical_root, CacheRoot::Required)?;
+        let created = normalize_created(*created, &canonical_root, ReplayPurpose::Use)?;
         let store = Self::paths(canonical_root);
         match fs::create_dir(&store.state_root) {
             Ok(()) => {}
@@ -378,11 +378,11 @@ impl SessionStore {
 
     /// [`Self::replay`] for proving which installation owns this folder, for example before
     /// deleting it. Everything inside the folder is verified as usual, but the shared cache
-    /// recorded at creation may be gone: deleted downloads must not make an installation
-    /// impossible to remove. The recorded cache path is kept as it was recorded.
+    /// recorded at creation is not needed: deleted, replaced or disconnected downloads must not
+    /// make an installation impossible to remove. The recorded cache path is kept as recorded.
     pub fn replay_ownership(&self) -> Result<SessionReplay> {
         let _guard = self.acquire_lock()?;
-        self.replay_unlocked_with(CacheRoot::MayBeMissing)
+        self.replay_unlocked_with(ReplayPurpose::Ownership)
     }
 
     fn paths(managed_root: PathBuf) -> Self {
@@ -471,10 +471,10 @@ impl SessionStore {
     }
 
     fn replay_unlocked(&self) -> Result<SessionReplay> {
-        self.replay_unlocked_with(CacheRoot::Required)
+        self.replay_unlocked_with(ReplayPurpose::Use)
     }
 
-    fn replay_unlocked_with(&self, cache: CacheRoot) -> Result<SessionReplay> {
+    fn replay_unlocked_with(&self, purpose: ReplayPurpose) -> Result<SessionReplay> {
         validate_directory(&self.ledger_root)?;
         let mut finals = BTreeMap::<u64, PathBuf>::new();
         for entry in fs::read_dir(&self.ledger_root).map_err(|source| EngineError::Io {
@@ -553,7 +553,7 @@ impl SessionStore {
 
         let created = match &records[0].event {
             SessionEvent::Created(created) => {
-                normalize_created(created.as_ref().clone(), &self.managed_root, cache)?
+                normalize_created(created.as_ref().clone(), &self.managed_root, purpose)?
             }
             _ => {
                 return Err(ledger_error(
@@ -587,23 +587,40 @@ impl SessionStore {
     }
 }
 
-/// Whether a replay requires the campaign's shared cache folder to exist.
+/// What a replay is for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CacheRoot {
-    /// Creating, resuming and checking a campaign use the cache, so it must still exist.
-    Required,
-    /// Proving ownership of the folder does not use the cache, which may have been deleted.
-    MayBeMissing,
+enum ReplayPurpose {
+    /// Creating, resuming and checking a campaign, which use its recorded folders: the shared
+    /// cache must still be a usable folder.
+    Use,
+    /// Proving which installation owns this folder, which does not use the shared cache: it may
+    /// have been deleted or replaced, or be on a drive that is not connected, and its recorded
+    /// path is kept as recorded. Records made for a folder that no longer exists belong to a
+    /// different installation.
+    Ownership,
 }
 
 fn normalize_created(
     mut created: CampaignCreated,
     canonical_managed_root: &Path,
-    cache: CacheRoot,
+    purpose: ReplayPurpose,
 ) -> Result<CampaignCreated> {
     validate_identifier(&created.install_id, "install id", canonical_managed_root)?;
     validate_identifier(&created.attempt_id, "attempt id", canonical_managed_root)?;
-    let event_managed_root = canonical_directory(&created.managed_root, "managed root")?;
+    let event_managed_root = match canonical_directory(&created.managed_root, "managed root") {
+        Ok(root) => root,
+        Err(EngineError::Io { source, .. })
+            if purpose == ReplayPurpose::Ownership
+                && source.kind() == std::io::ErrorKind::NotFound =>
+        {
+            return Err(identity_mismatch(
+                "managed root",
+                &display_path(canonical_managed_root),
+                &display_path(&created.managed_root),
+            ));
+        }
+        Err(error) => return Err(error),
+    };
     if event_managed_root != canonical_managed_root {
         return Err(identity_mismatch(
             "managed root",
@@ -613,14 +630,12 @@ fn normalize_created(
     }
     created.managed_root = event_managed_root;
     created.cache_root = match canonical_directory(&created.cache_root, "cache root") {
-        Err(EngineError::Io { source, .. })
-            if cache == CacheRoot::MayBeMissing
-                && source.kind() == std::io::ErrorKind::NotFound
-                && created.cache_root.is_absolute() =>
-        {
+        Ok(cache_root) => cache_root,
+        // Creation records a canonical absolute path; only that shape is kept unresolved.
+        Err(_) if purpose == ReplayPurpose::Ownership && created.cache_root.is_absolute() => {
             created.cache_root
         }
-        result => result?,
+        Err(error) => return Err(error),
     };
     if created.staged_bg1 != canonical_managed_root.join("bg1") {
         return Err(identity_mismatch(

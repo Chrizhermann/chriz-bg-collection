@@ -8,6 +8,7 @@ use std::path::{Component, Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::digest::sha256_bytes;
+use crate::error::EngineError;
 use crate::lock::TargetLock;
 use crate::preflight::{
     recheck_staging_target_before_mutation_with, PreflightHost, SystemPreflight,
@@ -144,11 +145,12 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
         let replay = match SessionStore::open(root).and_then(|store| store.replay_ownership()) {
             Ok(replay) => replay,
             Err(error) if records_unusable(&error, root) => {
-                return Ok(unlisted(
-                    plan,
-                    Some(identity),
-                    "Its CEBG install records are missing or damaged.",
-                ))
+                let reason = if matches!(error, EngineError::SessionIdentityMismatch { .. }) {
+                    "Its CEBG install records belong to a different installation."
+                } else {
+                    "Its CEBG install records are missing or damaged."
+                };
+                return Ok(unlisted(plan, Some(identity), reason));
             }
             Err(error) => {
                 return Err(failure(format!(
@@ -222,7 +224,11 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
     plan.protected_paths.sort();
     plan.protected_paths.dedup();
     for protected in &plan.protected_paths {
-        let protected = prospective_path(protected)?;
+        // Nothing exists of a location such as a cache or source game on a drive that is not
+        // connected, so it can neither contain nor be inside this existing folder.
+        let Some(protected) = resolvable_path(protected)? else {
+            continue;
+        };
         if overlap(root, &protected) {
             return Err(failure(format!(
                 "Protected source, saves, cache or app-data overlaps {}",
@@ -298,9 +304,7 @@ fn unlisted(mut plan: RemovalPlan, directory_identity: Option<u64>, reason: &str
 fn records_unusable(error: &(dyn std::error::Error + 'static), root: &Path) -> bool {
     let mut current = Some(error);
     while let Some(error) = current {
-        if let Some(crate::error::EngineError::Io { path, source }) =
-            error.downcast_ref::<crate::error::EngineError>()
-        {
+        if let Some(EngineError::Io { path, source }) = error.downcast_ref::<EngineError>() {
             if source.kind() != io::ErrorKind::NotFound || !path.starts_with(root) {
                 return false;
             }
@@ -441,16 +445,24 @@ fn reject_broad_root(root: &Path) -> Result<(), RemovalError> {
 }
 
 fn prospective_path(path: &Path) -> Result<PathBuf, RemovalError> {
+    resolvable_path(path)?.ok_or_else(|| failure("Cannot resolve protected path."))
+}
+
+/// `path` below its nearest existing ancestor, resolved, or `None` when nothing of it exists,
+/// for example on a drive or network share that is not connected.
+fn resolvable_path(path: &Path) -> Result<Option<PathBuf>, RemovalError> {
     if !path.is_absolute() {
         return Err(failure("Protected path must be absolute."));
     }
     for ancestor in path.ancestors() {
         if ancestor.exists() {
             let base = fs::canonicalize(ancestor).map_err(|e| io_at(ancestor, e))?;
-            return Ok(base.join(path.strip_prefix(ancestor).map_err(failure)?));
+            return Ok(Some(
+                base.join(path.strip_prefix(ancestor).map_err(failure)?),
+            ));
         }
     }
-    Err(failure("Cannot resolve protected path."))
+    Ok(None)
 }
 
 fn overlap(a: &Path, b: &Path) -> bool {
@@ -877,6 +889,119 @@ mod tests {
         assert!(f.source.join("original.txt").exists());
         assert_eq!(registered_campaigns(&f), 0);
     }
+    /// Replaces one recorded path in the fixture's only ledger record. Record zero has no
+    /// successor whose hash binds its bytes, so the edited ledger is otherwise intact.
+    fn rewrite_recorded_path(f: &Fixture, field: &str, value: &Path) {
+        fn replace(json: &mut serde_json::Value, field: &str, value: &serde_json::Value) -> bool {
+            match json {
+                serde_json::Value::Object(map) => {
+                    if let Some(slot) = map.get_mut(field) {
+                        *slot = value.clone();
+                        return true;
+                    }
+                    map.values_mut().any(|child| replace(child, field, value))
+                }
+                serde_json::Value::Array(items) => {
+                    items.iter_mut().any(|child| replace(child, field, value))
+                }
+                _ => false,
+            }
+        }
+        let record = f.root.join(".chriz/ledger/0000000000.json");
+        let mut json: serde_json::Value =
+            serde_json::from_slice(&fs::read(&record).unwrap()).unwrap();
+        assert!(replace(&mut json, field, &serde_json::json!(value)));
+        fs::write(&record, serde_json::to_vec(&json).unwrap()).unwrap();
+    }
+    /// A cache folder replaced by a file is not part of the installation either; the general
+    /// replay, which uses the cache, still refuses it.
+    #[test]
+    fn a_cache_replaced_by_a_file_does_not_block_deleting_a_proven_installation() {
+        let f = fixture();
+        fs::remove_dir_all(&f.cache).unwrap();
+        fs::write(&f.cache, "not a cache").unwrap();
+        assert!(SessionStore::open(&f.root).unwrap().replay().is_err());
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Delete);
+        assert!(plan.protected_paths.contains(&f.cache));
+        run(&f, &plan).unwrap();
+        assert!(!f.root.exists());
+        assert_eq!(fs::read_to_string(&f.cache).unwrap(), "not a cache");
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    /// Downloads on a drive that is not connected neither prove nor disprove ownership, and
+    /// cannot overlap the existing folder.
+    #[cfg(windows)]
+    #[test]
+    fn a_cache_on_a_disconnected_drive_does_not_block_deleting_a_proven_installation() {
+        let f = fixture();
+        let drive = ('D'..='Z')
+            .rev()
+            .map(|letter| PathBuf::from(format!("{letter}:\\")))
+            .find(|drive| !drive.exists())
+            .expect("an unused drive letter");
+        let cache = drive.join("cebg-cache");
+        rewrite_recorded_path(&f, "cache_root", &cache);
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Delete);
+        assert!(plan.protected_paths.contains(&cache));
+        run(&f, &plan).unwrap();
+        assert!(!f.root.exists());
+        assert!(f.source.join("original.txt").exists());
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    /// Records made for a folder that no longer exists belong to a different installation. The
+    /// entry can leave the list; nothing is deleted.
+    #[test]
+    fn records_made_for_a_missing_folder_are_only_unlisted() {
+        let f = fixture();
+        rewrite_recorded_path(&f, "managed_root", &f._temp.path().join("elsewhere"));
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Unlist);
+        assert_eq!(
+            plan.reason.as_deref(),
+            Some("Its CEBG install records belong to a different installation.")
+        );
+        run(&f, &plan).unwrap();
+        assert!(f.root.join("game/game.exe").exists());
+        assert!(f.root.join(".chriz/ledger/0000000000.json").exists());
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    /// Only missing or damaged records inside the folder justify removing a working entry from
+    /// the list; anything unreadable for the moment, or missing outside it, does not.
+    #[test]
+    fn only_missing_or_damaged_records_inside_the_folder_are_unusable() {
+        let root = Path::new(if cfg!(windows) {
+            r"C:\games\cebg"
+        } else {
+            "/games/cebg"
+        });
+        let failed = |path: &Path, kind: io::ErrorKind| EngineError::Io {
+            path: path.to_path_buf(),
+            source: io::Error::from(kind),
+        };
+        let inside = root.join(".chriz/ledger");
+        let outside = root.parent().unwrap().join("downloads");
+        assert!(records_unusable(
+            &failed(&inside, io::ErrorKind::NotFound),
+            root
+        ));
+        assert!(!records_unusable(
+            &failed(&inside, io::ErrorKind::PermissionDenied),
+            root
+        ));
+        assert!(!records_unusable(
+            &failed(&outside, io::ErrorKind::NotFound),
+            root
+        ));
+        assert!(records_unusable(
+            &EngineError::SessionLedger {
+                path: inside.clone(),
+                message: "damaged".into(),
+            },
+            root
+        ));
+    }
     /// A directory junction on Windows and a symbolic link elsewhere; both are disposable.
     fn link_directory(link: &Path, target: &Path) {
         #[cfg(windows)]
@@ -930,6 +1055,10 @@ mod tests {
         link_directory(&f.root, &f.source);
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert_eq!(plan.action, RemovalAction::Unlist);
+        assert_eq!(
+            plan.reason.as_deref(),
+            Some("Its location is no longer a plain folder.")
+        );
         run(&f, &plan).unwrap();
         assert!(f.source.join("original.txt").exists());
         assert!(reparse(&fs::symlink_metadata(&f.root).unwrap()));
