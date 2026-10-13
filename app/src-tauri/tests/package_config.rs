@@ -13,6 +13,27 @@ fn product_name_is_safe_for_the_nsis_template() {
     assert_eq!(config["app"]["windows"][0]["height"], 760);
 }
 
+/// The uninstaller hook asks the app to remove its data with the request the app accepts.
+#[test]
+fn the_uninstaller_hook_asks_the_app_to_remove_its_application_data() {
+    use chriz_bg_app_lib::application_data::REMOVE_APPLICATION_DATA;
+
+    let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let config: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(crate_root.join("tauri.conf.json")).expect("read Tauri configuration"),
+    )
+    .expect("parse Tauri configuration");
+    let hooks = config["bundle"]["windows"]["nsis"]["installerHooks"]
+        .as_str()
+        .expect("NSIS installer hooks are configured");
+    let hooks = fs::read_to_string(crate_root.join(hooks)).expect("read NSIS installer hooks");
+
+    assert!(hooks.contains("!macro NSIS_HOOK_PREUNINSTALL"));
+    assert!(hooks.contains(&format!(
+        r#"ExecWait '"$INSTDIR\${{MAINBINARYNAME}}.exe" {REMOVE_APPLICATION_DATA} "${{BUNDLEID}}"' $0"#
+    )));
+}
+
 #[test]
 fn bundle_resources_include_production_game_profiles() {
     let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
