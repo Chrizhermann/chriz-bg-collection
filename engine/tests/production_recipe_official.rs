@@ -423,10 +423,12 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "chriz-bg-modpack-bg2",
             "safana-bg2",
             "chriz-bg-modpack-late-companions-bg2",
+            "chriz-bg-modpack-campaign-xp-bg2",
             "spell-rev-npc-spellbooks-bg2",
             "spell-rev-lightning-bg2",
             "chriz-bg-modpack-baeloth-bg2",
             "buffbot-bg2",
+            "chriz-bg-modpack-scrolls-bg2",
         ]
     );
     assert!(manifest.collection.runs[6..40]

@@ -125,18 +125,23 @@ class CatalogParserTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2] / "docs" / "curation" / "components"
         rows = load_catalogs(root)
 
-        self.assertEqual(len(rows), 1_227)
+        # October 13 intake adds Modpack 237/238/650/651/660 and SoD 177/198/285.
+        self.assertEqual(len(rows), 1_235)
         self.assertEqual(
             decision_totals(rows),
             {
                 Decision.EXCLUDED: 515,
                 # September 22 approval moves HGO 38 from optional to default.
                 # October 12 moves Emotion 301 back to optional.
-                Decision.OPTIONAL: 239,
+                # October 13 intake: campaign XP caps Modpack 650/651 are optional.
+                Decision.OPTIONAL: 241,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults.
-                Decision.DEFAULT: 321,
-                Decision.MANDATORY: 152,
+                # October 13 intake: Modpack 237/238/660 are defaults and scrolls 430
+                # moves from mandatory to default.
+                Decision.DEFAULT: 325,
+                # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
+                Decision.MANDATORY: 154,
             },
         )
 
@@ -358,13 +363,13 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_227)
+        self.assertEqual(result.mapped_rows, 1_235)
         self.assertEqual(result.excluded_rows, 515)
-        self.assertEqual(result.feature_rows + result.omission_rows, 712)
+        self.assertEqual(result.feature_rows + result.omission_rows, 720)
         self.assertEqual(result.choice_groups, 74)
         self.assertEqual(result.optional_none_groups, 23)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1227", coverage_report(rows, result))
+        self.assertIn("rows=1235", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]
@@ -479,11 +484,13 @@ default = "none"
                     170,
                     180,
                     175,
+                    177,
                     185,
                     190,
                     195,
                     210,
                     197,
+                    198,
                     187,
                     200,
                     215,
@@ -500,6 +507,7 @@ default = "none"
                     266,
                     270,
                     280,
+                    285,
                     290,
                     900,
                     910,

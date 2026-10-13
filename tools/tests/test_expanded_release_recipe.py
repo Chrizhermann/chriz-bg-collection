@@ -99,9 +99,11 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # October 7 adds seven Rebalance defaults and Edwin236's dedicated run;
         # the next-release policy removes only Emotion301 from normal defaults.
         # October 13 default bard ceilings add 420/421 and Bardic 3010's own run.
-        self.assertEqual(len(without_controls), 463)
-        self.assertEqual(len(selected), 464)
-        self.assertEqual(len({run for run, _ in selected}), 52)
+        # The October 13 intake adds default Modpack 237/238/660 and mandatory SoD
+        # 177/198/285, and moves 430 into its own final run.
+        self.assertEqual(len(without_controls), 469)
+        self.assertEqual(len(selected), 470)
+        self.assertEqual(len({run for run, _ in selected}), 53)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -175,7 +177,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertIn("feature:stratagems:mandatory-components", self.features[lethal_melee]["requires"])
         self.assertNotIn((run_id, 111), self.selected({"mod:stratagems": "off"}))
         self.assertLess(self.positions["stratagems-bg2"], self.positions["chriz-bg-rebalance-bg2"])
-        self.assertEqual(self.collection["runs"][-1]["run_id"], "buffbot-bg2")
+        # The scroll policy 430 hashes final scrolls and spells, so it follows BuffBot.
+        self.assertEqual(self.collection["runs"][-2]["run_id"], "buffbot-bg2")
+        self.assertEqual(self.collection["runs"][-1]["run_id"], "chriz-bg-modpack-scrolls-bg2")
 
     def test_emotion_exclusivity_is_optional_with_an_independent_optin(self):
         feature_id = "feature:chriz-bg-rebalance:component-301"
@@ -194,7 +198,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 464)
+        self.assertEqual(len(baseline), 470)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -226,7 +230,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         for identity in (("iwdification-bg2", 30), ("iwdification-bg2", 40),
                          ("stratagems-bg2", 5900), ("spell-rev-core-bg2", 0),
                          ("cdtweaks-spell-save-penalties-bg2", 2312),
-                         ("chriz-bg-modpack-bg2", 430)):
+                         ("chriz-bg-modpack-scrolls-bg2", 430)):
             self.assertIn(identity, selected)
 
     def test_bard_spell_ceilings_are_default_and_gate_the_bardic_adapter(self):

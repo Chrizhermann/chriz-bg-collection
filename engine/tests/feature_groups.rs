@@ -219,18 +219,20 @@ fn recipe_without_groups_serializes_and_digests_exactly_as_before() {
 #[test]
 fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // (recipe, collection JSON before the group was added, Recommended selection, plan)
+    // Re-pinned for the October 13 intake (Modpack alpha.11 / SoD Remix v0.6.13 rows);
+    // the group itself still changes nothing but `feature_groups`.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "610b338f45a7ff6a334405bbfc43a5ed96b291f983ef9079970792d91c081e9c",
-            "ab8b3caf95bda52b9d839d3f90960a52763fe1a786e3f669761e4cb7a153f0d3",
-            "c5d574f7713518ed9e0e26bfa89133217da04978e71229b1c645109f6732e1c8",
+            "877531371fc80d380281702696de32bd74f0cf49d710569be18ae5350a3b0011",
+            "c6ff69ccff52932f52653fe43469a461aa2b0f4eb290d5adcad478772b0ca6dd",
+            "8ea5b204e48f9d2cef29aa26ccf829b9f1ca6355a754d56faf7f1dad9fc801ce",
         ),
         (
             "../recipes/curated-full-current",
-            "0f685c02b47ac4ddbacc0975bde38fa5bd08794fb2b767de71eb25c80de166e2",
-            "39b07e05e8c8cd1c8d88337b14df0ecff20a89041f3a95285cfc5bc24341c0a6",
-            "7262a94dc2db5fff326d9b3f11cd522d31a0fbc814c27af58ae2efccc6729e4c",
+            "bf4755833c249bb73afa393052cca49f0bcd727fd8f46b27f173aa8e4a9715d0",
+            "29a503c0a8267a71b8959575e2166740acab049324d1e727b0b8a39b06ed2078",
+            "ff02d8e844d057416b01f9eed6c78b014045bc941959fa50912823a6ac4a5b81",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

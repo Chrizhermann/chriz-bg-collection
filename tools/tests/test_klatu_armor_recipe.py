@@ -95,7 +95,8 @@ class KlatuArmorRecipeTests(unittest.TestCase):
             self.assertLess(run_ids.index("artisanskitpack-npc-late-bg2"), klatu)
             self.assertLess(run_ids.index("eet-end-bg2"), klatu)
             self.assertEqual(run_ids[klatu + 1], "buffbot-bg2")
-            self.assertEqual(run_ids[-1], "buffbot-bg2")
+            # Only the Modpack scroll policy 430 follows BuffBot (October 13 intake).
+            self.assertEqual(run_ids[-2:], ["buffbot-bg2", "chriz-bg-modpack-scrolls-bg2"])
 
     def test_freezes_the_released_source_and_exports_coherent_public_credits(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

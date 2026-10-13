@@ -261,7 +261,9 @@ fn mandatory_blocked_tail_fixes_are_recorded_as_limitations_not_forgotten() {
         .filter_map(|record| record["feature_id"].as_str())
         .collect::<Vec<_>>();
     assert!(ids.contains(&"feature:chriz-bg-modpack:component-400"));
-    assert!(ids.contains(&"feature:chriz-bg-modpack:component-430"));
+    // October 13: alpha.11's reader-level scroll policy 430 needs EEex instead of
+    // Tweaks Anthology 2170, so it is a ready default and no longer an omission.
+    assert!(!ids.contains(&"feature:chriz-bg-modpack:component-430"));
 }
 
 #[test]

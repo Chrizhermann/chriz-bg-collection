@@ -50,8 +50,11 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # October 13 default bard ceilings add Rebalance 420/421 and Bardic 3010's late run.
         self.assertTrue({420, 421} <= set(actual["chriz-bg-rebalance-bg2"]))
         self.assertEqual(actual["bardicwonders-progression-bg2"], [3010])
-        self.assertEqual(self.result["componentCount"], 464)
-        self.assertEqual(len(actual), 52)
+        # The October 13 intake adds Modpack 237/238/660 and SoD 177/198/285 and
+        # moves scroll policy 430 into its own final run.
+        self.assertEqual(actual["chriz-bg-modpack-scrolls-bg2"], [430])
+        self.assertEqual(self.result["componentCount"], 470)
+        self.assertEqual(len(actual), 53)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

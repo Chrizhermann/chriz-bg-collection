@@ -16,6 +16,7 @@ approved_tail_runs = [
   "chriz-bg-modpack-baeloth-bg2",
   "klatu-armor-thieving-bg2",
   "buffbot-bg2",
+  "chriz-bg-modpack-scrolls-bg2",
 ]
 
 [[omissions]]

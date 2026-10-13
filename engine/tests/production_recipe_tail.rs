@@ -98,7 +98,7 @@ fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
 }
 
 #[test]
-fn authors_the_tail_in_dependency_order_and_keeps_buffbot_absolute_last() {
+fn authors_the_tail_in_dependency_order_with_only_the_scroll_policy_after_buffbot() {
     let manifest = recipe();
     let run_ids = manifest
         .collection
@@ -117,7 +117,10 @@ fn authors_the_tail_in_dependency_order_and_keeps_buffbot_absolute_last() {
     let eet_end = run_ids.iter().position(|id| *id == "eet-end-bg2").unwrap();
     let buffbot = run_ids.iter().position(|id| *id == "buffbot-bg2").unwrap();
     assert!(randomiser < scs && scs < eet_end && eet_end < buffbot);
-    assert_eq!(buffbot, run_ids.len() - 1);
+    // October 13: Modpack scroll policy 430 hashes the final scrolls and spells,
+    // so its own run is the only one after BuffBot.
+    assert_eq!(buffbot + 1, run_ids.len() - 1);
+    assert_eq!(run_ids[buffbot + 1], "chriz-bg-modpack-scrolls-bg2");
 
     let runs = &manifest.collection.runs;
     assert_eq!(runs[scs].phase, Phase::Main);

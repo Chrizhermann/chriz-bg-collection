@@ -2,8 +2,11 @@
 
 Refreshed for the October 7 target **v0.2.0-alpha.9**, retaining the choices
 approved in the [September 16 candidate](../../alpha16-candidate-2026-09-16.md).
-50 current or historical entries; the collection exposes 33 and its recommended
-curated selection includes 26. Component `195` already includes the work from standalone component
+Rows `237`, `238`, `650`, `651` and `660` and the reworked `430` come from the
+unpublished **v0.2.0-alpha.11** candidate (October 13 intake, see
+[next batch intake](../../plans/2026-10-13-next-batch-intake.md)); the recipe pin
+moves to that release only when it is published.
+55 current or historical entries; the collection exposes 38. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
@@ -23,11 +26,28 @@ The four ✓ marks record the old reference install, not the new default recipe.
   [Evandra handoff](../../handoffs/2026-09-29-evandra-default-restoration.md).
 - The public alpha implements `110`, `130`, `140`, `160`, `170`, `190`, `192`–`198`,
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
-  FAIL placeholders.
+  FAIL placeholders. The alpha.11 candidate adds `237`, `238`, `650`, `651` and `660`.
 - The collection exposes every implemented component except standalone `160`, whose exact
   skill repair is invoked atomically by the default Skie component `195`.
-- Components `400` and `430` remain visible but conditionally inactive unless their Branwen /
-  Spell Revisions or Tweaks Anthology prerequisites are selected.
+- Component `400` remains visible but conditionally inactive unless its Branwen /
+  Spell Revisions prerequisites are selected.
+- Scrolls `430` (alpha.11) is default and no longer uses Tweaks Anthology `2170`: it
+  requires Windows EEex and sets the casting level for every scroll reader (the reader's
+  arcane or divine caster level; other readers, such as Use Any Item users, half their
+  highest class level, minimum 1). At install time it hashes every scroll and the spells
+  they cast, so it runs in its own final run `chriz-bg-modpack-scrolls-bg2`, after BuffBot
+  and every other spell/item writer.
+- Fade `237` and Evandra `238` are default whenever Fade or Evandra is selected: at the
+  first SoA recruitment they raise the companion to the highest protagonist XP threshold
+  reached (125,000 to 1,250,000), never lower XP and pay once. They run in the
+  late-companion run in TP2 order, `189, 237, 238, 620`.
+- Campaign XP caps `650` (BG1 161,000, SoD 500,000; excess banked) and the SoA cap `651`
+  (2,950,000, requires `650`) are optional, unchecked and experimental. Both require EEex
+  and run in their own run `chriz-bg-modpack-campaign-xp-bg2` right after the
+  late-companion run.
+- Degrodel `660` is default: refusing to hand over the Helm of Balduran makes Degrodel
+  and his servants attack; handing it over keeps the normal reward. It runs in the main
+  post-EET_end Modpack run after `630`.
 - Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
   and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's
   Archer choice `198`; never add standalone `KIVAN_QUEST_FIX` alongside it. Its
@@ -99,7 +119,7 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 400 | SR Branwen Spiritual Hammer (SPIN113): fix param1 for Create Weapon | chriz-bg-modpack: Spell fixes |  |  | mandatory |
 | 410 | Dispel Magic (Yeslick + Keldorn): friendly-fire + Yeslick cap fix | chriz-bg-modpack: Spell fixes |  |  | mandatory |
 | 420 | SPWI910 Imprisonment: extend duration via maze-reuse hack (BINARY REPLACE — install LAST) | chriz-bg-modpack: Spell fixes |  |  | |
-| 430 | Use Any Item: scrolls cast at a fair caster level for non-casters (CDTweaks #2170 fix) | chriz-bg-modpack: Spell fixes |  | ✓ | mandatory |
+| 430 | Scrolls: use the reader's active caster level, or half their active class level | chriz-bg-modpack: Spell fixes |  | ✓ | default |
 | 440 | Ascension Improved Slayer Transformation: repair the EE Fixpack branch (fizzled transformation kills the player) | chriz-bg-modpack: Spell fixes |  | ✓ | mandatory |
 | 450 | SCS shapeshift spell tweak: restore the five forms broken by EE Fixpack (Mind Flayer/Iron Golem/Giant Troll/Spider/Mustard Jelly) | chriz-bg-modpack: Spell fixes |  | ✓ | mandatory |
 | 500 | NPC kit changes (Khalid/Sirene/Skie/Sarah/etc.) | chriz-bg-modpack: Meta / multi-fix |  |  | |
@@ -112,5 +132,10 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 610 | Progressive utility XP for locks, traps, and learning spells | chriz-bg-modpack: Gameplay tweaks | Utility XP scaling | | optional |
 | 611 | Story-stage utility XP for locks, traps, and learning spells | chriz-bg-modpack: Gameplay tweaks | Utility XP scaling | | default |
 | 620 | Imoen: bring mage XP up to the party average at Spellhold | chriz-bg-modpack: Gameplay tweaks |  |  | default |
+| 237 | Fade: first-recruitment SoA XP catch-up (new recruitment actors) | chriz-bg-modpack: Gameplay tweaks |  |  | default |
+| 238 | Evandra: first-recruitment SoA XP catch-up (new recruitment actors) | chriz-bg-modpack: Gameplay tweaks |  |  | default |
 | 630 | Hide unidentified item appearance | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 650 | Campaign XP caps - keep excess XP for later (BG1/SoD; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 651 | Campaign XP caps - also cap SoA until ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
+| 660 | Degrodel: hand over the Helm of Balduran or keep it and fight him | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
