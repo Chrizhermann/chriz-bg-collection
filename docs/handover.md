@@ -16,8 +16,10 @@ scans passed; this binary was not launched. See
 [complete release notes](release-notes-alpha20.md).
 
 All seven versioned assets and the alpha update URL are verified. The collection
-website shows alpha.20 (website PR 28, verified live). Public docs and local tools
-now write the owner's home folder as `%USERPROFILE%`. Current coordination:
+website shows alpha.20 (website PR 28, verified live). This branch's docs and
+local tools, SoD Remix and BG Rebalance now write the owner's home folder as
+`%USERPROFILE%`; CEBG `main` and three other public repositories still contain it
+(listed in the overview). Current coordination:
 [work overview](plans/2026-10-12-bg-work-overview.md#october-13-continuation-claude).
 
 ## October 12 — straightforward work started and Claude handover

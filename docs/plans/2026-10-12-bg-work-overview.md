@@ -60,8 +60,12 @@ owner releases and [CEBG alpha.20](https://github.com/Chrizhermann/chriz-easy-bg
 (app and collection) are published; each fresh public download was verified, and
 the alpha updater channel now offers alpha.20. After Christopher's go-ahead the
 [collection website](https://bg.chrizfader.org/collection) shows alpha.20 (PR 28,
-verified live), and public docs and local tools no longer contain his home-folder
-path. The only game installation is still the disposable lab test.
+verified live). His home-folder path is gone from this release line's docs and
+local tools, SoD Remix `master` (PR 29) and BG Rebalance `main` (PR 8). A later
+scan still finds it on CEBG `main` (61 lines, 23 docs), Item Randomiser `main`
+(36 lines), BuffBot `main` (6), the SR patch `master` (1) and older feature
+branches. Those repositories were not part of the approved cleanup. The only
+game installation is still the disposable lab test.
 
 | Published 13 October | Release | Source commit |
 |---|---|---|
@@ -109,8 +113,16 @@ updater key was found on this PC; the setup was signed with it by path (no key
 created, copied or rotated), packaged, Defender-scanned and published. Exact
 record: [alpha.20 package verification](../package-acceptance-alpha20-2026-10-13.md).
 
-Still waiting for Christopher: a lab game launch and the optional one-file fix for
-his current game.
+Modpack release builder (local branch `claude/release-build-committed-bytes`,
+unpushed): the alpha.11 ZIP built on this PC differed from CI's build only in one
+manifest's line endings. Release builds now package only committed bytes. A local
+build now matches CI's `1f78a001…` exactly. Local CI-equivalent checks pass,
+except 14 scroll-runtime test modules that need `capstone`/`pefile`, which are not
+installed on this PC. It ships with the next Modpack release PR, whose CI runs
+those modules.
+
+Still waiting for Christopher: a lab game launch, the optional one-file fix for
+his current game, and whether to clean the remaining home-folder paths above.
 
 ## The useful answer
 
