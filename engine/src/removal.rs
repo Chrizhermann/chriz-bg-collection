@@ -282,10 +282,20 @@ fn execute_with(
         }
     }
     .map_err(failure)?;
-    if journal_present(&journal)? {
-        fs::remove_file(&journal).map_err(|e| io_at(&journal, e))?;
-    }
+    // My installs no longer lists the installation, so the removal has succeeded and must be
+    // reported as such. Only a listed installation reads its journal, so a journal that stays
+    // behind, for example while another program holds it open, can no longer authorize anything.
+    remove_journal_best_effort(&journal);
     Ok(())
+}
+
+/// Removes a removal journal if it is still a plain file reached without links. It is checked
+/// again here because its folder may have changed since it was first inspected, and a link must
+/// never be followed out of application data.
+fn remove_journal_best_effort(path: &Path) {
+    if matches!(journal_present(path), Ok(true)) {
+        let _ = fs::remove_file(path);
+    }
 }
 
 /// A plan that only removes the entry from My installs, because the folder exists but cannot be
@@ -1045,6 +1055,91 @@ mod tests {
             "not a journal"
         );
         assert_eq!(registered_campaigns(&f), 1);
+    }
+    /// Deletes the installation, calling `last_step` just before its folder itself is removed:
+    /// after its journal was written, before My installs is updated and the journal cleaned up.
+    fn delete_with_last_step(f: &Fixture, last_step: &mut dyn FnMut()) -> Result<(), RemovalError> {
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Delete);
+        execute_with(&f.app, &plan, &Host::default(), &mut |path| {
+            if path == f.root {
+                assert!(journal_path(&f.app, "fixture-removal").is_file());
+                last_step();
+            }
+            Ok(())
+        })
+    }
+    /// The installation is gone and no longer listed, so the removal succeeded even when its
+    /// journal cannot be cleaned up afterwards; the item that took its place is left alone.
+    #[test]
+    fn a_journal_that_cannot_be_cleaned_up_does_not_fail_a_completed_removal() {
+        let f = fixture();
+        let journal = journal_path(&f.app, "fixture-removal");
+
+        delete_with_last_step(&f, &mut || {
+            fs::remove_file(&journal).unwrap();
+            fs::create_dir(&journal).unwrap();
+            fs::write(journal.join("kept.txt"), "not a journal").unwrap();
+        })
+        .unwrap();
+
+        assert!(!f.root.exists());
+        assert_eq!(registered_campaigns(&f), 0);
+        assert_eq!(
+            fs::read_to_string(journal.join("kept.txt")).unwrap(),
+            "not a journal"
+        );
+    }
+    /// The reported case: another program, such as a virus scanner, holds the journal open.
+    #[cfg(windows)]
+    #[test]
+    fn a_journal_held_open_by_another_program_does_not_fail_a_completed_removal() {
+        use std::os::windows::fs::OpenOptionsExt;
+        const FILE_SHARE_READ: u32 = 1;
+
+        let f = fixture();
+        let journal = journal_path(&f.app, "fixture-removal");
+        let mut holder = None;
+
+        delete_with_last_step(&f, &mut || {
+            holder = Some(
+                fs::OpenOptions::new()
+                    .read(true)
+                    .share_mode(FILE_SHARE_READ)
+                    .open(&journal)
+                    .unwrap(),
+            );
+        })
+        .unwrap();
+
+        assert!(holder.is_some());
+        assert!(!f.root.exists());
+        assert_eq!(registered_campaigns(&f), 0);
+        assert!(journal.is_file());
+        drop(holder);
+    }
+    /// Cleaning up must not follow a link that replaced the journal folder after it was first
+    /// inspected, and the completed removal still succeeds.
+    #[test]
+    fn journal_cleanup_never_follows_a_link_that_appeared_during_removal() {
+        let f = fixture();
+        let outside = f._temp.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        fs::write(outside.join("fixture-removal.json"), "not a journal").unwrap();
+        let journals = f.app.join("installation-removals");
+
+        delete_with_last_step(&f, &mut || {
+            fs::rename(&journals, f._temp.path().join("moved-journals")).unwrap();
+            link_directory(&journals, &outside);
+        })
+        .unwrap();
+
+        assert!(!f.root.exists());
+        assert_eq!(registered_campaigns(&f), 0);
+        assert_eq!(
+            fs::read_to_string(outside.join("fixture-removal.json")).unwrap(),
+            "not a journal"
+        );
     }
     /// A registered folder replaced by a link is never followed or deleted, but its entry can
     /// leave the list.
