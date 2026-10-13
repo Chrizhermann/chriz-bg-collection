@@ -1591,7 +1591,9 @@ class AppController implements AppHandle {
     }
     this.#removalPreview = null;
     this.#removalBusy = false;
-    this.#removalNotice = preview.action === "forget" ? "Installation entry removed. No files were deleted." : "Installation deleted. Saved games outside its folder were kept.";
+    this.#removalNotice = preview.action === "forget" ? "Installation entry removed. No files were deleted."
+      : preview.action === "unlist" ? "Installation removed from My installs. Its folder was not changed."
+      : "Installation deleted. Saved games outside its folder were kept.";
     this.#checkedPatches.delete(preview.installId);
     if (this.#patchPreview?.installId === preview.installId) this.#patchPreview = null;
     if (this.#installedUpdateInstallId === preview.installId) {

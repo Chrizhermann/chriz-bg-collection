@@ -25,6 +25,9 @@ pub struct RemovalPlan {
     pub managed_root: PathBuf,
     pub preserved_save_path: Option<PathBuf>,
     pub action: RemovalAction,
+    /// Why the folder cannot be deleted, only for [`RemovalAction::Unlist`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
     registry_sha256: String,
     directory_identity: Option<u64>,
     protected_paths: Vec<PathBuf>,
@@ -35,6 +38,9 @@ pub struct RemovalPlan {
 pub enum RemovalAction {
     Delete,
     Forget,
+    /// The folder exists but cannot be proven to be this installation. Only its entry leaves
+    /// My installs; nothing in the folder is deleted.
+    Unlist,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -77,6 +83,7 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
         managed_root: root.clone(),
         preserved_save_path: install.map(|record| record.managed_save_root.clone()),
         action: RemovalAction::Forget,
+        reason: None,
         registry_sha256: sha256_bytes(&snapshot),
         directory_identity: None,
         protected_paths: vec![app_data.to_path_buf()],
@@ -100,52 +107,90 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(plan),
         Err(error) => return Err(io_at(root, error)),
         Ok(metadata) if !metadata.is_dir() || reparse(&metadata) => {
-            return Err(failure("Installation root is not a direct folder."))
+            return Ok(unlisted(
+                plan,
+                None,
+                "Its location is no longer a plain folder.",
+            ));
         }
         Ok(_) => {}
     }
     if fs::canonicalize(root).map_err(|e| io_at(root, e))? != *root {
-        return Err(failure("Installation root identity changed."));
+        return Ok(unlisted(
+            plan,
+            None,
+            "The folder's name changed since it was installed.",
+        ));
     }
-    plan.action = RemovalAction::Delete;
-    plan.directory_identity = Some(directory_identity(root)?);
+    let identity = directory_identity(root)?;
     let journal_path = journal_path(app_data, install_id);
     if let Some(journal) = read_journal(&journal_path)? {
         if journal.install_id != plan.install_id
             || journal.managed_root != plan.managed_root
             || journal.registry_sha256 != plan.registry_sha256
-            || journal.directory_identity != plan.directory_identity
+            || journal.directory_identity != Some(identity)
             || journal.action != RemovalAction::Delete
         {
-            return Err(failure(
-                "Removal journal does not match this installation folder.",
+            return Ok(unlisted(
+                plan,
+                Some(identity),
+                "An interrupted removal started on a different folder or registration.",
             ));
         }
         plan = journal;
     } else {
-        let replay = SessionStore::open(root)
-            .and_then(|store| store.replay())
-            .map_err(|e| failure(format!("Cannot prove ownership of this folder: {e}")))?;
+        let replay = match SessionStore::open(root).and_then(|store| store.replay()) {
+            Ok(replay) => replay,
+            Err(error) if records_unusable(&error) => {
+                return Ok(unlisted(
+                    plan,
+                    Some(identity),
+                    "Its CEBG install records are missing or damaged.",
+                ))
+            }
+            Err(error) => {
+                return Err(failure(format!(
+                    "Cannot read this folder's install records: {error}"
+                )))
+            }
+        };
         let created = replay.created();
         if created.install_id != install_id
             || created.managed_root != *root
             || install.is_some_and(|record| record.recipe_sha256 != created.recipe_payload_sha256)
             || campaign.is_some_and(|record| record.recipe_sha256 != created.recipe_payload_sha256)
         {
-            return Err(failure("The folder belongs to a different installation."));
+            return Ok(unlisted(
+                plan,
+                Some(identity),
+                "Its CEBG install records belong to a different installation.",
+            ));
         }
-        let payload: serde_json::Value =
-            serde_json::from_slice(&created.recipe_payload).map_err(failure)?;
-        for role in ["bg1", "bg2"] {
-            let source = payload
-                .get(role)
-                .and_then(|source| source.get("root"))
-                .and_then(|root| root.as_str())
-                .ok_or_else(|| {
-                    failure("Frozen source-game paths are unavailable; refusing deletion.")
-                })?;
-            plan.protected_paths.push(PathBuf::from(source));
-        }
+        let sources = serde_json::from_slice::<serde_json::Value>(&created.recipe_payload)
+            .ok()
+            .map(|payload| {
+                ["bg1", "bg2"]
+                    .iter()
+                    .map(|role| {
+                        payload
+                            .get(role)
+                            .and_then(|source| source.get("root"))
+                            .and_then(|root| root.as_str())
+                            .map(PathBuf::from)
+                    })
+                    .collect::<Option<Vec<_>>>()
+                    .map(|sources| (sources, payload))
+            });
+        let Some(Some((sources, payload))) = sources else {
+            return Ok(unlisted(
+                plan,
+                Some(identity),
+                "Its CEBG install records are incomplete.",
+            ));
+        };
+        plan.action = RemovalAction::Delete;
+        plan.directory_identity = Some(identity);
+        plan.protected_paths.extend(sources);
         plan.protected_paths.push(created.cache_root.clone());
         if let Some(name) = payload.get("display_name").and_then(|value| value.as_str()) {
             if install.is_none() {
@@ -214,15 +259,48 @@ fn execute_with(
         persist_journal(app_data, &current)?;
         remove_tree(&current.managed_root, before_remove)?;
     }
-    ManagedInstallRegistry::open_or_create(app_data)
-        .map_err(failure)?
-        .forget_missing(&current.install_id, &current.managed_root)
-        .map_err(failure)?;
+    let registry = ManagedInstallRegistry::open_or_create(app_data).map_err(failure)?;
+    match current.action {
+        RemovalAction::Delete | RemovalAction::Forget => {
+            registry.forget_missing(&current.install_id, &current.managed_root)
+        }
+        // The folder cannot be proven to be this installation, so nothing in it is touched.
+        RemovalAction::Unlist => {
+            registry.forget_unproven(&current.install_id, &current.managed_root)
+        }
+    }
+    .map_err(failure)?;
     let journal = journal_path(app_data, &current.install_id);
     if journal.exists() {
         fs::remove_file(&journal).map_err(|e| io_at(&journal, e))?;
     }
     Ok(())
+}
+
+/// A plan that only removes the entry from My installs, because the folder exists but cannot be
+/// proven to be this installation: deleting it could destroy files that are not CEBG's.
+fn unlisted(mut plan: RemovalPlan, directory_identity: Option<u64>, reason: &str) -> RemovalPlan {
+    plan.action = RemovalAction::Unlist;
+    plan.directory_identity = directory_identity;
+    plan.reason = Some(reason.to_owned());
+    plan
+}
+
+/// Whether reading a folder's install records failed because they are missing or damaged,
+/// rather than being unreadable for the moment, for example locked or denied by a security
+/// product. Only the former can turn a deletion into removing the entry from the list.
+fn records_unusable(error: &(dyn std::error::Error + 'static)) -> bool {
+    let mut current = Some(error);
+    while let Some(error) = current {
+        if error
+            .downcast_ref::<io::Error>()
+            .is_some_and(|io| io.kind() != io::ErrorKind::NotFound)
+        {
+            return false;
+        }
+        current = error.source();
+    }
+    true
 }
 
 fn journal_path(app_data: &Path, id: &str) -> PathBuf {
@@ -659,7 +737,120 @@ mod tests {
         .unwrap_err();
         fs::rename(&f.root, f._temp.path().join("moved")).unwrap();
         fs::create_dir(&f.root).unwrap();
+        fs::write(f.root.join("personal.txt"), "not ours").unwrap();
+        let replacement = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(replacement.action, RemovalAction::Unlist);
+        run(&f, &replacement).unwrap();
+        assert!(f.root.join("personal.txt").exists());
+        assert!(!journal_path(&f.app, "fixture-removal").exists());
+    }
+    fn registered_campaigns(f: &Fixture) -> usize {
+        ManagedInstallRegistry::open_or_create(&f.app)
+            .unwrap()
+            .list_campaigns()
+            .unwrap()
+            .len()
+    }
+    /// The reported case: old installation folders were partly deleted by hand, including
+    /// their install records. The entry can leave My installs; no remaining file is deleted.
+    #[test]
+    fn folder_without_install_records_is_only_unlisted_and_keeps_every_file() {
+        let f = fixture();
+        fs::remove_dir_all(f.root.join(".chriz")).unwrap();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Unlist);
+        assert_eq!(
+            plan.reason.as_deref(),
+            Some("Its CEBG install records are missing or damaged.")
+        );
+        assert_eq!(plan.protected_paths, std::slice::from_ref(&f.app));
+
+        run(&f, &plan).unwrap();
+
+        assert!(f.root.join("game/game.exe").exists());
+        assert_eq!(registered_campaigns(&f), 0);
         assert!(preview(&f.app, "fixture-removal").is_err());
+    }
+    #[test]
+    fn damaged_install_records_are_only_unlisted() {
+        let f = fixture();
+        fs::write(f.root.join(".chriz/ledger/0000000000.json"), b"{ damaged").unwrap();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Unlist);
+        run(&f, &plan).unwrap();
+        assert!(f.root.join("game/game.exe").exists());
+        assert!(f.root.join(".chriz/ledger/0000000000.json").exists());
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    /// Records that cannot be read at the moment, here because access is denied, are not
+    /// missing: the preview fails instead of offering to drop a working installation.
+    #[cfg(windows)]
+    #[test]
+    fn unreadable_install_records_are_neither_deleted_nor_unlisted() {
+        let f = fixture();
+        let ledger = f.root.join(".chriz/ledger");
+        let denied = std::process::Command::new("icacls")
+            .arg(&ledger)
+            .args(["/deny", "*S-1-1-0:(RD)"])
+            .output()
+            .unwrap();
+        assert!(denied.status.success());
+        let result = preview(&f.app, "fixture-removal");
+        let restored = std::process::Command::new("icacls")
+            .arg(&ledger)
+            .args(["/remove:d", "*S-1-1-0"])
+            .output()
+            .unwrap();
+        assert!(restored.status.success());
+
+        let error = result.unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("Cannot read this folder's install records"),
+            "{error}"
+        );
+        assert_eq!(
+            preview(&f.app, "fixture-removal").unwrap().action,
+            RemovalAction::Delete
+        );
+    }
+    #[test]
+    fn unlisting_holds_the_target_lock_and_restored_records_invalidate_it() {
+        let f = fixture();
+        let records = f.root.join(".chriz");
+        let held = f._temp.path().join("held-records");
+        fs::rename(&records, &held).unwrap();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Unlist);
+
+        let lock = TargetLock::try_acquire(f.app.join("locks"), &f.root).unwrap();
+        assert!(run(&f, &plan).is_err());
+        drop(lock);
+        assert_eq!(registered_campaigns(&f), 1);
+
+        fs::rename(&held, &records).unwrap();
+        let error = run(&f, &plan).unwrap_err();
+        assert!(
+            error.to_string().contains("changed since confirmation"),
+            "{error}"
+        );
+        assert_eq!(registered_campaigns(&f), 1);
+        assert_eq!(
+            preview(&f.app, "fixture-removal").unwrap().action,
+            RemovalAction::Delete
+        );
+    }
+    #[test]
+    fn a_path_that_is_no_longer_a_folder_is_only_unlisted() {
+        let f = fixture();
+        fs::rename(&f.root, f._temp.path().join("moved")).unwrap();
+        fs::write(&f.root, "a file now").unwrap();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Unlist);
+        run(&f, &plan).unwrap();
+        assert_eq!(fs::read_to_string(&f.root).unwrap(), "a file now");
+        assert_eq!(registered_campaigns(&f), 0);
     }
     #[test]
     fn broad_roots_and_source_overlap_are_rejected() {

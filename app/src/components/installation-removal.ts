@@ -26,14 +26,21 @@ export function installationRemovalDialog(
   dialog.setAttribute("aria-labelledby", "removal-title");
   dialog.setAttribute("aria-describedby", "removal-description");
   const forget = preview.action === "forget";
-  const title = element("h2", undefined, forget ? "Forget this installation?" : "Delete this installation?");
+  const unlist = preview.action === "unlist";
+  const title = element("h2", undefined, forget ? "Forget this installation?"
+    : unlist ? "Remove this installation from My installs?" : "Delete this installation?");
   title.id = "removal-title";
   const description = element("p", undefined, forget
     ? "This folder is missing. Remove its entry from My installs; no files will be deleted."
-    : "Permanently delete this installation folder and everything inside it, including any files or saves you manually placed there. This cannot be undone.");
+    : unlist
+      ? "CEBG can no longer confirm that this folder is this installation, so it will not delete anything in it. Only the entry leaves My installs; the folder stays where it is."
+      : "Permanently delete this installation folder and everything inside it, including any files or saves you manually placed there. This cannot be undone.");
   description.id = "removal-description";
   dialog.append(title, element("strong", undefined, preview.displayName), description, element("p", "path removal-path", preview.managedRoot));
-  if (!forget) {
+  if (unlist) {
+    if (preview.reason) dialog.append(element("p", "muted", preview.reason));
+    dialog.append(element("p", "muted", "If you no longer need this folder, delete it yourself after checking that it holds nothing you want to keep."));
+  } else if (!forget) {
     const size = approximateSize(preview.approximateSizeBytes);
     dialog.append(element("p", "muted", `Approximate folder size: ${size}.${size === "unavailable" ? "" : " Disk space freed may differ."}`));
     dialog.append(element("p", "muted", "Your original game sources and shared downloads stay untouched. Saves stored outside this folder are kept."));
@@ -52,7 +59,7 @@ export function installationRemovalDialog(
   cancelButton.dataset.action = "cancel-removal";
   cancelButton.disabled = busy;
   const confirmButton = actionButton(busy ? error === null ? "Removing…" : "Checking…"
-    : error !== null ? "Review removal again" : forget ? "Forget installation" : "Delete permanently", confirm, "danger");
+    : error !== null ? "Review removal again" : forget ? "Forget installation" : unlist ? "Remove from list" : "Delete permanently", confirm, "danger");
   confirmButton.disabled = busy;
   actions.append(cancelButton, confirmButton);
   dialog.append(actions);

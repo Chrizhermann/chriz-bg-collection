@@ -337,7 +337,10 @@ export interface InstallationRemovalPreview {
   readonly installId: string;
   readonly displayName: string;
   readonly managedRoot: string;
-  readonly action: "delete" | "forget";
+  /** `unlist` removes only the entry: the folder exists but cannot be proven to be this installation. */
+  readonly action: "delete" | "forget" | "unlist";
+  /** Why the folder will not be deleted, only for `unlist`. */
+  readonly reason?: string | null;
   /** Advisory logical file bytes; absent when the bounded scan cannot finish. */
   readonly approximateSizeBytes?: string | null;
   readonly preservedSavePath: string | null;

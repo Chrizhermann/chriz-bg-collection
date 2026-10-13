@@ -359,6 +359,8 @@ pub struct InstallationRemovalPreview {
     pub display_name: String,
     pub managed_root: String,
     pub action: bg_engine::removal::RemovalAction,
+    /// Why the folder will not be deleted, only when the action removes just the entry.
+    pub reason: Option<String>,
     /// Advisory only: never part of the removal plan, token identity or journal.
     pub approximate_size_bytes: Option<String>,
     pub preserved_save_path: Option<String>,
@@ -1991,6 +1993,7 @@ impl NativeBridge {
                 .map_err(installation_name_error)?,
             managed_root: display_windows_path(&plan.managed_root)?,
             action: plan.action,
+            reason: plan.reason.clone(),
             approximate_size_bytes: None,
             preserved_save_path: plan
                 .preserved_save_path

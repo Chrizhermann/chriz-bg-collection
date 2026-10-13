@@ -18,13 +18,14 @@ class RemovalBackend extends FixtureBackend {
   entries = [installation];
   previews: string[] = [];
   removals: { id: string; token: string }[] = [];
-  action: "delete" | "forget" = "delete";
+  action: "delete" | "forget" | "unlist" = "delete";
   inUse = false;
   override listManagedInstallations() { return Promise.resolve([...this.entries]); }
   override previewInstallationRemoval(id: string): Promise<InstallationRemovalPreview> {
     this.previews.push(id);
     return Promise.resolve({
       installId: id, displayName: installation.name, managedRoot: installation.path, action: this.action,
+      reason: this.action === "unlist" ? "Its CEBG install records are missing or damaged." : null,
       preservedSavePath: "C:\\Users\\Fixture\\Documents\\Chriz Easy BG-test", confirmationToken: "exact-preview-token",
     });
   }
@@ -144,6 +145,38 @@ describe("explicit managed-install removal", () => {
     expect(queryByRole(root, "button", { name: "Delete permanently" })).toBeNull();
     await user.click(getByRole(root, "button", { name: "Forget installation" }));
     expect(backend.removals[0]?.id).toBe("chosen");
+  });
+
+  it("explains entry-only removal of a folder that cannot be proven to be the installation", () => {
+    const dialog = installationRemovalDialog({
+      installId: installation.id, displayName: installation.name, managedRoot: installation.path,
+      action: "unlist", reason: "Its CEBG install records are missing or damaged.", preservedSavePath: null,
+      confirmationToken: "token", approximateSizeBytes: "12884901888",
+    }, false, null, () => {}, () => {});
+    expect(getByRole(dialog, "heading").textContent).toBe("Remove this installation from My installs?");
+    expect(dialog.textContent).toContain("it will not delete anything in it");
+    expect(dialog.textContent).toContain("Its CEBG install records are missing or damaged.");
+    expect(dialog.textContent).toContain(installation.path);
+    expect(dialog.textContent).not.toContain("folder size");
+    expect(dialog.textContent).not.toContain("cannot be undone");
+    expect(queryByRole(dialog, "button", { name: "Delete permanently" })).toBeNull();
+    expect(getByRole(dialog, "button", { name: "Remove from list" })).toBeTruthy();
+  });
+
+  it("removes an installation it cannot prove from the list and says its folder was kept", async () => {
+    const backend = new RemovalBackend();
+    backend.action = "unlist";
+    backend.entries = [{ ...installation, available: false, launchPath: null, status: "Build unavailable — folder moved or changed" }];
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Delete / remove installation…" }));
+    expect(getByRole(root, "alertdialog").textContent).toContain("Its CEBG install records are missing or damaged.");
+    await user.click(getByRole(root, "button", { name: "Remove from list" }));
+    await waitFor(() => expect(backend.removals).toEqual([{ id: "chosen", token: "exact-preview-token" }]));
+    expect(queryByRole(root, "alertdialog")).toBeNull();
+    expect(root.textContent).toContain("Installation removed from My installs. Its folder was not changed.");
   });
 
   it("keeps deletion available for sealed failures but disables it during active work", () => {

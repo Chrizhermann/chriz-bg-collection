@@ -131,6 +131,11 @@ outside the deleted folder are kept. Export diagnostics first if you need its lo
 If the folder is already missing, **Forget installation** removes only its entry
 from the list. That is not a deletion of files somewhere else on the disk.
 
+If the folder still exists but CEBG can no longer confirm it is that installation,
+for example because parts of it were deleted or renamed by hand, CEBG never
+deletes anything in it. **Remove from list** then removes only the entry and shows
+why. Delete the folder yourself afterwards if you are sure you no longer need it.
+
 ## What to send when asking for help
 
 - Your CEBG version and the step/action that failed.

@@ -186,6 +186,21 @@ impl ManagedInstallRegistry {
                 ))
             }
         }
+        self.forget_entries(install_id, root)
+    }
+
+    /// Forget an exact indexed identity whose folder still exists but can no longer be proven
+    /// to be that installation, leaving the folder and everything in it untouched. Callers
+    /// hold its target lock and have established that ownership cannot be proven.
+    pub fn forget_unproven(&self, install_id: &str, root: &Path) -> Result<(), RegistryError> {
+        let _names_guard = self.lock_names()?;
+        validate_identifier(install_id, "install id", root)?;
+        self.forget_entries(install_id, root)
+    }
+
+    /// Removes the completed and campaign records of `install_id`, registered at `root`.
+    /// Called with the names lock held.
+    fn forget_entries(&self, install_id: &str, root: &Path) -> Result<(), RegistryError> {
         let completed = self
             .list()?
             .into_iter()
