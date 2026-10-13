@@ -477,6 +477,17 @@ date = "2026-10-07"
 status = "accepted"
 scope = "Six static intake/selection tests and 35 native recipe tests passed: released artifact, opt-in selection and post-spellbook component order only. Not a combined game installation or gameplay acceptance."
 
+[[evidence]]
+subject_kind = "run"
+subject_id = "chriz-bg-modpack-scrolls-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "59e4ab964237a1fabab0df80c33c6fc37474595d"
+test_artifact = "tools/tests/test_oct13_intake_recipe.py"
+date = "2026-10-13"
+status = "accepted"
+scope = "Static recipe checks only: component, EEex dependency, default selection and final-run order of the Modpack scroll policy 430 in both profiles. Not a game installation or gameplay acceptance; the Modpack v0.2.0-alpha.11 pin is still pending publication."
+
 # This remains intentionally pending. Static checks do not turn it into live acceptance.
 [[evidence]]
 subject_kind = "release"
