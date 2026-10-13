@@ -10,11 +10,10 @@ separate installation, verifies the result, and reopens later as a simple launch
 
 ## Current development status (2026-10-13)
 
-App and collection **0.1.0-alpha.19** are published. This branch prepares app and
-collection **0.1.0-alpha.20**: Challenge Mode, the Lefreut interface fix, resumable
-re-downloads, and the October 13 Modpack, SoD Remix, BG Rebalance and Bardic Wonders
-releases. Source checks pass; the signed package and its publication are still
-pending. See the [candidate changelog](docs/release-notes-alpha20.md).
+App and collection **0.1.0-alpha.20** are published: Challenge Mode, the Lefreut
+interface fix, resumable re-downloads, and the October 13 Modpack, SoD Remix,
+BG Rebalance and Bardic Wonders releases. See the [changelog](docs/release-notes-alpha20.md)
+and the [package verification](docs/package-acceptance-alpha20-2026-10-13.md).
 
 Get the installer and guide from [the collection page](https://bg.chrizfader.org/collection),
 or [public releases](https://github.com/Chrizhermann/chriz-easy-bg/releases).

@@ -1,6 +1,7 @@
 # Chriz Easy BG 0.1.0-alpha.20
 
-**Candidate:** app alpha.20 / collection alpha.20, not yet published.
+**Published:** app alpha.20 / collection alpha.20.
+[Download and complete release notes](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0-alpha.20).
 
 This update adds Challenge Mode, new recommended choices and updated mods, and fixes
 Lefreut's interfaces and resumed installations. These notes cover everything since
