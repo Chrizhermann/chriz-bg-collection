@@ -152,7 +152,11 @@ fn zip_bytes(entries: &[(&str, &[u8])]) -> Vec<u8> {
 }
 
 fn cli() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_chriz-bg-install"))
+    let mut command = Command::new(env!("CARGO_BIN_EXE_chriz-bg-install"));
+    // Process checks see no running program unless a test declares one, whatever else runs on
+    // this PC.
+    command.env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", "");
+    command
 }
 
 fn run(args: &[&str]) -> Output {
@@ -638,6 +642,111 @@ fn executable_command(fixture: &ExecutableFixture) -> Command {
         .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2");
     command
+}
+
+/// A real program named like WeiDU, running outside the fixture's game folders until dropped.
+#[cfg(windows)]
+struct ForeignInstaller(std::process::Child);
+
+#[cfg(windows)]
+impl ForeignInstaller {
+    fn start(executable: &Path) -> Self {
+        use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
+
+        fs::create_dir_all(executable.parent().unwrap()).unwrap();
+        fs::copy(std::env::var_os("COMSPEC").unwrap(), executable).unwrap();
+        let child = Command::new(executable)
+            .args(["/D", "/C", "set /p wait_for_test="])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        Self(child)
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ForeignInstaller {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+/// In a test build the installer sees only the programs a test declares running, so another
+/// program's WeiDU on this PC never decides a test (issue 9). A declared installer still blocks
+/// the manual checkpoint, wherever it runs.
+#[cfg(windows)]
+#[test]
+fn manual_checkpoint_checks_see_only_the_installers_a_test_declares() {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .args(["--manual-pause-after", "eefixpack-bg1:0"]);
+    let paused = install.output().unwrap();
+    assert!(
+        paused.status.success(),
+        "{}
+{}",
+        stdout(&paused),
+        stderr(&paused)
+    );
+    let paused = json_stdout(&paused);
+    assert_eq!(paused["status"]["status"], "paused");
+    let install_id = paused["install_id"].as_str().unwrap();
+    let check = |declared: Option<&Path>| {
+        let mut command = executable_command(&fixture);
+        if let Some(declared) = declared {
+            command.env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", declared);
+        }
+        command
+            .args([
+                "--json",
+                "check-manual-checkpoint",
+                fixture.managed.to_str().unwrap(),
+                "--install-id",
+                install_id,
+            ])
+            .output()
+            .unwrap()
+    };
+    let outside = fixture.managed.parent().unwrap().join("elsewhere");
+    let _foreign = ForeignInstaller::start(&outside.join("weidu.exe"));
+
+    // Tests declare no running program by default.
+    let unaffected = check(None);
+    assert!(
+        unaffected.status.success(),
+        "{}
+{}",
+        stdout(&unaffected),
+        stderr(&unaffected)
+    );
+
+    let declared = outside.join("Downloads").join("Setup-SomeMod.exe");
+    let blocked = check(Some(&declared));
+    assert!(!blocked.status.success(), "{}", stdout(&blocked));
+    let error = &json_stdout(&blocked)["error"];
+    assert_eq!(
+        error["code"], "manual_checkpoint_needs_attention",
+        "{error}"
+    );
+    let message = error["message"].as_str().unwrap();
+    assert!(
+        message.contains("Close the manual installer")
+            && message.contains(declared.to_str().unwrap()),
+        "{message}"
+    );
 }
 
 #[cfg(windows)]

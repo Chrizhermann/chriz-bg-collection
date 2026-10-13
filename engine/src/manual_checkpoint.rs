@@ -610,11 +610,14 @@ pub fn game_update_guard(root: &Path) -> Result<(), String> {
 
 /// Manual WeiDU may run from Downloads, outside either staged game directory.
 pub fn check_manual_processes() -> Result<(), String> {
-    use crate::preflight::PreflightHost;
-    for executable in crate::preflight::SystemPreflight
-        .running_executable_paths()
-        .map_err(|e| e.to_string())?
-    {
+    check_manual_processes_with(&crate::preflight::SystemPreflight)
+}
+
+/// Injected form of [`check_manual_processes`].
+pub fn check_manual_processes_with(
+    host: &dyn crate::preflight::PreflightHost,
+) -> Result<(), String> {
+    for executable in host.running_executable_paths().map_err(|e| e.to_string())? {
         let name = executable
             .file_name()
             .unwrap_or_default()

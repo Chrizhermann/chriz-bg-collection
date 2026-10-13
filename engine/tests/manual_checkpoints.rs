@@ -431,3 +431,81 @@ fn manual_diagnostics_provenance_is_bounded_and_unchanged_old_errors_are_not_new
     fs::write(debug, "ERROR: new failure\n").unwrap();
     assert!(fixture.review().err().unwrap().contains("failure"));
 }
+
+/// Reports `0` as the programs running on the PC. The manual-installer check uses nothing else.
+struct RunningPrograms(Result<Vec<std::path::PathBuf>, std::io::ErrorKind>);
+
+impl bg_engine::preflight::PreflightHost for RunningPrograms {
+    fn available_space(&self, _: &Path) -> std::io::Result<u64> {
+        unreachable!("the manual-installer check reads only running programs")
+    }
+
+    fn volume_key(&self, _: &Path) -> std::io::Result<std::ffi::OsString> {
+        unreachable!("the manual-installer check reads only running programs")
+    }
+
+    fn probe_directory_writable(&self, _: &Path) -> std::io::Result<()> {
+        unreachable!("the manual-installer check reads only running programs")
+    }
+
+    fn running_executable_paths(&self) -> std::io::Result<Vec<std::path::PathBuf>> {
+        self.0.clone().map_err(std::io::Error::from)
+    }
+
+    fn probe_exclusive_writable_files(
+        &self,
+        _: &[std::path::PathBuf],
+    ) -> Result<(), bg_engine::preflight::ExclusiveFileError> {
+        unreachable!("the manual-installer check reads only running programs")
+    }
+}
+
+#[test]
+fn manual_installers_block_checking_wherever_they_run() {
+    for installer in [
+        Path::new("Downloads").join("weidu.exe"),
+        Path::new("Mods").join("ItemRev").join("SETUP-ItemRev.EXE"),
+        Path::new("game").join("WeiDU.exe"),
+    ] {
+        let error = check_manual_processes_with(&RunningPrograms(Ok(vec![
+            Path::new("Tools").join("notepad.exe"),
+            installer.clone(),
+        ])))
+        .unwrap_err();
+        assert!(
+            error.contains("Close the manual installer")
+                && error.contains(installer.to_str().unwrap()),
+            "{error}"
+        );
+    }
+}
+
+#[test]
+fn other_programs_do_not_block_checking() {
+    let running = [
+        "notepad.exe",
+        "Baldur.exe",
+        "setup.exe",
+        "weidu-helper.exe",
+        "mysetup-mod.exe",
+        "setup-notes.txt",
+    ]
+    .map(|name| Path::new("Tools").join(name))
+    .to_vec();
+    assert_eq!(
+        check_manual_processes_with(&RunningPrograms(Ok(running))),
+        Ok(())
+    );
+    assert_eq!(
+        check_manual_processes_with(&RunningPrograms(Ok(Vec::new()))),
+        Ok(())
+    );
+}
+
+#[test]
+fn a_process_list_that_cannot_be_read_blocks_checking() {
+    assert!(check_manual_processes_with(&RunningPrograms(Err(
+        std::io::ErrorKind::PermissionDenied
+    )))
+    .is_err());
+}

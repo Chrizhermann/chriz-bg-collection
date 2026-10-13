@@ -128,6 +128,14 @@ impl PreflightHost for SystemPreflight {
     }
 
     fn running_executable_paths(&self) -> io::Result<Vec<PathBuf>> {
+        // Debug builds only: tests that run the installer declare which programs run, so that
+        // another program's WeiDU on the same PC never decides their outcome.
+        #[cfg(debug_assertions)]
+        if let Some(declared) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES") {
+            return Ok(std::env::split_paths(&declared)
+                .filter(|path| !path.as_os_str().is_empty())
+                .collect());
+        }
         system_running_executable_paths()
     }
 
@@ -1271,9 +1279,14 @@ mod process_tests {
     use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
 
+    /// Not named like an installer or the game: tests running in parallel use the real process
+    /// list, which fails closed on such a program that it cannot inspect, for example while it
+    /// starts. The checks below still treat the fixture as `weidu.exe` by its process name.
+    const FIXTURE_IMAGE: &str = "process-fixture.exe";
+
     fn fixture_process(script: &str) -> (tempfile::TempDir, Child) {
         let temp = tempfile::tempdir().expect("create process fixture folder");
-        let executable = temp.path().join("weidu.exe");
+        let executable = temp.path().join(FIXTURE_IMAGE);
         fs::copy(
             std::env::var_os("COMSPEC").expect("locate Windows command interpreter"),
             &executable,
@@ -1298,6 +1311,11 @@ mod process_tests {
             "weidu.exe",
             child.id(),
         )
+    }
+
+    #[test]
+    fn fixture_processes_are_not_relevant_to_parallel_process_checks() {
+        assert!(!is_relevant_process_name(FIXTURE_IMAGE));
     }
 
     #[test]
@@ -1348,7 +1366,7 @@ mod process_tests {
         );
         drop(child.stdin.take());
         child.wait().expect("wait for fixture after stdin closes");
-        let expected = fs::canonicalize(temp.path().join("weidu.exe")).unwrap();
+        let expected = fs::canonicalize(temp.path().join(FIXTURE_IMAGE)).unwrap();
         for found in [waitable, query_only] {
             let path = found
                 .expect("inspect live process")
