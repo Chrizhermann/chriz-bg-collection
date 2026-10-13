@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Cursor, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -18,7 +18,9 @@ use bg_engine::digest::sha256_bytes;
 use bg_engine::events::ChannelSink;
 use bg_engine::games::{FileSystemProvider, SystemFileSystem};
 use bg_engine::lock::TargetLock;
-use bg_engine::receipt::{InstallReceipt, ReceiptOutcome, RECEIPT_SCHEMA_VERSION};
+use bg_engine::receipt::{
+    ArtifactCacheOutcome, ArtifactReceipt, InstallReceipt, ReceiptOutcome, RECEIPT_SCHEMA_VERSION,
+};
 use bg_engine::registry::ManagedInstallRegistry;
 use bg_engine::session::SessionStore;
 use bg_engine::weidu::runner::RunnerControlHandle;
@@ -47,11 +49,12 @@ impl ArtifactServer {
             .expect("make artifact server nonblocking");
         let stop = Arc::new(AtomicBool::new(false));
         let thread_stop = Arc::clone(&stop);
+        let signatures = AtomicU64::new(0);
         let thread = thread::spawn(move || {
             while !thread_stop.load(Ordering::Acquire) {
                 match listener.accept() {
                     Ok((_stream, _)) if thread_stop.load(Ordering::Acquire) => break,
-                    Ok((stream, _)) => serve_artifact(stream, &artifacts),
+                    Ok((stream, _)) => serve_artifact(stream, &artifacts, &signatures),
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                         thread::sleep(Duration::from_millis(5));
                     }
@@ -78,7 +81,14 @@ impl Drop for ArtifactServer {
     }
 }
 
-fn serve_artifact(mut stream: TcpStream, artifacts: &BTreeMap<String, Vec<u8>>) {
+/// Serves exact artifact paths. `/signed/<path>` mimics a GitHub release download: it
+/// redirects to `<path>` with a fresh single-use signature, so every transfer of the same
+/// bytes reports a different final URL.
+fn serve_artifact(
+    mut stream: TcpStream,
+    artifacts: &BTreeMap<String, Vec<u8>>,
+    signatures: &AtomicU64,
+) {
     stream
         .set_nonblocking(false)
         .expect("make artifact connection blocking");
@@ -99,6 +109,23 @@ fn serve_artifact(mut stream: TcpStream, artifacts: &BTreeMap<String, Vec<u8>>) 
             break;
         }
     }
+    if let Some(signed) = path.strip_prefix("/signed") {
+        let signature = signatures.fetch_add(1, Ordering::AcqRel) + 1;
+        write!(
+            stream,
+            "HTTP/1.1 302 Found
+Location: {signed}?signature={signature}
+Content-Length: 0
+Connection: close
+
+"
+        )
+        .expect("write artifact redirect");
+        stream.flush().expect("flush artifact redirect");
+        let _ = stream.shutdown(Shutdown::Both);
+        return;
+    }
+    let path = path.split_once('?').map_or(path, |(path, _query)| path);
     let (status, body) = artifacts
         .get(path)
         .map(|body| ("200 OK", body.as_slice()))
@@ -401,6 +428,8 @@ struct ExecutableFixture {
     cache: PathBuf,
     app_data: PathBuf,
     documents: PathBuf,
+    payload: Vec<u8>,
+    tool_archive: Vec<u8>,
 }
 
 fn executable_fixture() -> ExecutableFixture {
@@ -491,6 +520,8 @@ fn executable_fixture() -> ExecutableFixture {
         cache,
         app_data,
         documents,
+        payload,
+        tool_archive,
     }
 }
 
@@ -1928,6 +1959,156 @@ fn display_name_and_recipe_are_both_frozen_across_a_failed_install_resume() {
             .list()
             .expect("list resumed installation");
     assert_eq!(cards[0].record.display_name, "Resumed BG");
+}
+
+/// Replace a fixture artifact's verified cache entry with a fresh transfer through the
+/// signed-redirect route, as happens when the download cache is lost and a GitHub release
+/// asset is fetched again: same original URL and bytes, new single-use final URL.
+#[cfg(windows)]
+fn reacquire_through_signed_redirect(fixture: &ExecutableFixture, path: &str, bytes: &[u8]) {
+    let digest = sha256_bytes(bytes);
+    let entry = fixture.cache.join("sha256").join(&digest[..2]);
+    for extension in ["archive", "json"] {
+        let file = entry.join(format!("{digest}.{extension}"));
+        if file.exists() {
+            fs::remove_file(&file).expect("remove fixture cache entry");
+        }
+    }
+    let (sink, _events) = ChannelSink::unbounded();
+    let acquired = ArtifactCache::open(&fixture.cache)
+        .expect("open fixture artifact cache")
+        .acquire(
+            &DownloadRequest {
+                request_id: format!("fixture-signed{}", path.replace(['/', '.'], "-")),
+                url: format!("{}/signed{path}", fixture._server.base_url),
+                expected_length: bytes.len() as u64,
+                expected_sha256: digest,
+                redirect_hosts: Vec::new(),
+                max_attempts: 1,
+            },
+            &sink,
+        )
+        .expect("download verified fixture archive through a signed redirect");
+    assert!(acquired.metadata.final_url.contains("?signature="));
+}
+
+#[cfg(windows)]
+fn read_artifact_receipt(path: &Path) -> ArtifactReceipt {
+    serde_json::from_slice(&fs::read(path).expect("read artifact evidence"))
+        .expect("parse artifact evidence")
+}
+
+#[cfg(windows)]
+#[test]
+fn resume_retains_first_acquisition_after_a_lost_cache_is_redownloaded_via_a_new_signed_url() {
+    let fixture = executable_fixture();
+    let archives = [
+        ("eefixpack", "/eefixpack.zip", fixture.payload.clone()),
+        ("weidu", "/weidu.zip", fixture.tool_archive.clone()),
+    ];
+    for (_, path, bytes) in &archives {
+        reacquire_through_signed_redirect(&fixture, path, bytes);
+    }
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    let failed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("execute first synthetic attempt");
+    assert_eq!(failed.status.code(), Some(1), "{}", stderr(&failed));
+    assert_eq!(
+        json_stdout(&failed)["status"]["step_id"],
+        "install:eefixpack-bg1"
+    );
+
+    let evidence = fixture.managed.join(".chriz/evidence");
+    let first_evidence: BTreeMap<_, _> = archives
+        .iter()
+        .map(|(id, _, _)| {
+            let bytes = fs::read(evidence.join("artifacts").join(format!("{id}.json")))
+                .expect("read first acquisition evidence");
+            (*id, bytes)
+        })
+        .collect();
+    let first: BTreeMap<_, _> = archives
+        .iter()
+        .map(|(id, _, _)| {
+            (
+                *id,
+                read_artifact_receipt(&evidence.join("artifacts").join(format!("{id}.json"))),
+            )
+        })
+        .collect();
+    assert!(!evidence.join("artifact-reacquisitions").exists());
+
+    // The download cache is separate from the install folder and can disappear between
+    // attempts; the next transfer of the same bytes gets a different signed final URL.
+    for (_, path, bytes) in &archives {
+        reacquire_through_signed_redirect(&fixture, path, bytes);
+    }
+    let resumed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume synthetic campaign");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+
+    let receipt: InstallReceipt = serde_json::from_slice(
+        &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    for (id, _, _) in &archives {
+        assert_eq!(
+            fs::read(evidence.join("artifacts").join(format!("{id}.json"))).unwrap(),
+            first_evidence[id],
+            "first acquisition evidence for {id} must stay write-once"
+        );
+        assert_eq!(
+            receipt.artifacts.iter().find(|artifact| artifact.id == *id),
+            Some(&first[id]),
+            "the install receipt must carry the first acquisition of {id}"
+        );
+    }
+
+    // Payload materialization finished before the failure; WeiDU is re-verified by both
+    // resumed install steps, so the same reacquisition is observed twice but recorded once.
+    let reacquired = fs::read_dir(evidence.join("artifact-reacquisitions"))
+        .expect("read recorded reacquisitions")
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(reacquired, ["weidu"]);
+    let records = fs::read_dir(evidence.join("artifact-reacquisitions/weidu"))
+        .expect("read recorded WeiDU reacquisitions")
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    assert_eq!(records.len(), 1, "{records:?}");
+    let later = read_artifact_receipt(&records[0]);
+    assert_ne!(later.final_url, first["weidu"].final_url);
+    assert!(later.final_url.contains("?signature="));
+    assert_eq!(later.cache_outcome, ArtifactCacheOutcome::Hit);
+    assert_eq!(
+        ArtifactReceipt {
+            final_url: first["weidu"].final_url.clone(),
+            cache_outcome: first["weidu"].cache_outcome,
+            ..later.clone()
+        },
+        first["weidu"]
+    );
+    assert_eq!(
+        records[0].file_stem().and_then(|stem| stem.to_str()),
+        Some(sha256_bytes(&serde_json::to_vec(&later).unwrap()).as_str())
+    );
 }
 
 #[cfg(windows)]

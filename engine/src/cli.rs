@@ -96,6 +96,9 @@ const LEGACY_DISPLAY_NAME: &str = "Chriz BG Collection";
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
 const EVIDENCE_DIRECTORY: &str = "evidence";
+/// Later, accepted acquisitions of an artifact whose final URL or cache outcome differ from its
+/// write-once first acquisition evidence. Stored as `<category>/<artifact-id>/<digest>.json`.
+const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
 const INVOCATION_FILE: &str = "invocation.json";
@@ -2246,7 +2249,15 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             cache_outcome,
         };
         let receipt = match self.load_named_evidence("artifacts", &artifact.id)? {
-            Some(first) => retain_first_acquisition_receipt(&first, &observed_receipt)?,
+            Some(first) => {
+                match retain_first_acquisition_receipt(&first, &observed_receipt)? {
+                    LaterAcquisition::Identical => {}
+                    LaterAcquisition::Reacquired => {
+                        self.record_artifact_reacquisition(&observed_receipt)?;
+                    }
+                }
+                first
+            }
             None => {
                 self.persist_named_evidence("artifacts", &artifact.id, &observed_receipt)?;
                 observed_receipt
@@ -2333,7 +2344,11 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             .join(EVIDENCE_DIRECTORY)
     }
 
-    fn named_evidence_path(&self, category: &str, id: &str) -> Result<PathBuf, StepFailure> {
+    fn named_evidence_path(
+        &self,
+        category: impl AsRef<Path>,
+        id: &str,
+    ) -> Result<PathBuf, StepFailure> {
         validate_cli_identifier(id, "evidence id").map_err(StepFailure::new)?;
         let directory = self.evidence_root().join(category);
         ensure_directories(&directory)?;
@@ -2342,7 +2357,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn persist_named_evidence<T: Serialize>(
         &self,
-        category: &str,
+        category: impl AsRef<Path>,
         id: &str,
         value: &T,
     ) -> Result<(), StepFailure> {
@@ -2351,10 +2366,25 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn load_named_evidence<T: for<'de> Deserialize<'de>>(
         &self,
-        category: &str,
+        category: impl AsRef<Path>,
         id: &str,
     ) -> Result<Option<T>, StepFailure> {
         read_optional_json(&self.named_evidence_path(category, id)?)
+    }
+
+    /// Keep the provenance of a later acquisition that was accepted against, but differs
+    /// from, the write-once first acquisition evidence (for example a new single-use signed
+    /// redirect URL after the download cache was lost). The first evidence stays the receipt
+    /// of record; each distinct observation is stored once, named by its own digest, so
+    /// repeated identical observations are idempotent.
+    fn record_artifact_reacquisition(&self, observed: &ArtifactReceipt) -> Result<(), StepFailure> {
+        validate_cli_identifier(&observed.id, "artifact id").map_err(StepFailure::new)?;
+        let digest = sha256_bytes(&serde_json::to_vec(observed).map_err(step_error)?);
+        self.persist_named_evidence(
+            Path::new(ARTIFACT_REACQUISITIONS_EVIDENCE).join(&observed.id),
+            &digest,
+            observed,
+        )
     }
 
     fn run_attempt_path(&self, run_id: &str, attempt: u32) -> Result<PathBuf, StepFailure> {
@@ -3944,19 +3974,40 @@ fn inferred_success_exit_code(statuses: &[DebugStatus]) -> Option<i32> {
     }
 }
 
+/// How a later acquisition of an artifact relates to its accepted first acquisition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LaterAcquisition {
+    /// Exactly the first acquisition evidence.
+    Identical,
+    /// The same pinned archive from the same authored source, observed with a different final
+    /// URL (signed single-use redirects) and/or cache outcome (cache hit, or a re-download
+    /// after the download cache was lost).
+    Reacquired,
+}
+
+/// Decide whether `observed` may stand in for the write-once `first` acquisition.
+///
+/// The first acquisition always remains the receipt of record. A later acquisition is
+/// accepted when it names the same artifact, version and authored source URL and its
+/// verified bytes have the same length and SHA-256; its final URL and Hit/Downloaded outcome
+/// are transport details. Manual import versus download is not: the acquisition policy is
+/// frozen, so such a switch means the recipe changed.
 fn retain_first_acquisition_receipt(
     first: &ArtifactReceipt,
     observed: &ArtifactReceipt,
-) -> Result<ArtifactReceipt, StepFailure> {
+) -> Result<LaterAcquisition, StepFailure> {
     if first == observed {
-        return Ok(first.clone());
+        return Ok(LaterAcquisition::Identical);
     }
-    let mut later_hit = observed.clone();
-    let downloaded_then_hit = first.cache_outcome == ArtifactCacheOutcome::Downloaded
-        && later_hit.cache_outcome == ArtifactCacheOutcome::Hit;
-    later_hit.cache_outcome = first.cache_outcome;
-    if downloaded_then_hit && &later_hit == first {
-        return Ok(first.clone());
+    let same_archive = first.id == observed.id
+        && first.version == observed.version
+        && first.original_url == observed.original_url
+        && first.length == observed.length
+        && first.sha256 == observed.sha256;
+    let same_policy = (first.cache_outcome == ArtifactCacheOutcome::Manual)
+        == (observed.cache_outcome == ArtifactCacheOutcome::Manual);
+    if same_archive && same_policy {
+        return Ok(LaterAcquisition::Reacquired);
     }
     Err(StepFailure::new(format!(
         "artifact {:?} differs from its first acquisition evidence",
@@ -4242,7 +4293,7 @@ mod tests {
         install_interrupt_handler_with, non_prefix_component_diagnostic,
         retain_first_acquisition_receipt, select_terminal_evidence, selection_choices,
         stack_disturbed_reconciliation, validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource,
-        InstallReconciliation, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
+        InstallReconciliation, LaterAcquisition, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
     };
 
     fn downloaded_artifact_receipt() -> ArtifactReceipt {
@@ -4540,29 +4591,131 @@ mod tests {
     }
 
     #[test]
-    fn later_cache_hit_retains_the_first_download_acquisition_receipt() {
-        let first = downloaded_artifact_receipt();
-        let mut revalidated = first.clone();
-        revalidated.cache_outcome = ArtifactCacheOutcome::Hit;
+    fn identical_later_acquisition_is_not_a_reacquisition() {
+        for outcome in [
+            ArtifactCacheOutcome::Downloaded,
+            ArtifactCacheOutcome::Hit,
+            ArtifactCacheOutcome::Manual,
+        ] {
+            let first = ArtifactReceipt {
+                cache_outcome: outcome,
+                ..downloaded_artifact_receipt()
+            };
 
-        let retained = retain_first_acquisition_receipt(&first, &revalidated)
-            .expect("same immutable archive may become a cache hit later in the campaign");
-
-        assert_eq!(retained, first);
+            assert_eq!(
+                retain_first_acquisition_receipt(&first, &first.clone()).unwrap(),
+                LaterAcquisition::Identical
+            );
+        }
     }
 
     #[test]
-    fn later_cache_observation_cannot_change_acquisition_provenance() {
-        let first = downloaded_artifact_receipt();
-        let mut changed = first.clone();
-        changed.cache_outcome = ArtifactCacheOutcome::Hit;
-        changed.final_url = "https://other.invalid/test-mod.zip".to_owned();
+    fn same_archive_from_the_same_source_is_accepted_whatever_its_final_url_or_cache_outcome() {
+        use ArtifactCacheOutcome::{Downloaded, Hit};
+        let signed = "https://release-assets.githubusercontent.invalid/test-mod.zip?sig=2";
+        for (first_outcome, later_outcome, later_final_url) in [
+            // Cache entry reused later in the same campaign.
+            (Downloaded, Hit, None),
+            // Cache lost and re-downloaded through a new single-use signed redirect.
+            (Downloaded, Downloaded, Some(signed)),
+            (Hit, Downloaded, None),
+            (Hit, Downloaded, Some(signed)),
+            // Cache entry re-populated through another redirect, then reused.
+            (Downloaded, Hit, Some(signed)),
+            (Hit, Hit, Some(signed)),
+        ] {
+            let first = ArtifactReceipt {
+                cache_outcome: first_outcome,
+                ..downloaded_artifact_receipt()
+            };
+            let mut later = first.clone();
+            later.cache_outcome = later_outcome;
+            if let Some(final_url) = later_final_url {
+                later.final_url = final_url.to_owned();
+            }
 
-        let error = retain_first_acquisition_receipt(&first, &changed).unwrap_err();
+            assert_eq!(
+                retain_first_acquisition_receipt(&first, &later).unwrap_or_else(|error| panic!(
+                    "{first_outcome:?} -> {later_outcome:?} via {later_final_url:?}: {error}"
+                )),
+                LaterAcquisition::Reacquired,
+                "{first_outcome:?} -> {later_outcome:?} via {later_final_url:?}"
+            );
+        }
+    }
 
-        assert!(error
-            .to_string()
-            .contains("differs from its first acquisition evidence"));
+    #[test]
+    fn later_acquisition_cannot_change_archive_identity_source_or_acquisition_policy() {
+        type Change = fn(&mut ArtifactReceipt);
+        let changes: [(&str, Change); 6] = [
+            ("sha256", |receipt| receipt.sha256 = "cd".repeat(32)),
+            ("length", |receipt| receipt.length += 1),
+            ("original_url", |receipt| {
+                receipt.original_url = "https://example.invalid/other-test-mod.zip".to_owned();
+            }),
+            ("version", |receipt| receipt.version = "1.1".to_owned()),
+            ("id", |receipt| receipt.id = "other-mod".to_owned()),
+            ("final_url and sha256", |receipt| {
+                receipt.final_url = "https://other.invalid/test-mod.zip".to_owned();
+                receipt.sha256 = "cd".repeat(32);
+            }),
+        ];
+        for (outcome, later_outcome) in [
+            (
+                ArtifactCacheOutcome::Downloaded,
+                ArtifactCacheOutcome::Downloaded,
+            ),
+            (ArtifactCacheOutcome::Downloaded, ArtifactCacheOutcome::Hit),
+            (ArtifactCacheOutcome::Hit, ArtifactCacheOutcome::Downloaded),
+            (ArtifactCacheOutcome::Manual, ArtifactCacheOutcome::Manual),
+        ] {
+            for (field, change) in changes {
+                let first = ArtifactReceipt {
+                    cache_outcome: outcome,
+                    ..downloaded_artifact_receipt()
+                };
+                let mut changed = first.clone();
+                changed.cache_outcome = later_outcome;
+                change(&mut changed);
+
+                let error = retain_first_acquisition_receipt(&first, &changed)
+                    .expect_err(&format!("changed {field} must be refused"));
+
+                assert_eq!(
+                    error.to_string(),
+                    "artifact \"test-mod\" differs from its first acquisition evidence",
+                    "{field}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn later_acquisition_cannot_switch_between_manual_import_and_download() {
+        use ArtifactCacheOutcome::{Downloaded, Hit, Manual};
+        for (first_outcome, later_outcome) in [
+            (Manual, Downloaded),
+            (Manual, Hit),
+            (Downloaded, Manual),
+            (Hit, Manual),
+        ] {
+            let first = ArtifactReceipt {
+                cache_outcome: first_outcome,
+                ..downloaded_artifact_receipt()
+            };
+            let mut later = first.clone();
+            later.cache_outcome = later_outcome;
+
+            let error = retain_first_acquisition_receipt(&first, &later)
+                .expect_err("acquisition policy is frozen");
+
+            assert!(
+                error
+                    .to_string()
+                    .contains("differs from its first acquisition evidence"),
+                "{first_outcome:?} -> {later_outcome:?}"
+            );
+        }
     }
 
     #[test]
