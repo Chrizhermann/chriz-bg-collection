@@ -51,6 +51,32 @@ All three dispatched tasks have now completed their bounded local delivery.
 No worker from this dispatch still holds an edit reservation. Release integration
 and the remaining player checks are not finished by those deliveries.
 
+## October 14 (Claude)
+
+Christopher's answers:
+
+- **Lab play-checks:** deferred; he tests later. Everything in the
+  [checklist](2026-10-13-combined-test-checklist.md) already shipped in alpha.20.
+  He deleted the stopped 17 GB lab attempt.
+- **His stream game:** the one-file Imoen Spellhold XP fix was already applied
+  (verified hash; original kept as backup).
+- **He handles these in separate chats; tracked here:** Degrodel's extra
+  challenge layer; SoD Remix optional or mandatory; SR spell durations;
+  Entropy Shield/Dispelling Screen and enemy AI; Tempus AC rider, Artisan Fighter
+  all-weapon specialization, Wish with SR and further Challenge Mode rules; SoD
+  Darkness/autoblindness, relocated chest position and the Ashatiel fight;
+  configurable SR, the script engine and Item Randomiser Mode 2.
+- **Approved and started (Claude):** Bardic Wonders issues 2–5; Modpack
+  companion stat choices 230–234 (stranded alpha.6 work); packaging the Item
+  Randomiser Mode 1 runtime for CEBG; the Modpack release-builder fix as
+  [Modpack PR 10](https://github.com/Chrizhermann/chriz-bg-modpack/pull/10), whose CI also runs the
+  `capstone`/`pefile` tests.
+- **Potion uniqueness and Heroism family:** not done. The October 9 lab
+  prototype covers six potion families in tests only, has never run in a game and
+  is not installable; Heroism's spell side is missing.
+- The old August checkout of `main` was tidied: its superseded edits are stashed
+  (recoverable) and `main` matches GitHub.
+
 ## October 13 continuation (Claude)
 
 Christopher's decisions from 13 October are recorded in the
@@ -121,8 +147,8 @@ except 14 scroll-runtime test modules that need `capstone`/`pefile`, which are n
 installed on this PC. It ships with the next Modpack release PR, whose CI runs
 those modules.
 
-Still waiting for Christopher: a lab game launch, the optional one-file fix for
-his current game, and whether to clean the remaining home-folder paths above.
+Still waiting for Christopher (as of October 14): whether to clean the remaining
+home-folder paths above, and whether to finish potion uniqueness.
 
 ## The useful answer
 
