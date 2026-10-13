@@ -2491,28 +2491,40 @@ fn completed_mock_weidu_without_process_result_is_proven_on_resume_without_rerun
     );
 }
 
+/// Stops the install of eefixpack-bg2 before WeiDU starts. `kind` names the guard that fails, or
+/// is "weidu-executable" for a failure to get the run's WeiDU executable.
 #[cfg(windows)]
 fn blocked_before_spawn_fixture(kind: &str) -> (ExecutableFixture, PathBuf) {
     let fixture = executable_fixture();
     let mut install = executable_command(&fixture);
-    install
-        .env(
+    if kind == "weidu-executable" {
+        install.env("CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL", "eefixpack-bg2");
+    } else {
+        install.env(
             "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
             format!("{kind}:install:eefixpack-bg2"),
-        )
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
-        ));
+        );
+    }
+    install.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
     let output = install
         .output()
         .expect("block synthetic guard before spawn");
     assert_eq!(output.status.code(), Some(1), "{}", stdout(&output));
     let response = json_stdout(&output);
     assert_eq!(response["status"]["step_id"], "install:eefixpack-bg2");
+    if kind == "weidu-executable" {
+        assert!(
+            stdout(&output).contains("simulated failure to get the WeiDU executable"),
+            "{}",
+            stdout(&output)
+        );
+    }
     let replay = SessionStore::open(&fixture.managed)
         .unwrap()
         .replay()
@@ -2531,6 +2543,7 @@ fn blocked_before_spawn_fixture(kind: &str) -> (ExecutableFixture, PathBuf) {
     .unwrap();
     let attempt = step.path().join("attempt-0001");
     assert!(attempt.join("before.log").is_file());
+    assert!(attempt.join("pre-spawn-failure.json").is_file());
     assert!(!attempt.join("process-result.json").exists());
     assert!(!attempt.join("stdout.log").exists());
     assert!(!fixture.managed.join("game/WeiDU.log").exists());
@@ -2569,6 +2582,7 @@ fn pre_spawn_guard_failures_resume_only_the_unstarted_run() {
         ("invocation-build", false),
         ("process-spawn", false),
         ("invocation-build", true),
+        ("weidu-executable", false),
     ] {
         let (fixture, attempt) = blocked_before_spawn_fixture(kind);
         if legacy {

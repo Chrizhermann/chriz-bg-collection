@@ -170,6 +170,7 @@ pub struct MutationCheck {
 #[error("{message}")]
 pub struct StepFailure {
     message: String,
+    before_preparation: bool,
 }
 
 impl StepFailure {
@@ -182,6 +183,17 @@ impl StepFailure {
             } else {
                 message
             },
+            before_preparation: false,
+        }
+    }
+
+    /// Marks a failure of an install attempt that happened before it prepared anything for
+    /// WeiDU, such as getting the WeiDU executable. The orchestrator records the same pre-spawn
+    /// evidence as for a failed safety guard, so that the run can be retried.
+    pub fn before_preparation(self) -> Self {
+        Self {
+            before_preparation: true,
+            ..self
         }
     }
 
@@ -1256,7 +1268,19 @@ where
             attempt,
             MutationKind::InvocationBuild,
         )?;
-        let built = self.dependencies.build(run, components, attempt)?;
+        let built = match self.dependencies.build(run, components, attempt) {
+            Ok(built) => built,
+            Err(failure) if failure.before_preparation => {
+                return Err(self.pre_spawn_failure(
+                    run,
+                    components,
+                    attempt,
+                    MutationKind::InvocationBuild,
+                    failure,
+                ));
+            }
+            Err(failure) => return Err(failure),
+        };
         if built.identity_digest.trim().is_empty() {
             return Err(StepFailure::new("invocation identity digest is empty"));
         }
@@ -1281,15 +1305,29 @@ where
         attempt: &StepAttempt,
         kind: MutationKind,
     ) -> Result<(), StepFailure> {
-        if let Err(failure) = self.recheck(step, run.target, kind) {
-            let digest = self
-                .dependencies
-                .record_pre_spawn_failure(run, components, attempt, kind, &failure)?;
-            return Err(StepFailure::new(format!(
-                "{failure}\nPre-spawn evidence SHA-256: {digest}"
-            )));
+        self.recheck(step, run.target, kind)
+            .map_err(|failure| self.pre_spawn_failure(run, components, attempt, kind, failure))
+    }
+
+    /// Records durable evidence that `failure` happened before WeiDU could start and binds that
+    /// record into the ledger failure, so that retrying can prove the run never started.
+    fn pre_spawn_failure(
+        &mut self,
+        run: &PlannedRun,
+        components: &[u32],
+        attempt: &StepAttempt,
+        kind: MutationKind,
+        failure: StepFailure,
+    ) -> StepFailure {
+        match self
+            .dependencies
+            .record_pre_spawn_failure(run, components, attempt, kind, &failure)
+        {
+            Ok(digest) => {
+                StepFailure::new(format!("{failure}\nPre-spawn evidence SHA-256: {digest}"))
+            }
+            Err(error) => error,
         }
-        Ok(())
     }
 
     fn postcondition_failure(

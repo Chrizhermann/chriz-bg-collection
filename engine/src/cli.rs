@@ -2390,6 +2390,20 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         Ok(extracted)
     }
 
+    fn run_tool(&self, run: &PlannedRun) -> Result<VerifiedWeidu, StepFailure> {
+        #[cfg(debug_assertions)]
+        if std::env::var("CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL")
+            .ok()
+            .as_deref()
+            == Some(run.run_id.as_str())
+        {
+            return Err(StepFailure::new(
+                "simulated failure to get the WeiDU executable",
+            ));
+        }
+        self.verified_tool(&run.weidu_artifact_id)
+    }
+
     fn verified_tool(&self, id: &str) -> Result<VerifiedWeidu, StepFailure> {
         let artifact = self.artifact(id)?;
         let contract = artifact.tool.as_ref().ok_or_else(|| {
@@ -2803,7 +2817,12 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 answer_sha256: sha256_bytes(prompt.answer.as_bytes()),
             })
             .collect();
-        let tool = self.verified_tool(&run.weidu_artifact_id)?;
+        // Nothing for this attempt is prepared before its WeiDU executable, so failing to get it,
+        // for example after a failed download or a Stop while another program unpacks it,
+        // leaves the run retryable.
+        let tool = self
+            .run_tool(run)
+            .map_err(StepFailure::before_preparation)?;
         if ui_correction {
             crate::weidu::invocation::validate_setup_name_declarations(
                 self.frozen
