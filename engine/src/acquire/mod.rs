@@ -1,6 +1,8 @@
 //! Immutable artifact acquisition and content-addressed caching.
 
+use std::fmt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -15,8 +17,8 @@ mod manual;
 mod materialize;
 
 pub use archive::{
-    extract_archive, extract_archive_reporting_repair, ArchiveFormat, ArchiveLimits, ArchiveMode,
-    ArchiveRequirements, ExtractedArtifact,
+    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop, ArchiveFormat,
+    ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact,
 };
 pub use cache::ArtifactCache;
 pub use damaged::CacheRepair;
@@ -30,6 +32,38 @@ pub use materialize::{
 
 /// Standard archive budget: initial attempt, then retries after 0, 2, 10 and 30 seconds.
 pub const DEFAULT_DOWNLOAD_ATTEMPTS: u32 = 5;
+
+/// Whether the user stopped the operation that is acquiring or extracting an artifact.
+///
+/// Waiting for another download or extraction of the same cache entry has no time limit,
+/// because that work may still be progressing; this signal ends such a wait instead.
+#[derive(Clone, Default)]
+pub struct StopSignal(Option<Arc<dyn Fn() -> bool + Send + Sync>>);
+
+impl StopSignal {
+    /// A signal that never stops, for callers without a way to stop.
+    pub fn never() -> Self {
+        Self(None)
+    }
+
+    /// Asks `requested` whenever a wait checks whether to give up.
+    pub fn new(requested: impl Fn() -> bool + Send + Sync + 'static) -> Self {
+        Self(Some(Arc::new(requested)))
+    }
+
+    fn requested(&self) -> bool {
+        self.0.as_ref().is_some_and(|requested| requested())
+    }
+}
+
+impl fmt::Debug for StopSignal {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_tuple("StopSignal")
+            .field(&self.0.is_some())
+            .finish()
+    }
+}
 
 /// One immutable HTTP artifact requested by a recipe.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -268,4 +302,13 @@ pub enum AcquireError {
     /// The system clock is earlier than the Unix epoch.
     #[error("system clock is earlier than the Unix epoch")]
     InvalidClock,
+    /// The user stopped while another download or extraction of the same file held its lock.
+    #[error(
+        "stopped by the user while another download or unpacking of the same file was still \
+         in progress (lock `{lock}`)"
+    )]
+    Stopped {
+        /// Lock file of the cache entry that was being waited for.
+        lock: PathBuf,
+    },
 }

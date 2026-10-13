@@ -16,9 +16,10 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::acquire::{
-    extract_archive_reporting_repair, materialize, provide_manual_archive, ArchiveFormat,
-    ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
-    DownloadRequest, ExtractedArtifact, MaterializationRequest, DEFAULT_DOWNLOAD_ATTEMPTS,
+    extract_archive_with_stop, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
+    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
+    DownloadRequest, ExtractedArtifact, MaterializationRequest, StopSignal,
+    DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
@@ -2191,6 +2192,13 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         .map_err(stage_error)
     }
 
+    /// Stop ends waits for another download or extraction of the same cache entry, which may
+    /// belong to a process that hangs or is suspended.
+    fn stop_signal(&self) -> StopSignal {
+        let controls = self.controls.clone();
+        StopSignal::new(move || controls.cancel_requested())
+    }
+
     fn artifact(&self, id: &str) -> Result<&Artifact, StepFailure> {
         self.frozen
             .artifacts
@@ -2214,7 +2222,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
                 let acquired = ArtifactCache::open(&self.created.cache_root)
                     .and_then(|cache| {
-                        cache.acquire(
+                        cache.acquire_with_stop(
                             &DownloadRequest {
                                 request_id: artifact.id.clone(),
                                 url: artifact.source.url.clone(),
@@ -2224,6 +2232,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                                 max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
                             },
                             self.sink,
+                            &self.stop_signal(),
                         )
                     })
                     .map_err(step_error)?;
@@ -2329,7 +2338,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn extract(&self, artifact: &Artifact) -> Result<ExtractedArtifact, StepFailure> {
         let (archive, _) = self.acquire_archive(artifact)?;
-        let (extracted, repair) = extract_archive_reporting_repair(
+        let (extracted, repair) = extract_archive_with_stop(
             &archive,
             &self.created.cache_root.join("extracted"),
             &ArchiveRequirements {
@@ -2356,6 +2365,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 },
                 mode: ArchiveMode::Public,
             },
+            &self.stop_signal(),
         )
         .map_err(step_error)?;
         if let Some(repair) = &repair {
@@ -5194,5 +5204,147 @@ mod tests {
                 .expect("cancel was not forwarded"),
             RunnerControl::Cancel
         );
+    }
+
+    /// A one-entry ZIP holding `mod/setup-mod.tp2`, and a fetch-only artifact pinned to it.
+    fn pinned_test_archive(frozen: &FrozenCliRecipe) -> (Vec<u8>, crate::manifest::Artifact) {
+        use std::io::Write;
+
+        let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        writer
+            .start_file(
+                "mod/setup-mod.tp2",
+                zip::write::SimpleFileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored),
+            )
+            .unwrap();
+        writer.write_all(b"BACKUP ~mod/backup~\n").unwrap();
+        let bytes = writer.finish().unwrap().into_inner();
+        let mut artifact = frozen.artifacts["eefixpack"].clone();
+        artifact.acquisition = crate::manifest::AcquisitionPolicy::FetchOnly;
+        artifact.source.url = "https://example.invalid/stop-test.zip".to_owned();
+        artifact.source.expected_length = Some(bytes.len() as u64);
+        artifact.source.sha256 = sha256_bytes(&bytes);
+        artifact.archive.kind = crate::manifest::ArchiveKind::Zip;
+        artifact.archive.root_rule = crate::manifest::ArchiveRootRule::Direct;
+        artifact.archive.publish_roots = vec!["mod".to_owned()];
+        artifact.archive.tp2_paths = vec!["mod/setup-mod.tp2".to_owned()];
+        artifact.archive.limits = crate::manifest::ArchiveLimitsSpec {
+            max_depth: 8,
+            max_entries: 8,
+            max_entry_uncompressed_bytes: 1024,
+            max_total_uncompressed_bytes: 1024,
+            max_compression_ratio: 100,
+        };
+        (bytes, artifact)
+    }
+
+    /// Stop ends a wait for a download or unpacked mod whose cache lock another process holds
+    /// and never releases, for example because it hangs or is suspended. Without a stop, the
+    /// wait continues, because the other process may still be working.
+    #[test]
+    fn stop_ends_waits_for_cache_entries_another_process_never_releases() {
+        use fs4::fs_std::FileExt;
+
+        use super::GuardedCliDependencies;
+        use crate::acquire::ArtifactMetadata;
+        use crate::events::ChannelSink;
+        use crate::games::{Eligibility, GameCandidate};
+
+        let temp = tempfile::tempdir().unwrap();
+        let root = std::fs::canonicalize(temp.path()).unwrap();
+        let frozen = frozen_recipe_fixture();
+        let (bytes, artifact) = pinned_test_archive(&frozen);
+        let digest = sha256_bytes(&bytes);
+        // The verified download, published the way a finished download publishes it.
+        let downloads = root.join("cache/sha256").join(&digest[..2]);
+        std::fs::create_dir_all(&downloads).unwrap();
+        std::fs::write(downloads.join(format!("{digest}.archive")), &bytes).unwrap();
+        let metadata = ArtifactMetadata {
+            original_url: artifact.source.url.clone(),
+            final_url: artifact.source.url.clone(),
+            etag: None,
+            last_modified: None,
+            length: bytes.len() as u64,
+            sha256: digest.clone(),
+            completed_at_unix_seconds: 1,
+        };
+        std::fs::write(
+            downloads.join(format!("{digest}.json")),
+            serde_json::to_vec(&metadata).unwrap(),
+        )
+        .unwrap();
+        let mut created = created_for_frozen_recipe(&frozen, Vec::new());
+        created.cache_root = root.join("cache");
+        created.managed_root = root.join("managed");
+        std::fs::create_dir(&created.managed_root).unwrap();
+        let candidate = GameCandidate {
+            role: GameRole::Bg2ee,
+            storefront: Storefront::Steam,
+            root: root.join("game"),
+            build: None,
+            eligibility: Eligibility::Eligible,
+            findings: vec![],
+            fingerprint: None,
+        };
+        let (sink, _events) = ChannelSink::unbounded();
+        let dependencies = |controls: &RunnerControlHandle| {
+            GuardedCliDependencies::new(
+                &created,
+                &frozen,
+                candidate.clone(),
+                candidate.clone(),
+                root.join("app-data"),
+                &sink,
+                controls.clone(),
+            )
+        };
+        let contract = dependencies(&RunnerControlHandle::new())
+            .extract(&artifact)
+            .expect("unpack the verified download once")
+            .extraction_contract_sha256;
+
+        for lock in [
+            root.join("cache/locks").join(format!("{digest}.lock")),
+            root.join("cache/extracted/locks")
+                .join(format!("{digest}.{contract}.lock")),
+        ] {
+            let holder = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&lock)
+                .unwrap();
+            holder.lock_exclusive().unwrap();
+            let controls = RunnerControlHandle::new();
+            let worker = dependencies(&controls);
+            std::thread::scope(|scope| {
+                let waiting = scope.spawn(|| worker.extract(&artifact));
+                std::thread::sleep(Duration::from_millis(400));
+                assert!(
+                    !waiting.is_finished(),
+                    "{} must be waited for",
+                    lock.display()
+                );
+
+                controls.cancel();
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
+                while !waiting.is_finished() && std::time::Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                let stopped = waiting.is_finished();
+                // Release the lock so that a wait that ignored Stop still ends this test.
+                FileExt::unlock(&holder).unwrap();
+                assert!(stopped, "Stop did not end the wait for {}", lock.display());
+                let error = waiting.join().unwrap().unwrap_err().to_string();
+                assert!(error.contains("stopped by the user"), "{error}");
+            });
+        }
+        let extracted = root
+            .join("cache/extracted/sha256-v3")
+            .join(&digest[..2])
+            .join(&digest)
+            .join(&contract);
+        assert!(extracted.join("mod/setup-mod.tp2").is_file());
+        assert!(!root.join("cache/damaged").exists());
     }
 }

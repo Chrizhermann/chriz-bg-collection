@@ -14,7 +14,7 @@ use widestring::WideCString;
 
 use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
 use super::entry_lock::lock_entry;
-use super::AcquireError;
+use super::{AcquireError, StopSignal};
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const EXTRACTION_MARKER: &str = ".chriz-bg-extraction.json";
@@ -171,6 +171,22 @@ pub fn extract_archive_reporting_repair(
     extraction_cache: &Path,
     requirements: &ArchiveRequirements,
 ) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
+    extract_archive_with_stop(
+        archive_path,
+        extraction_cache,
+        requirements,
+        &StopSignal::never(),
+    )
+}
+
+/// [`extract_archive_reporting_repair`], giving up with [`AcquireError::Stopped`] when `stop`
+/// reports that the user stopped while another extraction of the same identity holds its lock.
+pub fn extract_archive_with_stop(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+    stop: &StopSignal,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
     validate_limits(&requirements.limits)?;
     let expected_roots = normalize_expected_paths(&requirements.expected_roots, "root")?;
     let expected_tp2_paths =
@@ -274,7 +290,10 @@ pub fn extract_archive_reporting_repair(
     // Held until this identity is validated or republished. A request that finds the entry
     // damaged has validated it under the lock, so it can never set aside a replacement that
     // another request published in the meantime, and identical requests extract only once.
-    let _lock = lock_entry(&locks.join(format!("{digest}.{contract_sha256}.lock")))?;
+    let _lock = lock_entry(
+        &locks.join(format!("{digest}.{contract_sha256}.lock")),
+        stop,
+    )?;
     let mut repair = None;
     if entry_is_present(&final_root)? {
         match validate_published_extraction(final_root.clone(), &identity) {

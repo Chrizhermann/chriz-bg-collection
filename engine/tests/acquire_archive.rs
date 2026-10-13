@@ -3,8 +3,8 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use bg_engine::acquire::{
-    extract_archive, extract_archive_reporting_repair, AcquireError, ArchiveFormat, ArchiveLimits,
-    ArchiveMode, ArchiveRequirements, ExtractedArtifact,
+    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop, AcquireError,
+    ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact, StopSignal,
 };
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
@@ -1196,6 +1196,70 @@ fn a_damaged_entry_is_validated_again_under_its_lock_before_it_is_set_aside() {
         assert_eq!(waiting.join().unwrap().unwrap(), (extracted.clone(), None));
     });
     assert!(!cache.join("damaged").exists());
+}
+
+/// Stop ends a wait for an extraction identity whose lock another process holds and never
+/// releases, for example because it hangs or is suspended. The entry stays as it was.
+#[test]
+fn a_stop_ends_the_wait_for_an_extraction_lock_that_is_never_released() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+    use std::time::{Duration, Instant};
+
+    use fs4::fs_std::FileExt;
+
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("stopped-wait.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    let request = requirements(&archive);
+    let extracted = extract_archive(&archive, &cache, &request).unwrap();
+    let lock_path = cache.join("locks").join(format!(
+        "{}.{}.lock",
+        extracted.artifact_sha256, extracted.extraction_contract_sha256
+    ));
+    let lock = extraction_lock(&cache, &extracted);
+    lock.lock_exclusive().unwrap();
+    let stopped = Arc::new(AtomicBool::new(false));
+    let stop = StopSignal::new({
+        let stopped = Arc::clone(&stopped);
+        move || stopped.load(Ordering::SeqCst)
+    });
+
+    let result = std::thread::scope(|scope| {
+        let waiting = scope.spawn(|| extract_archive_with_stop(&archive, &cache, &request, &stop));
+        std::thread::sleep(Duration::from_millis(400));
+        let waited = !waiting.is_finished();
+        stopped.store(true, Ordering::SeqCst);
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !waiting.is_finished() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let ended = waiting.is_finished();
+        // Release the lock so that a wait that ignored Stop still ends this test.
+        FileExt::unlock(&lock).unwrap();
+        assert!(waited, "the request must wait for the lock");
+        assert!(ended, "Stop did not end the wait");
+        waiting.join().unwrap()
+    });
+
+    match result {
+        Err(AcquireError::Stopped { lock }) => assert_eq!(lock, lock_path),
+        other => panic!("expected a stopped wait, got {other:?}"),
+    }
+    assert!(extracted.root.join("mod/setup-mod.tp2").is_file());
+    assert!(!cache.join("damaged").exists());
+    assert_eq!(
+        extract_archive_reporting_repair(&archive, &cache, &request).unwrap(),
+        (extracted, None)
+    );
 }
 
 #[test]

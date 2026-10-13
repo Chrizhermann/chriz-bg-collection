@@ -11,7 +11,9 @@ use crate::events::{EngineEvent, EventSink, Stream};
 use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
 use super::entry_lock::lock_entry;
 use super::http::{validate_download_url, HttpClient, HttpResponse};
-use super::{AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest};
+use super::{
+    AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest, StopSignal,
+};
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const MAX_PROGRESS_INTEGER: u64 = (1_u64 << 53) - 1;
@@ -81,13 +83,24 @@ impl ArtifactCache {
         request: &DownloadRequest,
         sink: &dyn EventSink,
     ) -> Result<AcquiredArtifact, AcquireError> {
+        self.acquire_with_stop(request, sink, &StopSignal::never())
+    }
+
+    /// [`Self::acquire`], giving up with [`AcquireError::Stopped`] when `stop` reports that the
+    /// user stopped while another download of the same artifact holds its cache entry.
+    pub fn acquire_with_stop(
+        &self,
+        request: &DownloadRequest,
+        sink: &dyn EventSink,
+        stop: &StopSignal,
+    ) -> Result<AcquiredArtifact, AcquireError> {
         let digest = validate_request(request)?;
         validate_download_url(&request.url)?;
         let paths = self.paths(request, &digest);
 
         let mut repaired = None;
         {
-            let _guard = lock_entry(&paths.lock)?;
+            let _guard = lock_entry(&paths.lock, stop)?;
             if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
                 sink.emit(EngineEvent::StepProgress {
                     id: request.request_id.clone(),
@@ -131,7 +144,7 @@ impl ArtifactCache {
                 .as_secs(),
         };
 
-        let _guard = lock_entry(&paths.lock)?;
+        let _guard = lock_entry(&paths.lock, stop)?;
         if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
             remove_if_exists(&paths.partial)?;
             remove_if_exists(&paths.partial_state)?;

@@ -135,6 +135,15 @@ impl RunnerControlHandle {
         }
     }
 
+    /// Whether cancellation was requested, for work outside a runner that waits on others,
+    /// such as another download or extraction of the same cache entry.
+    pub fn cancel_requested(&self) -> bool {
+        self.state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .cancel_requested
+    }
+
     /// Request a cooperative campaign stop after the current durable pipeline boundary.
     ///
     /// Unlike [`Self::cancel`], this never sends a control message to the active child process.
