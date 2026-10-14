@@ -9,14 +9,18 @@ use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223,
-    224, 225, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640, 235, 236, 237, 238, 660, 650, 651,
+    224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640, 235, 236,
+    237, 238, 660, 650, 651,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
 /// companion preparation before continuity, the continuity run before EET_end,
 /// the unchanged post-EET slot and the late companions after Safana.
+/// The October 14 intake (Modpack alpha.12) adds companion stats 230-234 after
+/// the class/kit conversions, in TP2 order.
 const PRE_CONTINUITY_COMPONENTS: &[u32] = &[
-    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225,
+    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230,
+    231, 232, 233, 234,
 ];
 
 const CONTINUITY_COMPONENTS: &[u32] = &[199];
@@ -26,7 +30,7 @@ const CONTINUITY_COMPONENTS: &[u32] = &[199];
 const POST_EET_END_COMPONENTS: &[u32] = &[130, 400, 410, 440, 450, 610, 611, 630, 660];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
-    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221,
+    110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234,
 ];
 
 const RECOMMENDED_COMPONENTS: &[u32] = &[130, 410, 440, 450, 611, 660];
@@ -43,27 +47,27 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.11");
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.12");
     let artifact = &manifest.artifacts[artifact_id];
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.11");
+    assert_eq!(artifact.version, "0.2.0-alpha.12");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.11");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.12");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.11/chriz-bg-modpack-v0.2.0-alpha.11.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.12/chriz-bg-modpack-v0.2.0-alpha.12.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.11.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.12.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(10_445_075));
+    assert_eq!(artifact.source.expected_length, Some(10_449_774));
     assert_eq!(
         artifact.source.sha256,
-        "1ab6fe05b282dd3d5badcbd25f41af3e15ea966c110298aed71c39c855c7fa18"
+        "3c1ee079541d8e64c9e692b511e5560ee505867b43698425e6bdd3ad48d578e2"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -135,7 +139,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.11");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.12");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -192,8 +196,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
 
     // October 13: reader-level scrolls 430 (EEex, no longer TA 2170), Fade's
     // recruitment XP 237 and Degrodel 660 are deselectable defaults.
+    // October 14: companion stats 230-234 (Modpack alpha.12) are defaults too.
     for component in [
-        110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 236, 237, 430, 611, 660,
+        110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234, 236, 237,
+        430, 611, 660,
     ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
@@ -272,7 +278,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // in the curated plan only). EET's desktop shortcut (100) leaves both plans.
     // The October 13 intake adds Modpack 237/430/660 and SoD 177/198/285 here
     // (Evandra's 238 only in the curated plan).
-    // This 374-component base plan is distinct from the 469-component curated plan.
+    // The October 14 intake adds Modpack 230-234, Rebalance 331/332 and SCS 3021
+    // (and Tweaks 3220/3500/3510 in the curated plan only).
+    // This 382-component base plan is distinct from the 480-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -280,7 +288,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        374
+        382
     );
 }
 

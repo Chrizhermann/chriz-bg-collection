@@ -2,11 +2,12 @@
 
 Refreshed for the October 7 target **v0.2.0-alpha.9**, retaining the choices
 approved in the [September 16 candidate](../../alpha16-candidate-2026-09-16.md).
-Rows `237`, `238`, `650`, `651` and `660` and the reworked `430` come from the
-unpublished **v0.2.0-alpha.11** candidate (October 13 intake, see
-[next batch intake](../../plans/2026-10-13-next-batch-intake.md)); the recipe pin
-moves to that release only when it is published.
-55 current or historical entries; the collection exposes 38. Component `195` already includes the work from standalone component
+Rows `237`, `238`, `650`, `651` and `660` and the reworked `430` came with
+**v0.2.0-alpha.11** (October 13 intake, see
+[next batch intake](../../plans/2026-10-13-next-batch-intake.md)). The recipe now pins
+**v0.2.0-alpha.12** (published 2026-10-14), which adds the companion stat rows
+`230`–`234`.
+60 current or historical entries; the collection exposes 43. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
@@ -19,6 +20,13 @@ The four ✓ marks record the old reference install, not the new default recipe.
   and makes the amulet removable while leaving extra slots to the kit.
   Other Edwin kits and saved actors are not rewritten by this fresh-install option.
 
+- Companion stats `230`–`234` (alpha.12) are **default (Christopher's decision,
+  2026-10-14)**: Rasaad DEX 17/CON 16, Dorn CON 16, Eldoth STR 17/CON 16/WIS 9/INT 14,
+  Garrick DEX 17/INT 15 and Quayle CON 15. Each is independent and needs no class, kit
+  or spell mod. They run at the end of the pre-continuity run, after `225` in TP2 order,
+  so they follow the companion class/kit conversions and precede continuity `199` and
+  EET_end, as the Modpack's companion stat guide requires. Stored HP and saved actors
+  are unchanged.
 - Evandra `224` (Sorcerer) and `225` (owner-created portrait) are released and
   pinned independent defaults requiring Evandra core. They run after class and
   NPC providers, before continuity and EET_end; the generator and packaging
@@ -26,7 +34,8 @@ The four ✓ marks record the old reference install, not the new default recipe.
   [Evandra handoff](../../handoffs/2026-09-29-evandra-default-restoration.md).
 - The public alpha implements `110`, `130`, `140`, `160`, `170`, `190`, `192`–`198`,
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
-  FAIL placeholders. The alpha.11 candidate adds `237`, `238`, `650`, `651` and `660`.
+  FAIL placeholders. Alpha.11 added `237`, `238`, `650`, `651` and `660`; alpha.12 adds
+  `230`–`234`.
 - The collection exposes every implemented component except standalone `160`, whose exact
   skill repair is invoked atomically by the default Skie component `195`.
 - Component `400` remains visible but conditionally inactive unless its Branwen /
@@ -112,6 +121,11 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 223 | Assassin | chriz-bg-modpack: NPC fixes | Hexxat: choose a class or kit |  | optional |
 | 224 | Evandra: Sorcerer build and starting spellbook | chriz-bg-modpack: NPC fixes | | | default |
 | 225 | Evandra: custom portrait | chriz-bg-modpack: NPC fixes | | | default |
+| 230 | Rasaad: Dexterity 17 and Constitution 16 | chriz-bg-modpack: NPC fixes | | | default |
+| 231 | Dorn: Constitution 16 | chriz-bg-modpack: NPC fixes | | | default |
+| 232 | Eldoth: Strength 17, Constitution 16, Wisdom 9 and Intelligence 14 | chriz-bg-modpack: NPC fixes | | | default |
+| 233 | Garrick: Dexterity 17 and Intelligence 15 | chriz-bg-modpack: NPC fixes | | | default |
+| 234 | Quayle: Constitution 15 | chriz-bg-modpack: NPC fixes | | | default |
 | 200 | Artisan Kitpack: fix missing multiclass proficiency stats | chriz-bg-modpack: Kit fixes |  |  | |
 | 210 | Druid/Ranger: remove Elemental Prince Call (SPPR724) from CLAB tables | chriz-bg-modpack: Kit fixes |  |  | |
 | 300 | Red Bearskin Mail: Rashemi Berserker kit usability fix | chriz-bg-modpack: Item fixes |  |  | |

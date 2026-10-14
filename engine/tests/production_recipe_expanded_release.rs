@@ -70,9 +70,10 @@ fn authors_the_six_runs_exactly() {
             PRE,
             "chriz-bg-modpack",
             Phase::Main,
+            // October 14: Modpack alpha.12 companion stats 230-234 in TP2 order.
             &[
                 110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223,
-                224, 225,
+                224, 225, 230, 231, 232, 233, 234,
             ],
         ),
         (CONTINUITY, "chriz-bg-modpack", Phase::Main, &[199]),
@@ -105,7 +106,12 @@ fn recommended_preset_resolves_the_reviewed_components() {
     assert_eq!(plan.components_for(SRCB), Some(&[0][..]));
     assert_eq!(
         plan.components_for(PRE),
-        Some(&[110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221][..])
+        Some(
+            &[
+                110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231,
+                232, 233, 234
+            ][..]
+        )
     );
     assert_eq!(plan.components_for(CONTINUITY), Some(&[199][..]));
     assert_eq!(plan.components_for(SAFANA), Some(&[0][..]));
@@ -213,10 +219,10 @@ fn freezes_the_reviewed_release_sources() {
         ),
         (
             "chriz-bg-modpack",
-            "chriz-bg-modpack-0.2.0-alpha.11",
-            "v0.2.0-alpha.11",
-            10_445_075,
-            "1ab6fe05b282dd3d5badcbd25f41af3e15ea966c110298aed71c39c855c7fa18",
+            "chriz-bg-modpack-0.2.0-alpha.12",
+            "v0.2.0-alpha.12",
+            10_449_774,
+            "3c1ee079541d8e64c9e692b511e5560ee505867b43698425e6bdd3ad48d578e2",
         ),
         (
             "safana",

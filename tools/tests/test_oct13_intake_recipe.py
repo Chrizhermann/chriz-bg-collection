@@ -180,7 +180,7 @@ class Oct13IntakeTests(unittest.TestCase):
             self.assertEqual(baseline - self._selected(collection, preset, **{MODPACK.format(660): "off"}), {("chriz-bg-modpack-bg2", 660)})
 
     def test_sod_remix_new_start_rows_are_mandatory_in_tp2_order(self):
-        for _, _, collection, preset in self._each_profile():
+        for name, _, collection, preset in self._each_profile():
             runs = {run["run_id"]: run for run in collection["runs"]}
             features = {f["id"]: f for f in collection["features"]}
             self.assertEqual(runs[SOD_RUN]["components"], SOD_V0613_RUN)
@@ -198,12 +198,14 @@ class Oct13IntakeTests(unittest.TestCase):
             )
             self.assertEqual(bridge["decision"], "optional")
             group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
-            self.assertEqual(group["members"], [
+            # October 14 adds Tweaks 2760 where Tweaks Anthology exists (curated only).
+            self.assertEqual(group["members"][:4], [
                 "feature:chriz-bg-rebalance:component-301",
                 "feature:chriz-bg-modpack:component-235",
                 "feature:chriz-bg-rebalance:component-110",
                 "feature:chriz-sod-remix:component-257",
             ])
+            self.assertEqual(group["members"][4:], ["feature:cdtweaks:component-2760"] if name == "curated" else [])
 
     def test_release_gate_records_cover_only_what_the_default_selection_installs(self):
         for name, directory, collection, preset in self._each_profile():
@@ -237,8 +239,9 @@ class Oct13IntakeTests(unittest.TestCase):
         names = {component["id"]: component["name"] for component in mod["components"]}
         self.assertEqual(names[430], "Scrolls: use the reader's active caster level, or half their active class level")
         self.assertTrue({237, 238, 650, 651, 660} <= names.keys())
-        # The owners published both releases on October 13; the pins follow them.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.11")
+        # The owners published both releases on October 13. Modpack alpha.12
+        # (test_oct14_intake_recipe) supersedes alpha.11 and keeps these rows.
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.12")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
         self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.13")
         self.assertTrue({177, 198, 285} <= {component["id"] for component in sod["components"]})
@@ -284,6 +287,9 @@ class Oct13IntakeTests(unittest.TestCase):
             "manifest": [ROOT / "manifest"],
             "recipes/curated-full-current": [ROOT / "recipes/curated-full-current", self.output],
         }
+        # The October 14 intake (test_oct14_intake_recipe) supersedes these pins;
+        # their pinned files stay exactly as verified here.
+        superseded = {"chriz-bg-modpack", "chriz-bg-rebalance"}
         for record in evidence["artifacts"]:
             for flag in ("fresh_download", "fresh_extraction", "published_release_verified",
                          "native_component_order_verified"):
@@ -293,6 +299,15 @@ class Oct13IntakeTests(unittest.TestCase):
                 for profile in profiles:
                     with self.subTest(profile=str(profile), mod=record["mod_id"]):
                         mod_path = profile / f"mods/{record['mod_id']}.toml"
+                        if record["mod_id"] in superseded and name in record["recipe_profiles"]:
+                            artifact = tomllib.loads(
+                                (profile / f"artifacts/{record['artifact_id']}.toml").read_text(encoding="utf-8"))
+                            for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
+                                                  ("url", "immutable_source_url"), ("reference", "source_reference")):
+                                self.assertEqual(artifact["source"][key], record[measured])
+                            mod = tomllib.loads(mod_path.read_text(encoding="utf-8"))
+                            self.assertNotEqual(mod["artifact_id"], record["artifact_id"])
+                            continue
                         if name not in record["recipe_profiles"]:
                             # A curated-only fork never leaks into the fallback recipe.
                             pinned = mod_path.is_file() and tomllib.loads(

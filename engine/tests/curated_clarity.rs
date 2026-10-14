@@ -31,7 +31,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // October 13 default bard ceilings add 420/421 and Bardic 3010;
         // EET's desktop shortcut (EET 100) becomes an unchecked option.
         // The October 13 intake adds Modpack 237/238/660 and SoD 177/198/285.
-        469
+        // The October 14 intake adds Modpack 230-234, Rebalance 331/332, SCS 3021
+        // and Tweaks 3220/3500/3510.
+        480
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -76,14 +78,14 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.2"
+        "chriz-bg-rebalance-0.8.3"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
                 100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420,
-                421, 310, 130, 220, 320,
+                421, 310, 130, 220, 320, 331, 332,
             ][..]
         )
     );

@@ -18,6 +18,12 @@ and no extra command-line arguments. The byte counts, hashes, roots, and TP2 pat
 were verified from fresh downloads. Prefer the plain IEMOD assets over the Windows
 self-extractors for Tweaks Anthology and IWDification.
 
+Later pin change: since 2026-10-14 the curated recipe pins Tweaks Anthology to the
+unreleased master snapshot `7649ced6cd25865874d787ec1a9abbc67b068729` as GitHub's commit
+archive (`single-wrapper`, root `cdtweaks`). See `manifest/evidence/release-intake-20261014.toml`
+and the [snapshot inventory](tweaks-anthology-7649ced-inventory.md). The `2310`–`2312` code
+quoted below is unchanged in that snapshot.
+
 The recorded Bardic source is the maintained `v2.9c-balance.2` fork, not the old upstream
 `cfcd1c4` snapshot. A later `v2.9c-balance.3` release exists, but promoting it is a separate
 source/curation decision and is not implied here.

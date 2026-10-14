@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.11"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.12"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -89,6 +89,26 @@ name = "Evandra: Sorcerer build and starting spellbook"
 [[components]]
 id = 225
 name = "Evandra: custom portrait"
+
+[[components]]
+id = 230
+name = "Rasaad: Dexterity 17 and Constitution 16"
+
+[[components]]
+id = 231
+name = "Dorn: Constitution 16"
+
+[[components]]
+id = 232
+name = "Eldoth: Strength 17, Constitution 16, Wisdom 9 and Intelligence 14"
+
+[[components]]
+id = 233
+name = "Garrick: Dexterity 17 and Intelligence 15"
+
+[[components]]
+id = 234
+name = "Quayle: Constitution 15"
 
 [[components]]
 id = 400

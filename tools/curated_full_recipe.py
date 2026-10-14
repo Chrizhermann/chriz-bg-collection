@@ -56,7 +56,8 @@ NATIVE_RUN_ORDERS = {
         5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001,
     ],
     "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 8204],
-    "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225],
+    # Modpack alpha.12 (October 14) declares companion stats 230-234 right after 225.
+    "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234],
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
     # Degrodel 660 is declared after 640 and before the campaign XP pair 650/651.
     "chriz-bg-modpack-bg2": [130, 400, 410, 440, 450, 610, 611, 630, 660],
@@ -64,7 +65,8 @@ NATIVE_RUN_ORDERS = {
     "chriz-bg-modpack-campaign-xp-bg2": [650, 651],
     # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
     # Verify new source pins with tools/check_native_component_order.py.
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320],
+    # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],
@@ -208,6 +210,40 @@ license = "Fetch-only third-party release; the collection does not redistribute 
 url = "https://github.com/Gibberlings3/Tweaks-Anthology/releases/tag/v18"
 reviewed_on = "2026-09-05"
 """,
+    # Unreleased master snapshot, 134 commits after v18 (031ec93); pinned like the EET snapshot.
+    "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729.toml": """id = "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729"
+name = "The Tweaks Anthology"
+version = "7649ced6cd25865874d787ec1a9abbc67b068729"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729"
+reference = "7649ced6cd25865874d787ec1a9abbc67b068729"
+expected_filename = "Tweaks-Anthology-7649ced6cd25865874d787ec1a9abbc67b068729.zip"
+expected_length = 23871463
+sha256 = "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["cdtweaks"]
+tp2_paths = ["cdtweaks/setup-cdtweaks.tp2"]
+
+[archive.limits]
+max_depth = 10
+max_entries = 4096
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 256
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/Tweaks-Anthology"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/Gibberlings3/Tweaks-Anthology/commit/7649ced6cd25865874d787ec1a9abbc67b068729"
+reviewed_on = "2026-10-14"
+""",
     "iwdification-11.toml": """id = "iwdification-11"
 name = "IWDification"
 version = "11"
@@ -277,10 +313,19 @@ reviewed_on = "2026-09-08"
 }
 
 
+# Tweaks Anthology 7649ced components whose TP2 requires EEex.tp2 component 0
+# (REQUIRE_PREDICATE MOD_IS_INSTALLED; deprecated ones omitted). Without EEex
+# WeiDU skips them, and the installer treats a skipped component as a failed run.
+CDTWEAKS_EEEX_COMPONENTS = frozenset({
+    2650, 2660, 2670, 2680, 2690, 2691, 2692, 2693, 2700, 2710, 2750, 2770, 3420, 3430,
+    3450, 3460, 3480, 3500, 3520, 4200, 4240, *range(6000, 6361, 10),
+})
+
+
 MOD_SPECS = {
     "bardicwonders": ("bardicwonders-v2.9c-balance.7", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
     "branwen": ("branwen-8", "Branwen for BGII", "Branwen/branwen.tp2", "BRANWEN"),
-    "cdtweaks": ("cdtweaks-18", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
+    "cdtweaks": ("cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729", "The Tweaks Anthology", "cdtweaks/setup-cdtweaks.tp2", "CDTWEAKS"),
     "evandra": ("evandra-2.2-windows", "Evandra NPC", "evandra/setup-evandra.tp2", "EVANDRA"),
     "iwdification": ("iwdification-11", "IWDification", "iwdification/setup-iwdification.tp2", "IWDIFICATION"),
     "klatu": ("klatu-tweaks-1.7.4", "Klatu Tweaks and Fixes", "klatu/setup-klatu.tp2", "KLATU"),
@@ -460,7 +505,7 @@ def _feature_blocks(root: Path, collection: dict) -> str:
             (other, "Choose one source for IWD casting graphics: IWDification or Tweaks Anthology.")
         )
 
-    # CDTweaks v18, setup-cdtweaks.tp2:1088-1195: every individual
+    # CDTweaks 7649ced, setup-cdtweaks.tp2:1091-1206 (unchanged since v18): every individual
     # all-class stronghold rejects either Multiple Strongholds component.
     # The individual strongholds do NOT conflict with each other.
     for multiple in (1160, 1161):
@@ -516,6 +561,8 @@ def _feature_blocks(root: Path, collection: dict) -> str:
             category = "kits"
         elif target.target_id == "feature:evandra:component-1":
             requires = ["feature:evandra:mandatory-components"]
+        elif any(row.catalog == "CDTWEAKS" and row.component_id in CDTWEAKS_EEEX_COMPONENTS for row in target_rows):
+            requires = ["feature:eeex:mandatory-components"]
         components = [
             f'  {{ run_id = {_q(_run_for(RowKey(row.catalog, row.component_id)))}, component = {row.component_id} }},'
             for row in target_rows
@@ -934,11 +981,49 @@ def _validate_game_interface_order(collection: str) -> None:
                 raise ValueError(f"Review game interface order for {feature['id']}")
 
 
+# Feature-group members that exist only in this curated profile. The fallback
+# recipe has no Tweaks Anthology run, so manifest/collection.toml cannot name them.
+CURATED_GROUP_MEMBERS = {
+    # Christopher, 2026-10-14: Challenge Mode disables stealing from fences (Tweaks 2760).
+    "challenge-mode": ["feature:cdtweaks:component-2760"],
+}
+
+
+def _curated_feature_groups(base: dict) -> list[dict]:
+    groups = [dict(group, members=list(group["members"])) for group in base.get("feature_groups", [])]
+    known = {group["id"] for group in groups}
+    unknown = set(CURATED_GROUP_MEMBERS) - known
+    if unknown:
+        raise ValueError(f"curated members name unknown feature groups: {sorted(unknown)}")
+    for group in groups:
+        group["members"].extend(CURATED_GROUP_MEMBERS.get(group["id"], []))
+    return groups
+
+
+def _add_curated_group_members(collection: str, base: dict) -> str:
+    """Append curated-only members to the copied group blocks, leaving authored members first."""
+    for group_id, members in CURATED_GROUP_MEMBERS.items():
+        pattern = re.compile(
+            rf'(?ms)(^\[\[feature_groups\]\]\nid = "{re.escape(group_id)}"\n.*?^members = \[\n)(.*?)(^\]\n)'
+        )
+        matches = list(pattern.finditer(collection))
+        if len(matches) != 1:
+            raise ValueError(f"expected one members array for feature group {group_id}")
+        match = matches[0]
+        added = "".join(f"  {_q(member)},\n" for member in members)
+        collection = collection[:match.end(2)] + added + collection[match.end(2):]
+    if tomllib.loads(collection).get("feature_groups", []) != _curated_feature_groups(base):
+        raise ValueError("curated feature group members were not added exactly once")
+    return collection
+
+
 def _validate_feature_groups(base: dict, collection: dict) -> None:
-    """Feature groups are authored once in manifest/collection.toml and copied unchanged."""
+    """Feature groups are authored in manifest/collection.toml plus CURATED_GROUP_MEMBERS."""
     groups = collection.get("feature_groups", [])
-    if groups != base.get("feature_groups", []):
-        raise ValueError("feature groups must be carried unchanged from manifest/collection.toml")
+    if groups != _curated_feature_groups(base):
+        raise ValueError(
+            "feature groups must be carried from manifest/collection.toml plus CURATED_GROUP_MEMBERS"
+        )
     features = {feature["id"] for feature in collection["features"]}
     for group in groups:
         missing = [member for member in group["members"] if member not in features]
@@ -1096,6 +1181,7 @@ def build_recipe(root: Path, destination: Path, commit: str) -> None:
     presentations = build_feature_presentations(parsed_collection, rows, curation_map)
     base_collection = apply_feature_presentations(base_collection, presentations)
     _validate_game_interface_order(base_collection)
+    base_collection = _add_curated_group_members(base_collection, base)
     _validate_feature_groups(base, tomllib.loads(base_collection))
     (destination / "collection.toml").write_text(base_collection, encoding="utf-8", newline="\n")
 

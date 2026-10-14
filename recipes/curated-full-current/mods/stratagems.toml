@@ -19,8 +19,16 @@ id = 2510
 name = "Add 6 new divine spells"
 
 [[components]]
+id = 3010
+name = "Replace +1 arrows and other projectiles with nonmagical \"fine\" ones"
+
+[[components]]
 id = 3015
 name = "Re-introduce potions of extra-healing"
+
+[[components]]
+id = 3021
+name = "Fine weapons are immune to the iron crisis"
 
 [[components]]
 id = 3040

@@ -14,7 +14,10 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-29 curated entries, 21 recommended selections for the next release. Bard spell-level
+The recipe pins **v0.8.3** (published 2026-10-14), which adds potion uniqueness
+`330`/`331` and the Heroism family `332` (see below).
+
+32 curated entries, 23 recommended selections for the next release. Bard spell-level
 ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
 2026-10-13)** (see below).
 ✓ = selected and receipt-verified in the isolated
@@ -71,6 +74,9 @@ release-candidate provenance.
 | 408 | Cleric of Tempus: updated kit and ability descriptions | Class and kit revisions |  | ✓ | default |
 | 420 | EEex: independent kit spell-progression provider | Class and kit revisions |  |  | default |
 | 421 | Bard progression: IWD through level 7; Blade and Skald use original progression through level 6 | Class and kit revisions |  |  | default |
+| 330 | Potion uniqueness: all temporary potion types | Cross-cutting audits | Potion uniqueness |  | optional |
+| 331 | Potion uniqueness: all temporary potion types except Potions of Genius | Cross-cutting audits | Potion uniqueness |  | default |
+| 332 | Heroism family: Heroism, Greater Heroism and the Potion of Heroism do not combine | Cross-cutting audits |  |  | default |
 
 ## Atomic Tempus UI behavior
 
@@ -115,6 +121,24 @@ release-candidate provenance.
   release-tail approval and static evidence in the curated profile's release gate.
 - Order follows the v0.8.1 TP2: `...408, 302, 420, 421, 310, 130, 220, 320` in the
   existing post-EET-end run.
+
+## Potion uniqueness and the Heroism family — v0.8.3 (Christopher's decision, 2026-10-14)
+
+- `330` and `331` are one at-most-one choice. Each temporary potion type works once at
+  a time on its drinker: max-HP potions (Heroism, Power and similar) keep the first dose,
+  every other type restarts its duration instead of stacking. `331` lets Potions of
+  Genius stack as before; `330` does not.
+- **`331` is default** in the recommended preset; `330` is offered and unchecked.
+  Christopher wants `330` instead of `331` in Challenge Mode. The current feature-group
+  model cannot switch a choice-group variant (members must be optional and outside any
+  choice group), so that switch is not built yet; pick `330` by hand until it is.
+- **`332` is default**: Heroism, Greater Heroism (Bardic Wonders), their copies and the
+  Potion of Heroism do not combine; the first one active wins. It works with or without
+  `330`/`331`.
+- No EEex. Potions are recognised by what they do, so potions from other mods are
+  included; they run at the end of the existing Rebalance run in TP2 order
+  (`..., 320, 330/331, 332`). Later runs (Modpack, Safana, Klatu, BuffBot, EEex Remote)
+  add no potion types. Effects already active in an existing save can stack once more.
 
 ## Emotion — optional for the next release
 

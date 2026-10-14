@@ -26,6 +26,16 @@ const NORMAL_DEFAULTS: [&str; 4] = [
     "feature:chriz-bg-rebalance:component-111", // Dragon wing buffet spacing
 ];
 const DRAGON_MELEE: &str = "feature:chriz-bg-rebalance:component-110";
+/// Tweaks Anthology runs only in the curated profile (Christopher, 2026-10-14).
+const CURATED_ONLY_MEMBERS: [&str; 1] = ["feature:cdtweaks:component-2760"];
+
+fn members(dir: &str) -> Vec<&'static str> {
+    let mut members = MEMBERS.to_vec();
+    if dir.ends_with("curated-full-current") {
+        members.extend(CURATED_ONLY_MEMBERS);
+    }
+    members
+}
 
 fn profiles() -> Vec<(&'static str, Manifest)> {
     ["../manifest", "../recipes/curated-full-current"]
@@ -91,14 +101,15 @@ fn selected(evaluation: &SelectionEvaluation) -> BTreeMap<String, bool> {
 }
 
 #[test]
-fn both_profiles_define_challenge_mode_with_exactly_the_four_optional_members() {
+fn both_profiles_define_challenge_mode_with_exactly_their_optional_members() {
     for (dir, manifest) in profiles() {
+        let members = members(dir);
         let groups = &manifest.collection.feature_groups;
         assert_eq!(groups.len(), 1, "{dir}");
         let group = &groups[0];
         assert_eq!(group.id, GROUP, "{dir}");
         assert_eq!(group.title, "Challenge Mode", "{dir}");
-        assert_eq!(group.members, MEMBERS, "{dir}");
+        assert_eq!(group.members, members, "{dir}");
         assert!(
             group
                 .description
@@ -112,12 +123,12 @@ fn both_profiles_define_challenge_mode_with_exactly_the_four_optional_members() 
                 "{dir} {}",
                 preset.id
             );
-            for member in MEMBERS {
+            for member in &members {
                 // Chris's Recommended may name a member only to keep it off (Emotion 301).
                 assert!(
                     preset
                         .selections
-                        .get(member)
+                        .get(*member)
                         .is_none_or(|value| value == "off"),
                     "{dir} {} {member}",
                     preset.id
@@ -134,7 +145,7 @@ fn chris_recommended_keeps_challenge_mode_off_with_every_member_available() {
         let state = evaluation.group(GROUP).unwrap();
         assert_eq!(state.state, FeatureGroupState::Off, "{dir}");
         assert!(state.selected_members.is_empty(), "{dir}");
-        assert_eq!(state.available_members, MEMBERS, "{dir}");
+        assert_eq!(state.available_members, members(dir), "{dir}");
         assert!(state.unavailable_members.is_empty(), "{dir}");
         assert_eq!(state.disabled_reason, None, "{dir}");
         for feature in NORMAL_DEFAULTS {
@@ -149,6 +160,7 @@ fn chris_recommended_keeps_challenge_mode_off_with_every_member_available() {
 #[test]
 fn turning_challenge_mode_on_selects_exactly_the_members_and_off_restores_recommended() {
     for (dir, manifest) in profiles() {
+        let members = members(dir);
         let base = recommended_selection(&manifest);
         let recommended = evaluate(&manifest, &base).unwrap();
 
@@ -156,7 +168,7 @@ fn turning_challenge_mode_on_selects_exactly_the_members_and_off_restores_recomm
             feature_group_changes(&manifest, &base, GROUP, FeatureGroupTarget::On).unwrap();
         assert_eq!(
             on_changes,
-            MEMBERS.iter().map(|id| ((*id).to_owned(), true)).collect(),
+            members.iter().map(|id| ((*id).to_owned(), true)).collect(),
             "{dir}"
         );
         let on_selection = apply(&base, &on_changes);
@@ -171,7 +183,7 @@ fn turning_challenge_mode_on_selects_exactly_the_members_and_off_restores_recomm
         let before = selected(&recommended);
         let after = selected(&on);
         for (id, was_selected) in &before {
-            if MEMBERS.contains(&id.as_str()) {
+            if members.contains(&id.as_str()) {
                 assert!(!was_selected && after[id], "{dir} {id}");
             } else {
                 assert_eq!(after[id], *was_selected, "{dir} {id} changed");
@@ -185,7 +197,7 @@ fn turning_challenge_mode_on_selects_exactly_the_members_and_off_restores_recomm
             installed_components(&recommended).is_subset(&installed_components(&on)),
             "{dir}"
         );
-        assert_eq!(added, member_components(&manifest, &MEMBERS), "{dir}");
+        assert_eq!(added, member_components(&manifest, &members), "{dir}");
         // Existing runs keep their order; a run is added only when it consists solely of
         // member components (Baeloth 235 has its own run).
         let recommended_runs = recommended
@@ -204,7 +216,7 @@ fn turning_challenge_mode_on_selects_exactly_the_members_and_off_restores_recomm
             recommended_runs,
             "{dir}"
         );
-        let members = member_components(&manifest, &MEMBERS);
+        let member_components = member_components(&manifest, &members);
         for run in on
             .plan
             .runs
@@ -214,7 +226,7 @@ fn turning_challenge_mode_on_selects_exactly_the_members_and_off_restores_recomm
             assert!(
                 run.components
                     .iter()
-                    .all(|component| members.contains(&(run.run_id.clone(), *component))),
+                    .all(|component| member_components.contains(&(run.run_id.clone(), *component))),
                 "{dir}: added run {} contains non-member components",
                 run.run_id
             );
@@ -254,7 +266,7 @@ fn a_hand_changed_member_makes_the_group_mixed_without_touching_the_others() {
         let state = evaluation.group(GROUP).unwrap();
         assert_eq!(state.state, FeatureGroupState::Mixed, "{dir}");
         assert_eq!(state.selected_members, [MEMBERS[3]], "{dir}");
-        for member in &MEMBERS[..3] {
+        for member in members(dir).iter().filter(|member| **member != MEMBERS[3]) {
             assert!(
                 !evaluation.view.control(member).unwrap().selected,
                 "{dir} {member}"
@@ -270,7 +282,11 @@ fn without_scs_dragon_melee_is_unavailable_and_never_forced_on() {
         base.set_feature("mod:stratagems", false);
         let evaluation = evaluate(&manifest, &base).unwrap();
         let state = evaluation.group(GROUP).unwrap();
-        assert_eq!(state.available_members.len(), 3, "{dir}");
+        assert_eq!(
+            state.available_members.len(),
+            members(dir).len() - 1,
+            "{dir}"
+        );
         assert_eq!(state.unavailable_members.len(), 1, "{dir}");
         assert_eq!(
             state.unavailable_members[0].feature_id, DRAGON_MELEE,
@@ -287,7 +303,11 @@ fn without_scs_dragon_melee_is_unavailable_and_never_forced_on() {
         let on = evaluate(&manifest, &apply(&base, &changes)).unwrap();
         let state = on.group(GROUP).unwrap();
         assert_eq!(state.state, FeatureGroupState::On, "{dir}");
-        assert_eq!(state.selected_members.len(), 3, "{dir}");
+        assert_eq!(
+            state.selected_members.len(),
+            members(dir).len() - 1,
+            "{dir}"
+        );
         assert!(!on.view.control(DRAGON_MELEE).unwrap().selected, "{dir}");
         assert!(!on.normalized_selection.features[DRAGON_MELEE], "{dir}");
     }

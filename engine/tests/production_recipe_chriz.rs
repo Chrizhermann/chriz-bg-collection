@@ -18,13 +18,15 @@ const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
     198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285,
     290, 900, 910,
 ];
+// v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last;
+// 331 (Genius still stacks) and 332 are defaults, 330 is the optional strict variant.
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
     100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130,
-    220, 320,
+    220, 320, 331, 332,
 ];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
     100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
-    420, 421, 310, 130, 220, 320,
+    420, 421, 310, 130, 220, 320, 330, 331, 332,
 ];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
@@ -163,24 +165,24 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.2");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.3");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.8.2");
+    assert_eq!(artifact.version, "0.8.3");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.2/chriz-bg-rebalance-v0.8.2-windows.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.3/chriz-bg-rebalance-v0.8.3-windows.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.8.2");
+    assert_eq!(artifact.source.reference, "v0.8.3");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.8.2-windows.zip")
+        Some("chriz-bg-rebalance-v0.8.3-windows.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_757_530));
+    assert_eq!(artifact.source.expected_length, Some(1_766_746));
     assert_eq!(
         artifact.source.sha256,
-        "1577243caa0e503c1946ce4fa803952c87a6c4ccb1530141665e2b1d933661f1"
+        "d03714f8da0943380f36bc5876d15ec50f23ab2d26194b249eaa5ab961e26a41"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -321,6 +323,22 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 Decision::Default,
                 1
             ),
+            // v0.8.3: strict potion uniqueness 330 is the optional alternative to 331.
+            (
+                "feature:chriz-bg-rebalance:component-330",
+                Decision::Optional,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-331",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-332",
+                Decision::Default,
+                1
+            ),
             (
                 "feature:chriz-bg-rebalance:bard-spell-ceilings",
                 Decision::Default,
@@ -349,7 +367,10 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
     let no_tempus = evaluate(&manifest, &no_tempus).unwrap();
     assert_eq!(
         no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
-        Some(&[100, 101, 111, 120, 121, 200, 210, 211, 302, 420, 421, 310, 130, 220, 320][..])
+        Some(
+            &[100, 101, 111, 120, 121, 200, 210, 211, 302, 420, 421, 310, 130, 220, 320, 331, 332]
+                [..]
+        )
     );
 
     let mut disabled = Selection::defaults("windows");
@@ -408,7 +429,7 @@ fn defaults_wing_buffet_spacing_with_scs_and_an_independent_optout() {
         Some(
             &[
                 100, 101, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421,
-                310, 130, 220, 320
+                310, 130, 220, 320, 331, 332
             ][..]
         )
     );

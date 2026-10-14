@@ -1,5 +1,5 @@
 id = "cdtweaks"
-artifact_id = "cdtweaks-18"
+artifact_id = "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729"
 name = "The Tweaks Anthology"
 tp2 = "cdtweaks/setup-cdtweaks.tp2"
 language = 0
@@ -252,7 +252,7 @@ name = "Allow Cespenar to Use Cromwell Recipes"
 
 [[components]]
 id = 1257
-name = "Move NPCs to Convenient Locations: Alora, Eldoth, Quayle, Shar-Teel, Tiax, and Viconia"
+name = "Move NPCs to Convenient Locations: Ajantis, Alora, Eldoth, Quayle, Shar-Teel, Tiax, and Viconia"
 
 [[components]]
 id = 2020
@@ -300,7 +300,7 @@ name = "Hybrid of both methods"
 
 [[components]]
 id = 2210
-name = "True grandmastery [Baldurdash]"
+name = "True grandmastery [Baldurdash]: High Mastery and Grand Mastery give +3 to hit and +5 damage"
 
 [[components]]
 id = 2220
@@ -377,6 +377,10 @@ name = "Speed Up de'Arnise Keep Stronghold Quests"
 [[components]]
 id = 2590
 name = "Thieves Can Backstab With More Weapons With \"Use Any Item\" or as Dual- and Multi-Classes"
+
+[[components]]
+id = 2760
+name = "Disable stealing at fences [Luke]"
 
 [[components]]
 id = 2999
@@ -575,6 +579,10 @@ id = 3205
 name = "Stores Purchase All Item Types"
 
 [[components]]
+id = 3220
+name = "Sensible Entrance Points"
+
+[[components]]
 id = 3230
 name = "Taerom Makes Additional Ankheg Armor [Icendoan/grogerson]"
 
@@ -681,6 +689,14 @@ name = "Every 120 minutes (cycle through four saves)"
 [[components]]
 id = 3390
 name = "Automatic Use of Ranger Tracking Skill"
+
+[[components]]
+id = 3500
+name = "Summoned Creatures Clear Fog of War"
+
+[[components]]
+id = 3510
+name = "Add Ribald's Special Stock to His Regular Store"
 
 [[components]]
 id = 4031

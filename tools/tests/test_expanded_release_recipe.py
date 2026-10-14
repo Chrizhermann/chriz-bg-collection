@@ -97,11 +97,11 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.11")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.11.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.11")
-        self.assertEqual(artifact["source"]["expected_length"], 10445075)
-        self.assertEqual(artifact["source"]["sha256"], "1ab6fe05b282dd3d5badcbd25f41af3e15ea966c110298aed71c39c855c7fa18")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.12")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.12.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.12")
+        self.assertEqual(artifact["source"]["expected_length"], 10449774)
+        self.assertEqual(artifact["source"]["sha256"], "3c1ee079541d8e64c9e692b511e5560ee505867b43698425e6bdd3ad48d578e2")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
         # Modpack also restores Evandra defaults and switches 610 to 611.
@@ -118,8 +118,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # EET's desktop shortcut (EET 100) becomes an unchecked option.
         # The October 13 intake adds default Modpack 237/238/660 and mandatory SoD
         # 177/198/285, and moves 430 into its own final run.
-        self.assertEqual(len(without_controls), 468)
-        self.assertEqual(len(selected), 469)
+        # The October 14 intake adds default Modpack 230-234, Rebalance 331/332,
+        # SCS 3021 and Tweaks 3220/3500/3510.
+        self.assertEqual(len(without_controls), 479)
+        self.assertEqual(len(selected), 480)
         self.assertEqual(len({run for run, _ in selected}), 53)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -141,7 +143,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertIn((continuity, 199), self.selected())
         self.assertEqual(self.positions[continuity] + 1, self.positions["eet-end-bg2"])
         self.assertLess(self.positions[pre], self.positions[continuity])
-        self.assertEqual(self.runs[pre]["components"], [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225])
+        # Modpack alpha.12 companion stats 230-234 follow the class/kit conversions.
+        self.assertEqual(self.runs[pre]["components"], [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234])
         for component in self.runs[pre]["components"]:
             self.assertNotIn(component, self.runs["chriz-bg-modpack-bg2"]["components"])
 
@@ -215,7 +218,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 469)
+        self.assertEqual(len(baseline), 480)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -235,7 +238,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_including_default_bard_ceilings(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertIn((run_id, component), self.selected())

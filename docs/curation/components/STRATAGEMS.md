@@ -15,6 +15,16 @@ Listed at installed version **35.21**.
 - Component `4130` has the same visible restriction: its pinned installer explicitly
   forbids Spell Revisions component 0. Component `2520` also conflicts with SR but
   remains excluded.
+- Fine weapons `3021` is **default (Christopher's decision, 2026-10-14)**: most
+  standard +1 weapons become nonmagical "fine" weapons (+1 to hit and damage, no
+  initiative bonus, no harm to creatures immune to normal weapons, about a third of the
+  price) that never break in BG1's iron crisis. Its alternative `3022` (fine weapons
+  affected by the iron crisis) is not offered; `3020` is the BG2-only version and does
+  not install on EET.
+- Fine ammunition `3010` is **offered but unchecked** (Christopher, 2026-10-14) and is
+  not part of Challenge Mode: +1 arrows, bolts, darts and sling bullets become
+  nonmagical "fine" ammunition.
+- Both run in the existing SCS run in TP2 order: `..., 2510, 3010, 3015, 3021, 3040, ...`.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
@@ -37,11 +47,11 @@ Listed at installed version **35.21**.
 | 2510 | Add 6 new divine spells (some borrowed from Divine Remix) | Spell system revisions and new spells |  | ✓ | mandatory |
 | 2520 | Revised elementals and elemental summoning | Spell system revisions and new spells |  |  | |
 | 2900 | Move or modify some overpowered magic items | Gameplay tweaks |  |  | |
-| 3010 | Replace +1 arrows and other projectiles with nonmagical "fine" ones | Gameplay tweaks |  |  | |
+| 3010 | Replace +1 arrows and other projectiles with nonmagical "fine" ones | Gameplay tweaks |  |  | optional |
 | 3015 | Re-introduce potions of extra-healing | Gameplay tweaks |  |  | optional |
 | 3017 | Make elemental arrows like BG2 | Gameplay tweaks |  |  | |
 | 3020 | Replace many +1 magic weapons with nonmagical "fine" ones | Gameplay tweaks |  |  | |
-| 3021 | Fine weapons are immune to the iron crisis | Gameplay tweaks | Replace many +1 magic weapons with nonmagical "fine" ones |  | |
+| 3021 | Fine weapons are immune to the iron crisis | Gameplay tweaks | Replace many +1 magic weapons with nonmagical "fine" ones |  | default |
 | 3022 | Fine weapons are affected by the iron crisis | Gameplay tweaks | Replace many +1 magic weapons with nonmagical "fine" ones |  | |
 | 3040 | Remove Arrows of Dispelling from stores | Gameplay tweaks | Reduce the number of Arrows of Dispelling in stores |  | optional |
 | 3041 | Stores sell a maximum of 5 Arrows of Dispelling | Gameplay tweaks | Reduce the number of Arrows of Dispelling in stores | ✓ | default |

@@ -268,7 +268,7 @@ args = []
 run_id = "stratagems-bg2"
 mod_id = "stratagems"
 phase = "main"
-components = [2000, 2500, 2510, 3015, 3040, 3041, 3505, 3540, 3541, 4000, 4020, 4050, 4051, 4052, 4093, 4115, 4130, 4135, 4140, 4145, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173, 4174, 4210, 4215, 4216, 4217, 4218, 4230, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
+components = [2000, 2500, 2510, 3010, 3015, 3021, 3040, 3041, 3505, 3540, 3541, 4000, 4020, 4050, 4051, 4052, 4093, 4115, 4130, 4135, 4140, 4145, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173, 4174, 4210, 4215, 4216, 4217, 4218, 4230, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190]
 args = []
 
 [[runs]]
@@ -289,7 +289,7 @@ args = []
 run_id = "chriz-bg-modpack-pre-continuity-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "main"
-components = [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225]
+components = [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234]
 args = []
 
 [[runs]]
@@ -324,7 +324,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332]
 args = []
 
 [[runs]]
@@ -3002,6 +3002,16 @@ components = [
 ]
 
 [[features]]
+id = "feature:stratagems:component-3010"
+title = "Fine ammunition instead of +1 ammunition"
+description = "+1 arrows, bolts, darts and sling bullets become nonmagical \"fine\" ammunition. They keep +1 to hit and damage, but cannot harm creatures immune to normal weapons, and Protection from Normal Missiles stops them."
+category = "items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 3010 }]
+
+[[features]]
 id = "feature:stratagems:component-3015"
 title = "More extra-healing potions in BG1 shops"
 description = "Adds a small stock of Potions of Extra Healing to four BG1 temple shops."
@@ -3010,6 +3020,16 @@ decision = "optional"
 readiness = "ready"
 parent = "mod:stratagems"
 components = [{ run_id = "stratagems-bg2", component = 3015 }]
+
+[[features]]
+id = "feature:stratagems:component-3021"
+title = "Fine weapons instead of +1 weapons; they never break"
+description = "Most standard +1 weapons become nonmagical \"fine\" weapons: still +1 to hit and damage, but no initiative bonus, no harm to creatures immune to normal weapons, and about a third of the price. Fine weapons never break in BG1's iron crisis."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-bg2", component = 3021 }]
 
 [[features]]
 id = "feature:stratagems:component-3040"
@@ -3745,6 +3765,40 @@ parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 320 }]
 
 [[features]]
+id = "feature:chriz-bg-rebalance:component-330"
+title = "Potions: one dose of each type at a time"
+description = "Drinking a temporary potion type that is already active restarts its duration instead of stacking its bonus. Heroism, Power and other potions that raise maximum hit points keep the first dose until it ends. Different potion types still combine. Potions of Genius follow the same rule."
+category = "items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+choice_group = "potion-uniqueness"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-331", reason = "Choose whether Potions of Genius stack." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 330 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-331"
+title = "Potions: one dose of each type at a time; Genius still stacks"
+description = "Drinking a temporary potion type that is already active restarts its duration instead of stacking its bonus. Heroism, Power and other potions that raise maximum hit points keep the first dose until it ends. Different potion types still combine. Potions of Genius still stack as before."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+choice_group = "potion-uniqueness"
+conflicts = [{ feature_id = "feature:chriz-bg-rebalance:component-330", reason = "Choose whether Potions of Genius stack." }]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 331 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-332"
+title = "Heroism effects don't combine"
+description = "Heroism, Greater Heroism (Bardic Wonders), their copies and the Potion of Heroism: the first one active on a creature wins, and the others have no effect on it until it ends. Song of Heroism, Aid and the Potion of Power stay separate."
+category = "items"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 332 }]
+
+[[features]]
 id = "feature:chriz-bg-rebalance:bard-spell-ceilings"
 title = "Bard spell-level ceilings"
 description = "Bards and Jesters follow the Icewind Dale bard progression up to 7th-level spells, unlocked at bard level 21. Blades and Skalds keep the original progression, capped at 6th level. Requires EEex. Existing characters gain the new spell capacity at their next level-up."
@@ -4124,6 +4178,56 @@ unavailable_reason = "Evandra's verified core is supplied by the generated full 
 parent = "mod:chriz-bg-modpack"
 requires = ["mod:evandra"]
 components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 225 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-230"
+title = "Rasaad: Dexterity 17 and Constitution 16"
+description = "Set Rasaad's base Dexterity to 17 and Constitution to 16 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 230 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-231"
+title = "Dorn: Constitution 16"
+description = "Set Dorn's base Constitution to 16 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 231 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-232"
+title = "Eldoth: Strength 17, Constitution 16, Wisdom 9 and Intelligence 14"
+description = "Set Eldoth's base Strength to 17, Constitution to 16, Wisdom to 9 and Intelligence to 14. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 232 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-233"
+title = "Garrick: Dexterity 17 and Intelligence 15"
+description = "Set Garrick's base Dexterity to 17 and Intelligence to 15 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 233 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-234"
+title = "Quayle: Constitution 15"
+description = "Set Quayle's base Constitution to 15 in every campaign. Other scores, class, kit, equipment and current hit points stay as they are."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-pre-continuity-bg2", component = 234 }]
 
 [[features]]
 id = "mod:buffbot"

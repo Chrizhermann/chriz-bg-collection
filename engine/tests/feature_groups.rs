@@ -225,18 +225,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // The plans changed again only for the published October 13 artifact pins
     // (Modpack alpha.11, SoD 0.6.13, Rebalance 0.8.2, Bardic balance.7): with the
     // previous pins restored, both plans reproduce their earlier digests.
+    // Re-pinned for the October 14 intake: Modpack alpha.12 (230-234), Rebalance
+    // v0.8.3 (330-332), SCS 3010/3021 and, in the curated recipe, the Tweaks
+    // Anthology 7649ced snapshot (3220/3500/3510/2760, Challenge Mode's 2760).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "2088ab998856c0b83abdbc8afb3c39fd6ca5eafb60fa459041e646872b8da564",
-            "fc2fa9d5e7c32c8b2264f5b24d01dbe4242ee47c6a5fcf9b86ba4f74508138f3",
-            "4f826817ed305388f42269771df13a7a847379e2452653f2d239af944d1f86cf",
+            "847311e3895d60b71215025ccc7ed44740f3dbf23d2a3306b4a26e3d33c83336",
+            "44d42db20d6b83740070b6a13dddb8d9d6ff782819c3e8ab9d0ec35014841fb0",
+            "8ae2181b61325b732b5393e62025dd834b60718faae68930ea4e4f7e2565a4f8",
         ),
         (
             "../recipes/curated-full-current",
-            "7921b38ae60c08c53c5f7c8f97ab5cdf6a437a4b01cdda585bfff59cc1a58ca0",
-            "56271d3d028381a5a246fe3a9db561ddd20d41d00f833168a774612154e7c104",
-            "88677b07bf666f20fe7fc90460ba0714c99189513d2bda5bb4f39dde00481a86",
+            "6991ffc808e097bc62acd433721558fd392c3cef1fa674a885f2c042b4c4cf10",
+            "3583af30c2adac4aac99d270fb3257b6dd267b55d23005dedf2883537e4bfaf7",
+            "170c25f8ba019d3525011369d5a0f8d402cd83ea2b2cbf48774b427b6cd2c97b",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

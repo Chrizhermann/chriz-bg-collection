@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 
 from tools.curated_full_recipe import (
-    _effective_features, _preserve_native_run_orders, _validate_feature_groups, _validate_game_interface_order,
-    build_recipe,
+    CURATED_GROUP_MEMBERS, _add_curated_group_members, _curated_feature_groups, _effective_features,
+    _preserve_native_run_orders, _validate_feature_groups, _validate_game_interface_order, build_recipe,
 )
 from tools.public_component_credits import build_public_component_credits
 
@@ -58,7 +58,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         run_id = "chriz-bg-rebalance-bg2"
         runs = tomllib.loads(collection)["runs"]
         run = next(run for run in runs if run["run_id"] == run_id)
-        self.assertEqual(run["components"][-8:], [408, 302, 420, 421, 310, 130, 220, 320])
+        self.assertEqual(run["components"][-11:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332])
         # Regression: sorting numerical IDs recreated the September 30 failure.
         sorted_source = collection.replace(
             f"components = {run['components']}",
@@ -259,7 +259,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.11")
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.12")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -333,7 +333,13 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # Fade/Evandra recruitment XP 237/238 and Degrodel 660, optional
                 # experimental campaign XP caps 650/651 in their own run, mandatory
                 # SoD 177/198/285, and SoD 257's reworded description.
-                "0e297b32a5f9aa71fd15581b9c8409bb547e7a5cfea8542657a71d1ac7eeab06",
+                # October 14 intake (Christopher's decisions): Modpack alpha.12 default
+                # companion stats 230-234; Rebalance v0.8.3 potion uniqueness 330
+                # (optional) / 331 (default) and default Heroism 332; SCS fine weapons
+                # 3021 default and fine ammunition 3010 optional; Tweaks snapshot
+                # 7649ced defaults 3220/3500/3510 and optional 2760, which joins
+                # Challenge Mode in this profile only; 3500 requires EEex like its TP2.
+                "9ebac2dde0004cd8ee4f3b9990fd55f8c0786760ac07b992122670171ee6b747",
             )
 
             legacy_bg1npc_groups = {
@@ -642,18 +648,18 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.2")
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.3")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.2.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.3.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.2")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.2")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1757530)
+            self.assertEqual(bg_artifact["version"], "0.8.3")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.3")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1766746)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "1577243caa0e503c1946ce4fa803952c87a6c4ccb1530141665e2b1d933661f1",
+                "d03714f8da0943380f36bc5876d15ec50f23ab2d26194b249eaa5ab961e26a41",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.20")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19"):
@@ -1004,7 +1010,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertTrue(all(f"feature:chriz-bg-rebalance:component-{id_}" not in features for id_ in (420, 421)))
         run = next(run for run in collection["runs"] if run["run_id"] == "chriz-bg-rebalance-bg2")
         self.assertEqual(run["phase"], "post-eet-end")
-        self.assertEqual(run["components"][-8:], [408, 302, 420, 421, 310, 130, 220, 320])
+        self.assertEqual(run["components"][-11:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332])
 
     def test_shifted_dialogue_is_optional_and_requires_either_kit_without_eeex(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))
@@ -1076,22 +1082,28 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertIn("`CHRIZ-SOD-REMIX:910` | mandatory", report)
 
 
-    def test_challenge_mode_group_is_carried_unchanged_and_never_preselected(self) -> None:
+    def test_challenge_mode_group_is_carried_with_curated_members_and_never_preselected(self) -> None:
         base = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "curated"
             build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
-        self.assertEqual(collection["feature_groups"], base["feature_groups"])
-        [group] = collection["feature_groups"]
-        self.assertEqual(group["id"], "challenge-mode")
-        self.assertEqual(group["members"], [
+        fallback_members = [
             "feature:chriz-bg-rebalance:component-301",
             "feature:chriz-bg-modpack:component-235",
             "feature:chriz-bg-rebalance:component-110",
             "feature:chriz-sod-remix:component-257",
-        ])
+        ]
+        [authored] = base["feature_groups"]
+        self.assertEqual(authored["members"], fallback_members)
+        self.assertEqual(collection["feature_groups"], _curated_feature_groups(base))
+        [group] = collection["feature_groups"]
+        self.assertEqual(group["id"], "challenge-mode")
+        self.assertEqual({key: value for key, value in group.items() if key != "members"},
+                         {key: value for key, value in authored.items() if key != "members"})
+        # Tweaks Anthology exists only in this profile (Christopher, 2026-10-14).
+        self.assertEqual(group["members"], [*fallback_members, "feature:cdtweaks:component-2760"])
         features = {feature["id"]: feature for feature in collection["features"]}
         for member in group["members"]:
             self.assertEqual(features[member]["decision"], "optional", member)
@@ -1101,11 +1113,27 @@ class CuratedFullRecipeTests(unittest.TestCase):
 
     def test_feature_group_guard_rejects_dropped_or_altered_groups(self) -> None:
         base = {"feature_groups": [{"id": "challenge-mode", "title": "Challenge Mode", "description": "Harder.", "members": ["a"]}]}
-        _validate_feature_groups(base, {"features": [{"id": "a"}], **base})
-        with self.assertRaisesRegex(ValueError, "carried unchanged"):
-            _validate_feature_groups(base, {"features": [{"id": "a"}]})
+        curated = _curated_feature_groups(base)
+        self.assertEqual(curated[0]["members"], ["a", *CURATED_GROUP_MEMBERS["challenge-mode"]])
+        self.assertEqual(base["feature_groups"][0]["members"], ["a"])
+        features = [{"id": "a"}, *({"id": member} for member in CURATED_GROUP_MEMBERS["challenge-mode"])]
+        _validate_feature_groups(base, {"features": features, "feature_groups": curated})
+        with self.assertRaisesRegex(ValueError, "carried from manifest"):
+            _validate_feature_groups(base, {"features": features})
+        with self.assertRaisesRegex(ValueError, "carried from manifest"):
+            # The authored group alone drops the curated-only members.
+            _validate_feature_groups(base, {"features": features, **base})
         with self.assertRaisesRegex(ValueError, "absent from the curated recipe"):
-            _validate_feature_groups(base, {"features": [], **base})
+            _validate_feature_groups(base, {"features": [{"id": "a"}], "feature_groups": curated})
+
+    def test_curated_group_members_are_appended_once_to_the_authored_block(self) -> None:
+        base_text = (self.root / "manifest/collection.toml").read_text(encoding="utf-8").replace("\r\n", "\n")
+        base = tomllib.loads(base_text)
+        added = _add_curated_group_members(base_text, base)
+        self.assertEqual(tomllib.loads(added)["feature_groups"], _curated_feature_groups(base))
+        self.assertEqual(added.replace('  "feature:cdtweaks:component-2760",\n', "", 1), base_text)
+        with self.assertRaisesRegex(ValueError, "exactly once"):
+            _add_curated_group_members(added, base)
 
 
 if __name__ == "__main__":

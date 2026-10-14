@@ -1,8 +1,9 @@
 """Check recipe batches against a pinned ZIP's literal TP2 declaration order.
 
 This read-only authoring check does not execute WeiDU or inspect a game folder.
-It deliberately supports direct-layout ZIPs with literal DESIGNATED components;
-other layouts or generated component identities need their own source audit.
+It deliberately supports direct-layout and single-wrapper ZIPs (such as GitHub commit
+archives) with literal DESIGNATED components; other layouts or generated component
+identities need their own source audit.
 """
 
 from __future__ import annotations
@@ -92,6 +93,27 @@ def validate_run_order(run: dict, native_order: list[int]) -> None:
         )
 
 
+def payload_prefix(files: list[str], root_rule: str, tp2: str) -> str:
+    """Mirror the engine's unique payload-root rule for normalized ZIP file paths.
+
+    The direct layout has the TP2 at the archive root. A wrapper candidate is a
+    top-level directory that contains every file and the TP2. Exactly one
+    candidate may match, and it must be the layout the artifact pin declares.
+    """
+    direct = tp2 in files
+    wrappers = sorted({path.split("/", 1)[0] for path in files if "/" in path})
+    wrapped = [
+        wrapper for wrapper in wrappers
+        if f"{wrapper}/{tp2}" in files and all(path.startswith(f"{wrapper}/") for path in files)
+    ]
+    candidates = ([""] if direct else []) + [f"{wrapper}/" for wrapper in wrapped]
+    if len(candidates) != 1:
+        raise ValueError("pinned archive must have exactly one TP2 payload root")
+    if (root_rule == "direct") != (candidates[0] == ""):
+        raise ValueError(f"pinned archive layout does not match root_rule {root_rule}")
+    return candidates[0]
+
+
 def check_archive_component_order(recipe: Path, mod_id: str, archive_path: Path) -> dict:
     mod = tomllib.loads((recipe / "mods" / f"{mod_id}.toml").read_text(encoding="utf-8"))
     artifact = tomllib.loads(
@@ -99,8 +121,8 @@ def check_archive_component_order(recipe: Path, mod_id: str, archive_path: Path)
     )
     source = artifact["source"]
     layout = artifact["archive"]
-    if layout["kind"] != "zip" or layout["root_rule"] != "direct":
-        raise ValueError("native order check needs a reviewed direct-layout ZIP")
+    if layout["kind"] != "zip" or layout["root_rule"] not in {"direct", "single-wrapper"}:
+        raise ValueError("native order check needs a reviewed direct-layout or single-wrapper ZIP")
     if archive_path.stat().st_size != source["expected_length"]:
         raise ValueError("archive length differs from the recipe pin")
     with archive_path.open("rb") as archive_file:
@@ -109,8 +131,12 @@ def check_archive_component_order(recipe: Path, mod_id: str, archive_path: Path)
         raise ValueError("archive SHA-256 differs from the recipe pin")
     normalize = lambda path: path.replace("\\", "/").casefold()
     with zipfile.ZipFile(archive_path) as archive:
-        matches = [entry for entry in archive.infolist()
-                   if normalize(entry.filename) == normalize(mod["tp2"])]
+        files = [entry for entry in archive.infolist() if not entry.is_dir()]
+        prefix = payload_prefix(
+            [normalize(entry.filename) for entry in files], layout["root_rule"], normalize(mod["tp2"]),
+        )
+        matches = [entry for entry in files
+                   if normalize(entry.filename) == prefix + normalize(mod["tp2"])]
         if len(matches) != 1:
             raise ValueError("pinned archive must contain exactly one descriptor TP2")
         entry = matches[0]

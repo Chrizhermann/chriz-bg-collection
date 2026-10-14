@@ -1,14 +1,44 @@
 # CDTWEAKS — components
 
-Listed at installed version **v18**.
-429 entries, 62 installed. ✓ = installed. Subgroup = choose one.
+Listed at the pinned development snapshot **7649ced** (master, 134 commits after v18
+`031ec93`, unreleased; curated recipe only). Its TP2 still declares `VERSION ~v18~`, so
+WeiDU.log shows ": v18" for these components too.
+441 entries, 62 installed. ✓ = installed in the v18 reference install. Subgroup = choose one.
+The [Tweaks Anthology snapshot inventory](../../tweaks-anthology-7649ced-inventory.md) lists
+what changed since v18 and Christopher's decisions.
+
+## Snapshot 7649ced decisions (Christopher, 2026-10-14)
+
+- New defaults: `3500` (summons clear fog of war), `3510` (Ribald's special stock in his
+  regular store) and `3220` (Sensible Entrance Points; the snapshot makes it available on EET).
+- `2760` (no stealing from fences, and reputation no longer changes their prices) is
+  optional and part of Challenge Mode.
+- `2210` stays the grandmastery default. The snapshot's shared grandmastery table gives High
+  Mastery +5 damage instead of +4; to-hit and the other levels are unchanged.
+  **Pending Christopher:** with Spell Revisions, the snapshot's `2210` also gives SR's Black
+  Blade of Disaster +3/2 attacks per round and a +8/+10 melee header (SR's item is +5/+5 and
+  v18 left it alone). Without Spell Revisions the item is unchanged.
+- `3220` now runs on EET. Besides five unused BG1 entrances, it adds a southern entrance to
+  the Bridge District and routes 34 of its 39 world-map links there.
+- Not offered: `2670`, `2212`, `2213`, `3520`, `4240`, `6360`, `3530`/`3531`, `2780`, `2770`,
+  `2750`. `2670` is not new: it was already in v18 and excluded. `2212`/`2213` are new
+  alternatives in the grandmastery choice (EE-style and IWD numbers; `2213` reproduces v18's
+  `2210` tables).
+- `1258` (Ajantis only) is **not offered**, pending Christopher: in the snapshot the default
+  `1257` already moves Ajantis to the Friendly Arm Inn (it includes `1258`'s code, and its
+  title now lists Ajantis), and `1258` refuses to install after `1257`, which the installer
+  treats as a failed run. No conflict with BG1NPC v32, Artisan's `3101` or BG1UB was found.
+  Alternatives for him: keep `1257` as is (current state), or offer `1251`–`1256` plus `1258`
+  instead of `1257`.
+- Withdrawn upstream: `260` is commented out and `3470` is deprecated in the snapshot; both
+  were already excluded and their rows are gone.
 
 ## UI/dependency notes
 
 - `1160`/`1161` (Multiple Strongholds) each conflict with every individual
   all-class stronghold `1340`–`1347`. The individual options remain compatible
-  with each other. Source: v18 `setup-cdtweaks.tp2:1088–1195`; each `134x`
-  predicate rejects both Multiple Strongholds variants, including batch mode.
+  with each other. Source: 7649ced `setup-cdtweaks.tp2:1091–1206` (unchanged since v18);
+  each `134x` predicate rejects both Multiple Strongholds variants, including batch mode.
   Keep both directions of these exclusions in the generated recipe. Default
   `1161` is unchanged; turn Multiple Strongholds off to choose individual ones.
 - `2380` is approved as **default-checked, optional** for the next patch
@@ -51,8 +81,8 @@ Listed at installed version **v18**.
   has occurred. `3121` is the maintained happiness implementation and replaces the
   duplicate BG2EE-EET-FIXPACK component `300`; characters already below the leave-party
   threshold need a separate one-time save repair.
-- Keep `260` unavailable with SCS; the combination has a known invisible-hostile/save
-  failure path and is not part of this preset.
+- `260` was unavailable with SCS (a known invisible-hostile/save failure path); the
+  snapshot withdraws it upstream.
 - **Optional expansion screened 2026-09-11:** 44 additional choices are exposed
   unchecked after a bounded review of the pinned v18 installer. Recommended
   selections are unchanged; this is not live acceptance of every combination.
@@ -69,7 +99,7 @@ Listed at installed version **v18**.
   class/kit/proficiency and priest-progression rewrites; EEex combat
   feats and spell overhauls; NPC/romance/SoD-to-BG2 continuity changes; random-drop
   rewrites; custom-input choices without installer support; non-EET components.
-  Keep `2680` (useful infravision) excluded alongside the known `260` problem.
+  Keep `2680` (useful infravision) excluded.
   `2150` builds alternate protection items and needs its own compatibility check;
   `3280` has an old EEex-component check and runtime hook to verify; `3020` bypasses
   identification mechanics and potentially mod quests. Their absence is deliberate,
@@ -120,7 +150,6 @@ Listed at installed version **v18**.
 | 253 | Slightly decreased brightness | Cosmetic Changes | Colorize NPC Names and Tooltips |  | |
 | 254 | Moderately decreased brightness | Cosmetic Changes | Colorize NPC Names and Tooltips |  | |
 | 255 | Original color | Cosmetic Changes | Colorize NPC Names and Tooltips |  | |
-| 260 | Hide Visual Effects from Invisible Enemies [Luke] | Cosmetic Changes |  |  | |
 | 270 | Visualize health and status changes | Cosmetic Changes | Static PsT Character Portraits |  | |
 | 271 | Don't visualize health and status changes | Cosmetic Changes | Static PsT Character Portraits |  | |
 | 1010 | More Interjections | Content Changes |  | ✓ | default |
@@ -167,7 +196,8 @@ Listed at installed version **v18**.
 | 1227 | Full 24 hours (BG2EE default, includes sleep) | Content Changes | Adjust Cromwell's Forging Time | ✓ | default |
 | 1230 | Allow Cespenar to Use Cromwell Recipes | Content Changes |  | ✓ | default |
 | 1240 | Friendly Arm Inn Hidden Container Restoration [plainab] | Content Changes |  |  | |
-| 1257 | Move NPCs to Convenient Locations: Alora, Eldoth, Quayle, Shar-Teel, Tiax, and Viconia | Content Changes |  | ✓ | default |
+| 1257 | Move NPCs to Convenient Locations: Ajantis, Alora, Eldoth, Quayle, Shar-Teel, Tiax, and Viconia | Content Changes |  | ✓ | default |
+| 1258 | Move NPCs to Convenient Locations: Move Ajantis to the Friendly Arm Inn | Content Changes |  |  |  |
 | 1251 | Move NPCs to Convenient Locations: Move Alora to Gullykin | Content Changes |  |  | |
 | 1252 | Move NPCs to Convenient Locations: Move Eldoth to the Coast Way | Content Changes |  |  | |
 | 1253 | Move NPCs to Convenient Locations: Move Quayle to the Nashkel Carnival | Content Changes |  |  | |
@@ -215,8 +245,10 @@ Listed at installed version **v18**.
 | 2191 | Identification ability is based on storekeeper's lore | Rule Changes | Limit Ability of Storekeepers to Identify Items |  | optional |
 | 2192 | Hybrid of both methods | Rule Changes | Limit Ability of Storekeepers to Identify Items | ✓ | default |
 | 2200 | Multi-Class Grandmastery [Weimer] | Rule Changes |  |  | |
-| 2210 | True grandmastery [Baldurdash] | Rule Changes | Change Grandmastery Bonuses | ✓ | default |
-| 2211 | BG2 grandmastery rules | Rule Changes | Change Grandmastery Bonuses |  | |
+| 2210 | True grandmastery [Baldurdash]: High Mastery and Grand Mastery give +3 to hit and +5 damage | Rule Changes | Change Grandmastery Bonuses | ✓ | default |
+| 2213 | IWD grandmastery bonuses | Rule Changes | Change Grandmastery Bonuses |  |  |
+| 2212 | EE-style grandmastery bonuses | Rule Changes | Change Grandmastery Bonuses |  |  |
+| 2211 | BG2 grandmastery bonuses | Rule Changes | Change Grandmastery Bonuses |  |  |
 | 2220 | Change Magically Created Weapons to Zero Weight | Rule Changes |  |  | optional |
 | 2230 | Make +x/+y Weapons Consistent | Rule Changes |  |  | |
 | 2240 | Un-Nerfed THAC0 Table | Rule Changes |  |  | |
@@ -303,6 +335,10 @@ Listed at installed version **v18**.
 | 2700 | Revised Troll Regeneration [Luke] | Rule Changes |  |  | |
 | 2710 | NWN-Style Summons [Luke] | Rule Changes |  |  | |
 | 2740 | Allow Shapeshifters to Wear Armor But Prevent Shapeshifting While Worn | Rule Changes |  |  | |
+| 2750 | Force the AI to cast AoE spells on the ground [Luke] | Rule Changes |  |  |  |
+| 2760 | Disable stealing at fences [Luke] | Rule Changes |  |  | optional |
+| 2770 | Standardize buying/selling markups for all stores [Luke] | Rule Changes |  |  |  |
+| 2780 | P&P Free Action | Rule Changes |  |  |  |
 | 2999 | Max HP at Level One | Convenience Tweaks/Cheats |  | ✓ | default |
 | 3000 | Maximum | Convenience Tweaks/Cheats | Higher HP on Level Up | ✓ | default |
 | 3001 | NWN-style | Convenience Tweaks/Cheats | Higher HP on Level Up |  | optional |
@@ -363,7 +399,7 @@ Listed at installed version **v18**.
 | 3200 | Sellable Items [icelus] | Convenience Tweaks/Cheats |  |  | optional |
 | 3205 | Stores Purchase All Item Types | Convenience Tweaks/Cheats |  |  | optional |
 | 3210 | Minimum Stats Cheat | Convenience Tweaks/Cheats |  |  | |
-| 3220 | Sensible Entrance Points | Convenience Tweaks/Cheats |  |  | |
+| 3220 | Sensible Entrance Points | Convenience Tweaks/Cheats |  |  | default |
 | 3230 | Taerom Makes Additional Ankheg Armor [Icendoan/grogerson] | Convenience Tweaks/Cheats |  |  | optional |
 | 3240 | Randomize on reload | Convenience Tweaks/Cheats | Friendly Random Drops |  | |
 | 3241 | Choose your drop | Convenience Tweaks/Cheats | Friendly Random Drops |  | |
@@ -433,8 +469,12 @@ Listed at installed version **v18**.
 | 3430 | More Stoneskin Feedback [Luke] | Convenience Tweaks/Cheats |  |  | |
 | 3450 | More Sensible Fireshield [Luke] | Convenience Tweaks/Cheats |  |  | |
 | 3460 | More Sensible Blade Barrier [Luke] | Convenience Tweaks/Cheats |  |  | |
-| 3470 | Dynamic FPS Change [Luke] | Convenience Tweaks/Cheats |  |  | |
 | 3480 | More Sensible Morentherene [Luke] | Convenience Tweaks/Cheats |  |  | |
+| 3500 | Summoned Creatures Clear Fog of War | Convenience Tweaks/Cheats |  |  | default |
+| 3510 | Add Ribald's Special Stock to His Regular Store | Convenience Tweaks/Cheats |  |  | default |
+| 3520 | "Bank" XP when dualing a character [Luke (EEex)] | Convenience Tweaks/Cheats |  |  |  |
+| 3530 | Import all items except Voidhammer +3 | Convenience Tweaks/Cheats | Always Import SoD Items |  |  |
+| 3531 | Import all items except Voidsword +3 | Convenience Tweaks/Cheats | Always Import SoD Items |  |  |
 | 4000 | Adjust Evil Joinable NPC Reaction Rolls | NPC Tweaks |  |  | |
 | 4010 | Improved Fate Spirit Summoning | NPC Tweaks |  |  | |
 | 4020 | ToB-Style NPCs | NPC Tweaks |  |  | |
@@ -470,6 +510,7 @@ Listed at installed version **v18**.
 | 4220 | Delay until the Nashkel mines are cleared | NPC Tweaks | Delay Neera's Appearance in Beregost |  | |
 | 4221 | Delay until PC has 5000 XP | NPC Tweaks | Delay Neera's Appearance in Beregost |  | |
 | 4230 | Increase Yoshimo's Trapsetting Ability | NPC Tweaks |  |  | |
+| 4240 | Make sure you are getting back what Yoshimo has "taken" from you [Luke (EEex)] | NPC Tweaks |  |  |  |
 | 6000 | Disarm Class Feat for Rogues [Luke] | NWN-Style Feats |  |  | |
 | 6010 | Knockdown Class Feat for Fighters and Monks [Luke] | NWN-Style Feats |  |  | |
 | 6020 | Spellcaster Skill/Counterspell Class Talent [Luke] | NWN-Style Feats |  |  | |
@@ -506,3 +547,4 @@ Listed at installed version **v18**.
 | 6330 | Cantrips Class Feat for Spellcasters [Luke] | NWN-Style Feats |  |  | |
 | 6340 | Animal Companion Class Feat for Beastmasters [Luke] | NWN-Style Feats |  |  | |
 | 6350 | Opportunist Class Feat for Chaotic-Aligned Rogues [Luke] | NWN-Style Feats |  |  | |
+| 6360 | Quick To Master Racial Feat for Humans [Luke] | NWN-Style Feats |  |  |  |

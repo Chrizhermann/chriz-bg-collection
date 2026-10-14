@@ -54,20 +54,25 @@ BEGIN @110 DESIGNATED 110
             with self.subTest(components=components), self.assertRaises(ValueError):
                 validate_run_order({"run_id": "rebalance", "components": components}, [301])
 
-    def _fixture(self, root: Path, components: list[int]) -> tuple[Path, Path]:
+    def _fixture(
+        self, root: Path, components: list[int], *, root_rule: str = "direct",
+        entries: dict[str, str | None] | None = None, tp2: str = "setup-example.tp2",
+    ) -> tuple[Path, Path]:
         recipe = root / "recipe"
         (recipe / "mods").mkdir(parents=True)
         (recipe / "artifacts").mkdir()
         archive_path = root / "fixture.zip"
+        source = (
+            "BEGIN @301 DESIGNATED 301\n"
+            "BEGIN @408 DESIGNATED 408\n"
+            "BEGIN @302 DESIGNATED 302\n"
+        )
         with zipfile.ZipFile(archive_path, "w") as archive:
-            archive.writestr("setup-example.tp2", (
-                "BEGIN @301 DESIGNATED 301\n"
-                "BEGIN @408 DESIGNATED 408\n"
-                "BEGIN @302 DESIGNATED 302\n"
-            ))
+            for name, text in (entries or {"setup-example.tp2": None}).items():
+                archive.writestr(name, source if text is None else text)
         data = archive_path.read_bytes()
         (recipe / "mods/example.toml").write_text(
-            'artifact_id = "example-v1"\ntp2 = "setup-example.tp2"\n', encoding="utf-8",
+            f'artifact_id = "example-v1"\ntp2 = "{tp2}"\n', encoding="utf-8",
         )
         (recipe / "artifacts/example-v1.toml").write_text(
             f'''[source]
@@ -75,7 +80,7 @@ expected_length = {len(data)}
 sha256 = "{hashlib.sha256(data).hexdigest()}"
 [archive]
 kind = "zip"
-root_rule = "direct"
+root_rule = "{root_rule}"
 [archive.limits]
 max_entry_uncompressed_bytes = 4096
 ''', encoding="utf-8",
@@ -113,6 +118,45 @@ components = {components}
             archive.write_bytes(data + b"extra")
             with self.assertRaisesRegex(ValueError, "length"):
                 check_archive_component_order(recipe, "example", archive)
+
+    def test_single_wrapper_commit_archive_reads_the_wrapped_tp2(self) -> None:
+        # GitHub commit archives wrap the payload in one <repo>-<sha>/ directory.
+        entries = {
+            "Repo-abc123/": "",
+            "Repo-abc123/example/setup-example.tp2": None,
+            "Repo-abc123/example/lib/comp.tpa": "// payload",
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            recipe, archive = self._fixture(
+                Path(temp), [301, 408, 302], root_rule="single-wrapper",
+                entries=entries, tp2="example/setup-example.tp2",
+            )
+            result = check_archive_component_order(recipe, "example", archive)
+            self.assertEqual(result["native_components"], [301, 408, 302])
+
+    def test_wrapper_layout_must_be_unique_and_match_the_pin(self) -> None:
+        cases = {
+            "file outside the wrapper": ("single-wrapper", {
+                "Repo-abc123/example/setup-example.tp2": None, "README.md": "outside",
+            }, "payload root"),
+            "two wrappers": ("single-wrapper", {
+                "One/example/setup-example.tp2": None, "Two/example/setup-example.tp2": None,
+            }, "payload root"),
+            "direct archive pinned as wrapped": ("single-wrapper", {
+                "example/setup-example.tp2": None,
+            }, "root_rule single-wrapper"),
+            "wrapped archive pinned as direct": ("direct", {
+                "Repo-abc123/example/setup-example.tp2": None,
+            }, "root_rule direct"),
+        }
+        for label, (root_rule, entries, message) in cases.items():
+            with self.subTest(label), tempfile.TemporaryDirectory() as temp:
+                recipe, archive = self._fixture(
+                    Path(temp), [301, 408, 302], root_rule=root_rule,
+                    entries=entries, tp2="example/setup-example.tp2",
+                )
+                with self.assertRaisesRegex(ValueError, message):
+                    check_archive_component_order(recipe, "example", archive)
 
 
 if __name__ == "__main__":
