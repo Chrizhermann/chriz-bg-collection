@@ -22,6 +22,10 @@ const LAST_OUTPUT_BYTES: usize = 4 * 1024;
 const PROCESS_POLL_INTERVAL: Duration = Duration::from_millis(20);
 /// Runner-owned create-once evidence proving which authored prompt answers reached child stdin.
 pub const PROMPT_RESULTS_FILE_NAME: &str = "prompt-results.jsonl";
+/// While this variable exists, whatever its value, `cmd.exe` skips the current directory when
+/// resolving a bare command name. Some shells set it (Claude Code's does); a normal Windows
+/// session does not, and mods rely on that default.
+const NO_DEFAULT_CURRENT_DIRECTORY_IN_EXE_PATH: &str = "NoDefaultCurrentDirectoryInExePath";
 
 /// One prompt answer successfully written and flushed to the child process.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -324,29 +328,7 @@ pub fn run<S: EventSink>(
         }
     };
 
-    let has_prompts = !request.invocation.prompts.is_empty();
-    let mut command = Command::new(&request.invocation.program);
-    command
-        .current_dir(&request.invocation.cwd)
-        .args(&request.invocation.args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .stdin(if has_prompts {
-            Stdio::piped()
-        } else {
-            Stdio::null()
-        });
-
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
-
-        // Keep WeiDU in the background; its output and prompts still use our pipes.
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
-
-    let mut child = match command.spawn() {
+    let mut child = match weidu_command(&request.invocation).spawn() {
         Ok(child) => child,
         Err(error) => {
             emit_error(
@@ -590,6 +572,35 @@ pub fn run<S: EventSink>(
     }
 }
 
+/// Configures, without spawning, the supervised child for one invocation.
+fn weidu_command(invocation: &Invocation) -> Command {
+    let has_prompts = !invocation.prompts.is_empty();
+    let mut command = Command::new(&invocation.program);
+    command
+        .current_dir(&invocation.cwd)
+        .args(&invocation.args)
+        // Mods run bare batch names from the game folder (EET: `AT_NOW ~shortcut.bat~`,
+        // `AT_NOW ~call arch_var.bat~`). Everything else is inherited unchanged.
+        .env_remove(NO_DEFAULT_CURRENT_DIRECTORY_IN_EXE_PATH)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(if has_prompts {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        });
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
+
+        // Keep WeiDU in the background; its output and prompts still use our pipes.
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
+}
+
 fn create_output_log(path: &std::path::Path) -> io::Result<File> {
     OpenOptions::new().write(true).create_new(true).open(path)
 }
@@ -758,7 +769,9 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::OsStr;
     use std::io::{self, Cursor, Write};
+    use std::path::PathBuf;
     use std::sync::{Arc, Mutex};
     use std::thread;
 
@@ -766,7 +779,7 @@ mod tests {
 
     use crate::events::{ChannelSink, Stream};
 
-    use super::{join_readers, spawn_reader, OutputMessage};
+    use super::{join_readers, spawn_reader, weidu_command, Invocation, OutputMessage};
 
     #[derive(Default)]
     struct FailingWriter;
@@ -800,6 +813,27 @@ mod tests {
             }
         ));
         reader.join().unwrap();
+    }
+
+    #[test]
+    fn child_inherits_the_environment_except_the_current_directory_search_opt_out() {
+        let command = weidu_command(&Invocation {
+            program: PathBuf::from("weidu.exe"),
+            cwd: PathBuf::from("game"),
+            args: Vec::new(),
+            prompts: Vec::new(),
+            debug_path: PathBuf::from("weidu.debug.log"),
+            identity_digest: "environment-test".to_owned(),
+        });
+
+        // The one removal is the only explicit change: every other variable is inherited as-is.
+        assert_eq!(
+            command.get_envs().collect::<Vec<_>>(),
+            [(
+                OsStr::new("NoDefaultCurrentDirectoryInExePath"),
+                None::<&OsStr>
+            )]
+        );
     }
 
     #[test]

@@ -199,7 +199,9 @@ mod installation_name_tests {
     fn fixture_at(relative_managed: &str) -> (TempDir, NativeBridge, PathBuf) {
         let temp = TempDir::new().unwrap();
         let app_data = temp.path().join("app-data");
-        let managed = temp.path().join(relative_managed);
+        // The installer registers canonical roots. TEMP can be an 8.3 short path (`RUNNER~1` on
+        // CI runners), and a registered short path never matches a canonical candidate.
+        let managed = temp.path().canonicalize().unwrap().join(relative_managed);
         fs::create_dir_all(managed.join(".chriz")).unwrap();
         fs::create_dir_all(managed.join("game")).unwrap();
         fs::write(managed.join(".chriz/install-receipt.json"), b"receipt").unwrap();
@@ -343,12 +345,13 @@ mod installation_name_tests {
         bridge
             .rename_installation("name-fixture", "Stream")
             .unwrap();
+        let home = temp.path().canonicalize().unwrap();
         let before = snapshot(temp.path());
-        let defaults = bridge.suggest_installation_defaults(temp.path()).unwrap();
+        let defaults = bridge.suggest_installation_defaults(&home).unwrap();
         assert_eq!(defaults.name, "Chriz Easy BG");
         assert_eq!(
             defaults.path,
-            display_windows_path(&temp.path().join("Games").join("Chriz Easy BG (2)")).unwrap()
+            display_windows_path(&home.join("Games").join("Chriz Easy BG (2)")).unwrap()
         );
         assert_eq!(snapshot(temp.path()), before);
         assert_eq!(
@@ -363,11 +366,12 @@ mod installation_name_tests {
         bridge
             .rename_installation("name-fixture", "Stream")
             .unwrap();
-        let games = temp.path().join("Games");
+        let home = temp.path().canonicalize().unwrap();
+        let games = home.join("Games");
         fs::create_dir_all(games.join("Chriz Easy BG")).unwrap();
         fs::write(games.join("Chriz Easy BG (2)"), b"user file").unwrap();
         let before = snapshot(temp.path());
-        let defaults = bridge.suggest_installation_defaults(temp.path()).unwrap();
+        let defaults = bridge.suggest_installation_defaults(&home).unwrap();
         assert_eq!(defaults.name, "Chriz Easy BG");
         assert_eq!(
             defaults.path,
@@ -382,8 +386,9 @@ mod installation_name_tests {
         bridge
             .rename_installation("name-fixture", "Stream")
             .unwrap();
-        fs::rename(&managed, temp.path().join("moved-completed")).unwrap();
-        let campaign_root = temp.path().join("Games/Chriz Easy BG (2)");
+        let home = temp.path().canonicalize().unwrap();
+        fs::rename(&managed, home.join("moved-completed")).unwrap();
+        let campaign_root = home.join("Games/Chriz Easy BG (2)");
         let pointer = bg_engine::registry::ManagedCampaignRecord {
             schema_version: REGISTRY_SCHEMA_VERSION,
             install_id: "missing-campaign".into(),
@@ -397,10 +402,10 @@ mod installation_name_tests {
         )
         .unwrap();
         let before = snapshot(temp.path());
-        let defaults = bridge.suggest_installation_defaults(temp.path()).unwrap();
+        let defaults = bridge.suggest_installation_defaults(&home).unwrap();
         assert_eq!(
             defaults.path,
-            display_windows_path(&temp.path().join("Games").join("Chriz Easy BG (3)")).unwrap()
+            display_windows_path(&home.join("Games").join("Chriz Easy BG (3)")).unwrap()
         );
         assert_eq!(snapshot(temp.path()), before);
     }
@@ -443,14 +448,14 @@ mod installation_name_tests {
         bridge
             .rename_installation("name-fixture", "Stream")
             .unwrap();
-        let games = temp.path().join("Games");
+        let home = temp.path().canonicalize().unwrap();
+        let games = home.join("Games");
         fs::create_dir(&games).unwrap();
         let link = games.join("Chriz Easy BG");
         #[cfg(windows)]
-        let result =
-            std::os::windows::fs::symlink_dir(temp.path().join("missing-link-target"), &link);
+        let result = std::os::windows::fs::symlink_dir(home.join("missing-link-target"), &link);
         #[cfg(not(windows))]
-        let result = std::os::unix::fs::symlink(temp.path().join("missing-link-target"), &link);
+        let result = std::os::unix::fs::symlink(home.join("missing-link-target"), &link);
         if let Err(error) = result {
             if matches!(
                 error.kind(),
@@ -462,7 +467,7 @@ mod installation_name_tests {
             }
             panic!("cannot create fixture symlink: {error}");
         }
-        let defaults = bridge.suggest_installation_defaults(temp.path()).unwrap();
+        let defaults = bridge.suggest_installation_defaults(&home).unwrap();
         assert_eq!(
             defaults.path,
             display_windows_path(&games.join("Chriz Easy BG (2)")).unwrap()
