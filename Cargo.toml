@@ -1,3 +1,12 @@
 [workspace]
 resolver = "2"
 members = ["engine", "app/src-tauri"]
+
+# Dev and test builds stay small: dependencies carry no debug info, and our own
+# crates keep line tables only, so backtraces still show file and line. The
+# release profile is unchanged.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false

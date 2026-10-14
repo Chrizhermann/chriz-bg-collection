@@ -3057,6 +3057,9 @@ curation content is Chris-only — the engine is curation-independent.
    repo ever goes public, archived third-party content must be dropped/licensing-reviewed.
 3. `gh` CLI auth is shared across concurrent agent sessions — `gh auth status` before any
    gh op; this repo needs `Chrizhermann`.
+4. **A session deletes its worktree's `target/` once its work is merged** (`cargo clean`
+   in that worktree). Each worktree's Rust build output is 15–35 GB; on October 14 one
+   reached 114 GB and C: fell to 34 GB free.
 
 ## Work queue
 
