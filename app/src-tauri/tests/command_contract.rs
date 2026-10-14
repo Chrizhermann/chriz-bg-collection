@@ -319,7 +319,7 @@ impl BridgeSystem for RecordingBridgeSystem {
 
     fn create_desktop_shortcut(&self, request: ShortcutRequest) -> Result<PathBuf, String> {
         self.shortcuts.lock().unwrap().push(request);
-        Ok(PathBuf::from(r"C:\Users\Chris\Desktop\Chriz Easy BG.lnk"))
+        Ok(PathBuf::from(r"C:\Users\Player\Desktop\Chriz Easy BG.lnk"))
     }
 }
 
@@ -558,7 +558,7 @@ impl BridgeEngine for FakeBridgeEngine {
 #[test]
 fn installation_defaults_use_the_injected_home_without_creating_directories() {
     let temp = tempfile::tempdir().expect("create defaults fixture root");
-    let home = temp.path().join("Chris");
+    let home = temp.path().join("Player");
     let expected = home.join("Games").join("Chriz Easy BG");
 
     let defaults = installation_defaults(&home).expect("project installation defaults");
@@ -570,9 +570,12 @@ fn installation_defaults_use_the_injected_home_without_creating_directories() {
         "reading defaults must not create the home path"
     );
 
-    let windows_defaults = installation_defaults(Path::new(r"C:\Users\Chris"))
+    let windows_defaults = installation_defaults(Path::new(r"C:\Users\Player"))
         .expect("project Windows installation defaults");
-    assert_eq!(windows_defaults.path, r"C:\Users\Chris\Games\Chriz Easy BG");
+    assert_eq!(
+        windows_defaults.path,
+        r"C:\Users\Player\Games\Chriz Easy BG"
+    );
 }
 
 #[test]
@@ -2394,7 +2397,7 @@ fn desktop_shortcut_uses_only_the_available_registry_identity_and_current_app() 
     let response = bridge
         .create_desktop_shortcut("install-shortcut")
         .expect("create shortcut from available install");
-    assert_eq!(response.path, r"C:\Users\Chris\Desktop\Chriz Easy BG.lnk");
+    assert_eq!(response.path, r"C:\Users\Player\Desktop\Chriz Easy BG.lnk");
     assert_eq!(
         system.shortcuts.lock().unwrap().as_slice(),
         &[ShortcutRequest {

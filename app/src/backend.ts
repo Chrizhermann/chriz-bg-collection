@@ -811,7 +811,7 @@ export class FixtureBackend implements Backend {
   getInstallationDefaults(): Promise<InstallationDefaults> {
     return Promise.resolve({
       name: "Chriz Easy BG",
-      path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+      path: "C:\\Users\\Player\\Games\\Chriz Easy BG",
     });
   }
 
@@ -993,7 +993,7 @@ export class FixtureBackend implements Backend {
   }
 
   createDesktopShortcut(_installId: string): Promise<{ readonly path: string }> {
-    return Promise.resolve({ path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" });
+    return Promise.resolve({ path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk" });
   }
 
   installRadar(_installId: string): Promise<void> {

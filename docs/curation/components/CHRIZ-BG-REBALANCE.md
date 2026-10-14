@@ -20,6 +20,26 @@ ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
 ✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
 
+## Bard progression release and intended default
+
+[Rebalance v0.5.0](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.5.0)
+adds the shared EEex provider `420` and base Bard policy `421`. The intended collection
+order is `420` → `421` → Bardic Wonders `3010`, after kit installation and competing
+description edits. Treat progression and its descriptions as one default-on feature.
+
+`421` gives Bard and Jester IWD progression through spell level 7, with Blade and Skald
+retaining BG progression through level 6. Provider `420` alone changes no kit policy;
+standalone Bardic users may select `420` → `3010` without `421`. The provider requires
+compatible EEex capabilities and a unique supported native signature, without a fixed
+EEex version or executable-offset requirement.
+
+Christopher reported "Works great" after the BG2EE/EET live smoke test on 2026-09-20.
+IWDEE 2.7.3 has binary and offline installer coverage, not live runtime acceptance.
+See the [selected policy and release integration boundary](../../research/2026-09-19-bard-progression-policy.md).
+On 2026-10-13 Christopher made `420`/`421` a recommended default; see the bard
+spell-level ceilings section below. The table below retains its existing
+release-candidate provenance.
+
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
 | 130 | EET elemental arrows: BG2 damage | Item balance |  | | default |

@@ -6,6 +6,30 @@ Row `3010` comes from the pinned release **v2.9c-balance.6**
 (`7db986160fcc5f466ecb8730eabd6bb226ee71c2`); it did not exist in the reference install.
 27 entries, 21 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
+## Bard progression release and intended default
+
+[Bardic Wonders v2.9c-balance.6](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.6)
+adds late adapter `3010`. It requires EEex and Rebalance provider `420`; base policy `421`
+is optional for standalone users. The intended collection order is `420` → `421` → `3010`,
+after the installed kits and other description changes.
+
+The adapter registers Dancer for BG progression through spell level 6, Kapellmeister
+and optional Darkbloom for IWD progression through level 8, and Abettor, Storm Drummer,
+Troubadour, Deathsinger and Strategist for IWD progression through level 7. Existing kit
+slot bonuses/penalties, Skald casting restrictions and caster-level changes remain.
+Kit descriptions receive matching progression advantages or disadvantages.
+
+Darkbloom is not required: absent kits are skipped. Installer fixtures passed with and
+without it, and with provider `420` alone. Its separate Spell Revisions copied-spell
+restriction remains; `3010` adds no SR restriction. Non-native bard casting systems and
+unrecognized kits keep their fallback behavior. Artisan's Garrick Troubadour assignment
+inherits the recognized Troubadour mapping.
+
+The BG2EE/EET user smoke test passed on 2026-09-20; IWDEE has binary and offline checks
+only. See the [selected policy and release integration boundary](../../research/2026-09-19-bard-progression-policy.md).
+On 2026-10-13 Christopher made `3010` a recommended default whenever Bardic Wonders is
+selected; see the notes below. The reference table below retains its captured provenance.
+
 ## UI/dependency notes
 
 - `2001` is not a fix component: it creates the Trademeet vendor Leanne, a store, and a

@@ -106,7 +106,7 @@ describe("engine-shaped fixture backend", () => {
   it("suggests the safe CEBG installation defaults", async () => {
     await expect(new FixtureBackend().getInstallationDefaults()).resolves.toEqual({
       name: "Chriz Easy BG",
-      path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+      path: "C:\\Users\\Player\\Games\\Chriz Easy BG",
     });
   });
 
@@ -161,13 +161,13 @@ describe("native command adapter", () => {
       expect(args).toBeUndefined();
       return {
         name: "Chriz Easy BG",
-        path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+        path: "C:\\Users\\Player\\Games\\Chriz Easy BG",
       };
     });
 
     await expect(new NativeBackend(invoke).getInstallationDefaults()).resolves.toEqual({
       name: "Chriz Easy BG",
-      path: "C:\\Users\\Chris\\Games\\Chriz Easy BG",
+      path: "C:\\Users\\Player\\Games\\Chriz Easy BG",
     });
   });
 
@@ -428,7 +428,7 @@ describe("native command adapter", () => {
           return null;
         case "create_desktop_shortcut":
           expect(args).toEqual({ installId: "install-ready" });
-          return { path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk" };
+          return { path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk" };
         default:
           throw new Error(`Unexpected command ${command}`);
       }
@@ -469,7 +469,7 @@ describe("native command adapter", () => {
     });
     await expect(backend.openInstallFolder("install-ready")).resolves.toBeUndefined();
     await expect(backend.createDesktopShortcut("install-ready")).resolves.toEqual({
-      path: "C:\\Users\\Chris\\Desktop\\Chriz Easy BG.lnk",
+      path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk",
     });
   });
 

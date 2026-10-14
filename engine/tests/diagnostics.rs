@@ -64,7 +64,7 @@ fn pre_spawn_guard_evidence_is_exported_and_personal_paths_are_redacted() {
 fn fixture(include_success: bool) -> Fixture {
     let temp = TempDir::new().unwrap();
     let managed = temp.path().join("managed");
-    let home = temp.path().join("Users/Christopher");
+    let home = temp.path().join("Users/Player");
     let output = temp.path().join("exports/diagnostics.zip");
     std::fs::create_dir_all(output.parent().unwrap()).unwrap();
     let raw_home = home.to_string_lossy();
@@ -413,12 +413,12 @@ fn receipt_evidence_attempt_cannot_escape_the_attempts_directory() {
 #[test]
 fn redacts_serde_escaped_windows_paths_in_json_evidence() {
     let fixture = fixture(false);
-    let windows_home = PathBuf::from(r"C:\Users\Christopher");
+    let windows_home = PathBuf::from(r"C:\Users\Player");
     write(
         &fixture.managed,
         ".chriz/attempts/attempt-001/receipt.json",
         &serde_json::to_vec_pretty(&serde_json::json!({
-            "managed_save_root": r"C:\Users\Christopher\Documents\Chriz BG Collection"
+            "managed_save_root": r"C:\Users\Player\Documents\Chriz BG Collection"
         }))
         .unwrap(),
     );
@@ -437,7 +437,7 @@ fn redacts_serde_escaped_windows_paths_in_json_evidence() {
         .find(|(name, _)| name == "receipt/attempt-receipt.json")
         .map(|(_, bytes)| String::from_utf8(bytes.clone()).unwrap())
         .unwrap();
-    assert!(!receipt.contains(r"C:\\Users\\Christopher"), "{receipt}");
+    assert!(!receipt.contains(r"C:\\Users\\Player"), "{receipt}");
     assert!(receipt.contains("<redacted-home>"), "{receipt}");
 }
 
