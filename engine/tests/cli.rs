@@ -5,7 +5,7 @@ use std::net::{Shutdown, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -422,24 +422,9 @@ fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, Pat
     (temp, recipe, bg1, bg2, managed, cache)
 }
 
-/// The mock WeiDU runs as `Setup-*.exe`, and the manual-checkpoint guard rejects every running
-/// WeiDU on the machine (issue 9). Each executable fixture holds this lock: shared while its test
-/// may run the mock installer, exclusive when its test reaches that guard.
-static MOCK_INSTALLERS: RwLock<()> = RwLock::new(());
-
-enum MockInstallerAccess {
-    Shared {
-        _guard: RwLockReadGuard<'static, ()>,
-    },
-    Exclusive {
-        _guard: RwLockWriteGuard<'static, ()>,
-    },
-}
-
 struct ExecutableFixture {
     _temp: TempDir,
     _server: ArtifactServer,
-    _installers: MockInstallerAccess,
     recipe: PathBuf,
     bg1: PathBuf,
     bg2: PathBuf,
@@ -452,23 +437,6 @@ struct ExecutableFixture {
 }
 
 fn executable_fixture() -> ExecutableFixture {
-    executable_fixture_with(MockInstallerAccess::Shared {
-        _guard: MOCK_INSTALLERS
-            .read()
-            .unwrap_or_else(PoisonError::into_inner),
-    })
-}
-
-/// For a test whose commands reach the manual-checkpoint guard: no other mock installer runs.
-fn exclusive_executable_fixture() -> ExecutableFixture {
-    executable_fixture_with(MockInstallerAccess::Exclusive {
-        _guard: MOCK_INSTALLERS
-            .write()
-            .unwrap_or_else(PoisonError::into_inner),
-    })
-}
-
-fn executable_fixture_with(installers: MockInstallerAccess) -> ExecutableFixture {
     let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
     let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
@@ -549,7 +517,6 @@ fn executable_fixture_with(installers: MockInstallerAccess) -> ExecutableFixture
     ExecutableFixture {
         _temp: temp,
         _server: server,
-        _installers: installers,
         recipe,
         bg1,
         bg2,
@@ -785,7 +752,7 @@ fn manual_checkpoint_checks_see_only_the_installers_a_test_declares() {
 #[cfg(windows)]
 #[test]
 fn manual_checkpoints_resume_two_boundaries_and_finalize_with_dragonspear_history_intact() {
-    let fixture = exclusive_executable_fixture();
+    let fixture = executable_fixture();
     let mut install = executable_command(&fixture);
     install
         .args(install_args(
