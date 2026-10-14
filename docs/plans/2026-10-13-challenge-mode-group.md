@@ -120,13 +120,16 @@ variants = [
   switching the group on makes it mixed, like deselecting a member. An unavailable
   variant does not keep the group mixed.
 - **Selections stay per feature.** The group state is still derived and never
-  stored. A setup saved before variants existed (members on, `331` picked)
-  reloads unchanged and shows the group as mixed; switching it on picks `330`.
+  stored. A selection saved before variants existed (members on, `331` picked)
+  evaluates unchanged under the new recipe and shows the group as mixed;
+  switching it on picks `330`. The app's saved setup reloads this way within one
+  collection version and, as before, is discarded when the version changes.
 
 **CLI:** `--group challenge-mode=on|off` applies the same changes after the
-`--feature` choices. An explicitly chosen option of the variant's choice group,
-anywhere on the command line, keeps the group from switching that choice. The
-plan summary adds "X of Y available variants picked"; the JSON output lists each
+`--feature` choices, which always win. When an explicit choice disagrees with
+what the group would set in the variant's choice group (such as `331=on` with
+the group on), the group leaves that choice alone; when it agrees (such as
+`330=on`), the group still deselects the other options. The plan summary adds "X of Y available variants picked"; the JSON output lists each
 variant with `selected`, `available` and `unavailable_reason`, and the recipe view
 adds its `label`, `options` and `recipe_default`.
 

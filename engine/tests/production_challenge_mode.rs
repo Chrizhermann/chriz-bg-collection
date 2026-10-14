@@ -173,6 +173,16 @@ fn chris_recommended_keeps_challenge_mode_off_with_every_member_available() {
         let view = &evaluation.view.groups[0].variants[0];
         assert_eq!(view.options, [STRICT_POTIONS, GENIUS_STACKS], "{dir}");
         assert_eq!(view.recipe_default, [GENIUS_STACKS], "{dir}");
+        // Both profiles show the potion rule as one choice, where the group's pick is marked.
+        for option in [STRICT_POTIONS, GENIUS_STACKS] {
+            let control = evaluation.view.control(option).unwrap();
+            assert_eq!(
+                control.group_label.as_deref(),
+                Some("Potion uniqueness"),
+                "{dir} {option}"
+            );
+            assert_eq!(control.choice_available, Some(true), "{dir} {option}");
+        }
         for feature in NORMAL_DEFAULTS {
             assert!(
                 evaluation.view.control(feature).unwrap().selected,

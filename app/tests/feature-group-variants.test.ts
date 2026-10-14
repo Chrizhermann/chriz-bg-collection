@@ -267,12 +267,18 @@ describe("native variant projection", () => {
     }]);
   });
 
-  it("leaves out a variant whose derived state is missing or names another option", async () => {
-    for (const states of [undefined, [], [{ choice_group: "potion-uniqueness", option: GENIUS, selected: true, available: true }]]) {
+  it("leaves out a group whose variant states don't match its variants instead of showing it half-switched", async () => {
+    const strict = { choice_group: "potion-uniqueness", option: STRICT, selected: true, available: true };
+    for (const states of [
+      undefined,
+      [],
+      [{ ...strict, option: GENIUS }],
+      [{ ...strict, choice_group: "other-choice" }],
+      [strict, { ...strict, choice_group: "other-choice" }],
+    ]) {
       const invoke = vi.fn(async () => wire(states));
       const evaluation = await new NativeBackend(invoke).evaluateBuild({ platform: "windows", features: {}, inputs: {} });
-      expect(evaluation.featureGroups?.[0]?.variants).toBeUndefined();
-      expect(evaluation.featureGroups?.[0]?.members).toEqual([EMOTION]);
+      expect(evaluation.featureGroups).toBeUndefined();
     }
   });
 });

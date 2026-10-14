@@ -217,6 +217,35 @@ fn recipe_without_groups_serializes_and_digests_exactly_as_before() {
     assert_eq!(plan_digest(&evaluation.plan).unwrap(), FIXTURE_PLAN_SHA256);
 }
 
+/// Digests of a recipe with a group but no variants, and of one evaluation of it, captured from
+/// the engine before variants existed (commit be09eb9). Equal values prove that the new optional
+/// field changes neither the frozen serialization of existing groups nor what the app receives.
+const GROUPED_COLLECTION_JSON_SHA256: &str =
+    "c911b70941cecf0e0e922305f4f5cf01eee102cf709ea62038fdf9489bc9296d";
+const GROUPED_COLLECTION_TOML_SHA256: &str =
+    "177098c538e06cd151d1a7830475294f9c7a05b7a6369b3f87035834dab445e2";
+const GROUPED_EVALUATION_JSON_SHA256: &str =
+    "556ff6dc4d8361a8433ebf97f35d1a8e4c4642bb775d80f3c2da0821057e9992";
+
+#[test]
+fn a_group_without_variants_serializes_and_evaluates_exactly_as_before_variants() {
+    let manifest = grouped_manifest();
+    assert!(manifest.collection.feature_groups[0].variants.is_empty());
+    let json = serde_json::to_vec(&manifest.collection).unwrap();
+    let toml_text = toml::to_string(&manifest.collection).unwrap();
+    assert_eq!(sha256_bytes(&json), GROUPED_COLLECTION_JSON_SHA256);
+    assert_eq!(
+        sha256_bytes(toml_text.as_bytes()),
+        GROUPED_COLLECTION_TOML_SHA256
+    );
+    let evaluation = evaluate(&manifest, &selection(&[("a", "on"), ("gate", "on")])).unwrap();
+    assert_eq!(evaluation.groups[0].state, FeatureGroupState::Mixed);
+    assert_eq!(
+        sha256_bytes(&serde_json::to_vec(&evaluation).unwrap()),
+        GROUPED_EVALUATION_JSON_SHA256
+    );
+}
+
 #[test]
 fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // (recipe, collection JSON without the group, Recommended selection, plan)
@@ -229,10 +258,12 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned for the October 14 intake: Modpack alpha.12 (230-234), Rebalance
     // v0.8.3 (330-332), SCS 3010/3021 and, in the curated recipe, the Tweaks
     // Anthology 7649ced snapshot (3220/3500/3510/2760, Challenge Mode's 2760).
+    // The public-alpha collection was re-pinned once more when its potion choice got the
+    // curated recipe's "Potion uniqueness" label (display only; without it, the old value).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "847311e3895d60b71215025ccc7ed44740f3dbf23d2a3306b4a26e3d33c83336",
+            "ca85703180b06917f059d5db2a0d6e9b79a791fb6edfc9d7cce573a31f72b53b",
             "44d42db20d6b83740070b6a13dddb8d9d6ff782819c3e8ab9d0ec35014841fb0",
             "8ae2181b61325b732b5393e62025dd834b60718faae68930ea4e4f7e2565a4f8",
         ),

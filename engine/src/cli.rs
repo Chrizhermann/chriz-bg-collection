@@ -207,8 +207,8 @@ pub struct ValidationReport {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelectionOverrides {
     /// `group-id=on|off` values, expanded into member features after `features` apply; a group
-    /// never overwrites a feature chosen explicitly in `features`, nor any option of a choice
-    /// group in which `features` chose an option.
+    /// never overwrites a feature chosen explicitly in `features`, and leaves a variant's choice
+    /// group to `features` when an explicit choice there disagrees with the group.
     pub groups: Vec<String>,
     /// `feature-id=on|off` values.
     pub features: Vec<String>,
@@ -4407,7 +4407,7 @@ fn selection_choices(
     let mut choices = preset.selections.clone();
     // Explicit `--feature` overrides apply first, so group expansion sees them: a prerequisite
     // switched on by `--feature` makes a dependent member available to `--group ...=on`.
-    let mut explicit_features = BTreeSet::new();
+    let mut explicit_features = BTreeMap::new();
     for authored in &overrides.features {
         let (id, value) = split_assignment(authored, "feature override")?;
         if !matches!(value, "on" | "off" | "true" | "false") {
@@ -4419,28 +4419,19 @@ fn selection_choices(
             ));
         }
         choices.insert(id.to_owned(), value.to_owned());
-        explicit_features.insert(id.to_owned());
+        explicit_features.insert(id.to_owned(), matches!(value, "on" | "true"));
     }
     // Groups then expand in command-line order against that state plus earlier groups. A group
-    // never overwrites a feature chosen explicitly, so `--feature` always wins for a member. An
-    // explicit option of a choice group likewise keeps a variant from switching that choice.
-    let explicit_choice_groups = manifest
+    // never overwrites a feature chosen explicitly, so `--feature` always wins for a member. In a
+    // variant's choice group, an explicit choice that disagrees with the group leaves the whole
+    // choice to the explicit choices; one that agrees, such as the variant option itself, still
+    // lets the group deselect the other options, so they never both stay requested.
+    let choice_group_of = manifest
         .collection
         .features
         .iter()
-        .filter(|feature| explicit_features.contains(&feature.id))
-        .filter_map(|feature| feature.choice_group.clone())
-        .collect::<BTreeSet<_>>();
-    let explicitly_chosen = |feature_id: &str| {
-        explicit_features.contains(feature_id)
-            || manifest.collection.features.iter().any(|feature| {
-                feature.id == feature_id
-                    && feature
-                        .choice_group
-                        .as_ref()
-                        .is_some_and(|choice| explicit_choice_groups.contains(choice))
-            })
-    };
+        .filter_map(|feature| Some((feature.id.as_str(), feature.choice_group.as_deref()?)))
+        .collect::<BTreeMap<_, _>>();
     for authored in &overrides.groups {
         let (id, value) = split_assignment(authored, "group override")?;
         let target = match value {
@@ -4463,8 +4454,21 @@ fn selection_choices(
             target,
         )
         .map_err(|error| CliError::new("invalid_selection", error.to_string()))?;
+        let overridden_choices = changes
+            .iter()
+            .filter(|(feature_id, selected)| {
+                explicit_features
+                    .get(feature_id.as_str())
+                    .is_some_and(|explicit| explicit != *selected)
+            })
+            .filter_map(|(feature_id, _)| choice_group_of.get(feature_id.as_str()).copied())
+            .collect::<BTreeSet<_>>();
         for (feature_id, selected) in changes {
-            if !explicitly_chosen(&feature_id) {
+            let left_to_explicit = explicit_features.contains_key(&feature_id)
+                || choice_group_of
+                    .get(feature_id.as_str())
+                    .is_some_and(|choice| overridden_choices.contains(choice));
+            if !left_to_explicit {
                 choices.insert(feature_id, if selected { "on" } else { "off" }.to_owned());
             }
         }

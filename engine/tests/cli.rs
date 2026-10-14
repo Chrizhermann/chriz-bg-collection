@@ -1312,6 +1312,37 @@ fn plan_group_switch_picks_its_variant_and_an_explicit_choice_wins() {
         );
     }
 
+    // An explicit choice that agrees with the group still lets it settle the rest of the choice:
+    // the variant option itself, or the recommended option switched off.
+    for args in [
+        ["--group", "challenge-mode=on", "--feature", "pace-harsh=on"],
+        ["--feature", "pace-calm=off", "--group", "challenge-mode=on"],
+    ] {
+        let agreed = plan(&args);
+        assert_eq!(
+            planned_components(&agreed),
+            planned_components(&on),
+            "{args:?}"
+        );
+        assert_eq!(agreed["groups"][0]["state"], "on", "{args:?}");
+        assert_eq!(
+            agreed["normalized_selection"]["features"]["pace-calm"], false,
+            "{args:?}"
+        );
+    }
+    // Switching the variant option itself off keeps the recommended option.
+    let declined = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--feature",
+        "pace-harsh=off",
+    ]);
+    assert_eq!(
+        planned_components(&declined),
+        vec![("eefixpack-bg1".to_owned(), vec![0, 2])]
+    );
+    assert_eq!(declined["groups"][0]["state"], "mixed");
+
     // Switching the group off again restores the recommended option.
     let toggled = plan(&[
         "--group",

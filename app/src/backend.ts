@@ -8,6 +8,7 @@ import type {
   DestinationEvaluation,
   FeatureControl,
   FeatureGroup,
+  FeatureGroupVariant,
   FixtureOptions,
   FrozenReview,
   Freshness,
@@ -349,12 +350,17 @@ function projectFeatureGroups(evaluation: SelectionEvaluationWire): FeatureGroup
   return (evaluation.view.groups ?? []).flatMap((group) => {
     const state = states.get(group.id);
     if (!state) return [];
-    // A variant without its matching derived state is left out rather than guessed.
-    const variantStates = new Map((state.variants ?? []).map(variant => [variant.choice_group, variant]));
-    const variants = (group.variants ?? []).flatMap((variant) => {
+    // A group whose variant states don't match its authored variants is left out like a group
+    // without state, rather than shown half-switched.
+    const authoredVariants = group.variants ?? [];
+    const stateVariants = state.variants ?? [];
+    if (stateVariants.length !== authoredVariants.length) return [];
+    const variantStates = new Map(stateVariants.map(variant => [variant.choice_group, variant]));
+    const variants: FeatureGroupVariant[] = [];
+    for (const variant of authoredVariants) {
       const variantState = variantStates.get(variant.choice_group);
       if (!variantState || variantState.option !== variant.option) return [];
-      return [{
+      variants.push({
         choiceGroup: variant.choice_group,
         option: variant.option,
         label: variant.label,
@@ -363,8 +369,8 @@ function projectFeatureGroups(evaluation: SelectionEvaluationWire): FeatureGroup
         selected: variantState.selected,
         available: variantState.available,
         unavailableReason: variantState.unavailable_reason ?? null,
-      }];
-    });
+      });
+    }
     return [{
       id: group.id,
       title: group.title,
