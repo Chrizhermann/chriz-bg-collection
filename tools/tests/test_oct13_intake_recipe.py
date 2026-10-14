@@ -288,8 +288,10 @@ class Oct13IntakeTests(unittest.TestCase):
             "recipes/curated-full-current": [ROOT / "recipes/curated-full-current", self.output],
         }
         # The October 14 intake (test_oct14_intake_recipe) supersedes these pins;
-        # their pinned files stay exactly as verified here.
-        superseded = {"chriz-bg-modpack", "chriz-bg-rebalance"}
+        # their pinned files stay exactly as verified here. Bardic Wonders' retired
+        # descriptor moved to the historical references, as balance.6's did.
+        historical = ROOT / "manifest/reference/historical-artifacts"
+        superseded = {"chriz-bg-modpack": None, "chriz-bg-rebalance": None, "bardicwonders": historical}
         for record in evidence["artifacts"]:
             for flag in ("fresh_download", "fresh_extraction", "published_release_verified",
                          "native_component_order_verified"):
@@ -300,8 +302,11 @@ class Oct13IntakeTests(unittest.TestCase):
                     with self.subTest(profile=str(profile), mod=record["mod_id"]):
                         mod_path = profile / f"mods/{record['mod_id']}.toml"
                         if record["mod_id"] in superseded and name in record["recipe_profiles"]:
+                            artifact_dir = superseded[record["mod_id"]] or profile / "artifacts"
+                            self.assertEqual((profile / f"artifacts/{record['artifact_id']}.toml").is_file(),
+                                             superseded[record["mod_id"]] is None)
                             artifact = tomllib.loads(
-                                (profile / f"artifacts/{record['artifact_id']}.toml").read_text(encoding="utf-8"))
+                                (artifact_dir / f"{record['artifact_id']}.toml").read_text(encoding="utf-8"))
                             for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
                                                   ("url", "immutable_source_url"), ("reference", "source_reference")):
                                 self.assertEqual(artifact["source"][key], record[measured])

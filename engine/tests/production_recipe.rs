@@ -528,20 +528,25 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
     let manifest = recipe();
     let curated = Manifest::load(&recipe_root().join("../recipes/curated-full-current")).unwrap();
     // Preserve historical verification evidence without bundling the retired
-    // archive descriptor as an available current download.
-    let historical_modpack: bg_engine::manifest::Artifact = toml::from_str(include_str!(
-        "../../manifest/reference/historical-artifacts/chriz-bg-modpack-0.2.0-alpha.5.toml"
-    ))
-    .unwrap();
+    // archive descriptors as available current downloads.
+    let historical: Vec<bg_engine::manifest::Artifact> = [
+        include_str!(
+            "../../manifest/reference/historical-artifacts/chriz-bg-modpack-0.2.0-alpha.5.toml"
+        ),
+        include_str!(
+            "../../manifest/reference/historical-artifacts/artisans-kitpack-chriz-v1.6.0.toml"
+        ),
+        include_str!(
+            "../../manifest/reference/historical-artifacts/bardicwonders-v2.9c-balance.6.toml"
+        ),
+        include_str!(
+            "../../manifest/reference/historical-artifacts/bardicwonders-v2.9c-balance.7.toml"
+        ),
+    ]
+    .into_iter()
+    .map(|text| toml::from_str(text).unwrap())
+    .collect();
     let evidence = artifact_verification_evidence();
-    let historical_artisan: bg_engine::manifest::Artifact = toml::from_str(include_str!(
-        "../../manifest/reference/historical-artifacts/artisans-kitpack-chriz-v1.6.0.toml"
-    ))
-    .unwrap();
-    let historical_bardic: bg_engine::manifest::Artifact = toml::from_str(include_str!(
-        "../../manifest/reference/historical-artifacts/bardicwonders-v2.9c-balance.6.toml"
-    ))
-    .unwrap();
     let expected_observations = BTreeMap::from([
         (
             "weidu-249-amd64",
@@ -894,6 +899,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
             ),
         ),
         (
+            "bardicwonders-v2.9c-balance.8",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 843,
+                    max_entry_uncompressed_bytes: 3311752,
+                    total_uncompressed_bytes: 33077934,
+                    max_compression_ratio: 432,
+                },
+            ),
+        ),
+        (
             "chriz-sod-remix-0.6.13",
             (
                 "release-assets.githubusercontent.com",
@@ -961,12 +980,10 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
             .get(&record.artifact_id)
             .or_else(|| curated.artifacts.get(&record.artifact_id))
             .or_else(|| {
-                (record.artifact_id == historical_modpack.id).then_some(&historical_modpack)
+                historical
+                    .iter()
+                    .find(|artifact| artifact.id == record.artifact_id)
             })
-            .or_else(|| {
-                (record.artifact_id == historical_artisan.id).then_some(&historical_artisan)
-            })
-            .or_else(|| (record.artifact_id == historical_bardic.id).then_some(&historical_bardic))
             .unwrap_or_else(|| panic!("unknown evidence artifact {}", record.artifact_id));
         let (expected_host, expected_wrapper, expected_shape) = expected_observations
             .get(record.artifact_id.as_str())

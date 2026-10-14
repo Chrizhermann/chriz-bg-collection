@@ -260,6 +260,8 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Anthology 7649ced snapshot (3220/3500/3510/2760, Challenge Mode's 2760).
     // The public-alpha collection was re-pinned once more when its potion choice got the
     // curated recipe's "Potion uniqueness" label (display only; without it, the old value).
+    // The curated plan was re-pinned for Bardic Wonders v2.9c-balance.8: only the four
+    // Bardic runs' artifact id changes; with balance.7 restored, the plan is the old digest.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
@@ -271,7 +273,7 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
             "../recipes/curated-full-current",
             "6991ffc808e097bc62acd433721558fd392c3cef1fa674a885f2c042b4c4cf10",
             "3583af30c2adac4aac99d270fb3257b6dd267b55d23005dedf2883537e4bfaf7",
-            "170c25f8ba019d3525011369d5a0f8d402cd83ea2b2cbf48774b427b6cd2c97b",
+            "73b1a0a9ff613ab1322779c8733eaf8eaec21f6bca143bef23ce26958cb0247f",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

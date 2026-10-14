@@ -2,7 +2,7 @@ schema = 1
 evidence_kind = "published-release-download-and-native-order-verification"
 verified_on = "2026-10-14"
 command = "chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh downloaded ZIP>"
-scope = "Modpack v0.2.0-alpha.12 and Rebalance v0.8.3 were published as normal GitHub releases on October 14; SCS v35.21 is the unchanged published pin. The Tweaks Anthology pin is the unreleased master commit 7649ced, fetched as GitHub's immutable commit archive (curated recipe only). Each archive was downloaded anonymously into a fresh cache and passed the production acquisition and extraction contracts; measured hashes and the native TP2 declaration order match every recipe that pins it. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
+scope = "Modpack v0.2.0-alpha.12, Rebalance v0.8.3 and Bardic Wonders v2.9c-balance.8 were published as normal GitHub releases on October 14 (the Bardic release also carries Abettor-HLA-Rebalance-v1.2.0.zip, which no recipe uses; its published SHA-256 was checked too); SCS v35.21 is the unchanged published pin. The Tweaks Anthology pin is the unreleased master commit 7649ced, fetched as GitHub's immutable commit archive (curated recipe only). Each archive was downloaded anonymously into a fresh cache and passed the production acquisition and extraction contracts; measured hashes and the native TP2 declaration order match every recipe that pins it. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
 
 [[artifacts]]
 mod_id = "chriz-bg-modpack"
@@ -116,4 +116,23 @@ native_components = [
 fresh_download = true
 fresh_extraction = true
 published_release_verified = false
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "bardicwonders"
+artifact_id = "bardicwonders-v2.9c-balance.8"
+recipe_profiles = ["recipes/curated-full-current"]
+source_reference = "v2.9c-balance.8"
+source_commit = "8b454bf3435ff45d00ffc6729deffd2bfcaa3272"
+immutable_source_url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip"
+actual_length = 5205399
+actual_sha256 = "fa99ef91f39dfa4ae1fc15d234022e2623c359e991372f24afa116f5053feda1"
+tp2_sha256 = "70112bc2b8075a189f407e5c7247447995e0105f1c48f090c0a33d5bdeff3b92"
+native_components = [
+  1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 2001, 2002, 2007, 2008,
+  2003, 2004, 2005, 2012, 2013, 2006, 2009, 2010, 2011, 3001, 3010
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
 native_component_order_verified = true

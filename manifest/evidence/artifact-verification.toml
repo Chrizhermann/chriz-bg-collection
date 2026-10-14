@@ -800,3 +800,31 @@ entry_count = 139
 max_entry_uncompressed_bytes = 8232364
 total_uncompressed_bytes = 12295146
 max_compression_ratio = 6
+
+[[artifacts]]
+# Fresh anonymous release download and production extraction verified 2026-10-14.
+artifact_id = "bardicwonders-v2.9c-balance.8"
+immutable_source_url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip"
+source_reference = "v2.9c-balance.8"
+observed_final_host = "release-assets.githubusercontent.com"
+actual_length = 5205399
+actual_sha256 = "fa99ef91f39dfa4ae1fc15d234022e2623c359e991372f24afa116f5053feda1"
+wrapper_kind = "direct"
+materialized_publish_roots = ["BardicWonders"]
+declared_tp2_paths = ["BardicWonders/Setup-BardicWonders.tp2"]
+fresh_download = true
+fresh_extraction = true
+
+[artifacts.verified_limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 512
+
+[artifacts.observed_shape]
+max_depth = 5
+entry_count = 843
+max_entry_uncompressed_bytes = 3311752
+total_uncompressed_bytes = 33077934
+max_compression_ratio = 432

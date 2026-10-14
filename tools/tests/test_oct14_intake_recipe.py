@@ -1,4 +1,5 @@
-"""October 14 intake: Modpack v0.2.0-alpha.12, Rebalance v0.8.3, SCS fine weapons, Tweaks 7649ced.
+"""October 14 intake: Modpack v0.2.0-alpha.12, Rebalance v0.8.3, SCS fine weapons, Tweaks 7649ced,
+Bardic Wonders v2.9c-balance.8.
 
 Static recipe, selection, dependency and order checks for both recipe profiles only.
 The pins follow the October 14 publications and the unreleased Tweaks Anthology master
@@ -222,7 +223,7 @@ class Oct14IntakeTests(unittest.TestCase):
     def test_intake_evidence_matches_current_pins_and_native_order(self):
         self.assertEqual(self.evidence["verified_on"], "2026-10-14")
         self.assertEqual({record["mod_id"] for record in self.evidence["artifacts"]},
-                         {"chriz-bg-modpack", "chriz-bg-rebalance", "stratagems", "cdtweaks"})
+                         {"chriz-bg-modpack", "chriz-bg-rebalance", "stratagems", "cdtweaks", "bardicwonders"})
         directories = {
             "manifest": [ROOT / "manifest"],
             "recipes/curated-full-current": [ROOT / "recipes/curated-full-current", self.output],

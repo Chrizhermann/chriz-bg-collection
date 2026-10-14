@@ -99,11 +99,23 @@ unchanged.
   - The kit ability table change that SCS reads is labelled correctly.
 - **Modpack alpha.12** also installs companion fixes `196`/`197` when only some
   of the files they patch are present, and says which ones it skipped.
+- **Bardic Wonders fixes** (Default components; Bardic Wonders v2.9c-balance.8):
+  - The Troubadour, Deathsinger and New Bard Spells copies of priest spells are
+    now found by the spell's name, so they follow Spell Revisions. Recasting one
+    of these copies refreshes it instead of stacking with the earlier cast.
+  - The Troubadour and Deathsinger descriptions name the spells the kits
+    actually get, as Spell Revisions and the game's language call them.
+  - The Gallant now gets the new bard spells. In the collection's install order
+    it got none of them.
+  - Symphony of the Dark Children (Abettor of Mask): the party turns invisible
+    again when the song ends. Before, nothing happened at the end, and a
+    disabled singer gave Invisibility every round.
 
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.12 (was alpha.11)
 - BG Rebalance v0.8.3 (was v0.8.2)
+- Bardic Wonders v2.9c-balance.8 (was balance.7)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
   (was v18). There is no newer release yet; the collection pins this exact
   version, as it does for EET.
@@ -111,16 +123,19 @@ unchanged.
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.12, BG
-Rebalance to v0.8.3 and The Tweaks Anthology to its current development
-version. New in Chris's Recommended: companion stat adjustments for Rasaad,
+Rebalance to v0.8.3, Bardic Wonders to v2.9c-balance.8 and The Tweaks Anthology
+to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; and sensible entrance points. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. High Mastery now gives +5
-damage, and the NPC move now includes Ajantis. These changes apply to new
-installations; existing games and saves are unchanged.
+damage, and the NPC move now includes Ajantis. In Bardic Wonders, the
+Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
+the Gallant gets the new bard spells, and Symphony of the Dark Children ends
+with its round of Invisibility. These changes apply to new installations;
+existing games and saves are unchanged.
 
 ## Notes for the release integrator
 
@@ -128,3 +143,6 @@ installations; existing games and saves are unchanged.
   feature-group `variants` field, and older apps reject unknown recipe fields.
   The release that ships this recipe must set `minimum_app_version` to the app
   version that adds variants.
+- **Bardic Wonders v2.9c-balance.8** has not been played in a game yet (its
+  release notes). Its standalone Abettor tail 1.2.0 is for existing
+  playthroughs; the collection installs component 2004 fresh and doesn't use it.

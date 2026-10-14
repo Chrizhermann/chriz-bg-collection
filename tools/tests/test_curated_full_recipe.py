@@ -495,9 +495,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(runs["buffbot-bg2"]["components"], [1, 0])
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.7")
+            self.assertEqual(bardic["artifact_id"], "bardicwonders-v2.9c-balance.8")
             bardic_artifact = tomllib.loads(
-                (output / "artifacts/bardicwonders-v2.9c-balance.7.toml").read_text(
+                (output / "artifacts/bardicwonders-v2.9c-balance.8.toml").read_text(
                     encoding="utf-8"
                 )
             )
@@ -509,22 +509,23 @@ class CuratedFullRecipeTests(unittest.TestCase):
             )
             self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.5.toml").exists())
             self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.6.toml").exists())
-            self.assertEqual(bardic_artifact["version"], "2.9c-balance.7")
+            self.assertFalse((output / "artifacts/bardicwonders-v2.9c-balance.7.toml").exists())
+            self.assertEqual(bardic_artifact["version"], "2.9c-balance.8")
             self.assertEqual(bardic_artifact["source"]["kind"], "github-release")
-            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.7")
+            self.assertEqual(bardic_artifact["source"]["reference"], "v2.9c-balance.8")
             self.assertEqual(
                 bardic_artifact["source"]["url"],
                 "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/"
-                "releases/download/v2.9c-balance.7/Bardic-Wonders-v2.9c-balance.7.zip",
+                "releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip",
             )
             self.assertEqual(
                 bardic_artifact["source"]["expected_filename"],
-                "Bardic-Wonders-v2.9c-balance.7.zip",
+                "Bardic-Wonders-v2.9c-balance.8.zip",
             )
-            self.assertEqual(bardic_artifact["source"]["expected_length"], 5189060)
+            self.assertEqual(bardic_artifact["source"]["expected_length"], 5205399)
             self.assertEqual(
                 bardic_artifact["source"]["sha256"],
-                "f1c83c3fd35643b913fd300ada2b218b17ef46fb29e3c43344fc183f3617e46c",
+                "fa99ef91f39dfa4ae1fc15d234022e2623c359e991372f24afa116f5053feda1",
             )
             self.assertEqual(bardic_artifact["archive"]["root_rule"], "direct")
             self.assertEqual(bardic_artifact["archive"]["publish_roots"], ["BardicWonders"])
@@ -553,7 +554,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             bardic_credit = next(
                 mod for mod in credits["mods"] if mod["id"] == "bardicwonders"
             )
-            self.assertEqual(bardic_credit["version"], "2.9c-balance.7")
+            self.assertEqual(bardic_credit["version"], "2.9c-balance.8")
             self.assertEqual(
                 bardic_credit["homepage"],
                 "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch",

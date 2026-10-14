@@ -1,15 +1,15 @@
-id = "bardicwonders-v2.9c-balance.7"
+id = "bardicwonders-v2.9c-balance.8"
 name = "Bardic Wonders — Christopher's balance fork"
-version = "2.9c-balance.7"
+version = "2.9c-balance.8"
 acquisition = "fetch-only"
 
 [source]
 kind = "github-release"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.7/Bardic-Wonders-v2.9c-balance.7.zip"
-reference = "v2.9c-balance.7"
-expected_filename = "Bardic-Wonders-v2.9c-balance.7.zip"
-expected_length = 5189060
-sha256 = "f1c83c3fd35643b913fd300ada2b218b17ef46fb29e3c43344fc183f3617e46c"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip"
+reference = "v2.9c-balance.8"
+expected_filename = "Bardic-Wonders-v2.9c-balance.8.zip"
+expected_length = 5205399
+sha256 = "fa99ef91f39dfa4ae1fc15d234022e2623c359e991372f24afa116f5053feda1"
 redirect_hosts = ["release-assets.githubusercontent.com"]
 
 [archive]
@@ -28,5 +28,5 @@ max_compression_ratio = 512
 [provenance]
 homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
 license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
-url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.7"
-reviewed_on = "2026-10-13"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.8"
+reviewed_on = "2026-10-14"
