@@ -1202,6 +1202,144 @@ fn plan_group_switch_expands_members_before_feature_overrides() {
     );
 }
 
+/// Fixture recipe whose `challenge-mode` group has the member `challenge-a` and a variant that
+/// picks `pace-harsh` instead of the recommended `pace-calm`.
+fn recipe_with_group_variant(temp: &TempDir) -> PathBuf {
+    let recipe = temp.path().join("recipe");
+    copy_tree(&fixture_recipe(), &recipe);
+    let collection = recipe.join("collection.toml");
+    let mut text = fs::read_to_string(&collection).unwrap();
+    text.push_str(
+        r#"
+
+[[feature_groups]]
+id = "challenge-mode"
+title = "Challenge Mode"
+description = "Fixture challenge rules."
+members = ["challenge-a"]
+variants = [{ choice_group = "pace", option = "pace-harsh", label = "Pace: harsh" }]
+
+[[features]]
+id = "challenge-a"
+title = "Challenge A"
+description = "Fixture challenge A"
+category = "difficulty"
+decision = "optional"
+readiness = "ready"
+components = [{ run_id = "eefixpack-bg1", component = 0 }]
+
+[[features]]
+id = "pace-calm"
+title = "Calm pace"
+description = "Fixture calm pace"
+category = "difficulty"
+group_label = "Pace"
+choice_group = "pace"
+decision = "default"
+readiness = "ready"
+conflicts = [{ feature_id = "pace-harsh", reason = "Choose one pace." }]
+components = [{ run_id = "eefixpack-bg1", component = 2 }]
+
+[[features]]
+id = "pace-harsh"
+title = "Harsh pace"
+description = "Fixture harsh pace"
+category = "difficulty"
+group_label = "Pace"
+choice_group = "pace"
+decision = "optional"
+readiness = "ready"
+conflicts = [{ feature_id = "pace-calm", reason = "Choose one pace." }]
+components = [{ run_id = "eefixpack-bg2", component = 0 }]
+"#,
+    );
+    fs::write(collection, text).unwrap();
+    recipe
+}
+
+#[test]
+fn plan_group_switch_picks_its_variant_and_an_explicit_choice_wins() {
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_group_variant(&temp);
+    let recipe = recipe.to_str().unwrap();
+    let plan = |extra: &[&str]| {
+        let mut args = vec!["--json", "plan", recipe, "--preset", "recommended"];
+        args.extend_from_slice(extra);
+        let output = run(&args);
+        assert!(output.status.success(), "{extra:?}: {}", stderr(&output));
+        json_stdout(&output)
+    };
+
+    let off = plan(&[]);
+    assert_eq!(
+        planned_components(&off),
+        vec![("eefixpack-bg1".to_owned(), vec![2])]
+    );
+    assert_eq!(off["groups"][0]["state"], "off");
+    assert_eq!(off["groups"][0]["variants"][0]["choice_group"], "pace");
+    assert_eq!(off["groups"][0]["variants"][0]["option"], "pace-harsh");
+    assert_eq!(off["groups"][0]["variants"][0]["selected"], false);
+    assert_eq!(off["groups"][0]["variants"][0]["available"], true);
+
+    let on = plan(&["--group", "challenge-mode=on"]);
+    assert_eq!(
+        planned_components(&on),
+        vec![
+            ("eefixpack-bg1".to_owned(), vec![0]),
+            ("eefixpack-bg2".to_owned(), vec![0]),
+        ]
+    );
+    assert_eq!(on["groups"][0]["state"], "on");
+    assert_eq!(on["groups"][0]["variants"][0]["selected"], true);
+    assert_eq!(on["normalized_selection"]["features"]["pace-calm"], false);
+    assert_eq!(on["normalized_selection"]["features"]["pace-harsh"], true);
+
+    // An explicit option of the choice keeps the group from switching it, wherever it appears.
+    for args in [
+        ["--group", "challenge-mode=on", "--feature", "pace-calm=on"],
+        ["--feature", "pace-calm=on", "--group", "challenge-mode=on"],
+    ] {
+        let kept = plan(&args);
+        assert_eq!(
+            planned_components(&kept),
+            vec![("eefixpack-bg1".to_owned(), vec![0, 2])],
+            "{args:?}"
+        );
+        assert_eq!(kept["groups"][0]["state"], "mixed", "{args:?}");
+        assert_eq!(
+            kept["normalized_selection"]["features"]["pace-harsh"], false,
+            "{args:?}"
+        );
+    }
+
+    // Switching the group off again restores the recommended option.
+    let toggled = plan(&[
+        "--group",
+        "challenge-mode=on",
+        "--group",
+        "challenge-mode=off",
+    ]);
+    assert_eq!(planned_components(&toggled), planned_components(&off));
+    assert_eq!(toggled["normalized_selection"], off["normalized_selection"]);
+
+    let human = run(&[
+        "plan",
+        recipe,
+        "--preset",
+        "recommended",
+        "--group",
+        "challenge-mode=on",
+    ]);
+    assert!(human.status.success(), "{}", stderr(&human));
+    assert!(
+        stdout(&human).contains(
+            "Group challenge-mode (Challenge Mode): on, 1 of 1 available selected, 1 of 1 available variants picked"
+        ),
+        "{}",
+        stdout(&human)
+    );
+}
+
 /// Fixture recipe whose preset switches the default `gate` off, with `challenge-c` requiring
 /// `gate`; `members` names the `challenge-mode` members among `challenge-a` and `challenge-c`.
 fn recipe_with_gated_group(temp: &TempDir, members: &[&str]) -> PathBuf {

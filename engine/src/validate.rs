@@ -6,8 +6,9 @@ use std::path::{Component as PathComponent, Path};
 
 use crate::error::EngineError;
 use crate::manifest::{
-    AcquisitionPolicy, Artifact, ComponentRef, Decision, GameRoot, InputSpec, InvocationMode,
-    PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source, SourceKind,
+    AcquisitionPolicy, Artifact, ComponentRef, Decision, Feature, FeatureGroup, GameRoot,
+    InputSpec, InvocationMode, PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source,
+    SourceKind,
 };
 use crate::postcondition::{
     is_safe_normalized_relative_path, marker_len_exceeds, MAX_TEXT_FILE_MARKER_BYTES,
@@ -114,8 +115,11 @@ pub const RULE_FEATURE_GROUP_CONTENT: &str = "feature-group-content";
 pub const RULE_FEATURE_GROUP_MEMBERS: &str = "feature-group-members";
 /// Rule requiring group members to be independent optional features.
 pub const RULE_FEATURE_GROUP_MEMBER_DECISIONS: &str = "feature-group-member-decisions";
-/// Rule forbidding conflicts between members of one feature group, in either direction.
+/// Rule forbidding conflicts between the features one group switches on, in either direction.
 pub const RULE_FEATURE_GROUP_MEMBER_CONFLICTS: &str = "feature-group-member-conflicts";
+/// Rule requiring each group variant to pick a non-default option of a switchable choice
+/// group, with at most one group setting a variant for any choice group.
+pub const RULE_FEATURE_GROUP_VARIANTS: &str = "feature-group-variants";
 
 /// Runs the currently defined recipe validation rules in stable order.
 pub fn validate(manifest: &Manifest) -> Vec<Finding> {
@@ -1530,8 +1534,18 @@ fn check_feature_groups(manifest: &Manifest, findings: &mut Vec<Finding>) {
         .iter()
         .map(|feature| (feature.id.as_str(), feature))
         .collect::<BTreeMap<_, _>>();
+    let mut choice_options = BTreeMap::<&str, Vec<&Feature>>::new();
+    for feature in &manifest.collection.features {
+        if let Some(choice_group) = feature.choice_group.as_deref() {
+            choice_options
+                .entry(choice_group)
+                .or_default()
+                .push(feature);
+        }
+    }
     let mut group_ids = BTreeSet::new();
     let mut member_owner = BTreeMap::<&str, &str>::new();
+    let mut variant_owner = BTreeMap::<&str, &str>::new();
     for group in &manifest.collection.feature_groups {
         if !is_kebab_case_id(&group.id) {
             error(
@@ -1559,11 +1573,14 @@ fn check_feature_groups(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 );
             }
         }
-        if group.members.is_empty() {
+        if group.members.is_empty() && group.variants.is_empty() {
             error(
                 findings,
                 RULE_FEATURE_GROUP_CONTENT,
-                format!("feature group {:?} must list at least one member", group.id),
+                format!(
+                    "feature group {:?} must list at least one member or variant",
+                    group.id
+                ),
             );
         }
         let mut members = BTreeSet::new();
@@ -1622,33 +1639,154 @@ fn check_feature_groups(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 );
             }
         }
-        // Switching a group on requests every member at once; conflicting members would then
-        // disable each other and leave the group off with no way to turn it on.
+        let variant_options = check_feature_group_variants(
+            group,
+            &features,
+            &choice_options,
+            &mut variant_owner,
+            findings,
+        );
+        // Switching a group on requests every member and variant option at once; conflicting
+        // ones would then disable each other and leave the group off with no way to turn it on.
+        let requested = members
+            .iter()
+            .copied()
+            .chain(variant_options.iter().copied())
+            .collect::<BTreeSet<_>>();
         let mut conflicting_pairs = BTreeSet::new();
-        for member in &members {
-            let Some(feature) = features.get(member) else {
+        for requested_id in &requested {
+            let Some(feature) = features.get(requested_id) else {
                 continue;
             };
             for conflict in &feature.conflicts {
                 let other = conflict.feature_id.as_str();
-                if other != *member && members.contains(other) {
-                    conflicting_pairs.insert(if *member < other {
-                        (*member, other)
+                if other != *requested_id && requested.contains(other) {
+                    conflicting_pairs.insert(if *requested_id < other {
+                        (*requested_id, other)
                     } else {
-                        (other, *member)
+                        (other, *requested_id)
                     });
                 }
             }
         }
         for (first, second) in conflicting_pairs {
+            let changes = if members.contains(first) && members.contains(second) {
+                format!("members {first:?} and {second:?}")
+            } else {
+                let kind = |id: &str| {
+                    if members.contains(id) {
+                        "member"
+                    } else {
+                        "variant option"
+                    }
+                };
+                format!("{} {first:?} and {} {second:?}", kind(first), kind(second))
+            };
             error(
                 findings,
                 RULE_FEATURE_GROUP_MEMBER_CONFLICTS,
                 format!(
-                    "feature group {:?} members {first:?} and {second:?} conflict with each other; switching the group on would disable both",
+                    "feature group {:?} {changes} conflict with each other; switching the group on would disable both",
                     group.id
                 ),
             );
         }
     }
+}
+
+/// Validates one group's variants and returns the options the group may pick.
+///
+/// A variant names an existing choice group and one of its options that differs from the
+/// recipe default. No option of that choice group may be mandatory, because the group must be
+/// able to deselect every alternative, and at most one variant across all groups may set a
+/// given choice group.
+fn check_feature_group_variants<'a>(
+    group: &'a FeatureGroup,
+    features: &BTreeMap<&'a str, &'a Feature>,
+    choice_options: &BTreeMap<&'a str, Vec<&'a Feature>>,
+    variant_owner: &mut BTreeMap<&'a str, &'a str>,
+    findings: &mut Vec<Finding>,
+) -> Vec<&'a str> {
+    let mut picked = Vec::new();
+    for variant in &group.variants {
+        let choice_group = variant.choice_group.as_str();
+        if variant
+            .label
+            .as_deref()
+            .is_some_and(|label| label.trim().is_empty())
+        {
+            error(
+                findings,
+                RULE_FEATURE_GROUP_CONTENT,
+                format!(
+                    "feature group {:?} variant for choice group {choice_group:?} has an empty label; omit it to show the option title",
+                    group.id
+                ),
+            );
+        }
+        let mut problems = Vec::new();
+        if let Some(owner) = variant_owner.insert(choice_group, group.id.as_str()) {
+            problems.push(if owner == group.id {
+                format!(
+                    "feature group {:?} sets a variant for choice group {choice_group:?} more than once",
+                    group.id
+                )
+            } else {
+                format!(
+                    "choice group {choice_group:?} has variants in both feature groups {owner:?} and {:?}",
+                    group.id
+                )
+            });
+        }
+        match choice_options.get(choice_group) {
+            None => problems.push(format!(
+                "feature group {:?} variant names unknown choice group {choice_group:?}",
+                group.id
+            )),
+            Some(options) if options.len() < 2 => problems.push(format!(
+                "feature group {:?} variant names choice group {choice_group:?}, which has only one option",
+                group.id
+            )),
+            Some(options) => {
+                for option in options {
+                    if option.decision == Decision::Mandatory {
+                        problems.push(format!(
+                            "feature group {:?} cannot switch choice group {choice_group:?}: option {:?} is mandatory",
+                            group.id, option.id
+                        ));
+                    }
+                }
+            }
+        }
+        match features.get(variant.option.as_str()) {
+            None => problems.push(format!(
+                "feature group {:?} variant references unknown feature {:?}",
+                group.id, variant.option
+            )),
+            Some(option) if option.choice_group.as_deref() != Some(choice_group) => {
+                problems.push(format!(
+                    "feature group {:?} variant option {:?} is not an option of choice group {choice_group:?}",
+                    group.id, variant.option
+                ));
+            }
+            Some(option) if option.decision == Decision::Default => problems.push(format!(
+                "feature group {:?} variant option {:?} is the recipe default of choice group {choice_group:?}; a variant must pick a different option",
+                group.id, variant.option
+            )),
+            Some(option) if option.decision != Decision::Optional => problems.push(format!(
+                "feature group {:?} variant option {:?} must be an optional feature, not {}",
+                group.id,
+                variant.option,
+                format!("{:?}", option.decision).to_lowercase()
+            )),
+            Some(_) => {}
+        }
+        if problems.is_empty() {
+            picked.push(variant.option.as_str());
+        }
+        for problem in problems {
+            error(findings, RULE_FEATURE_GROUP_VARIANTS, problem);
+        }
+    }
+    picked
 }

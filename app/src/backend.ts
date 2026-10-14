@@ -145,6 +145,13 @@ type FeatureGroupWire = {
   readonly title: string;
   readonly description: string;
   readonly members: readonly string[];
+  readonly variants?: readonly {
+    readonly choice_group: string;
+    readonly option: string;
+    readonly label: string;
+    readonly options: readonly string[];
+    readonly recipe_default: readonly string[];
+  }[];
 };
 
 type FeatureGroupStateWire = {
@@ -153,6 +160,13 @@ type FeatureGroupStateWire = {
   readonly selected_members: readonly string[];
   readonly available_members: readonly string[];
   readonly unavailable_members: readonly { readonly feature_id: string; readonly reason: string }[];
+  readonly variants?: readonly {
+    readonly choice_group: string;
+    readonly option: string;
+    readonly selected: boolean;
+    readonly available: boolean;
+    readonly unavailable_reason?: string | null;
+  }[];
   readonly disabled_reason?: string | null;
 };
 
@@ -335,6 +349,22 @@ function projectFeatureGroups(evaluation: SelectionEvaluationWire): FeatureGroup
   return (evaluation.view.groups ?? []).flatMap((group) => {
     const state = states.get(group.id);
     if (!state) return [];
+    // A variant without its matching derived state is left out rather than guessed.
+    const variantStates = new Map((state.variants ?? []).map(variant => [variant.choice_group, variant]));
+    const variants = (group.variants ?? []).flatMap((variant) => {
+      const variantState = variantStates.get(variant.choice_group);
+      if (!variantState || variantState.option !== variant.option) return [];
+      return [{
+        choiceGroup: variant.choice_group,
+        option: variant.option,
+        label: variant.label,
+        options: variant.options,
+        recipeDefault: variant.recipe_default,
+        selected: variantState.selected,
+        available: variantState.available,
+        unavailableReason: variantState.unavailable_reason ?? null,
+      }];
+    });
     return [{
       id: group.id,
       title: group.title,
@@ -345,6 +375,7 @@ function projectFeatureGroups(evaluation: SelectionEvaluationWire): FeatureGroup
       availableMembers: state.available_members,
       unavailableMembers: state.unavailable_members.map(member => ({ featureId: member.feature_id, reason: member.reason })),
       disabledReason: state.disabled_reason ?? null,
+      ...(variants.length === 0 ? {} : { variants }),
     }];
   });
 }

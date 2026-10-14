@@ -1282,9 +1282,15 @@ input[type="search"] {
   font-size: 0.8rem;
 }
 
-.feature-group-member .unavailable-reason {
+.feature-group-member .unavailable-reason,
+.feature-group-variant-default {
   flex-basis: 100%;
   margin: 0.2rem 0 0;
+}
+
+.feature-group-variant-default {
+  color: var(--vellum-dim);
+  font-size: 0.8rem;
 }
 
 .badge.feature-group-badge {
@@ -1384,7 +1390,8 @@ input[type="search"] {
   font-size: 0.82rem;
 }
 
-.setup-screen .control-row .badge {
+.setup-screen .control-row .badge,
+.setup-screen .exclusive-choice-heading .badge {
   margin: 0.2rem 0 0.1rem 0.5rem;
   letter-spacing: 0;
   text-transform: none;
@@ -1395,6 +1402,12 @@ input[type="search"] {
   gap: 0.4rem;
   padding: 0.75rem 0;
   border-bottom: 1px solid var(--slate);
+}
+
+.exclusive-choice-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .exclusive-choice-label {

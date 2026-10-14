@@ -1026,7 +1026,8 @@ def _validate_feature_groups(base: dict, collection: dict) -> None:
         )
     features = {feature["id"] for feature in collection["features"]}
     for group in groups:
-        missing = [member for member in group["members"] if member not in features]
+        named = [*group["members"], *(variant["option"] for variant in group.get("variants", []))]
+        missing = [feature_id for feature_id in named if feature_id not in features]
         if missing:
             raise ValueError(f"feature group {group['id']} names features absent from the curated recipe: {missing}")
 

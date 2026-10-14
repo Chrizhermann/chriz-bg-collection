@@ -26,6 +26,10 @@ published.
   stay listed as if removal had failed.
 - **A step whose WeiDU copy could not be prepared can be retried.** It used to
   require a fresh copy of the games.
+- **Challenge Mode can pick an option of a choice.** Switching it on now also
+  picks the strict potion rule instead of the recommended one, and switching it
+  off restores the recommended rule. The Challenge Mode card lists it with the
+  other changes, and the choice under its mod shows the Challenge Mode mark.
 - **EET's desktop shortcut and EET's 64-bit tools work in every environment.**
   If Windows had `NoDefaultCurrentDirectoryInExePath` set, EET's shortcut
   component failed and EET's core quietly used its 32-bit tools. Mod installers
@@ -56,8 +60,9 @@ unchanged.
   its duration instead of stacking its bonus; Heroism, Power and other potions
   that raise maximum hit points keep the first dose until it ends. Different
   potion types still combine. The strict version, where Genius does not stack
-  either, is **Optional**; Christopher wants it in Challenge Mode (**Pending**:
-  Challenge Mode cannot switch between the two versions yet). (Rebalance v0.8.3)
+  either, is **Optional** and part of **Challenge Mode**: switching Challenge
+  Mode on picks it instead, and switching it off restores the default. (Rebalance
+  v0.8.3)
 - **Heroism effects don't combine** — **Default.** Heroism, Greater Heroism
   (Bardic Wonders), their copies and the Potion of Heroism: the first one active
   on a creature wins. Song of Heroism, Aid and the Potion of Power stay
@@ -112,6 +117,14 @@ Dorn, Eldoth, Garrick and Quayle; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; and sensible entrance points. Challenge
-Mode adds that fences can't be stolen from and ignore reputation. High Mastery now gives +5
+Mode adds that fences can't be stolen from and ignore reputation, and picks the
+strict potion rule where Potions of Genius don't stack either. High Mastery now gives +5
 damage, and the NPC move now includes Ajantis. These changes apply to new
 installations; existing games and saves are unchanged.
+
+## Notes for the release integrator
+
+- **This recipe needs the new app.** Challenge Mode's potion choice uses the new
+  feature-group `variants` field, and older apps reject unknown recipe fields.
+  The release that ships this recipe must set `minimum_app_version` to the app
+  version that adds variants.

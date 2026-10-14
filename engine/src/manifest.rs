@@ -545,6 +545,28 @@ pub struct FeatureGroup {
     pub description: String,
     /// Member feature ids in player-facing order.
     pub members: Vec<String>,
+    /// Choice-group alternatives the group picks while it is on, in player-facing order.
+    /// Omitted when empty so groups without variants serialize, and therefore freeze and
+    /// digest, exactly as before variants existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<FeatureGroupVariant>,
+}
+
+/// One alternative of an authored choice group that a feature group picks while it is on.
+///
+/// Switching the group on picks `option` and deselects the choice group's other options;
+/// switching it off restores the choice group's recipe default. Like member state, whether the
+/// variant is picked is derived from the selection and never stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroupVariant {
+    /// Authored `choice_group` id shared by the alternatives.
+    pub choice_group: String,
+    /// Feature id of the alternative picked while the group is on; never the recipe default.
+    pub option: String,
+    /// Short player-facing name for the picked alternative; the option title when omitted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 /// Minimal preset metadata loaded from `presets/<id>.toml`.

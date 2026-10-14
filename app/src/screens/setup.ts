@@ -5,7 +5,7 @@ import { gameInterfaceSelector } from "../components/game-interface";
 import { manualBreakpointEditor, invalidBreakpoints, type ManualBreakpointEditorModel } from "../components/manual-checkpoints";
 import { featureInputs, type InputChange } from "../components/feature-inputs";
 import { featureGroupCard } from "../components/feature-group-card";
-import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, featureGroupsByMember, type ExclusiveChoiceGroup } from "../customization";
+import { bulkCategoryChanges, bundleChanges, bundleSelected, commonBundles, exclusiveChoiceChanges, exclusiveChoiceGroups, featureGroupsByMember, featureGroupVariantsByChoiceGroup, type ExclusiveChoiceGroup } from "../customization";
 
 export interface SetupViewState {
   search: string;
@@ -79,6 +79,8 @@ export function setupScreen(
   // Feature groups (Challenge Mode) are the first choice on the page, above common changes.
   if (batch) for (const group of evaluation.featureGroups ?? []) page.append(featureGroupCard(evaluation, group, batch.change));
   const groupByMember = featureGroupsByMember(evaluation);
+  const variantByChoiceGroup = featureGroupVariantsByChoiceGroup(evaluation);
+  const variantByOption = new Map([...variantByChoiceGroup.values()].map(entry => [entry.variant.option, entry] as const));
   const exclusiveGroups = batch ? exclusiveChoiceGroups(evaluation) : [];
   const interfaceGroup = exclusiveGroups.find(group => group.id === "game-interface");
   const bundles = batch ? commonBundles(evaluation) : [];
@@ -207,6 +209,8 @@ export function setupScreen(
         const selectId = choiceGroupControlId(exclusive);
         const label = element("label", "exclusive-choice-label", exclusive.label);
         label.htmlFor = selectId;
+        // A feature group variant marks the choice it switches and the option it picks.
+        const groupVariant = variantByChoiceGroup.get(exclusive.id);
         const select = element("select", "exclusive-choice-select");
         select.id = selectId;
         const selectedControl = exclusive.controls.find(option => option.selected);
@@ -222,7 +226,7 @@ export function setupScreen(
         }
         for (const optionControl of exclusive.controls) {
           const available = optionControl.selected || optionControl.choiceAvailable === true;
-          const optionLabel = `${choiceOptionLabel(exclusive, optionControl.title)}${optionControl.decision === "default" ? " (Recommended)" : ""}`;
+          const optionLabel = `${choiceOptionLabel(exclusive, optionControl.title)}${optionControl.decision === "default" ? " (Recommended)" : ""}${groupVariant?.variant.option === optionControl.id ? ` (${groupVariant.group.title})` : ""}`;
           const option = element("option", undefined, `${optionLabel}${available ? "" : " (Unavailable)"}`);
           option.value = optionControl.id;
           option.disabled = !available;
@@ -247,12 +251,16 @@ export function setupScreen(
           if (select.value === "" && !exclusive.allowNone) return;
           void batch!.change(exclusiveChoiceChanges(exclusive, select.value), select.id);
         });
-        row.append(label, select, detail, source, reasons);
+        // The label and a feature group's mark share one line, as on other controls.
+        const heading = element("div", "exclusive-choice-heading");
+        heading.append(label);
+        if (groupVariant) heading.append(element("span", "badge feature-group-badge", groupVariant.group.title));
+        row.append(heading, select, detail, source, reasons);
         if (selectedControl?.inputs.length) row.append(featureInputs(selectedControl, batch?.input, inputValidity));
         fieldset.append(row);
         rows.push({
           element: row,
-          text: [exclusive.label, ...exclusive.controls.flatMap(option => [option.title, option.description, option.sourceLabel ?? ""])].join(" ").toLocaleLowerCase(),
+          text: [exclusive.label, ...exclusive.controls.flatMap(option => [option.title, option.description, option.sourceLabel ?? ""]), groupVariant?.group.title ?? ""].join(" ").toLocaleLowerCase(),
         });
         return;
       }
@@ -282,7 +290,7 @@ export function setupScreen(
       const description = element("p", undefined, control.description);
       description.id = descriptionId;
       copy.append(label, badge);
-      const featureGroup = groupByMember.get(control.id);
+      const featureGroup = groupByMember.get(control.id) ?? variantByOption.get(control.id)?.group;
       if (featureGroup) copy.append(element("span", "badge feature-group-badge", featureGroup.title));
       if (control.readiness !== "ready") copy.append(element("span", `badge ${control.readiness}`, control.readiness === "blocked" ? "Unavailable" : "Experimental"));
       if (hasDistinctDescription) copy.append(description);

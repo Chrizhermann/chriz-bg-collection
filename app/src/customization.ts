@@ -1,4 +1,4 @@
-import type { FeatureControl, FeatureGroup, SelectionEvaluation } from "./contracts";
+import type { FeatureControl, FeatureGroup, FeatureGroupVariant, SelectionEvaluation } from "./contracts";
 
 export type ChoiceControl = FeatureControl;
 
@@ -131,16 +131,31 @@ export function bulkCategoryChanges(e: SelectionEvaluation, category: string, se
 
 /**
  * Member changes that switch a feature group on (`on` true) or off. Mirrors the engine's
- * `feature_group_changes`: on selects every currently available member, off deselects every
- * member. Unavailable members are never forced on and no other feature is touched.
+ * `feature_group_changes`: on selects every currently available member and picks every
+ * available variant option, deselecting its alternatives; off deselects every member and
+ * restores each variant's choice group to its recipe default. Unavailable members and
+ * variants are never forced on and no other feature is touched.
  */
 export function featureGroupChanges(group: FeatureGroup, on: boolean): Record<string, boolean> {
-  return on
+  const changes: Record<string, boolean> = on
     ? Object.fromEntries(group.availableMembers.map(id => [id, true]))
     : Object.fromEntries(group.members.map(id => [id, false]));
+  for (const variant of group.variants ?? []) {
+    if (on && !variant.available) continue;
+    for (const option of variant.options) {
+      changes[option] = on ? option === variant.option : variant.recipeDefault.includes(option);
+    }
+  }
+  return changes;
 }
 
 /** Feature group that owns each member feature (validation allows at most one). */
 export function featureGroupsByMember(evaluation: SelectionEvaluation): Map<string, FeatureGroup> {
   return new Map((evaluation.featureGroups ?? []).flatMap(group => group.members.map(id => [id, group] as const)));
+}
+
+/** Group variant that switches each choice group (validation allows at most one). */
+export function featureGroupVariantsByChoiceGroup(evaluation: SelectionEvaluation): Map<string, { readonly group: FeatureGroup; readonly variant: FeatureGroupVariant }> {
+  return new Map((evaluation.featureGroups ?? []).flatMap(group =>
+    (group.variants ?? []).map(variant => [variant.choiceGroup, { group, variant }] as const)));
 }

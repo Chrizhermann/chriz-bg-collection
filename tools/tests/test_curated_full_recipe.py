@@ -339,7 +339,9 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 3021 default and fine ammunition 3010 optional; Tweaks snapshot
                 # 7649ced defaults 3220/3500/3510 and optional 2760, which joins
                 # Challenge Mode in this profile only; 3500 requires EEex like its TP2.
-                "9ebac2dde0004cd8ee4f3b9990fd55f8c0786760ac07b992122670171ee6b747",
+                # October 14 (later): Challenge Mode gains its potion variant (330 instead
+                # of the recommended 331 while on); runs, features and the preset are unchanged.
+                "008693e2f7a96b78c998528945c9f498d961a20f33b31a523eb5df2ec3b3677f",
             )
 
             legacy_bg1npc_groups = {

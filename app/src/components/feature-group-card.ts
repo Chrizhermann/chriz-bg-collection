@@ -8,8 +8,10 @@ export function featureGroupControlId(group: FeatureGroup): string {
 
 function stateText(group: FeatureGroup): string {
   if (group.disabledReason) return group.disabledReason;
-  const available = group.availableMembers.length;
-  const selected = group.selectedMembers.length;
+  // A variant counts as one change, like a member.
+  const variants = group.variants ?? [];
+  const available = group.availableMembers.length + variants.filter(variant => variant.available).length;
+  const selected = group.selectedMembers.length + variants.filter(variant => variant.selected).length;
   if (group.state === "on") return `On: all ${available} available ${available === 1 ? "change is" : "changes are"} included.`;
   if (group.state === "mixed") return `Partly on: ${selected} of ${available} available changes are included. Select it to include them all.`;
   return `Off: no ${group.title} change is included.`;
@@ -62,6 +64,23 @@ export function featureGroupCard(
       reason ? "Unavailable" : selected ? "Included" : "Not included");
     item.append(title, status);
     if (control?.sourceLabel) item.append(element("span", "feature-group-member-source", control.sourceLabel));
+    if (reason) item.append(element("p", "unavailable-reason", reason));
+    list.append(item);
+  }
+  for (const variant of group.variants ?? []) {
+    const item = element("li", "feature-group-member feature-group-variant");
+    item.dataset.feature = variant.option;
+    item.dataset.choiceGroup = variant.choiceGroup;
+    const reason = variant.available ? null : variant.unavailableReason;
+    const status = element("span", `feature-group-member-state ${reason ? "is-unavailable" : variant.selected ? "is-included" : ""}`.trim(),
+      reason ? "Unavailable" : variant.selected ? "Included" : "Not included");
+    item.append(element("span", "feature-group-member-title", variant.label), status);
+    const source = controls.get(variant.option)?.sourceLabel;
+    if (source) item.append(element("span", "feature-group-member-source", source));
+    const defaults = variant.recipeDefault.map(id => controls.get(id)?.title ?? id);
+    item.append(element("p", "feature-group-variant-default", defaults.length > 0
+      ? `Instead of the recommended “${defaults.join("”, “")}”; switching ${group.title} off restores it.`
+      : `Switching ${group.title} off leaves these options out again.`));
     if (reason) item.append(element("p", "unavailable-reason", reason));
     list.append(item);
   }

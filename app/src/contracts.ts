@@ -145,6 +145,21 @@ export interface UnavailableGroupMember {
   readonly reason: string;
 }
 
+/**
+ * A choice-group alternative the group picks while it is on. Switching the group off restores
+ * `recipeDefault`; `selected` and `available` are derived by the engine like member state.
+ */
+export interface FeatureGroupVariant {
+  readonly choiceGroup: string;
+  readonly option: string;
+  readonly label: string;
+  readonly options: readonly string[];
+  readonly recipeDefault: readonly string[];
+  readonly selected: boolean;
+  readonly available: boolean;
+  readonly unavailableReason: string | null;
+}
+
 /** An authored feature group plus its state, derived by the engine from member selections. */
 export interface FeatureGroup {
   readonly id: string;
@@ -156,6 +171,8 @@ export interface FeatureGroup {
   readonly availableMembers: readonly string[];
   readonly unavailableMembers: readonly UnavailableGroupMember[];
   readonly disabledReason: string | null;
+  /** Omitted when the group has no variants. */
+  readonly variants?: readonly FeatureGroupVariant[];
 }
 
 export interface SelectionEvaluation {

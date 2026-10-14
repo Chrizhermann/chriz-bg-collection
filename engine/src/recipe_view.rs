@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{EngineError, Result};
 use crate::manifest::{
-    ComponentRef, Decision, Feature, FeatureGroup, InputSpec, InputValue, PromptAnswer, Readiness,
+    ComponentRef, Decision, Feature, FeatureGroup, FeatureGroupVariant, InputSpec, InputValue,
+    PromptAnswer, Readiness,
 };
 use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::Manifest;
@@ -82,17 +83,73 @@ pub struct FeatureGroupView {
     pub description: String,
     /// Member feature ids in authored order.
     pub members: Vec<String>,
+    /// Choice-group variants in authored order; omitted when the group has none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<FeatureGroupVariantView>,
 }
 
-impl From<&FeatureGroup> for FeatureGroupView {
-    fn from(group: &FeatureGroup) -> Self {
-        Self {
-            id: group.id.clone(),
-            title: group.title.clone(),
-            description: group.description.clone(),
-            members: group.members.clone(),
-        }
+/// One choice-group alternative that a feature group picks while it is on, for display.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroupVariantView {
+    /// Authored choice group the variant switches.
+    pub choice_group: String,
+    /// Option picked while the group is on.
+    pub option: String,
+    /// Player-facing name: the authored label, or the option title.
+    pub label: String,
+    /// Every selectable option of the choice group, in authored feature order.
+    pub options: Vec<String>,
+    /// Options the recipe selects by default; switching the group off restores exactly these.
+    pub recipe_default: Vec<String>,
+}
+
+fn group_view(manifest: &Manifest, group: &FeatureGroup) -> FeatureGroupView {
+    FeatureGroupView {
+        id: group.id.clone(),
+        title: group.title.clone(),
+        description: group.description.clone(),
+        members: group.members.clone(),
+        variants: group
+            .variants
+            .iter()
+            .map(|variant| {
+                let options = choice_group_options(manifest, &variant.choice_group);
+                let title = options
+                    .iter()
+                    .find(|option| option.id == variant.option)
+                    .map(|option| option.title.clone());
+                FeatureGroupVariantView {
+                    choice_group: variant.choice_group.clone(),
+                    option: variant.option.clone(),
+                    label: variant
+                        .label
+                        .clone()
+                        .or(title)
+                        .unwrap_or_else(|| variant.option.clone()),
+                    options: options.iter().map(|option| option.id.clone()).collect(),
+                    recipe_default: options
+                        .iter()
+                        .filter(|option| option.decision == Decision::Default)
+                        .map(|option| option.id.clone())
+                        .collect(),
+                }
+            })
+            .collect(),
     }
+}
+
+/// Selectable options of one authored choice group, in authored feature order.
+fn choice_group_options<'a>(manifest: &'a Manifest, choice_group: &str) -> Vec<&'a Feature> {
+    manifest
+        .collection
+        .features
+        .iter()
+        .filter(|feature| {
+            feature.decision != Decision::Excluded
+                && feature.choice_group.as_deref() == Some(choice_group)
+        })
+        .collect()
 }
 
 /// Ordered engine projection rendered by the frontend.
@@ -177,6 +234,23 @@ pub enum FeatureGroupTarget {
     Off,
 }
 
+/// Derived state of one group variant under the current selection; never stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroupVariantState {
+    /// Choice group the variant switches.
+    pub choice_group: String,
+    /// Option picked while the group is on.
+    pub option: String,
+    /// Whether the option is currently effective.
+    pub selected: bool,
+    /// Whether picking the option, and deselecting its alternatives, would make it effective.
+    pub available: bool,
+    /// Ordinary reason the option cannot be picked; present only when unavailable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unavailable_reason: Option<String>,
+}
+
 /// A group member that cannot currently be selected, with the ordinary feature reason.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -201,7 +275,10 @@ pub struct FeatureGroupEvaluation {
     pub available_members: Vec<String>,
     /// Members whose requirements are unmet, in authored order.
     pub unavailable_members: Vec<UnavailableGroupMember>,
-    /// Why the group control is disabled; present only when no member is available.
+    /// Variant states in authored order; omitted when the group has none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<FeatureGroupVariantState>,
+    /// Why the group control is disabled; present only when no member or variant is available.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disabled_reason: Option<String>,
 }
@@ -429,18 +506,25 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
         });
     }
 
+    let groups = manifest
+        .collection
+        .feature_groups
+        .iter()
+        .map(|group| {
+            let variants = group
+                .variants
+                .iter()
+                .map(|variant| evaluate_variant(manifest, variant, &features, &desired, &effective))
+                .collect();
+            evaluate_group(group, &controls, variants)
+        })
+        .collect();
     let normalized_selection = NormalizedSelection {
         platform: selection.platform.clone(),
         features: desired,
         inputs,
     };
     let plan = build_plan(manifest, &effective, &normalized_selection)?;
-    let groups = manifest
-        .collection
-        .feature_groups
-        .iter()
-        .map(|group| evaluate_group(group, &controls))
-        .collect();
 
     Ok(SelectionEvaluation {
         view: RecipeView {
@@ -450,7 +534,7 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
                 .collection
                 .feature_groups
                 .iter()
-                .map(FeatureGroupView::from)
+                .map(|group| group_view(manifest, group))
                 .collect(),
         },
         normalized_selection,
@@ -462,10 +546,13 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
 
 /// Expands a group switch into member feature changes under `selection`.
 ///
-/// `on` selects every member that is available under the current selection; members whose
-/// requirements are unmet are left unchanged and never forced on. `off` deselects every member.
-/// No non-member feature is ever changed; the caller applies the result as ordinary feature
-/// choices, so later individual feature choices still take precedence.
+/// `on` selects every member that is available under the current selection and, for each
+/// available variant, picks its option and deselects the choice group's other options; members
+/// and variants whose requirements are unmet are left unchanged and never forced on. `off`
+/// deselects every member and restores each variant's choice group to its recipe default.
+/// No feature outside the members and the variants' choice groups is ever changed; the caller
+/// applies the result as ordinary feature choices, so later individual feature choices still
+/// take precedence.
 pub fn feature_group_changes(
     manifest: &Manifest,
     selection: &Selection,
@@ -495,11 +582,19 @@ pub fn feature_group_changes(
     };
     let group = &manifest.collection.feature_groups[index];
     match target {
-        FeatureGroupTarget::Off => Ok(group
-            .members
-            .iter()
-            .map(|member| (member.clone(), false))
-            .collect()),
+        FeatureGroupTarget::Off => {
+            let mut changes = group
+                .members
+                .iter()
+                .map(|member| (member.clone(), false))
+                .collect::<BTreeMap<_, _>>();
+            for variant in &group.variants {
+                for option in choice_group_options(manifest, &variant.choice_group) {
+                    changes.insert(option.id.clone(), option.decision == Decision::Default);
+                }
+            }
+            Ok(changes)
+        }
         FeatureGroupTarget::On => {
             let evaluation = evaluate(manifest, selection)?;
             let state = &evaluation.groups[index];
@@ -508,16 +603,57 @@ pub fn feature_group_changes(
                     "feature group {group_id:?} cannot be turned on: {reason}"
                 )));
             }
-            Ok(state
+            let mut changes = state
                 .available_members
                 .iter()
                 .map(|member| (member.clone(), true))
-                .collect())
+                .collect::<BTreeMap<_, _>>();
+            for variant in state.variants.iter().filter(|variant| variant.available) {
+                for option in choice_group_options(manifest, &variant.choice_group) {
+                    changes.insert(option.id.clone(), option.id == variant.option);
+                }
+            }
+            Ok(changes)
         }
     }
 }
 
-fn evaluate_group(group: &FeatureGroup, controls: &[FeatureControl]) -> FeatureGroupEvaluation {
+/// Derives one variant's state: picked when its option is effective, available when picking
+/// it with the ordinary evaluator would make it effective.
+fn evaluate_variant(
+    manifest: &Manifest,
+    variant: &FeatureGroupVariant,
+    features: &BTreeMap<&str, &Feature>,
+    desired: &BTreeMap<String, bool>,
+    effective: &BTreeMap<String, bool>,
+) -> FeatureGroupVariantState {
+    const FALLBACK: &str = "Unavailable with the current choices.";
+    let selected = effective.get(&variant.option).copied().unwrap_or(false);
+    // Validation guarantees the option is an optional feature of its choice group.
+    let (available, reason) = match features.get(variant.option.as_str()) {
+        Some(option) => preview_switch(
+            manifest,
+            option,
+            features,
+            desired,
+            &choice_group_options(manifest, &variant.choice_group),
+        ),
+        None => (false, None),
+    };
+    FeatureGroupVariantState {
+        choice_group: variant.choice_group.clone(),
+        option: variant.option.clone(),
+        selected,
+        available,
+        unavailable_reason: (!available).then(|| reason.unwrap_or_else(|| FALLBACK.to_owned())),
+    }
+}
+
+fn evaluate_group(
+    group: &FeatureGroup,
+    controls: &[FeatureControl],
+    variants: Vec<FeatureGroupVariantState>,
+) -> FeatureGroupEvaluation {
     let mut selected_members = Vec::new();
     let mut available_members = Vec::new();
     let mut unavailable_members = Vec::new();
@@ -541,17 +677,24 @@ fn evaluate_group(group: &FeatureGroup, controls: &[FeatureControl]) -> FeatureG
             });
         }
     }
-    let state = if selected_members.is_empty() {
+    // A variant counts like a member: picked when its option is effective, and an unavailable
+    // variant does not hold the group in mixed.
+    let state = if selected_members.is_empty() && !variants.iter().any(|variant| variant.selected) {
         FeatureGroupState::Off
     } else if available_members
         .iter()
         .all(|member| selected_members.contains(member))
+        && variants
+            .iter()
+            .all(|variant| variant.selected || !variant.available)
     {
         FeatureGroupState::On
     } else {
         FeatureGroupState::Mixed
     };
-    let disabled_reason = available_members.is_empty().then(|| {
+    let disabled_reason = (available_members.is_empty()
+        && !variants.iter().any(|variant| variant.available))
+    .then(|| {
         format!(
             "No {} change is available with the current choices.",
             group.title
@@ -563,6 +706,7 @@ fn evaluate_group(group: &FeatureGroup, controls: &[FeatureControl]) -> FeatureG
         selected_members,
         available_members,
         unavailable_members,
+        variants,
         disabled_reason,
     }
 }
@@ -617,16 +761,29 @@ fn preview_choice(
     {
         return None;
     }
+    Some(preview_switch(manifest, feature, features, desired, &peers))
+}
+
+/// Evaluates selecting `feature` while deselecting the other `peers`, with the ordinary
+/// evaluator, and returns whether it would be effective and its reason otherwise.
+fn preview_switch(
+    manifest: &Manifest,
+    feature: &Feature,
+    features: &BTreeMap<&str, &Feature>,
+    desired: &BTreeMap<String, bool>,
+    peers: &[&Feature],
+) -> (bool, Option<String>) {
     let mut candidate = desired.clone();
     for peer in peers {
         candidate.insert(peer.id.clone(), peer.id == feature.id);
     }
+    candidate.insert(feature.id.clone(), true);
     let base = base_effective_features(manifest, &candidate);
     let effective = effective_features(manifest, &base);
-    Some((
+    (
         effective.get(&feature.id).copied().unwrap_or(false),
         unavailable_reason(feature, features, &base, &effective),
-    ))
+    )
 }
 
 fn render_prompt_script_for_effective(

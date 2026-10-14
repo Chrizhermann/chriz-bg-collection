@@ -11,6 +11,11 @@ members = [
   "feature:chriz-bg-rebalance:component-110",
   "feature:chriz-sod-remix:component-257",
 ]
+# Christopher, 2026-10-14: Challenge Mode picks strict potion uniqueness (Rebalance 330);
+# switching the group off restores the recommended 331.
+variants = [
+  { choice_group = "potion-uniqueness", option = "feature:chriz-bg-rebalance:component-330", label = "Potions: strict (Potions of Genius don't stack either)" },
+]
 
 [[runs]]
 run_id = "dlcmerger-bg1"

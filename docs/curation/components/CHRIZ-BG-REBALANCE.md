@@ -129,9 +129,8 @@ release-candidate provenance.
   every other type restarts its duration instead of stacking. `331` lets Potions of
   Genius stack as before; `330` does not.
 - **`331` is default** in the recommended preset; `330` is offered and unchecked.
-  Christopher wants `330` instead of `331` in Challenge Mode. The current feature-group
-  model cannot switch a choice-group variant (members must be optional and outside any
-  choice group), so that switch is not built yet; pick `330` by hand until it is.
+  Challenge Mode picks `330` instead and switching it off restores `331` (Christopher,
+  2026-10-14; a group [variant](../../plans/2026-10-13-challenge-mode-group.md#variants-switching-a-choice)).
 - **`332` is default**: Heroism, Greater Heroism (Bardic Wonders), their copies and the
   Potion of Heroism do not combine; the first one active wins. It works with or without
   `330`/`331`.

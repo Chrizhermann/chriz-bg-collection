@@ -207,7 +207,8 @@ pub struct ValidationReport {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelectionOverrides {
     /// `group-id=on|off` values, expanded into member features after `features` apply; a group
-    /// never overwrites a feature chosen explicitly in `features`.
+    /// never overwrites a feature chosen explicitly in `features`, nor any option of a choice
+    /// group in which `features` chose an option.
     pub groups: Vec<String>,
     /// `feature-id=on|off` values.
     pub features: Vec<String>,
@@ -4343,8 +4344,25 @@ pub fn human_plan_lines(report: &PlanReport) -> Vec<String> {
             FeatureGroupState::Off => "off",
             FeatureGroupState::Mixed => "mixed",
         };
+        let variants = if group.variants.is_empty() {
+            String::new()
+        } else {
+            format!(
+                ", {} of {} available variants picked",
+                group
+                    .variants
+                    .iter()
+                    .filter(|variant| variant.selected)
+                    .count(),
+                group
+                    .variants
+                    .iter()
+                    .filter(|variant| variant.available)
+                    .count()
+            )
+        };
         format!(
-            "Group {} ({title}): {state}, {} of {} available selected",
+            "Group {} ({title}): {state}, {} of {} available selected{variants}",
             group.id,
             group.selected_members.len(),
             group.available_members.len()
@@ -4404,7 +4422,25 @@ fn selection_choices(
         explicit_features.insert(id.to_owned());
     }
     // Groups then expand in command-line order against that state plus earlier groups. A group
-    // never overwrites a feature chosen explicitly, so `--feature` always wins for a member.
+    // never overwrites a feature chosen explicitly, so `--feature` always wins for a member. An
+    // explicit option of a choice group likewise keeps a variant from switching that choice.
+    let explicit_choice_groups = manifest
+        .collection
+        .features
+        .iter()
+        .filter(|feature| explicit_features.contains(&feature.id))
+        .filter_map(|feature| feature.choice_group.clone())
+        .collect::<BTreeSet<_>>();
+    let explicitly_chosen = |feature_id: &str| {
+        explicit_features.contains(feature_id)
+            || manifest.collection.features.iter().any(|feature| {
+                feature.id == feature_id
+                    && feature
+                        .choice_group
+                        .as_ref()
+                        .is_some_and(|choice| explicit_choice_groups.contains(choice))
+            })
+    };
     for authored in &overrides.groups {
         let (id, value) = split_assignment(authored, "group override")?;
         let target = match value {
@@ -4428,7 +4464,7 @@ fn selection_choices(
         )
         .map_err(|error| CliError::new("invalid_selection", error.to_string()))?;
         for (feature_id, selected) in changes {
-            if !explicit_features.contains(&feature_id) {
+            if !explicitly_chosen(&feature_id) {
                 choices.insert(feature_id, if selected { "on" } else { "off" }.to_owned());
             }
         }
