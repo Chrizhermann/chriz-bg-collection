@@ -145,6 +145,18 @@ remains unavailable or excluded.
 
 ## Live/runtime acceptance
 
+- [ ] [Sarah](SARAHTOB.md): XP catch-up is not applied (reported by Christopher on
+  2026-10-16).
+  - Cause (verified 2026-10-17): EET catches NPCs up through a `BD_JOINXP` block in
+    each NPC's override script. EET adds it to vanilla NPCs, and some NPC mods ship
+    their own; SarahTOB v8 has none. So her SoA version always joins at 89,000 XP
+    (level 7).
+  - Fix in progress: a generic Modpack component adds EET's block to every joinable
+    mod NPC that lacks it, in SoA and ToB.
+- [ ] Vanguard Defensive Stance: investigate PraetorFallen's report that disabling
+  "Use special abilities" in the AI settings stops companions from using the ability,
+  but the main character still uses it automatically. Recorded on 2026-10-16;
+  reproduction and cause not yet investigated.
 - [ ] Boot and exercise the merged 2.7 EET result after both EE Fixpack runs.
 - [ ] [EEex](EEEX.md): launch through its loader and exercise LuaJIT, hotkey, effect-menu,
   empty-container, scale, time-step, and timer behavior.
