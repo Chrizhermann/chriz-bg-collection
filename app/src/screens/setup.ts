@@ -146,7 +146,7 @@ export function setupScreen(
         select.id = selectId;
         const selectedControl = exclusive.controls.find(option => option.selected);
         if (exclusive.allowNone) {
-          const none = element("option", undefined, "None / unchanged");
+          const none = element("option", undefined, exclusive.unchangedLabel);
           none.value = "";
           select.append(none);
         } else if (!selectedControl) {
@@ -164,7 +164,9 @@ export function setupScreen(
           select.append(option);
         }
         select.value = selectedControl?.id ?? "";
-        const detail = element("p", "exclusive-choice-description", selectedControl?.description ?? "No option selected.");
+        const unchangedDescription = exclusive.controls[0]?.choiceUnchangedLabel
+          ? `No ${exclusive.label} override selected.` : "No option selected.";
+        const detail = element("p", "exclusive-choice-description", selectedControl?.description ?? unchangedDescription);
         const sources = [...new Set(exclusive.controls.map(option => option.sourceLabel).filter((source): source is string => Boolean(source)))];
         const source = element("p", "exclusive-choice-source", `${sources.length === 1 ? "Source" : "Sources"}: ${sources.join(", ")}`);
         source.hidden = sources.length === 0;
@@ -177,7 +179,7 @@ export function setupScreen(
         reasons.id = `${selectId}-reasons`;
         select.addEventListener("change", () => {
           const selected = exclusive.controls.find(option => option.id === select.value);
-          detail.textContent = selected?.description ?? "No option selected.";
+          detail.textContent = selected?.description ?? unchangedDescription;
           if (select.value === "" && !exclusive.allowNone) return;
           void batch!.change(exclusiveChoiceChanges(exclusive, select.value), select.id);
         });

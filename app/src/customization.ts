@@ -8,6 +8,7 @@ export interface ExclusiveChoiceGroup {
   readonly category: string;
   readonly controls: readonly ChoiceControl[];
   readonly allowNone: boolean;
+  readonly unchangedLabel: string;
 }
 
 export interface CommonBundle {
@@ -88,6 +89,7 @@ export function exclusiveChoiceGroups(e: SelectionEvaluation): ExclusiveChoiceGr
       control.category === first.category
       && control.parent === first.parent
       && control.groupLabel === first.groupLabel
+      && (control.choiceUnchangedLabel ?? null) === (first.choiceUnchangedLabel ?? null)
     );
     const pairwiseAlternatives = controls.every((control, index) =>
       controls.slice(index + 1).every(peer => hasSymmetricConflict(control, peer))
@@ -99,6 +101,7 @@ export function exclusiveChoiceGroups(e: SelectionEvaluation): ExclusiveChoiceGr
       category: first.category,
       controls,
       allowNone: true,
+      unchangedLabel: first.choiceUnchangedLabel?.trim() || "None / unchanged",
     });
   }
   return groups;

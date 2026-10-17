@@ -169,6 +169,9 @@ def apply_feature_presentations(collection_text: str, presentations: dict[str, F
         if parsed_id is None or parsed_id.group(1) not in presentations:
             return match.group(0)
         presentation = presentations[parsed_id.group(1)]
+        # Base features may already author their choice context (including
+        # blocked development options). Replace it instead of duplicating TOML keys.
+        block = re.sub(r"(?m)^(?:source_label|group_label|choice_group) = .*\n?", "", block)
         replacements = {"title": presentation.title, "description": presentation.description}
         for key, value in replacements.items():
             if value is not None:

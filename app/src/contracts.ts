@@ -102,6 +102,7 @@ export interface FeatureControl {
   readonly sourceLabel?: string | null;
   readonly groupLabel?: string | null;
   readonly choiceGroup?: string | null;
+  readonly choiceUnchangedLabel?: string | null;
   readonly choiceAvailable?: boolean | null;
   readonly decision: FeatureDecision;
   readonly readiness: "ready" | "experimental" | "blocked";

@@ -44,6 +44,9 @@ pub struct FeatureControl {
     /// Explicit same-purpose alternative group, when authored.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub choice_group: Option<String>,
+    /// Authored name for retaining the unchanged behavior of an optional group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choice_unchanged_label: Option<String>,
     /// Whether replacing only this group's siblings would select this option.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub choice_available: Option<bool>,
@@ -318,6 +321,7 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
             source_label: feature.source_label.clone(),
             group_label: feature.group_label.clone(),
             choice_group: feature.choice_group.clone(),
+            choice_unchanged_label: feature.choice_unchanged_label.clone(),
             choice_available: choice_preview.as_ref().map(|(available, _)| *available),
             decision: feature.decision,
             readiness: feature.readiness,

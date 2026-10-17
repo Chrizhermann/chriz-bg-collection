@@ -1,9 +1,9 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1189
-expected_choice_groups = 61
-expected_optional_none_groups = 13
+expected_rows = 1191
+expected_choice_groups = 62
+expected_optional_none_groups = 14
 expected_fixed_groups = 10
 
 parents = [
@@ -2470,6 +2470,25 @@ id = "feature:spell-rev:component-65"
 kind = "feature"
 rows = ["SPELL_REV:65"]
 parent = "mod:spell-rev"
+
+[[targets]]
+id = "feature:spell-rev:component-80"
+kind = "feature"
+rows = ["SPELL_REV:80"]
+parent = "mod:spell-rev"
+
+[[targets]]
+id = "feature:spell-rev:component-81"
+kind = "feature"
+rows = ["SPELL_REV:81"]
+parent = "mod:spell-rev"
+
+[[choice_groups]]
+id = "choice:spell-rev:lightning-bolt"
+catalog = "SPELL_REV"
+subgroup = "Lightning Bolt"
+options = ["SPELL_REV:80", "SPELL_REV:81"]
+default = "none"
 
 [[targets]]
 id = "feature:stratagems:component-3040"

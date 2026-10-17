@@ -19,6 +19,7 @@ fn fixture() -> Manifest {
         source_label: None,
         group_label: None,
         choice_group: None,
+        choice_unchanged_label: None,
         decision: Decision::Default,
         readiness: Readiness::Ready,
         unavailable_reason: None,

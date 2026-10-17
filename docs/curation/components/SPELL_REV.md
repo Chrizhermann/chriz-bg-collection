@@ -3,9 +3,19 @@
 The captured install used **v4.19**. The production recipe now pins the immutable
 **v4.21-chriz.3** successor release, which retains the same eight-component menu and
 contains the reviewed protection-refresh and hidden-subspell repairs.
-8 entries, 7 installed. ✓ = installed. Subgroup = choose one.
+10 catalog entries: 8 released and 2 development options; 7 installed.
+✓ = installed. Subgroup = choose one.
 
 ## UI/dependency notes
+
+- The Lightning Bolt selector has three states: **Spell Revisions** (unchanged
+  default; install neither `80` nor `81`), **Original** (`80`), and **Non-bouncing**
+  (`81`). Both development components are optional, mutually exclusive and blocked
+  until a verified successor release includes them; they are not part of the pinned
+  eight-component menu. `81` affects the wizard spell and Wand of Lightning, with
+  path hits/friendly fire retained and traps unchanged. Do not substitute CDTweaks
+  `2530`, whose shared-projectile change includes traps. Ordering and release gates:
+  [integration handoff](../../handoffs/2026-09-07-lightning-bolt-options.md).
 
 - Whenever the parent Spell Revisions mod is selected, component `0` is included without
   a separate component toggle.
@@ -34,3 +44,5 @@ contains the reviewed protection-refresh and hidden-subspell repairs.
 | 60 | Update Spellbooks of Joinable NPCs |  |  | ✓ | default |
 | 65 | Revised Warrior HLAs |  |  | ✓ | default |
 | 70 | Revised Saving Throws |  |  |  | |
+| 80 | Original | Spells | Lightning Bolt |  | optional |
+| 81 | Non-bouncing | Spells | Lightning Bolt |  | optional |

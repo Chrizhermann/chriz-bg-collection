@@ -2766,6 +2766,38 @@ parent = "mod:spell-rev"
 components = [{ run_id = "spell-rev-core-bg2", component = 65 }]
 
 [[features]]
+id = "feature:spell-rev:component-80"
+title = "Original"
+description = "Restore the classic bouncing Lightning Bolt, hitting creatures along its path with friendly fire. Spell Revisions remains the unchanged default."
+category = "spells"
+source_label = "Spell Revisions"
+group_label = "Lightning Bolt"
+choice_group = "choice:spell-rev:lightning-bolt"
+choice_unchanged_label = "Spell Revisions"
+decision = "optional"
+readiness = "blocked"
+unavailable_reason = "Awaiting a verified Spell Revisions successor release with components 80 and 81; the pinned v4.21-chriz.3 does not contain these options."
+parent = "mod:spell-rev"
+requires = ["feature:spell-rev:mandatory-components"]
+conflicts = [{ feature_id = "feature:spell-rev:component-81", reason = "Choose one Lightning Bolt behavior." }]
+
+[[features]]
+id = "feature:spell-rev:component-81"
+title = "Non-bouncing"
+description = "Make the Lightning Bolt spell and Wand of Lightning hit along their path without bouncing. Friendly fire remains; traps keep bouncing. Spell Revisions remains the unchanged default."
+category = "spells"
+source_label = "Spell Revisions"
+group_label = "Lightning Bolt"
+choice_group = "choice:spell-rev:lightning-bolt"
+choice_unchanged_label = "Spell Revisions"
+decision = "optional"
+readiness = "blocked"
+unavailable_reason = "Awaiting a verified Spell Revisions successor release with components 80 and 81; the pinned v4.21-chriz.3 does not contain these options."
+parent = "mod:spell-rev"
+requires = ["feature:spell-rev:mandatory-components"]
+conflicts = [{ feature_id = "feature:spell-rev:component-80", reason = "Choose one Lightning Bolt behavior." }]
+
+[[features]]
 id = "mod:stratagems"
 title = "Sword Coast Stratagems"
 description = "Install the curated SCS spell, AI, and encounter package with WeiDU 249."

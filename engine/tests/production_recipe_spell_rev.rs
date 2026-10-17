@@ -176,6 +176,70 @@ fn recommended_preset_selects_both_runs_and_parent_disable_removes_both() {
 }
 
 #[test]
+fn pending_lightning_choices_are_named_but_cannot_resolve_against_the_old_release() {
+    let manifest = recipe();
+    let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    let mut previous = manifest.clone();
+    previous.collection.features.retain(|feature| {
+        !matches!(
+            feature.id.as_str(),
+            "feature:spell-rev:component-80" | "feature:spell-rev:component-81"
+        )
+    });
+    assert_eq!(
+        baseline.plan,
+        evaluate_preset(&previous, "chris-recommended", "windows")
+            .unwrap()
+            .plan
+    );
+    for (component, title) in [(80, "Original"), (81, "Non-bouncing")] {
+        let id = format!("feature:spell-rev:component-{component}");
+        let feature = manifest
+            .collection
+            .features
+            .iter()
+            .find(|feature| feature.id == id)
+            .unwrap();
+        assert_eq!(feature.title, title);
+        assert_eq!(feature.decision, Decision::Optional);
+        assert_eq!(feature.readiness, Readiness::Blocked);
+        assert_eq!(feature.parent.as_deref(), Some("mod:spell-rev"));
+        assert_eq!(
+            feature.choice_group.as_deref(),
+            Some("choice:spell-rev:lightning-bolt")
+        );
+        assert_eq!(
+            feature.choice_unchanged_label.as_deref(),
+            Some("Spell Revisions")
+        );
+        assert!(
+            feature.components.is_empty(),
+            "old release must not claim the future component"
+        );
+        let control = baseline.view.control(&id).unwrap();
+        assert_eq!(control.choice_available, Some(false));
+        assert!(!control.selected);
+        assert!(control
+            .unavailable_reason
+            .as_deref()
+            .unwrap()
+            .contains("v4.21-chriz.3"));
+        let mut requested = baseline.normalized_selection.to_selection();
+        requested.set_feature(&id, true);
+        assert_eq!(evaluate(&manifest, &requested).unwrap().plan, baseline.plan);
+        requested.set_feature("mod:spell-rev", false);
+        let disabled = evaluate(&manifest, &requested).unwrap();
+        assert!(!disabled.view.control(&id).unwrap().selected);
+        assert_eq!(disabled.plan.components_for("spell-rev-core-bg2"), None);
+    }
+    assert!(manifest
+        .collection
+        .runs
+        .iter()
+        .all(|run| run.run_id != "spell-rev-lightning-bolt-bg2"));
+}
+
+#[test]
 fn preserves_the_scs_conflict_without_blocking_deferred_rr_compatibility() {
     let manifest = recipe();
     let scs_hlas = manifest

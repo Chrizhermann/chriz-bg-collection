@@ -82,6 +82,7 @@ describe("common customization bundles", () => {
     const group = exclusiveChoiceGroups(valid)[0]!;
     expect(group.label).toBe("Class route");
     expect(group.allowNone).toBe(true);
+    expect(group.unchangedLabel).toBe("None / unchanged");
     expect(exclusiveChoiceChanges(group, "b")).toEqual({ a: false, b: true });
     expect(exclusiveChoiceChanges(group, "")).toEqual({ a: false, b: false });
 
@@ -117,6 +118,48 @@ describe("common customization bundles", () => {
     await userEvent.setup().selectOptions(select, "");
     expect(batches.at(-1)).toEqual({ fighter: false, cleric: false, mage: false });
     view.remove();
+  });
+
+  it("names exactly three Lightning Bolt states and preserves unavailable alternatives", async () => {
+    const makeOptions = (blocked: boolean) => ["Original", "Non-bouncing"].map((title, index) => control(String(80 + index), {
+      title, description: index ? "Spell and Wand of Lightning stop bouncing; traps keep bouncing." : "Classic bouncing bolt with friendly fire.",
+      selected: false, decision: "optional", parent: "mod:spell-rev", category: "spells",
+      sourceLabel: "Spell Revisions", groupLabel: "Lightning Bolt", choiceGroup: "choice:spell-rev:lightning-bolt",
+      choiceUnchangedLabel: "Spell Revisions", conflicts: [String(81 - index)],
+      readiness: blocked ? "blocked" : "ready", interactive: !blocked, choiceAvailable: !blocked,
+      unavailableReason: blocked ? "Awaiting a verified successor release." : null,
+    }));
+    for (const blocked of [true, false]) {
+      const batches: Record<string, boolean>[] = [];
+      const view = setupScreen(evaluation(makeOptions(blocked)), () => {}, () => {}, () => {}, { search: "", category: "", advancedOpen: true }, { change: patch => { batches.push(patch); }, reset: () => {} });
+      document.body.append(view);
+      const select = getByRole(view, "combobox", { name: "Lightning Bolt" }) as HTMLSelectElement;
+      expect([...select.options].map(option => option.textContent)).toEqual([
+        "Spell Revisions", `Original${blocked ? " (Unavailable)" : ""}`, `Non-bouncing${blocked ? " (Unavailable)" : ""}`,
+      ]);
+      expect(select.value).toBe("");
+      expect(select.options[1]!.disabled).toBe(blocked);
+      expect(select.options[2]!.disabled).toBe(blocked);
+      if (blocked) {
+        expect(view.textContent).toContain("Awaiting a verified successor release.");
+      } else {
+        const user = userEvent.setup();
+        await user.selectOptions(select, "80");
+        await user.selectOptions(select, "81");
+        expect(view.textContent).toContain("traps keep bouncing");
+        await user.selectOptions(select, "");
+        expect(batches).toEqual([{ "80": true, "81": false }, { "80": false, "81": true }, { "80": false, "81": false }]);
+      }
+      view.remove();
+    }
+    const inconsistent = makeOptions(false);
+    inconsistent[1] = { ...inconsistent[1]!, choiceUnchangedLabel: "Different behavior" };
+    expect(exclusiveChoiceGroups(evaluation(inconsistent))).toEqual([]);
+    const parentOff = setupScreen(evaluation([
+      control("mod:spell-rev", { selected: false, category: "spells" }), ...makeOptions(true),
+    ]), () => {}, () => {}, () => {}, { search: "", category: "", advancedOpen: true }, { change: () => {}, reset: () => {} });
+    expect(parentOff.textContent).toContain("No Lightning Bolt override selected.");
+    expect(parentOff.textContent).not.toContain("Keeping Spell Revisions");
   });
 
   it("keeps legacy checkboxes and searches discreet source and group labels", async () => {

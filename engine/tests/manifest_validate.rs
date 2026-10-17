@@ -34,6 +34,7 @@ fn feature(id: &str, decision: Decision) -> Feature {
         source_label: None,
         group_label: None,
         choice_group: None,
+        choice_unchanged_label: None,
         decision,
         readiness: Readiness::Ready,
         unavailable_reason: None,
@@ -87,6 +88,31 @@ fn fixture_is_valid_and_repeats_one_component_across_game_roots() {
     assert_eq!(manifest.collection.runs[0].components, vec![0, 2]);
     assert_eq!(manifest.collection.runs[1].components, vec![0]);
     assert_eq!(error_rules(&validate(&manifest)), Vec::<&str>::new());
+}
+
+#[test]
+fn unchanged_labels_require_a_consistent_optional_group() {
+    let mut manifest = good();
+    let mut a = feature("a", Decision::Optional);
+    a.choice_group = Some("choice:test".into());
+    a.choice_unchanged_label = Some("Original behavior".into());
+    let mut b = a.clone();
+    b.id = "b".into();
+    manifest.collection.features = vec![a, b];
+    assert!(validate(&manifest)
+        .iter()
+        .all(|finding| finding.rule != "choice-unchanged-label"));
+    for case in 0..5 {
+        let mut invalid = manifest.clone();
+        match case {
+            0 => invalid.collection.features[0].choice_group = None,
+            1 => invalid.collection.features[0].choice_unchanged_label = Some(" ".into()),
+            2 => invalid.collection.features[1].choice_unchanged_label = None,
+            3 => invalid.collection.features[1].choice_unchanged_label = Some("Different".into()),
+            _ => invalid.collection.features[1].decision = Decision::Mandatory,
+        }
+        assert_has_error(&validate(&invalid), "choice-unchanged-label");
+    }
 }
 
 #[test]

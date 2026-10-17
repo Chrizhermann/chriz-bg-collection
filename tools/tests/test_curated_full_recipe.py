@@ -14,6 +14,28 @@ class CuratedFullRecipeTests(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[2]
 
+    def test_pending_lightning_options_keep_the_released_menu_and_default_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "bdb040e0d0ab7c63eac260497f3b828116fcb6aa")
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            mod = tomllib.loads((output / "mods/spell-rev.toml").read_text(encoding="utf-8"))
+            self.assertEqual(mod["artifact_id"], "spell-rev-4.21-chriz.3")
+            self.assertEqual([entry["id"] for entry in mod["components"]], [0, 10, 20, 30, 55, 60, 65, 70])
+            features = {feature["id"]: feature for feature in collection["features"]}
+            preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))["selections"]
+            defaults = _effective_features(collection, preset)
+            for component in [80, 81]:
+                feature_id = f"feature:spell-rev:component-{component}"
+                option = features[feature_id]
+                self.assertEqual(option["choice_unchanged_label"], "Spell Revisions")
+                self.assertEqual(option["choice_group"], "choice:spell-rev:lightning-bolt")
+                self.assertEqual(option["readiness"], "blocked")
+                self.assertEqual(option.get("components", []), [])
+                self.assertFalse(defaults[feature_id])
+                self.assertEqual(_effective_features(collection, {**preset, feature_id: "on"}), defaults)
+            self.assertNotIn("spell-rev-lightning-bolt-bg2", [run["run_id"] for run in collection["runs"]])
+
     def test_evandra_uses_official_windows_archive_without_private_aggregate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "recipe"
@@ -118,7 +140,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             ).hexdigest()
             self.assertEqual(
                 semantic_digest,
-                "4320bd5a5a766e1acc1667d8979e1c33816baa0f0e110a1dabdc4a53d5cc8415",
+                "d68a750fdc9edfdda3fec9d818ca8e9789c0fb3accaf39840f606c81c53990a3",
             )
 
             legacy_bg1npc_groups = {

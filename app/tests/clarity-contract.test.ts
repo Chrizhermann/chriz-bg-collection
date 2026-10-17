@@ -10,6 +10,7 @@ describe("clarity metadata transport", () => {
         selected: false, interactive: false, unavailable_reason: null, inputs: [],
         source_label: "Tweaks Anthology", group_label: "Potion stacking",
         choice_group: "potion-stacking", choice_available: true,
+        choice_unchanged_label: "Original stacking",
       }] },
       normalized_selection: { platform: "windows", features: { unlimited: true, forty: false }, inputs: {} },
       findings: [], plan: { phases: [] }, selected_choice_count: 1,
@@ -18,8 +19,10 @@ describe("clarity metadata transport", () => {
     expect(result.view.controls[0]).toMatchObject({
       sourceLabel: "Tweaks Anthology", groupLabel: "Potion stacking", choiceGroup: "potion-stacking",
       choiceAvailable: true, selected: false, interactive: false,
+      choiceUnchangedLabel: "Original stacking",
     });
     expect(result.view.controls[0]).not.toHaveProperty("choice_available");
+    expect(result.view.controls[0]).not.toHaveProperty("choice_unchanged_label");
   });
 
   it("preserves current log rows and missing receipt entries", async () => {

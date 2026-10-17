@@ -106,6 +106,8 @@ pub const RULE_FEATURE_INPUTS: &str = "feature-inputs";
 pub const RULE_PROMPT_INPUT_REFERENCES: &str = "prompt-input-references";
 /// Rule requiring visible blocked features to explain why they are unavailable.
 pub const RULE_FEATURE_READINESS: &str = "feature-readiness";
+/// Rule requiring consistent authored unchanged labels on optional choice groups.
+pub const RULE_CHOICE_UNCHANGED_LABEL: &str = "choice-unchanged-label";
 
 /// Runs the currently defined recipe validation rules in stable order.
 pub fn validate(manifest: &Manifest) -> Vec<Finding> {
@@ -136,6 +138,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_feature_inputs(manifest, &mut findings);
     check_prompt_input_references(manifest, &mut findings);
     check_feature_readiness(manifest, &mut findings);
+    check_choice_unchanged_labels(manifest, &mut findings);
     findings
 }
 
@@ -1458,6 +1461,36 @@ fn check_prompt_input_references(manifest: &Manifest, findings: &mut Vec<Finding
                     );
                 }
             }
+        }
+    }
+}
+
+fn check_choice_unchanged_labels(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    for feature in &manifest.collection.features {
+        let Some(label) = &feature.choice_unchanged_label else {
+            continue;
+        };
+        let group = feature
+            .choice_group
+            .as_deref()
+            .filter(|value| !value.trim().is_empty());
+        let peers = manifest
+            .collection
+            .features
+            .iter()
+            .filter(|peer| group.is_some() && peer.choice_group.as_deref() == group)
+            .collect::<Vec<_>>();
+        if label.trim().is_empty()
+            || peers.len() < 2
+            || peers.iter().any(|peer| {
+                peer.choice_unchanged_label.as_ref() != Some(label)
+                    || peer.decision == Decision::Mandatory
+            })
+        {
+            error(findings, RULE_CHOICE_UNCHANGED_LABEL, format!(
+                "feature {:?} must use a nonblank unchanged label shared by every member of an optional choice group",
+                feature.id
+            ));
         }
     }
 }

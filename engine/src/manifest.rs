@@ -503,6 +503,9 @@ pub struct Feature {
     /// Authored same-purpose choice identity; not a general conflict group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub choice_group: Option<String>,
+    /// Optional player-facing name for selecting none of this group's alternatives.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub choice_unchanged_label: Option<String>,
     /// Curated visibility/default decision.
     pub decision: Decision,
     /// Release readiness.

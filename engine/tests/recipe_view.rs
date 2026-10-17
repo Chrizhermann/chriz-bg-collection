@@ -63,6 +63,7 @@ fn feature(id: &str, decision: Decision, components: Vec<ComponentRef>) -> Featu
         source_label: None,
         group_label: None,
         choice_group: None,
+        choice_unchanged_label: None,
         decision,
         readiness: Readiness::Ready,
         unavailable_reason: None,
@@ -120,6 +121,7 @@ fn choice_projection_previews_replacement_without_changing_defaults() {
     let alternate = evaluation.view.control("forty").unwrap();
     assert_eq!(alternate.source_label.as_deref(), Some("Tweaks Anthology"));
     assert_eq!(alternate.group_label.as_deref(), Some("Potion stacking"));
+    assert_eq!(alternate.choice_unchanged_label, None);
     assert_eq!(alternate.choice_available, Some(true));
     assert!(alternate.unavailable_reason.is_none());
     assert!(!alternate.selected);
@@ -132,6 +134,31 @@ fn choice_projection_previews_replacement_without_changing_defaults() {
     switched.set_feature("forty", true);
     let result = evaluate(&manifest, &switched).unwrap();
     assert_eq!(result.plan.runs[0].components, vec![2]);
+}
+
+#[test]
+fn authored_unchanged_label_roundtrips_and_does_not_change_selection() {
+    let mut manifest = grouped_manifest();
+    for option in &mut manifest.collection.features {
+        option.decision = Decision::Optional;
+        option.choice_unchanged_label = Some("Original behavior".into());
+    }
+    let encoded = toml::to_string(&manifest.collection).unwrap();
+    manifest.collection = toml::from_str(&encoded).unwrap();
+    let result = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    assert!(result.plan.runs.is_empty());
+    for option in &result.view.controls {
+        assert_eq!(
+            option.choice_unchanged_label.as_deref(),
+            Some("Original behavior")
+        );
+        assert!(!option.selected);
+    }
+    let wire = serde_json::to_value(&result.view).unwrap();
+    assert_eq!(
+        wire["controls"][0]["choice_unchanged_label"],
+        "Original behavior"
+    );
 }
 
 #[test]
