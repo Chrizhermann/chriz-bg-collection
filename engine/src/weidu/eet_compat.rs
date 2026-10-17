@@ -1,12 +1,12 @@
 //! Narrow, audited compatibility fixes to a staged EET installer, never its archive/cache.
 
-use std::fs;
-use std::io::Write;
+use std::io::Read;
 use std::path::Path;
 
 use serde::Serialize;
 
 use crate::digest::sha256_bytes;
+use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
 use crate::manifest::GameRoot;
 
 const ARTIFACT_ID: &str = "eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d";
@@ -124,63 +124,88 @@ fn patch_file(
     original_sha256: &str,
     corrected_sha256: &str,
 ) -> Result<(String, String), String> {
-    let path = target_root.join("EET/lib/macros.tph");
     if !target_root.is_absolute() {
         return Err("EET compatibility target must be absolute".into());
     }
-    // Check ancestors as well as the leaf: a junction must not redirect this scoped write.
-    for ancestor in path.ancestors() {
-        let metadata = fs::symlink_metadata(ancestor).map_err(|error| {
-            format!(
-                "Inspect EET compatibility path {}: {error}",
-                ancestor.display()
-            )
-        })?;
-        #[cfg(windows)]
-        let reparse = {
-            use std::os::windows::fs::MetadataExt;
-            metadata.file_attributes() & 0x400 != 0
-        };
-        #[cfg(not(windows))]
-        let reparse = false;
-        if metadata.file_type().is_symlink()
-            || reparse
-            || (ancestor == path && !metadata.is_file())
-            || (ancestor != path && !metadata.is_dir())
-        {
-            return Err(format!(
-                "EET compatibility path is not a direct file/directory: {}",
-                ancestor.display()
-            ));
-        }
-    }
-    let before = fs::read(&path).map_err(|error| error.to_string())?;
+    // EET and lib are opened from the target root down without following a link and held until
+    // the file is replaced, so neither a junction nor a folder swapped for one can redirect this
+    // scoped write. Nothing above the target root is inspected: once the root is held, a link
+    // above it can no longer redirect anything.
+    let folder = HeldFolder::open(target_root, ["EET", "lib"]).map_err(path_error)?;
+    patch_in_folder(&folder, original_sha256, corrected_sha256)
+}
+
+/// Rewrite `macros.tph` in the held `EET/lib` folder, replacing it in one step.
+fn patch_in_folder(
+    folder: &HeldFolder,
+    original_sha256: &str,
+    corrected_sha256: &str,
+) -> Result<(String, String), String> {
+    let path = folder.path().join(MACROS);
+    // The file is closed again before it is replaced: Windows does not replace a file that is
+    // open without delete sharing.
+    let before = {
+        let (file, _) = folder.open_file(MACROS).map_err(path_error)?;
+        let mut bytes = Vec::new();
+        (&file)
+            .read_to_end(&mut bytes)
+            .map_err(|error| format!("Read EET compatibility path {}: {error}", path.display()))?;
+        bytes
+    };
     let after = corrected_bytes(&before, original_sha256, corrected_sha256)?;
     if before != after {
-        let mut temporary = tempfile::NamedTempFile::new_in(path.parent().unwrap())
-            .map_err(|error| error.to_string())?;
-        temporary
-            .write_all(&after)
-            .map_err(|error| error.to_string())?;
-        temporary
-            .as_file()
-            .sync_all()
-            .map_err(|error| error.to_string())?;
-        temporary
-            .persist(&path)
-            .map_err(|error| error.to_string())?;
+        folder.replace_file(MACROS, &after).map_err(|error| {
+            format!("Replace EET compatibility path {}: {error}", path.display())
+        })?;
     }
     Ok((sha256_bytes(&before), sha256_bytes(&after)))
+}
+
+const MACROS: &str = "macros.tph";
+
+fn path_error(error: EntryError) -> String {
+    let path = error.path.display();
+    match error.kind {
+        EntryErrorKind::Missing => format!("EET compatibility path is missing: {path}"),
+        EntryErrorKind::NotDirect => {
+            format!("EET compatibility path is not a direct file/directory: {path}")
+        }
+        EntryErrorKind::Io(error) => format!("Inspect EET compatibility path {path}: {error}"),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::held_folder::tests::entries;
+    #[cfg(windows)]
+    use crate::held_folder::tests::junction;
 
     fn fixture() -> (String, String) {
         let original = format!("unrelated prefix\n{ORIGINAL_BATCH}\nunrelated suffix\n");
         let corrected = original.replace(ORIGINAL_BATCH, CORRECTED_BATCH);
         (original, corrected)
+    }
+
+    /// The fixture's original and corrected hashes.
+    fn fixture_hashes() -> (String, String) {
+        let (original, corrected) = fixture();
+        (
+            sha256_bytes(original.as_bytes()),
+            sha256_bytes(corrected.as_bytes()),
+        )
+    }
+
+    /// A staged `game` folder below `parent` whose macros.tph is the fixture's original.
+    fn staged_game(parent: &Path) -> std::path::PathBuf {
+        let game = parent.join("game");
+        std::fs::create_dir_all(game.join("EET").join("lib")).unwrap();
+        std::fs::write(game.join("EET").join("lib").join(MACROS), fixture().0).unwrap();
+        game
+    }
+
+    fn macros_text(game: &Path) -> String {
+        std::fs::read_to_string(game.join("EET").join("lib").join(MACROS)).unwrap()
     }
 
     #[test]
@@ -236,6 +261,9 @@ mod tests {
         );
         assert_eq!(patch_file(&target, &old, &new).unwrap(), (new.clone(), new));
         assert_eq!(std::fs::read_to_string(cache).unwrap(), original);
+        // Replaced in place: the corrected file alone, with no temporary file left behind.
+        assert_eq!(macros_text(&target), corrected);
+        assert_eq!(entries(&target.join("EET/lib")), [MACROS]);
     }
 
     #[test]
@@ -314,6 +342,121 @@ mod tests {
         std::fs::write(&path, "user changes").unwrap();
         assert!(patch_file(temp.path(), ORIGINAL_SHA256, CORRECTED_SHA256).is_err());
         assert_eq!(std::fs::read_to_string(path).unwrap(), "user changes");
+    }
+
+    #[test]
+    fn eet_compat_requires_the_staged_folders_and_creates_none() {
+        let temp = tempfile::tempdir().unwrap();
+        let (old, new) = fixture_hashes();
+
+        let error = patch_file(temp.path(), &old, &new).unwrap_err();
+        assert!(error.contains("is missing"), "{error}");
+        std::fs::create_dir_all(temp.path().join("EET/lib")).unwrap();
+        let error = patch_file(temp.path(), &old, &new).unwrap_err();
+        assert!(error.contains("is missing"), "{error}");
+        std::fs::create_dir(temp.path().join("EET/lib").join(MACROS)).unwrap();
+        let error = patch_file(temp.path(), &old, &new).unwrap_err();
+        assert!(error.contains("not a direct file/directory"), "{error}");
+
+        assert_eq!(entries(&temp.path().join("EET/lib")), [MACROS]);
+        assert_eq!(
+            entries(&temp.path().join("EET/lib").join(MACROS)),
+            Vec::<String>::new()
+        );
+    }
+
+    /// The target root, EET, lib and macros.tph itself are junctions in turn. None of them is
+    /// followed, and the file they point to is never touched.
+    #[cfg(windows)]
+    #[test]
+    fn eet_compat_never_writes_through_a_junction_at_any_level() {
+        let temp = tempfile::tempdir().unwrap();
+        let (old, new) = fixture_hashes();
+        let outside = staged_game(&temp.path().join("outside"));
+        let outside_lib = outside.join("EET").join("lib");
+
+        let linked_root = temp.path().join("linked-root");
+        junction(&linked_root, &outside);
+        let linked_eet = temp.path().join("linked-eet");
+        std::fs::create_dir(&linked_eet).unwrap();
+        junction(&linked_eet.join("EET"), &outside.join("EET"));
+        let linked_lib = temp.path().join("linked-lib");
+        std::fs::create_dir_all(linked_lib.join("EET")).unwrap();
+        junction(&linked_lib.join("EET").join("lib"), &outside_lib);
+        let linked_file = temp.path().join("linked-file");
+        std::fs::create_dir_all(linked_file.join("EET").join("lib")).unwrap();
+        junction(
+            &linked_file.join("EET").join("lib").join(MACROS),
+            &outside_lib,
+        );
+
+        for (target, refused) in [
+            (&linked_root, linked_root.clone()),
+            (&linked_eet, linked_eet.join("EET")),
+            (&linked_lib, linked_lib.join("EET").join("lib")),
+            (
+                &linked_file,
+                linked_file.join("EET").join("lib").join(MACROS),
+            ),
+        ] {
+            let error = patch_file(target, &old, &new).unwrap_err();
+            assert!(
+                error.contains(&format!(
+                    "not a direct file/directory: {}",
+                    refused.display()
+                )),
+                "{error}"
+            );
+        }
+        assert_eq!(macros_text(&outside), fixture().0);
+        assert_eq!(entries(&outside_lib), [MACROS]);
+    }
+
+    /// Nothing above the target root is inspected. A link there, such as a cloud-files folder or
+    /// a volume mounted in a folder, is no reason to refuse, and the real file is corrected.
+    #[cfg(windows)]
+    #[test]
+    fn eet_compat_patches_below_a_link_above_the_target_root() {
+        let temp = tempfile::tempdir().unwrap();
+        let (old, new) = fixture_hashes();
+        let real = temp.path().join("real");
+        let game = staged_game(&real);
+        let link = temp.path().join("link");
+        junction(&link, &real);
+
+        assert_eq!(
+            patch_file(&link.join("game"), &old, &new).unwrap(),
+            (old, new)
+        );
+
+        assert_eq!(macros_text(&game), fixture().1);
+        assert_eq!(entries(&game.join("EET").join("lib")), [MACROS]);
+    }
+
+    /// Re-pointing a link above the target root after the folders were opened redirects every
+    /// path through it. The file must still be read and replaced in the folder that was checked.
+    #[cfg(windows)]
+    #[test]
+    fn eet_compat_replaces_the_held_file_after_a_link_above_is_repointed() {
+        let temp = tempfile::tempdir().unwrap();
+        let (old, new) = fixture_hashes();
+        let checked = staged_game(&temp.path().join("checked"));
+        // Unrecognized bytes: reading through the redirected path would refuse the fix.
+        let other = staged_game(&temp.path().join("other"));
+        std::fs::write(other.join("EET").join("lib").join(MACROS), "user changes").unwrap();
+        let link = temp.path().join("link");
+        junction(&link, &temp.path().join("checked"));
+
+        let folder = HeldFolder::open(&link.join("game"), ["EET", "lib"]).unwrap();
+        std::fs::remove_dir(&link).unwrap();
+        junction(&link, &temp.path().join("other"));
+        assert_eq!(patch_in_folder(&folder, &old, &new).unwrap(), (old, new));
+        drop(folder);
+
+        assert_eq!(macros_text(&checked), fixture().1);
+        assert_eq!(entries(&checked.join("EET").join("lib")), [MACROS]);
+        assert_eq!(macros_text(&other), "user changes");
+        assert_eq!(entries(&other.join("EET").join("lib")), [MACROS]);
     }
 
     /// Opt-in acceptance against locally verified upstream files, with no network or game.

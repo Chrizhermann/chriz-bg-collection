@@ -12,6 +12,13 @@ pub fn sha256_bytes(bytes: &[u8]) -> String {
     hex::encode(Sha256::digest(bytes))
 }
 
+/// Returns the lowercase SHA-256 of everything `reader` yields, without holding it in memory.
+pub fn sha256_reader(mut reader: impl std::io::Read) -> std::io::Result<String> {
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut reader, &mut hasher)?;
+    Ok(hex::encode(hasher.finalize()))
+}
+
 /// Returns a deterministic digest of a normalized semantic selection.
 pub fn selection_digest(selection: &NormalizedSelection) -> Result<String> {
     canonical_json_digest("normalized selection", selection)
