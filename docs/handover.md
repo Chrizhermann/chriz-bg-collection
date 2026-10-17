@@ -2,6 +2,18 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## October 14 — Defender investigation refreshed
+
+The owner chose detection analysis first, signing-provider selection later.
+Fresh scans of the exact alpha.21 and September 30 Dragon/Order setup files
+found no threats. A fresh, hash-matching official WeiDU 249 archive reproduced
+`Trojan:Win32/Pomal!rfn` on its unused `weinstall.exe`; CEBG already extracts only
+`weidu.exe`. The owner-requested WeiDU submission is confirmed; analyst decision
+pending. Existing Microsoft CEBG cases remain in progress without express
+false-positive clearance. Original CEBG cause unknown; no runtime test, security
+exception or game change today. See the
+[assessment and evidence limits](defender-assessment-2026-10-14.md).
+
 ## October 14 — app alpha.21 and its website published (installer fixes)
 
 **App alpha.21 is public** as a prerelease and on the alpha updater channel; the

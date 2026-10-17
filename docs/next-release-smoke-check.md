@@ -5,16 +5,27 @@ implementation and automated checks, then use **one combined fresh installation*
 Do not turn each component or UI provider into a separate required manual test.
 **September 30 status:** the fresh Test19 installation completed, and Christopher
 used Play to launch it. Do not repeat the full installation or use the outdated
-September 29 setup named in earlier instructions. The remaining checks below
+September 29 setup named in earlier instructions. The remaining gameplay checks below
 are not yet recorded as accepted; do not infer that they failed either.
 
-Defender subsequently quarantined the CEBG app. That incident is unresolved.
-The Radar checkbox/consent fix is now packaged and verified in
-`%USERPROFILE%\Downloads\Chriz Easy BG alpha19 - Radar Fix 2026-10-01-setup.exe`.
-See [candidate verification](package-acceptance-alpha19-radar-2026-10-01.md).
-Do not restore quarantine, change antivirus protection or
-launch a live check without Christopher's agreement. See the
-[current handover](handover.md) and [package history](package-acceptance-alpha19-dragon-order-2026-09-30.md).
+**October 7 Defender/Radar follow-up:** Christopher authorized a bounded
+reproduction using the October 1 Radar Fix candidate and the completed Test19
+installation. Installation, Play, installation-details/path copying and cleanup
+produced no new Defender detection. Radar-off and approved Radar-on launches
+passed. The original September 30 alert's precise cause remains unknown; these
+results do not establish a confirmed false positive or cover every later build.
+See the [launch evidence and limits](defender-smoke-2026-10-07.md) and
+[candidate verification](package-acceptance-alpha19-radar-2026-10-01.md).
+No save was loaded or manually saved/deleted during those checks, and declining
+Radar's administrator prompt remains untested. Existing exclusions could not
+be inspected, limiting the real-time scanning claim; explicit scans ignored
+exclusions. Steam Cloud imported saves into Test19, so a separate local profile
+alone is not sufficient isolation for any future save/reload check.
+
+That one-time test authorization does not authorize another live check. Do not
+restore quarantine, change antivirus protection or launch a new live check
+without Christopher's agreement. See the [current handover](handover.md) and
+[original incident record](package-acceptance-alpha19-dragon-order-2026-09-30.md).
 
 ## Test selection
 
@@ -49,14 +60,20 @@ campaign-transition and reward-table tests are the main evidence for utility XP;
 this optional sample is not another campaign playthrough or a release blocker.
 One normal conversation in a shifted form is also optional.
 
-## Final app check tonight, when agreed
+## App check: recorded result and remaining coverage
 
-The candidate is ready. After the Defender issue has been assessed and the check agreed:
-check that Play leaves Radar off when unchecked, and that opting in requests
-Radar's own Windows approval. Confirm that Radar actually appears when approved;
-declining it must leave the game running and show a clear message. No second full
-game installation is required for this app-only check. These are pending checks,
-not permission for an agent to click or launch them while Christopher streams.
+The approved October 7 follow-up started without a game or Radar running.
+Unchecked Play reached Test19's main menu without launching Radar. After the
+game exited, checked Play requested Radar's Windows approval; Christopher
+approved it and Radar appeared. Those launch paths passed on the exact October 1
+candidate; they are not still pending. They do not prove combat readings or
+runtime acceptance of later packaged binaries.
+
+Declining the administrator prompt remains untested. If a further app check is
+agreed, confirm that declining leaves the game running and shows a clear message.
+No second full game installation is required for that check. This remaining
+coverage is not permission for an agent to click or launch anything while
+Christopher streams, or to repeat the already completed checks automatically.
 
 ## Agent-side checks before/after that install
 

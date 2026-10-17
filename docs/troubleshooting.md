@@ -23,25 +23,34 @@ Don't disable protection, add broad exclusions, or repeatedly restore/reinstall
 the flagged build. We need to investigate the exact detection first.
 
 On September 30, Defender quarantined the alpha.19 candidate as
-`Behavior:Win32/DefenseEvasion.A!ml`. The cause is under investigation; it has
-not been confirmed as a false positive. That incident removed the launcher, but
-the separately installed game and Radar files remained present. Do not delete
-your game or saves just because the launcher is missing.
+`Behavior:Win32/DefenseEvasion.A!ml`. The exact cause remains unknown; it has
+not been confirmed as a false positive. The approved October 7 checks of the
+October 1 Radar Fix candidate found no new detection during installation,
+Play, installation-details/path copying or cleanup. Radar-off and approved
+Radar-on launches passed; declining Windows approval remains untested. See the
+[test record and limits](defender-smoke-2026-10-07.md). These results do not
+guarantee acceptance of another build or on another machine. The September 30
+incident removed the launcher, but the separately installed game and Radar
+files remained present. Do not delete your game or saves just because the
+launcher is missing.
 
 ## The game starts without Radar
 
 Radar is stored in **BG Radar Overlay** inside the installation's `game` folder,
 not directly beside `InfinityLoader.exe`.
 
-The next corrected build adds **Start Radar with the game** beside Play. It is
-off initially and remembers your choice for each installation. Windows may ask
-for administrator approval for Radar; cancelling starts the game without it.
-If Radar cannot start, the corrected build shows a warning and optional details.
+The published alpha.19 and later builds offer **Start Radar with the game**
+beside Play. It is off initially and remembers your choice for each installation. Windows may ask
+for administrator approval for Radar; cancelling is designed to leave the game
+running without it. If Radar cannot start, CEBG shows a warning and optional details.
 This does not require running the whole CEBG installer as administrator.
 
-Older alpha.19 builds can silently fail to start Radar because they do not
-request its required Windows approval. The source correction is not yet a
-published or live-tested fix.
+Earlier local alpha.19 candidates did not provide the corrected launch path.
+The October 1 candidate passed the approved October 7 launch checks with Radar
+off and with Windows approval; the Radar window appeared. This verifies launch,
+not combat readings or the declined-approval path. See the
+[bounded launch evidence](defender-smoke-2026-10-07.md#follow-up-approved-radar-launch-06250629-kst)
+and [alpha.19 release verification](package-acceptance-alpha19-2026-10-07.md).
 
 ## The installer cannot find or create a folder
 
