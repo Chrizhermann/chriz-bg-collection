@@ -51,6 +51,11 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
 - Chapter-cap values for the new XP-cap component.
+- Installer link safety: configuration files and the EET/Infinity UI hooks now read and
+  write through held folder handles (`engine/src/held_folder.rs`). Other writers into
+  staged or installed games still check a path and then write by path, among them patch
+  restore, mod upgrades, uninstall, staging publication and mod materialization (inventory
+  in the held-handle PR). Moving them over waits for Christopher's go.
 - The [curation queue](#curation-decisions-still-in-chriss-review-queue) at the end of this file.
 
 **Deferred by decision**
