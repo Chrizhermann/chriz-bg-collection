@@ -21,10 +21,11 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 - Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
   Thief→Mage dual as the default, working for every thief kit.
-- Modpack: a runtime fix for campaign XP caps `650`/`651`; new chapter-bound XP caps
-  (values: Christopher); a generic join-XP catch-up for mod NPCs without EET's
-  `BD_JOINXP` block (see Sarah below). The next collection release pins only a
-  lab-verified `650`.
+- Modpack: lab-verified, unreleased fixes for campaign XP caps `650`/`651` and a new
+  optional join-XP catch-up `239` for mod NPCs without EET's `BD_JOINXP` block (see
+  Sarah below) wait for Christopher's release decision. Chapter-bound XP caps (`652`,
+  values: Christopher) come next. The next collection release pins only a lab-verified
+  `650`.
 - Hobgoblin challenge run (design with Christopher).
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle (see below).
@@ -160,8 +161,13 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
     each NPC's override script. EET adds it to vanilla NPCs, and some NPC mods ship
     their own; SarahTOB v8 has none. So her SoA version always joins at 89,000 XP
     (level 7).
-  - Fix in progress: a generic Modpack component adds EET's block to every joinable
-    mod NPC that lacks it, in SoA and ToB.
+  - Fix lab-verified, not yet released: optional Modpack component `239` reads EET's
+    own rules and adds its SoA ladder or ToB raise to every joinable NPC script that
+    lacks one (Fade, Sarah, Yeslick, Xan and Evandra get the ladder; Wilson and Yoshimo
+    get the raise). In a lab copy of a SoA save, a fresh Sarah joined at 750,000 XP.
+    Mod NPCs that got the ladder are then no longer raised to 2,500,000 at the ToB
+    transition, which matches EET's vanilla NPCs. Whether the collection offers `239`
+    is a curation decision.
 - [ ] Vanguard Defensive Stance: PraetorFallen reports that disabling "Use special
   abilities" in the AI settings stops companions from using the ability, but the main
   character still uses it automatically. Recorded on 2026-10-16; a fix is in progress on
