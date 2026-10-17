@@ -16,6 +16,24 @@ promise or authorization to implement every idea at once. Historical plans retai
 their original snapshots; the latest release/acceptance evidence takes precedence.
 Game-content work stays in its owning mod repository; CEBG owns integration and UX.
 
+## October 17 additions
+
+- [ ] **Sarah's previous custom portrait as the collection default.** Christopher
+  requested restoring the old red-haired, dark-background portrait privately and
+  making it Sarah's standard portrait for future installs. All three original
+  BMPs were recovered from the read-only reference and staged privately at
+  `%USERPROFILE%\.codex\artifacts\sarah-portrait-restore-20261017`.
+  The private restoration was subsequently applied October 17 after Christopher
+  confirmed the game closed: three BMPs backed up and replaced, hashes verified;
+  no save/CRE/TLK/WeiDU edits. In-game visual confirmation remains. Review/reuse Modpack's
+  existing private `codex/sarah-options` component 191. Christopher confirmed on
+  October 17 that he created this portrait himself, clearing the earlier
+  unknown-source blocker for his requested public default. Update the asset
+  provenance notice and bring only the portrait component/assets into the current
+  Modpack, then integrate it as the recommended portrait when Sarah is selected.
+  Do not merge obsolete conversion code from the old branch. Owner packaging and
+  recipe integration are still pending; the public default is not yet shipped or enabled.
+
 ## October 13 additions
 
 - [ ] Review Degrodel running away with the Helm of Balduran after Christopher
