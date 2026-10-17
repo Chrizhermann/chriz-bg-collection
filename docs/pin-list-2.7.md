@@ -20,7 +20,6 @@ except AJANTISBG2 (language 1).
 | ARTISANSKITPACK_NPC | — | same chriz-v1.2.0 artifact | One artifact supplies all three TP2s; use the exact same source hash. |
 | ARTISANSKITPACK_TWEAK | — | same chriz-v1.2.0 artifact | One artifact supplies all three TP2s; use the exact same source hash. |
 | ASCENSION | 2.1.0 | 2.1.0 | unchanged (installed = latest) |
-| AURA_BG1_2_EET | — | reconciled Chris fork, pending release | Reconcile local balance work with seven newer upstream commits beyond reviewed upstream `285dabbc`, then publish an immutable source. |
 | BARDICWONDERS | — | v2.9c-balance.2 @ `db0cf815` | Released selected fork; later finite-Abettor-HLA work still needs integration/release. |
 | BGGO | v3.5 | v3.6 | upgrade v3.5 -> v3.6 |
 | BRANWEN | v8pre | v8 | upgrade v8pre -> v8 |
@@ -51,10 +50,19 @@ except AJANTISBG2 (language 1).
 | XAN | v19 | v19 | unchanged (installed = latest) |
 | YESLICKNPC | v5.0 | v5.0 | unchanged (installed = latest) |
 
+## Deferred from version 1
+
+| Mod/layer | Version 1 treatment | Later-release prerequisite |
+|---|---|---|
+| AURA_BG1_2_EET | Excluded; no download, UI option, component selection, or v1 pin | Reconcile Chris's balance fork with the seven newer upstream commits beyond reviewed upstream `285dabbc`, verify the retained balance changes, fix component `6`'s legacy EEex detection, and publish an immutable source. |
+| AURA_BALANCE_PATCH / AURA_BALANCE_PATCH_SPELLS | Excluded with Aura; historical reference evidence only | Recover and compare the legacy spell layer and prove parity for the six item changes before retiring or absorbing either layer. |
+
 ## Chriz-layer repos
 
-Pinned at authoring time to a tagged release (or SHA) of each own repo:
-ABETTORHLAREBALANCE, AKCB_BERSERKER, AKCB_SHAPESHIFTER, AURA_BALANCE_PATCH_SPELLS, BG2EE-EET-FIXPACK, CHRIZ-BG-MODPACK, CHRIZ-BG-REBALANCE, CHRIZ-SOD-REMIX, EEEXREMOTE.
+Pinned at authoring time to a tagged release (or SHA) of each selected own repo:
+ABETTORHLAREBALANCE, AKCB_BERSERKER, AKCB_SHAPESHIFTER, BG2EE-EET-FIXPACK,
+CHRIZ-BG-MODPACK, CHRIZ-BG-REBALANCE, CHRIZ-SOD-REMIX, EEEXREMOTE.
+`AURA_BALANCE_PATCH_SPELLS` remains documented but needs no version 1 pin.
 
 ## Local hotfixes (22)
 

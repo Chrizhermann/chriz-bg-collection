@@ -3,6 +3,12 @@
 Listed at installed version **v1.0**.
 1 entries, 1 installed. ✓ = installed. Subgroup = choose one.
 
+## Version 1 policy
+
+Excluded together with Aura from version 1 of the collection. Do not download or install
+this historical layer while its parent mod is deferred. The checkmark below records only
+the reference installation.
+
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
 | 0 | Aura Balance Patch - Spell Effects |  |  | ✓ | |

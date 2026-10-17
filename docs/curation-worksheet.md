@@ -32,6 +32,9 @@ This is now a living document — decisions are preserved, tables are not regene
   The bard conversion (via local patches, e.g. `BARD_SPELL_FIX`, `SAFANA_LATE_SPELLS`)
   becomes an **optional toggle**.
 - **WINGS**: drop.
+- **AURA**: defer the entire NPC mod and both Aura-specific balance layers from version 1.
+  Preserve their catalogs and historical reference-install evidence for possible work after
+  the first release; do not download, offer, or install them in v1.
 
 ## 1. Third-party mods currently installed (35)
 
@@ -42,7 +45,7 @@ This is now a living document — decisions are preserved, tables are not regene
 | ARTISANSKITPACK_NPC | 6 | — | Artisan's Kitpack | same as above |
 | ARTISANSKITPACK_TWEAK | 7 | — | Artisan's Kitpack | will have to do a quick check together later |
 | ASCENSION | 16 | 2.1.0 | Rewritten Final Chapter of Throne of Bhaal | newest version essential |
-| AURA_BG1_2_EET | 4 | — | Aura NPC for Baldur's Gate | optional (default not, mark as overpowered currently, I will have to nerf it more later) |
+| AURA_BG1_2_EET | 4 | — | Aura NPC for Baldur's Gate | deferred from v1; preserve for a possible later release |
 | BARDICWONDERS | 21 | — | Bardic Wonders | Important part of my collection, BUT we will use our own custom version, which has it's own repo (which is a fork, that we keep in sync with upstream |
 | BGGO | 1 | v3.5 | Baldurs Gate Graphical Overhaul Core | optional, included by default |
 | BRANWEN | 1 | v8pre | Branwen BG2 NPC mod for players and modders | optional, included by default |
@@ -92,7 +95,7 @@ This is now a living document — decisions are preserved, tables are not regene
 | ABETTORHLAREBALANCE | 1 | 1.0.0 | Abettor of Mask | |
 | AKCB_BERSERKER | 1 | 2.0 | Berserker Overhaul Rebalance | |
 | AKCB_SHAPESHIFTER | 1 | 1.0 | Shapeshifter Overhaul Rebalance | |
-| AURA_BALANCE_PATCH_SPELLS | 1 | v1.0 | Aura Balance Patch - Spell Effects | |
+| AURA_BALANCE_PATCH_SPELLS | 1 | v1.0 | Aura Balance Patch - Spell Effects | deferred with Aura from v1 |
 | BG2EE-EET-FIXPACK | 5 | 1.0 | Branwen BG2 | |
 | CHRIZ-BG-MODPACK | 4 | v0.1.0 | Use Any Item | |
 | CHRIZ-BG-REBALANCE | 7 | v0.1.0 | ?????? ->  | |
@@ -108,8 +111,8 @@ of its own. Put the intended home in the Decision column.
 | Mod folder | Comps | Version | Identifies as | Decision |
 |---|---|---|---|---|
 | AK_MULTICLASS_PROFS_FIX | 1 | 2 | Fix missing multiclass proficiency stats in Artisan's Kitpac | |
-| AURA_BALANCE_PATCH | 1 | v1.0 | Aura NPC Balance Patch | |
-| BARD_SPELL_FIX | 1 | 1 | Add Bard spells to Aura and Safana CRE files | part of Safana-bard toggle |
+| AURA_BALANCE_PATCH | 1 | v1.0 | Aura NPC Balance Patch | deferred with Aura from v1 |
+| BARD_SPELL_FIX | 1 | 1 | Add Bard spells to Aura and Safana CRE files | Safana half only; no Aura dependency in v1 |
 | BEARSKIN_MAIL_FIX | 1 | 1.0 | Red Bearskin Mail - Rashemi Berserker Kit Usability Fix | |
 | BRANWEN_HAMMER_FIX | 1 | 1.0 | SR Branwen Spiritual Hammer (SPIN113) - Fix param1 for Creat | |
 | CBM_UAI_SCROLL | 1 | 1.0 | Use Any Item | |
