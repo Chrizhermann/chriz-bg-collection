@@ -653,6 +653,7 @@ name = "Casting speed only"
 [[components]]
 id = 3347
 name = "Customize (via cdtweaks.txt)"
+config_files = [{ path = "cdtweaks/cdtweaks.txt", content = "OUTER_SET party_movement_speed_enabled = 1\nOUTER_SET party_movement_speed_value = 125\nOUTER_SET party_casting_speed_enabled = 0\nOUTER_SET party_movement_speed_display_icons = 1\n" }]
 
 [[components]]
 id = 3350

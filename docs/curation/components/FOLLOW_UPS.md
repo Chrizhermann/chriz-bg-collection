@@ -115,11 +115,7 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   `../../handoffs/2026-09-10-red-wizard-sr-default.md`.
 - [ ] Validate [Tweaks Anthology](CDTWEAKS.md) `2312` against the final SR/IWDification/SCS
   spell set, `2420/2430` against the final Artisan proficiency and item rules, and `3390`
-  against final tracking-area scripts. Package the `3347` custom configuration (`125`
-  percent movement, casting-speed increase off, portrait icon on, as the reference
-  `cdtweaks/cdtweaks.txt` sets them); today `3347` installs with the upstream defaults
-  (`200` percent). The installer cannot yet place a mod's configuration file before its
-  run.
+  against final tracking-area scripts.
 - [ ] Artisan: add hidden, predicate-driven activation for tweak `1110` (`1010`+EEex) and
   `1010000` (`C0PR#CL.SPL` present); the feature schema has no file-exists predicate yet.
   Keep `30001`, `300010` and `8102` unavailable until priest delivery is redesigned.
@@ -241,6 +237,11 @@ Done on 2026-10-18 on `claude/recipe-fixes-20261018`:
   Sirene content needs the Will NPC, which the collection does not include. Order
   before CDTweaks and `1 -> 0` are enforced; component `2` is moot without a
   multi-romance route.
+- [Tweaks Anthology](CDTWEAKS.md) `3347` ships its reference `cdtweaks.txt` (`125`
+  percent movement, casting-speed increase off, portrait icon on). Recipe components
+  can now declare configuration files, which the installer places in the mod's
+  published folder before the run and records as `config-files.json` evidence
+  (branch `claude/mod-config-files-20261018`).
 
 Verified on 2026-10-17 against `claude/cebg-installer-fixes-20261014`:
 
