@@ -188,8 +188,9 @@ impl StepFailure {
     }
 
     /// Marks a failure of an install attempt that happened before it prepared anything for
-    /// WeiDU, such as getting the WeiDU executable. The orchestrator records the same pre-spawn
-    /// evidence as for a failed safety guard, so that the run can be retried.
+    /// WeiDU, such as getting the WeiDU executable, or while placing recipe configuration files,
+    /// which a retry repeats safely. The orchestrator records the same pre-spawn evidence as for
+    /// a failed safety guard, so that the run can be retried.
     pub fn before_preparation(self) -> Self {
         Self {
             before_preparation: true,
