@@ -189,6 +189,41 @@ fn exports_eet_compatibility_hash_evidence_without_mod_payloads() {
 }
 
 #[test]
+fn exports_config_file_evidence_without_the_placed_file() {
+    let fixture = fixture(false);
+    let evidence = br#"[{"component":3347,"path":"cdtweaks/cdtweaks.txt","sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","created":true}]"#;
+    write(
+        &fixture.managed,
+        ".chriz/attempts/attempt-001/steps/0001-0123456789abcdef/attempt-0001/config-files.json",
+        evidence,
+    );
+    write(
+        &fixture.managed,
+        "game/cdtweaks/cdtweaks.txt",
+        b"not for diagnostics",
+    );
+    let bundle = export_diagnostics(&DiagnosticsRequest {
+        managed_root: fixture.managed,
+        attempt_id: "attempt-001".into(),
+        output_path: fixture.output,
+        redact_roots: vec![fixture.home],
+    })
+    .unwrap();
+    let entries = zip_entries(&bundle.path);
+    let exported = entries
+        .iter()
+        .find(|(name, _)| name.ends_with("/config-files.json"))
+        .expect("placed configuration files must be listed in diagnostics");
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&exported.1).unwrap(),
+        serde_json::from_slice::<serde_json::Value>(evidence).unwrap()
+    );
+    assert!(!entries
+        .iter()
+        .any(|(name, _)| name.ends_with("cdtweaks.txt")));
+}
+
+#[test]
 fn exports_ui_launch_correction_evidence_without_mod_payloads() {
     let fixture = fixture(false);
     let evidence = br#"{"fix_id":"infinity-ui-1.28-setup-name-v1","original_mode":"explicit-tp2","effective_mode":"setup-name"}"#;

@@ -1,5 +1,6 @@
 //! WeiDU invocation, supervision, and verification.
 
+pub(crate) mod config_files;
 pub(crate) mod eet_compat;
 pub mod invocation;
 pub mod log;

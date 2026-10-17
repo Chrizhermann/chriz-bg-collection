@@ -321,6 +321,17 @@ CDTWEAKS_EEEX_COMPONENTS = frozenset({
     3450, 3460, 3480, 3500, 3520, 4200, 4240, *range(6000, 6361, 10),
 })
 
+# The reference setup installed 3347 ("Customize (via cdtweaks.txt)") with exactly this file:
+# movement at 125 percent, no faster casting, portrait icons on (see CDTWEAKS.md). The
+# installer places it before the run; the Tweaks Anthology reads it in its ALWAYS block, and
+# only 3347 reads these variables.
+CDTWEAKS_3347_CONFIG = (
+    "OUTER_SET party_movement_speed_enabled = 1\n"
+    "OUTER_SET party_movement_speed_value = 125\n"
+    "OUTER_SET party_casting_speed_enabled = 0\n"
+    "OUTER_SET party_movement_speed_display_icons = 1\n"
+)
+
 
 MOD_SPECS = {
     "bardicwonders": ("bardicwonders-v2.9c-balance.8", "Bardic Wonders", "BardicWonders/Setup-BardicWonders.tp2", "BARDICWONDERS"),
@@ -689,6 +700,10 @@ def _write_mods(root: Path, destination: Path) -> None:
             lines.extend(["", "[[components]]", f"id = {row.component_id}", f"name = {_q(row.component)}"])
             if catalog == "BARDICWONDERS" and row.component_id == 1008:
                 lines.append('prompts = [{ expected_output = "Please select 1 or 2 and press Enter.", answer = { kind = "literal", value = { kind = "integer", value = 2 } } }]')
+            if catalog == "CDTWEAKS" and row.component_id == 3347:
+                lines.append(
+                    f"config_files = [{{ path = {_q('cdtweaks/cdtweaks.txt')}, content = {_q(CDTWEAKS_3347_CONFIG)} }}]"
+                )
         (destination / "mods" / f"{mod_id}.toml").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
 

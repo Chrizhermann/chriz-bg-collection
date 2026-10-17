@@ -84,6 +84,7 @@ fn grouped_manifest() -> Manifest {
             name: format!("Component {id}"),
             stdin: None,
             prompts: Vec::new(),
+            config_files: Vec::new(),
         })
         .collect();
     manifest.mods.insert(RUN.to_owned(), installer);
@@ -771,6 +772,7 @@ fn variant_manifest() -> Manifest {
             name: format!("Component {id}"),
             stdin: None,
             prompts: Vec::new(),
+            config_files: Vec::new(),
         });
     }
     manifest

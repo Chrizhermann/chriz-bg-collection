@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 use bg_engine::error::EngineError;
 use bg_engine::manifest::{
-    AcquisitionPolicy, Component, ComponentRef, Conflict, Decision, Feature, FeatureInputRef,
-    InputOption, InputSpec, InvocationMode, Phase, Postcondition, PromptAnswer, PromptStep,
-    Readiness, Run, SourceKind,
+    AcquisitionPolicy, Component, ComponentRef, ConfigFile, Conflict, Decision, Feature,
+    FeatureInputRef, InputOption, InputSpec, InvocationMode, Phase, Postcondition, PromptAnswer,
+    PromptStep, Readiness, Run, SourceKind,
 };
 use bg_engine::validate::{check, validate, Finding, Severity};
 use bg_engine::Manifest;
@@ -220,6 +220,120 @@ fn text_marker_postcondition_rejects_empty_markers_and_unbounded_reads() {
     }
 }
 
+fn with_config_file(manifest: &mut Manifest, component: u32, path: &str, content: &str) {
+    manifest
+        .mods
+        .get_mut("eefixpack")
+        .unwrap()
+        .components
+        .iter_mut()
+        .find(|item| item.id == component)
+        .unwrap()
+        .config_files
+        .push(ConfigFile {
+            path: path.to_owned(),
+            content: content.to_owned(),
+        });
+}
+
+fn config_file_errors(manifest: &Manifest) -> usize {
+    validate(manifest)
+        .iter()
+        .filter(|finding| {
+            finding.rule == "component-config-files" && finding.severity == Severity::Error
+        })
+        .count()
+}
+
+#[test]
+fn component_config_file_inside_its_published_mod_folder_is_valid() {
+    let mut manifest = good();
+    with_config_file(
+        &mut manifest,
+        0,
+        "EE_Fixpack/fixpack.txt",
+        "OUTER_SET a = 1\r\n\tb\n",
+    );
+
+    assert_eq!(
+        config_file_errors(&manifest),
+        0,
+        "{:#?}",
+        validate(&manifest)
+    );
+}
+
+#[test]
+fn component_config_file_must_stay_inside_its_published_mod_folder() {
+    for path in [
+        "",
+        "fixpack.txt",
+        "/EE_Fixpack/fixpack.txt",
+        "../fixpack.txt",
+        "EE_Fixpack/../fixpack.txt",
+        "EE_Fixpack\\fixpack.txt",
+        "EE_Fixpack//fixpack.txt",
+        "EE_Fixpack/fixpack.txt:stream",
+        "EE_Fixpack",
+        "EE_FixpackX/fixpack.txt",
+        "ee_fixpack/fixpack.txt",
+        "override/fixpack.txt",
+        "weidu.exe/fixpack.txt",
+    ] {
+        let mut manifest = good();
+        with_config_file(&mut manifest, 0, path, "OUTER_SET a = 1\n");
+
+        assert_eq!(config_file_errors(&manifest), 1, "{path:?} was accepted");
+    }
+}
+
+#[test]
+fn component_config_file_content_must_be_bounded_text() {
+    for content in [
+        String::new(),
+        "x".repeat(64 * 1024 + 1),
+        "OUTER_SET a = 1\0\n".to_owned(),
+        "OUTER_SET a = 1\u{1b}\n".to_owned(),
+    ] {
+        let mut manifest = good();
+        with_config_file(&mut manifest, 0, "EE_Fixpack/fixpack.txt", &content);
+
+        assert_eq!(config_file_errors(&manifest), 1, "{content:?} was accepted");
+    }
+    let mut manifest = good();
+    with_config_file(
+        &mut manifest,
+        0,
+        "EE_Fixpack/fixpack.txt",
+        &"x".repeat(64 * 1024),
+    );
+    assert_eq!(config_file_errors(&manifest), 0);
+}
+
+#[test]
+fn component_config_file_has_one_declaration_ignoring_case() {
+    let mut manifest = good();
+    with_config_file(
+        &mut manifest,
+        0,
+        "EE_Fixpack/fixpack.txt",
+        "OUTER_SET a = 1\n",
+    );
+    with_config_file(
+        &mut manifest,
+        2,
+        "EE_Fixpack/FIXPACK.TXT",
+        "OUTER_SET a = 1\n",
+    );
+
+    assert_eq!(
+        config_file_errors(&manifest),
+        1,
+        "{:#?}",
+        validate(&manifest)
+    );
+}
+
 #[test]
 fn run_must_reference_an_existing_installer() {
     let mut manifest = good();
@@ -424,6 +538,7 @@ fn finalization_then_explicit_tail_is_valid() {
             name: format!("Synthetic component {id}"),
             stdin: None,
             prompts: Vec::new(),
+            config_files: Vec::new(),
         }));
     manifest.collection.runs = vec![
         run("eet-init", Phase::EetInitialization, &[0]),
@@ -450,6 +565,7 @@ fn duplicate_installer_component_ids_remain_invalid() {
             name: "Core again".to_owned(),
             stdin: None,
             prompts: Vec::new(),
+            config_files: Vec::new(),
         });
 
     let findings = validate(&manifest);
