@@ -16,8 +16,6 @@ Subgroup = mutually exclusive; choose zero or one.
   additionally requires Level Up Icon Tweaks `0`.
 - New-in-v5.2 component `306` supports EET only when EET GUI `0` is installed. EET GUI
   is now an optional interface choice; `306` remains excluded from this first UI batch.
-  Refresh the stale v5.1 latest-version
-  entry in `manifest/mod-sources.tsv` when the source pin is authored.
 - Component `38` is selected with the recommended Tweaks Anthology 15-minute,
   four-save interval setting (`3354`). It remains available with any curated
   interval-save choice (`3350`–`3357`) and is inactive when none is selected;

@@ -2096,6 +2096,184 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
     }
 }
 
+/// Adds one configuration file to the named component of the synthetic EE Fixpack installer.
+fn author_config_file(fixture: &ExecutableFixture, component: &str, path: &str, content: &str) {
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&mod_file).expect("read synthetic installer");
+    let anchor = format!("name = \"{component}\"");
+    assert_eq!(text.matches(&anchor).count(), 1, "{anchor}");
+    let entry = format!(
+        "{anchor}\nconfig_files = [{{ path = {}, content = {} }}]",
+        serde_json::to_string(path).unwrap(),
+        serde_json::to_string(content).unwrap()
+    );
+    fs::write(&mod_file, text.replace(&anchor, &entry)).expect("author synthetic config file");
+}
+
+/// The evidence directory of one attempt of one pipeline step.
+fn step_attempt(fixture: &ExecutableFixture, step_id: &str, attempt: u32) -> PathBuf {
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let step_key = &sha256_bytes(step_id.as_bytes())[..16];
+    fs::read_dir(
+        fixture
+            .managed
+            .join(".chriz/attempts")
+            .join(&replay.created().attempt_id)
+            .join("steps"),
+    )
+    .unwrap()
+    .filter_map(Result::ok)
+    .find(|entry| entry.file_name().to_string_lossy().ends_with(step_key))
+    .unwrap()
+    .path()
+    .join(format!("attempt-{attempt:04}"))
+}
+
+fn config_evidence(attempt: &Path) -> Value {
+    serde_json::from_slice(&fs::read(attempt.join("config-files.json")).unwrap()).unwrap()
+}
+
+#[cfg(windows)]
+#[test]
+fn install_places_component_config_files_before_weidu_in_both_games() {
+    const CONTENT: &str = "OUTER_SET fixed = 1\n";
+    let fixture = executable_fixture();
+    author_config_file(&fixture, "Core fixes", "EE_Fixpack/fixpack.txt", CONTENT);
+    let mut command = executable_command(&fixture);
+    // The synthetic WeiDU refuses to install unless the file is already in place.
+    command.env(
+        "CHRIZ_TEST_MOCK_WEIDU_REQUIRE_FILE",
+        "EE_Fixpack/fixpack.txt",
+    );
+    command.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+
+    let output = command.output().expect("execute config-file install");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    let expected = serde_json::json!([{
+        "component": 0,
+        "path": "EE_Fixpack/fixpack.txt",
+        "sha256": sha256_bytes(CONTENT.as_bytes()),
+        "created": true,
+    }]);
+    for (root, step) in [
+        ("bg1", "install:eefixpack-bg1"),
+        ("game", "install:eefixpack-bg2"),
+    ] {
+        assert_eq!(
+            fs::read_to_string(fixture.managed.join(root).join("EE_Fixpack/fixpack.txt"))
+                .expect("placed config file"),
+            CONTENT
+        );
+        assert_eq!(config_evidence(&step_attempt(&fixture, step, 1)), expected);
+    }
+}
+
+/// A failed placement leaves WeiDU unstarted, so resuming retries the run instead of demanding
+/// a fresh copy of the games. A file placed before the failure is accepted again.
+#[cfg(windows)]
+#[test]
+fn failed_config_file_placement_is_retried_on_resume() {
+    const PLACED: &str = "OUTER_SET fixed = 1\n";
+    const CONTENT: &str = "OUTER_SET fixed = 2\n";
+    let fixture = executable_fixture();
+    // The first file can be placed; the folder of the second one is missing.
+    author_config_file(&fixture, "Core fixes", "EE_Fixpack/fixpack.txt", PLACED);
+    author_config_file(
+        &fixture,
+        "BG1 preparation fixes",
+        "EE_Fixpack/later/fixpack.txt",
+        CONTENT,
+    );
+    let mut install = executable_command(&fixture);
+    install.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+
+    let output = install
+        .output()
+        .expect("execute install without the folder");
+
+    assert_eq!(output.status.code(), Some(1), "{}", stdout(&output));
+    let response = json_stdout(&output);
+    assert_eq!(
+        response["status"]["step_id"], "install:eefixpack-bg1",
+        "{response:#}"
+    );
+    assert!(
+        stdout_from_value(&response).contains("is missing"),
+        "{response:#}"
+    );
+    let failed = step_attempt(&fixture, "install:eefixpack-bg1", 1);
+    assert!(failed.join("pre-spawn-failure.json").is_file());
+    assert!(!failed.join("invocation.json").exists());
+    assert!(!failed.join("config-files.json").exists());
+    assert!(!fixture.managed.join("bg1/WeiDU.log").exists());
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/EE_Fixpack/fixpack.txt")).unwrap(),
+        PLACED
+    );
+
+    // The folder appears, as once a passing problem is fixed.
+    fs::create_dir(fixture.managed.join("bg1/EE_Fixpack/later")).unwrap();
+    let mut resume = executable_command(&fixture);
+    resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+    let output = resume.output().expect("resume after the failed placement");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/EE_Fixpack/later/fixpack.txt")).unwrap(),
+        CONTENT
+    );
+    let receipt: InstallReceipt = serde_json::from_slice(
+        &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(receipt.runs[0].attempts.len(), 1);
+    assert_eq!(receipt.runs[0].attempts[0].attempt, 2);
+    assert_eq!(receipt.runs[0].attempts[0].components, vec![0, 2]);
+    assert_eq!(
+        config_evidence(&step_attempt(&fixture, "install:eefixpack-bg1", 2)),
+        serde_json::json!([
+            {
+                "component": 0,
+                "path": "EE_Fixpack/fixpack.txt",
+                "sha256": sha256_bytes(PLACED.as_bytes()),
+                "created": false,
+            },
+            {
+                "component": 2,
+                "path": "EE_Fixpack/later/fixpack.txt",
+                "sha256": sha256_bytes(CONTENT.as_bytes()),
+                "created": true,
+            }
+        ])
+    );
+}
+
 #[cfg(windows)]
 #[test]
 fn setup_name_log_override_reconciles_from_attempt_owned_stdout() {

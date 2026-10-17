@@ -124,6 +124,27 @@ class CuratedFullRecipeTests(unittest.TestCase):
             for component in (2550, 2551, 2552):
                 self.assertNotIn(f"feature:cdtweaks:component-{component}", features)
 
+    def test_custom_party_speed_carries_the_reference_configuration_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "recipe"
+            build_recipe(self.root, output, "d6d46647b24b1a4baa501bca8c1d23048da3e83f")
+            declared = [
+                (path.stem, component["id"], config)
+                for path in sorted((output / "mods").glob("*.toml"))
+                for component in tomllib.loads(path.read_text(encoding="utf-8"))["components"]
+                for config in component.get("config_files", [])
+            ]
+            self.assertEqual(declared, [("cdtweaks", 3347, {
+                "path": "cdtweaks/cdtweaks.txt",
+                "content": "OUTER_SET party_movement_speed_enabled = 1\n"
+                           "OUTER_SET party_movement_speed_value = 125\n"
+                           "OUTER_SET party_casting_speed_enabled = 0\n"
+                           "OUTER_SET party_movement_speed_display_icons = 1\n",
+            })])
+            collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
+            features = {feature["id"]: feature for feature in collection["features"]}
+            self.assertEqual(features["feature:cdtweaks:component-3347"]["decision"], "optional")
+
     def test_screened_optional_batch_has_real_exclusivity_and_keeps_defaults(self) -> None:
         additions = {
             "stratagems": [3015, 4020, 4050, 4051, 4052, 4093, 4145, 4150,

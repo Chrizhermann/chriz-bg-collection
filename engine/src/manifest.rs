@@ -257,6 +257,24 @@ pub struct Component {
     /// Ordered output-gated prompt answers for this component.
     #[serde(default)]
     pub prompts: Vec<PromptStep>,
+    /// Configuration files the installer reads while installing this component.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_files: Vec<ConfigFile>,
+}
+
+/// Largest configuration file a component may place.
+pub const MAX_CONFIG_FILE_BYTES: usize = 64 * 1024;
+
+/// A recipe-authored text file that a mod reads at install time, such as the Tweaks
+/// Anthology's `cdtweaks.txt`. It is placed before the run that installs its component.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConfigFile {
+    /// Normalized path relative to the staged target root, below a folder that the installer's
+    /// artifact publishes.
+    pub path: String,
+    /// Exact file content.
+    pub content: String,
 }
 
 /// A single installer definition from `mods/<id>.toml`.

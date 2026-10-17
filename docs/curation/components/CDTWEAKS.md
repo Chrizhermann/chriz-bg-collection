@@ -71,9 +71,11 @@ what changed since v18 and Christopher's decisions.
   workaround is enabled. Validate them with the final Artisan proficiency/item rules;
   ordinary multiclasses such as the planned Viconia Cleric/Thief are not affected by that
   dual-class UI limitation.
-- `3347` is optional. When selected, ship the curated `cdtweaks.txt` values from the
-  reference setup: movement enabled at `125` percent, casting-speed increase disabled,
-  and the portrait icon enabled.
+- `3347` is optional. When it is selected, the installer places the reference setup's
+  `cdtweaks/cdtweaks.txt` before the Tweaks Anthology run: movement enabled at `125`
+  percent, casting-speed increase disabled, portrait icon enabled. Only `3347` reads
+  these variables, and an existing file with other content stops the run instead of
+  being overwritten.
 - `3390` is optional. EET satisfies its upstream availability predicate; it extends the
   final tracking-area scripts, so validate its order with IWDification and SCS.
 - `2720` and `3121` are deliberate new defaults rather than reference-install choices.

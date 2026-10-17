@@ -107,6 +107,8 @@ const CACHE_REPAIRS_EVIDENCE: &str = "cache-repairs";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
 const INVOCATION_FILE: &str = "invocation.json";
+/// Recipe-authored configuration files placed before the attempt's WeiDU run.
+const CONFIG_FILES_EVIDENCE_FILE: &str = "config-files.json";
 const PRE_SPAWN_FAILURE_FILE: &str = "pre-spawn-failure.json";
 const PROCESS_RESULT_FILE: &str = "process-result.json";
 const PROCESS_OUTPUT_FILE: &str = "process-output.log";
@@ -2873,6 +2875,29 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
         let tool = self
             .run_tool(run)
             .map_err(StepFailure::before_preparation)?;
+        // Placing configuration files comes next and is retryable as well: it only creates
+        // complete files and accepts identical ones, and its evidence is written after the last
+        // file, so a failed placement leaves the attempt with its before.log alone.
+        let config_files = mod_file
+            .components
+            .iter()
+            .filter(|component| components.contains(&component.id))
+            .flat_map(|component| {
+                component
+                    .config_files
+                    .iter()
+                    .map(move |file| (component.id, file))
+            })
+            .collect::<Vec<_>>();
+        if !config_files.is_empty() {
+            let evidence =
+                crate::weidu::config_files::place(self.target_root(run.target), &config_files)
+                    .map_err(|error| step_error(error).before_preparation())?;
+            write_json_once(
+                &attempt.evidence_root.join(CONFIG_FILES_EVIDENCE_FILE),
+                &evidence,
+            )?;
+        }
         if ui_correction {
             crate::weidu::invocation::validate_setup_name_declarations(
                 self.frozen
@@ -3795,6 +3820,7 @@ fn pre_spawn_file_digests(
                     name.as_str(),
                     INVOCATION_FILE
                         | DEBUG_LOG_FILE
+                        | CONFIG_FILES_EVIDENCE_FILE
                         | "eet-compatibility.json"
                         | "ui-invocation-compatibility.json"
                 ))

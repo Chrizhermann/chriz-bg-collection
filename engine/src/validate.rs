@@ -8,7 +8,7 @@ use crate::error::EngineError;
 use crate::manifest::{
     AcquisitionPolicy, Artifact, ComponentRef, Decision, Feature, FeatureGroup, GameRoot,
     InputSpec, InvocationMode, PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source,
-    SourceKind,
+    SourceKind, MAX_CONFIG_FILE_BYTES,
 };
 use crate::postcondition::{
     is_safe_normalized_relative_path, marker_len_exceeds, MAX_TEXT_FILE_MARKER_BYTES,
@@ -65,6 +65,8 @@ pub const RULE_BLOCKED_ARTIFACTS: &str = "blocked-artifacts";
 pub const RULE_PATHS: &str = "paths";
 /// Rule requiring run postconditions to be safe, bounded, and meaningful.
 pub const RULE_RUN_POSTCONDITIONS: &str = "run-postconditions";
+/// Rule requiring component configuration files to be bounded text inside their mod's folder.
+pub const RULE_COMPONENT_CONFIG_FILES: &str = "component-config-files";
 /// Rule preventing setup-name aliases from selecting the same TP2 implicitly.
 pub const RULE_SETUP_NAME_AMBIGUITY: &str = "setup-name-ambiguity";
 /// Rule preventing one installer component from running twice against one game root.
@@ -131,6 +133,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_blocked_artifacts(manifest, &mut findings);
     check_paths(manifest, &mut findings);
     check_run_postconditions(manifest, &mut findings);
+    check_component_config_files(manifest, &mut findings);
     check_setup_name_ambiguity(manifest, &mut findings);
     check_component_ids(manifest, &mut findings);
     check_component_placement(manifest, &mut findings);
@@ -272,6 +275,77 @@ fn check_run_postconditions(manifest: &Manifest, findings: &mut Vec<Finding>) {
                             ),
                         );
                     }
+                }
+            }
+        }
+    }
+}
+
+fn check_component_config_files(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    // Windows paths ignore case, so each file has exactly one declaration in the recipe.
+    let mut owners: BTreeMap<String, (&str, u32)> = BTreeMap::new();
+    for (mod_id, mod_file) in &manifest.mods {
+        let publish_roots = manifest
+            .artifacts
+            .get(&mod_file.artifact_id)
+            .map(|artifact| artifact.archive.publish_roots.as_slice())
+            .unwrap_or_default();
+        for component in &mod_file.components {
+            for file in &component.config_files {
+                let subject = format!(
+                    "installer {mod_id:?} component {} config file {:?}",
+                    component.id, file.path
+                );
+                if !is_safe_normalized_relative_path(&file.path) {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!("{subject} must be a normalized portable target-relative path"),
+                    );
+                } else if !publish_roots.iter().any(|root| {
+                    file.path
+                        .strip_prefix(root.as_str())
+                        .is_some_and(|rest| rest.starts_with('/'))
+                }) {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} must be inside a folder that artifact {:?} publishes",
+                            mod_file.artifact_id
+                        ),
+                    );
+                }
+                if file.content.is_empty() || file.content.len() > MAX_CONFIG_FILE_BYTES {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} must contain between 1 and {MAX_CONFIG_FILE_BYTES} bytes"
+                        ),
+                    );
+                }
+                if file.content.chars().any(|character| {
+                    character.is_control() && !matches!(character, '\t' | '\n' | '\r')
+                }) {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} must be text without control characters other than tabs and line breaks"
+                        ),
+                    );
+                }
+                if let Some((first_mod, first_component)) =
+                    owners.insert(file.path.to_ascii_lowercase(), (mod_id, component.id))
+                {
+                    error(
+                        findings,
+                        RULE_COMPONENT_CONFIG_FILES,
+                        format!(
+                            "{subject} is also declared by installer {first_mod:?} component {first_component}"
+                        ),
+                    );
                 }
             }
         }

@@ -78,10 +78,6 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   and been played with saves, but no acceptance record captures loader boot, BG1 start or
   save/reload, and the record's "no clean BG1 source" reason is outdated. The `430`
   record still says the alpha.11 pin awaits publication although alpha.12 is pinned.
-- [ ] Correct the user-facing omission texts in both `known-limitations.toml` files:
-  Artisan `8101` is "Pale Master Spells: Unholy Necromancy Spells Only" (not "Revised
-  Stormlord") and Artisan NPC `10004` is "Make Rasaad a Sacred Fist" (not "Stormlord
-  Yeslick").
 - [ ] The release gate evaluates only the Recommended selection
   (`engine/src/release_validate.rs`). The optional post-EET runs `eeexremote-bg2` and
   `chriz-bg-modpack-campaign-xp-bg2` are not in `approved_tail_runs`, so a user who
@@ -103,14 +99,8 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   pinned and still the newest); never follow unreleased `master`.
 - [ ] [Warlock](C0WARLOCK.md): pin exact commit
   `a821992228c87a4bef75be4bc2fc833f8db46819` (still upstream head), update the renamed
-  `Artisans_Warlock/Artisans_Warlock.TP2` path, and stop describing it as a v3.0 target,
-  also in `mod-sources.tsv`. Waits for the Contingency prompt answer below.
-- [ ] [The 2.7 pin list](../../pin-list-2.7.md) has not changed since 2026-09-04 and
-  contradicts the recipe for Artisan, Bardic Wonders, Spell Revisions, Evandra and the
-  Tweaks Anthology; `mod-sources.tsv` is stale for BuffBot, the Modpack, SoD Remix, Spell
-  Revisions and Bardic Wonders. Regenerate both from
-  `recipes/curated-full-current/artifacts/`, or mark them historical with the artifacts as
-  the source of truth.
+  `Artisans_Warlock/Artisans_Warlock.TP2` path, and stop describing it as a v3.0 target.
+  Waits for the Contingency prompt answer below.
 - [ ] Stale catalog wording: `CHRIZ-SOD-REMIX.md` still names v0.6.11 as the pin;
   `BARDICWONDERS.md` cites `balance.4`/`balance.6`; `ABETTORHLAREBALANCE.md` still says
   "keep unavailable" although the finite Abettor HLA work ships inside Bardic Wonders.
@@ -127,10 +117,6 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 - [ ] [EEex Remote Console](EEEXREMOTE.md): its repository documentation at the pinned
   commit still describes EEex 1.0.x; the update sits on its unmerged branch
   `codex/eeex-1.2-compat`.
-- [ ] [Crossmod](CROSSMODBG2.md): fix Sirene detection. Crossmod looks for `bc0siren.dlg`,
-  but the installed Sirene ships `bc0sire2.dlg`, so its Sirene content is probably
-  skipped. (Order before CDTweaks and `1 -> 0` are enforced; component `2` is moot
-  without a multi-romance route.)
 - [ ] Red Wizard source follow-up: the pinned Artisan tag still removes fixed vanilla spell
   resrefs (`ArtisansKitpack/lib/redwizard.tpa`) instead of checking effective prohibited
   schools, and SR `60` custom-kit school cleanup is uninvestigated. EET `EDWIN7_` coverage
@@ -138,9 +124,7 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   `../../handoffs/2026-09-10-red-wizard-sr-default.md`.
 - [ ] Validate [Tweaks Anthology](CDTWEAKS.md) `2312` against the final SR/IWDification/SCS
   spell set, `2420/2430` against the final Artisan proficiency and item rules, and `3390`
-  against final tracking-area scripts. Package the `3347` custom configuration (`125`
-  percent movement, casting-speed increase off, portrait icon on); today `3347` installs
-  without it.
+  against final tracking-area scripts.
 - [ ] Artisan: add hidden, predicate-driven activation for tweak `1110` (`1010`+EEex) and
   `1010000` (`C0PR#CL.SPL` present); the feature schema has no file-exists predicate yet.
   Keep `30001`, `300010` and `8102` unavailable until priest delivery is redesigned.
@@ -252,6 +236,24 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   as a default Wizard Slayer.
 
 ## Done since 2026-09-04
+
+Done on 2026-10-18 on `claude/recipe-fixes-20261018`:
+
+- Both `known-limitations.toml` files name Artisan `8101` and NPC `10004` correctly,
+  checked against the Artisan tag `v4.81a-dev.85928f9-chriz.1`.
+- The pin tables in [the 2.7 pin list](../../pin-list-2.7.md) are generated from both
+  recipes and checked by `engine/tests/pin_list.rs`; the 2026-08/09 planning list stays
+  there as history. `manifest/mod-sources.tsv` is captured research data, not a pin
+  list, and the catalog notes that called it one now point at the recipe artifacts.
+- [Crossmod](CROSSMODBG2.md) Sirene audit: detection fails upstream, but Crossmod's only
+  Sirene content needs the Will NPC, which the collection does not include. Order
+  before CDTweaks and `1 -> 0` are enforced; component `2` is moot without a
+  multi-romance route.
+- [Tweaks Anthology](CDTWEAKS.md) `3347` ships its reference `cdtweaks.txt` (`125`
+  percent movement, casting-speed increase off, portrait icon on). Recipe components
+  can now declare configuration files, which the installer places in the mod's
+  published folder before the run and records as `config-files.json` evidence
+  (branch `claude/mod-config-files-20261018`).
 
 Verified on 2026-10-17 against `claude/cebg-installer-fixes-20261014`:
 
