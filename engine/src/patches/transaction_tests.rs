@@ -619,9 +619,9 @@ fn hold_then_repoint(fixture: &Fixture, dir: &Path, other: &Path) -> files::Held
     held
 }
 
-/// Every read, replacement and removal of a restoration stays in the folders that were held,
-/// even once a link above the installation points elsewhere. Replaced tables keep the spelling
-/// of their names, and nothing is left where the replacements were written.
+/// Every read, write and removal of a restoration stays in the folders that were held, even once
+/// a link above the installation points elsewhere. Restored tables keep the spelling of their
+/// names, and nothing else appears in the record.
 #[test]
 fn restoring_stays_in_the_held_folders_after_a_link_above_is_repointed() {
     let fixture = Fixture::new();
@@ -708,10 +708,10 @@ fn restoring_refuses_a_link_at_every_level_without_going_through_it() {
     }
 }
 
-/// The adapter's files appear in the held game only once complete, never replace anything, and
-/// stay in the held folders once a link above the installation points elsewhere.
+/// The adapter's files are created in the held game and never replace anything, even once a
+/// link above the installation points elsewhere.
 #[test]
-fn the_adapter_is_placed_complete_in_the_held_game_only() {
+fn the_adapter_is_created_in_the_held_game_only() {
     let fixture = Fixture::new();
     let (dir, _, _) = prepared(&fixture);
     let sources: [(&str, &[u8]); 2] = [

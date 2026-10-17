@@ -5,6 +5,7 @@ use crate::{
         ArtifactCache, DownloadRequest,
     },
     events::ConsoleSink,
+    held_folder::Existing,
     lock::TargetLock,
     weidu::{
         invocation::{Invocation, VerifiedWeidu},
@@ -612,7 +613,7 @@ pub(super) fn put_back_fixture(
     )
 }
 /// Copy the verified adapter `payload` from the record into a new adapter folder in the game.
-/// Each file is written in the record and appears in the game only once complete.
+/// Each file is created in the held game and never replaces anything already there.
 fn place_adapter(
     held: &files::HeldTransaction,
     payload: &[(&str, u64, &str)],
@@ -628,8 +629,8 @@ fn place_adapter(
             .open_or_create_below(std::iter::once(catalog::ADAPTER).chain(folders))
             .map_err(files::held)?;
         folder
-            .create_file_from(&held.record, last, &bytes)
-            .map_err(|error| format!("{}: {error}", folder.path().join(last).display()))?;
+            .write_file(last, &bytes, Existing::Refuse)
+            .map_err(files::held)?;
     }
     Ok(())
 }
@@ -827,7 +828,7 @@ fn restore_inner(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result<(), String
     )
 }
 /// Put the affected files back from their backups and remove what the patch created, all
-/// through the held folders. Each restored file replaces the patched one in a single step.
+/// through the held folders. Each restored file is written into the patched one, as before.
 fn put_back(held: &files::HeldTransaction, p: &Prepared, r: &Restoring) -> Result<(), String> {
     for (name, expected) in &p.backups {
         let bytes = files::read_held(&held.record, &format!("affected/{name}"), 16 * 1024 * 1024)?;
@@ -837,7 +838,7 @@ fn put_back(held: &files::HeldTransaction, p: &Prepared, r: &Restoring) -> Resul
         // An affected file goes back only into a folder that is still there.
         let (folders, last) = files::split_relative(name)?;
         let folder = held.game.open_below(folders).map_err(files::held)?;
-        files::replace_held(&folder, &held.record, last, &bytes)?;
+        files::write_held(&folder, last, &bytes)?;
     }
     let mut created = r.removable.iter().collect::<Vec<_>>();
     created.sort_by_key(|(name, _)| std::cmp::Reverse(name.len()));

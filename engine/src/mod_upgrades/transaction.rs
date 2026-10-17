@@ -340,8 +340,8 @@ fn verify_hashes(
     }
     Ok(())
 }
-/// Put `bytes` in place of the game file `name`, creating it and any missing folders. The file
-/// is written in the update record first and replaces the old one in a single step.
+/// Write `bytes` to the game file `name` through the held game, creating it and any missing
+/// folders. An existing file is written into, as a truncating write by path did.
 pub(super) fn write_existing(
     held: &files::HeldTransaction,
     name: &str,
@@ -352,7 +352,7 @@ pub(super) fn write_existing(
         .game
         .open_or_create_below(folders)
         .map_err(files::held)?;
-    files::replace_held(&folder, &held.record, last, bytes)
+    files::write_held(&folder, last, bytes)
 }
 fn backups(dir: &Path, p: &Prepared) -> Result<(), String> {
     for (name, hash) in &p.backups {
@@ -790,7 +790,7 @@ pub(super) fn put_back_fixture(
     )
 }
 /// Put the affected files back from their backups and remove what the update created, all
-/// through the held folders. Each restored file replaces the updated one in a single step.
+/// through the held folders. Each restored file is written into the updated one, as before.
 fn put_back(held: &files::HeldTransaction, p: &Prepared, r: &Restoring) -> Result<(), String> {
     const CHANGED: &str = "New update file changed during restoration.";
     // Validate the entire cleanup set before overwriting/removing anything.

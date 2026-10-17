@@ -1,5 +1,5 @@
 //! Constrained files and independent copies used by the first patch transaction.
-use crate::held_folder::{self, EntryError, EntryErrorKind, HeldFolder, RemovableFile};
+use crate::held_folder::{self, EntryError, EntryErrorKind, Existing, HeldFolder, RemovableFile};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -228,23 +228,13 @@ pub(crate) fn verify_held_hashes(
     Ok(())
 }
 
-/// Put a file with `bytes` in place of `name` in `folder` in one step, or create it. It is written
-/// in `scratch` first, so an interruption leaves either the old file or the new one. An existing
-/// entry must be an independent regular file; a replaced file keeps the spelling of its name.
-pub(crate) fn replace_held(
-    folder: &HeldFolder,
-    scratch: &HeldFolder,
-    name: &str,
-    bytes: &[u8],
-) -> Result<(), String> {
-    let path = folder.path().join(name);
-    // Only checked: the file is closed again before it is replaced.
-    if let Some((file, _)) = present(folder.open_file(name))? {
-        independent(&file, &path)?;
-    }
+/// Write `bytes` to the file `name` directly in `folder` as a truncating write by path did: an
+/// existing file, which must be a direct regular file without another name, keeps its identity
+/// and gets the new content; a missing one is created in `folder`.
+pub(crate) fn write_held(folder: &HeldFolder, name: &str, bytes: &[u8]) -> Result<(), String> {
     folder
-        .replace_file_from(scratch, name, bytes)
-        .map_err(|error| format!("{}: {error}", path.display()))
+        .write_file(name, bytes, Existing::Overwrite)
+        .map_err(held)
 }
 
 /// The file `name` below `folder` that a transaction created, opened so that it can be removed,

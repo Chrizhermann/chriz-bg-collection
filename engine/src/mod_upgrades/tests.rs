@@ -391,7 +391,7 @@ fn restoring_an_update_stays_in_the_held_folders_after_a_link_above_is_repointed
     assert_eq!(tree(&other), elsewhere);
 }
 
-/// Writing an update file creates only missing folders, replaces a file in one step, refuses
+/// Writing an update file creates only missing folders, writes into an existing file, refuses
 /// anything else in its place, and stays in the held folders once a link above points elsewhere.
 #[cfg(windows)]
 #[test]

@@ -28,7 +28,8 @@ pub(crate) struct EntryError {
 pub(crate) enum EntryErrorKind {
     /// Nothing has this name.
     Missing,
-    /// A link or other reparse point, or a file where a folder belongs or the other way round.
+    /// A link or other reparse point, or a file where a folder belongs or the other way round. A
+    /// file that is to be written must not have another name either.
     NotDirect,
     /// Inspecting it failed otherwise.
     Io(io::Error),
@@ -80,6 +81,15 @@ pub(crate) struct HeldFolder {
     path: PathBuf,
     /// Whether this folder itself was opened so that it can be removed.
     removable: bool,
+}
+
+/// What [`HeldFolder::write_file`] does when an entry already has the name.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Existing {
+    /// Fail and leave the entry as it is.
+    Refuse,
+    /// Write the new content into the existing file.
+    Overwrite,
 }
 
 /// A direct regular file opened so that it can be removed; see [`HeldFolder::open_removable_file`].
@@ -175,37 +185,13 @@ impl HeldFolder {
 
     /// Create the file `name` with `content`, never replacing anything already there.
     pub(crate) fn create_file(&self, name: &str, content: &[u8]) -> io::Result<()> {
-        self.publish_file(self, name, content, false)
+        self.publish_file(name, content, false)
     }
 
     /// Put a file with `content` in place of `name` in one step, or create it. A directory with
-    /// that name is not replaced, and a link with that name is never followed. A replaced file
-    /// keeps the spelling it had.
+    /// that name is not replaced, and a link with that name is never followed.
     pub(crate) fn replace_file(&self, name: &str, content: &[u8]) -> io::Result<()> {
-        self.publish_file(self, name, content, true)
-    }
-
-    /// Like [`Self::create_file`], but the file is written in `scratch`, another held folder on the
-    /// same volume, and moved here only once it is complete. Nothing unfinished ever appears in
-    /// this folder, not even after a crash.
-    pub(crate) fn create_file_from(
-        &self,
-        scratch: &HeldFolder,
-        name: &str,
-        content: &[u8],
-    ) -> io::Result<()> {
-        self.publish_file(scratch, name, content, false)
-    }
-
-    /// Like [`Self::replace_file`], but the file is written in `scratch`, another held folder on
-    /// the same volume, and moved here only once it is complete.
-    pub(crate) fn replace_file_from(
-        &self,
-        scratch: &HeldFolder,
-        name: &str,
-        content: &[u8],
-    ) -> io::Result<()> {
-        self.publish_file(scratch, name, content, true)
+        self.publish_file(name, content, true)
     }
 }
 
@@ -408,28 +394,74 @@ impl HeldFolder {
         same_file::Handle::from_file(self.folder().try_clone()?)
     }
 
-    /// Only a complete file is ever published under `name`.
-    fn publish_file(
+    /// Write `content` to the file `name` in this folder as a truncating write by path does, but
+    /// without resolving a path. A missing file is created here, so it gets the permissions this
+    /// folder gives new files. With [`Existing::Overwrite`], an existing file is emptied and
+    /// written through the handle that checked it: it stays the same file, with its permissions,
+    /// owner, file ID and the spelling of its name. It must be a direct regular file without
+    /// another name, since writing through a link or a second name would change another place. A
+    /// file created here is removed again if writing it fails.
+    pub(crate) fn write_file(
         &self,
-        scratch: &HeldFolder,
         name: &str,
         content: &[u8],
-        replace: bool,
-    ) -> io::Result<()> {
+        existing: Existing,
+    ) -> Result<(), EntryError> {
+        let path = self.path.join(name);
+        check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
+        let wide = handles::wide(name);
+        if existing == Existing::Overwrite {
+            match handles::open_writable_entry(self.folder(), &wide) {
+                Ok(file) => {
+                    let metadata = file
+                        .metadata()
+                        .map_err(|error| EntryError::io(path.clone(), error))?;
+                    if !metadata.is_file() || is_link_or_reparse(&metadata) {
+                        return Err(EntryError::not_direct(path));
+                    }
+                    let names = handles::link_count(&file)
+                        .map_err(|error| EntryError::io(path.clone(), error))?;
+                    if names != 1 {
+                        return Err(EntryError::not_direct(path));
+                    }
+                    return file
+                        .set_len(0)
+                        .and_then(|()| (&file).write_all(content))
+                        .and_then(|()| file.sync_all())
+                        .map_err(|error| EntryError::io(path, error));
+                }
+                Err(error) if error.kind() == ErrorKind::NotFound => {}
+                Err(error) => return Err(EntryError::io(path, error)),
+            }
+        }
+        let file = handles::create_new_file(self.folder(), &wide)
+            .map_err(|error| EntryError::io(path.clone(), error))?;
+        let written = (&file).write_all(content).and_then(|()| file.sync_all());
+        match written {
+            Ok(()) => Ok(()),
+            // Remove the unfinished new file through its own handle.
+            Err(error) => match handles::delete_on_close(&file) {
+                Ok(()) => Err(EntryError::io(path, error)),
+                Err(cleanup) => Err(EntryError::io(
+                    path,
+                    io::Error::new(
+                        error.kind(),
+                        format!("{error}; the unfinished file could not be removed: {cleanup}"),
+                    ),
+                )),
+            },
+        }
+    }
+
+    /// Only a complete file is ever published under `name`.
+    fn publish_file(&self, name: &str, content: &[u8], replace: bool) -> io::Result<()> {
         check_name(name)?;
-        let temporary = scratch.create_temporary_file()?;
+        let temporary = self.create_temporary_file()?;
         let published = (&temporary)
             .write_all(content)
             .and_then(|()| temporary.sync_all())
             .and_then(|()| {
-                // A replacement keeps the spelling of the entry it replaces.
-                let existing = if replace {
-                    handles::existing_name(self.folder(), &handles::wide(name))?
-                } else {
-                    None
-                };
-                let target = existing.unwrap_or_else(|| handles::wide(name));
-                handles::rename_into(&temporary, self.folder(), &target, replace)
+                handles::rename_into(&temporary, self.folder(), &handles::wide(name), replace)
             });
         match published {
             Ok(()) => Ok(()),
@@ -571,8 +603,8 @@ mod handles {
     use windows_sys::Wdk::Foundation::OBJECT_ATTRIBUTES;
     use windows_sys::Wdk::Storage::FileSystem::{
         FileRenameInformation, NtCreateFile, NtSetInformationFile, FILE_CREATE,
-        FILE_DIRECTORY_FILE, FILE_NON_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_IF,
-        FILE_OPEN_REPARSE_POINT, FILE_RENAME_INFORMATION, FILE_SYNCHRONOUS_IO_NONALERT,
+        FILE_DIRECTORY_FILE, FILE_OPEN, FILE_OPEN_IF, FILE_OPEN_REPARSE_POINT,
+        FILE_RENAME_INFORMATION, FILE_SYNCHRONOUS_IO_NONALERT,
     };
     use windows_sys::Win32::Foundation::{
         RtlNtStatusToDosError, ERROR_INVALID_FUNCTION, ERROR_INVALID_PARAMETER,
@@ -581,14 +613,13 @@ mod handles {
     };
     use windows_sys::Win32::Storage::FileSystem::{
         FileDispositionInfo, FileDispositionInfoEx, FileFullDirectoryInfo,
-        FileFullDirectoryRestartInfo, FileNameInfo, GetFileInformationByHandle,
-        GetFileInformationByHandleEx, SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
-        DELETE, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT,
-        FILE_DISPOSITION_FLAG_DELETE, FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE,
-        FILE_DISPOSITION_FLAG_POSIX_SEMANTICS, FILE_DISPOSITION_INFO, FILE_DISPOSITION_INFO_EX,
-        FILE_FULL_DIR_INFO, FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_LIST_DIRECTORY,
-        FILE_NAME_INFO, FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
-        FILE_TRAVERSE, SYNCHRONIZE,
+        FileFullDirectoryRestartInfo, GetFileInformationByHandle, GetFileInformationByHandleEx,
+        SetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, DELETE, FILE_ATTRIBUTE_DIRECTORY,
+        FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT, FILE_DISPOSITION_FLAG_DELETE,
+        FILE_DISPOSITION_FLAG_IGNORE_READONLY_ATTRIBUTE, FILE_DISPOSITION_FLAG_POSIX_SEMANTICS,
+        FILE_DISPOSITION_INFO, FILE_DISPOSITION_INFO_EX, FILE_FULL_DIR_INFO, FILE_GENERIC_READ,
+        FILE_GENERIC_WRITE, FILE_LIST_DIRECTORY, FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE,
+        FILE_SHARE_READ, FILE_SHARE_WRITE, FILE_TRAVERSE, SYNCHRONIZE,
     };
     use windows_sys::Win32::System::IO::IO_STATUS_BLOCK;
 
@@ -693,61 +724,18 @@ mod handles {
         }
     }
 
-    /// The stored name of the entry that the file system finds for `name` directly inside
-    /// `folder`, which can differ from `name` in case, or `None` if nothing has that name.
-    pub(super) fn existing_name(folder: &File, name: &[u16]) -> io::Result<Option<Vec<u16>>> {
-        let entry = match open_relative(
+    /// Open the entry `name` directly inside `folder` to write into it. Others may still read and
+    /// write it, as with a plain open for writing, but nobody can rename or delete it meanwhile.
+    pub(super) fn open_writable_entry(folder: &File, name: &[u16]) -> io::Result<File> {
+        open_relative(
             folder,
             name,
-            FILE_READ_ATTRIBUTES | SYNCHRONIZE,
-            SHARE_ALL,
+            FILE_GENERIC_WRITE | FILE_READ_ATTRIBUTES,
+            SHARE_ALL_BUT_DELETE,
             FILE_OPEN,
             0,
             0,
-        ) {
-            Ok(entry) => entry,
-            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-            Err(error) => return Err(error),
-        };
-        // Room for the header and the longest path the file system allows.
-        let buffer_bytes = size_of::<FILE_NAME_INFO>() + 32_768 * size_of::<u16>();
-        // Whole u64 words keep the buffer aligned for FILE_NAME_INFO.
-        let mut buffer = vec![0_u64; buffer_bytes.div_ceil(size_of::<u64>())];
-        let buffer_bytes = buffer.len() * size_of::<u64>();
-        // SAFETY: the buffer is writable for `buffer_bytes` bytes and outlives the call.
-        let queried = unsafe {
-            GetFileInformationByHandleEx(
-                entry.as_raw_handle(),
-                FileNameInfo,
-                buffer.as_mut_ptr().cast(),
-                buffer_bytes as u32,
-            )
-        };
-        if queried == 0 {
-            return Err(io::Error::last_os_error());
-        }
-        let info = buffer.as_ptr().cast::<FILE_NAME_INFO>();
-        // SAFETY: the call filled in a complete FILE_NAME_INFO at the start of the buffer. The
-        // name is read only as far as it lies inside the buffer.
-        let path = unsafe {
-            let name = ptr::addr_of!((*info).FileName).cast::<u16>();
-            let available =
-                (buffer_bytes - (name as usize - buffer.as_ptr() as usize)) / size_of::<u16>();
-            let length = ptr::addr_of!((*info).FileNameLength).read() as usize / size_of::<u16>();
-            if length > available {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "a file name lies outside its buffer",
-                ));
-            }
-            std::slice::from_raw_parts(name, length).to_vec()
-        };
-        // The path runs from the root of the volume; its last part is the entry's own name.
-        let start = path
-            .iter()
-            .rposition(|&unit| unit == u16::from(b'\\'))
-            .map_or(0, |separator| separator + 1);
-        Ok(Some(path[start..].to_vec()).filter(|stored| !stored.is_empty()))
+        )
     }
 
     /// All entries directly inside `folder`, read through its handle from the start.
@@ -813,7 +801,9 @@ mod handles {
         }
     }
 
-    /// Create the file `name` directly inside `folder`, failing if any entry has that name.
+    /// Create the file `name` directly inside `folder`, failing if any entry has that name. Without
+    /// a directory option the call creates a file, and a folder or link with the name fails it as
+    /// a name collision; asking for a non-directory would fail those as access denied instead.
     pub(super) fn create_new_file(folder: &File, name: &[u16]) -> io::Result<File> {
         open_relative(
             folder,
@@ -822,7 +812,7 @@ mod handles {
             0,
             FILE_CREATE,
             FILE_ATTRIBUTE_NORMAL,
-            FILE_NON_DIRECTORY_FILE,
+            0,
         )
     }
 
@@ -1158,15 +1148,62 @@ impl HeldFolder {
         same_file::Handle::from_path(&self.path)
     }
 
-    fn publish_file(
+    pub(crate) fn write_file(
         &self,
-        scratch: &HeldFolder,
         name: &str,
         content: &[u8],
-        replace: bool,
-    ) -> io::Result<()> {
+        existing: Existing,
+    ) -> Result<(), EntryError> {
+        let path = self.path.join(name);
+        check_name(name).map_err(|error| EntryError::io(path.clone(), error))?;
+        if existing == Existing::Overwrite {
+            match fs::symlink_metadata(&path) {
+                // A link, or a FIFO that would block, is never opened.
+                Ok(metadata) if !metadata.is_file() => return Err(EntryError::not_direct(path)),
+                Ok(_) => {
+                    let file = fs::OpenOptions::new()
+                        .write(true)
+                        .open(&path)
+                        .map_err(|error| EntryError::io(path.clone(), error))?;
+                    if link_count(&file).map_err(|error| EntryError::io(path.clone(), error))? != 1
+                    {
+                        return Err(EntryError::not_direct(path));
+                    }
+                    return file
+                        .set_len(0)
+                        .and_then(|()| (&file).write_all(content))
+                        .and_then(|()| file.sync_all())
+                        .map_err(|error| EntryError::io(path, error));
+                }
+                Err(error) if error.kind() == ErrorKind::NotFound => {}
+                Err(error) => return Err(EntryError::io(path, error)),
+            }
+        }
+        let file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|error| EntryError::io(path.clone(), error))?;
+        let written = (&file).write_all(content).and_then(|()| file.sync_all());
+        drop(file);
+        match written {
+            Ok(()) => Ok(()),
+            Err(error) => match fs::remove_file(&path) {
+                Ok(()) => Err(EntryError::io(path, error)),
+                Err(cleanup) => Err(EntryError::io(
+                    path,
+                    io::Error::new(
+                        error.kind(),
+                        format!("{error}; the unfinished file could not be removed: {cleanup}"),
+                    ),
+                )),
+            },
+        }
+    }
+
+    fn publish_file(&self, name: &str, content: &[u8], replace: bool) -> io::Result<()> {
         check_name(name)?;
-        let mut temporary = tempfile::NamedTempFile::new_in(&scratch.path)?;
+        let mut temporary = tempfile::NamedTempFile::new_in(&self.path)?;
         temporary.write_all(content)?;
         temporary.as_file().sync_all()?;
         let target = self.path.join(name);
@@ -1350,6 +1387,103 @@ pub(crate) mod tests {
         }
     }
 
+    /// The volume and file index of `path`, which a file keeps for as long as it exists.
+    #[cfg(windows)]
+    fn file_id(path: &Path) -> (u32, u64) {
+        use std::os::windows::fs::OpenOptionsExt;
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Storage::FileSystem::{
+            GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION, FILE_FLAG_BACKUP_SEMANTICS,
+            FILE_READ_ATTRIBUTES,
+        };
+
+        let file = fs::OpenOptions::new()
+            .access_mode(FILE_READ_ATTRIBUTES)
+            .custom_flags(FILE_FLAG_BACKUP_SEMANTICS)
+            .open(path)
+            .unwrap();
+        let mut information = BY_HANDLE_FILE_INFORMATION::default();
+        // SAFETY: `information` is a complete BY_HANDLE_FILE_INFORMATION that outlives the call.
+        let read = unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut information) };
+        assert_ne!(read, 0, "{}", io::Error::last_os_error());
+        (
+            information.dwVolumeSerialNumber,
+            u64::from(information.nFileIndexHigh) << 32 | u64::from(information.nFileIndexLow),
+        )
+    }
+
+    /// Add the access control entry `ace`, in `icacls` form, to `path`.
+    #[cfg(windows)]
+    fn grant(path: &Path, ace: &str) {
+        let granted = std::process::Command::new("icacls")
+            .arg(path)
+            .args(["/grant", ace])
+            .output()
+            .unwrap();
+        assert!(granted.status.success(), "{granted:?}");
+    }
+
+    /// The access control list of `path` as stored, inherited entries included.
+    #[cfg(windows)]
+    fn access_list(path: &Path) -> Vec<u8> {
+        use std::os::windows::fs::OpenOptionsExt;
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::Security::{
+            GetKernelObjectSecurity, GetSecurityDescriptorDacl, ACL, DACL_SECURITY_INFORMATION,
+        };
+        use windows_sys::Win32::Storage::FileSystem::{
+            FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, READ_CONTROL,
+        };
+
+        let file = fs::OpenOptions::new()
+            .access_mode(READ_CONTROL)
+            .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
+            .open(path)
+            .unwrap();
+        let mut needed = 0_u32;
+        // SAFETY: with no buffer the call only reports the size it needs.
+        unsafe {
+            GetKernelObjectSecurity(
+                file.as_raw_handle(),
+                DACL_SECURITY_INFORMATION,
+                std::ptr::null_mut(),
+                0,
+                &mut needed,
+            )
+        };
+        // Whole u64 words keep the descriptor aligned.
+        let mut descriptor = vec![0_u64; (needed as usize).div_ceil(8)];
+        // SAFETY: the buffer is writable for the size passed and outlives the call.
+        let read = unsafe {
+            GetKernelObjectSecurity(
+                file.as_raw_handle(),
+                DACL_SECURITY_INFORMATION,
+                descriptor.as_mut_ptr().cast(),
+                (descriptor.len() * 8) as u32,
+                &mut needed,
+            )
+        };
+        assert_ne!(read, 0, "{}", io::Error::last_os_error());
+        let mut present = 0;
+        let mut defaulted = 0;
+        let mut list: *mut ACL = std::ptr::null_mut();
+        // SAFETY: the descriptor was filled in above and stays alive while `list` is read.
+        let found = unsafe {
+            GetSecurityDescriptorDacl(
+                descriptor.as_mut_ptr().cast(),
+                &mut present,
+                &mut list,
+                &mut defaulted,
+            )
+        };
+        assert!(found != 0 && present != 0 && !list.is_null());
+        // SAFETY: `list` points to a complete ACL of `AclSize` bytes inside the descriptor.
+        unsafe {
+            let size = usize::from(std::ptr::addr_of!((*list).AclSize).read());
+            std::slice::from_raw_parts(list.cast::<u8>(), size).to_vec()
+        }
+    }
+
     #[test]
     fn creating_never_replaces_an_entry_and_leaves_no_temporary_file() {
         let root = tempfile::tempdir().unwrap();
@@ -1395,58 +1529,147 @@ pub(crate) mod tests {
         assert_eq!(entries(&root.path().join("macros.tph")), ["inside"]);
     }
 
-    /// A file replaced under another spelling keeps the one it had, as an overwrite in place
-    /// would; a new file gets the requested spelling.
+    /// Overwriting writes into the existing file, as a truncating write by path did: it keeps the
+    /// spelling of its name, its file ID and its own permissions. A missing file is created with
+    /// the requested spelling.
     #[cfg(windows)]
     #[test]
-    fn replacing_keeps_the_spelling_of_the_replaced_file() {
+    fn overwriting_keeps_the_existing_file_with_its_name_identity_and_permissions() {
         let root = tempfile::tempdir().unwrap();
-        fs::write(root.path().join("BGCLATXT.2DA"), OTHER).unwrap();
+        let path = root.path().join("BGCLATXT.2DA");
+        fs::write(&path, OTHER).unwrap();
+        grant(&path, "*S-1-5-4:(R)");
+        let permissions = access_list(&path);
+        let identity = file_id(&path);
+        // A file put in its place would not get these permissions.
+        fs::write(root.path().join("fresh.2da"), OTHER).unwrap();
+        assert_ne!(access_list(&root.path().join("fresh.2da")), permissions);
         let folder = HeldFolder::open(root.path(), []).unwrap();
 
-        folder.replace_file("bgclatxt.2da", CONTENT).unwrap();
-        folder.replace_file("New.Txt", OTHER).unwrap();
+        folder
+            .write_file("bgclatxt.2da", b"shorter\n", Existing::Overwrite)
+            .unwrap();
+        folder
+            .write_file("New.Txt", CONTENT, Existing::Overwrite)
+            .unwrap();
         drop(folder);
 
-        assert_eq!(entries(root.path()), ["BGCLATXT.2DA", "New.Txt"]);
-        assert_eq!(fs::read(root.path().join("BGCLATXT.2DA")).unwrap(), CONTENT);
+        assert_eq!(
+            entries(root.path()),
+            ["BGCLATXT.2DA", "New.Txt", "fresh.2da"]
+        );
+        assert_eq!(fs::read(&path).unwrap(), b"shorter\n");
+        assert_eq!(fs::read(root.path().join("New.Txt")).unwrap(), CONTENT);
+        assert_eq!(file_id(&path), identity);
+        assert_eq!(access_list(&path), permissions);
     }
 
-    /// The file is written in the scratch folder and appears in its folder only once complete.
-    /// Neither a publication nor a refused one leaves anything behind in either folder.
+    /// Like a truncating write by path, overwriting works while another program reads the file
+    /// and shares it fully, as a scanner might.
+    #[cfg(windows)]
     #[test]
-    fn files_written_in_a_scratch_folder_appear_complete_and_leave_nothing_behind() {
+    fn overwriting_works_while_another_program_reads_the_file() {
         let root = tempfile::tempdir().unwrap();
-        let scratch_path = root.path().join(".chriz/record");
+        let path = root.path().join("bgclatxt.2da");
+        fs::write(&path, OTHER).unwrap();
+        let mut reader = fs::File::open(&path).unwrap();
+        let folder = HeldFolder::open(root.path(), []).unwrap();
+
+        folder
+            .write_file("bgclatxt.2da", CONTENT, Existing::Overwrite)
+            .unwrap();
+        drop(folder);
+
+        let mut seen = Vec::new();
+        io::Read::read_to_end(&mut reader, &mut seen).unwrap();
+        assert_eq!(seen, CONTENT);
+    }
+
+    /// A new file is created in the folder it belongs to, so it gets the permissions that folder
+    /// gives new files, and not those of a folder it could have been written in first.
+    #[cfg(windows)]
+    #[test]
+    fn a_new_file_gets_the_permissions_its_folder_gives_new_files() {
+        let root = tempfile::tempdir().unwrap();
         let target = root.path().join("game/override");
-        fs::create_dir_all(&scratch_path).unwrap();
         fs::create_dir_all(&target).unwrap();
-        let held = HeldFolder::open(root.path(), []).unwrap();
-        let scratch = held.open_below([".chriz", "record"]).unwrap();
-        let folder = held.open_below(["game", "override"]).unwrap();
+        grant(&target, "*S-1-5-4:(OI)(R)");
+        fs::write(target.join("reference.2da"), OTHER).unwrap();
+        let expected = access_list(&target.join("reference.2da"));
+        fs::write(root.path().join("elsewhere.2da"), OTHER).unwrap();
+        assert_ne!(access_list(&root.path().join("elsewhere.2da")), expected);
+        let folder = HeldFolder::open(root.path(), ["game", "override"]).unwrap();
 
         folder
-            .create_file_from(&scratch, "new.2da", CONTENT)
-            .unwrap();
-        let error = folder
-            .create_file_from(&scratch, "new.2da", OTHER)
-            .unwrap_err();
-        assert_eq!(error.kind(), ErrorKind::AlreadyExists, "{error}");
-        folder
-            .replace_file_from(&scratch, "new.2da", OTHER)
+            .write_file("created.2da", CONTENT, Existing::Refuse)
             .unwrap();
         folder
-            .replace_file_from(&scratch, "weidu.log", CONTENT)
+            .write_file("written.2da", CONTENT, Existing::Overwrite)
             .unwrap();
-        assert!(folder
-            .create_file_from(&scratch, "bad/name", CONTENT)
-            .is_err());
-        drop((scratch, folder, held));
+        drop(folder);
 
-        assert_eq!(entries(&scratch_path), Vec::<String>::new());
-        assert_eq!(entries(&target), ["new.2da", "weidu.log"]);
-        assert_eq!(fs::read(target.join("new.2da")).unwrap(), OTHER);
-        assert_eq!(fs::read(target.join("weidu.log")).unwrap(), CONTENT);
+        assert_eq!(
+            entries(&target),
+            ["created.2da", "reference.2da", "written.2da"]
+        );
+        for name in ["created.2da", "written.2da"] {
+            assert_eq!(fs::read(target.join(name)).unwrap(), CONTENT);
+            assert_eq!(access_list(&target.join(name)), expected, "{name}");
+        }
+    }
+
+    /// A write never goes through a link or a second name of a file, and never into a folder:
+    /// overwriting refuses each of them and creating finds the name taken. All stay as they are.
+    #[cfg(windows)]
+    #[test]
+    fn writing_refuses_links_folders_and_files_with_another_name() {
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("target.2da"), OTHER).unwrap();
+        junction(&root.path().join("linked.2da"), outside.path());
+        fs::create_dir(root.path().join("folder.2da")).unwrap();
+        foreign_reparse_point(&root.path().join("foreign.2da"));
+        fs::write(root.path().join("shared.2da"), OTHER).unwrap();
+        fs::hard_link(
+            root.path().join("shared.2da"),
+            outside.path().join("second-name.2da"),
+        )
+        .unwrap();
+        let folder = HeldFolder::open(root.path(), []).unwrap();
+
+        for name in [
+            "linked.2da",
+            "folder.2da",
+            "foreign.2da",
+            "shared.2da",
+            "SHARED.2DA",
+        ] {
+            let error = unwrap_error(folder.write_file(name, CONTENT, Existing::Overwrite));
+            assert_eq!(kind(&error), "not direct", "{name}");
+            let error = unwrap_error(folder.write_file(name, CONTENT, Existing::Refuse));
+            assert!(
+                matches!(&error.kind, EntryErrorKind::Io(io) if io.kind() == ErrorKind::AlreadyExists),
+                "{name}: {error:?}"
+            );
+        }
+        drop(folder);
+
+        assert_eq!(
+            entries(root.path()),
+            ["folder.2da", "foreign.2da", "linked.2da", "shared.2da"]
+        );
+        assert_eq!(
+            entries(&root.path().join("folder.2da")),
+            Vec::<String>::new()
+        );
+        assert_eq!(fs::read(root.path().join("shared.2da")).unwrap(), OTHER);
+        assert_eq!(
+            tree(outside.path()),
+            [
+                ("second-name.2da".to_owned(), OTHER.to_vec()),
+                ("target.2da".to_owned(), OTHER.to_vec())
+            ]
+        );
     }
 
     #[test]
@@ -1659,6 +1882,8 @@ pub(crate) mod tests {
                 folder.remove_empty_folder(name),
                 folder.open_below([name]).map(|_| ()),
                 folder.open_or_create_below([name]).map(|_| ()),
+                folder.write_file(name, CONTENT, Existing::Refuse),
+                folder.write_file(name, CONTENT, Existing::Overwrite),
             ] {
                 let error = unwrap_error(result);
                 assert!(
@@ -1670,8 +1895,6 @@ pub(crate) mod tests {
                 folder.contains(name).map(|_| ()),
                 folder.create_file(name, CONTENT),
                 folder.replace_file(name, CONTENT),
-                folder.create_file_from(&folder, name, CONTENT),
-                folder.replace_file_from(&folder, name, CONTENT),
             ] {
                 assert_eq!(
                     result.unwrap_err().kind(),
@@ -1744,9 +1967,13 @@ pub(crate) mod tests {
         assert!(folder.contains("linked-lib").unwrap());
         assert!(folder.replace_file("linked-lib", CONTENT).is_err());
         assert!(folder.create_file("linked-lib", CONTENT).is_err());
-        assert!(folder
-            .replace_file_from(&folder, "linked-lib", CONTENT)
-            .is_err());
+        let error = unwrap_error(folder.write_file("linked-lib", CONTENT, Existing::Overwrite));
+        assert_eq!(kind(&error), "not direct");
+        let error = unwrap_error(folder.write_file("linked-lib", CONTENT, Existing::Refuse));
+        assert!(
+            matches!(&error.kind, EntryErrorKind::Io(io) if io.kind() == ErrorKind::AlreadyExists),
+            "{error:?}"
+        );
         drop(folder);
 
         assert_eq!(entries(&outside), ["lib"]);
@@ -2114,8 +2341,8 @@ pub(crate) mod tests {
         let other = root.path().join("other");
         for tree in [&checked, &other] {
             fs::create_dir_all(tree.join("game/cdtweaks")).unwrap();
-            fs::create_dir_all(tree.join("game/.chriz")).unwrap();
             fs::write(tree.join("game/cdtweaks/existing.txt"), OTHER).unwrap();
+            fs::write(tree.join("game/cdtweaks/written.txt"), OTHER).unwrap();
             fs::write(tree.join("game/cdtweaks/owned.txt"), OTHER).unwrap();
             fs::create_dir(tree.join("game/cdtweaks/empty")).unwrap();
         }
@@ -2127,16 +2354,21 @@ pub(crate) mod tests {
         let folder = held.open_below(["cdtweaks"]).unwrap();
         fs::remove_dir(&link).unwrap();
         junction(&link, &other);
-        let scratch = held.open_below([".chriz"]).unwrap();
         let created = held.open_or_create_below(["cdtweaks", "new"]).unwrap();
         assert!(!folder.contains("only-elsewhere.txt").unwrap());
         let mut names = folder.names().unwrap();
         names.sort();
-        assert_eq!(names, ["empty", "existing.txt", "new", "owned.txt"]);
+        assert_eq!(
+            names,
+            ["empty", "existing.txt", "new", "owned.txt", "written.txt"]
+        );
         folder.create_file("cdtweaks.txt", CONTENT).unwrap();
         folder.replace_file("existing.txt", CONTENT).unwrap();
+        folder
+            .write_file("written.txt", CONTENT, Existing::Overwrite)
+            .unwrap();
         created
-            .create_file_from(&scratch, "made.txt", CONTENT)
+            .write_file("made.txt", CONTENT, Existing::Refuse)
             .unwrap();
         let (existing, _) = folder.open_file("existing.txt").unwrap();
         assert_eq!(
@@ -2150,21 +2382,29 @@ pub(crate) mod tests {
             .remove()
             .unwrap();
         folder.remove_empty_folder("empty").unwrap();
-        drop((folder, created, scratch, held));
+        drop((folder, created, held));
 
         let checked_mod = checked.join("game/cdtweaks");
         assert_eq!(
             entries(&checked_mod),
-            ["cdtweaks.txt", "existing.txt", "new"]
+            ["cdtweaks.txt", "existing.txt", "new", "written.txt"]
         );
         assert_eq!(fs::read(checked_mod.join("existing.txt")).unwrap(), CONTENT);
+        assert_eq!(fs::read(checked_mod.join("written.txt")).unwrap(), CONTENT);
         assert_eq!(fs::read(checked_mod.join("new/made.txt")).unwrap(), CONTENT);
         let other_mod = other.join("game/cdtweaks");
         assert_eq!(
             entries(&other_mod),
-            ["empty", "existing.txt", "only-elsewhere.txt", "owned.txt"]
+            [
+                "empty",
+                "existing.txt",
+                "only-elsewhere.txt",
+                "owned.txt",
+                "written.txt"
+            ]
         );
         assert_eq!(fs::read(other_mod.join("existing.txt")).unwrap(), OTHER);
+        assert_eq!(fs::read(other_mod.join("written.txt")).unwrap(), OTHER);
         assert_eq!(fs::read(other_mod.join("owned.txt")).unwrap(), OTHER);
     }
 
