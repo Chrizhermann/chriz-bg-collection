@@ -2184,12 +2184,15 @@ fn install_places_component_config_files_before_weidu_in_both_games() {
 }
 
 /// A failed placement leaves WeiDU unstarted, so resuming retries the run instead of demanding
-/// a fresh copy of the games.
+/// a fresh copy of the games. A file placed before the failure is accepted again.
 #[cfg(windows)]
 #[test]
 fn failed_config_file_placement_is_retried_on_resume() {
+    const PLACED: &str = "OUTER_SET fixed = 1\n";
     const CONTENT: &str = "OUTER_SET fixed = 2\n";
     let fixture = executable_fixture();
+    // The first file can be placed; the folder of the second one is missing.
+    author_config_file(&fixture, "Core fixes", "EE_Fixpack/fixpack.txt", PLACED);
     author_config_file(
         &fixture,
         "BG1 preparation fixes",
@@ -2224,6 +2227,10 @@ fn failed_config_file_placement_is_retried_on_resume() {
     assert!(!failed.join("invocation.json").exists());
     assert!(!failed.join("config-files.json").exists());
     assert!(!fixture.managed.join("bg1/WeiDU.log").exists());
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("bg1/EE_Fixpack/fixpack.txt")).unwrap(),
+        PLACED
+    );
 
     // The folder appears, as once a passing problem is fixed.
     fs::create_dir(fixture.managed.join("bg1/EE_Fixpack/later")).unwrap();
@@ -2250,12 +2257,20 @@ fn failed_config_file_placement_is_retried_on_resume() {
     assert_eq!(receipt.runs[0].attempts[0].components, vec![0, 2]);
     assert_eq!(
         config_evidence(&step_attempt(&fixture, "install:eefixpack-bg1", 2)),
-        serde_json::json!([{
-            "component": 2,
-            "path": "EE_Fixpack/later/fixpack.txt",
-            "sha256": sha256_bytes(CONTENT.as_bytes()),
-            "created": true,
-        }])
+        serde_json::json!([
+            {
+                "component": 0,
+                "path": "EE_Fixpack/fixpack.txt",
+                "sha256": sha256_bytes(PLACED.as_bytes()),
+                "created": false,
+            },
+            {
+                "component": 2,
+                "path": "EE_Fixpack/later/fixpack.txt",
+                "sha256": sha256_bytes(CONTENT.as_bytes()),
+                "created": true,
+            }
+        ])
     );
 }
 
