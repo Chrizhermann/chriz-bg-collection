@@ -19,6 +19,10 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **In progress (separate sessions)**
 
+- EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
+  everywhere): pinned in both recipes on `claude/eeex-131-pin` with fresh-download and
+  native-order evidence; a disposable 2.7.3.0 lab with the full recipe tests every EEex
+  user. Attack Info `9` waits for Christopher.
 - Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
   Thief→Mage dual as the default, working for every thief kit.
 - Modpack: lab-verified, unreleased fixes for campaign XP caps `650`/`651` and a new
@@ -47,6 +51,8 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **Waiting for Christopher**
 
+- EEex v1.3.1: whether to offer Attack Info `9`, and how existing installations
+  (including the stream game) move from v1.2.0.
 - Small spell durations (Luck, Bless, Aid) and druid Chaotic Commands: in discussion.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
@@ -85,8 +91,10 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 
 ## Release gates — source and immutable pins
 
-- [ ] [EEex](EEEX.md): v1.2.0 is pinned; upstream v1.3.0 (2026-09-16) and v1.3.1
-  (2026-10-07) have no intake review on the branch yet.
+- [ ] [EEex](EEEX.md): v1.3.1 (2026-10-07) replaces v1.2.0 on `claude/eeex-131-pin`:
+  fresh download, published release, archive shape and a native-order source audit in
+  `manifest/evidence/release-intake-20261018.toml`. Check this once the lab smoke test of
+  every EEex user is recorded and the branch is merged.
 - [ ] [EET](EET.md): at each manifest freeze, recheck official releases (v14.1 is still the
   newest). Upstream `master` is six commits ahead of the pinned `74e91d72` archive,
   including a Windows shortcut-path fix (#206) that may matter for EET `100`.
@@ -227,6 +235,9 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   `7000`, `7007`, and `7008`, plus tweak components `20021`, `1020000`, and `2000001`.
 - [ ] Curate newly discovered Bardic Wonders components `2011`, `2012`, and `2013`.
 - [ ] [BGGO](BGGO.md) `4`: decide whether Alternate Graphics is excluded, optional, or default.
+- [ ] [EEex](EEEX.md) `9` Attack Info (new in v1.3.0; to-hit chances on the attack cursor):
+  decide whether it stays out or becomes optional, default or mandatory. Players can switch
+  the module on in EEex's in-game options either way.
 - [ ] [Warlock](C0WARLOCK.md): choose Yes or No for the Contingency UI-based
   spell-learning prompt. The component remains a default either way.
 - [ ] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
