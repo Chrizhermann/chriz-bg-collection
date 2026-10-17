@@ -52,6 +52,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **Waiting for Christopher**
 
+- SoD Remix `256` × Tweaks Anthology `3500`: Recommended does not install until `256`
+  handles the summon effect; which fix
+  ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
 - EEex v1.3.1: whether to offer Attack Info `9`, and how existing installations
   (including the stream game) move from v1.2.0.
 - Small spell durations (Luck, Bless, Aid) and druid Chaotic Commands: in discussion.
@@ -110,6 +113,12 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 
 ## Release gates — installer and static integration
 
+- [ ] The Recommended selection does not install: SoD Remix v0.6.13 `256` refuses the
+  fire-elemental donor `BDELFIRM`, because Tweaks Anthology `3500` (a default since the
+  October 14 intake) gives every summon a `CDTFOW` cast-spell effect
+  ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
+  The October 14 and 18 labs install with `3500` off. Fix `256`, then install the whole
+  Recommended selection once with `3500` on.
 - [ ] [EEex](EEEX.md) options: decide whether to seed or document
   `[EEex] Uncap FPS Limit Enabled`. The installer sets no EEex options, and a played
   collection install runs with the limit off. (Clean stage, loader launch and the absence
