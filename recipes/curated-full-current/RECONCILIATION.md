@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 489 default/mandatory rows — conditional inactive: 6, deferred: 5, selected for installation: 478.
+Engine-equivalent resolved-selection summary: 470 default/mandatory rows — conditional inactive: 6, deferred: 4, selected for installation: 460.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -474,25 +474,6 @@ Engine-equivalent resolved-selection summary: 489 default/mandatory rows — con
 | `STRATAGEMS:8170` | mandatory | `feature:stratagems:mandatory-components` | selected for installation | stratagems → stratagems-35.21 35.21 (v35.21), component 8170 |  |
 | `STRATAGEMS:8180` | mandatory | `feature:stratagems:mandatory-components` | selected for installation | stratagems → stratagems-35.21 35.21 (v35.21), component 8180 |  |
 | `STRATAGEMS:8190` | mandatory | `feature:stratagems:mandatory-components` | selected for installation | stratagems → stratagems-35.21 35.21 (v35.21), component 8190 |  |
-| `UB:0` | default | `feature:ub:component-0` | selected for installation | ub → ub-28 28 (v28), component 0 |  |
-| `UB:1` | default | `feature:ub:component-1` | selected for installation | ub → ub-28 28 (v28), component 1 |  |
-| `UB:2` | default | `feature:ub:component-2` | selected for installation | ub → ub-28 28 (v28), component 2 |  |
-| `UB:4` | default | `feature:ub:component-4` | selected for installation | ub → ub-28 28 (v28), component 4 |  |
-| `UB:5` | default | `feature:ub:component-5` | selected for installation | ub → ub-28 28 (v28), component 5 |  |
-| `UB:6` | default | `feature:ub:component-6` | selected for installation | ub → ub-28 28 (v28), component 6 |  |
-| `UB:7` | default | `feature:ub:component-7` | selected for installation | ub → ub-28 28 (v28), component 7 |  |
-| `UB:8` | default | `feature:ub:component-8` | selected for installation | ub → ub-28 28 (v28), component 8 |  |
-| `UB:9` | default | `feature:ub:component-9` | selected for installation | ub → ub-28 28 (v28), component 9 |  |
-| `UB:10` | default | `feature:ub:component-10` | selected for installation | ub → ub-28 28 (v28), component 10 |  |
-| `UB:12` | default | `feature:ub:component-12` | selected for installation | ub → ub-28 28 (v28), component 12 |  |
-| `UB:13` | default | `feature:ub:component-13` | selected for installation | ub → ub-28 28 (v28), component 13 |  |
-| `UB:14` | default | `feature:ub:component-14` | selected for installation | ub → ub-28 28 (v28), component 14 |  |
-| `UB:15` | default | `feature:ub:component-15` | selected for installation | ub → ub-28 28 (v28), component 15 |  |
-| `UB:17` | default | `feature:ub:component-17` | selected for installation | ub → ub-28 28 (v28), component 17 |  |
-| `UB:18` | default | `feature:ub:component-18` | selected for installation | ub → ub-28 28 (v28), component 18 |  |
-| `UB:19` | default | `omission:restored-bhaalspawn-provider` | deferred | No executable source selected | Christopher has not yet selected the canonical restored-Bhaalspawn-powers provider; neither alternative may enter the alpha until that choice is recorded. |
-| `UB:20` | default | `feature:ub:component-20` | selected for installation | ub → ub-28 28 (v28), component 20 |  |
-| `UB:21` | default | `feature:ub:component-21` | selected for installation | ub → ub-28 28 (v28), component 21 |  |
 | `XAN:0` | mandatory | `feature:xan:mandatory-components` | selected for installation | xan → xan-19 19 (v19), component 0 |  |
 | `XAN:1` | default | `feature:xan:component-1` | selected for installation | xan → xan-19 19 (v19), component 1 |  |
 | `YESLICKNPC:1` | default | `feature:yeslicknpc:component-1` | selected for installation | yeslicknpc → yeslicknpc-5.0 5.0 (v5.0), component 1 |  |

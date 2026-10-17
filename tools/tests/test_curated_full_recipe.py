@@ -81,17 +81,18 @@ class CuratedFullRecipeTests(unittest.TestCase):
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text())["selections"]
             features = {feature["id"]: feature for feature in collection["features"]}
-            feature_id = "feature:ub:component-25"
-            feature = features[feature_id]
-            self.assertEqual(feature["decision"], "optional")
-            self.assertEqual(feature["readiness"], "ready")
-            self.assertEqual(feature["components"], [{"run_id": "ub-bg2", "component": 25}])
             defaults = _effective_features(collection, preset)
-            self.assertFalse(defaults[feature_id])
-            enabled = _effective_features(collection, {**preset, feature_id: "on"})
-            self.assertEqual({key for key in defaults if defaults[key] != enabled[key]}, {feature_id})
+            ub_components = (0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 20, 21, 22, 23, 24, 25)
+            for component in ub_components:
+                feature_id = f"feature:ub:component-{component}"
+                feature = features[feature_id]
+                self.assertEqual(feature["decision"], "optional", feature_id)
+                self.assertEqual(feature["readiness"], "ready", feature_id)
+                self.assertEqual(feature["components"], [{"run_id": "ub-bg2", "component": component}])
+                self.assertFalse(defaults[feature_id], feature_id)
+                enabled = _effective_features(collection, {**preset, feature_id: "on"})
+                self.assertEqual({key for key in defaults if defaults[key] != enabled[key]}, {feature_id})
             self.assertTrue(defaults["feature:cdtweaks:component-2380"])
-            self.assertTrue(defaults["feature:ub:component-21"])
 
     def test_racial_kit_unlock_is_default_optional_and_follows_kit_additions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -341,7 +342,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # Challenge Mode in this profile only; 3500 requires EEex like its TP2.
                 # October 14 (later): Challenge Mode gains its potion variant (330 instead
                 # of the recommended 331 while on); runs, features and the preset are unchanged.
-                "008693e2f7a96b78c998528945c9f498d961a20f33b31a523eb5df2ec3b3677f",
+                # October 16: all UB components become optional and unchecked by default.
+                "4bc47e908f0e78e1e747d739b52f5f74cae5018dad61c764bdadbad36baa090e",
             )
 
             legacy_bg1npc_groups = {

@@ -80,6 +80,9 @@ unchanged.
 
 ### Changed behavior
 
+- **Unfinished Business (BG2)** — now **Optional** (was **Default**). All 22
+  offered components remain available in the installer, unchecked by default in
+  Chris's Recommended.
 - **Grandmastery** (Default, unchanged choice): High Mastery now gives +5
   damage instead of +4, matching Grand Mastery. To-hit and the other levels are
   unchanged. (Tweaks Anthology)
@@ -130,7 +133,8 @@ dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; and sensible entrance points. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
-strict potion rule where Potions of Genius don't stack either. High Mastery now gives +5
+strict potion rule where Potions of Genius don't stack either. Unfinished
+Business (BG2) is now optional; High Mastery now gives +5
 damage, and the NPC move now includes Ajantis. In Bardic Wonders, the
 Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
 the Gallant gets the new bard spells, and Symphony of the Dark Children ends

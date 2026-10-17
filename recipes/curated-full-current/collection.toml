@@ -1695,7 +1695,7 @@ description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 0 }]
 
@@ -1706,7 +1706,7 @@ description = "Restore the reviewed Unfinished Business content."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 1 }]
 
@@ -1717,7 +1717,7 @@ description = "Restore the reviewed Unfinished Business content."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 2 }]
 
@@ -1728,7 +1728,7 @@ description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 4 }]
 
@@ -1739,7 +1739,7 @@ description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 5 }]
 
@@ -1750,7 +1750,7 @@ description = "Restore the reviewed Crooked Crane Inn content."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 6 }]
 
@@ -1761,7 +1761,7 @@ description = "Restore the reviewed Unfinished Business encounters."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 7 }]
 
@@ -1772,7 +1772,7 @@ description = "Restore the reviewed Unfinished Business encounter."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 8 }]
 
@@ -1783,7 +1783,7 @@ description = "Apply the reviewed Unfinished Business correction."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 9 }]
 
@@ -1794,7 +1794,7 @@ description = "Restore the reviewed Unfinished Business content."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 10 }]
 
@@ -1805,7 +1805,7 @@ description = "Install the reviewed Unfinished Business item restorations."
 category = "items"
 source_label = "Unfinished Business"
 group_label = "Items"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 12 }]
 
@@ -1816,7 +1816,7 @@ description = "Use Yoshimo's reviewed original portrait."
 category = "visuals"
 source_label = "Unfinished Business"
 group_label = "Visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 13 }]
 
@@ -1827,7 +1827,7 @@ description = "Use Anomen's reviewed original portrait."
 category = "visuals"
 source_label = "Unfinished Business"
 group_label = "Visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 14 }]
 
@@ -1838,7 +1838,7 @@ description = "Install the reviewed NPC portrait restorations."
 category = "visuals"
 source_label = "Unfinished Business"
 group_label = "Visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 15 }]
 
@@ -1849,7 +1849,7 @@ description = "Apply the reviewed name and biography corrections."
 category = "fixes"
 source_label = "Unfinished Business"
 group_label = "Fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 17 }]
 
@@ -1860,7 +1860,7 @@ description = "Restore the reviewed minor dialogs."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 18 }]
 
@@ -1871,7 +1871,7 @@ description = "Install the reviewed Throne of Bhaal item descriptions."
 category = "items"
 source_label = "Unfinished Business"
 group_label = "Items"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 20 }]
 
@@ -1882,7 +1882,7 @@ description = "Install the reviewed Throne of Bhaal minor restorations."
 category = "quests"
 source_label = "Unfinished Business"
 group_label = "Quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 21 }]
 

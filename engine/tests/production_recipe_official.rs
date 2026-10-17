@@ -13,9 +13,6 @@ const RR_DEFAULT_COMPONENTS: &[u32] = &[0, 3, 7, 8, 11, 12, 999];
 const UB_AUTHORED_COMPONENTS: &[u32] = &[
     0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 20, 21, 22, 23, 24, 25,
 ];
-const UB_DEFAULT_COMPONENTS: &[u32] = &[
-    0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 17, 18, 20, 21,
-];
 const ASCENSION_COMPONENTS: &[u32] = &[
     0, 10, 20, 30, 50, 60, 1000, 1100, 1200, 1300, 1400, 1500, 2000, 2100, 2300, 2400,
 ];
@@ -471,7 +468,7 @@ fn recommended_preset_reproduces_the_proven_official_defaults_except_recorded_om
     assert_eq!(plan.components_for("fade-bg2"), Some(&[0][..]));
     assert_eq!(plan.components_for("paina-bg2"), Some(&[0][..]));
     assert_eq!(plan.components_for("sarahtob-bg2"), Some(&[1][..]));
-    assert_eq!(plan.components_for("ub-bg2"), Some(UB_DEFAULT_COMPONENTS));
+    assert_eq!(plan.components_for("ub-bg2"), None);
     assert_eq!(plan.components_for("xan-bg2"), Some(&[0, 1][..]));
     assert_eq!(plan.components_for("yeslicknpc-bg2"), Some(&[1][..]));
     assert_eq!(plan.components_for("sirene-bg2"), Some(&[0, 2, 5][..]));

@@ -1407,7 +1407,7 @@ id = "feature:ub:component-0"
 title = "The Kidnapping of Boo"
 description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 0 }]
 
@@ -1416,7 +1416,7 @@ id = "feature:ub:component-1"
 title = "The Suna Seni and Valygar Relationship"
 description = "Restore the reviewed Unfinished Business content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 1 }]
 
@@ -1425,7 +1425,7 @@ id = "feature:ub:component-2"
 title = "Kalah and What He Was Promised"
 description = "Restore the reviewed Unfinished Business content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 2 }]
 
@@ -1434,7 +1434,7 @@ id = "feature:ub:component-4"
 title = "Gorje Hilldark and the Extended Illithium Quest"
 description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 4 }]
 
@@ -1443,7 +1443,7 @@ id = "feature:ub:component-5"
 title = "The Pai'Na and Spider's Bane Quest"
 description = "Restore the reviewed Unfinished Business quest."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 5 }]
 
@@ -1452,7 +1452,7 @@ id = "feature:ub:component-6"
 title = "Restored Crooked Crane Inn"
 description = "Restore the reviewed Crooked Crane Inn content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 6 }]
 
@@ -1461,7 +1461,7 @@ id = "feature:ub:component-7"
 title = "Restored Encounters"
 description = "Restore the reviewed Unfinished Business encounters."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 7 }]
 
@@ -1470,7 +1470,7 @@ id = "feature:ub:component-8"
 title = "Artemis Entreri in Bodhi's Lair"
 description = "Restore the reviewed Unfinished Business encounter."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 8 }]
 
@@ -1479,7 +1479,7 @@ id = "feature:ub:component-9"
 title = "Corrected Xzar's Creations"
 description = "Apply the reviewed Unfinished Business correction."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 9 }]
 
@@ -1488,7 +1488,7 @@ id = "feature:ub:component-10"
 title = "Restored Hell Minions"
 description = "Restore the reviewed Unfinished Business content."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 10 }]
 
@@ -1497,7 +1497,7 @@ id = "feature:ub:component-12"
 title = "Item Restorations"
 description = "Install the reviewed Unfinished Business item restorations."
 category = "items"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 12 }]
 
@@ -1506,7 +1506,7 @@ id = "feature:ub:component-13"
 title = "Yoshimo's Original Portrait"
 description = "Use Yoshimo's reviewed original portrait."
 category = "visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 13 }]
 
@@ -1515,7 +1515,7 @@ id = "feature:ub:component-14"
 title = "Anomen's Original Portrait"
 description = "Use Anomen's reviewed original portrait."
 category = "visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 14 }]
 
@@ -1524,7 +1524,7 @@ id = "feature:ub:component-15"
 title = "NPC Portrait Restorations"
 description = "Install the reviewed NPC portrait restorations."
 category = "visuals"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 15 }]
 
@@ -1533,7 +1533,7 @@ id = "feature:ub:component-17"
 title = "Corrected Character Names and Biographies"
 description = "Apply the reviewed name and biography corrections."
 category = "fixes"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 17 }]
 
@@ -1542,7 +1542,7 @@ id = "feature:ub:component-18"
 title = "Restored Minor Dialogs"
 description = "Restore the reviewed minor dialogs."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 18 }]
 
@@ -1551,7 +1551,7 @@ id = "feature:ub:component-20"
 title = "Extended ToB Item Descriptions"
 description = "Install the reviewed Throne of Bhaal item descriptions."
 category = "items"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 20 }]
 
@@ -1560,7 +1560,7 @@ id = "feature:ub:component-21"
 title = "Throne of Bhaal Minor Restorations"
 description = "Install the reviewed Throne of Bhaal minor restorations."
 category = "quests"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "ub-bg2", component = 21 }]
 

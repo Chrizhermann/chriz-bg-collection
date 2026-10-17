@@ -120,9 +120,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # 177/198/285, and moves 430 into its own final run.
         # The October 14 intake adds default Modpack 230-234, Rebalance 331/332,
         # SCS 3021 and Tweaks 3220/3500/3510.
-        self.assertEqual(len(without_controls), 479)
-        self.assertEqual(len(selected), 480)
-        self.assertEqual(len({run for run, _ in selected}), 53)
+        # October 16 makes all 18 previously default UB components optional.
+        self.assertEqual(len(without_controls), 461)
+        self.assertEqual(len(selected), 462)
+        self.assertEqual(len({run for run, _ in selected}), 52)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -218,7 +219,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 480)
+        self.assertEqual(len(baseline), 462)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

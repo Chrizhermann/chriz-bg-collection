@@ -140,7 +140,8 @@ class CatalogParserTests(unittest.TestCase):
                 # October 13 makes EET's desktop shortcut (EET 100) optional.
                 # October 13 intake: campaign XP caps Modpack 650/651 are optional.
                 # October 14: SCS 3010, Rebalance 330 and Tweaks 2760 are optional.
-                Decision.OPTIONAL: 245,
+                # October 16: all 19 remaining default UB rows become optional.
+                Decision.OPTIONAL: 264,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -148,7 +149,8 @@ class CatalogParserTests(unittest.TestCase):
                 # moves from mandatory to default.
                 # October 14: Modpack 230-234, Rebalance 331/332, SCS 3021 and
                 # Tweaks 3220/3500/3510 are defaults.
-                Decision.DEFAULT: 335,
+                # October 16: UB leaves the defaults (19 rows move to optional).
+                Decision.DEFAULT: 316,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
