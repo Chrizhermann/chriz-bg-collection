@@ -280,7 +280,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // (Evandra's 238 only in the curated plan).
     // The October 14 intake adds Modpack 230-234, Rebalance 331/332 and SCS 3021
     // (and Tweaks 3220/3500/3510 in the curated plan only).
-    // This 382-component base plan is distinct from the 480-component curated plan.
+    // October 17 makes Unfinished Business optional and unselected, which removes
+    // its 18 former defaults from both plans.
+    // This 364-component base plan is distinct from the 462-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -288,7 +290,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        382
+        364
     );
 }
 

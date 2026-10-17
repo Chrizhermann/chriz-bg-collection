@@ -19,7 +19,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     let manifest = recipe();
     let result = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
     // The October 13 intake moves Modpack scroll policy 430 into its own final run.
-    assert_eq!(result.plan.runs.len(), 53);
+    // Unfinished Business became optional and unselected on October 17, so the
+    // ub-bg2 run no longer runs by default.
+    assert_eq!(result.plan.runs.len(), 52);
     assert_eq!(
         result
             .plan
@@ -33,7 +35,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // The October 13 intake adds Modpack 237/238/660 and SoD 177/198/285.
         // The October 14 intake adds Modpack 230-234, Rebalance 331/332, SCS 3021
         // and Tweaks 3220/3500/3510.
-        480
+        // October 17 removes the 18 formerly default Unfinished Business components.
+        462
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
