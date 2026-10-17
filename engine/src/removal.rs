@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::digest::sha256_bytes;
 use crate::error::EngineError;
+use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
 use crate::lock::TargetLock;
 use crate::preflight::{
     recheck_staging_target_before_mutation_with, PreflightHost, SystemPreflight,
@@ -265,11 +266,14 @@ fn execute_with(
     if current.action == RemovalAction::Delete {
         recheck_staging_target_before_mutation_with(&current.managed_root, "en_US", host)
             .map_err(failure)?;
-        validate_tree(&current.managed_root)?;
+        // From here on the confirmed folder is held: everything below is checked and removed in
+        // it, whatever happens to its path meanwhile.
+        let root = hold_root(&current)?;
+        validate_tree(&root)?;
         // This small durable record is outside the deleted tree. It retains folder file identity,
         // source/cache exclusions and registry binding if deletion is interrupted or files lock.
         persist_journal(app_data, &current)?;
-        remove_tree(&current.managed_root, before_remove)?;
+        remove_tree(root, before_remove)?;
     }
     let registry = ManagedInstallRegistry::open_or_create(app_data).map_err(failure)?;
     match current.action {
@@ -384,9 +388,36 @@ fn persist_journal(app_data: &Path, plan: &RemovalPlan) -> Result<(), RemovalErr
 
 fn directory_identity(path: &Path) -> Result<u64, RemovalError> {
     let handle = same_file::Handle::from_path(path).map_err(|e| io_at(path, e))?;
+    Ok(identity_hash(&handle))
+}
+
+fn identity_hash(handle: &same_file::Handle) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     handle.hash(&mut hasher);
-    Ok(hasher.finish())
+    hasher.finish()
+}
+
+/// Opens the managed root so that it can be removed, and only if it is still the folder whose
+/// identity was confirmed: the path may name another folder by now.
+fn hold_root(plan: &RemovalPlan) -> Result<HeldFolder, RemovalError> {
+    let root = HeldFolder::open_for_removal(&plan.managed_root).map_err(entry_failure)?;
+    let identity = root.identity().map_err(|e| io_at(&plan.managed_root, e))?;
+    if plan.directory_identity != Some(identity_hash(&identity)) {
+        return Err(failure(
+            "Installation changed since confirmation. Review removal again.",
+        ));
+    }
+    Ok(root)
+}
+
+fn entry_failure(error: EntryError) -> RemovalError {
+    match error.kind {
+        EntryErrorKind::Missing => io_at(&error.path, io::ErrorKind::NotFound.into()),
+        EntryErrorKind::NotDirect => {
+            failure(format!("Refusing linked path {}", error.path.display()))
+        }
+        EntryErrorKind::Io(source) => io_at(&error.path, source),
+    }
 }
 
 fn direct_ancestors(path: &Path) -> Result<(), RemovalError> {
@@ -502,53 +533,28 @@ fn reparse(metadata: &fs::Metadata) -> bool {
     }
 }
 
-fn validate_tree(root: &Path) -> Result<(), RemovalError> {
-    for entry in walkdir::WalkDir::new(root).follow_links(false) {
-        let entry = entry.map_err(failure)?;
-        let metadata = fs::symlink_metadata(entry.path()).map_err(|e| io_at(entry.path(), e))?;
-        if reparse(&metadata) || (!metadata.is_dir() && !metadata.is_file()) {
-            return Err(failure(format!(
-                "Refusing linked or special file {}",
-                entry.path().display()
-            )));
-        }
+fn validate_tree(root: &HeldFolder) -> Result<(), RemovalError> {
+    if let Some(path) = root.find_link_below().map_err(entry_failure)? {
+        return Err(failure(format!(
+            "Refusing linked or special file {}",
+            path.display()
+        )));
     }
     Ok(())
 }
 
+/// Removes everything in the held `root` through its handles, depth first, and then `root`
+/// itself. A link found on the way is refused, never followed.
 fn remove_tree(
-    path: &Path,
+    root: HeldFolder,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
 ) -> Result<(), RemovalError> {
-    direct_ancestors(path)?;
-    let metadata = fs::symlink_metadata(path).map_err(|e| io_at(path, e))?;
-    if reparse(&metadata) {
-        return Err(failure(format!("Refusing linked path {}", path.display())));
-    }
-    if metadata.is_dir() {
-        let mut entries = fs::read_dir(path)
-            .map_err(|e| io_at(path, e))?
-            .map(|entry| entry.map(|entry| entry.path()))
-            .collect::<io::Result<Vec<_>>>()
-            .map_err(|e| io_at(path, e))?;
-        // Keep normal ownership evidence until game payload deletion has succeeded.
-        entries.sort_by_key(|entry| {
-            (
-                entry.file_name().is_some_and(|name| name == ".chriz"),
-                entry.clone(),
-            )
-        });
-        for entry in entries {
-            remove_tree(&entry, before_remove)?;
-        }
-        before_remove(path).map_err(|e| io_at(path, e))?;
-        fs::remove_dir(path).map_err(|e| io_at(path, e))
-    } else if metadata.is_file() {
-        before_remove(path).map_err(|e| io_at(path, e))?;
-        fs::remove_file(path).map_err(|e| io_at(path, e))
-    } else {
-        Err(failure("Refusing special file."))
-    }
+    // Keep normal ownership evidence until game payload deletion has succeeded.
+    root.remove_contents(&[".chriz"], before_remove)
+        .map_err(entry_failure)?;
+    let path = root.path().to_path_buf();
+    before_remove(&path).map_err(|e| io_at(&path, e))?;
+    root.remove().map_err(|e| io_at(&path, e))
 }
 
 #[cfg(test)]
@@ -1178,6 +1184,105 @@ mod tests {
         plan.protected_paths.push(f.root.join("game"));
         persist_journal(&f.app, &plan).unwrap();
         assert!(preview(&f.app, "fixture-removal").is_err());
+    }
+    /// Once the root is held, removal stays in the confirmed tree, even when a link above it is
+    /// pointed elsewhere midway.
+    #[cfg(windows)]
+    #[test]
+    fn removal_stays_in_the_held_tree_after_a_link_above_is_repointed() {
+        let temp = tempfile::tempdir().unwrap();
+        let checked = temp.path().join("checked");
+        let other = temp.path().join("other");
+        for tree in [&checked, &other] {
+            for file in [
+                "game/game.exe",
+                "game/override/a.2da",
+                ".chriz/ledger/0.json",
+            ] {
+                let path = tree.join("managed").join(file);
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(&path, "fixture").unwrap();
+            }
+        }
+        let elsewhere = crate::held_folder::tests::tree(&other);
+        let link = temp.path().join("link");
+        link_directory(&link, &checked);
+        let root = HeldFolder::open_for_removal(&link.join("managed")).unwrap();
+        validate_tree(&root).unwrap();
+        let mut repointed = false;
+
+        remove_tree(root, &mut |_| {
+            if !repointed {
+                fs::remove_dir(&link)?;
+                link_directory(&link, &other);
+                repointed = true;
+            }
+            Ok(())
+        })
+        .unwrap();
+
+        assert!(repointed);
+        assert_eq!(fs::read_dir(&checked).unwrap().count(), 0);
+        assert_eq!(crate::held_folder::tests::tree(&other), elsewhere);
+    }
+    /// A folder being emptied cannot be moved away for a link to take its place, and a folder
+    /// that is swapped for a link before it is reached is refused there. Nothing outside is
+    /// touched.
+    #[cfg(windows)]
+    #[test]
+    fn folders_swapped_for_links_during_removal_are_never_followed() {
+        let f = fixture();
+        let outside = f._temp.path().join("outside");
+        fs::create_dir(&outside).unwrap();
+        fs::write(outside.join("game.exe"), "not ours").unwrap();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        let mut swapped = false;
+
+        let game = f.root.join("game");
+        let error = execute_with(&f.app, &plan, &Host::default(), &mut |path| {
+            // Neither while its contents are removed nor once it is empty.
+            if path == game.join("game.exe") || path == game {
+                let moved = fs::rename(&game, f._temp.path().join("moved"));
+                assert!(moved.is_err(), "{} could be moved", path.display());
+            }
+            if path == game {
+                // Ownership records are removed last, so they are not reached yet.
+                fs::rename(f.root.join(".chriz"), f._temp.path().join("moved-records"))?;
+                link_directory(&f.root.join(".chriz"), &outside);
+                swapped = true;
+            }
+            Ok(())
+        })
+        .unwrap_err();
+
+        assert!(swapped);
+        assert!(
+            error.to_string().contains("Refusing linked path"),
+            "{error}"
+        );
+        assert_eq!(
+            fs::read_to_string(outside.join("game.exe")).unwrap(),
+            "not ours"
+        );
+        assert_eq!(registered_campaigns(&f), 1);
+    }
+    /// The folder held for removal must be the one whose identity was confirmed: its path may
+    /// name another folder by then.
+    #[test]
+    fn holding_refuses_a_folder_that_replaced_the_confirmed_one() {
+        let f = fixture();
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        drop(hold_root(&plan).unwrap());
+        fs::rename(&f.root, f._temp.path().join("moved")).unwrap();
+        fs::create_dir(&f.root).unwrap();
+
+        let error = hold_root(&plan).err().unwrap();
+
+        assert!(
+            error.to_string().contains("changed since confirmation"),
+            "{error}"
+        );
+        assert!(f._temp.path().join("moved/game/game.exe").exists());
     }
     #[test]
     fn nested_reparse_point_is_refused_without_touching_its_target() {

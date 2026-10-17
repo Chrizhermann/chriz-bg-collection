@@ -1,4 +1,5 @@
 //! Constrained files and independent copies used by the first patch transaction.
+use crate::held_folder::{self, EntryError, EntryErrorKind, HeldFolder, RemovableFile};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -113,6 +114,187 @@ pub fn json_new(path: &Path, value: &impl Serialize) -> Result<(), String> {
     }
     create(&pending, &bytes)?;
     fs::rename(&pending, path).map_err(err)
+}
+
+/// The game folder of a managed installation and one of its transaction records, both held from
+/// the managed root down: every read, write and removal below them stays in the folders that were
+/// checked, whatever happens to their paths meanwhile.
+pub(crate) struct HeldTransaction {
+    pub(crate) game: HeldFolder,
+    /// Also where replacements are written before they are moved into the game, so that an
+    /// interrupted write never leaves anything in the game.
+    pub(crate) record: HeldFolder,
+}
+
+/// Hold `managed_root/game` and the transaction record folder `record` inside `managed_root`.
+pub(crate) fn hold(managed_root: &Path, record: &Path) -> Result<HeldTransaction, String> {
+    let names = record
+        .strip_prefix(managed_root)
+        .map_err(|_| "Transaction record is outside this installation.")?
+        .components()
+        .map(|part| match part {
+            Component::Normal(name) => name.to_str().ok_or("Unsupported transaction record name."),
+            _ => Err("Unsupported transaction record name."),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let root = HeldFolder::open(managed_root, []).map_err(held)?;
+    Ok(HeldTransaction {
+        game: root.open_below(["game"]).map_err(held)?,
+        record: root.open_below(names).map_err(held)?,
+    })
+}
+
+/// A held folder or entry that could not be used, as a message.
+pub(crate) fn held(error: EntryError) -> String {
+    let path = error.path.display();
+    match error.kind {
+        EntryErrorKind::Missing => format!("Missing file or folder: {path}"),
+        EntryErrorKind::NotDirect => format!("Linked or unexpected entry is not supported: {path}"),
+        EntryErrorKind::Io(error) => format!("{path}: {error}"),
+    }
+}
+
+/// The folders and the last name of a safe relative name such as `override/bgclatxt.2da`.
+pub(crate) fn split_relative(name: &str) -> Result<(Vec<&str>, &str), String> {
+    safe_relative(name)?;
+    let mut parts = name.split('/').collect::<Vec<_>>();
+    let last = parts.pop().ok_or("Unsafe relative patch path.")?;
+    Ok((parts, last))
+}
+
+/// `None` for an entry that is not there.
+fn present<T>(result: Result<T, EntryError>) -> Result<Option<T>, String> {
+    match result {
+        Ok(value) => Ok(Some(value)),
+        Err(EntryError {
+            kind: EntryErrorKind::Missing,
+            ..
+        }) => Ok(None),
+        Err(error) => Err(held(error)),
+    }
+}
+
+/// A file with another name is changed through either name.
+fn independent(file: &File, path: &Path) -> Result<(), String> {
+    if held_folder::link_count(file).map_err(err)? != 1 {
+        return Err(format!(
+            "Expected an independent regular file: {}",
+            path.display()
+        ));
+    }
+    Ok(())
+}
+
+/// Read the independent regular file `name` below `folder`, refusing more than `limit` bytes.
+pub(crate) fn read_held(folder: &HeldFolder, name: &str, limit: u64) -> Result<Vec<u8>, String> {
+    let (folders, last) = split_relative(name)?;
+    let parent = folder.open_below(folders).map_err(held)?;
+    let (file, metadata) = parent.open_file(last).map_err(held)?;
+    let path = parent.path().join(last);
+    independent(&file, &path)?;
+    if metadata.len() > limit {
+        return Err(format!("File exceeds its size limit: {}", path.display()));
+    }
+    let mut bytes = Vec::new();
+    (&file)
+        .take(limit + 1)
+        .read_to_end(&mut bytes)
+        .map_err(err)?;
+    if bytes.len() as u64 > limit {
+        return Err("File grew beyond its size limit.".into());
+    }
+    Ok(bytes)
+}
+
+/// The hash of the independent regular file `name` below `folder`.
+pub(crate) fn hash_held(folder: &HeldFolder, name: &str) -> Result<String, String> {
+    let (folders, last) = split_relative(name)?;
+    let parent = folder.open_below(folders).map_err(held)?;
+    let (file, _) = parent.open_file(last).map_err(held)?;
+    independent(&file, &parent.path().join(last))?;
+    crate::digest::sha256_reader(&file).map_err(err)
+}
+
+/// Check that each named file below `folder` still has its hash.
+pub(crate) fn verify_held_hashes(
+    folder: &HeldFolder,
+    hashes: &BTreeMap<String, String>,
+) -> Result<(), String> {
+    for (name, expected) in hashes {
+        if hash_held(folder, name)? != *expected {
+            return Err(format!("File changed: {name}"));
+        }
+    }
+    Ok(())
+}
+
+/// Put a file with `bytes` in place of `name` in `folder` in one step, or create it. It is written
+/// in `scratch` first, so an interruption leaves either the old file or the new one. An existing
+/// entry must be an independent regular file; a replaced file keeps the spelling of its name.
+pub(crate) fn replace_held(
+    folder: &HeldFolder,
+    scratch: &HeldFolder,
+    name: &str,
+    bytes: &[u8],
+) -> Result<(), String> {
+    let path = folder.path().join(name);
+    // Only checked: the file is closed again before it is replaced.
+    if let Some((file, _)) = present(folder.open_file(name))? {
+        independent(&file, &path)?;
+    }
+    folder
+        .replace_file_from(scratch, name, bytes)
+        .map_err(|error| format!("{}: {error}", path.display()))
+}
+
+/// The file `name` below `folder` that a transaction created, opened so that it can be removed,
+/// or `None` if it is gone. It must still be an independent regular file with `hash`; otherwise
+/// this fails with `changed`. Until the returned file is closed or removed, nobody can change it.
+pub(crate) fn created_file(
+    folder: &HeldFolder,
+    name: &str,
+    hash: &str,
+    changed: &str,
+) -> Result<Option<RemovableFile>, String> {
+    let (folders, last) = split_relative(name)?;
+    let Some(parent) = present(folder.open_below(folders))? else {
+        return Ok(None);
+    };
+    let Some(file) = present(parent.open_removable_file(last))? else {
+        return Ok(None);
+    };
+    independent(file.file(), file.path())?;
+    if crate::digest::sha256_reader(file.file()).map_err(err)? != hash {
+        return Err(changed.into());
+    }
+    Ok(Some(file))
+}
+
+/// Remove what a transaction created at `name` below `folder`, if it is still there: a file that
+/// still has `hash`, failing with `changed` otherwise, or with no hash an empty folder.
+pub(crate) fn remove_created(
+    folder: &HeldFolder,
+    name: &str,
+    hash: Option<&str>,
+    changed: &str,
+) -> Result<(), String> {
+    match hash {
+        Some(hash) => match created_file(folder, name, hash, changed)? {
+            Some(file) => {
+                let path = file.path().to_path_buf();
+                file.remove()
+                    .map_err(|error| format!("{}: {error}", path.display()))
+            }
+            None => Ok(()),
+        },
+        None => {
+            let (folders, last) = split_relative(name)?;
+            let Some(parent) = present(folder.open_below(folders))? else {
+                return Ok(());
+            };
+            present(parent.remove_empty_folder(last)).map(|_| ())
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

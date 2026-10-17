@@ -5,6 +5,7 @@ use crate::{
         ArtifactCache, DownloadRequest,
     },
     events::ConsoleSink,
+    held_folder::{EntryError, EntryErrorKind},
     lock::TargetLock,
     patches::files::Inventory,
     weidu::{
@@ -14,7 +15,6 @@ use crate::{
 };
 use std::{
     fs::OpenOptions,
-    io::Write,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -340,26 +340,19 @@ fn verify_hashes(
     }
     Ok(())
 }
-fn write_existing(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    if path.exists() {
-        files::regular(path)?;
-    } else {
-        let parent = path.parent().ok_or("Missing file parent")?;
-        let ancestor = parent
-            .ancestors()
-            .find(|p| p.exists())
-            .ok_or("Missing folder")?;
-        files::direct(ancestor)?;
-        fs::create_dir_all(parent).map_err(err)?;
-        files::direct(parent)?;
-    }
-    let mut f = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(path)
-        .map_err(err)?;
-    f.write_all(bytes).and_then(|_| f.sync_all()).map_err(err)
+/// Put `bytes` in place of the game file `name`, creating it and any missing folders. The file
+/// is written in the update record first and replaces the old one in a single step.
+pub(super) fn write_existing(
+    held: &files::HeldTransaction,
+    name: &str,
+    bytes: &[u8],
+) -> Result<(), String> {
+    let (folders, last) = files::split_relative(name)?;
+    let folder = held
+        .game
+        .open_or_create_below(folders)
+        .map_err(files::held)?;
+    files::replace_held(&folder, &held.record, last, bytes)
 }
 fn backups(dir: &Path, p: &Prepared) -> Result<(), String> {
     for (name, hash) in &p.backups {
@@ -568,6 +561,8 @@ fn execute(
 ) -> Result<(), String> {
     // Source-tree identity is checked again immediately before publication.
     buffbot::validate_sources(&sources.old, &sources.new)?;
+    // The folders are no longer held once WeiDU runs.
+    let held = files::hold(&ctx.record.managed_root, dir)?;
     for entry in walkdir::WalkDir::new(sources.new.join("buffbot")).follow_links(false) {
         let entry = entry.map_err(err)?;
         if entry.file_type().is_dir() {
@@ -579,8 +574,9 @@ fn execute(
             return Err("Unexpected upgrade source output.".into());
         }
         let bytes = files::read(entry.path(), 16 * 1024 * 1024)?;
-        write_existing(&ctx.game().join(relative), &bytes)?;
+        write_existing(&held, &name, &bytes)?;
     }
+    drop(held);
     VerifiedWeidu::verify(&sources.tool, crate::patches::catalog::TOOL_HASH).map_err(err)?;
     let mut options = OpenOptions::new();
     options.read(true);
@@ -773,59 +769,73 @@ pub(super) fn restore_files(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result
     }
     check_restore(ctx, dir, false)?;
     let r: Restoring = read_json(&dir.join("restoring.json"))?;
+    put_back(&files::hold(&ctx.record.managed_root, dir)?, &p, &r)?;
+    files::json_new(
+        &dir.join("restored.json"),
+        &files::hash(&dir.join("prepared.json"))?,
+    )
+}
+/// Restores the record `dir` through `held`, as production restoration does once its checks
+/// have passed and its restoration record is written.
+#[cfg(test)]
+pub(super) fn put_back_fixture(
+    ctx: &Context<'_>,
+    dir: &Path,
+    held: &files::HeldTransaction,
+) -> Result<(), String> {
+    put_back(
+        held,
+        &load(&ctx.record.managed_root, dir)?,
+        &read_json(&dir.join("restoring.json"))?,
+    )
+}
+/// Put the affected files back from their backups and remove what the update created, all
+/// through the held folders. Each restored file replaces the updated one in a single step.
+fn put_back(held: &files::HeldTransaction, p: &Prepared, r: &Restoring) -> Result<(), String> {
+    const CHANGED: &str = "New update file changed during restoration.";
     // Validate the entire cleanup set before overwriting/removing anything.
     for (name, hash) in &r.removable {
         files::safe_relative(name)?;
         if p.before.contains_key(name) || !buffbot::writable(name) {
             return Err("Invalid update cleanup declaration.".into());
         }
-        let path = ctx.game().join(name);
-        if path.exists() {
-            files::direct(&path)?;
-            if let Some(hash) = hash {
-                files::regular(&path)?;
-                if files::hash(&path)? != *hash {
-                    return Err("New update file changed during restoration.".into());
-                }
-            } else if !path.is_dir() {
-                return Err("Update folder changed.".into());
+        if let Some(hash) = hash {
+            // Closed again at once, so that restoring can go on.
+            files::created_file(&held.game, name, hash, CHANGED)?;
+        } else {
+            match held.game.open_below(name.split('/')) {
+                Ok(_)
+                | Err(EntryError {
+                    kind: EntryErrorKind::Missing,
+                    ..
+                }) => {}
+                Err(EntryError {
+                    kind: EntryErrorKind::NotDirect,
+                    ..
+                }) => return Err("Update folder changed.".into()),
+                Err(error) => return Err(files::held(error)),
             }
         }
     }
     for (name, stamp) in &p.before {
         if stamp.directory && buffbot::writable(name) {
-            let path = ctx.game().join(name);
-            let ancestor = path
-                .ancestors()
-                .find(|p| p.exists())
-                .ok_or("Missing restore parent")?;
-            files::direct(ancestor)?;
-            fs::create_dir_all(&path).map_err(err)?;
-            files::direct(&path)?;
+            files::safe_relative(name)?;
+            held.game
+                .open_or_create_below(name.split('/'))
+                .map_err(files::held)?;
         }
     }
-    for name in p.backups.keys() {
-        let bytes = files::read(&dir.join("affected").join(name), 256 * 1024 * 1024)?;
-        write_existing(&ctx.game().join(name), &bytes)?;
-    }
-    let mut remove = r.removable.keys().collect::<Vec<_>>();
-    remove.sort_by_key(|n| std::cmp::Reverse(n.len()));
-    for name in remove {
-        let path = ctx.game().join(name);
-        if !path.exists() {
-            continue;
+    for (name, expected) in &p.backups {
+        let bytes = files::read_held(&held.record, &format!("affected/{name}"), 256 * 1024 * 1024)?;
+        if sha256_bytes(&bytes) != *expected {
+            return Err(format!("Backup verification failed: {name}"));
         }
-        files::direct(&path)?;
-        if r.removable[name].is_none() {
-            fs::remove_dir(path).map_err(err)?;
-        } else {
-            files::regular(&path)?;
-            fs::remove_file(path).map_err(err)?;
-        }
+        write_existing(held, name, &bytes)?;
     }
-    verify_hashes(&ctx.game(), &p.backups, false)?;
-    files::json_new(
-        &dir.join("restored.json"),
-        &files::hash(&dir.join("prepared.json"))?,
-    )
+    let mut remove = r.removable.iter().collect::<Vec<_>>();
+    remove.sort_by_key(|(name, _)| std::cmp::Reverse(name.len()));
+    for (name, hash) in remove {
+        files::remove_created(&held.game, name, hash.as_deref(), CHANGED)?;
+    }
+    files::verify_held_hashes(&held.game, &p.backups)
 }

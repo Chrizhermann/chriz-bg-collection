@@ -4,6 +4,7 @@
 use super::*;
 use crate::{
     digest::plan_digest,
+    held_folder::tests::{copy_dir, entries, junction, tree},
     manifest::GameRoot,
     receipt::{
         FinalLogReceipt, FinalReceiptState, InstallReceipt, LogComponentReceipt, ReceiptOutcome,
@@ -289,6 +290,42 @@ fn publish_applied(fixture: &Fixture, dir: &Path, before: &Inventory) {
     .unwrap();
 }
 
+/// Writes the restoration record as production restoration writes it before its first change.
+fn restoring(fixture: &Fixture, dir: &Path) {
+    let before = files::inventory(&fixture.game(), false).unwrap();
+    let removable: BTreeMap<String, Option<String>> = before
+        .iter()
+        .filter(|(name, _)| adapter_scope(name) && allowed(name))
+        .map(|(name, stamp)| {
+            let hash = if stamp.directory {
+                None
+            } else {
+                Some(files::hash(&fixture.game().join(name)).unwrap())
+            };
+            (name.clone(), hash)
+        })
+        .collect();
+    files::json_new(
+        &dir.join("restoring.json"),
+        &json!({
+            "prepared_sha256": files::hash(&dir.join("prepared.json")).unwrap(),
+            "before": before,
+            "removable": removable,
+        }),
+    )
+    .unwrap();
+}
+
+/// `path` below the fixture's managed root, spelled through its temporary folder: the managed
+/// root is canonicalized, a form `mklink` does not take.
+fn plain(fixture: &Fixture, relative: &str) -> PathBuf {
+    relative
+        .split('/')
+        .fold(fixture._temp.path().join("managed"), |path, part| {
+            path.join(part)
+        })
+}
+
 fn applied(fixture: &Fixture) -> PathBuf {
     let (dir, plan, before) = prepared(fixture);
     repair_tables(fixture, &plan);
@@ -489,28 +526,7 @@ fn interrupted_undo_is_retryable_after_partial_restore_and_runtime_writes() {
     let dir = applied(&fixture);
     let runtime = fixture.game().join("runtime-note.txt");
     write(&runtime, b"unrelated runtime data");
-    let before = files::inventory(&fixture.game(), false).unwrap();
-    let removable: BTreeMap<String, Option<String>> = before
-        .iter()
-        .filter(|(name, _)| adapter_scope(name) && allowed(name))
-        .map(|(name, stamp)| {
-            let hash = if stamp.directory {
-                None
-            } else {
-                Some(files::hash(&fixture.game().join(name)).unwrap())
-            };
-            (name.clone(), hash)
-        })
-        .collect();
-    files::json_new(
-        &dir.join("restoring.json"),
-        &json!({
-            "prepared_sha256": files::hash(&dir.join("prepared.json")).unwrap(),
-            "before": before,
-            "removable": removable,
-        }),
-    )
-    .unwrap();
+    restoring(&fixture, &dir);
     // Simulate a crash after one original table was restored and one generated file removed.
     let original = fs::read(dir.join("affected/override/bgclatxt.2da")).unwrap();
     write(&fixture.game().join("override/BGCLATXT.2DA"), &original);
@@ -572,6 +588,176 @@ fn corrupted_backup_or_prepared_hash_link_blocks_automatic_undo() {
     assert!(launch_guard(&fixture.record.managed_root).is_err());
     assert!(restore(&fixture.ctx(), &catalog(), true).is_err());
     assert_eq!(file_bytes(&fixture.game()), before);
+}
+
+fn refused<T>(result: Result<T, String>) -> String {
+    match result {
+        Ok(_) => panic!("expected a refusal"),
+        Err(error) => error,
+    }
+}
+
+/// Holds the record `dir` through a link to the fixture's temporary folder, then points that
+/// link at a copy of the installation in `other`, as if the folders above had been swapped.
+/// The copy's backups and payload differ, so anything read by path again is detected.
+fn hold_then_repoint(fixture: &Fixture, dir: &Path, other: &Path) -> files::HeldTransaction {
+    let temp = fixture._temp.path();
+    let relative = dir.strip_prefix(&fixture.record.managed_root).unwrap();
+    copy_dir(&fixture.record.managed_root, &other.join("managed"));
+    let record = other.join("managed").join(relative);
+    for entry in walkdir::WalkDir::new(&record) {
+        let entry = entry.unwrap();
+        if entry.file_type().is_file() && !entry.file_name().to_string_lossy().ends_with(".json") {
+            fs::write(entry.path(), b"elsewhere").unwrap();
+        }
+    }
+    let link = temp.join("link");
+    junction(&link, temp);
+    let held = files::hold(&link.join("managed"), &link.join("managed").join(relative)).unwrap();
+    fs::remove_dir(&link).unwrap();
+    junction(&link, other);
+    held
+}
+
+/// Every read, replacement and removal of a restoration stays in the folders that were held,
+/// even once a link above the installation points elsewhere. Replaced tables keep the spelling
+/// of their names, and nothing is left where the replacements were written.
+#[test]
+fn restoring_stays_in_the_held_folders_after_a_link_above_is_repointed() {
+    let fixture = Fixture::new();
+    let override_names = entries(&fixture.game().join("override"));
+    let dir = applied(&fixture);
+    restoring(&fixture, &dir);
+    let other = fixture._temp.path().join("other");
+    let held = hold_then_repoint(&fixture, &dir, &other);
+    let elsewhere = tree(&other);
+
+    transaction::put_back_fixture(&fixture.ctx(), &dir, &held).unwrap();
+    drop(held);
+
+    fixture.assert_original();
+    assert!(!fixture.game().join(catalog::ADAPTER).exists());
+    assert_eq!(entries(&fixture.game().join("override")), override_names);
+    assert_eq!(
+        entries(&dir),
+        [
+            "affected",
+            "applied.json",
+            "prepared.json",
+            "restoring.json"
+        ]
+    );
+    assert_eq!(tree(&other), elsewhere);
+}
+
+/// A link anywhere from the installation down to an entry being restored or removed is
+/// refused, and nothing is read or written through it.
+#[test]
+fn restoring_refuses_a_link_at_every_level_without_going_through_it() {
+    let fixture = Fixture::new();
+    let dir = applied(&fixture);
+    restoring(&fixture, &dir);
+    let before = tree(&fixture.record.managed_root);
+    let link = fixture._temp.path().join("linked-managed");
+    junction(&link, &fixture._temp.path().join("managed"));
+    let relative = dir.strip_prefix(&fixture.record.managed_root).unwrap();
+    let error = refused(files::hold(&link, &link.join(relative)));
+    assert!(error.contains("Linked or unexpected entry"), "{error}");
+    assert_eq!(tree(&fixture.record.managed_root), before);
+
+    for level in [
+        "game",
+        ".chriz",
+        "{record}/affected",
+        "{record}/affected/override",
+        "game/override",
+        "game/weidu.conf",
+        "game/AKCB_KIT_DESCRIPTIONS",
+        "game/AKCB_KIT_DESCRIPTIONS/backup/0",
+    ] {
+        let fixture = Fixture::new();
+        let dir = applied(&fixture);
+        restoring(&fixture, &dir);
+        let record = dir
+            .strip_prefix(&fixture.record.managed_root)
+            .unwrap()
+            .to_string_lossy()
+            .replace('\\', "/");
+        let linked = plain(&fixture, &level.replace("{record}", &record));
+        // What was there moves outside, where a link in its place now leads.
+        let outside = fixture._temp.path().join("outside");
+        if linked.is_dir() {
+            fs::rename(&linked, &outside).unwrap();
+        } else {
+            fs::create_dir(&outside).unwrap();
+            fs::rename(&linked, outside.join(linked.file_name().unwrap())).unwrap();
+        }
+        junction(&linked, &outside);
+        let before = tree(&outside);
+
+        let error = refused(
+            files::hold(&fixture.record.managed_root, &dir)
+                .and_then(|held| transaction::put_back_fixture(&fixture.ctx(), &dir, &held)),
+        );
+
+        assert!(
+            error.contains("Linked or unexpected entry"),
+            "{level}: {error}"
+        );
+        assert_eq!(tree(&outside), before, "{level}");
+    }
+}
+
+/// The adapter's files appear in the held game only once complete, never replace anything, and
+/// stay in the held folders once a link above the installation points elsewhere.
+#[test]
+fn the_adapter_is_placed_complete_in_the_held_game_only() {
+    let fixture = Fixture::new();
+    let (dir, _, _) = prepared(&fixture);
+    let sources: [(&str, &[u8]); 2] = [
+        (
+            "setup-AKCB_KIT_DESCRIPTIONS.tp2",
+            b"synthetic adapter source",
+        ),
+        ("lib/kit_strref.tpa", b"synthetic adapter library"),
+    ];
+    for (name, bytes) in sources {
+        write(&dir.join("payload").join(name), bytes);
+    }
+    let hashes = sources.map(|(_, bytes)| sha256_bytes(bytes));
+    let payload = [0, 1].map(|index| {
+        let (name, bytes) = sources[index];
+        (name, bytes.len() as u64, hashes[index].as_str())
+    });
+    let other = fixture._temp.path().join("other");
+    let held = hold_then_repoint(&fixture, &dir, &other);
+    let elsewhere = tree(&other);
+
+    let unknown = "00".repeat(32);
+    let error = transaction::place_adapter_fixture(&held, &[(payload[0].0, 0, unknown.as_str())])
+        .unwrap_err();
+    assert!(error.contains("Adapter identity changed"), "{error}");
+    assert!(!fixture.game().join(catalog::ADAPTER).exists());
+    transaction::place_adapter_fixture(&held, &payload).unwrap();
+    let error = transaction::place_adapter_fixture(&held, &payload).unwrap_err();
+    drop(held);
+
+    assert!(error.contains("os error 183"), "{error}");
+    assert_eq!(
+        tree(&fixture.game().join(catalog::ADAPTER)),
+        [
+            (
+                "lib/kit_strref.tpa".to_owned(),
+                b"synthetic adapter library".to_vec()
+            ),
+            (
+                "setup-AKCB_KIT_DESCRIPTIONS.tp2".to_owned(),
+                b"synthetic adapter source".to_vec()
+            ),
+        ]
+    );
+    assert_eq!(entries(&dir), ["affected", "payload", "prepared.json"]);
+    assert_eq!(tree(&other), elsewhere);
 }
 
 /// Explicit local opt-in only. Both inputs must match the production pins; the tool
