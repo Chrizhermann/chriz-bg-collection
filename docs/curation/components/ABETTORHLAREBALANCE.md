@@ -5,4 +5,4 @@ Listed at installed version **1.0.0**.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
-| 0 | Abettor of Mask: Symphony of the Dark Children finite-song rebalance |  |  | ✓ | |
+| 0 | Abettor of Mask: Symphony of the Dark Children finite-song rebalance |  |  | ✓ | THIS SHOULD BE INCLUDED IN THE ARTISANS KITPACK BALANCE PATCH I BELIEVE |
