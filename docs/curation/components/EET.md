@@ -28,7 +28,7 @@ reviewed on 2026-09-01 is v14.1; it does not contain all of that work.
   newer package only if it includes the required 2.7 changes; otherwise re-resolve and
   pin the exact official `master` SHA.
 - Re-list both EET component menus if the resolved SHA changes.
-- Replace the stale v14.0 source URL in `manifest/mod-sources.tsv`; do not infer the
-  downloadable artifact from the version string printed by the current TP2.
+- The recipe artifact is the pin; do not infer the downloadable artifact from the
+  version string printed by the current TP2.
 - Validate the merge from the two staged 2.7 games, including the separately required
   EE Fixpack runs, before treating the pin as accepted.
