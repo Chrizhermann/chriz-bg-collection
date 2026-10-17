@@ -262,18 +262,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // curated recipe's "Potion uniqueness" label (display only; without it, the old value).
     // The curated plan was re-pinned for Bardic Wonders v2.9c-balance.8: only the four
     // Bardic runs' artifact id changes; with balance.7 restored, the plan is the old digest.
+    // Re-pinned on October 17 when Unfinished Business became optional and unselected.
+    // In both recipes the new Recommended plan equals the previous plan minus the
+    // ub-bg2 run (its 18 former defaults); no other run changes.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "ca85703180b06917f059d5db2a0d6e9b79a791fb6edfc9d7cce573a31f72b53b",
-            "44d42db20d6b83740070b6a13dddb8d9d6ff782819c3e8ab9d0ec35014841fb0",
-            "8ae2181b61325b732b5393e62025dd834b60718faae68930ea4e4f7e2565a4f8",
+            "fa1af794108547bfc9018761c1461e4569d2d8704bbc2e369a75e689ab606f5b",
+            "004f6b8b5075641f3caaa3bafa9db5e6f69e8f0285524be014a484e6c4b3df29",
+            "49ed090082cdc4374ec8b819b31774cd8a79b8f50c1b0b8acc03afbef8992bc4",
         ),
         (
             "../recipes/curated-full-current",
-            "6991ffc808e097bc62acd433721558fd392c3cef1fa674a885f2c042b4c4cf10",
-            "3583af30c2adac4aac99d270fb3257b6dd267b55d23005dedf2883537e4bfaf7",
-            "73b1a0a9ff613ab1322779c8733eaf8eaec21f6bca143bef23ce26958cb0247f",
+            "11d690a4002a37322849d574b3098985a416af689a0693105add8818458066e7",
+            "fe99c02a54aa7aca228559b538570bdbc1929d68a4ec127f3f1f89f090a3b94c",
+            "09d1b39ba942516227aa1af4955c08b2a92a1f81403f35df95b261b4cf0044b7",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
