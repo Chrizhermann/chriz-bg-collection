@@ -424,10 +424,11 @@ impl ModFolder {
 
     fn open_file(&self, name: &str) -> io::Result<fs::File> {
         let path = self.path.join(name);
-        if fs::symlink_metadata(&path)?.file_type().is_symlink() {
+        // Opening a link, or a FIFO that would block, is never needed to compare a file.
+        if !fs::symlink_metadata(&path)?.is_file() {
             return Err(io::Error::new(
                 ErrorKind::InvalidInput,
-                "a link is not a direct file",
+                "the configuration file path is not a direct file",
             ));
         }
         fs::File::open(path)
@@ -697,12 +698,15 @@ mod tests {
     fn held_folders_cannot_be_moved_while_the_file_is_placed() {
         let root = tempfile::tempdir().unwrap();
         let game = root.path().join("game");
-        let mod_folder = game.join("cdtweaks");
+        let outer = game.join("mods");
+        let mod_folder = outer.join("cdtweaks");
         fs::create_dir_all(&mod_folder).unwrap();
 
-        let folder = ModFolder::open(&game, "cdtweaks").unwrap();
-        assert!(fs::rename(&mod_folder, game.join("moved")).is_err());
-        assert!(fs::rename(&game, root.path().join("moved")).is_err());
+        let folder = ModFolder::open(&game, "mods/cdtweaks").unwrap();
+        for held in [&mod_folder, &outer, &game] {
+            let moved = held.with_file_name("moved");
+            assert!(fs::rename(held, &moved).is_err(), "{}", held.display());
+        }
         // Adding the configuration file inside the held folder still works.
         folder
             .create_file("cdtweaks.txt", CONTENT.as_bytes())
@@ -710,7 +714,27 @@ mod tests {
         drop(folder);
 
         assert_eq!(entries(&mod_folder), ["cdtweaks.txt"]);
-        fs::rename(&mod_folder, game.join("moved")).unwrap();
+        fs::rename(&mod_folder, outer.join("moved")).unwrap();
+    }
+
+    /// The bytes compared are the bytes in place: while open, the file cannot be changed, replaced
+    /// or removed.
+    #[cfg(windows)]
+    #[test]
+    fn an_existing_file_cannot_change_while_it_is_compared() {
+        let root = staged_mod();
+        let path = root.path().join("cdtweaks/cdtweaks.txt");
+        fs::write(&path, CONTENT).unwrap();
+        let folder = ModFolder::open(root.path(), "cdtweaks").unwrap();
+
+        let existing = folder.open_file("cdtweaks.txt").unwrap();
+        assert!(fs::write(&path, "OUTER_SET changed = 1\n").is_err());
+        assert!(fs::remove_file(&path).is_err());
+        assert!(fs::rename(&path, path.with_file_name("moved.txt")).is_err());
+        drop(existing);
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), CONTENT);
+        fs::remove_file(&path).unwrap();
     }
 
     /// A link above the target root can still be re-pointed while the folders are held, which
