@@ -40,7 +40,8 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Time Stop/Haste timing fix as a standalone EEex mod. Engine research and an observation
   lab exist (BG Rebalance branch `wip/2026-10-17/main-checkout`,
   `research/10-timestop-haste-engine-clocks.md` and `research/timestop-lab/`); nothing
-  has run in the game yet.
+  has run in the game yet. The lab scripts pin EEex v1.3.0 (commit, version, tree hash,
+  WeiDU.log pattern) and refuse v1.3.1 until they are re-pinned.
 - Compatibility follow-ups from the October 8 owner audits (`docs/audits/2026-10-08-*.md`
   in BG Rebalance): Rebalance and the Spell Revisions fork first, Modpack and SoD items
   after the sessions above land.
