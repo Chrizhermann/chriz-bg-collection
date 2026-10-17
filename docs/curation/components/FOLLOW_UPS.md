@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-17
+## Work queue at a glance — 2026-10-18
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -22,10 +22,10 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
   Thief→Mage dual as the default, working for every thief kit.
 - Modpack: lab-verified, unreleased fixes for campaign XP caps `650`/`651` and a new
-  optional join-XP catch-up `239` for mod NPCs without EET's `BD_JOINXP` block (see
-  Sarah below) wait for Christopher's release decision. Chapter-bound XP caps (`652`,
-  values: Christopher) come next. The next collection release pins only a lab-verified
-  `650`.
+  join-XP catch-up `239` for mod NPCs without EET's `BD_JOINXP` block (see Sarah below)
+  ship together with chapter-bound XP caps (`652`, values: Christopher), which come next
+  (decided 2026-10-17). The collection then offers `239` as a default (decided
+  2026-10-18). The next collection release pins only a lab-verified `650`.
 - Hobgoblin challenge run (design with Christopher).
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle (see below).
@@ -40,6 +40,10 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Compatibility follow-ups from the October 8 owner audits (`docs/audits/2026-10-08-*.md`
   in BG Rebalance): Rebalance and the Spell Revisions fork first, Modpack and SoD items
   after the sessions above land.
+- Installer: a hidden setting that turns on the game log for crash diagnosis
+  (InfinityLoader's `LogFile`), requested on 2026-10-18. The loader overwrites the log on
+  every start, so the feature has to keep the previous session's log; Windows crash dumps
+  are the other half of the evidence.
 
 **Waiting for Christopher**
 
@@ -166,8 +170,8 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
     lacks one (Fade, Sarah, Yeslick, Xan and Evandra get the ladder; Wilson and Yoshimo
     get the raise). In a lab copy of a SoA save, a fresh Sarah joined at 750,000 XP.
     Mod NPCs that got the ladder are then no longer raised to 2,500,000 at the ToB
-    transition, which matches EET's vanilla NPCs. Whether the collection offers `239`
-    is a curation decision.
+    transition, which matches EET's vanilla NPCs. Christopher decided on 2026-10-18
+    that the collection offers `239` as a default, because it is a fix.
 - [ ] Vanguard Defensive Stance: PraetorFallen reports that disabling "Use special
   abilities" in the AI settings stops companions from using the ability, but the main
   character still uses it automatically. Recorded on 2026-10-16; a fix is in progress on
