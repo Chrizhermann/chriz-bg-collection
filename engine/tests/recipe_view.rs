@@ -27,6 +27,7 @@ fn component(id: u32) -> Component {
         name: format!("Component {id}"),
         stdin: None,
         prompts: Vec::new(),
+        config_files: Vec::new(),
     }
 }
 

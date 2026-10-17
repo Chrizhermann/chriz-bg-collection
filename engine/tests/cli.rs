@@ -2098,6 +2098,74 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
 
 #[cfg(windows)]
 #[test]
+fn install_places_component_config_files_in_both_games_and_records_them() {
+    const CONTENT: &str = "OUTER_SET fixed = 1\n";
+    let fixture = executable_fixture();
+    let mod_file = fixture.recipe.join("mods/eefixpack.toml");
+    let text = fs::read_to_string(&mod_file)
+        .expect("read synthetic installer")
+        .replace(
+            "name = \"Core fixes\"",
+            "name = \"Core fixes\"\nconfig_files = [{ path = \"EE_Fixpack/fixpack.txt\", content = \"OUTER_SET fixed = 1\\n\" }]",
+        );
+    fs::write(&mod_file, text).expect("author synthetic config file");
+    let mut command = executable_command(&fixture);
+    command.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+
+    let output = command.output().expect("execute config-file install");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    for root in ["bg1", "game"] {
+        assert_eq!(
+            fs::read_to_string(fixture.managed.join(root).join("EE_Fixpack/fixpack.txt"))
+                .expect("placed config file"),
+            CONTENT
+        );
+    }
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let steps = fixture
+        .managed
+        .join(".chriz/attempts")
+        .join(&replay.created().attempt_id)
+        .join("steps");
+    let evidence = fs::read_dir(steps)
+        .unwrap()
+        .filter_map(Result::ok)
+        .flat_map(|step| {
+            fs::read_dir(step.path())
+                .into_iter()
+                .flatten()
+                .filter_map(Result::ok)
+                .map(|attempt| attempt.path().join("config-files.json"))
+        })
+        .filter(|path| path.is_file())
+        .map(|path| serde_json::from_slice::<Value>(&fs::read(path).unwrap()).unwrap())
+        .collect::<Vec<_>>();
+    let expected = serde_json::json!([{
+        "component": 0,
+        "path": "EE_Fixpack/fixpack.txt",
+        "sha256": sha256_bytes(CONTENT.as_bytes()),
+        "created": true,
+    }]);
+    assert_eq!(evidence, vec![expected.clone(), expected]);
+}
+
+#[cfg(windows)]
+#[test]
 fn setup_name_log_override_reconciles_from_attempt_owned_stdout() {
     let fixture = executable_fixture();
     let mut command = executable_command(&fixture);
