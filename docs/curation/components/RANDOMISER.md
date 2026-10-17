@@ -2,7 +2,8 @@
 
 Listed at installed version **7**. The maintained fork target is **v8.1.1** at commit
 `f4a9dfb1281269629e4a6fcedb6a064147dfde32`; it preserves the same 26 component IDs.
-`manifest/mod-sources.tsv` pins the immutable release asset, SHA-256, and size.
+The recipe artifact `randomiser-8.1.1` pins the immutable release asset, SHA-256, and
+size.
 26 entries, 9 installed. ✓ = installed. Subgroup = choose one.
 
 ## UI/dependency notes
