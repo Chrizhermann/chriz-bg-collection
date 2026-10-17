@@ -30,6 +30,10 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle (see below).
 - InfinityLoader crash analysis: causes found; follow-up decisions are Christopher's.
+- Installer link safety: patch restore, mod upgrades and uninstall now read and write
+  through held folder handles too (PR #17, in review). Next: ancestor checks above an
+  installation accept OneDrive (cloud-files) folders but keep refusing junctions, symlinks
+  and unknown reparse points (decided 2026-10-18).
 
 **Ready to start**
 
@@ -51,11 +55,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
 - Chapter-cap values for the new XP-cap component.
-- Installer link safety: configuration files and the EET/Infinity UI hooks now read and
-  write through held folder handles (`engine/src/held_folder.rs`). Other writers into
-  staged or installed games still check a path and then write by path, among them patch
-  restore, mod upgrades, uninstall, staging publication and mod materialization (inventory
-  in PR #16). Moving them over waits for Christopher's go.
+- Installer link safety, remaining writers: staging publication, mod materialization and
+  the WeiDU setup copy, then Radar and the `.chriz` state writers, still check a path and
+  then write by path (inventory in PR #16). Moving them over waits for Christopher's go.
 - The [curation queue](#curation-decisions-still-in-chriss-review-queue) at the end of this file.
 
 **Deferred by decision**
