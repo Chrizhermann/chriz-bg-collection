@@ -22,15 +22,22 @@ Cross-repository status. Component detail stays in the sections below and in the
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
   everywhere): pinned in both recipes on `claude/eeex-131-pin` with fresh-download and
   native-order evidence. On 2026-10-18 a disposable 2.7.3.0 lab with the full recipe
-  booted every EEex user cleanly. Remote Console: [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3).
-  Attack Info `9` waits for Christopher.
+  booted every EEex user cleanly; a new BG1 game in that lab then exercised the EEex
+  modules, Remote Console and BuffBot (see Done). Remote Console: [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3)
+  and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4). Open from that lab: creature
+  `LOCALS` are missing after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `650`
+  (below). Attack Info `9` waits for Christopher.
 - Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
   Thief→Mage dual as the default, working for every thief kit.
 - Modpack: lab-verified, unreleased fixes for campaign XP caps `650`/`651` and a new
   join-XP catch-up `239` for mod NPCs without EET's `BD_JOINXP` block (see Sarah below)
   ship together with chapter-bound XP caps (`652`, values: Christopher), which come next
   (decided 2026-10-17). The collection then offers `239` as a default (decided
-  2026-10-18). The next collection release pins only a lab-verified `650`.
+  2026-10-18). The next collection release pins only a lab-verified `650`. In the
+  2026-10-18 EEex v1.3.1 lab, released alpha.12 still gave no actor an identity (the
+  EEex v1.2 failure); the unreleased fix is lab-verified on v1.2.0 only and needs the
+  same check on v1.3.1
+  ([modpack archive #10](https://github.com/Chrizhermann/chriz-bg-modpack-private-archive/issues/10)).
 - Hobgoblin challenge run (design with Christopher).
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle (see below).
@@ -38,6 +45,11 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **Ready to start**
 
+- Creature `LOCALS` after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)): in the EEex v1.3.1 lab,
+  locals set before saving were missing after loading, in the same process and after a
+  restart; globals survived. Next: compare the vanilla 2.7.3.0 effect-list loader with
+  EEex's replacement and repeat the save/reload without EEex, on 2.6.6.0 and with a
+  smaller stack. The result decides whether this blocks the v1.3.1 rollout.
 - Time Stop/Haste timing fix as a standalone EEex mod. Engine research and an observation
   lab exist (BG Rebalance branch `wip/2026-10-17/main-checkout`,
   `research/10-timestop-haste-engine-clocks.md` and `research/timestop-lab/`); nothing
@@ -186,12 +198,16 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   abilities" in the AI settings stops companions from using the ability, but the main
   character still uses it automatically. Recorded on 2026-10-16; a fix is in progress on
   Artisan branch `claude/defensive-stance-ai-toggle`.
-- [ ] [EEex](EEEX.md): loader launch and LuaJIT are shown in play, and with v1.3.1 in the
-  2026-10-18 lab (main menu and Options menu). Hotkey, effect-menu, empty-container,
-  scale, time-step and timer behavior have no record.
-- [ ] [EEex Remote Console](EEEXREMOTE.md): on target EET 2.7.3 with EEex v1.3.1, the
-  ready handshake, `pong` and the 22-case watchdog smoke passed on the main menu
-  (2026-10-18 lab). World-screen polling is still unrecorded.
+- [ ] [EEex](EEEX.md): the modules ran in the 2026-10-18 v1.3.1 lab (see Done), but that
+  lab is hidden, so nothing was seen on screen. Check `B3Scale` at a resolution wider
+  than 4:3 and the empty-container highlight in a visible game.
+- [ ] [EEex Remote Console](EEEXREMOTE.md): with the pinned v0.2.0, once `START` reopens
+  from character creation or the load screen, New Game (seen in the 2026-10-18 lab) or
+  Load Game leaves `START_SP` on the menu stack under the game's screens. The fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4) is lab-verified and
+  waits for review; the pin moves after a release (Christopher's OK).
+- [ ] Creature `LOCALS` survive save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)). In the 2026-10-18
+  EEex v1.3.1 lab they did not, in the same process and after a restart; `GLOBAL`
+  variables did.
 - [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md) Tempus APR: under the pinned EEex (v1.3.1), verify
   steady 1.5 APR with a two-pip weapon, 2.5 under Holy Power, no cycling, and immediate
   loss of the bonus with a zero-pip weapon.
@@ -205,10 +221,14 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   statically.)
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
-- [ ] [BuffBot](BUFFBOT.md): BG1 start/save/reload smoke. The collection-specific
-  InfinityLoader boot is recorded with EEex v1.3.1 (2026-10-18 lab: options registered,
-  Options-menu tab and radio sync). The combat-stop notice never shows
-  ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76)).
+- [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed (see Done). Open: the
+  combat-stop notice never shows
+  ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76), fix in
+  [#77](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/77)); toggle stances with
+  opcode 214 variants count as buffs, so a new party's Long preset enables Artisan's
+  Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
+  in-game test suites have stale or install-specific expectations
+  ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)).
 - [ ] Visually verify the Evandra portrait override in game.
 
 ## Conditional/future feature gates
@@ -257,6 +277,27 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   as a default Wizard Slayer.
 
 ## Done since 2026-09-04
+
+Done on 2026-10-18 in the EEex v1.3.1 runtime lab (EET over BG2:EE 2.7.3.0, full recipe,
+new BG1 game with a throwaway character, hidden quiet launches; branch
+`claude/eeex-131-pin`). Checked through Lua state, not on screen:
+
+- [EEex](EEEX.md) modules: the effect menu opened while Left Shift was held and listed
+  Bless after a cast; the empty-container hook was installed and gave the empty
+  container in Candlekeep its own colour; a temporary two-key hotkey fired for j then
+  k and not for k then j; `B3Scale` left 1024x768 unchanged and computed 1365x768,
+  1820x768 and 1228x768 for 1920x1080, 2560x1080 and 1280x800; time step (`d`) advanced one tick
+  from pause, ran while held and paused again on release; the timer's cast and modal
+  bars ran during a cast and a modal action.
+- [EEex Remote Console](EEEXREMOTE.md): README checklist steps 1-6 on the target. On the
+  world screen `ping.lua` answered `pong`, the 22-case smoke with the watchdog passed and
+  the next `pong` came from the same game process, both with the pinned v0.2.0 loader
+  and with the fix from [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4).
+- [BuffBot](BUFFBOT.md): BG1 start and save; after loading, the saved preset name and
+  active preset were back and an unsaved change was gone (UDAux). `BfBot.Test.RunAll()`
+  passed 22 of 25 phases; the three failures are tracked in
+  [bg-eeex-buffbot#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78) and
+  [#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79).
 
 Done on 2026-10-18 on `claude/recipe-fixes-20261018`:
 
