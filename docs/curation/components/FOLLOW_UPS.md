@@ -21,8 +21,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
   everywhere): pinned in both recipes on `claude/eeex-131-pin` with fresh-download and
-  native-order evidence; a disposable 2.7.3.0 lab with the full recipe tests every EEex
-  user. Attack Info `9` waits for Christopher.
+  native-order evidence. On 2026-10-18 a disposable 2.7.3.0 lab with the full recipe
+  booted every EEex user cleanly. Remote Console: [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3).
+  Attack Info `9` waits for Christopher.
 - Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
   Thief→Mage dual as the default, working for every thief kit.
 - Modpack: lab-verified, unreleased fixes for campaign XP caps `650`/`651` and a new
@@ -93,8 +94,9 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 
 - [ ] [EEex](EEEX.md): v1.3.1 (2026-10-07) replaces v1.2.0 on `claude/eeex-131-pin`:
   fresh download, published release, archive shape and a native-order source audit in
-  `manifest/evidence/release-intake-20261018.toml`. Check this once the lab smoke test of
-  every EEex user is recorded and the branch is merged.
+  `manifest/evidence/release-intake-20261018.toml`. The lab smoke test of every EEex
+  user is recorded in the pin pull request (2026-10-18); check this once the branch is
+  merged.
 - [ ] [EET](EET.md): at each manifest freeze, recheck official releases (v14.1 is still the
   newest). Upstream `master` is six commits ahead of the pinned `74e91d72` archive,
   including a Windows shortcut-path fix (#206) that may matter for EET `100`.
@@ -124,8 +126,9 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   collection install runs with the limit off. (Clean stage, loader launch and the absence
   of stale `EEex_*.lua` are confirmed.)
 - [ ] [EEex Remote Console](EEEXREMOTE.md): its repository documentation at the pinned
-  commit still describes EEex 1.0.x; the update sits on its unmerged branch
-  `codex/eeex-1.2-compat`.
+  commit still describes EEex 1.0.x. The update is [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3):
+  v1.2 and v1.3 guidance, v1.3.1 lab evidence and a PowerShell 7 fix for its smoke
+  suite. Re-pin after it merges.
 - [ ] Red Wizard source follow-up: the pinned Artisan tag still removes fixed vanilla spell
   resrefs (`ArtisansKitpack/lib/redwizard.tpa`) instead of checking effective prohibited
   schools, and SR `60` custom-kit school cleanup is uninvestigated. EET `EDWIN7_` coverage
@@ -141,7 +144,7 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   it).
 - [ ] Fix legacy EEex dependency checks: Artisan (`v4.81a-dev.85928f9-chriz.1`), Bardic
   Wonders (`v2.9c-balance.8`) and Bubb's Spell Menu still test EEex component `0`, which
-  is only Quick Menu Core in EEex v1.2. Require main component `1` or use a
+  is only Quick Menu Core since EEex v1.2 (unchanged in v1.3.1). Require main component `1` or use a
   version-independent capability check; the mandatory EEex `0`–`8` only masks this.
 - [ ] Implement and fixture-test the [IWDification](IWDIFICATION.md) `120` tail patch that
   adds level-7 Evasion to Arcane Trickster `C0ATR.2DA`; it stays excluded until then.
@@ -178,25 +181,29 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   abilities" in the AI settings stops companions from using the ability, but the main
   character still uses it automatically. Recorded on 2026-10-16; a fix is in progress on
   Artisan branch `claude/defensive-stance-ai-toggle`.
-- [ ] [EEex](EEEX.md): loader launch and LuaJIT are shown in play; hotkey, effect-menu,
-  empty-container, scale, time-step and timer behavior have no record.
-- [ ] [EEex Remote Console](EEEXREMOTE.md): on target EET 2.7.3, record the ready
-  handshake, `pong`, main-menu/world-screen polling and watchdog smoke. Ready files appear
-  in 2.7.3 labs; earlier live evidence used BG2EE 2.6.6.
-- [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md) Tempus APR: under EEex v1.2, verify
+- [ ] [EEex](EEEX.md): loader launch and LuaJIT are shown in play, and with v1.3.1 in the
+  2026-10-18 lab (main menu and Options menu). Hotkey, effect-menu, empty-container,
+  scale, time-step and timer behavior have no record.
+- [ ] [EEex Remote Console](EEEXREMOTE.md): on target EET 2.7.3 with EEex v1.3.1, the
+  ready handshake, `pong` and the 22-case watchdog smoke passed on the main menu
+  (2026-10-18 lab). World-screen polling is still unrecorded.
+- [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md) Tempus APR: under the pinned EEex (v1.3.1), verify
   steady 1.5 APR with a two-pip weapon, 2.5 under Holy Power, no cycling, and immediate
   loss of the bonus with a zero-pip weapon.
 - [ ] [CHRIZ-SOD-REMIX](CHRIZ-SOD-REMIX.md) `225`: obtain all five items naturally and
   verify a live one-item-short refusal that consumes nothing and grants no XP.
   Activation, dormant re-click and save/reload were accepted on 2026-09-05.
 - [ ] [Randomiser](RANDOMISER.md) v8.1.1 `1100` on a clean rebuilt collection and new
-  game: Tarnesh loot smoke and the EEex-v1.2 legacy-BCS fallback. (Ordering, `510`
+  game: Tarnesh loot smoke and the legacy-BCS fallback for EEex v1.x (the fork rejects the root `EEex_scripts` layout of
+  v1.2 and v1.3). (Ordering, `510`
   numeric input, the `570` conflict and the `10300` omission with SCS `8040` are covered
   statically.)
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
-- [ ] [BuffBot](BUFFBOT.md): record the collection-specific InfinityLoader boot plus BG1
-  start/save/reload smoke.
+- [ ] [BuffBot](BUFFBOT.md): BG1 start/save/reload smoke. The collection-specific
+  InfinityLoader boot is recorded with EEex v1.3.1 (2026-10-18 lab: options registered,
+  Options-menu tab and radio sync). The combat-stop notice never shows
+  ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76)).
 - [ ] Visually verify the Evandra portrait override in game.
 
 ## Conditional/future feature gates
@@ -214,7 +221,7 @@ These are nonblocking while their parent feature remains unavailable.
   accepted. The same applies to the Campaign Item Randomiser (CIR) until its release.
 - [ ] [Warlock](C0WARLOCK.md): script the chosen answer to the hidden Contingency UI
   spell-learning prompt, then test its pit-fiend spell loadout under SR, copied demon AI
-  under SCS, Bubb menu integration and EEex v1.2 behavior. Warlock is not in the recipe.
+  under SCS, Bubb menu integration and EEex v1.3.1 behavior. Warlock is not in the recipe.
 - [ ] [Aura](AURA_BG1_2_EET.md), parked on 2026-10-17: the unreleased balance fork lacks
   8 upstream commits and has 12 fork-only commits; compare its spell changes with the
   historical [Aura Balance Patch - Spells](AURA_BALANCE_PATCH_SPELLS.md) v1.0 before

@@ -56,5 +56,12 @@ Subgroup = choose one.
 - Bardic Wonders, Artisan's Kitpack and Bubb's Spell Menu still test
   `MOD_IS_INSTALLED` for EEex component `0`; that is the Quick Menu Core since v1.2, and
   the checks pass because the collection installs it with the rest.
-- Smoke-test launch, every enabled module, LuaJIT, and EEex Remote Console on the target
-  EET 2.7 build before calling the all-components preset accepted.
+- Lab check on 2026-10-18 (EET over 2.7.3.0, the Recommended recipe with Tweaks `3500`
+  off, EEex v1.3.1), in two quiet hidden launches to the main menu:
+  - Loader launch, and LuaJIT 2.1 with the JIT on.
+  - The Options menu, including BuffBot's tab.
+  - Boot markers of every EEex user: the Rebalance/Bardic progression with 12 kits,
+    Modpack `430`/`650`, and Remote Console.
+  Evidence is in the pin pull request. Still open before calling the all-components
+  preset accepted: in-play behavior of modules `2`–`7` (effect menu, empty containers,
+  hotkeys, scale, time step, timer) and a world-screen session.
