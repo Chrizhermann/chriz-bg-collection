@@ -317,7 +317,10 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
             "{id}"
         );
         assert_eq!(artifact.archive.tp2_paths, expected.tp2_paths, "{id}");
-        assert_eq!(artifact.provenance.reviewed_on, expected.reviewed_on, "{id}");
+        assert_eq!(
+            artifact.provenance.reviewed_on, expected.reviewed_on,
+            "{id}"
+        );
     }
 }
 
