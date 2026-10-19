@@ -117,9 +117,8 @@ unchanged.
   while it is open and no longer opens during dialogs or cutscenes, and
   InfinityLoader no longer fails to start the game on some systems. EEex's new
   attack info display (to-hit chances when the attack cursor is over a target)
-  comes switched off and can be turned on in EEex's options.
-  - **Pending:** whether the collection switches the attack info display on
-    (EEex component 9). Christopher decides.
+  comes switched off and can be turned on in EEex's options; the collection
+  never switches it on.
 
 ### Mod versions
 
@@ -159,5 +158,6 @@ existing games and saves are unchanged.
   release notes). Its standalone Abettor tail 1.2.0 is for existing
   playthroughs; the collection installs component 2004 fresh and doesn't use it.
 - **EEex v1.3.1** reaches new installations only. EEex installs early, so moving an
-  existing installation means reinstalling everything after it; how existing
-  games move is Christopher's call (see `FOLLOW_UPS.md`).
+  existing installation means reinstalling everything after it. Existing games,
+  the stream game included, move only with their next reinstall (Christopher,
+  2026-10-18).

@@ -3,8 +3,9 @@
 The reference install used **v0.11.0-alpha**. This catalog is refreshed to the current
 collection target, **v1.3.1** (reviewed 2026-10-18). v1.2's new core plus the eight old
 capabilities produce nine components that are all included whenever EEex is included.
-v1.3.0 added component `9`, the Attack Info module; its Decision is open, so it is not
-installed yet.
+v1.3.0 added component `9`, the Attack Info module. Christopher ruled out making it a
+default or switching it on automatically (2026-10-18). Whether it stays out or becomes
+optional is still open, so its Decision is blank and it is not installed.
 
 10 entries, 8 reference equivalents installed. ✓ = capability present in the reference.
 Subgroup = choose one.
@@ -44,6 +45,9 @@ Subgroup = choose one.
   correctly remain in `override`.
 - After installation, verify `[EEex] Uncap FPS Limit Enabled`; v1.2 defaults it to `0`
   independently of the numeric FPS limit.
+- Existing installations, the stream game included, keep v1.2.0 and move to v1.3.1 only
+  with their next reinstall (Christopher, 2026-10-18). EEex installs early, so an
+  in-place upgrade would mean reinstalling everything after it.
 - v1.3.1 against v1.2.0: the TP2 differs only by component `9`. The Lua API removes four
   definitions (`B3EffectMenu_Private_Init`, `B3EffectMenu_Private_Menu_KeybindActive`,
   `EEex_Options_Private_IdToDisplayEntry`, `EEex_Sprite_Hook_CheckBlockWeaponHit`) and
@@ -62,6 +66,7 @@ Subgroup = choose one.
   - The Options menu, including BuffBot's tab.
   - Boot markers of every EEex user: the Rebalance/Bardic progression with 12 kits,
     Modpack `430`/`650`, and Remote Console.
-  Evidence is in the pin pull request. Still open before calling the all-components
-  preset accepted: in-play behavior of modules `2`–`7` (effect menu, empty containers,
-  hotkeys, scale, time step, timer) and a world-screen session.
+  Evidence is in the pin pull request. A new BG1 game in the same lab then exercised
+  modules `2`–`7` (effect menu, empty containers, hotkeys, scale, time step, timer) on
+  the world screen, checked through Lua state rather than on screen (see `FOLLOW_UPS.md`,
+  Done).

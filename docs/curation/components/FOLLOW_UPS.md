@@ -13,20 +13,23 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-18
+## Work queue at a glance — 2026-10-20
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
 **In progress (separate sessions)**
 
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
-  everywhere): pinned in both recipes on `claude/eeex-131-pin` with fresh-download and
-  native-order evidence. On 2026-10-18 a disposable 2.7.3.0 lab with the full recipe
-  booted every EEex user cleanly; a new BG1 game in that lab then exercised the EEex
-  modules, Remote Console and BuffBot (see Done). Remote Console: [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3)
-  and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4). Open from that lab: creature
-  `LOCALS` are missing after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `650`
-  (below). Attack Info `9` waits for Christopher.
+  everywhere): pinned in both recipes ([#18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18), merged 2026-10-19). On 2026-10-18 a
+  disposable 2.7.3.0 lab with the full recipe booted every EEex user cleanly; a new BG1
+  game in that lab then exercised the EEex modules, Remote Console and BuffBot (see
+  Done). Merged on 2026-10-19 but not pinned here yet: Remote Console
+  [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3) and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4), and
+  BuffBot v1.10.1 (combat-stop notice). Open from that lab: creature `LOCALS` are missing
+  after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `650` (below). Decided on
+  2026-10-18: Attack Info `9` is never a default and never switched on automatically, and
+  existing installations, the stream game included, move to v1.3.1 only with their next
+  reinstall.
 - Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
   Thief→Mage dual as the default, working for every thief kit.
 - Modpack: lab-verified, unreleased fixes for campaign XP caps `650`/`651` and a new
@@ -53,8 +56,10 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Time Stop/Haste timing fix as a standalone EEex mod. Engine research and an observation
   lab exist (BG Rebalance branch `wip/2026-10-17/main-checkout`,
   `research/10-timestop-haste-engine-clocks.md` and `research/timestop-lab/`); nothing
-  has run in the game yet. The lab scripts pin EEex v1.3.0 (commit, version, tree hash,
-  WeiDU.log pattern) and refuse v1.3.1 until they are re-pinned.
+  has run in the game yet. The lab scripts are re-pinned to EEex v1.3.1 on BG Rebalance
+  branch `claude/timestop-lab-eeex-131` (not merged; guard tests pass, the observer test
+  needs four Python packages). A new lab build first needs Christopher's word on the
+  leftover profile folder `CBR TimeStop Lab 2730`.
 - Compatibility follow-ups from the October 8 owner audits (`docs/audits/2026-10-08-*.md`
   in BG Rebalance): Rebalance and the Spell Revisions fork first, Modpack and SoD items
   after the sessions above land.
@@ -65,11 +70,8 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **Waiting for Christopher**
 
-- SoD Remix `256` × Tweaks Anthology `3500`: Recommended does not install until `256`
-  handles the summon effect; which fix
-  ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
-- EEex v1.3.1: whether to offer Attack Info `9`, and how existing installations
-  (including the stream game) move from v1.2.0.
+- EEex v1.3.1 Attack Info `9`: whether it stays out of the installer or becomes an
+  optional component. Default and automatic switching are ruled out (2026-10-18).
 - Small spell durations (Luck, Bless, Aid) and druid Chaotic Commands: in discussion.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
@@ -109,11 +111,6 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 
 ## Release gates — source and immutable pins
 
-- [ ] [EEex](EEEX.md): v1.3.1 (2026-10-07) replaces v1.2.0 on `claude/eeex-131-pin`:
-  fresh download, published release, archive shape and a native-order source audit in
-  `manifest/evidence/release-intake-20261018.toml`. The lab smoke test of every EEex
-  user is recorded in the pin pull request (2026-10-18); check this once the branch is
-  merged.
 - [ ] [EET](EET.md): at each manifest freeze, recheck official releases (v14.1 is still the
   newest). Upstream `master` is six commits ahead of the pinned `74e91d72` archive,
   including a Windows shortcut-path fix (#206) that may matter for EET `100`.
@@ -132,12 +129,15 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 
 ## Release gates — installer and static integration
 
-- [ ] The Recommended selection does not install: SoD Remix v0.6.13 `256` refuses the
+- [ ] The Recommended selection does not install yet: SoD Remix v0.6.13 `256` refuses the
   fire-elemental donor `BDELFIRM`, because Tweaks Anthology `3500` (a default since the
   October 14 intake) gives every summon a `CDTFOW` cast-spell effect
   ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
-  The October 14 and 18 labs install with `3500` off. Fix `256`, then install the whole
-  Recommended selection once with `3500` on.
+  The October 14 and 18 labs install with `3500` off. Fix, option 1 (Christopher,
+  2026-10-18): the hostile clones leave that effect behind
+  ([chriz-sod-rebalance#32](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/32)). On 2026-10-20 the stopped EEex v1.3.1 lab
+  installed `256` and the following `260`–`910` with `3500` on. Still needed: a SoD Remix
+  release with the fix, its pin here, and one complete Recommended install with `3500` on.
 - [ ] [EEex](EEEX.md) options: decide whether to seed or document
   `[EEex] Uncap FPS Limit Enabled`. The installer sets no EEex options, and a played
   collection install runs with the limit off. (Clean stage, loader launch and the absence
@@ -222,9 +222,9 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
 - [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed (see Done). Open: the
-  combat-stop notice never shows
-  ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76), fix in
-  [#77](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/77)); toggle stances with
+  pinned v1.10.0 never shows the combat-stop notice
+  ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76)); v1.10.1 fixes it ([#77](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/77), released
+  2026-10-19) and is not pinned yet; toggle stances with
   opcode 214 variants count as buffs, so a new party's Long preset enables Artisan's
   Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
@@ -262,8 +262,9 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
 - [ ] Curate newly discovered Bardic Wonders components `2011`, `2012`, and `2013`.
 - [ ] [BGGO](BGGO.md) `4`: decide whether Alternate Graphics is excluded, optional, or default.
 - [ ] [EEex](EEEX.md) `9` Attack Info (new in v1.3.0; to-hit chances on the attack cursor):
-  decide whether it stays out or becomes optional, default or mandatory. Players can switch
-  the module on in EEex's in-game options either way.
+  decide whether it stays out or becomes optional. Christopher ruled out default and
+  mandatory on 2026-10-18 (never switched on automatically). Players can switch the module
+  on in EEex's in-game options either way.
 - [ ] [Warlock](C0WARLOCK.md): choose Yes or No for the Contingency UI-based
   spell-learning prompt. The component remains a default either way.
 - [ ] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
@@ -277,6 +278,13 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   as a default Wizard Slayer.
 
 ## Done since 2026-09-04
+
+Done on 2026-10-19:
+
+- [EEex](EEEX.md) v1.3.1 replaces v1.2.0 in both recipes
+  ([#18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18)): fresh download, published release, archive shape and a native-order
+  source audit in `manifest/evidence/release-intake-20261018.toml`; the lab smoke test
+  of every EEex user is recorded in that pull request.
 
 Done on 2026-10-18 in the EEex v1.3.1 runtime lab (EET over BG2:EE 2.7.3.0, full recipe,
 new BG1 game with a throwaway character, hidden quiet launches; branch
