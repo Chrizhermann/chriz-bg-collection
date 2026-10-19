@@ -50,7 +50,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Small spell durations (Luck, Bless, Aid) and druid Chaotic Commands: in discussion.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
-- Chapter-cap values for the new XP-cap component.
+- Chapter-cap values for `652`: Christopher posted the full table on 2026-10-18 (Ch. 1-2
+  16,000 through ToB Ch. 22 8,900,000); Modpack branch `feat/chapter-xp-caps-652` uses
+  the same values. What remains is the `652` release itself.
 - Installer link safety: configuration files and the EET/Infinity UI hooks now read and
   write through held folder handles (`engine/src/held_folder.rs`). Other writers into
   staged or installed games still check a path and then write by path, among them patch
@@ -63,6 +65,26 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Next collection release (lab run with Bardic `balance.8`, optional Unfinished Business
   and the fixed Modpack): later.
 - Aura fork work: parked (2026-10-17).
+
+**Ideas for later (community, recorded 2026-10-20)**
+
+- SoD Coalition Camp defence: after the first troll group fell, the whole allied army
+  turned hostile; a reload fixed it (alpha.13 stream-collection install). Home: SoD Remix
+  (`chriz-sod-rebalance`) for triage, because Remix `230` cuts BD7100 trolls and `260`
+  rewrites coalition-field areas. First reproduce in a lab with and without Remix; only
+  if vanilla shows it too, fix it ourselves and file an upstream EEFixes issue with the
+  repro.
+- Optional "un-hired companions catch up" component: a companion recruited late joins
+  at the current chapter cap (or the active party's level) instead of EET's fixed join
+  XP. Home: Modpack campaign-XP family, next to `239` (join-XP catch-up) and `652`
+  (chapter caps). It must stay off in Challenge Mode, whose point is that the party
+  never outlevels content and banked XP goes only to active members (Christopher,
+  2026-10-19).
+- Companion randomizer: randomize NPC classes, either fully or within their class
+  group. Home: proposed as a new standalone mod repository, because it conflicts with
+  Modpack's fixed companion class changes (`190`-`198`), has to install after all NPC
+  mods, and is useful outside CEBG. Needs a design with Christopher (kits, multi/dual
+  classes, proficiencies, spells, SoD/SoA hand-over, saves).
 
 **Larger projects:** Time Stop/Haste (above); script engine / Fight Director (design with
 Christopher); configurable Spell Revisions (recover branch `codex/configurable-sr-catalog`);
