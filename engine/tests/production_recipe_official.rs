@@ -42,6 +42,7 @@ struct ExpectedArtifact<'a> {
     root_rule: ArchiveRootRule,
     publish_roots: &'a [&'a str],
     tp2_paths: &'a [&'a str],
+    reviewed_on: &'a str,
 }
 
 #[test]
@@ -49,19 +50,20 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
     let manifest = recipe();
     let expected = BTreeMap::from([
         (
-            "eeex-1.2.0",
+            "eeex-1.3.1",
             ExpectedArtifact {
-                version: "1.2.0",
+                version: "1.3.1",
                 source_kind: SourceKind::GithubRelease,
-                url: "https://github.com/Bubb13/EEex/releases/download/v1.2.0/eeex-v1.2.0.zip",
-                reference: "v1.2.0",
-                filename: "eeex-v1.2.0.zip",
-                length: 10_346_381,
-                sha256: "ac2d81bc5e6fdba04a686338a969507e5beca9cb082b2809a556e0874e690a88",
+                url: "https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip",
+                reference: "v1.3.1",
+                filename: "eeex-v1.3.1.zip",
+                length: 10_390_181,
+                sha256: "9c8104bd63fe7e7dfff889d89ab2d98e158b6e552846370a924ed7eacea4ecf3",
                 archive_kind: ArchiveKind::Zip,
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["EEex"],
                 tp2_paths: &["EEex/EEex.tp2"],
+                reviewed_on: "2026-10-18",
             },
         ),
         (
@@ -78,6 +80,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::SingleWrapper,
                 publish_roots: &["bubb_spell_menu_extended"],
                 tp2_paths: &["bubb_spell_menu_extended/bubb_spell_menu_extended.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -94,6 +97,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["bggo"],
                 tp2_paths: &["bggo/bggo.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -110,6 +114,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["HiddenGameplayOptions"],
                 tp2_paths: &["HiddenGameplayOptions/HiddenGameplayOptions.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -126,6 +131,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["HQ_SoundClips_BG2EE"],
                 tp2_paths: &["HQ_SoundClips_BG2EE/HQ_SoundClips_BG2EE.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -142,6 +148,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["rr"],
                 tp2_paths: &["rr/setup-rr.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -158,6 +165,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["fade"],
                 tp2_paths: &["fade/Setup-Fade.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -174,6 +182,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::SingleWrapper,
                 publish_roots: &["paina"],
                 tp2_paths: &["paina/Paina.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -190,6 +199,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["sarahtob"],
                 tp2_paths: &["sarahtob/setup-sarahtob.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -206,6 +216,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["ub"],
                 tp2_paths: &["ub/kalah/kalah.tp2", "ub/setup-ub.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -222,6 +233,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["Xan"],
                 tp2_paths: &["Xan/xan.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -238,6 +250,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["yeslicknpc"],
                 tp2_paths: &["yeslicknpc/yeslicknpc.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -254,6 +267,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::SingleWrapper,
                 publish_roots: &["Sirene_BG2"],
                 tp2_paths: &["Sirene_BG2/Sirene_BG2.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
         (
@@ -270,6 +284,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
                 root_rule: ArchiveRootRule::Direct,
                 publish_roots: &["ascension"],
                 tp2_paths: &["ascension/Ascension.tp2"],
+                reviewed_on: "2026-09-04",
             },
         ),
     ]);
@@ -302,7 +317,10 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
             "{id}"
         );
         assert_eq!(artifact.archive.tp2_paths, expected.tp2_paths, "{id}");
-        assert_eq!(artifact.provenance.reviewed_on, "2026-09-04", "{id}");
+        assert_eq!(
+            artifact.provenance.reviewed_on, expected.reviewed_on,
+            "{id}"
+        );
     }
 }
 
