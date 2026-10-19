@@ -913,6 +913,20 @@ fn committed_real_verification_evidence_matches_core_and_alpha_tail_artifacts() 
             ),
         ),
         (
+            "eeex-1.3.1",
+            (
+                "release-assets.githubusercontent.com",
+                None,
+                ObservedArchiveShape {
+                    max_depth: 5,
+                    entry_count: 160,
+                    max_entry_uncompressed_bytes: 8193400,
+                    total_uncompressed_bytes: 42911947,
+                    max_compression_ratio: 35,
+                },
+            ),
+        ),
+        (
             "chriz-sod-remix-0.6.13",
             (
                 "release-assets.githubusercontent.com",

@@ -14,7 +14,7 @@ Listed at installed version **3.0**; target is exact untagged upstream commit
 - Bubb's Spell Menu must precede Warlock for its integration path.
 - The selected Artisan, Bardic, and Warlock sources carry the same ClassSpellTool helper,
   but this does not prove runtime compatibility. Audit the pit fiend's hardcoded `SPWI`
-  loadout under Spell Revisions and its copied demon scripts under SCS; then validate EEex v1.2.
+  loadout under Spell Revisions and its copied demon scripts under SCS; then validate it with the pinned EEex (v1.3.1).
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|

@@ -175,7 +175,7 @@ real-WeiDU synthetic/resource checks and the owner's full suite passed; this is
 not live gameplay acceptance. Existing `301` stays selected and `420`/`421`
 stay unselected.
 
-- Stage the fixed APR implementation against EEex v1.2 and verify 1.5 APR with a two-pip
+- Stage the fixed APR implementation against the pinned EEex (v1.3.1 since 2026-10-18) and verify 1.5 APR with a two-pip
   weapon, 2.5 under Holy Power, no cycling, and prompt return to normal with a zero-pip
   weapon. The earlier installed test used EEex v0.11, so it is not target acceptance.
 - Components `120` and `121` are now curated and selected. Current-version component `121`

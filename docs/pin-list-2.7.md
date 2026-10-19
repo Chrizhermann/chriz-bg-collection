@@ -34,7 +34,7 @@ no installer references, such as older versions, are not listed.
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
-| EEex | 1.2.0 | `eeex` | `ac2d81bc5e6f…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.2.0/eeex-v1.2.0.zip) |
+| EEex | 1.3.1 | `eeex` | `9c8104bd63fe…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip) |
 | EEex Remote Console | 0.2.0 | `eeexremote` | `d634b1e8f0a2…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164) |
 | Enhanced Edition Fixpack | Beta 2 | `eefixpack` | `7a57e43bd6c3…` | [release asset](https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod) |
 | Enhanced Edition Trilogy | 74e91d72bca5d073fa11c1d088b90d7ff0c7105d | `eet`, `eet-end`, `eet-gui` | `9834a53322b7…` | [commit archive](https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d) |
@@ -82,7 +82,7 @@ no installer references, such as older versions, are not listed.
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
-| EEex | 1.2.0 | `eeex` | `ac2d81bc5e6f…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.2.0/eeex-v1.2.0.zip) |
+| EEex | 1.3.1 | `eeex` | `9c8104bd63fe…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip) |
 | EEex Remote Console | 0.2.0 | `eeexremote` | `d634b1e8f0a2…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164) |
 | Enhanced Edition Fixpack | Beta 2 | `eefixpack` | `7a57e43bd6c3…` | [release asset](https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod) |
 | Enhanced Edition Trilogy | 74e91d72bca5d073fa11c1d088b90d7ff0c7105d | `eet`, `eet-end`, `eet-gui` | `9834a53322b7…` | [commit archive](https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d) |
