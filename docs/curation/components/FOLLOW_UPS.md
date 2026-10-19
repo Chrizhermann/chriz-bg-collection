@@ -42,6 +42,14 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle (see below).
 - InfinityLoader crash analysis: causes found; follow-up decisions are Christopher's.
+- Compatibility follow-ups from the October 8 audit for BG Rebalance and the Spell
+  Revisions fork (`docs/audits/2026-10-08-sr-rebalance-compatibility.md` in BG
+  Rebalance): all seven implemented and reviewed, unreleased, in
+  [BG Rebalance PR #10](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/10) and
+  [Spell Revisions fork PR #2](https://github.com/Chrizhermann/chriz-spell-revisions-patch/pull/2).
+  Cloud forms (320): 75% stays the target for immunity, not a cap (decided 2026-10-20).
+  A lab check on 2.7.3.0 is running; the release and the CEBG pin need Christopher's
+  approval.
 
 **Ready to start**
 
@@ -55,9 +63,9 @@ Cross-repository status. Component detail stays in the sections below and in the
   `research/10-timestop-haste-engine-clocks.md` and `research/timestop-lab/`); nothing
   has run in the game yet. The lab scripts pin EEex v1.3.0 (commit, version, tree hash,
   WeiDU.log pattern) and refuse v1.3.1 until they are re-pinned.
-- Compatibility follow-ups from the October 8 owner audits (`docs/audits/2026-10-08-*.md`
-  in BG Rebalance): Rebalance and the Spell Revisions fork first, Modpack and SoD items
-  after the sessions above land.
+- Remaining compatibility follow-ups from the October 8 owner audits
+  (`docs/audits/2026-10-08-*.md` in BG Rebalance): the Modpack and SoD items and the
+  forks audit, after the sessions above land.
 - Installer: a hidden setting that turns on the game log for crash diagnosis
   (InfinityLoader's `LogFile`), requested on 2026-10-18. The loader overwrites the log on
   every start, so the feature has to keep the previous session's log; Windows crash dumps
