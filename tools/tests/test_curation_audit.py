@@ -128,13 +128,15 @@ class CatalogParserTests(unittest.TestCase):
         # October 13 intake adds Modpack 237/238/650/651/660 and SoD 177/198/285.
         # October 14 intake adds Modpack 230-234, Rebalance 330-332 and 14 Tweaks
         # snapshot rows; the snapshot withdraws Tweaks 260 and 3470.
-        self.assertEqual(len(rows), 1_255)
+        # October 18: EEex v1.3.1 adds Attack Info 9 with an open Decision.
+        self.assertEqual(len(rows), 1_256)
         self.assertEqual(
             decision_totals(rows),
             {
                 # October 14: 11 new Tweaks rows are not offered, 260/3470 are gone,
                 # and Tweaks 3220 plus SCS 3010/3021 are offered.
-                Decision.EXCLUDED: 521,
+                # October 18: EEex 9 is not installed until Christopher decides.
+                Decision.EXCLUDED: 522,
                 # September 22 approval moves HGO 38 from optional to default.
                 # October 12 moves Emotion 301 back to optional.
                 # October 13 makes EET's desktop shortcut (EET 100) optional.
@@ -374,14 +376,15 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_255)
-        self.assertEqual(result.excluded_rows, 521)
+        # October 18: EEex v1.3.1's Attack Info 9 is listed with an open Decision.
+        self.assertEqual(result.mapped_rows, 1_256)
+        self.assertEqual(result.excluded_rows, 522)
         self.assertEqual(result.feature_rows + result.omission_rows, 734)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         self.assertEqual(result.choice_groups, 76)
         self.assertEqual(result.optional_none_groups, 23)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1255", coverage_report(rows, result))
+        self.assertIn("rows=1256", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

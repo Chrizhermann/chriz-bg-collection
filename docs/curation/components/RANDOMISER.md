@@ -29,7 +29,7 @@ size.
 ## Integration notes
 
 - Fork v8.1.1's safer manifest-driven Mode 1 backend does not yet support EEex v1.x's
-  root `EEex_scripts` layout. With the collection's EEex v1.2 target, component `1100`
+  root `EEex_scripts` layout. With the collection's EEex v1.x pin (v1.3.1 since 2026-10-18, the same layout as v1.2), component `1100`
   falls back to legacy BCS delivery. It remains installable, but does not get the fork's
   safer delivery path until the fork gains EEex v1.x support.
 - Do not use fork v8.1: its physical CRE-item removal can leave inventory slot offsets

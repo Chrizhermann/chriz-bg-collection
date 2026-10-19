@@ -113,12 +113,20 @@ unchanged.
   - Symphony of the Dark Children (Abettor of Mask): the party turns invisible
     again when the song ends. Before, nothing happened at the end, and a
     disabled singer gave Invisibility every round.
+- **EEex v1.3.1** (Mandatory; was v1.2.0): the EEex Options menu pauses the game
+  while it is open and no longer opens during dialogs or cutscenes, and
+  InfinityLoader no longer fails to start the game on some systems. EEex's new
+  attack info display (to-hit chances when the attack cursor is over a target)
+  comes switched off and can be turned on in EEex's options.
+  - **Pending:** whether the collection switches the attack info display on
+    (EEex component 9). Christopher decides.
 
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.12 (was alpha.11)
 - BG Rebalance v0.8.3 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
+- EEex v1.3.1 (was v1.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
   (was v18). There is no newer release yet; the collection pins this exact
   version, as it does for EET.
@@ -126,8 +134,8 @@ unchanged.
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.12, BG
-Rebalance to v0.8.3, Bardic Wonders to v2.9c-balance.8 and The Tweaks Anthology
-to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
+Rebalance to v0.8.3, Bardic Wonders to v2.9c-balance.8, EEex to v1.3.1 and The
+Tweaks Anthology to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
@@ -150,3 +158,6 @@ existing games and saves are unchanged.
 - **Bardic Wonders v2.9c-balance.8** has not been played in a game yet (its
   release notes). Its standalone Abettor tail 1.2.0 is for existing
   playthroughs; the collection installs component 2004 fresh and doesn't use it.
+- **EEex v1.3.1** reaches new installations only. EEex installs early, so moving an
+  existing installation means reinstalling everything after it; how existing
+  games move is Christopher's call (see `FOLLOW_UPS.md`).

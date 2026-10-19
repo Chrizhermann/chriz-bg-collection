@@ -305,15 +305,15 @@ Engine-equivalent resolved-selection summary: 470 default/mandatory rows — con
 | `CROSSMODBG2:1` | default | `feature:crossmodbg2:component-1` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 1 |  |
 | `CROSSMODBG2:2` | default | `feature:crossmodbg2:component-2` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 2 |  |
 | `DLCMERGER:1` | mandatory | `feature:dlcmerger:mandatory-components` | selected for installation | dlcmerger → dlcmerger-2.1 2.1 (v2.1), component 1 |  |
-| `EEEX:0` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 0 |  |
-| `EEEX:1` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 1 |  |
-| `EEEX:2` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 2 |  |
-| `EEEX:3` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 3 |  |
-| `EEEX:4` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 4 |  |
-| `EEEX:5` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 5 |  |
-| `EEEX:6` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 6 |  |
-| `EEEX:7` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 7 |  |
-| `EEEX:8` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.2.0 1.2.0 (v1.2.0), component 8 |  |
+| `EEEX:0` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 0 |  |
+| `EEEX:1` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 1 |  |
+| `EEEX:2` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 2 |  |
+| `EEEX:3` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 3 |  |
+| `EEEX:4` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 4 |  |
+| `EEEX:5` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 5 |  |
+| `EEEX:6` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 6 |  |
+| `EEEX:7` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 7 |  |
+| `EEEX:8` | mandatory | `feature:eeex:mandatory-components` | selected for installation | eeex → eeex-1.3.1 1.3.1 (v1.3.1), component 8 |  |
 | `EEFIXPACK:0` | mandatory | `feature:eefixpack:mandatory-components` | selected for installation | eefixpack → eefixpack-beta2 Beta 2 (Beta_2), component 0 |  |
 | `EEFIXPACK:2` | mandatory | `feature:eefixpack:mandatory-components` | selected for installation | eefixpack → eefixpack-beta2 Beta 2 (Beta_2), component 2 |  |
 | `EET:0` | mandatory | `feature:eet:mandatory-components` | selected for installation | eet → eet-official-74e91d72bca5d073fa11c1d088b90d7ff0c7105d 74e91d72bca5d073fa11c1d088b90d7ff0c7105d (74e91d72bca5d073fa11c1d088b90d7ff0c7105d), component 0 |  |

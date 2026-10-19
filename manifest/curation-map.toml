@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1255
+expected_rows = 1256
 expected_choice_groups = 76
 expected_optional_none_groups = 23
 expected_fixed_groups = 10
@@ -135,7 +135,7 @@ excluded = [10]
 
 [[catalogs]]
 id = "EEEX"
-excluded = []
+excluded = [9]
 
 [[catalogs]]
 id = "EEEXREMOTE"

@@ -266,18 +266,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned on October 17 when Unfinished Business became optional and unselected.
     // In both recipes the new Recommended plan equals the previous plan minus the
     // ub-bg2 run (its 18 former defaults); no other run changes.
+    // Re-pinned on October 18 for EEex v1.3.1: in both recipes the Recommended plan differs
+    // only in the eeex-bg2 run's artifact id (with v1.2.0 restored, the previous digests
+    // return) and the collection only in the EEex feature description.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "fa1af794108547bfc9018761c1461e4569d2d8704bbc2e369a75e689ab606f5b",
+            "7e63251498dde16f20b9ac6f590ad66beedb5d7a2cb6ee2a1168eec0eff4255d",
             "004f6b8b5075641f3caaa3bafa9db5e6f69e8f0285524be014a484e6c4b3df29",
-            "49ed090082cdc4374ec8b819b31774cd8a79b8f50c1b0b8acc03afbef8992bc4",
+            "9e202110b6bfbc5a1352376c7281223a1801a75c48aabf4f18f515d42e9f96e3",
         ),
         (
             "../recipes/curated-full-current",
-            "11d690a4002a37322849d574b3098985a416af689a0693105add8818458066e7",
+            "56f8ecd6761c59b8bcd5c80c5b6b851e6c3b369e6c40bf338b344a22e9ca9be5",
             "fe99c02a54aa7aca228559b538570bdbc1929d68a4ec127f3f1f89f090a3b94c",
-            "09d1b39ba942516227aa1af4955c08b2a92a1f81403f35df95b261b4cf0044b7",
+            "a7e6bf5aa7d2473cbbe9861dcf25f549dfe1025b74613293649c79433a80a045",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
