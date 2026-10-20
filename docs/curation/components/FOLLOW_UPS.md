@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-18
+## Work queue at a glance — 2026-10-20
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -25,19 +25,21 @@ Cross-repository status. Component detail stays in the sections below and in the
   booted every EEex user cleanly; a new BG1 game in that lab then exercised the EEex
   modules, Remote Console and BuffBot (see Done). Remote Console: [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3)
   and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4). Open from that lab: creature
-  `LOCALS` are missing after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `650`
-  (below). Attack Info `9` waits for Christopher.
+  `LOCALS` are missing after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `430`
+  on v1.3.1 (see Release gates); Modpack `650` works on v1.3.1 since alpha.13 (below).
+  Attack Info `9` waits for Christopher.
 - Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
   Thief→Mage dual as the default, working for every thief kit.
-- Modpack: lab-verified, unreleased fixes for campaign XP caps `650`/`651` and a new
-  join-XP catch-up `239` for mod NPCs without EET's `BD_JOINXP` block (see Sarah below)
-  ship together with chapter-bound XP caps (`652`, values: Christopher), which come next
-  (decided 2026-10-17). The collection then offers `239` as a default (decided
-  2026-10-18). The next collection release pins only a lab-verified `650`. In the
-  2026-10-18 EEex v1.3.1 lab, released alpha.12 still gave no actor an identity (the
-  EEex v1.2 failure); the unreleased fix is lab-verified on v1.2.0 only and needs the
-  same check on v1.3.1
-  ([modpack archive #10](https://github.com/Chrizhermann/chriz-bg-modpack-private-archive/issues/10)).
+- Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
+  again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
+  on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
+  `BD_JOINXP` block (see Sarah below), which the collection offers as a default (decided
+  2026-10-18). Pinned in both recipes on `claude/modpack-a13-pin` (fresh-download and
+  native-order evidence in `manifest/evidence/release-intake-20261020.toml`); `650`/`651`
+  stay optional, experimental and off. The new `135` (Dorn ambush camera fix), `460`
+  (party AI Defensive Stance) and `652` (chapter caps) are not offered until Christopher
+  decides. `430` still fails on v1.3.1; a fix is in progress in a separate session (see
+  Release gates).
 - Hobgoblin challenge run (design with Christopher).
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle (see below).
@@ -81,9 +83,11 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Small spell durations (Luck, Bless, Aid) and druid Chaotic Commands: in discussion.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
-- Chapter-cap values for `652`: Christopher posted the full table on 2026-10-18 (Ch. 1-2
-  16,000 through ToB Ch. 22 8,900,000); Modpack branch `feat/chapter-xp-caps-652` uses
-  the same values. What remains is the `652` release itself.
+- Modpack alpha.13 (2026-10-20): whether the collection offers `135` (Dorn ambush
+  camera fix), `460` (party AI Defensive Stance obeys "Use special abilities") and `652`
+  (chapter-by-chapter XP caps, experimental alternative to `651` on top of `650`). `652`
+  shipped with Christopher's 2026-10-18 values (Ch. 1-2 16,000 through ToB Ch. 22
+  8,900,000). They are catalogued with open Decisions and are in no run.
 - Installer link safety: configuration files and the EET/Infinity UI hooks now read and
   write through held folder handles (`engine/src/held_folder.rs`). Other writers into
   staged or installed games still check a path and then write by path, among them patch
@@ -128,7 +132,7 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   and `recipes/curated-full-current/`). A full 2.7.3 collection install has since booted
   and been played with saves, but no acceptance record captures loader boot, BG1 start or
   save/reload, and the record's "no clean BG1 source" reason is outdated. The `430`
-  record still says the alpha.11 pin awaits publication although alpha.12 is pinned.
+  record still says the alpha.11 pin awaits publication although alpha.13 is pinned.
 - [ ] The release gate evaluates only the Recommended selection
   (`engine/src/release_validate.rs`). The optional post-EET runs `eeexremote-bg2` and
   `chriz-bg-modpack-campaign-xp-bg2` are not in `approved_tail_runs`, so a user who
@@ -168,6 +172,14 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
   The October 14 and 18 labs install with `3500` off. Fix `256`, then install the whole
   Recommended selection once with `3500` on.
+- [ ] Modpack `430` (scrolls at the reader's caster level) fails on 2.7.3.0 with EEex
+  v1.3.1, in alpha.12 and alpha.13: on the first load, a new game or an NPC join it shows
+  its EEex error box ("copied action construction overlaps an existing lifetime") and
+  disables itself, because the engine destroys most `CAIAction` objects inline, without
+  the destructor `430` hooks. It is probably also the cause of a player's container-open
+  error report. A proper fix is in progress in a separate session. `430` is a default,
+  so the next collection release needs that fix or Christopher's decision about the
+  default.
 - [ ] [EEex](EEEX.md) options: decide whether to seed or document
   `[EEex] Uncap FPS Limit Enabled`. The installer sets no EEex options, and a played
   collection install runs with the limit off. (Clean stage, loader launch and the absence
@@ -217,13 +229,17 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
     each NPC's override script. EET adds it to vanilla NPCs, and some NPC mods ship
     their own; SarahTOB v8 has none. So her SoA version always joins at 89,000 XP
     (level 7).
-  - Fix lab-verified, not yet released: optional Modpack component `239` reads EET's
-    own rules and adds its SoA ladder or ToB raise to every joinable NPC script that
-    lacks one (Fade, Sarah, Yeslick, Xan and Evandra get the ladder; Wilson and Yoshimo
-    get the raise). In a lab copy of a SoA save, a fresh Sarah joined at 750,000 XP.
-    Mod NPCs that got the ladder are then no longer raised to 2,500,000 at the ToB
-    transition, which matches EET's vanilla NPCs. Christopher decided on 2026-10-18
-    that the collection offers `239` as a default, because it is a fix.
+  - Fix released in Modpack alpha.13 (2026-10-20): component `239` reads EET's own
+    rules and adds its SoA ladder or ToB raise to every joinable NPC script that lacks
+    one (Fade, Sarah, Yeslick, Xan and Evandra get the ladder; Wilson and Yoshimo get the
+    raise). In lab copies of a SoA save (October 17, and October 20 on EEex v1.3.1 with
+    the release package), a fresh Sarah joined at 750,000 XP. Mod NPCs that got the
+    ladder are then no longer raised to 2,500,000 at the ToB transition, which matches
+    EET's vanilla NPCs. Christopher decided on 2026-10-18 that the collection offers
+    `239` as a default, because it is a fix; it is a default in both recipes on
+    `claude/modpack-a13-pin`, in the late-companion run before campaign XP `650`. Open:
+    the ToB raise was not exercised in a game, and the fix reaches players with the next
+    collection release.
 - [ ] Vanguard Defensive Stance: PraetorFallen reports that disabling "Use special
   abilities" in the AI settings stops companions from using the ability, but the main
   character still uses it automatically. Recorded on 2026-10-16; a fix is in progress on
@@ -294,6 +310,9 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
 - [ ] [EEex](EEEX.md) `9` Attack Info (new in v1.3.0; to-hit chances on the attack cursor):
   decide whether it stays out or becomes optional, default or mandatory. Players can switch
   the module on in EEex's in-game options either way.
+- [ ] [Modpack](CHRIZ-BG-MODPACK.md) alpha.13 `135` (Dorn ambush camera fix), `460` (party AI
+  Defensive Stance obeys "Use special abilities") and `652` (chapter-by-chapter XP caps,
+  experimental): decide whether each stays out or is offered, and as what.
 - [ ] [Warlock](C0WARLOCK.md): choose Yes or No for the Contingency UI-based
   spell-learning prompt. The component remains a default either way.
 - [ ] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the

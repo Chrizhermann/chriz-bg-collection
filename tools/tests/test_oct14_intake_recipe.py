@@ -228,6 +228,9 @@ class Oct14IntakeTests(unittest.TestCase):
             "manifest": [ROOT / "manifest"],
             "recipes/curated-full-current": [ROOT / "recipes/curated-full-current", self.output],
         }
+        # The October 20 intake (test_oct20_intake_recipe) supersedes the Modpack pin;
+        # its pinned files stay exactly as verified here.
+        superseded = {"chriz-bg-modpack"}
         for record in self.evidence["artifacts"]:
             for flag in ("fresh_download", "fresh_extraction", "native_component_order_verified"):
                 self.assertIs(record[flag], True, (record["mod_id"], flag))
@@ -237,6 +240,15 @@ class Oct14IntakeTests(unittest.TestCase):
                 for profile in profiles:
                     with self.subTest(profile=str(profile), mod=record["mod_id"]):
                         mod_path = profile / f"mods/{record['mod_id']}.toml"
+                        if record["mod_id"] in superseded and name in record["recipe_profiles"]:
+                            artifact = tomllib.loads(
+                                (profile / f"artifacts/{record['artifact_id']}.toml").read_text(encoding="utf-8"))
+                            for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
+                                                  ("url", "immutable_source_url"), ("reference", "source_reference")):
+                                self.assertEqual(artifact["source"][key], record[measured])
+                            mod = tomllib.loads(mod_path.read_text(encoding="utf-8"))
+                            self.assertNotEqual(mod["artifact_id"], record["artifact_id"])
+                            continue
                         if name not in record["recipe_profiles"]:
                             pinned = mod_path.is_file() and tomllib.loads(
                                 mod_path.read_text(encoding="utf-8"))["artifact_id"] == record["artifact_id"]

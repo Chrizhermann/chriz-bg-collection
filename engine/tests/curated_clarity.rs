@@ -36,7 +36,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // The October 14 intake adds Modpack 230-234, Rebalance 331/332, SCS 3021
         // and Tweaks 3220/3500/3510.
         // October 17 removes the 18 formerly default Unfinished Business components.
-        462
+        // The October 20 intake adds Modpack EET join XP 239.
+        463
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

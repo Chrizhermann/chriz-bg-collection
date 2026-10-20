@@ -78,12 +78,13 @@ fn authors_the_six_runs_exactly() {
         ),
         (CONTINUITY, "chriz-bg-modpack", Phase::Main, &[199]),
         (SAFANA, "safana", Phase::PostEetEnd, &[0]),
-        // October 13 adds Fade/Evandra recruitment XP 237/238 in TP2 order.
+        // October 13 adds Fade/Evandra recruitment XP 237/238 in TP2 order;
+        // October 20 (Modpack alpha.13) adds EET join XP 239 after them.
         (
             LATE,
             "chriz-bg-modpack",
             Phase::PostEetEnd,
-            &[189, 237, 238, 620],
+            &[189, 237, 238, 239, 620],
         ),
         (LIGHTNING, "spell-rev", Phase::PostEetEnd, &[80, 81]),
     ];
@@ -116,7 +117,7 @@ fn recommended_preset_resolves_the_reviewed_components() {
     assert_eq!(plan.components_for(CONTINUITY), Some(&[199][..]));
     assert_eq!(plan.components_for(SAFANA), Some(&[0][..]));
     // Evandra's 238 needs her core, which only the generated full recipe supplies.
-    assert_eq!(plan.components_for(LATE), Some(&[189, 237, 620][..]));
+    assert_eq!(plan.components_for(LATE), Some(&[189, 237, 239, 620][..]));
     assert_eq!(plan.components_for(LIGHTNING), Some(&[80][..]));
 }
 
@@ -219,10 +220,10 @@ fn freezes_the_reviewed_release_sources() {
         ),
         (
             "chriz-bg-modpack",
-            "chriz-bg-modpack-0.2.0-alpha.12",
-            "v0.2.0-alpha.12",
-            10_449_774,
-            "3c1ee079541d8e64c9e692b511e5560ee505867b43698425e6bdd3ad48d578e2",
+            "chriz-bg-modpack-0.2.0-alpha.13",
+            "v0.2.0-alpha.13",
+            10_479_090,
+            "afbf05eec35bf65280cdab5276417f83e767ca5594de93602934d0398a68a381",
         ),
         (
             "safana",

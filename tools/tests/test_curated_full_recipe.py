@@ -281,7 +281,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.12")
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -364,7 +364,10 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # October 14 (later): Challenge Mode gains its potion variant (330 instead
                 # of the recommended 331 while on); runs, features and the preset are unchanged.
                 # October 16: all UB components become optional and unchecked by default.
-                "4bc47e908f0e78e1e747d739b52f5f74cae5018dad61c764bdadbad36baa090e",
+                # October 20 intake (Modpack alpha.13): default EET join XP 239 in the
+                # late-companion run after 238; without 239 the October 16 digest
+                # 4bc47e908f0e78e1e747d739b52f5f74cae5018dad61c764bdadbad36baa090e returns.
+                "863540b3bc98efcb3b606baba4b865e6d345d5032c2911caa8b26a98f5caa451",
             )
 
             legacy_bg1npc_groups = {

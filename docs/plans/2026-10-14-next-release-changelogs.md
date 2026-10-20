@@ -47,6 +47,11 @@ unchanged.
   Wisdom 9 and Intelligence 14; Garrick Dexterity 17 and Intelligence 15; Quayle
   Constitution 15. Only the base scores change; class, kit, equipment and current
   hit points stay as they are. (Modpack alpha.12)
+- **Join XP for every joinable NPC** — **Default.** NPCs whose scripts lack EET's
+  join-XP catch-up, mostly from mods, get EET's own: on joining in SoA they rise
+  to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000,
+  and in ToB to 2,500,000. Sarah, for example, used to join at 89,000 XP. Never
+  lowers XP and doesn't repeat when an NPC rejoins. (Modpack alpha.13)
 - **Fine weapons instead of +1 weapons; they never break** — **Default.** Most
   standard +1 weapons become nonmagical "fine" weapons: still +1 to hit and
   damage, but no initiative bonus, no harm to creatures immune to normal weapons,
@@ -77,6 +82,10 @@ unchanged.
   can no longer steal from fences, and reputation no longer changes their
   prices. At fences this also replaces the chosen store-price option. (Tweaks
   Anthology)
+- **Pending:** Modpack alpha.13 also adds a fix for Dorn's BG1 ambush, whose
+  camera lock on Senjak could crash the game; party AI that no longer enters
+  Defensive Stance with "Use special abilities" off; and chapter-by-chapter XP caps
+  (experimental). Christopher decides whether the collection offers them.
 
 ### Changed behavior
 
@@ -100,8 +109,16 @@ unchanged.
   - Mages can decline the Sphere stronghold (Multiple Strongholds).
   - Familiars no longer get the boosted hit points meant for party members.
   - The kit ability table change that SCS reads is labelled correctly.
-- **Modpack alpha.12** also installs companion fixes `196`/`197` when only some
-  of the files they patch are present, and says which ones it skipped.
+- **Modpack** (since alpha.12) also installs companion fixes `196`/`197` when only
+  some of the files they patch are present, and says which ones it skipped.
+- **Campaign XP caps with banked XP** (Optional, experimental, unchanged choice)
+  now work, on EEex v1.3.1 too. With Modpack alpha.11 and alpha.12 no character
+  got a bank account, so with the caps installed every permanent XP award was
+  refused. If the bank cannot start, XP stays uncapped and unbanked, and the
+  message log says so once per loaded game. This includes the optional SoA cap.
+  (Modpack alpha.13)
+- **Fade and Evandra's SoA join XP** (Default) recognise a catch-up an NPC
+  already has under EET, so they no longer add a second one. (Modpack alpha.13)
 - **Bardic Wonders fixes** (Default components; Bardic Wonders v2.9c-balance.8):
   - The Troubadour, Deathsinger and New Bard Spells copies of priest spells are
     now found by the spell's name, so they follow Spell Revisions. Recasting one
@@ -123,7 +140,7 @@ unchanged.
 
 ### Mod versions
 
-- Chriz BG Modpack v0.2.0-alpha.12 (was alpha.11)
+- Chriz BG Modpack v0.2.0-alpha.13 (was alpha.11)
 - BG Rebalance v0.8.3 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
@@ -133,15 +150,17 @@ unchanged.
 
 ## Release-note entry (collection alpha.21)
 
-**Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.12, BG
+**Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.13, BG
 Rebalance to v0.8.3, Bardic Wonders to v2.9c-balance.8, EEex to v1.3.1 and The
 Tweaks Anthology to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
-Dorn, Eldoth, Garrick and Quayle; SCS fine weapons that never break; one potion
+Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
+lacked it; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; and sensible entrance points. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
-strict potion rule where Potions of Genius don't stack either. Unfinished
+strict potion rule where Potions of Genius don't stack either. The optional,
+experimental campaign XP caps with banked XP now work. Unfinished
 Business (BG2) is now optional; High Mastery now gives +5
 damage, and the NPC move now includes Ajantis. In Bardic Wonders, the
 Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
@@ -158,6 +177,10 @@ existing games and saves are unchanged.
 - **Bardic Wonders v2.9c-balance.8** has not been played in a game yet (its
   release notes). Its standalone Abettor tail 1.2.0 is for existing
   playthroughs; the collection installs component 2004 fresh and doesn't use it.
+- **Modpack `430`** (scrolls at the reader's caster level, Default) fails on EEex
+  v1.3.1 in alpha.12 and alpha.13: it shows its EEex error box and disables itself on
+  the first load, a new game or an NPC join. A fix is in progress; this release needs
+  it or Christopher's decision about the default (see `FOLLOW_UPS.md`).
 - **EEex v1.3.1** reaches new installations only. EEex installs early, so moving an
   existing installation means reinstalling everything after it; how existing
   games move is Christopher's call (see `FOLLOW_UPS.md`).

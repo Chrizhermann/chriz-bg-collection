@@ -357,7 +357,7 @@ args = []
 run_id = "chriz-bg-modpack-late-companions-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [189, 237, 238, 620]
+components = [189, 237, 238, 239, 620]
 args = []
 
 [[runs]]
@@ -4389,6 +4389,17 @@ unavailable_reason = "Evandra's verified core is supplied by the generated full 
 parent = "mod:chriz-bg-modpack"
 requires = ["mod:evandra"]
 components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 238 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-239"
+title = "Give every joinable NPC EET's join-XP catch-up"
+description = "NPCs whose scripts lack EET's join-XP catch-up, mostly from mods, get it: on joining in SoA they rise to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000, and in ToB to 2,500,000. Never lowers XP and doesn't repeat when they rejoin."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-late-companions-bg2", component = 239 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-650"

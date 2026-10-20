@@ -269,18 +269,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned on October 18 for EEex v1.3.1: in both recipes the Recommended plan differs
     // only in the eeex-bg2 run's artifact id (with v1.2.0 restored, the previous digests
     // return) and the collection only in the EEex feature description.
+    // Re-pinned on October 20 for Modpack alpha.13: with alpha.12 restored and EET join XP
+    // 239 removed from the mod, the late-companion run, the features and the preset, all six
+    // previous digests return in both recipes.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "7e63251498dde16f20b9ac6f590ad66beedb5d7a2cb6ee2a1168eec0eff4255d",
-            "004f6b8b5075641f3caaa3bafa9db5e6f69e8f0285524be014a484e6c4b3df29",
-            "9e202110b6bfbc5a1352376c7281223a1801a75c48aabf4f18f515d42e9f96e3",
+            "01da448686ac2325ce787294bfb764f628c67ed584b25672e8378197d74cf3d3",
+            "cc79fa3c2a0fd14b86a0953d5fff5e8c9973da1973584377b09c7ba459905c8b",
+            "b7d2694f50de57208543ff3ef031b8ee76aa70e3df697d4a0752404a1061517a",
         ),
         (
             "../recipes/curated-full-current",
-            "56f8ecd6761c59b8bcd5c80c5b6b851e6c3b369e6c40bf338b344a22e9ca9be5",
-            "fe99c02a54aa7aca228559b538570bdbc1929d68a4ec127f3f1f89f090a3b94c",
-            "a7e6bf5aa7d2473cbbe9861dcf25f549dfe1025b74613293649c79433a80a045",
+            "0dd26563ce74ec2caebef4aed6b6bd8fdd22116498dae38fda99699297a0970d",
+            "55c33c0bb1a2f053feabff868fc41a9ee23fdbbfd02e5c05784526e9c48445ab",
+            "4e62e7d9ed3dd9462b5992712eeef37079a5b7e0bd68f4818063900ec1597ec6",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

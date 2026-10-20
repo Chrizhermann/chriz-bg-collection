@@ -97,11 +97,11 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.12")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.12.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.12")
-        self.assertEqual(artifact["source"]["expected_length"], 10449774)
-        self.assertEqual(artifact["source"]["sha256"], "3c1ee079541d8e64c9e692b511e5560ee505867b43698425e6bdd3ad48d578e2")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.13.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.13")
+        self.assertEqual(artifact["source"]["expected_length"], 10479090)
+        self.assertEqual(artifact["source"]["sha256"], "afbf05eec35bf65280cdab5276417f83e767ca5594de93602934d0398a68a381")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
         # Modpack also restores Evandra defaults and switches 610 to 611.
@@ -121,8 +121,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # The October 14 intake adds default Modpack 230-234, Rebalance 331/332,
         # SCS 3021 and Tweaks 3220/3500/3510.
         # October 16 makes all 18 previously default UB components optional.
-        self.assertEqual(len(without_controls), 461)
-        self.assertEqual(len(selected), 462)
+        # The October 20 intake (Modpack alpha.13) adds default EET join XP 239.
+        self.assertEqual(len(without_controls), 462)
+        self.assertEqual(len(selected), 463)
         self.assertEqual(len({run for run, _ in selected}), 52)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -219,7 +220,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 462)
+        self.assertEqual(len(baseline), 463)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
