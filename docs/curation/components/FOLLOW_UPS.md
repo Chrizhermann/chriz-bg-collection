@@ -42,7 +42,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   Release gates).
 - Hobgoblin challenge run (design with Christopher).
 - Campaign Item Randomiser (CIR): next version.
-- Vanguard Defensive Stance AI toggle (see below).
+- Vanguard Defensive Stance AI toggle: the fix shipped as Modpack `460` in alpha.13; the
+  collection offers it once Christopher decides (see below).
 - InfinityLoader crash analysis: causes found; follow-up decisions are Christopher's.
 - Compatibility follow-ups from the October 8 audit for BG Rebalance and the Spell
   Revisions fork (`docs/audits/2026-10-08-sr-rebalance-compatibility.md` in BG
@@ -242,8 +243,13 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
     collection release.
 - [ ] Vanguard Defensive Stance: PraetorFallen reports that disabling "Use special
   abilities" in the AI settings stops companions from using the ability, but the main
-  character still uses it automatically. Recorded on 2026-10-16; a fix is in progress on
-  Artisan branch `claude/defensive-stance-ai-toggle`.
+  character still uses it automatically. Recorded on 2026-10-16. Cause: EET's BG1
+  Defensive Stance block in the default party AI script `BDDEFAI` lacks that check
+  ([Gibberlings3/EET#210](https://github.com/Gibberlings3/EET/issues/210)). The fix,
+  first built on Artisan branch `claude/defensive-stance-ai-toggle`, shipped as Modpack
+  `460` in alpha.13; in the October 20 lab there was no stance with the option off and
+  the stance was used with it on. Open: whether the collection offers `460` (see
+  Decisions) and whether the Artisan branch is still needed.
 - [ ] [EEex](EEEX.md): the modules ran in the 2026-10-18 v1.3.1 lab (see Done), but that
   lab is hidden, so nothing was seen on screen. Check `B3Scale` at a resolution wider
   than 4:3 and the empty-container highlight in a visible game.
