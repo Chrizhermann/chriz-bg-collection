@@ -34,6 +34,11 @@ published.
   If Windows had `NoDefaultCurrentDirectoryInExePath` set, EET's shortcut
   component failed and EET's core quietly used its 32-bit tools. Mod installers
   no longer inherit that setting.
+- **Large downloads on slower connections no longer fail after 30 seconds.**
+  Every download attempt used to stop 30 seconds after it started, even while
+  data was still arriving, so EET or Infinity UI could not be downloaded below
+  roughly 60 Mbit/s. A download is now retried only when it actually stalls: when
+  no data has arrived for a minute.
 
 ## Collection changelog
 
