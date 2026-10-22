@@ -121,8 +121,8 @@ pub fn json_new(path: &Path, value: &impl Serialize) -> Result<(), String> {
 /// checked, whatever happens to their paths meanwhile.
 pub(crate) struct HeldTransaction {
     pub(crate) game: HeldFolder,
-    /// Also where replacements are written before they are moved into the game, so that an
-    /// interrupted write never leaves anything in the game.
+    /// Where the adapter payload and the backups of the affected files are read from. Nothing is
+    /// written here: replacements go straight into the held game files.
     pub(crate) record: HeldFolder,
 }
 
