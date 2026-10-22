@@ -1,10 +1,11 @@
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Cursor, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
+use base64::Engine;
 use serde_json::json;
 use tauri_plugin_updater::{Error as UpdaterError, UpdaterExt};
 
@@ -13,7 +14,14 @@ struct LocalFeed {
     server: JoinHandle<Vec<String>>,
 }
 
+/// Sends the artifact in chunks of `.0` bytes, waiting `.1` before each chunk.
+type Pace = Option<(usize, Duration)>;
+
 fn spawn_feed(version: &str, signature: &str, artifact: Vec<u8>) -> LocalFeed {
+    spawn_paced_feed(version, signature, artifact, None)
+}
+
+fn spawn_paced_feed(version: &str, signature: &str, artifact: Vec<u8>, pace: Pace) -> LocalFeed {
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback update server");
     let address = listener.local_addr().expect("read loopback server address");
     let endpoint = format!("http://{address}/latest.json");
@@ -67,8 +75,20 @@ fn spawn_feed(version: &str, signature: &str, artifact: Vec<u8>) -> LocalFeed {
             stream
                 .write_all(response.as_bytes())
                 .expect("write response headers");
-            stream.write_all(body).expect("write response body");
-            stream.flush().expect("flush response");
+            stream.flush().expect("flush response headers");
+            match pace {
+                Some((chunk_size, delay)) if path == "/update.exe" => {
+                    for chunk in body.chunks(chunk_size) {
+                        thread::sleep(delay);
+                        stream.write_all(chunk).expect("write response body chunk");
+                        stream.flush().expect("flush response body chunk");
+                    }
+                }
+                _ => {
+                    stream.write_all(body).expect("write response body");
+                    stream.flush().expect("flush response");
+                }
+            }
         }
         paths
     });
@@ -76,8 +96,76 @@ fn spawn_feed(version: &str, signature: &str, artifact: Vec<u8>) -> LocalFeed {
     LocalFeed { endpoint, server }
 }
 
+fn mock_app(current_version: &str) -> tauri::App<tauri::test::MockRuntime> {
+    let mut context = tauri::generate_context!();
+    context.package_info_mut().version = current_version.parse().expect("parse current version");
+    tauri::test::mock_builder()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .build(context)
+        .expect("build updater test app without a native window")
+}
+
 fn acceptance_input(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("set {name} for the ignored acceptance test"))
+}
+
+// check_updates gives the feed check a short timeout. tauri-plugin-updater 2.11 applies it to
+// the feed request only and hands out the update without a timeout, so a slow setup download
+// that keeps progressing is not cut off by it.
+#[test]
+fn a_slow_update_download_outlasts_the_feed_check_timeout() {
+    let check_timeout = Duration::from_secs(1);
+    let setup: Vec<u8> = (0..60_000).map(|index| (index % 251) as u8).collect();
+    let keys = minisign::KeyPair::generate_unencrypted_keypair().expect("generate test key");
+    let signature = minisign::sign(None, &keys.sk, Cursor::new(&setup), None, None)
+        .expect("sign test setup")
+        .into_string();
+    let base64 = base64::engine::general_purpose::STANDARD;
+    let public_key = base64.encode(keys.pk.to_box().expect("box test key").to_string());
+
+    let app = mock_app("0.1.0-alpha.2");
+    let feed = spawn_paced_feed(
+        "0.1.0-alpha.3",
+        &base64.encode(signature),
+        setup.clone(),
+        Some((5_000, Duration::from_millis(200))),
+    );
+    let endpoint = feed.endpoint.parse().expect("parse loopback feed URL");
+    let (downloaded, download_time) = tauri::async_runtime::block_on(async {
+        let updater = app
+            .updater_builder()
+            .endpoints(vec![endpoint])
+            .expect("use loopback endpoint in this debug-only test")
+            .no_proxy()
+            .pubkey(public_key)
+            .timeout(check_timeout)
+            .build()
+            .expect("build updater");
+        let update = updater
+            .check()
+            .await
+            .expect("check local signed feed")
+            .expect("newer update should be offered");
+        let started = Instant::now();
+        let downloaded = update
+            .download(|_, _| {}, || {})
+            .await
+            .expect("a progressing download must not hit the feed check timeout");
+        (downloaded, started.elapsed())
+    });
+
+    assert!(
+        download_time > 2 * check_timeout,
+        "the download must outlast the check timeout, took {download_time:?}"
+    );
+    assert_eq!(
+        downloaded, setup,
+        "verified bytes must equal the served setup"
+    );
+    assert_eq!(
+        feed.server.join().expect("join paced feed server"),
+        ["/latest.json", "/update.exe"]
+    );
 }
 
 #[test]
@@ -93,12 +181,7 @@ fn real_tauri_updater_downloads_and_verifies_the_signed_nsis() {
         .expect("read setup's adjacent Tauri signature");
     assert!(!signature.trim().is_empty(), "signature must not be empty");
 
-    let mut context = tauri::generate_context!();
-    context.package_info_mut().version = current_version.parse().expect("parse current version");
-    let app = tauri::test::mock_builder()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .build(context)
-        .expect("build updater acceptance app without a native window");
+    let app = mock_app(&current_version);
 
     let valid_feed = spawn_feed(&version, signature.trim(), setup.clone());
     let valid_endpoint = valid_feed
