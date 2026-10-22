@@ -23,8 +23,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   everywhere): pinned in both recipes on `claude/eeex-131-pin` with fresh-download and
   native-order evidence. On 2026-10-18 a disposable 2.7.3.0 lab with the full recipe
   booted every EEex user cleanly; a new BG1 game in that lab then exercised the EEex
-  modules, Remote Console and BuffBot (see Done). Remote Console: [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3)
-  and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4). Open from that lab: creature
+  modules, Remote Console and BuffBot (see Done). Remote Console v0.2.1 with [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3)
+  and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4) is pinned (below). Open from that lab: creature
   `LOCALS` are missing after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `430`
   on v1.3.1 (see Release gates); Modpack `650` works on v1.3.1 since alpha.13 (below).
   Attack Info `9` waits for Christopher.
@@ -38,6 +38,15 @@ Cross-repository status. Component detail stays in the sections below and in the
   - `256` × Tweaks Anthology `3500` ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)):
     fixed in v0.6.15 (option 1, Christopher's choice of 2026-10-18); the combined
     Recommended lab install with `3500` on is still a release gate (see Release gates).
+- BuffBot v1.10.1 (released on 2026-10-20) and EEex Remote Console v0.2.1 (tagged on
+  2026-10-23), pinned in both recipes on `claude/buffbot-rc-repin` (fresh-download
+  evidence in `manifest/evidence/release-intake-20261023-buffbot-eeexremote.toml`):
+  - BuffBot v1.10.1 shows the combat-stop notice, which earlier versions always lost
+    ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76)). Its
+    components `1` and `0` are unchanged, and the run stays after the voicepacks and
+    before the scroll policy `430`.
+  - Remote Console v0.2.1 carries the EEex v1.2/v1.3 guidance and the `START_SP` fix.
+    Component `0` is unchanged and stays optional.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -212,10 +221,6 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   `[EEex] Uncap FPS Limit Enabled`. The installer sets no EEex options, and a played
   collection install runs with the limit off. (Clean stage, loader launch and the absence
   of stale `EEex_*.lua` are confirmed.)
-- [ ] [EEex Remote Console](EEEXREMOTE.md): its repository documentation at the pinned
-  commit still describes EEex 1.0.x. The update is [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3):
-  v1.2 and v1.3 guidance, v1.3.1 lab evidence and a PowerShell 7 fix for its smoke
-  suite. Re-pin after it merges.
 - [ ] Red Wizard source follow-up: the pinned Artisan tag still removes fixed vanilla spell
   resrefs (`ArtisansKitpack/lib/redwizard.tpa`) instead of checking effective prohibited
   schools, and SR `60` custom-kit school cleanup is uninvestigated. EET `EDWIN7_` coverage
@@ -280,10 +285,6 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 - [ ] [EEex](EEEX.md): the modules ran in the 2026-10-18 v1.3.1 lab (see Done), but that
   lab is hidden, so nothing was seen on screen. Check `B3Scale` at a resolution wider
   than 4:3 and the empty-container highlight in a visible game.
-- [ ] [EEex Remote Console](EEEXREMOTE.md): with the pinned v0.2.0, once `START` reopens
-  from character creation or the load screen, New Game (seen in the 2026-10-18 lab) or
-  Load Game leaves `START_SP` on the menu stack under the game's screens. The fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4) is lab-verified and
-  waits for review; the pin moves after a release (Christopher's OK).
 - [ ] Creature `LOCALS` survive save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)). In the 2026-10-18
   EEex v1.3.1 lab they did not, in the same process and after a restart; `GLOBAL`
   variables did.
@@ -300,14 +301,14 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   statically.)
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
-- [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed (see Done). Open: the
-  combat-stop notice never shows
-  ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76), fix in
-  [#77](https://github.com/Chrizhermann/bg-eeex-buffbot/pull/77)); toggle stances with
-  opcode 214 variants count as buffs, so a new party's Long preset enables Artisan's
-  Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
+- [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed (see Done). Open: toggle
+  stances with opcode 214 variants count as buffs, so a new party's Long preset enables
+  Artisan's Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
-  ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)).
+  ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)). The combat-stop notice
+  fix in the pinned v1.10.1 ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
+  was checked in a lab through the engine's text object only; nobody has seen the notice
+  on screen in a real combat stop yet.
 - [ ] Visually verify the Evandra portrait override in game.
 
 ## Conditional/future feature gates

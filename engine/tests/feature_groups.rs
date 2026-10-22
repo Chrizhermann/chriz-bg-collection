@@ -279,18 +279,22 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // 292/293/294 in the SoD run and features, and 292 in the preset); the October 22
     // digests were manifest b0d24b97…, 4085f958…, ea9dcc56…; curated 219dc492…, 0dbd118d…,
     // ee04b38a….
+    // Re-pinned on October 23 for BuffBot v1.10.1: in both recipes only the Recommended plan
+    // changes, in the buffbot-bg2 run's artifact id. With v1.10.0 restored, the previous plan
+    // digests return (manifest 69a7e052…, curated 34f2dae7…). Remote Console v0.2.1 is not
+    // in the Recommended plan and changes no digest here.
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "bfc610ef317a5bd4ec57e7f947fcbc65dbebba2ddb3d9404b4684bd81c6bacfb",
             "204329ad35fd43a56f854aeceaf25385cd7b2a008d26e97439c2b20c7b62d8b7",
-            "69a7e052533ea4ae3ad0e951758d74d52bf133078390d780ba7abf30487c0fa7",
+            "a9b52fae6d0a795994d4bf6a570725449c260531de2d9f060799f61ea661d6cc",
         ),
         (
             "../recipes/curated-full-current",
             "b6360c994fce5f81888867b05301711d72073c46491840c22babd934f39c66de",
             "16a7e51757c3ca0a61c8a6ed8a94c04ab4f46aa3038e8f582dc25456be71d909",
-            "34f2dae7dd8031e2192741ced8f0ae4831ae2eacc166377671554d68c596cc5e",
+            "acc45f71d3473bca6f4648e42673c063f5a6fd219052474c169179452571bf0e",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

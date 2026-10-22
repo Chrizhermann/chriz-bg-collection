@@ -26,7 +26,7 @@ no installer references, such as older versions, are not listed.
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
 | Branwen for BGII | 8 | `branwen` | `f82c93e67f19…` | [release asset](https://github.com/Pocket-Plane-Group/Branwen_for_BGII/releases/download/v8/branwen-v8pre.zip) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
-| BuffBot | 1.10.0 | `buffbot` | `cea6628cc6f0…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.0/buffbot-v1.10.0.zip) |
+| BuffBot | 1.10.1 | `buffbot` | `4aadd0ea5dba…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.1/buffbot-v1.10.1.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
 | chriz-bg-modpack | 0.2.0-alpha.13 | `chriz-bg-modpack` | `afbf05eec35b…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.3 | `chriz-bg-rebalance` | `d03714f8da09…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.3/chriz-bg-rebalance-v0.8.3-windows.zip) |
@@ -35,7 +35,7 @@ no installer references, such as older versions, are not listed.
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
 | EEex | 1.3.1 | `eeex` | `9c8104bd63fe…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip) |
-| EEex Remote Console | 0.2.0 | `eeexremote` | `d634b1e8f0a2…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164) |
+| EEex Remote Console | 0.2.1 | `eeexremote` | `f417cb993fff…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/3d98990766abe9ed1024c79ff43d609101f37836) |
 | Enhanced Edition Fixpack | Beta 2 | `eefixpack` | `7a57e43bd6c3…` | [release asset](https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod) |
 | Enhanced Edition Trilogy | 74e91d72bca5d073fa11c1d088b90d7ff0c7105d | `eet`, `eet-end`, `eet-gui` | `9834a53322b7…` | [commit archive](https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d) |
 | Evandra NPC | 2.2 | `evandra` | `21724b6d4679…` | [manual download](https://www.gibberlings3.net/files/file/1008-evandra/?do=download) |
@@ -93,7 +93,7 @@ no installer references, such as older versions, are not listed.
 | BG1 Unfinished Business | 17.1 | `bg1ub` | `5a525eb37f68…` | [release asset](https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod) |
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
-| BuffBot | 1.10.0 | `buffbot` | `cea6628cc6f0…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.0/buffbot-v1.10.0.zip) |
+| BuffBot | 1.10.1 | `buffbot` | `4aadd0ea5dba…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.1/buffbot-v1.10.1.zip) |
 | chriz-bg-modpack | 0.2.0-alpha.13 | `chriz-bg-modpack` | `afbf05eec35b…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.3 | `chriz-bg-rebalance` | `d03714f8da09…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.3/chriz-bg-rebalance-v0.8.3-windows.zip) |
 | CHRIZ-SOD-REMIX | 0.6.15 | `chriz-sod-remix` | `3a295832f9af…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip) |
@@ -101,7 +101,7 @@ no installer references, such as older versions, are not listed.
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
 | EEex | 1.3.1 | `eeex` | `9c8104bd63fe…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip) |
-| EEex Remote Console | 0.2.0 | `eeexremote` | `d634b1e8f0a2…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164) |
+| EEex Remote Console | 0.2.1 | `eeexremote` | `f417cb993fff…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/3d98990766abe9ed1024c79ff43d609101f37836) |
 | Enhanced Edition Fixpack | Beta 2 | `eefixpack` | `7a57e43bd6c3…` | [release asset](https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod) |
 | Enhanced Edition Trilogy | 74e91d72bca5d073fa11c1d088b90d7ff0c7105d | `eet`, `eet-end`, `eet-gui` | `9834a53322b7…` | [commit archive](https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d) |
 | Fade NPC | 5.6 | `fade` | `6d3cd8d528cf…` | [release asset](https://github.com/Spellhold-Studios/Fade-NPC/releases/download/v5.6/Fade-v5.6.zip) |

@@ -161,6 +161,13 @@ unchanged.
   comes switched off and can be turned on in EEex's options.
   - **Pending:** whether the collection switches the attack info display on
     (EEex component 9). Christopher decides.
+- **BuffBot** (Default): the "Combat detected - casting stopped" and "casting timed
+  out" notices now appear over the party leader's head. Before, both notices were
+  always lost; stopping the buff run itself worked. (BuffBot v1.10.1)
+- **EEex Remote Console** (Optional, experimental): after you return to the main menu
+  from character creation, the load screen or the options, the single-player menu no
+  longer stays behind the game's screens for the rest of the session. Its installer
+  messages now name the EEex v1.2/v1.3 components it needs. (Remote Console v0.2.1)
 
 ### Mod versions
 
@@ -173,12 +180,15 @@ unchanged.
   version, as it does for EET.
 - ChrizFader's voicepacks v1.1.0 (new)
 - SoD Remix v0.6.15 (was v0.6.13)
+- BuffBot v1.10.1 (was v1.10.0)
+- EEex Remote Console v0.2.1 (was v0.2.0)
 
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.13, BG
 Rebalance to v0.8.3, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
-EEex to v1.3.1 and The Tweaks Anthology to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
+EEex to v1.3.1, BuffBot to v1.10.1, EEex Remote Console to v0.2.1 and The Tweaks
+Anthology to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
 lacked it; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
@@ -193,7 +203,9 @@ Business (BG2) is now optional; High Mastery now gives +5
 damage, and the NPC move now includes Ajantis. In Bardic Wonders, the
 Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
 the Gallant gets the new bard spells, and Symphony of the Dark Children ends
-with its round of Invisibility. These changes apply to new installations;
+with its round of Invisibility. BuffBot's combat-stop notices now appear over the
+party leader, and the optional EEex Remote Console no longer leaves the
+single-player menu behind the game's screens. These changes apply to new installations;
 existing games and saves are unchanged.
 
 ## Notes for the release integrator
@@ -221,3 +233,11 @@ existing games and saves are unchanged.
 - **EEex v1.3.1** reaches new installations only. EEex installs early, so moving an
   existing installation means reinstalling everything after it; how existing
   games move is Christopher's call (see `FOLLOW_UPS.md`).
+- **BuffBot v1.10.1** changes only BuffBot's Lua code; its components and TP2 are
+  unchanged apart from the version. Its lab check on EET 2.7.3.0 with EEex v1.3.1
+  made the engine attach the notice over the party leader; a real combat stop with
+  the notice on screen, EEex v1.2.0 and BG:EE or BG2:EE outside EET were not checked
+  (its release notes).
+- **EEex Remote Console v0.2.1** is a tag without GitHub release assets, like
+  v0.2.0, so the pin is GitHub's commit archive of the tag commit. Its `START_SP` fix
+  passed the README checklist on EET 2.7.3.0 with EEex v1.3.1 in the October 18 lab.

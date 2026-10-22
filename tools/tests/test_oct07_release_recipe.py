@@ -92,9 +92,10 @@ class OctoberReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(evidence["verified_on"], "2026-10-07")
         self.assertEqual({record["mod_id"] for record in evidence["artifacts"]},
                          {"chriz-bg-rebalance", "chriz-bg-modpack", "buffbot"})
-        # The October 13 published intake supersedes these pins (test_oct13_intake_recipe);
+        # The October 13 published intake supersedes these pins (test_oct13_intake_recipe),
+        # and the October 23 intake (test_oct23_buffbot_eeexremote_recipe) the BuffBot pin;
         # their pinned files stay exactly as verified here.
-        superseded = {"chriz-bg-rebalance", "chriz-bg-modpack"}
+        superseded = {"chriz-bg-rebalance", "chriz-bg-modpack", "buffbot"}
         for profile in (self.root / "manifest", self.output):
             collection = tomllib.loads((profile / "collection.toml").read_text())
             for record in evidence["artifacts"]:

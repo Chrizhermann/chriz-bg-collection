@@ -1,0 +1,32 @@
+id = "buffbot-1.10.1"
+name = "BuffBot"
+version = "1.10.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.1/buffbot-v1.10.1.zip"
+reference = "v1.10.1"
+expected_filename = "buffbot-v1.10.1.zip"
+expected_length = 4270988
+sha256 = "4aadd0ea5dba2dd082b3af5b63da06db61139e997ea87e8adff1a2853fa31a7e"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["buffbot"]
+tp2_paths = ["buffbot/setup-buffbot.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/bg-eeex-buffbot"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.10.1"
+reviewed_on = "2026-10-23"
