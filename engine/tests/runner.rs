@@ -226,6 +226,16 @@ fn unmatched_prompt_alerts_once_and_stays_alive_until_explicit_cancel() {
         threshold,
     );
 
+    // The watchdog is armed when the child is started, so a child that is slow to start can
+    // already raise an alert before it prints anything. Time the silence from the prompt.
+    let printed = std::cell::RefCell::new(String::new());
+    harness.wait_for_event(Duration::from_secs(10), |event| match event {
+        EngineEvent::ConsoleLine { line, .. } => {
+            printed.borrow_mut().push_str(line);
+            printed.borrow().contains("Unexpected prompt: ")
+        }
+        _ => false,
+    });
     let attention = harness.wait_for_event(Duration::from_secs(3), |event| {
         matches!(event, EngineEvent::AttentionRequired { .. })
     });
