@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-22
+## Work queue at a glance — 2026-10-23
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -28,8 +28,16 @@ Cross-repository status. Component detail stays in the sections below and in the
   `LOCALS` are missing after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `430`
   on v1.3.1 (see Release gates); Modpack `650` works on v1.3.1 since alpha.13 (below).
   Attack Info `9` waits for Christopher.
-- Imoen's handover from BG1/SoD into SoA (SoD Remix): three choices with the vanilla
-  Thief→Mage dual as the default, working for every thief kit.
+- SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes on
+  `claude/sod-remix-0615-pin` (fresh-download evidence in
+  `manifest/evidence/release-intake-20261023.toml`):
+  - Imoen's handover from BG1/SoD into SoA (`292`/`293`/`294`, since v0.6.14): one
+    choice group with the vanilla Thief→Mage dual `292` as the default and `293`/`294`
+    selectable (Christopher, 2026-10-16: three choices, each working for every thief
+    kit). The owner lab covered `C0TRICKS` and no kit, with Spell Revisions only.
+  - `256` × Tweaks Anthology `3500` ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)):
+    fixed in v0.6.15 (option 1, Christopher's choice of 2026-10-18); the combined
+    Recommended lab install with `3500` on is still a release gate (see Release gates).
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -82,9 +90,6 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **Waiting for Christopher**
 
-- SoD Remix `256` × Tweaks Anthology `3500`: Recommended does not install until `256`
-  handles the summon effect; which fix
-  ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
 - EEex v1.3.1: whether to offer Attack Info `9`, and how existing installations
   (including the stream game) move from v1.2.0.
 - Small spell durations (Luck, Bless, Aid) and druid Chaotic Commands: in discussion.
@@ -172,8 +177,7 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   `a821992228c87a4bef75be4bc2fc833f8db46819` (still upstream head), update the renamed
   `Artisans_Warlock/Artisans_Warlock.TP2` path, and stop describing it as a v3.0 target.
   Waits for the Contingency prompt answer below.
-- [ ] Stale catalog wording: `CHRIZ-SOD-REMIX.md` still names v0.6.11 as the pin;
-  `BARDICWONDERS.md` cites `balance.4`/`balance.6`; `ABETTORHLAREBALANCE.md` still says
+- [ ] Stale catalog wording: `BARDICWONDERS.md` cites `balance.4`/`balance.6`; `ABETTORHLAREBALANCE.md` still says
   "keep unavailable" although the finite Abettor HLA work ships inside Bardic Wonders.
 - [ ] [Sarah](SARAHTOB.md) portraits: captured with hashes on Modpack branch
   `codex/sarah-options`, but their artist and licence are unknown, so they are not
@@ -181,12 +185,16 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 
 ## Release gates — installer and static integration
 
-- [ ] The Recommended selection does not install: SoD Remix v0.6.13 `256` refuses the
-  fire-elemental donor `BDELFIRM`, because Tweaks Anthology `3500` (a default since the
-  October 14 intake) gives every summon a `CDTFOW` cast-spell effect
+- [ ] SoD Remix `256` × Tweaks Anthology `3500`: fixed in v0.6.15, pinned; needs the
+  combined Recommended lab install with `3500` on. v0.6.13's `256` refused the
+  fire-elemental donor `BDELFIRM`, because `3500` (a default since the October 14
+  intake) gives every summon a `CDTFOW` cast-spell effect
   ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
-  The October 14 and 18 labs install with `3500` off. Fix `256`, then install the whole
-  Recommended selection once with `3500` on.
+  v0.6.15's `256` accepts exactly that effect and leaves it out of its hostile clones.
+  The October 14 and 18 labs installed with `3500` off; with the fixed library, the
+  owner reinstalled `256` and the rest of the remix tail in the disposable October 18
+  lab with `3500` on (chriz-sod-rebalance PR #32). The combined install now also
+  includes the default Imoen choice `292`.
 - [ ] Modpack `430` (scrolls at the reader's caster level) fails on 2.7.3.0 with EEex
   v1.3.1, in alpha.12 and alpha.13: on the first load, a new game or an NPC join it shows
   its EEex error box ("copied action construction overlaps an existing lifetime") and

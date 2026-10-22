@@ -372,7 +372,7 @@ args = []
 run_id = "chriz-sod-remix-bg2"
 mod_id = "chriz-sod-remix"
 phase = "post-eet-end"
-components = [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910]
+components = [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910, 292, 293, 294]
 args = []
 
 [[runs]]
@@ -5429,6 +5429,51 @@ readiness = "ready"
 parent = "mod:chriz-sod-remix"
 requires = ["feature:chriz-sod-remix:mandatory-components"]
 components = [{ run_id = "chriz-sod-remix-bg2", component = 257 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-292"
+title = "Imoen in Shadows of Amn: the BG2 thief/mage dual-class"
+description = "At the end of SoD, Imoen's gear is handed over like the party's and she keeps only her BG2 belt. In Shadows of Amn she is EET's own BG2 Imoen (thief 7 / mage 8) plus the tome boosts she read in BG1 and SoD, each score capped at 25."
+category = "npcs"
+group_label = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+source_label = "Include CHRIZ-SOD-REMIX"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components"]
+choice_group = "sod-remix-imoen-soa"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:component-293", reason = "Choose one way for Imoen to continue in Shadows of Amn." }, { feature_id = "feature:chriz-sod-remix:component-294", reason = "Choose one way for Imoen to continue in Shadows of Amn." }]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 292 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-293"
+title = "Imoen in Shadows of Amn: as taken along"
+description = "At the end of SoD, Imoen's gear is handed over like the party's and she keeps only her BG2 belt. She keeps her own BG1/SoD build and gets Shadows of Amn's dialog, scripts and XP catch-up."
+category = "npcs"
+group_label = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+source_label = "Include CHRIZ-SOD-REMIX"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components"]
+choice_group = "sod-remix-imoen-soa"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:component-292", reason = "Choose one way for Imoen to continue in Shadows of Amn." }, { feature_id = "feature:chriz-sod-remix:component-294", reason = "Choose one way for Imoen to continue in Shadows of Amn." }]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 293 }]
+
+[[features]]
+id = "feature:chriz-sod-remix:component-294"
+title = "Imoen in Shadows of Amn: dual-class at her SoD thief level"
+description = "At the end of SoD, Imoen's gear is handed over like the party's and she keeps only her BG2 belt. A single-class thief Imoen dual-classes to mage at her end-of-SoD thief level; Shadows of Amn's catch-up XP goes into mage, and she learns the BG2 Imoen's wizard spells. Kit, HP, skills and proficiencies stay. Requires EEex."
+category = "npcs"
+group_label = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+source_label = "Include CHRIZ-SOD-REMIX"
+decision = "optional"
+readiness = "ready"
+parent = "mod:chriz-sod-remix"
+requires = ["feature:chriz-sod-remix:mandatory-components", "feature:eeex:mandatory-components"]
+choice_group = "sod-remix-imoen-soa"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:component-292", reason = "Choose one way for Imoen to continue in Shadows of Amn." }, { feature_id = "feature:chriz-sod-remix:component-293", reason = "Choose one way for Imoen to continue in Shadows of Amn." }]
+components = [{ run_id = "chriz-sod-remix-bg2", component = 294 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:component-110"

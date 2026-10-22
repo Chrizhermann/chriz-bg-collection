@@ -8,16 +8,23 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 /// The October 13 intake adds the mandatory v0.6.13 rows 177, 198 and 285 in TP2 order.
+/// The October 23 intake (v0.6.15) adds the Imoen in Shadows of Amn choice after 910;
+/// Recommended installs its default 292.
 const SOD_REMIX_COMPONENTS: &[u32] = &[
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197,
     198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 260, 265, 266, 270, 280, 285, 290,
-    900, 910,
+    900, 910, 292,
 ];
 const SOD_REMIX_RUN_COMPONENTS: &[u32] = &[
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197,
     198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285,
-    290, 900, 910,
+    290, 900, 910, 292, 293, 294,
 ];
+/// Christopher, 2026-10-16: three choices, the vanilla BG2 thief-to-mage dual (292) by default.
+const IMOEN_CHOICE: &str = "sod-remix-imoen-soa";
+const IMOEN_DUAL: &str = "feature:chriz-sod-remix:component-292";
+const IMOEN_AS_TAKEN: &str = "feature:chriz-sod-remix:component-293";
+const IMOEN_SOD_LEVEL_DUAL: &str = "feature:chriz-sod-remix:component-294";
 // v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last;
 // 331 (Genius still stacks) and 332 are defaults, 330 is the optional strict variant.
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
@@ -43,25 +50,25 @@ fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
     assert_eq!(
         manifest.mods["chriz-sod-remix"].artifact_id,
-        "chriz-sod-remix-0.6.13"
+        "chriz-sod-remix-0.6.15"
     );
-    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.13"];
-    assert_eq!(artifact.version, "0.6.13");
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.15"];
+    assert_eq!(artifact.version, "0.6.15");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.13/chriz-sod-remix-v0.6.13.zip"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.13");
+    assert_eq!(artifact.source.reference, "v0.6.15");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-sod-remix-v0.6.13.zip")
+        Some("chriz-sod-remix-v0.6.15.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(3_010_880));
+    assert_eq!(artifact.source.expected_length, Some(3_045_799));
     assert_eq!(
         artifact.source.sha256,
-        "9253fbb295919b38c3958c6b581b663564a7f1760776d3cb8d5602ffe11d732a"
+        "3a295832f9af3540bf079ba437676b70b019ce8db506ef89fde28addd0b4feaf"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -126,7 +133,10 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
             .collect::<Vec<_>>(),
         [
             "feature:chriz-sod-remix:mandatory-components",
-            "feature:chriz-sod-remix:component-257"
+            "feature:chriz-sod-remix:component-257",
+            IMOEN_DUAL,
+            IMOEN_AS_TAKEN,
+            IMOEN_SOD_LEVEL_DUAL,
         ]
     );
     let extra_challenge = evaluation
@@ -159,6 +169,63 @@ fn authors_sod_remix_as_one_ready_default_post_eet_bundle_before_buffbot() {
     selection.set_feature("mod:chriz-sod-remix", false);
     let disabled = evaluate(&manifest, &selection).unwrap();
     assert_eq!(disabled.plan.components_for("chriz-sod-remix-bg2"), None);
+}
+
+#[test]
+fn offers_imoen_in_shadows_of_amn_as_one_choice_with_the_vanilla_dual_by_default() {
+    let manifest = recipe();
+    let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    for (id, decision, selected) in [
+        (IMOEN_DUAL, Decision::Default, true),
+        (IMOEN_AS_TAKEN, Decision::Optional, false),
+        (IMOEN_SOD_LEVEL_DUAL, Decision::Optional, false),
+    ] {
+        let control = evaluation.view.control(id).expect("Imoen choice option");
+        assert_eq!(control.decision, decision, "{id}");
+        assert_eq!(control.readiness, Readiness::Ready, "{id}");
+        assert_eq!(control.selected, selected, "{id}");
+        assert_eq!(control.choice_group.as_deref(), Some(IMOEN_CHOICE), "{id}");
+    }
+
+    let sod_components = |changes: &[(&str, bool)]| {
+        let mut selection = Selection::defaults("windows");
+        for (id, selected) in changes {
+            selection.set_feature(id, *selected);
+        }
+        let evaluation = evaluate(&manifest, &selection).unwrap();
+        evaluation
+            .plan
+            .components_for("chriz-sod-remix-bg2")
+            .unwrap()
+            .iter()
+            .copied()
+            .filter(|component| [292, 293, 294].contains(component))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(sod_components(&[]), [292]);
+    assert_eq!(
+        sod_components(&[(IMOEN_DUAL, false), (IMOEN_AS_TAKEN, true)]),
+        [293]
+    );
+    assert_eq!(
+        sod_components(&[(IMOEN_DUAL, false), (IMOEN_SOD_LEVEL_DUAL, true)]),
+        [294]
+    );
+    // Only the SoD-level dual-class needs EEex; the default does not.
+    let dual = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == IMOEN_SOD_LEVEL_DUAL)
+        .unwrap();
+    assert_eq!(
+        dual.requires,
+        [
+            "feature:chriz-sod-remix:mandatory-components",
+            "feature:eeex:mandatory-components"
+        ]
+    );
+    assert_eq!(sod_components(&[("mod:eeex", false)]), [292]);
 }
 
 #[test]

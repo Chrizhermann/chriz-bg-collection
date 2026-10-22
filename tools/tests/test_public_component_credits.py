@@ -59,7 +59,8 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # SCS 3021 and Tweaks 3220/3500/3510; October 16 makes all UB rows optional.
         # The October 20 intake (Modpack alpha.13) adds default EET join XP 239.
         # The October 22 intake adds 18 default player voicepacks, one run each.
-        self.assertEqual(self.result["componentCount"], 481)
+        # The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292.
+        self.assertEqual(self.result["componentCount"], 482)
         self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

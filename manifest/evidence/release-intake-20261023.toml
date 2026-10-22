@@ -1,0 +1,28 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-23"
+command = "chriz-bg-author artifact inspect <release URL> --cache-root <fresh cache> --expected-tp2 chriz-sod-remix/setup-chriz-sod-remix.tp2 --expected-tp2 setup-chriz-sod-remix.tp2; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id chriz-sod-remix --archive <fresh downloaded ZIP>"
+scope = "SoD Remix v0.6.15 was merged, tagged and published as a normal GitHub release on October 23 and replaces v0.6.13 in both recipe profiles. The release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; the measured hash and the native TP2 declaration order match both recipes. The archive layout and limits are unchanged from v0.6.13. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
+
+# v0.6.14 declares the Imoen choice 292/293/294 after 910; v0.6.15 changes only 256
+# (Tweaks Anthology 3500's CDTFOW effect, chriz-sod-rebalance#31). The collection
+# offers 292 as the default and 293/294 as alternatives (Christopher, 2026-10-16).
+[[artifacts]]
+mod_id = "chriz-sod-remix"
+artifact_id = "chriz-sod-remix-0.6.15"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.6.15"
+source_commit = "9581212b0d6ed1d545a7a6618dfcb36ad24ce07b"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip"
+actual_length = 3045799
+actual_sha256 = "3a295832f9af3540bf079ba437676b70b019ce8db506ef89fde28addd0b4feaf"
+tp2_sha256 = "8cbf1dee2bae4773caa2ee1e135fef5992114c89afea74220f6893c67112a69a"
+native_components = [
+  100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 176, 177, 185, 190, 195,
+  210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 235, 240, 250, 255, 256, 257, 258, 260,
+  265, 266, 270, 280, 285, 290, 291, 900, 901, 910, 292, 293, 294
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

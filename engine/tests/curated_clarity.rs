@@ -39,7 +39,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // October 17 removes the 18 formerly default Unfinished Business components.
         // The October 20 intake adds Modpack EET join XP 239.
         // The October 22 intake adds the 18 player voicepacks (component 0 each).
-        481
+        // The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292.
+        482
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
