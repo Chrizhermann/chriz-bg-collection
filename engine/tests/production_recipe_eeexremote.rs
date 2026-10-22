@@ -7,7 +7,8 @@ use bg_engine::recipe_view::{evaluate, evaluate_preset};
 use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
-const COMMIT: &str = "661927e56e28435541a3128568cd4ee6d5d80164";
+// Tag v0.2.1 (October 23): the START_SP fix and the EEex v1.2/v1.3 guidance.
+const COMMIT: &str = "3d98990766abe9ed1024c79ff43d609101f37836";
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -20,8 +21,9 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_reviewed_eeex_remote_console_commit() {
     let manifest = recipe();
-    let artifact = &manifest.artifacts["eeexremote-0.2.0"];
-    assert_eq!(artifact.version, "0.2.0");
+    assert_eq!(manifest.mods["eeexremote"].artifact_id, "eeexremote-0.2.1");
+    let artifact = &manifest.artifacts["eeexremote-0.2.1"];
+    assert_eq!(artifact.version, "0.2.1");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubCommitZip);
     assert_eq!(artifact.source.reference, COMMIT);
@@ -29,10 +31,10 @@ fn freezes_the_reviewed_eeex_remote_console_commit() {
         artifact.source.url,
         format!("https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/{COMMIT}")
     );
-    assert_eq!(artifact.source.expected_length, Some(26_360));
+    assert_eq!(artifact.source.expected_length, Some(34_419));
     assert_eq!(
         artifact.source.sha256,
-        "d634b1e8f0a253bb1100b924d9a400c2cc7eb74b0d919881739b8cc680a7483a"
+        "f417cb993fff8fac5f72a7e2c597baa78dd68f7bc51b5951777b5ffd60e70359"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::SingleWrapper);
     assert_eq!(
