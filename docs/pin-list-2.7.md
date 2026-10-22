@@ -28,7 +28,7 @@ no installer references, such as older versions, are not listed.
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.10.0 | `buffbot` | `cea6628cc6f0…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.0/buffbot-v1.10.0.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
-| chriz-bg-modpack | 0.2.0-alpha.12 | `chriz-bg-modpack` | `3c1ee079541d…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.12/chriz-bg-modpack-v0.2.0-alpha.12.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.13 | `chriz-bg-modpack` | `afbf05eec35b…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.3 | `chriz-bg-rebalance` | `d03714f8da09…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.3/chriz-bg-rebalance-v0.8.3-windows.zip) |
 | CHRIZ-SOD-REMIX | 0.6.13 | `chriz-sod-remix` | `9253fbb29591…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.13/chriz-sod-remix-v0.6.13.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
@@ -76,7 +76,7 @@ no installer references, such as older versions, are not listed.
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.10.0 | `buffbot` | `cea6628cc6f0…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.0/buffbot-v1.10.0.zip) |
-| chriz-bg-modpack | 0.2.0-alpha.12 | `chriz-bg-modpack` | `3c1ee079541d…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.12/chriz-bg-modpack-v0.2.0-alpha.12.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.13 | `chriz-bg-modpack` | `afbf05eec35b…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.3 | `chriz-bg-rebalance` | `d03714f8da09…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.3/chriz-bg-rebalance-v0.8.3-windows.zip) |
 | CHRIZ-SOD-REMIX | 0.6.13 | `chriz-sod-remix` | `9253fbb29591…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.13/chriz-sod-remix-v0.6.13.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
