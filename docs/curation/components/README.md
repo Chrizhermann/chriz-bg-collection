@@ -8,8 +8,9 @@ options (pick one).
 Decision column is Chris's. Where the pin-list targets a newer version the menu may differ — re-list after upgrade.
 
 This directory indexes the full menus generated for the mods listed below; it is not one
-file per manifest entry because soundsets and pseudo-installers are intentionally outside
-the component UI. The 22 historical single-component local fixes are all covered by the
+file per manifest entry because pseudo-installers and the reference install's other local
+soundsets are intentionally outside the component UI. Christopher's 18 published player
+voicepacks (the `CD_*` catalogs, October 22) are offered, one catalog each. The 22 historical single-component local fixes are all covered by the
 [collection tail-fix migration inventory](COLLECTION_TAIL_FIXES.md). Every unresolved
 release, installer, and live-acceptance check is indexed separately in
 [curation follow-ups](FOLLOW_UPS.md); detailed evidence stays in each mod catalog.
@@ -79,3 +80,21 @@ or a file-specific UI/dependency note, not in the `Decision` value.
 | BUFFBOT | 2 | 2 | [BUFFBOT.md](BUFFBOT.md) |
 | ABETTORHLAREBALANCE | 1 | 1 | [ABETTORHLAREBALANCE.md](ABETTORHLAREBALANCE.md) |
 | AKCB_SHAPESHIFTER | 1 | 1 | [AKCB_SHAPESHIFTER.md](AKCB_SHAPESHIFTER.md) |
+| CD_NEERA | 1 | 1 | [CD_NEERA.md](CD_NEERA.md) |
+| CD_SAFANA | 1 | 1 | [CD_SAFANA.md](CD_SAFANA.md) |
+| CD_SAFSOD | 1 | 1 | [CD_SAFSOD.md](CD_SAFSOD.md) |
+| CD_JAHEBG1 | 1 | 1 | [CD_JAHEBG1.md](CD_JAHEBG1.md) |
+| CD_JAHEBG2 | 1 | 1 | [CD_JAHEBG2.md](CD_JAHEBG2.md) |
+| CD_YESLICK | 1 | 1 | [CD_YESLICK.md](CD_YESLICK.md) |
+| CD_EDWNBG1 | 1 | 1 | [CD_EDWNBG1.md](CD_EDWNBG1.md) |
+| CD_EDWNBG2 | 1 | 1 | [CD_EDWNBG2.md](CD_EDWNBG2.md) |
+| CD_AERIE | 1 | 1 | [CD_AERIE.md](CD_AERIE.md) |
+| CD_IMOBG1 | 1 | 1 | [CD_IMOBG1.md](CD_IMOBG1.md) |
+| CD_IMOBG2 | 1 | 1 | [CD_IMOBG2.md](CD_IMOBG2.md) |
+| CD_SAREVOK | 1 | 1 | [CD_SAREVOK.md](CD_SAREVOK.md) |
+| CD_AMELY | 1 | 0 | [CD_AMELY.md](CD_AMELY.md) |
+| CD_GROMN | 1 | 0 | [CD_GROMN.md](CD_GROMN.md) |
+| CD_AJANTI | 1 | 1 | [CD_AJANTI.md](CD_AJANTI.md) |
+| CD_VICBG1 | 1 | 0 | [CD_VICBG1.md](CD_VICBG1.md) |
+| CD_VICBG2 | 1 | 0 | [CD_VICBG2.md](CD_VICBG2.md) |
+| CD_GARITH | 1 | 0 | [CD_GARITH.md](CD_GARITH.md) |

@@ -97,7 +97,10 @@ fn authors_the_exact_spell_revisions_menu_and_split_run_order() {
     assert_eq!(campaign_xp + 1, late);
     assert_eq!(late + 1, lightning);
     assert_eq!(lightning + 1, baeloth);
-    assert_eq!(baeloth + 1, buffbot);
+    // October 22: the 18 sound-only player voicepacks run between Baeloth and BuffBot.
+    assert_eq!(baeloth + 1, position("voicepack-neera-bg2"));
+    assert_eq!(baeloth + 18, position("voicepack-garithos-bg2"));
+    assert_eq!(position("voicepack-garithos-bg2") + 1, buffbot);
     // Modpack scroll policy 430 follows every spell writer, including SR's late runs.
     assert_eq!(buffbot + 1, scrolls);
     assert_eq!(scrolls, runs.len() - 1);

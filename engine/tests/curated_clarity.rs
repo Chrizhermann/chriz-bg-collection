@@ -21,7 +21,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     // The October 13 intake moves Modpack scroll policy 430 into its own final run.
     // Unfinished Business became optional and unselected on October 17, so the
     // ub-bg2 run no longer runs by default.
-    assert_eq!(result.plan.runs.len(), 52);
+    // The October 22 intake adds one run for each of the 18 default player voicepacks.
+    assert_eq!(result.plan.runs.len(), 70);
     assert_eq!(
         result
             .plan
@@ -37,7 +38,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // and Tweaks 3220/3500/3510.
         // October 17 removes the 18 formerly default Unfinished Business components.
         // The October 20 intake adds Modpack EET join XP 239.
-        463
+        // The October 22 intake adds the 18 player voicepacks (component 0 each).
+        481
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

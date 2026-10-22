@@ -224,6 +224,14 @@ SOURCE_LABELS = {
     "YESLICKNPC": "Yeslick NPC for BGII",
 }
 
+# Christopher's 18 player voicepacks (release v1.1.0, October 22) share one source.
+VOICEPACK_CATALOGS = (
+    "CD_NEERA", "CD_SAFANA", "CD_SAFSOD", "CD_JAHEBG1", "CD_JAHEBG2", "CD_YESLICK",
+    "CD_EDWNBG1", "CD_EDWNBG2", "CD_AERIE", "CD_IMOBG1", "CD_IMOBG2", "CD_SAREVOK",
+    "CD_AMELY", "CD_GROMN", "CD_AJANTI", "CD_VICBG1", "CD_VICBG2", "CD_GARITH",
+)
+SOURCE_LABELS.update({catalog: "ChrizFader's voicepacks" for catalog in VOICEPACK_CATALOGS})
+
 
 @dataclass(frozen=True)
 class FeaturePresentation:

@@ -1,0 +1,32 @@
+id = "voicepack-garithos-1.1.0"
+name = "Garithos player voicepack"
+version = "1.1.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/garithos-player-voicepack-v1.1.0.zip"
+reference = "v1.1.0"
+expected_filename = "garithos-player-voicepack-v1.1.0.zip"
+expected_length = 5117808
+sha256 = "24abfd30cd8c9e5bedc77b2f8c9ab8b1444cc5c4189f5857d2b70def805525c5"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_garith"]
+tp2_paths = ["cd_garith/cd_garith.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.1.0"
+reviewed_on = "2026-10-22"

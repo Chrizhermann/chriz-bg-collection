@@ -1,0 +1,32 @@
+id = "voicepack-sarevok-1.0.1"
+name = "Sarevok player voicepack"
+version = "1.0.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/sarevok-player-voicepack-v1.0.1.zip"
+reference = "v1.1.0"
+expected_filename = "sarevok-player-voicepack-v1.0.1.zip"
+expected_length = 2115482
+sha256 = "e105f9b296d06677d9d0ba67ffdc3583c90ac13a97ea4dd7d45117f721af7937"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_sarevok"]
+tp2_paths = ["cd_sarevok/cd_sarevok.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.1.0"
+reviewed_on = "2026-10-22"

@@ -1,0 +1,32 @@
+id = "voicepack-gromnir-il-khan-1.0.1"
+name = "Gromnir Il-Khan player voicepack"
+version = "1.0.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/gromnir-il-khan-player-voicepack-v1.0.1.zip"
+reference = "v1.1.0"
+expected_filename = "gromnir-il-khan-player-voicepack-v1.0.1.zip"
+expected_length = 1972660
+sha256 = "7aaad0379a6cbba87c5b2aa772ad3b53b777ae1d1821194567cfa8288811c9f5"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_gromn"]
+tp2_paths = ["cd_gromn/cd_gromn.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.1.0"
+reviewed_on = "2026-10-22"

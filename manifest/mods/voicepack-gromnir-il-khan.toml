@@ -1,0 +1,11 @@
+id = "voicepack-gromnir-il-khan"
+artifact_id = "voicepack-gromnir-il-khan-1.0.1"
+name = "Gromnir Il-Khan player voicepack"
+tp2 = "cd_gromn/cd_gromn.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Gromnir Il-Khan Soundset"

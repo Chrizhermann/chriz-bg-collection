@@ -272,18 +272,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned on October 20 for Modpack alpha.13: with alpha.12 restored and EET join XP
     // 239 removed from the mod, the late-companion run, the features and the preset, all six
     // previous digests return in both recipes.
+    // Re-pinned on October 22 for the 18 default player voicepacks (their runs, features
+    // and preset entries); without them all six October 20 digests return:
+    // manifest 01da4486…, cc79fa3c…, b7d2694f…; curated 0dd26563…, 55c33c0b…, 4e62e7d9….
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "01da448686ac2325ce787294bfb764f628c67ed584b25672e8378197d74cf3d3",
-            "cc79fa3c2a0fd14b86a0953d5fff5e8c9973da1973584377b09c7ba459905c8b",
-            "b7d2694f50de57208543ff3ef031b8ee76aa70e3df697d4a0752404a1061517a",
+            "b0d24b972e279f119472f5baf1db5f2795b25e62b1b55664cda16b2bd262f153",
+            "4085f958b5f0de8f842eab49076ee3e46f5085a244bf9cec691be46fefa21a13",
+            "ea9dcc566376ade1eb9c39f57c716836a34f3f9d4277139aa0994b63009b41b5",
         ),
         (
             "../recipes/curated-full-current",
-            "0dd26563ce74ec2caebef4aed6b6bd8fdd22116498dae38fda99699297a0970d",
-            "55c33c0bb1a2f053feabff868fc41a9ee23fdbbfd02e5c05784526e9c48445ab",
-            "4e62e7d9ed3dd9462b5992712eeef37079a5b7e0bd68f4818063900ec1597ec6",
+            "219dc4926293a1d1c1c97a7d003b587c2297bc5e3d5c809a76636beda0761a10",
+            "0dbd118de161bf9a8770e81f9979ed151142e7bb67fc60e2be64cd8b922cda32",
+            "ee04b38afb9d38b293a8d5dd9d3ad800576ba5eab1f0ba21b8da7638737cd604",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

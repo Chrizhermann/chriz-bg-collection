@@ -1,0 +1,32 @@
+id = "voicepack-viconia-bg2-1.0.0"
+name = "Viconia (BG2) player voicepack"
+version = "1.0.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/viconia-bg2-player-voicepack-v1.0.0.zip"
+reference = "v1.1.0"
+expected_filename = "viconia-bg2-player-voicepack-v1.0.0.zip"
+expected_length = 5058181
+sha256 = "dde9cfca2692de0b75e1bd9a6bc8dabba85db79608b87da18f49ae685d31420a"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_vicbg2"]
+tp2_paths = ["cd_vicbg2/cd_vicbg2.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.1.0"
+reviewed_on = "2026-10-22"

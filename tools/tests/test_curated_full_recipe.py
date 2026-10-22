@@ -367,7 +367,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # October 20 intake (Modpack alpha.13): default EET join XP 239 in the
                 # late-companion run after 238; without 239 the October 16 digest
                 # 4bc47e908f0e78e1e747d739b52f5f74cae5018dad61c764bdadbad36baa090e returns.
-                "863540b3bc98efcb3b606baba4b865e6d345d5032c2911caa8b26a98f5caa451",
+                # October 22 intake: 18 default player voicepacks in their own runs after
+                # the other post-EET writers and before Klatu/BuffBot; without them the
+                # October 20 digest
+                # 863540b3bc98efcb3b606baba4b865e6d345d5032c2911caa8b26a98f5caa451 returns.
+                "a7e9e7bb71ee60a24c8ab5bdd85b9153511055c68f1b7d245466a8b2da85b537",
             )
 
             legacy_bg1npc_groups = {

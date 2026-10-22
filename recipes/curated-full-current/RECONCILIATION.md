@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 471 default/mandatory rows — conditional inactive: 6, deferred: 4, selected for installation: 461.
+Engine-equivalent resolved-selection summary: 489 default/mandatory rows — conditional inactive: 6, deferred: 4, selected for installation: 479.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -139,6 +139,24 @@ Engine-equivalent resolved-selection summary: 471 default/mandatory rows — con
 | `BUFFBOT:1` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.10.0 1.10.0 (v1.10.0), component 1 |  |
 | `BUFFBOT:0` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.10.0 1.10.0 (v1.10.0), component 0 |  |
 | `C0WARLOCK:0` | default | `omission:warlock-unattended-answer` | deferred | No executable source selected | The hidden Contingency UI spell-learning prompt still needs Christopher's explicit Yes or No choice and an unattended script before this default can be installed. |
+| `CD_AERIE:0` | default | `feature:voicepack-aerie:component-0` | selected for installation | voicepack-aerie → voicepack-aerie-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_AJANTI:0` | default | `feature:voicepack-ajantis:component-0` | selected for installation | voicepack-ajantis → voicepack-ajantis-2.0.0 2.0.0 (v1.1.0), component 0 |  |
+| `CD_AMELY:0` | default | `feature:voicepack-amelyssan:component-0` | selected for installation | voicepack-amelyssan → voicepack-amelyssan-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_EDWNBG1:0` | default | `feature:voicepack-edwin-bg1:component-0` | selected for installation | voicepack-edwin-bg1 → voicepack-edwin-bg1-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_EDWNBG2:0` | default | `feature:voicepack-edwin-bg2:component-0` | selected for installation | voicepack-edwin-bg2 → voicepack-edwin-bg2-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_GARITH:0` | default | `feature:voicepack-garithos:component-0` | selected for installation | voicepack-garithos → voicepack-garithos-1.1.0 1.1.0 (v1.1.0), component 0 |  |
+| `CD_GROMN:0` | default | `feature:voicepack-gromnir-il-khan:component-0` | selected for installation | voicepack-gromnir-il-khan → voicepack-gromnir-il-khan-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_IMOBG1:0` | default | `feature:voicepack-imoen-bg1:component-0` | selected for installation | voicepack-imoen-bg1 → voicepack-imoen-bg1-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_IMOBG2:0` | default | `feature:voicepack-imoen-bg2:component-0` | selected for installation | voicepack-imoen-bg2 → voicepack-imoen-bg2-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_JAHEBG1:0` | default | `feature:voicepack-jaheira-bg1:component-0` | selected for installation | voicepack-jaheira-bg1 → voicepack-jaheira-bg1-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_JAHEBG2:0` | default | `feature:voicepack-jaheira-bg2:component-0` | selected for installation | voicepack-jaheira-bg2 → voicepack-jaheira-bg2-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_NEERA:0` | default | `feature:voicepack-neera:component-0` | selected for installation | voicepack-neera → voicepack-neera-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_SAFANA:0` | default | `feature:voicepack-safana-bg1:component-0` | selected for installation | voicepack-safana-bg1 → voicepack-safana-bg1-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_SAFSOD:0` | default | `feature:voicepack-safana-sod:component-0` | selected for installation | voicepack-safana-sod → voicepack-safana-sod-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_SAREVOK:0` | default | `feature:voicepack-sarevok:component-0` | selected for installation | voicepack-sarevok → voicepack-sarevok-1.0.1 1.0.1 (v1.1.0), component 0 |  |
+| `CD_VICBG1:0` | default | `feature:voicepack-viconia-bg1:component-0` | selected for installation | voicepack-viconia-bg1 → voicepack-viconia-bg1-1.0.0 1.0.0 (v1.1.0), component 0 |  |
+| `CD_VICBG2:0` | default | `feature:voicepack-viconia-bg2:component-0` | selected for installation | voicepack-viconia-bg2 → voicepack-viconia-bg2-1.0.0 1.0.0 (v1.1.0), component 0 |  |
+| `CD_YESLICK:0` | default | `feature:voicepack-yeslick:component-0` | selected for installation | voicepack-yeslick → voicepack-yeslick-1.0.1 1.0.1 (v1.1.0), component 0 |  |
 | `CDTWEAKS:40` | default | `feature:cdtweaks:component-40` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 40 |  |
 | `CDTWEAKS:60` | default | `feature:cdtweaks:component-60` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 60 |  |
 | `CDTWEAKS:110` | default | `feature:cdtweaks:component-110` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 110 |  |
