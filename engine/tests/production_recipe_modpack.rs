@@ -109,7 +109,10 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(campaign_xp + 1, spellbooks);
     assert_eq!(spellbooks + 1, lightning);
     assert_eq!(lightning + 1, baeloth);
-    assert_eq!(baeloth + 1, buffbot);
+    // October 22: the 18 sound-only player voicepacks run between Baeloth and BuffBot.
+    assert_eq!(baeloth + 1, position("voicepack-neera-bg2"));
+    assert_eq!(baeloth + 18, position("voicepack-garithos-bg2"));
+    assert_eq!(position("voicepack-garithos-bg2") + 1, buffbot);
     // 430 hashes the final scrolls and spells at install time, so it runs last.
     assert_eq!(buffbot + 1, scrolls);
     assert_eq!(position("artisanskitpack-npc-bg2") + 1, edwin);
@@ -285,7 +288,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // October 17 makes Unfinished Business optional and unselected, which removes
     // its 18 former defaults from both plans.
     // The October 20 intake adds Modpack EET join XP 239 to both plans.
-    // This 365-component base plan is distinct from the 463-component curated plan.
+    // The October 22 intake adds the 18 default player voicepacks to both plans.
+    // This 383-component base plan is distinct from the 481-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -293,7 +297,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        365
+        383
     );
 }
 

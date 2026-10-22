@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-20
+## Work queue at a glance — 2026-10-22
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -40,6 +40,12 @@ Cross-repository status. Component detail stays in the sections below and in the
   (party AI Defensive Stance) and `652` (chapter caps) are not offered until Christopher
   decides. `430` still fails on v1.3.1; a fix is in progress in a separate session (see
   Release gates).
+- ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
+  in both recipes on `claude/voicepacks-intake-20261022` as defaults under "Voicepacks"
+  (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
+  other post-EET writers and before BuffBot. Fresh-download evidence:
+  `manifest/evidence/release-intake-20261022.toml`. Still needed before the next CEBG
+  release: one combined lab install (see Release gates).
 - Hobgoblin challenge run (design with Christopher).
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle: the fix shipped as Modpack `460` in alpha.13; the
@@ -122,6 +128,14 @@ Cross-repository status. Component detail stays in the sections below and in the
   mods, and is useful outside CEBG. Needs a design with Christopher (kits, multi/dual
   classes, proficiencies, spells, SoD/SoA hand-over, saves).
 
+**Ideas for later (Christopher, recorded 2026-10-22)**
+
+- Challenge-run proof: a visible "Challenge Mode active" marker in the game menu that
+  works with any UI mod, ideally also an indicator while playing, plus an optional
+  certificate or end-of-run statistics that can be shown on streams. Ironman/Hardcore
+  must not be forced. Brainstorm with Christopher before any work.
+- German language support: later, low priority.
+
 **Larger projects:** Time Stop/Haste (above); script engine / Fight Director (design with
 Christopher); configurable Spell Revisions (recover branch `codex/configurable-sr-catalog`);
 dragon encounters (Thaxll, Nizid, Saladrex); the remaining Challenge Mode rules (wands,
@@ -181,6 +195,11 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   error report. A proper fix is in progress in a separate session. `430` is a default,
   so the next collection release needs that fix or Christopher's decision about the
   default.
+- [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
+  `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
+  installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
+  German). Install them once together with the full Recommended selection in a lab
+  before the next CEBG release, and check that the voices appear in character creation.
 - [ ] [EEex](EEEX.md) options: decide whether to seed or document
   `[EEex] Uncap FPS Limit Enabled`. The installer sets no EEex options, and a played
   collection install runs with the limit off. (Clean stage, loader launch and the absence

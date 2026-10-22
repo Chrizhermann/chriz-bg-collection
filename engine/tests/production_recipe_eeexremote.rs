@@ -79,8 +79,17 @@ fn offers_remote_console_as_an_experimental_advanced_tool_before_buffbot() {
         position("spell-rev-lightning-bg2") + 1,
         position("chriz-bg-modpack-baeloth-bg2")
     );
+    // October 22: the 18 sound-only player voicepacks run between Baeloth and BuffBot.
     assert_eq!(
         position("chriz-bg-modpack-baeloth-bg2") + 1,
+        position("voicepack-neera-bg2")
+    );
+    assert_eq!(
+        position("voicepack-neera-bg2") + 17,
+        position("voicepack-garithos-bg2")
+    );
+    assert_eq!(
+        position("voicepack-garithos-bg2") + 1,
         position("buffbot-bg2")
     );
 

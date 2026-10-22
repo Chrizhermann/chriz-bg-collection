@@ -82,6 +82,13 @@ unchanged.
   can no longer steal from fences, and reputation no longer changes their
   prices. At fences this also replaces the chosen store-price option. (Tweaks
   Anthology)
+- **Voicepacks** — **Default**, each separately: 18 player voicepacks from
+  ChrizFader's voicepacks v1.1.0, made from the characters' original game audio:
+  Neera, Safana (BG1 and SoD), Jaheira (BG1 and BG2), Yeslick, Edwin (BG1 and
+  BG2), Aerie, Imoen (BG1 and BG2), Sarevok, Amelyssan, Gromnir Il-Khan, Ajantis,
+  Viconia (BG1 and BG2), and Lord Garithos from Warcraft III (IAIWE's soundset).
+  Choose them as your character's voice in character creation. They add voices
+  only; companions keep their own.
 - **Pending:** Modpack alpha.13 also adds a fix for Dorn's BG1 ambush, whose
   camera lock on Senjak could crash the game; party AI that no longer enters
   Defensive Stance with "Use special abilities" off; and chapter-by-chapter XP caps
@@ -147,6 +154,7 @@ unchanged.
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
   (was v18). There is no newer release yet; the collection pins this exact
   version, as it does for EET.
+- ChrizFader's voicepacks v1.1.0 (new)
 
 ## Release-note entry (collection alpha.21)
 
@@ -157,7 +165,8 @@ Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
 lacked it; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
-special stock in his regular store; and sensible entrance points. Challenge
+special stock in his regular store; sensible entrance points; and 18 player
+voicepacks from ChrizFader's voicepacks. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. The optional,
 experimental campaign XP caps with banked XP now work. Unfinished
@@ -181,6 +190,9 @@ existing games and saves are unchanged.
   v1.3.1 in alpha.12 and alpha.13: it shows its EEex error box and disables itself on
   the first load, a new game or an NPC join. A fix is in progress; this release needs
   it or Christopher's decision about the default (see `FOLLOW_UPS.md`).
+- **Voicepacks** (18 defaults, release v1.1.0) passed per-pack fixture installs
+  with the pinned WeiDU only; this release needs one combined lab install with the
+  full Recommended selection first (see `FOLLOW_UPS.md`).
 - **EEex v1.3.1** reaches new installations only. EEex installs early, so moving an
   existing installation means reinstalling everything after it; how existing
   games move is Christopher's call (see `FOLLOW_UPS.md`).

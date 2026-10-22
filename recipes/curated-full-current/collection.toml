@@ -460,6 +460,133 @@ components = [235]
 args = []
 
 [[runs]]
+run_id = "voicepack-neera-bg2"
+mod_id = "voicepack-neera"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-safana-bg1-bg2"
+mod_id = "voicepack-safana-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-safana-sod-bg2"
+mod_id = "voicepack-safana-sod"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-jaheira-bg1-bg2"
+mod_id = "voicepack-jaheira-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-jaheira-bg2-bg2"
+mod_id = "voicepack-jaheira-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-yeslick-bg2"
+mod_id = "voicepack-yeslick"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-edwin-bg1-bg2"
+mod_id = "voicepack-edwin-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-edwin-bg2-bg2"
+mod_id = "voicepack-edwin-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-aerie-bg2"
+mod_id = "voicepack-aerie"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-imoen-bg1-bg2"
+mod_id = "voicepack-imoen-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-imoen-bg2-bg2"
+mod_id = "voicepack-imoen-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-sarevok-bg2"
+mod_id = "voicepack-sarevok"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-amelyssan-bg2"
+mod_id = "voicepack-amelyssan"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-gromnir-il-khan-bg2"
+mod_id = "voicepack-gromnir-il-khan"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-ajantis-bg2"
+mod_id = "voicepack-ajantis"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-viconia-bg1-bg2"
+mod_id = "voicepack-viconia-bg1"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-viconia-bg2-bg2"
+mod_id = "voicepack-viconia-bg2"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "voicepack-garithos-bg2"
+mod_id = "voicepack-garithos"
+phase = "post-eet-end"
+components = [0]
+args = []
+
+
+[[runs]]
 run_id = "klatu-armor-thieving-bg2"
 mod_id = "klatu"
 phase = "post-eet-end"
@@ -5412,6 +5539,204 @@ readiness = "experimental"
 requires = ["feature:eet:mandatory-components"]
 components = [{ run_id = "game-interface-dragonspear-bg2", component = 1 }]
 conflicts = [{ feature_id = "feature:game-interface:infinity", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:eet-sod", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg2", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-bg1", reason = "Choose one game interface." }, { feature_id = "feature:game-interface:leui-sod", reason = "Choose one game interface." }]
+
+[[features]]
+id = "feature:voicepack-neera:component-0"
+title = "Neera"
+description = "A broad Neera player soundset assembled from her BG:EE, BG2:EE, and Siege of Dragonspear recordings."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-neera-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-safana-bg1:component-0"
+title = "Safana (BG1)"
+description = "A BG1-first Safana set using the original BG1 lines, classic BG2 bonus-voice vocalizations, and limited SoD filler."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-safana-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-safana-sod:component-0"
+title = "Safana (SoD)"
+description = "The consistent Siege of Dragonspear Safana voice, with the fuller EE-era combat, stealth, and utility coverage."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-safana-sod-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-jaheira-bg1:component-0"
+title = "Jaheira (BG1)"
+description = "Jaheira's original BG1 voice, supplemented with same-actress BG2 lines where BG1 recorded no suitable slot."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-jaheira-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-jaheira-bg2:component-0"
+title = "Jaheira (BG2)"
+description = "A BG2/Throne of Bhaal Jaheira set, with BG1 supplying the otherwise missing death reaction."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-jaheira-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-yeslick:component-0"
+title = "Yeslick"
+description = "All 38 surviving lines from Yeslick's original BG1 companion voice."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-yeslick-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-edwin-bg1:component-0"
+title = "Edwin (BG1)"
+description = "Edwin's BG1 voice—including his memorable Dynaheir lines—with same-actor BG2 filler for missing events."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-edwin-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-edwin-bg2:component-0"
+title = "Edwin (BG2)"
+description = "Edwin's BG2/Throne of Bhaal voice, with his lost death-reaction slots recovered from BG1."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-edwin-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-aerie:component-0"
+title = "Aerie"
+description = "Aerie's BG2/Throne of Bhaal companion voice; events for which she has no genuine recording remain silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-aerie-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-imoen-bg1:component-0"
+title = "Imoen (BG1)"
+description = "Imoen's young, original BG1 voice kept era-pure; missing modern utility slots are intentionally silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-imoen-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-imoen-bg2:component-0"
+title = "Imoen (BG2)"
+description = "Imoen's mature BG2/Throne of Bhaal voice, including her recorded critical-hit and critical-miss lines."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-imoen-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-sarevok:component-0"
+title = "Sarevok"
+description = "The redeemed, Chaotic-Good Throne of Bhaal companion variant, using his five alignment-specific lines and excluding banter/cutscene padding."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-sarevok-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-amelyssan:component-0"
+title = "Amelyssan"
+description = "A deliberately sparse playable Amelyssan set, combining authoritative combat sounds with carefully cut Amelyssan and innocent Melissan dialogue. Original game audio only; no TTS."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-amelyssan-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-gromnir-il-khan:component-0"
+title = "Gromnir Il-Khan"
+description = "An intentionally sparse, comic Gromnir set built from his authoritative combat voice and four hand-cut dialogue clips—including ‘Gromnir knows’ and ‘We is no idiot!’ Original game audio only; no TTS."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-gromnir-il-khan-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-ajantis:component-0"
+title = "Ajantis"
+description = "Ajantis's original BG1 companion voice, decoded straight from the game's own recordings; events he never recorded stay silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-ajantis-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-viconia-bg1:component-0"
+title = "Viconia (BG1)"
+description = "Viconia's original BG1 companion voice, kept era-pure; events she never recorded, such as a city line, stay silent."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-viconia-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-viconia-bg2:component-0"
+title = "Viconia (BG2)"
+description = "Viconia's BG2/Throne of Bhaal companion voice, including her critical-hit, critical-miss, and spell-disrupted lines."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-viconia-bg2-bg2", component = 0 }]
+
+[[features]]
+id = "feature:voicepack-garithos:component-0"
+title = "Garithos"
+description = "Lord Garithos from Warcraft III: The Frozen Throne: IAIWE's soundset converted into an EE installer."
+category = "audio"
+source_label = "ChrizFader's voicepacks"
+group_label = "Voicepacks"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "voicepack-garithos-bg2", component = 0 }]
 
 [[features]]
 id = "mod:iwdification"

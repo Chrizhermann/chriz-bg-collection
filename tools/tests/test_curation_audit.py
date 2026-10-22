@@ -130,7 +130,8 @@ class CatalogParserTests(unittest.TestCase):
         # snapshot rows; the snapshot withdraws Tweaks 260 and 3470.
         # October 18: EEex v1.3.1 adds Attack Info 9 with an open Decision.
         # October 20: Modpack alpha.13 adds 239 and, with open Decisions, 135/460/652.
-        self.assertEqual(len(rows), 1_260)
+        # October 22: 18 player voicepack catalogs (CD_*) add one default row each.
+        self.assertEqual(len(rows), 1_278)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -155,7 +156,8 @@ class CatalogParserTests(unittest.TestCase):
                 # Tweaks 3220/3500/3510 are defaults.
                 # October 16: UB leaves the defaults (19 rows move to optional).
                 # October 20: Modpack EET join XP 239 is a default.
-                Decision.DEFAULT: 317,
+                # October 22: so are the 18 player voicepacks.
+                Decision.DEFAULT: 335,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -381,14 +383,15 @@ default = "none"
 
         # October 18: EEex v1.3.1's Attack Info 9 is listed with an open Decision.
         # October 20: Modpack 239 maps to a feature; 135/460/652 have open Decisions.
-        self.assertEqual(result.mapped_rows, 1_260)
+        # October 22: each of the 18 voicepack rows maps to its own feature.
+        self.assertEqual(result.mapped_rows, 1_278)
         self.assertEqual(result.excluded_rows, 525)
-        self.assertEqual(result.feature_rows + result.omission_rows, 735)
+        self.assertEqual(result.feature_rows + result.omission_rows, 753)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         self.assertEqual(result.choice_groups, 76)
         self.assertEqual(result.optional_none_groups, 23)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1260", coverage_report(rows, result))
+        self.assertIn("rows=1278", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]
