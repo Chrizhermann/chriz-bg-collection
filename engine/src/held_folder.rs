@@ -690,9 +690,10 @@ mod handles {
         )
     }
 
-    /// Open the entry `name` directly inside `folder` so that it can be removed. When it is read
-    /// first, nobody else may change, rename or remove it meanwhile. Otherwise others may keep it
-    /// open in any way, as with a plain delete.
+    /// Open the entry `name` directly inside `folder` so that it can be removed. Nobody else may
+    /// rename or remove it meanwhile, so it cannot be moved out of `folder` before it is removed.
+    /// When it is read first, nobody else may change it either. Otherwise others may keep reading
+    /// and writing it, as with a plain delete.
     pub(super) fn open_removable_entry(
         folder: &File,
         name: &[u16],
@@ -701,7 +702,10 @@ mod handles {
         let (access, share) = if read {
             (FILE_GENERIC_READ | DELETE, FILE_SHARE_READ)
         } else {
-            (DELETE | FILE_READ_ATTRIBUTES | SYNCHRONIZE, SHARE_ALL)
+            (
+                DELETE | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+                SHARE_ALL_BUT_DELETE,
+            )
         };
         open_relative(folder, name, access, share, FILE_OPEN, 0, 0)
     }
@@ -2328,6 +2332,36 @@ pub(crate) mod tests {
         assert_eq!(kind(&error), "not direct");
         assert_eq!(error.path, target.join("b-folder"));
         assert_eq!(fs::read(outside.join("inside.txt")).unwrap(), OTHER);
+    }
+
+    /// While a file is open for removal, nobody can move it out of the held folder, so removing
+    /// it can never remove an entry outside. Others can still read it, as with a plain delete.
+    #[cfg(windows)]
+    #[test]
+    fn removing_contents_keeps_each_file_in_place_until_it_is_removed() {
+        let root = tempfile::tempdir().unwrap();
+        let target = root.path().join("managed");
+        let outside = root.path().join("outside");
+        fs::create_dir_all(&target).unwrap();
+        fs::write(target.join("a.txt"), CONTENT).unwrap();
+        fs::create_dir(&outside).unwrap();
+        let held = HeldFolder::open_for_removal(&target).unwrap();
+        let mut attempts = Vec::new();
+
+        held.remove_contents(&[], &mut |path| {
+            attempts.push((
+                fs::read(path).ok(),
+                fs::rename(path, outside.join("moved.txt")).is_ok(),
+                fs::remove_file(path).is_ok(),
+            ));
+            Ok(())
+        })
+        .unwrap();
+        held.remove().unwrap();
+
+        assert_eq!(attempts, [(Some(CONTENT.to_vec()), false, false)]);
+        assert!(!target.exists());
+        assert_eq!(entries(&outside), Vec::<String>::new());
     }
 
     /// A link above the target root, such as a cloud-files folder or a volume mounted in a
