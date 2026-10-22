@@ -123,8 +123,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # October 16 makes all 18 previously default UB components optional.
         # The October 20 intake (Modpack alpha.13) adds default EET join XP 239.
         # The October 22 intake adds 18 default player voicepacks, one run each.
-        self.assertEqual(len(without_controls), 480)
-        self.assertEqual(len(selected), 481)
+        # The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292 to the SoD run.
+        self.assertEqual(len(without_controls), 481)
+        self.assertEqual(len(selected), 482)
         self.assertEqual(len({run for run, _ in selected}), 70)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -221,7 +222,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 481)
+        self.assertEqual(len(baseline), 482)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

@@ -94,6 +94,14 @@ unchanged.
   Viconia (BG1 and BG2), and Lord Garithos from Warcraft III (IAIWE's soundset).
   Choose them as your character's voice in character creation. They add voices
   only; companions keep their own.
+- **Imoen in Shadows of Amn** — choose one (EET). **Default:** she becomes the
+  BG2 thief/mage dual-class Imoen plus the tome boosts she read in BG1 and SoD.
+  **Optional:** she continues as taken along, or (with EEex) she dual-classes to
+  mage at her end-of-SoD thief level and Shadows of Amn's catch-up XP goes into
+  mage. With every choice her SoD gear is handed over like the party's, and she
+  keeps only her BG2 belt, correctly equipped; she no longer reaches Shadows of
+  Amn with all her gear and her belt in the magic-weapon slot. Raise a dead
+  Imoen before ending SoD. (SoD Remix v0.6.14)
 - **Pending:** Modpack alpha.13 also adds a fix for Dorn's BG1 ambush, whose
   camera lock on Senjak could crash the game; party AI that no longer enters
   Defensive Stance with "Use special abilities" off; and chapter-by-chapter XP caps
@@ -131,6 +139,10 @@ unchanged.
   (Modpack alpha.13)
 - **Fade and Evandra's SoA join XP** (Default) recognise a catch-up an NPC
   already has under EET, so they no longer add a second one. (Modpack alpha.13)
+- **SoD Remix's Boareskyr Bridge finale** (Mandatory) installs alongside
+  "Summoned creatures clear the fog of war" (Default). Chris's Recommended used to
+  stop there; the hostile bridge elementals now leave that ally-only effect out.
+  (SoD Remix v0.6.15)
 - **Bardic Wonders fixes** (Default components; Bardic Wonders v2.9c-balance.8):
   - The Troubadour, Deathsinger and New Bard Spells copies of priest spells are
     now found by the spell's name, so they follow Spell Revisions. Recasting one
@@ -160,18 +172,20 @@ unchanged.
   (was v18). There is no newer release yet; the collection pins this exact
   version, as it does for EET.
 - ChrizFader's voicepacks v1.1.0 (new)
+- SoD Remix v0.6.15 (was v0.6.13)
 
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.13, BG
-Rebalance to v0.8.3, Bardic Wonders to v2.9c-balance.8, EEex to v1.3.1 and The
-Tweaks Anthology to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
+Rebalance to v0.8.3, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
+EEex to v1.3.1 and The Tweaks Anthology to its current development version. New in Chris's Recommended: companion stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
 lacked it; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
-special stock in his regular store; sensible entrance points; and 18 player
-voicepacks from ChrizFader's voicepacks. Challenge
+special stock in his regular store; sensible entrance points; 18 player
+voicepacks from ChrizFader's voicepacks; and a choice of how Imoen continues
+into Shadows of Amn, by default as the BG2 thief/mage Imoen. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. The optional,
 experimental campaign XP caps with banked XP now work. Unfinished
@@ -195,6 +209,12 @@ existing games and saves are unchanged.
   v1.3.1 in alpha.12 and alpha.13: it shows its EEex error box and disables itself on
   the first load, a new game or an NPC join. A fix is in progress; this release needs
   it or Christopher's decision about the default (see `FOLLOW_UPS.md`).
+- **SoD Remix v0.6.15** fixes the bridge finale `256` with Tweaks Anthology `3500`
+  on; the owner lab reinstalled the remix tail on a copy of the Recommended stack.
+  This release still needs one combined lab install of the whole Recommended
+  selection with `3500` on (see `FOLLOW_UPS.md`). The Imoen choice (v0.6.14) passed
+  the owner lab for all three options; thief kits other than `C0TRICKS` and games
+  without Spell Revisions were not covered there.
 - **Voicepacks** (18 defaults, release v1.1.0) passed per-pack fixture installs
   with the pinned WeiDU only; this release needs one combined lab install with the
   full Recommended selection first (see `FOLLOW_UPS.md`).

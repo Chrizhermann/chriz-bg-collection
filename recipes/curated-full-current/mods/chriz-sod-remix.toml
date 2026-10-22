@@ -1,5 +1,5 @@
 id = "chriz-sod-remix"
-artifact_id = "chriz-sod-remix-0.6.13"
+artifact_id = "chriz-sod-remix-0.6.15"
 name = "CHRIZ-SOD-REMIX"
 tp2 = "chriz-sod-remix/setup-chriz-sod-remix.tp2"
 language = 0
@@ -169,3 +169,15 @@ name = "Collected in the camp chest at the Coast Way crossing"
 [[components]]
 id = 910
 name = "Offer to skip SoD at palace arrival (EET, experimental)"
+
+[[components]]
+id = 292
+name = "SoD remix: Imoen in Shadows of Amn - the BG2 dual-class build plus her tome boosts"
+
+[[components]]
+id = 293
+name = "SoD remix: Imoen in Shadows of Amn - as taken along"
+
+[[components]]
+id = 294
+name = "SoD remix: Imoen in Shadows of Amn - dual-class to mage at her SoD thief level (EEex)"

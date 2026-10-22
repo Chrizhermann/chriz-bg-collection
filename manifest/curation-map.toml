@@ -1,8 +1,8 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1278
-expected_choice_groups = 76
+expected_rows = 1281
+expected_choice_groups = 77
 expected_optional_none_groups = 23
 expected_fixed_groups = 10
 
@@ -380,6 +380,24 @@ parent = "mod:chriz-sod-remix"
 id = "feature:chriz-sod-remix:component-257"
 kind = "feature"
 rows = ["CHRIZ-SOD-REMIX:257"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-292"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:292"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-293"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:293"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-294"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:294"]
 parent = "mod:chriz-sod-remix"
 
 [[targets]]
@@ -4080,6 +4098,14 @@ catalog = "CHRIZ-BG-REBALANCE"
 subgroup = "Potion uniqueness"
 options = ["CHRIZ-BG-REBALANCE:330", "CHRIZ-BG-REBALANCE:331"]
 default = "CHRIZ-BG-REBALANCE:331"
+
+# Christopher, 2026-10-16: three choices, the vanilla BG2 thief-to-mage dual (292) by default.
+[[choice_groups]]
+id = "sod-remix-imoen-soa"
+catalog = "CHRIZ-SOD-REMIX"
+subgroup = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+options = ["CHRIZ-SOD-REMIX:292", "CHRIZ-SOD-REMIX:293", "CHRIZ-SOD-REMIX:294"]
+default = "CHRIZ-SOD-REMIX:292"
 
 [[choice_groups]]
 id = "choice:stratagems:replace-many-1-magic-weapons-with-nonmagical-fine-ones"
