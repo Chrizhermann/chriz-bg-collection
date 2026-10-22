@@ -1,0 +1,32 @@
+id = "voicepack-ajantis-2.0.0"
+name = "Ajantis player voicepack"
+version = "2.0.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/ajantis-player-voicepack-v2.0.0.zip"
+reference = "v1.1.0"
+expected_filename = "ajantis-player-voicepack-v2.0.0.zip"
+expected_length = 4057717
+sha256 = "7d2150ba920205e68258b9fc74a35594c1368d8b09e4e66ca9f1569a1baed77b"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_ajanti"]
+tp2_paths = ["cd_ajanti/cd_ajanti.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.1.0"
+reviewed_on = "2026-10-22"

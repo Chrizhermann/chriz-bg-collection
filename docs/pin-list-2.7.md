@@ -14,7 +14,7 @@ no installer references, such as older versions, are not listed.
 <!-- BEGIN GENERATED PINS -->
 ### Shipped recipe: `recipes/curated-full-current/`
 
-44 archives for 47 installers.
+62 archives for 65 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
@@ -28,13 +28,13 @@ no installer references, such as older versions, are not listed.
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.10.0 | `buffbot` | `cea6628cc6f0…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.0/buffbot-v1.10.0.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
-| chriz-bg-modpack | 0.2.0-alpha.12 | `chriz-bg-modpack` | `3c1ee079541d…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.12/chriz-bg-modpack-v0.2.0-alpha.12.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.13 | `chriz-bg-modpack` | `afbf05eec35b…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.3 | `chriz-bg-rebalance` | `d03714f8da09…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.3/chriz-bg-rebalance-v0.8.3-windows.zip) |
-| CHRIZ-SOD-REMIX | 0.6.13 | `chriz-sod-remix` | `9253fbb29591…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.13/chriz-sod-remix-v0.6.13.zip) |
+| CHRIZ-SOD-REMIX | 0.6.15 | `chriz-sod-remix` | `3a295832f9af…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
-| EEex | 1.2.0 | `eeex` | `ac2d81bc5e6f…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.2.0/eeex-v1.2.0.zip) |
+| EEex | 1.3.1 | `eeex` | `9c8104bd63fe…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip) |
 | EEex Remote Console | 0.2.0 | `eeexremote` | `d634b1e8f0a2…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164) |
 | Enhanced Edition Fixpack | Beta 2 | `eefixpack` | `7a57e43bd6c3…` | [release asset](https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod) |
 | Enhanced Edition Trilogy | 74e91d72bca5d073fa11c1d088b90d7ff0c7105d | `eet`, `eet-end`, `eet-gui` | `9834a53322b7…` | [commit archive](https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d) |
@@ -59,13 +59,31 @@ no installer references, such as older versions, are not listed.
 | Spell Revisions / Rogue Rebalancing compatibility | 4.21-chriz.5 | `srcb-rr-compat` | `c7958b467f91…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.5/SRCB_RR_COMPAT-v4-21-chriz-5.zip) |
 | Sword Coast Stratagems | 35.21 | `stratagems` | `dd6b0dbe3b9f…` | [release asset](https://github.com/Gibberlings3/SwordCoastStratagems/releases/download/v35.21/lin-stratagems-35.21.zip) |
 | Unfinished Business for BG2 | 28 | `ub` | `1d5aff32d760…` | [release asset](https://github.com/Pocket-Plane-Group/UnfinishedBusiness/releases/download/v28/ub-v28.zip) |
+| Aerie player voicepack | 1.0.1 | `voicepack-aerie` | `04ce446df621…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/aerie-player-voicepack-v1.0.1.zip) |
+| Ajantis player voicepack | 2.0.0 | `voicepack-ajantis` | `7d2150ba9202…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/ajantis-player-voicepack-v2.0.0.zip) |
+| Amelyssan player voicepack | 1.0.1 | `voicepack-amelyssan` | `f67c4e4b87cc…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/amelyssan-player-voicepack-v1.0.1.zip) |
+| Edwin (BG1) player voicepack | 1.0.1 | `voicepack-edwin-bg1` | `6c02995b38ed…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/edwin-bg1-player-voicepack-v1.0.1.zip) |
+| Edwin (BG2) player voicepack | 1.0.1 | `voicepack-edwin-bg2` | `d32e6f5577b9…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/edwin-bg2-player-voicepack-v1.0.1.zip) |
+| Garithos player voicepack | 1.1.0 | `voicepack-garithos` | `24abfd30cd8c…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/garithos-player-voicepack-v1.1.0.zip) |
+| Gromnir Il-Khan player voicepack | 1.0.1 | `voicepack-gromnir-il-khan` | `7aaad0379a6c…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/gromnir-il-khan-player-voicepack-v1.0.1.zip) |
+| Imoen (BG1) player voicepack | 1.0.1 | `voicepack-imoen-bg1` | `cda87d6b56a1…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/imoen-bg1-player-voicepack-v1.0.1.zip) |
+| Imoen (BG2) player voicepack | 1.0.1 | `voicepack-imoen-bg2` | `043d6216b4cf…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/imoen-bg2-player-voicepack-v1.0.1.zip) |
+| Jaheira (BG1) player voicepack | 1.0.1 | `voicepack-jaheira-bg1` | `d8a3bd683fc1…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/jaheira-bg1-player-voicepack-v1.0.1.zip) |
+| Jaheira (BG2) player voicepack | 1.0.1 | `voicepack-jaheira-bg2` | `5efe01db1594…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/jaheira-bg2-player-voicepack-v1.0.1.zip) |
+| Neera player voicepack | 1.0.1 | `voicepack-neera` | `f2adbfd775f8…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/neera-player-voicepack-v1.0.1.zip) |
+| Safana (BG1) player voicepack | 1.0.1 | `voicepack-safana-bg1` | `e5b3e7fa6946…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/safana-bg1-player-voicepack-v1.0.1.zip) |
+| Safana (SoD) player voicepack | 1.0.1 | `voicepack-safana-sod` | `edd486e85c95…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/safana-sod-player-voicepack-v1.0.1.zip) |
+| Sarevok player voicepack | 1.0.1 | `voicepack-sarevok` | `e105f9b296d0…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/sarevok-player-voicepack-v1.0.1.zip) |
+| Viconia (BG1) player voicepack | 1.0.0 | `voicepack-viconia-bg1` | `bd56af0ef69e…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/viconia-bg1-player-voicepack-v1.0.0.zip) |
+| Viconia (BG2) player voicepack | 1.0.0 | `voicepack-viconia-bg2` | `dde9cfca2692…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/viconia-bg2-player-voicepack-v1.0.0.zip) |
+| Yeslick player voicepack | 1.0.1 | `voicepack-yeslick` | `c3c1213cc4ec…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/yeslick-player-voicepack-v1.0.1.zip) |
 | WeiDU 249 for Windows x64 | 249.00 | WeiDU for every installer | `b156910cbec6…` | [release asset](https://github.com/WeiDUorg/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip) |
 | Xan NPC for BGII | 19 | `xan` | `47cd6622678f…` | [release asset](https://github.com/Pocket-Plane-Group/Xan_for_BGII/releases/download/v19/Xan_v19.zip) |
 | Yeslick NPC | 5.0 | `yeslicknpc` | `d9b403a6feb8…` | [release asset](https://github.com/Spellhold-Studios/Yeslick-NPC/releases/download/v5.0/yeslick-npc-v5.0.zip) |
 
 ### Base recipe: `manifest/`
 
-38 archives for 41 installers.
+56 archives for 59 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
@@ -76,13 +94,13 @@ no installer references, such as older versions, are not listed.
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.10.0 | `buffbot` | `cea6628cc6f0…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.10.0/buffbot-v1.10.0.zip) |
-| chriz-bg-modpack | 0.2.0-alpha.12 | `chriz-bg-modpack` | `3c1ee079541d…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.12/chriz-bg-modpack-v0.2.0-alpha.12.zip) |
+| chriz-bg-modpack | 0.2.0-alpha.13 | `chriz-bg-modpack` | `afbf05eec35b…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.3 | `chriz-bg-rebalance` | `d03714f8da09…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.3/chriz-bg-rebalance-v0.8.3-windows.zip) |
-| CHRIZ-SOD-REMIX | 0.6.13 | `chriz-sod-remix` | `9253fbb29591…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.13/chriz-sod-remix-v0.6.13.zip) |
+| CHRIZ-SOD-REMIX | 0.6.15 | `chriz-sod-remix` | `3a295832f9af…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
-| EEex | 1.2.0 | `eeex` | `ac2d81bc5e6f…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.2.0/eeex-v1.2.0.zip) |
+| EEex | 1.3.1 | `eeex` | `9c8104bd63fe…` | [release asset](https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip) |
 | EEex Remote Console | 0.2.0 | `eeexremote` | `d634b1e8f0a2…` | [commit archive](https://codeload.github.com/Chrizhermann/eeex-remote-console/zip/661927e56e28435541a3128568cd4ee6d5d80164) |
 | Enhanced Edition Fixpack | Beta 2 | `eefixpack` | `7a57e43bd6c3…` | [release asset](https://github.com/Gibberlings3/EE_Fixpack/releases/download/Beta_2/enhanced-edition-fixpack-beta-2.iemod) |
 | Enhanced Edition Trilogy | 74e91d72bca5d073fa11c1d088b90d7ff0c7105d | `eet`, `eet-end`, `eet-gui` | `9834a53322b7…` | [commit archive](https://codeload.github.com/Gibberlings3/EET/zip/74e91d72bca5d073fa11c1d088b90d7ff0c7105d) |
@@ -104,6 +122,24 @@ no installer references, such as older versions, are not listed.
 | Spell Revisions / Rogue Rebalancing compatibility | 4.21-chriz.5 | `srcb-rr-compat` | `c7958b467f91…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.5/SRCB_RR_COMPAT-v4-21-chriz-5.zip) |
 | Sword Coast Stratagems | 35.21 | `stratagems` | `dd6b0dbe3b9f…` | [release asset](https://github.com/Gibberlings3/SwordCoastStratagems/releases/download/v35.21/lin-stratagems-35.21.zip) |
 | Unfinished Business for BG2 | 28 | `ub` | `1d5aff32d760…` | [release asset](https://github.com/Pocket-Plane-Group/UnfinishedBusiness/releases/download/v28/ub-v28.zip) |
+| Aerie player voicepack | 1.0.1 | `voicepack-aerie` | `04ce446df621…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/aerie-player-voicepack-v1.0.1.zip) |
+| Ajantis player voicepack | 2.0.0 | `voicepack-ajantis` | `7d2150ba9202…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/ajantis-player-voicepack-v2.0.0.zip) |
+| Amelyssan player voicepack | 1.0.1 | `voicepack-amelyssan` | `f67c4e4b87cc…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/amelyssan-player-voicepack-v1.0.1.zip) |
+| Edwin (BG1) player voicepack | 1.0.1 | `voicepack-edwin-bg1` | `6c02995b38ed…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/edwin-bg1-player-voicepack-v1.0.1.zip) |
+| Edwin (BG2) player voicepack | 1.0.1 | `voicepack-edwin-bg2` | `d32e6f5577b9…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/edwin-bg2-player-voicepack-v1.0.1.zip) |
+| Garithos player voicepack | 1.1.0 | `voicepack-garithos` | `24abfd30cd8c…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/garithos-player-voicepack-v1.1.0.zip) |
+| Gromnir Il-Khan player voicepack | 1.0.1 | `voicepack-gromnir-il-khan` | `7aaad0379a6c…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/gromnir-il-khan-player-voicepack-v1.0.1.zip) |
+| Imoen (BG1) player voicepack | 1.0.1 | `voicepack-imoen-bg1` | `cda87d6b56a1…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/imoen-bg1-player-voicepack-v1.0.1.zip) |
+| Imoen (BG2) player voicepack | 1.0.1 | `voicepack-imoen-bg2` | `043d6216b4cf…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/imoen-bg2-player-voicepack-v1.0.1.zip) |
+| Jaheira (BG1) player voicepack | 1.0.1 | `voicepack-jaheira-bg1` | `d8a3bd683fc1…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/jaheira-bg1-player-voicepack-v1.0.1.zip) |
+| Jaheira (BG2) player voicepack | 1.0.1 | `voicepack-jaheira-bg2` | `5efe01db1594…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/jaheira-bg2-player-voicepack-v1.0.1.zip) |
+| Neera player voicepack | 1.0.1 | `voicepack-neera` | `f2adbfd775f8…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/neera-player-voicepack-v1.0.1.zip) |
+| Safana (BG1) player voicepack | 1.0.1 | `voicepack-safana-bg1` | `e5b3e7fa6946…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/safana-bg1-player-voicepack-v1.0.1.zip) |
+| Safana (SoD) player voicepack | 1.0.1 | `voicepack-safana-sod` | `edd486e85c95…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/safana-sod-player-voicepack-v1.0.1.zip) |
+| Sarevok player voicepack | 1.0.1 | `voicepack-sarevok` | `e105f9b296d0…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/sarevok-player-voicepack-v1.0.1.zip) |
+| Viconia (BG1) player voicepack | 1.0.0 | `voicepack-viconia-bg1` | `bd56af0ef69e…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/viconia-bg1-player-voicepack-v1.0.0.zip) |
+| Viconia (BG2) player voicepack | 1.0.0 | `voicepack-viconia-bg2` | `dde9cfca2692…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/viconia-bg2-player-voicepack-v1.0.0.zip) |
+| Yeslick player voicepack | 1.0.1 | `voicepack-yeslick` | `c3c1213cc4ec…` | [release asset](https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/yeslick-player-voicepack-v1.0.1.zip) |
 | WeiDU 249 for Windows x64 | 249.00 | WeiDU for every installer | `b156910cbec6…` | [release asset](https://github.com/WeiDUorg/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip) |
 | Xan NPC for BGII | 19 | `xan` | `47cd6622678f…` | [release asset](https://github.com/Pocket-Plane-Group/Xan_for_BGII/releases/download/v19/Xan_v19.zip) |
 | Yeslick NPC | 5.0 | `yeslicknpc` | `d9b403a6feb8…` | [release asset](https://github.com/Spellhold-Studios/Yeslick-NPC/releases/download/v5.0/yeslick-npc-v5.0.zip) |

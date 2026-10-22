@@ -57,8 +57,11 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(actual["chriz-bg-modpack-scrolls-bg2"], [430])
         # The October 14 intake adds default Modpack 230-234, Rebalance 331/332,
         # SCS 3021 and Tweaks 3220/3500/3510; October 16 makes all UB rows optional.
-        self.assertEqual(self.result["componentCount"], 462)
-        self.assertEqual(len(actual), 52)
+        # The October 20 intake (Modpack alpha.13) adds default EET join XP 239.
+        # The October 22 intake adds 18 default player voicepacks, one run each.
+        # The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292.
+        self.assertEqual(self.result["componentCount"], 482)
+        self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

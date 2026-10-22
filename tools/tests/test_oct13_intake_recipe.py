@@ -78,13 +78,15 @@ class Oct13IntakeTests(unittest.TestCase):
             runs = {run["run_id"]: run for run in collection["runs"]}
             order = [run["run_id"] for run in collection["runs"]]
             self.assertEqual(runs["chriz-bg-modpack-bg2"]["components"], [130, 400, 410, 440, 450, 610, 611, 630, 660])
-            self.assertEqual(runs[LATE_RUN]["components"], [189, 237, 238, 620])
+            # Modpack alpha.13 (test_oct20_intake_recipe) adds EET join XP 239 after 238.
+            self.assertEqual(runs[LATE_RUN]["components"], [189, 237, 238, 239, 620])
             self.assertEqual(runs[CAMPAIGN_RUN]["components"], [650, 651])
             self.assertEqual(runs[SCROLLS_RUN]["components"], [430])
             for run_id in ("chriz-bg-modpack-bg2", LATE_RUN, CAMPAIGN_RUN, SCROLLS_RUN):
                 self.assertEqual(runs[run_id]["mod_id"], "chriz-bg-modpack")
                 self.assertEqual(runs[run_id]["phase"], "post-eet-end")
-                components = runs[run_id]["components"]
+                # Rows alpha.11 declared keep its order; test_oct20_intake_recipe checks 239.
+                components = [c for c in runs[run_id]["components"] if c != 239]
                 self.assertEqual(components, [c for c in MODPACK_ALPHA11_ORDER if c in components])
             self.assertEqual(order.index(CAMPAIGN_RUN), order.index(LATE_RUN) + 1)
             # 430 hashes every scroll and the spells they cast at install time.
@@ -101,6 +103,7 @@ class Oct13IntakeTests(unittest.TestCase):
             self.assertEqual(len(occurrences), len({c for _, c in occurrences}))
         for run_id, native in NATIVE_RUN_ORDERS.items():
             if run_id.startswith("chriz-bg-modpack-") and run_id not in {"chriz-bg-modpack-pre-continuity-bg2"}:
+                native = [c for c in native if c != 239]  # alpha.13; see test_oct20_intake_recipe
                 self.assertEqual(native, [c for c in MODPACK_ALPHA11_ORDER if c in native], run_id)
 
     def test_reader_level_scrolls_are_a_deselectable_eeex_default(self):
@@ -183,7 +186,10 @@ class Oct13IntakeTests(unittest.TestCase):
         for name, _, collection, preset in self._each_profile():
             runs = {run["run_id"]: run for run in collection["runs"]}
             features = {f["id"]: f for f in collection["features"]}
-            self.assertEqual(runs[SOD_RUN]["components"], SOD_V0613_RUN)
+            # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe) appends the Imoen choice
+            # 292/293/294 after 910; the v0.6.13 rows keep their order.
+            self.assertEqual([c for c in runs[SOD_RUN]["components"] if c not in (292, 293, 294)], SOD_V0613_RUN)
+            self.assertEqual(runs[SOD_RUN]["components"][len(SOD_V0613_RUN):], [292, 293, 294])
             self.assertEqual([ref["component"] for ref in features[SOD_CORE]["components"]], [c for c in SOD_V0613_RUN if c != 257])
             self.assertFalse({176, 291, 901} & set(runs[SOD_RUN]["components"]))
             selected = self._selected(collection, preset)
@@ -240,10 +246,12 @@ class Oct13IntakeTests(unittest.TestCase):
         self.assertEqual(names[430], "Scrolls: use the reader's active caster level, or half their active class level")
         self.assertTrue({237, 238, 650, 651, 660} <= names.keys())
         # The owners published both releases on October 13. Modpack alpha.12
-        # (test_oct14_intake_recipe) supersedes alpha.11 and keeps these rows.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.12")
+        # (test_oct14_intake_recipe) and alpha.13 (test_oct20_intake_recipe)
+        # supersede alpha.11 and keep these rows.
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-        self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.13")
+        # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe) supersedes v0.6.13 and keeps these rows.
+        self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.15")
         self.assertTrue({177, 198, 285} <= {component["id"] for component in sod["components"]})
 
     def test_alpha20_ledger_covers_the_intake_for_new_installations(self):
@@ -287,11 +295,13 @@ class Oct13IntakeTests(unittest.TestCase):
             "manifest": [ROOT / "manifest"],
             "recipes/curated-full-current": [ROOT / "recipes/curated-full-current", self.output],
         }
-        # The October 14 intake (test_oct14_intake_recipe) supersedes these pins;
-        # their pinned files stay exactly as verified here. Bardic Wonders' retired
+        # The October 14 intake (test_oct14_intake_recipe) supersedes these pins, and
+        # the October 23 intake (test_oct23_sod_remix_recipe) the SoD Remix pin; their
+        # pinned files stay exactly as verified here. Bardic Wonders' retired
         # descriptor moved to the historical references, as balance.6's did.
         historical = ROOT / "manifest/reference/historical-artifacts"
-        superseded = {"chriz-bg-modpack": None, "chriz-bg-rebalance": None, "bardicwonders": historical}
+        superseded = {"chriz-bg-modpack": None, "chriz-bg-rebalance": None, "bardicwonders": historical,
+                      "chriz-sod-remix": None}
         for record in evidence["artifacts"]:
             for flag in ("fresh_download", "fresh_extraction", "published_release_verified",
                          "native_component_order_verified"):

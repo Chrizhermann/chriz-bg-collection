@@ -281,7 +281,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.12")
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -364,7 +364,18 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # October 14 (later): Challenge Mode gains its potion variant (330 instead
                 # of the recommended 331 while on); runs, features and the preset are unchanged.
                 # October 16: all UB components become optional and unchecked by default.
-                "4bc47e908f0e78e1e747d739b52f5f74cae5018dad61c764bdadbad36baa090e",
+                # October 20 intake (Modpack alpha.13): default EET join XP 239 in the
+                # late-companion run after 238; without 239 the October 16 digest
+                # 4bc47e908f0e78e1e747d739b52f5f74cae5018dad61c764bdadbad36baa090e returns.
+                # October 22 intake: 18 default player voicepacks in their own runs after
+                # the other post-EET writers and before Klatu/BuffBot; without them the
+                # October 20 digest
+                # 863540b3bc98efcb3b606baba4b865e6d345d5032c2911caa8b26a98f5caa451 returns.
+                # October 23 intake (SoD Remix v0.6.15): the Imoen in Shadows of Amn
+                # choice group with default 292 and optional 293/294 (294 needs EEex)
+                # after 910 in the SoD run; the October 22 digest was
+                # a7e9e7bb71ee60a24c8ab5bdd85b9153511055c68f1b7d245466a8b2da85b537.
+                "6eca33a3b76bb009637b7c006cf6f36261f03fd7b567f8e419a36195f4537e25",
             )
 
             legacy_bg1npc_groups = {
@@ -477,31 +488,32 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.13")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.15")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.13.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.15.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.7.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.11.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.13")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.13")
+            self.assertEqual(sod_artifact["version"], "0.6.15")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.15")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.13.zip",
+                "chriz-sod-remix-v0.6.15.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 3010880)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 3045799)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "9253fbb295919b38c3958c6b581b663564a7f1760776d3cb8d5602ffe11d732a",
+                "3a295832f9af3540bf079ba437676b70b019ce8db506ef89fde28addd0b4feaf",
             )
-            # October 13 adds mandatory v0.6.13 rows 177, 198 and 285 in native TP2 order.
-            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910])
+            # October 13 adds mandatory v0.6.13 rows 177, 198 and 285 in native TP2 order;
+            # October 23 (v0.6.15) adds the Imoen choice 292/293/294 after 910.
+            self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910, 292, 293, 294])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))

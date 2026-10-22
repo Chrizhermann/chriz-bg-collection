@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.12"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.13"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -165,6 +165,10 @@ name = "Fade: first-recruitment SoA XP catch-up (new recruitment actors)"
 [[components]]
 id = 238
 name = "Evandra: first-recruitment SoA XP catch-up (new recruitment actors)"
+
+[[components]]
+id = 239
+name = "EET: SoA and ToB join-XP catch-up for joinable NPCs whose scripts lack it"
 
 [[components]]
 id = 660

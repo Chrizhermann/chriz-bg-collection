@@ -59,7 +59,10 @@ struct CachePaths {
 impl ArtifactCache {
     /// Open or create a cache rooted at `root`.
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, AcquireError> {
-        let root = root.into();
+        Self::open_with_client(root.into(), HttpClient::new())
+    }
+
+    fn open_with_client(root: PathBuf, client: HttpClient) -> Result<Self, AcquireError> {
         for directory in [
             root.join("sha256"),
             root.join("partial"),
@@ -71,10 +74,7 @@ impl ArtifactCache {
                 source,
             })?;
         }
-        Ok(Self {
-            root,
-            client: HttpClient::new(),
-        })
+        Ok(Self { root, client })
     }
 
     /// Acquire one pinned artifact, returning only a rehashed cache hit or verified download.
@@ -781,10 +781,19 @@ fn remove_if_exists(path: &Path) -> Result<(), AcquireError> {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::collections::BTreeMap;
+    use std::fs;
+    use std::io::{BufRead, BufReader, Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::thread::{self, JoinHandle};
+    use std::time::{Duration, Instant};
 
-    use super::{retry_transfer, validate_request, AttemptFailure};
-    use crate::acquire::{AcquireError, DownloadRequest};
+    use sha2::{Digest, Sha256};
+    use tempfile::TempDir;
+
+    use super::{retry_transfer, validate_request, ArtifactCache, AttemptFailure};
+    use crate::acquire::http::{HttpClient, HttpTimeouts};
+    use crate::acquire::{AcquireError, CacheDisposition, DownloadRequest};
     use crate::events::{ChannelSink, EngineEvent, Stream};
 
     fn retry_request(max_attempts: u32) -> DownloadRequest {
@@ -942,5 +951,271 @@ mod tests {
         };
 
         assert!(validate_request(&request).is_ok());
+    }
+
+    // Loopback transfers with millisecond limits. Each connection has its own server thread,
+    // so a connection held open by a stalled reply does not delay the next attempt.
+
+    const TEST_TIMEOUTS: HttpTimeouts = HttpTimeouts {
+        resolve: Duration::from_millis(300),
+        connect: Duration::from_millis(300),
+        send_request: Duration::from_millis(300),
+        body_stall: Duration::from_millis(300),
+    };
+    // Generous for a loaded test machine; still far below a production limit.
+    const DETECTION_SLACK: Duration = Duration::from_millis(1500);
+
+    struct Connection {
+        stream: TcpStream,
+        headers: BTreeMap<String, String>,
+    }
+
+    impl Connection {
+        fn reply_headers(&mut self, status: &str, headers: &[(&str, String)], length: usize) {
+            let mut head = format!("HTTP/1.1 {status}\r\n");
+            for (name, value) in headers {
+                head.push_str(&format!("{name}: {value}\r\n"));
+            }
+            head.push_str(&format!(
+                "Content-Length: {length}\r\nConnection: close\r\n\r\n"
+            ));
+            self.send(head.as_bytes());
+        }
+
+        fn send(&mut self, bytes: &[u8]) {
+            self.stream.write_all(bytes).expect("write test response");
+            self.stream.flush().expect("flush test response");
+        }
+
+        /// Keep the connection open without sending anything until the client gives up.
+        fn hold_until_client_closes(&mut self) {
+            self.stream
+                .set_read_timeout(Some(Duration::from_millis(10)))
+                .expect("set hold read timeout");
+            let deadline = Instant::now() + Duration::from_secs(10);
+            let mut byte = [0_u8; 1];
+            while Instant::now() < deadline {
+                match self.stream.read(&mut byte) {
+                    Ok(0) => return,
+                    Ok(_) => {}
+                    Err(error)
+                        if matches!(
+                            error.kind(),
+                            std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                        ) => {}
+                    Err(_) => return,
+                }
+            }
+            panic!("client kept a stalled test connection open for 10 seconds");
+        }
+    }
+
+    type Handler = Box<dyn FnOnce(&mut Connection) + Send>;
+
+    /// Serve one connection per handler, in order. Joining returns each request's headers.
+    fn serve(handlers: Vec<Handler>) -> (String, JoinHandle<Vec<BTreeMap<String, String>>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback test server");
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let server = thread::spawn(move || {
+            let mut connections = Vec::new();
+            for handler in handlers {
+                let deadline = Instant::now() + Duration::from_secs(10);
+                let stream = loop {
+                    match listener.accept() {
+                        Ok((stream, _)) => break stream,
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(Instant::now() < deadline, "test request did not arrive");
+                            thread::sleep(Duration::from_millis(5));
+                        }
+                        Err(error) => panic!("accept test request: {error}"),
+                    }
+                };
+                connections.push(thread::spawn(move || {
+                    stream.set_nonblocking(false).unwrap();
+                    stream
+                        .set_read_timeout(Some(Duration::from_secs(5)))
+                        .unwrap();
+                    let mut headers = BTreeMap::new();
+                    let mut reader = BufReader::new(stream.try_clone().unwrap());
+                    let mut line = String::new();
+                    reader.read_line(&mut line).expect("read request line");
+                    loop {
+                        line.clear();
+                        reader.read_line(&mut line).expect("read request header");
+                        let Some((name, value)) = line.trim_end().split_once(':') else {
+                            break;
+                        };
+                        headers.insert(name.to_ascii_lowercase(), value.trim().to_owned());
+                    }
+                    let mut connection = Connection { stream, headers };
+                    handler(&mut connection);
+                    connection.headers
+                }));
+            }
+            connections
+                .into_iter()
+                .map(|connection| connection.join().expect("test connection thread"))
+                .collect()
+        });
+        (base_url, server)
+    }
+
+    fn archive_bytes(length: usize) -> Vec<u8> {
+        (0..length).map(|index| (index % 251) as u8).collect()
+    }
+
+    fn download(id: &str, url: String, bytes: &[u8]) -> DownloadRequest {
+        DownloadRequest {
+            request_id: id.to_owned(),
+            url,
+            expected_length: bytes.len() as u64,
+            expected_sha256: hex::encode(Sha256::digest(bytes)),
+            redirect_hosts: Vec::new(),
+            max_attempts: 1,
+        }
+    }
+
+    fn test_cache(temp: &TempDir) -> ArtifactCache {
+        ArtifactCache::open_with_client(
+            temp.path().join("cache"),
+            HttpClient::with_timeouts(TEST_TIMEOUTS),
+        )
+        .unwrap()
+    }
+
+    fn longest_test_timeout() -> Duration {
+        [
+            TEST_TIMEOUTS.resolve,
+            TEST_TIMEOUTS.connect,
+            TEST_TIMEOUTS.send_request,
+            TEST_TIMEOUTS.body_stall,
+        ]
+        .into_iter()
+        .max()
+        .unwrap()
+    }
+
+    #[test]
+    fn a_steady_download_longer_than_every_timeout_completes() {
+        let bytes = archive_bytes(64_000);
+        let body = bytes.clone();
+        let (url, server) = serve(vec![Box::new(move |connection: &mut Connection| {
+            connection.reply_headers("200 OK", &[("ETag", "\"steady\"".to_owned())], body.len());
+            // ureq gives a read that starts after a passed deadline one more second, so a
+            // total limit only fails a wait it interrupts. Chunks 120 ms apart put the
+            // 300 ms limits in the middle of a wait, while staying well inside the stall limit.
+            for chunk in body.chunks(6_400) {
+                thread::sleep(Duration::from_millis(120));
+                connection.send(chunk);
+            }
+        })]);
+        let temp = TempDir::new().unwrap();
+        let (sink, _) = ChannelSink::unbounded();
+
+        let started = Instant::now();
+        let acquired = test_cache(&temp)
+            .acquire(&download("steady", url, &bytes), &sink)
+            .unwrap();
+
+        assert!(
+            started.elapsed() > 3 * longest_test_timeout(),
+            "the transfer must outlast every limit, took {:?}",
+            started.elapsed()
+        );
+        assert_eq!(acquired.disposition, CacheDisposition::Downloaded);
+        assert_eq!(fs::read(&acquired.archive_path).unwrap(), bytes);
+        server.join().unwrap();
+    }
+
+    #[test]
+    fn a_stalled_body_fails_after_the_stall_window_and_the_next_attempt_resumes() {
+        let bytes = archive_bytes(32 * 1024);
+        let prefix_len = 12_000;
+        let total = bytes.len();
+        let (first, rest) = (bytes[..prefix_len].to_vec(), bytes[prefix_len..].to_vec());
+        let (url, server) = serve(vec![
+            Box::new(move |connection: &mut Connection| {
+                connection.reply_headers("200 OK", &[("ETag", "\"stall-v1\"".to_owned())], total);
+                connection.send(&first);
+                connection.hold_until_client_closes();
+            }),
+            Box::new(move |connection: &mut Connection| {
+                connection.reply_headers(
+                    "206 Partial Content",
+                    &[
+                        ("ETag", "\"stall-v1\"".to_owned()),
+                        (
+                            "Content-Range",
+                            format!("bytes {prefix_len}-{}/{total}", total - 1),
+                        ),
+                    ],
+                    rest.len(),
+                );
+                connection.send(&rest);
+            }),
+        ]);
+        let temp = TempDir::new().unwrap();
+        let cache = test_cache(&temp);
+        let (sink, _) = ChannelSink::unbounded();
+        let request = download("stall", url, &bytes);
+
+        let started = Instant::now();
+        let error = cache.acquire(&request, &sink).unwrap_err();
+        let elapsed = started.elapsed();
+
+        // Exhausting the budget, instead of returning the error itself, proves that the stall
+        // was classified as retryable.
+        assert!(
+            matches!(&error, AcquireError::RetryExhausted { attempts: 1, last_error } if last_error.contains("timeout: receive body")),
+            "{error}"
+        );
+        assert!(
+            elapsed >= TEST_TIMEOUTS.body_stall
+                && elapsed < TEST_TIMEOUTS.body_stall + DETECTION_SLACK,
+            "stall detected after {elapsed:?}"
+        );
+        assert_eq!(
+            fs::metadata(temp.path().join("cache/partial/stall.part"))
+                .unwrap()
+                .len(),
+            prefix_len as u64
+        );
+
+        let acquired = cache.acquire(&request, &sink).unwrap();
+
+        assert_eq!(acquired.disposition, CacheDisposition::Downloaded);
+        assert_eq!(fs::read(&acquired.archive_path).unwrap(), bytes);
+        let seen = server.join().unwrap();
+        assert!(!seen[0].contains_key("range"));
+        assert_eq!(seen[1]["range"], format!("bytes={prefix_len}-"));
+        assert_eq!(seen[1]["if-range"], "\"stall-v1\"");
+    }
+
+    #[test]
+    fn a_server_that_never_sends_headers_fails_within_the_header_bound() {
+        let bytes = archive_bytes(1024);
+        let (url, server) = serve(vec![Box::new(|connection: &mut Connection| {
+            connection.hold_until_client_closes();
+        })]);
+        let temp = TempDir::new().unwrap();
+        let (sink, _) = ChannelSink::unbounded();
+
+        let started = Instant::now();
+        let error = test_cache(&temp)
+            .acquire(&download("silent", url, &bytes), &sink)
+            .unwrap_err();
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(&error, AcquireError::RetryExhausted { attempts: 1, last_error } if last_error.contains("timeout: send request")),
+            "{error}"
+        );
+        assert!(
+            elapsed >= TEST_TIMEOUTS.send_request
+                && elapsed < TEST_TIMEOUTS.send_request + DETECTION_SLACK,
+            "missing headers detected after {elapsed:?}"
+        );
+        server.join().unwrap();
     }
 }

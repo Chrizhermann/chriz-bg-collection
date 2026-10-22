@@ -266,18 +266,31 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Re-pinned on October 17 when Unfinished Business became optional and unselected.
     // In both recipes the new Recommended plan equals the previous plan minus the
     // ub-bg2 run (its 18 former defaults); no other run changes.
+    // Re-pinned on October 18 for EEex v1.3.1: in both recipes the Recommended plan differs
+    // only in the eeex-bg2 run's artifact id (with v1.2.0 restored, the previous digests
+    // return) and the collection only in the EEex feature description.
+    // Re-pinned on October 20 for Modpack alpha.13: with alpha.12 restored and EET join XP
+    // 239 removed from the mod, the late-companion run, the features and the preset, all six
+    // previous digests return in both recipes.
+    // Re-pinned on October 22 for the 18 default player voicepacks (their runs, features
+    // and preset entries); without them all six October 20 digests return:
+    // manifest 01da4486…, cc79fa3c…, b7d2694f…; curated 0dd26563…, 55c33c0b…, 4e62e7d9….
+    // Re-pinned on October 23 for SoD Remix v0.6.15 (artifact pin, the Imoen choice
+    // 292/293/294 in the SoD run and features, and 292 in the preset); the October 22
+    // digests were manifest b0d24b97…, 4085f958…, ea9dcc56…; curated 219dc492…, 0dbd118d…,
+    // ee04b38a….
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "fa1af794108547bfc9018761c1461e4569d2d8704bbc2e369a75e689ab606f5b",
-            "004f6b8b5075641f3caaa3bafa9db5e6f69e8f0285524be014a484e6c4b3df29",
-            "49ed090082cdc4374ec8b819b31774cd8a79b8f50c1b0b8acc03afbef8992bc4",
+            "bfc610ef317a5bd4ec57e7f947fcbc65dbebba2ddb3d9404b4684bd81c6bacfb",
+            "204329ad35fd43a56f854aeceaf25385cd7b2a008d26e97439c2b20c7b62d8b7",
+            "69a7e052533ea4ae3ad0e951758d74d52bf133078390d780ba7abf30487c0fa7",
         ),
         (
             "../recipes/curated-full-current",
-            "11d690a4002a37322849d574b3098985a416af689a0693105add8818458066e7",
-            "fe99c02a54aa7aca228559b538570bdbc1929d68a4ec127f3f1f89f090a3b94c",
-            "09d1b39ba942516227aa1af4955c08b2a92a1f81403f35df95b261b4cf0044b7",
+            "b6360c994fce5f81888867b05301711d72073c46491840c22babd934f39c66de",
+            "16a7e51757c3ca0a61c8a6ed8a94c04ab4f46aa3038e8f582dc25456be71d909",
+            "34f2dae7dd8031e2192741ced8f0ae4831ae2eacc166377671554d68c596cc5e",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

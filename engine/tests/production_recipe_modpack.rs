@@ -10,7 +10,7 @@ use bg_engine::Manifest;
 const MODPACK_COMPONENTS: &[u32] = &[
     110, 130, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223,
     224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640, 235, 236,
-    237, 238, 660, 650, 651,
+    237, 238, 239, 660, 650, 651,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -47,27 +47,27 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.12");
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.13");
     let artifact = &manifest.artifacts[artifact_id];
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.12");
+    assert_eq!(artifact.version, "0.2.0-alpha.13");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.12");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.13");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.12/chriz-bg-modpack-v0.2.0-alpha.12.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.12.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.13.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(10_449_774));
+    assert_eq!(artifact.source.expected_length, Some(10_479_090));
     assert_eq!(
         artifact.source.sha256,
-        "3c1ee079541d8e64c9e692b511e5560ee505867b43698425e6bdd3ad48d578e2"
+        "afbf05eec35bf65280cdab5276417f83e767ca5594de93602934d0398a68a381"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -109,7 +109,10 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(campaign_xp + 1, spellbooks);
     assert_eq!(spellbooks + 1, lightning);
     assert_eq!(lightning + 1, baeloth);
-    assert_eq!(baeloth + 1, buffbot);
+    // October 22: the 18 sound-only player voicepacks run between Baeloth and BuffBot.
+    assert_eq!(baeloth + 1, position("voicepack-neera-bg2"));
+    assert_eq!(baeloth + 18, position("voicepack-garithos-bg2"));
+    assert_eq!(position("voicepack-garithos-bg2") + 1, buffbot);
     // 430 hashes the final scrolls and spells at install time, so it runs last.
     assert_eq!(buffbot + 1, scrolls);
     assert_eq!(position("artisanskitpack-npc-bg2") + 1, edwin);
@@ -128,7 +131,8 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(continuity.components, CONTINUITY_COMPONENTS);
     let late = &runs[late_companions];
     assert_eq!(late.phase, Phase::PostEetEnd);
-    assert_eq!(late.components, [189, 237, 238, 620]);
+    // October 20: Modpack alpha.13's EET join XP 239 follows 238 in TP2 order and precedes 650.
+    assert_eq!(late.components, [189, 237, 238, 239, 620]);
     assert_eq!(runs[campaign_xp].phase, Phase::PostEetEnd);
     assert_eq!(runs[campaign_xp].components, [650, 651]);
     assert_eq!(runs[scrolls].phase, Phase::PostEetEnd);
@@ -139,7 +143,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.12");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.13");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -197,9 +201,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // October 13: reader-level scrolls 430 (EEex, no longer TA 2170), Fade's
     // recruitment XP 237 and Degrodel 660 are deselectable defaults.
     // October 14: companion stats 230-234 (Modpack alpha.12) are defaults too.
+    // October 20: so is EET join XP 239 (Modpack alpha.13).
     for component in [
         110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234, 236, 237,
-        430, 611, 660,
+        239, 430, 611, 660,
     ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
@@ -282,7 +287,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // (and Tweaks 3220/3500/3510 in the curated plan only).
     // October 17 makes Unfinished Business optional and unselected, which removes
     // its 18 former defaults from both plans.
-    // This 364-component base plan is distinct from the 462-component curated plan.
+    // The October 20 intake adds Modpack EET join XP 239 to both plans.
+    // The October 22 intake adds the 18 default player voicepacks to both plans.
+    // The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292 to both.
+    // This 384-component base plan is distinct from the 482-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -290,7 +298,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        364
+        384
     );
 }
 

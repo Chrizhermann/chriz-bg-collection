@@ -128,20 +128,27 @@ class CatalogParserTests(unittest.TestCase):
         # October 13 intake adds Modpack 237/238/650/651/660 and SoD 177/198/285.
         # October 14 intake adds Modpack 230-234, Rebalance 330-332 and 14 Tweaks
         # snapshot rows; the snapshot withdraws Tweaks 260 and 3470.
-        self.assertEqual(len(rows), 1_255)
+        # October 18: EEex v1.3.1 adds Attack Info 9 with an open Decision.
+        # October 20: Modpack alpha.13 adds 239 and, with open Decisions, 135/460/652.
+        # October 22: 18 player voicepack catalogs (CD_*) add one default row each.
+        # October 23: SoD Remix v0.6.15 adds the Imoen choice 292 (default), 293/294.
+        self.assertEqual(len(rows), 1_281)
         self.assertEqual(
             decision_totals(rows),
             {
                 # October 14: 11 new Tweaks rows are not offered, 260/3470 are gone,
                 # and Tweaks 3220 plus SCS 3010/3021 are offered.
-                Decision.EXCLUDED: 521,
+                # October 18: EEex 9 is not installed until Christopher decides.
+                # October 20: neither are Modpack 135, 460 and 652.
+                Decision.EXCLUDED: 525,
                 # September 22 approval moves HGO 38 from optional to default.
                 # October 12 moves Emotion 301 back to optional.
                 # October 13 makes EET's desktop shortcut (EET 100) optional.
                 # October 13 intake: campaign XP caps Modpack 650/651 are optional.
                 # October 14: SCS 3010, Rebalance 330 and Tweaks 2760 are optional.
                 # October 16: all 19 remaining default UB rows become optional.
-                Decision.OPTIONAL: 264,
+                # October 23: SoD Imoen alternatives 293/294 are optional.
+                Decision.OPTIONAL: 266,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -150,7 +157,10 @@ class CatalogParserTests(unittest.TestCase):
                 # October 14: Modpack 230-234, Rebalance 331/332, SCS 3021 and
                 # Tweaks 3220/3500/3510 are defaults.
                 # October 16: UB leaves the defaults (19 rows move to optional).
-                Decision.DEFAULT: 316,
+                # October 20: Modpack EET join XP 239 is a default.
+                # October 22: so are the 18 player voicepacks.
+                # October 23: and SoD Imoen choice 292 (the vanilla BG2 dual-class).
+                Decision.DEFAULT: 336,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -374,14 +384,19 @@ default = "none"
 
         result = audit_curation_map(rows, curation_map)
 
-        self.assertEqual(result.mapped_rows, 1_255)
-        self.assertEqual(result.excluded_rows, 521)
-        self.assertEqual(result.feature_rows + result.omission_rows, 734)
+        # October 18: EEex v1.3.1's Attack Info 9 is listed with an open Decision.
+        # October 20: Modpack 239 maps to a feature; 135/460/652 have open Decisions.
+        # October 22: each of the 18 voicepack rows maps to its own feature.
+        # October 23: SoD Remix 292/293/294 map to one feature each.
+        self.assertEqual(result.mapped_rows, 1_281)
+        self.assertEqual(result.excluded_rows, 525)
+        self.assertEqual(result.feature_rows + result.omission_rows, 756)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
-        self.assertEqual(result.choice_groups, 76)
+        # October 23: the SoD Remix Imoen in Shadows of Amn choice.
+        self.assertEqual(result.choice_groups, 77)
         self.assertEqual(result.optional_none_groups, 23)
         self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1255", coverage_report(rows, result))
+        self.assertIn("rows=1281", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]
