@@ -290,7 +290,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // The October 20 intake adds Modpack EET join XP 239 to both plans.
     // The October 22 intake adds the 18 default player voicepacks to both plans.
     // The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292 to both.
-    // This 384-component base plan is distinct from the 482-component curated plan.
+    // The October 23 quest-mod intake makes BG1 Unfinished Business optional and
+    // unselected, which removes its 16 former defaults from both plans.
+    // This 368-component base plan is distinct from the 466-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -298,7 +300,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        384
+        368
     );
 }
 

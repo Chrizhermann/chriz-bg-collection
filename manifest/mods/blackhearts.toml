@@ -1,0 +1,11 @@
+id = "blackhearts"
+artifact_id = "blackhearts-2.05"
+name = "Black Hearts"
+tp2 = "Blackhearts/Blackhearts.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 1
+name = "Install Blackhearts for \"BGEE\" or \"EET including BGEE and BG2EE\""

@@ -1,0 +1,122 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-23"
+command = "chriz-bg-author artifact inspect <release asset or commit archive URL> --cache-root <fresh cache> --expected-tp2 <tp2>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id ppe --archive <fresh downloaded ZIP>; source audit of each TP2's component declarations (see below)"
+scope = "Six optional third-party quest mods enter both recipe profiles in the Quest mods category, unchecked and experimental: NTotSC at upstream master commit f0ef953 (a commit archive, not release v5.0.0), Ascalon's Questpack v7.0, Black Hearts v2.05 (declared incompatible with the SoD Remix), Thalantyr Item Upgrade v4.5.1, the Icewind Dale Voice Pack 1.2.0 and PPE at DaftHunk fork commit 417226ea. Each archive was first inspected and verified on 2026-10-22 (NTotSC f0ef953 on 2026-10-23), then verified again on 2026-10-23 from the final artifact TOMLs: each was downloaded anonymously into its own new cache and passed the production acquisition and extraction contracts, and its length and SHA-256 match both recipes. Extraction publishes only the mod folder, never a bundled setup executable or readme. The curated profile's artifact TOMLs are byte-identical copies. This is automated source/package verification, not a combined WeiDU install or gameplay acceptance; the lab test comes with the final combined install."
+
+# Commit archive of upstream master on 2026-10-23, 35 commits after release v5.0.0. The TP2
+# designates 0-16 in ascending order. tools/check_native_component_order.py stops on an
+# associative array in the ALWAYS block, so the order was audited by hand: every component
+# header carries a literal DESIGNATED, and the recipe installs all 17 in that order.
+[[artifacts]]
+mod_id = "ntotsc"
+artifact_id = "ntotsc-f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+source_commit = "f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+immutable_source_url = "https://codeload.github.com/Spellhold-Studios/NTotSC/zip/f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+actual_length = 135854624
+actual_sha256 = "b507d4b833676c5d8924f549bb8cfef408c18cd21ea61612dd93290773b48e9d"
+tp2_sha256 = "b9d3b3dc07697b79a1721a5095489d71c8f220bc1aa544b74ee3bc653d8c27aa"
+published_roots = ["ntotsc"]
+native_components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = false
+native_component_order_verified = true
+
+# The iemod archives below are outside tools/check_native_component_order.py's ZIP support;
+# their TP2 declarations were audited by hand. The Questpack declares 13 components without
+# DESIGNATED, so WeiDU numbers them 0-12 in order; English is language index 1.
+[[artifacts]]
+mod_id = "ac-quest"
+artifact_id = "ac-quest-7.0"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v7.0"
+source_commit = "f0290acc886402059b6631d65c4ec1ab8bb0b733"
+immutable_source_url = "https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod"
+actual_length = 20936689
+actual_sha256 = "87c2feb30c8968c7097913cb540eb1dd5025f311186c01b1100151af02447564"
+tp2_sha256 = "13a1006ff37fb492b74a8c8911e4cd65ed331b6778767af77ff42ae3ebd2a645"
+published_roots = ["AC_QUEST"]
+native_components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# The TP2 designates 1 (BG:EE or EET) and 20005 (BG2:EE without EET). Only 1 is offered.
+[[artifacts]]
+mod_id = "blackhearts"
+artifact_id = "blackhearts-2.05"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v2.05"
+source_commit = "879491490f8149851802f53ba0f8637beba34263"
+immutable_source_url = "https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod"
+actual_length = 38645056
+actual_sha256 = "a1a6257a2c21e19c87778bd34dba5c50224fdc3767b9fdbb2e41561f50340301"
+tp2_sha256 = "7a2a93a3d6af1ba298fb403bd62083ebd3dd35f618c5710ea83148713302a608"
+published_roots = ["Blackhearts"]
+native_components = [1, 20005]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# One component, designated 0.
+[[artifacts]]
+mod_id = "thalan"
+artifact_id = "thalan-4.5.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.5.1"
+source_commit = "e5cae288e55c0b53d7057b96097f5a240280ed92"
+immutable_source_url = "https://github.com/CrevsDaak/thalan/releases/download/v4.5.1/thalantyr-item-upgrade-v4.5.1.iemod"
+actual_length = 833151
+actual_sha256 = "ac5a2dff1feb41ee0e5d7a2e029c8a4985957aaef9c689558dbc6ed09cf019d3"
+tp2_sha256 = "939189cba0bb5e0b98c8d63d5a4f0a4a1545f59bae3e055ef1fbd3082c7121e6"
+published_roots = ["thalan"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# One undesignated component, which WeiDU numbers 0. The repository is archived.
+[[artifacts]]
+mod_id = "zg-iwd-voices"
+artifact_id = "zg-iwd-voices-1.2.0"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "version-1.2.0"
+source_commit = "187fdeb00f2cfff10fe1954af63b70f6c601c1e6"
+immutable_source_url = "https://github.com/GraionDilach/Icewind-Dale-Voice-Pack-For-EE-2.6/releases/download/version-1.2.0/zg-iwd-voices-1.2.0.iemod"
+actual_length = 28942218
+actual_sha256 = "7677e0d8fdef8422ec6424e29054e21bad7792ae07dc482331022b30bf9edefa"
+tp2_sha256 = "354cb3d8805078c25abbde5bace17546a13d58e52050f7d79f090a79bbc4adee"
+published_roots = ["zg_iwd_voices"]
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# Commit archive of the DaftHunk fork; the README calls it v1.03, the TP2 VERSION says 1.02.
+# The 2026-10-22 `artifact inspect` hit its 30-second download limit on this 387 MB archive;
+# `artifact verify` (with retries) passed on 2026-10-22 and 2026-10-23.
+# tools/check_native_component_order.py passes for the recipe's components; 310 and 320
+# (Viconia and Jaheira, BG1 style) are not offered because they are expected to fail on EET.
+[[artifacts]]
+mod_id = "ppe"
+artifact_id = "ppe-417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+source_commit = "417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+immutable_source_url = "https://codeload.github.com/DaftHunk/Portraits-Portraits-Everywhere/zip/417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+actual_length = 387318340
+actual_sha256 = "fc250193d9cc69823032529fc4dac1d66f3765e5d9a9877f28c269dc5654b539"
+tp2_sha256 = "04d670a4a0997e595efb1b41e9a66f3deed36cd6c1118567041cf6a07cb89057"
+published_roots = ["PPE"]
+native_components = [0, 100, 150, 10, 20, 25, 300, 301, 302, 310, 311, 312, 320, 322, 330, 332, 340, 342, 350, 30, 40]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = false
+native_component_order_verified = true

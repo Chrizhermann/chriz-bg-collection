@@ -132,7 +132,9 @@ class CatalogParserTests(unittest.TestCase):
         # October 20: Modpack alpha.13 adds 239 and, with open Decisions, 135/460/652.
         # October 22: 18 player voicepack catalogs (CD_*) add one default row each.
         # October 23: SoD Remix v0.6.15 adds the Imoen choice 292 (default), 293/294.
-        self.assertEqual(len(rows), 1_281)
+        # October 23: six optional quest-mod catalogs add 55 rows (NTOTSC 17,
+        # AC_QUEST 13, BLACKHEARTS 2, ZG_IWD_VOICES 1, THALAN 1, PPE 21).
+        self.assertEqual(len(rows), 1_336)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -140,7 +142,8 @@ class CatalogParserTests(unittest.TestCase):
                 # and Tweaks 3220 plus SCS 3010/3021 are offered.
                 # October 18: EEex 9 is not installed until Christopher decides.
                 # October 20: neither are Modpack 135, 460 and 652.
-                Decision.EXCLUDED: 525,
+                # October 23: nor Black Hearts 20005 (BG2:EE without EET) and PPE 310/320.
+                Decision.EXCLUDED: 528,
                 # September 22 approval moves HGO 38 from optional to default.
                 # October 12 moves Emotion 301 back to optional.
                 # October 13 makes EET's desktop shortcut (EET 100) optional.
@@ -148,7 +151,9 @@ class CatalogParserTests(unittest.TestCase):
                 # October 14: SCS 3010, Rebalance 330 and Tweaks 2760 are optional.
                 # October 16: all 19 remaining default UB rows become optional.
                 # October 23: SoD Imoen alternatives 293/294 are optional.
-                Decision.OPTIONAL: 266,
+                # October 23: the 16 BG1UB defaults become optional, and so are 47 of the
+                # 55 quest-mod rows (all but their 5 defaults and 3 excluded rows).
+                Decision.OPTIONAL: 329,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -160,7 +165,10 @@ class CatalogParserTests(unittest.TestCase):
                 # October 20: Modpack EET join XP 239 is a default.
                 # October 22: so are the 18 player voicepacks.
                 # October 23: and SoD Imoen choice 292 (the vanilla BG2 dual-class).
-                Decision.DEFAULT: 336,
+                # October 23: BG1UB leaves the defaults (16 rows move to optional); the
+                # quest mods' main components NTotSC 0 and PPE 0 and Ascalon's first
+                # variants 2/5/10 are defaults inside their unchecked mods.
+                Decision.DEFAULT: 325,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -388,15 +396,19 @@ default = "none"
         # October 20: Modpack 239 maps to a feature; 135/460/652 have open Decisions.
         # October 22: each of the 18 voicepack rows maps to its own feature.
         # October 23: SoD Remix 292/293/294 map to one feature each.
-        self.assertEqual(result.mapped_rows, 1_281)
-        self.assertEqual(result.excluded_rows, 525)
-        self.assertEqual(result.feature_rows + result.omission_rows, 756)
+        # October 23: the 52 offered quest-mod rows map to one feature each.
+        self.assertEqual(result.mapped_rows, 1_336)
+        self.assertEqual(result.excluded_rows, 528)
+        self.assertEqual(result.feature_rows + result.omission_rows, 808)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
-        self.assertEqual(result.choice_groups, 77)
-        self.assertEqual(result.optional_none_groups, 23)
-        self.assertEqual(result.fixed_groups, 10)
-        self.assertIn("rows=1281", coverage_report(rows, result))
+        # October 23: ten quest-mod choices (Ascalon's three with their first variant as
+        # default; NTotSC's two and PPE's five with none preselected) and PPE's
+        # single Jaheira portrait option as a fixed group.
+        self.assertEqual(result.choice_groups, 87)
+        self.assertEqual(result.optional_none_groups, 30)
+        self.assertEqual(result.fixed_groups, 11)
+        self.assertIn("rows=1336", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]
