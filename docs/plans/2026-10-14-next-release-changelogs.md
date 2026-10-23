@@ -52,6 +52,10 @@ published.
   before changing it. The game starts a new log each time, so **Play** first keeps
   the last session's log as `InfinityLoader-previous.log`. The section shows where
   the log, that copy and the game's crash reports are, and which files to send.
+- **Unticking an optional mod no longer adds setup notes for its components.**
+  Unticking Hidden Gameplay Options, for example, added one setup note per default
+  component, each saying "Available when Hidden Gameplay Options is selected." A
+  default that is unavailable while its mod is ticked still gets its note.
 
 ## Collection changelog
 
@@ -115,6 +119,21 @@ unchanged.
   keeps only her BG2 belt, correctly equipped; she no longer reaches Shadows of
   Amn with all her gear and her belt in the magic-weapon slot. Raise a dead
   Imoen before ending SoD. (SoD Remix v0.6.14)
+- **Quest mods** — **Optional**, experimental, each separately, in the new "Quest
+  mods" category: Northern Tales of the Sword Coast (new quests, areas and dungeons
+  north of Baldur's Gate and along the Sword Coast), Ascalon's Questpack (nine small
+  BG1 quests and one for Shadows of Amn), Thalantyr Item Upgrade (Thalantyr in High
+  Hedge improves BG1 items), the Icewind Dale Voice Pack (Icewind Dale's player
+  voices) and Portraits Portraits Everywhere (dialogue portraits for speaking NPCs,
+  about 0.4 GB). They are third-party mods, offered as they are and not yet tested in
+  a combined installation.
+  - **Pending:** which of their components start selected when you tick one.
+    Christopher decides.
+- **Black Hearts** — **Optional**, experimental, third-party: a BG1 and Siege of
+  Dragonspear quest in which Illasera hires the party. It can't be combined with the
+  SoD Remix, because its Siege of Dragonspear part runs through areas the remix
+  restructures, so the installer offers it only with the SoD Remix unticked. (Black
+  Hearts v2.05)
 - **Pending:** Modpack alpha.13 also adds a fix for Dorn's BG1 ambush, whose
   camera lock on Senjak could crash the game; party AI that no longer enters
   Defensive Stance with "Use special abilities" off; and chapter-by-chapter XP caps
@@ -125,6 +144,11 @@ unchanged.
 - **Unfinished Business (BG2)** — now **Optional** (was **Default**). All 22
   offered components remain available in the installer, unchecked by default in
   Chris's Recommended.
+- **BG1 Unfinished Business** — now **Optional** (was **Default**), like Unfinished
+  Business for BG2. All 16 offered components remain available in the installer,
+  unchecked by default in Chris's Recommended. Its Nim Furlwing and Svlast encounters
+  and the versions in Northern Tales of the Sword Coast are either-or; with both mods
+  ticked, BG1 Unfinished Business keeps them.
 - **Grandmastery** (Default, unchanged choice): High Mastery now gives +5
   damage instead of +4, matching Grand Mastery. To-hit and the other levels are
   unchanged. (Tweaks Anthology)
@@ -195,6 +219,15 @@ unchanged.
 - SoD Remix v0.6.15 (was v0.6.13)
 - BuffBot v1.10.1 (was v1.10.0)
 - EEex Remote Console v0.2.1 (was v0.2.0)
+- Northern Tales of the Sword Coast: development version `f0ef953`, 35 changes after
+  v5.0.0 (new). The collection pins this exact version because v5.0.0 lacks a fix
+  that SCS needs and the Island of the Sirines on the worldmap.
+- Ascalon's Questpack v7.0 (new)
+- Thalantyr Item Upgrade v4.5.1 (new)
+- Icewind Dale Voice Pack 1.2.0 (new)
+- Portraits Portraits Everywhere: DaftHunk's fork at `417226e` (its readme says
+  v1.03) (new)
+- Black Hearts v2.05 (new)
 
 ## Release-note entry (collection alpha.21)
 
@@ -211,9 +244,13 @@ voicepacks from ChrizFader's voicepacks; and a choice of how Imoen continues
 into Shadows of Amn, by default as the BG2 thief/mage Imoen. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. The optional,
-experimental campaign XP caps with banked XP now work. Unfinished
-Business (BG2) is now optional; High Mastery now gives +5
-damage, and the NPC move now includes Ajantis. In Bardic Wonders, the
+experimental campaign XP caps with banked XP now work. New and optional, all
+experimental: five third-party mods in a new "Quest mods" category (Northern Tales
+of the Sword Coast, Ascalon's Questpack, Thalantyr Item Upgrade, the Icewind Dale
+Voice Pack and Portraits Portraits Everywhere), and Black Hearts for installations
+without the SoD Remix. Unfinished Business for BG1 and BG2 is now
+optional; High Mastery now gives +5 damage, and the NPC move now includes
+Ajantis. In Bardic Wonders, the
 Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
 the Gallant gets the new bard spells, and Symphony of the Dark Children ends
 with its round of Invisibility. BuffBot's combat-stop notices now appear over the
@@ -259,3 +296,14 @@ existing games and saves are unchanged.
   loader settings files, as EEex v1.3.1 ships it and from a played game; no game
   was started with it. Check it once in a lab before the release (see
   `FOLLOW_UPS.md`).
+- **Quest mods** (six third-party mods, optional and experimental) and the now
+  optional BG1 Unfinished Business have static recipe checks only; nothing was
+  installed. They stay experimental until one combined lab install with the full
+  Recommended selection and the quest mods ticked (see `FOLLOW_UPS.md`). NTotSC and
+  PPE are GitHub commit archives without a release; PPE is a 387 MB download.
+- **Default components under an unticked optional mod** are no longer reported as
+  omitted defaults, neither in the installer's setup notes nor in release
+  validation (see the installer changelog). The quest mods' main components rely
+  on this: without it, Chris's Recommended would show five setup notes and need
+  omission records for them. A default that drops out while its optional parent is
+  ticked is still reported.
