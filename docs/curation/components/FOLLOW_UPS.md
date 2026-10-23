@@ -64,7 +64,7 @@ Cross-repository status. Component detail stays in the sections below and in the
   `manifest/evidence/release-intake-20261022.toml`. Still needed before the next CEBG
   release: one combined lab install (see Release gates).
 - Optional quest mods (Christopher's decisions of 2026-10-23), in both recipes on
-  `claude/optional-mods-20261022` (fresh-download and native-order evidence in
+  `claude/optional-mods-20261022` ([PR #32](https://github.com/Chrizhermann/chriz-bg-collection/pull/32); fresh-download and native-order evidence in
   `manifest/evidence/release-intake-20261023-quest-mods.toml`): Northern Tales of the
   Sword Coast (upstream `master` f0ef953, not v5.0.0), Ascalon's Questpack v7.0,
   Thalantyr Item Upgrade v4.5.1, the Icewind Dale Voice Pack 1.2.0 and Portraits
