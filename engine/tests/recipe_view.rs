@@ -537,6 +537,225 @@ fn blocked_default_keeps_identity_reason_and_an_omission_finding() {
     }));
 }
 
+fn child(id: &str, decision: Decision, parent: &str, components: Vec<ComponentRef>) -> Feature {
+    let mut child = feature(id, decision, components);
+    child.parent = Some(parent.to_owned());
+    child
+}
+
+/// An optional mod switch, a default mod switch, a mandatory mod, and an optional grandparent
+/// above a default parent, each with default (and some mandatory) children.
+fn hierarchy_manifest() -> Manifest {
+    let mut manifest = fixture();
+    manifest.collection.runs.clear();
+    add_run(&mut manifest, "quest", &[0, 1, 2]);
+    add_run(&mut manifest, "core", &[0, 1]);
+    add_run(&mut manifest, "base", &[0]);
+    add_run(&mut manifest, "pack", &[0, 1]);
+    manifest.collection.features = vec![
+        feature("mod:quest", Decision::Optional, Vec::new()),
+        child(
+            "quest-main",
+            Decision::Default,
+            "mod:quest",
+            component_refs("quest", &[0]),
+        ),
+        child(
+            "quest-core",
+            Decision::Mandatory,
+            "mod:quest",
+            component_refs("quest", &[1]),
+        ),
+        child(
+            "quest-extra",
+            Decision::Optional,
+            "mod:quest",
+            component_refs("quest", &[2]),
+        ),
+        feature("mod:core", Decision::Default, Vec::new()),
+        child(
+            "core-main",
+            Decision::Default,
+            "mod:core",
+            component_refs("core", &[0]),
+        ),
+        child(
+            "core-fix",
+            Decision::Mandatory,
+            "mod:core",
+            component_refs("core", &[1]),
+        ),
+        feature("mod:base", Decision::Mandatory, Vec::new()),
+        child(
+            "base-main",
+            Decision::Default,
+            "mod:base",
+            component_refs("base", &[0]),
+        ),
+        feature("mod:pack", Decision::Optional, Vec::new()),
+        child("pack-core", Decision::Default, "mod:pack", Vec::new()),
+        child(
+            "pack-a",
+            Decision::Default,
+            "pack-core",
+            component_refs("pack", &[0]),
+        ),
+        child(
+            "pack-b",
+            Decision::Default,
+            "pack-core",
+            component_refs("pack", &[1]),
+        ),
+    ];
+    manifest
+}
+
+fn finding_ids(evaluation: &bg_engine::recipe_view::SelectionEvaluation) -> Vec<(&str, &str)> {
+    evaluation
+        .findings
+        .iter()
+        .map(|finding| (finding.rule.as_str(), finding.feature_id.as_str()))
+        .collect()
+}
+
+#[test]
+fn defaults_beneath_an_unticked_optional_parent_preview_it_without_omission_findings() {
+    let manifest = hierarchy_manifest();
+    check(&manifest).unwrap();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+
+    // Nothing beneath the unticked switch is requested, so nothing is reported as omitted.
+    assert!(evaluation.findings.is_empty(), "{:#?}", evaluation.findings);
+    assert_eq!(evaluation.plan.components_for("quest"), None);
+    for id in ["quest-main", "quest-core", "quest-extra"] {
+        let control = evaluation.view.control(id).unwrap();
+        assert!(!control.selected, "{id}");
+        assert!(!control.interactive, "{id}");
+        // The tree still shows what ticking the switch would add.
+        assert_eq!(
+            control.unavailable_reason.as_deref(),
+            Some("Available when mod:quest is selected."),
+            "{id}"
+        );
+    }
+    // The defaults keep their preference, so ticking the switch preselects them.
+    assert!(evaluation.normalized_selection.features["quest-main"]);
+    assert!(!evaluation.normalized_selection.features["quest-extra"]);
+
+    let mut ticked = evaluation.normalized_selection.to_selection();
+    ticked.set_feature("mod:quest", true);
+    let ticked = evaluate(&manifest, &ticked).unwrap();
+    assert!(ticked.findings.is_empty(), "{:#?}", ticked.findings);
+    assert_eq!(ticked.plan.components_for("quest"), Some(&[0, 1][..]));
+}
+
+#[test]
+fn defaults_beneath_a_switched_off_default_parent_are_still_reported() {
+    let manifest = hierarchy_manifest();
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:core", false);
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+
+    assert_eq!(
+        finding_ids(&evaluation),
+        [("default-feature-omitted", "core-main")]
+    );
+    assert_eq!(
+        evaluation.findings[0].message,
+        "Available when mod:core is selected."
+    );
+    assert_eq!(evaluation.plan.components_for("core"), None);
+}
+
+#[test]
+fn defaults_that_drop_out_under_requested_parents_are_still_reported() {
+    let mut manifest = hierarchy_manifest();
+    for feature in &mut manifest.collection.features {
+        match feature.id.as_str() {
+            "quest-main" | "base-main" => {
+                feature.readiness = Readiness::Blocked;
+                feature.unavailable_reason = Some("Awaiting a reviewed build.".to_owned());
+            }
+            "core-main" => feature.conflicts.push(Conflict {
+                feature_id: "quest-extra".to_owned(),
+                reason: "Unavailable with the quest extra.".to_owned(),
+            }),
+            _ => {}
+        }
+    }
+    check(&manifest).unwrap();
+
+    // Unticked, the optional switch still covers its blocked default.
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    assert_eq!(
+        finding_ids(&evaluation),
+        [("blocked-default-omitted", "base-main")]
+    );
+
+    // Ticked, each default that drops out under a requested optional, default, or mandatory
+    // parent is reported with its reason.
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:quest", true);
+    selection.set_feature("quest-extra", true);
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(
+        finding_ids(&evaluation),
+        [
+            ("blocked-default-omitted", "quest-main"),
+            ("default-feature-omitted", "core-main"),
+            ("blocked-default-omitted", "base-main"),
+        ]
+    );
+    assert_eq!(
+        evaluation.findings[1].message,
+        "Unavailable with the quest extra."
+    );
+    assert_eq!(evaluation.plan.components_for("quest"), Some(&[1, 2][..]));
+}
+
+#[test]
+fn an_unticked_optional_grandparent_covers_its_default_parent_and_children() {
+    let manifest = hierarchy_manifest();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    assert!(evaluation.findings.is_empty(), "{:#?}", evaluation.findings);
+    assert_eq!(
+        evaluation
+            .view
+            .control("pack-core")
+            .unwrap()
+            .unavailable_reason
+            .as_deref(),
+        Some("Available when mod:pack is selected.")
+    );
+    for id in ["pack-a", "pack-b"] {
+        let control = evaluation.view.control(id).unwrap();
+        assert!(!control.selected, "{id}");
+        assert_eq!(
+            control.unavailable_reason.as_deref(),
+            Some("Available when pack-core is selected."),
+            "{id}"
+        );
+    }
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:pack", true);
+    let ticked = evaluate(&manifest, &selection).unwrap();
+    assert!(ticked.findings.is_empty(), "{:#?}", ticked.findings);
+    assert_eq!(ticked.plan.components_for("pack"), Some(&[0, 1][..]));
+
+    // With the grandparent ticked, the default parent is requested like any other default:
+    // switching it off reports the defaults beneath it, as before.
+    selection.set_feature("pack-core", false);
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(
+        finding_ids(&evaluation),
+        [
+            ("default-feature-omitted", "pack-a"),
+            ("default-feature-omitted", "pack-b"),
+        ]
+    );
+}
+
 #[test]
 fn semantic_selection_identity_survives_reordered_reevaluation() {
     let mut selection = Selection::defaults("windows");
