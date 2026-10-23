@@ -361,7 +361,8 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
 
 ## Done since 2026-09-04
 
-Done on 2026-10-23 on `claude/game-log-switch`:
+Done on 2026-10-23 on `claude/game-log-switch`
+([PR #30](https://github.com/Chrizhermann/chriz-bg-collection/pull/30)):
 
 - Installer: the hidden game-log switch for crash diagnosis (requested on 2026-10-17,
   confirmed for the next release on 2026-10-23).
