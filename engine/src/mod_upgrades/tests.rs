@@ -1,5 +1,7 @@
 //! Transaction boundaries use disposable synthetic data, never installed games.
 use super::*;
+#[cfg(windows)]
+use crate::held_folder::tests::{copy_dir, entries, junction, tree};
 use transaction::{finish, history, prepare, restore_files};
 
 struct Fixture {
@@ -304,6 +306,187 @@ fn undo_accepts_identical_bytes_restored_by_a_later_undone_fix() {
     );
     restore_files(&f.ctx(), &dir, true).unwrap();
     f.assert_original();
+}
+
+/// Writes the restoration record as production restoration writes it before its first change.
+#[cfg(windows)]
+fn restoring(f: &Fixture, dir: &Path, p: &transaction::Prepared) {
+    let game = f.ctx().game();
+    let before = files::inventory(&game, false).unwrap();
+    let removable: BTreeMap<String, Option<String>> = before
+        .iter()
+        .filter(|(name, _)| !p.before.contains_key(*name) && buffbot::writable(name))
+        .map(|(name, stamp)| {
+            let hash = (!stamp.directory).then(|| files::hash(&game.join(name)).unwrap());
+            (name.clone(), hash)
+        })
+        .collect();
+    files::json_new(
+        &dir.join("restoring.json"),
+        &serde_json::json!({
+            "prepared_sha256": files::hash(&dir.join("prepared.json")).unwrap(),
+            "before": before,
+            "removable": removable,
+        }),
+    )
+    .unwrap();
+}
+
+/// Holds the record `dir` through a link to the fixture's temporary folder, then points that
+/// link at a copy of the installation in `other`, as if the folders above had been swapped.
+/// The copy's backups differ, so anything read by path again is detected.
+#[cfg(windows)]
+fn hold_then_repoint(f: &Fixture, dir: &Path, other: &Path) -> files::HeldTransaction {
+    let temp = f._temp.path();
+    let relative = dir.strip_prefix(&f.record.managed_root).unwrap();
+    copy_dir(&f.record.managed_root, &other.join("managed"));
+    let affected = other.join("managed").join(relative).join("affected");
+    for entry in walkdir::WalkDir::new(affected) {
+        let entry = entry.unwrap();
+        if entry.file_type().is_file() {
+            fs::write(entry.path(), b"elsewhere").unwrap();
+        }
+    }
+    let link = temp.join("link");
+    junction(&link, temp);
+    let held = files::hold(&link.join("managed"), &link.join("managed").join(relative)).unwrap();
+    fs::remove_dir(&link).unwrap();
+    junction(&link, other);
+    held
+}
+
+#[cfg(windows)]
+fn refused<T>(result: Result<T, String>) -> String {
+    match result {
+        Ok(_) => panic!("expected a refusal"),
+        Err(error) => error,
+    }
+}
+
+/// Restoring an update reads, replaces and removes only in the folders that were held, even
+/// once a link above the installation points elsewhere, and leaves nothing in its record.
+#[cfg(windows)]
+#[test]
+fn restoring_an_update_stays_in_the_held_folders_after_a_link_above_is_repointed() {
+    let f = Fixture::new();
+    let (dir, p) = f.prepare(1);
+    // The update replaced and added files, and one went missing, before it was interrupted.
+    f.change("override/bfbotscn.lua", b"new code");
+    f.change("buffbot/setup-buffbot.tp2", b"synthetic new source");
+    fs::remove_file(f.ctx().game().join("lang/en_us/dialog.tlk")).unwrap();
+    restoring(&f, &dir, &p);
+    let other = f._temp.path().join("other");
+    let held = hold_then_repoint(&f, &dir, &other);
+    let elsewhere = tree(&other);
+
+    transaction::put_back_fixture(&f.ctx(), &dir, &held).unwrap();
+    drop(held);
+
+    f.assert_original();
+    assert!(!f.ctx().game().join("buffbot").exists());
+    assert_eq!(
+        entries(&dir),
+        ["affected", "prepared.json", "restoring.json"]
+    );
+    assert_eq!(tree(&other), elsewhere);
+}
+
+/// Writing an update file creates only missing folders, writes into an existing file, refuses
+/// anything else in its place, and stays in the held folders once a link above points elsewhere.
+#[cfg(windows)]
+#[test]
+fn update_files_are_written_only_into_the_held_game() {
+    let f = Fixture::new();
+    let (dir, _) = f.prepare(1);
+    let game = f.ctx().game();
+    let other = f._temp.path().join("other");
+    let held = hold_then_repoint(&f, &dir, &other);
+    let elsewhere = tree(&other);
+    // A link where the mod folder belongs leads outside.
+    let outside = f._temp.path().join("outside");
+    fs::create_dir(&outside).unwrap();
+    junction(
+        &f._temp.path().join("managed").join("game").join("buffbot"),
+        &outside,
+    );
+
+    transaction::write_existing(&held, "override/bfbotscn.lua", b"new code").unwrap();
+    transaction::write_existing(&held, "override/bfbot_presets/new/preset.json", b"preset")
+        .unwrap();
+    for (name, refused_at) in [
+        ("buffbot/setup-buffbot.tp2", "buffbot"),
+        ("override/bfbotscn.lua/inner.lua", "bfbotscn.lua"),
+        ("override", "override"),
+    ] {
+        let error = refused(transaction::write_existing(&held, name, b"refused"));
+        assert!(
+            error.contains("Linked or unexpected entry") && error.ends_with(refused_at),
+            "{name}: {error}"
+        );
+    }
+    drop(held);
+
+    assert_eq!(
+        fs::read(game.join("override/bfbotscn.lua")).unwrap(),
+        b"new code"
+    );
+    assert_eq!(
+        fs::read(game.join("override/bfbot_presets/new/preset.json")).unwrap(),
+        b"preset"
+    );
+    assert_eq!(entries(&outside), Vec::<String>::new());
+    assert_eq!(entries(&dir), ["affected", "prepared.json"]);
+    assert_eq!(tree(&other), elsewhere);
+}
+
+/// A link anywhere from the installation down to an entry being restored or removed is
+/// refused, and nothing is read or written through it.
+#[cfg(windows)]
+#[test]
+fn restoring_an_update_refuses_a_link_at_every_level_without_going_through_it() {
+    for (level, message) in [
+        ("game", "Linked or unexpected entry"),
+        (".chriz", "Linked or unexpected entry"),
+        ("{record}/affected", "Linked or unexpected entry"),
+        ("{record}/affected/override", "Linked or unexpected entry"),
+        ("game/override", "Linked or unexpected entry"),
+        ("game/override/bfbot_presets", "Linked or unexpected entry"),
+        ("game/lang/en_us", "Linked or unexpected entry"),
+        ("game/weidu.log", "Linked or unexpected entry"),
+        ("game/buffbot", "Update folder changed."),
+    ] {
+        let f = Fixture::new();
+        let (dir, p) = f.prepare(1);
+        f.change("buffbot/setup-buffbot.tp2", b"synthetic new source");
+        restoring(&f, &dir, &p);
+        let record = dir
+            .strip_prefix(&f.record.managed_root)
+            .unwrap()
+            .to_string_lossy()
+            .replace('\\', "/");
+        let linked = level
+            .replace("{record}", &record)
+            .split('/')
+            .fold(f._temp.path().join("managed"), |path, part| path.join(part));
+        // What was there moves outside, where a link in its place now leads.
+        let outside = f._temp.path().join("outside");
+        if linked.is_dir() {
+            fs::rename(&linked, &outside).unwrap();
+        } else {
+            fs::create_dir(&outside).unwrap();
+            fs::rename(&linked, outside.join(linked.file_name().unwrap())).unwrap();
+        }
+        junction(&linked, &outside);
+        let before = tree(&outside);
+
+        let error = refused(
+            files::hold(&f.record.managed_root, &dir)
+                .and_then(|held| transaction::put_back_fixture(&f.ctx(), &dir, &held)),
+        );
+
+        assert!(error.contains(message), "{level}: {error}");
+        assert_eq!(tree(&outside), before, "{level}");
+    }
 }
 
 #[test]

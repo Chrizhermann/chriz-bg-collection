@@ -76,6 +76,11 @@ Cross-repository status. Component detail stays in the sections below and in the
   Cloud forms (320): 75% stays the target for immunity, not a cap (decided 2026-10-20).
   A lab check on 2.7.3.0 is running; the release and the CEBG pin need Christopher's
   approval.
+- Installer link safety: patch restore, mod upgrades and uninstall now read and write
+  through held folder handles too (PR #17, in review; approved for the next CEBG release
+  on 2026-10-23). The ancestor checks above an installation stay as they are: the planned
+  OneDrive classification is dropped (Christopher, 2026-10-19), because Windows shows
+  OneDrive's placeholders to the installer as plain folders and files.
 
 **Ready to start**
 
@@ -109,11 +114,9 @@ Cross-repository status. Component detail stays in the sections below and in the
   (chapter-by-chapter XP caps, experimental alternative to `651` on top of `650`). `652`
   shipped with Christopher's 2026-10-18 values (Ch. 1-2 16,000 through ToB Ch. 22
   8,900,000). They are catalogued with open Decisions and are in no run.
-- Installer link safety: configuration files and the EET/Infinity UI hooks now read and
-  write through held folder handles (`engine/src/held_folder.rs`). Other writers into
-  staged or installed games still check a path and then write by path, among them patch
-  restore, mod upgrades, uninstall, staging publication and mod materialization (inventory
-  in PR #16). Moving them over waits for Christopher's go.
+- Installer link safety, remaining writers: staging publication, mod materialization and
+  the WeiDU setup copy, then Radar and the `.chriz` state writers, still check a path and
+  then write by path (inventory in PR #16). Moving them over waits for Christopher's go.
 - The [curation queue](#curation-decisions-still-in-chriss-review-queue) at the end of this file.
 
 **Deferred by decision**

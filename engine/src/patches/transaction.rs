@@ -5,6 +5,7 @@ use crate::{
         ArtifactCache, DownloadRequest,
     },
     events::ConsoleSink,
+    held_folder::Existing,
     lock::TargetLock,
     weidu::{
         invocation::{Invocation, VerifiedWeidu},
@@ -13,7 +14,6 @@ use crate::{
 };
 use std::{
     fs::OpenOptions,
-    io::Write,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -589,14 +589,57 @@ pub(super) fn run_prepared_fixture(
 ) -> Result<(), String> {
     apply_inner(ctx, dir, tool, &load_prepared(ctx, dir)?)
 }
-fn apply_inner(ctx: &Context<'_>, dir: &Path, tool: &Path, p: &Prepared) -> Result<(), String> {
-    for (name, _, hash) in catalog::FILES {
-        let bytes = files::read(&dir.join("payload").join(name), 65536)?;
-        if sha256_bytes(&bytes) != hash {
+/// Places a test's own adapter `payload`, which its record holds, as production apply places
+/// the pinned one.
+#[cfg(test)]
+pub(super) fn place_adapter_fixture(
+    held: &files::HeldTransaction,
+    payload: &[(&str, u64, &str)],
+) -> Result<(), String> {
+    place_adapter(held, payload)
+}
+/// Restores the record `dir` of `ctx` through `held`, as production restoration does once its
+/// checks have passed and its restoration record is written.
+#[cfg(test)]
+pub(super) fn put_back_fixture(
+    ctx: &Context<'_>,
+    dir: &Path,
+    held: &files::HeldTransaction,
+) -> Result<(), String> {
+    put_back(
+        held,
+        &load_prepared(ctx, dir)?,
+        &read_json(&dir.join("restoring.json"))?,
+    )
+}
+/// Copy the verified adapter `payload` from the record into a new adapter folder in the game.
+/// Each file is created in the held game and never replaces anything already there.
+fn place_adapter(
+    held: &files::HeldTransaction,
+    payload: &[(&str, u64, &str)],
+) -> Result<(), String> {
+    for (name, _, hash) in payload {
+        let bytes = files::read_held(&held.record, &format!("payload/{name}"), 65536)?;
+        if sha256_bytes(&bytes) != *hash {
             return Err("Adapter identity changed.".into());
         }
-        files::create(&ctx.game().join(catalog::ADAPTER).join(name), &bytes)?;
+        let (folders, last) = files::split_relative(name)?;
+        let folder = held
+            .game
+            .open_or_create_below(std::iter::once(catalog::ADAPTER).chain(folders))
+            .map_err(files::held)?;
+        folder
+            .write_file(last, &bytes, Existing::Refuse)
+            .map_err(files::held)?;
     }
+    Ok(())
+}
+fn apply_inner(ctx: &Context<'_>, dir: &Path, tool: &Path, p: &Prepared) -> Result<(), String> {
+    // The folders are no longer held once WeiDU runs.
+    place_adapter(
+        &files::hold(&ctx.record.managed_root, dir)?,
+        &catalog::FILES,
+    )?;
     VerifiedWeidu::verify(tool, catalog::TOOL_HASH).map_err(err)?;
     // Deny write/delete replacement of the executable while the runner owns it.
     let mut options = OpenOptions::new();
@@ -777,43 +820,35 @@ fn restore_inner(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result<(), String
         )?;
     }
     restorable(ctx, dir)?;
-    for name in p.backups.keys() {
-        let target = ctx.game().join(name);
-        if target.exists() {
-            files::regular(&target)?;
-        } else {
-            files::direct(target.parent().unwrap())?;
-        }
-        let bytes = files::read(&dir.join("affected").join(name), 16 * 1024 * 1024)?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(target)
-            .map_err(err)?;
-        file.write_all(&bytes)
-            .and_then(|_| file.sync_all())
-            .map_err(err)?;
-    }
     let r: Restoring = read_json(&dir.join("restoring.json"))?;
-    let mut created = r.removable.keys().cloned().collect::<Vec<_>>();
-    created.sort_by_key(|n| std::cmp::Reverse(n.len()));
-    for name in created {
-        let target = ctx.game().join(&name);
-        if !target.exists() {
-            continue;
-        }
-        files::direct(&target)?;
-        if r.removable[&name].is_none() {
-            fs::remove_dir(target).map_err(err)?;
-        } else {
-            files::regular(&target)?;
-            fs::remove_file(target).map_err(err)?;
-        }
-    }
-    unchanged_hashes(&ctx.game(), &p.plan.hashes)?;
+    put_back(&files::hold(&ctx.record.managed_root, dir)?, &p, &r)?;
     files::json_new(
         &dir.join("restored.json"),
         &files::hash(&dir.join("prepared.json"))?,
     )
+}
+/// Put the affected files back from their backups and remove what the patch created, all
+/// through the held folders. Each restored file is written into the patched one, as before.
+fn put_back(held: &files::HeldTransaction, p: &Prepared, r: &Restoring) -> Result<(), String> {
+    for (name, expected) in &p.backups {
+        let bytes = files::read_held(&held.record, &format!("affected/{name}"), 16 * 1024 * 1024)?;
+        if sha256_bytes(&bytes) != *expected {
+            return Err("Backup hash mismatch.".into());
+        }
+        // An affected file goes back only into a folder that is still there.
+        let (folders, last) = files::split_relative(name)?;
+        let folder = held.game.open_below(folders).map_err(files::held)?;
+        files::write_held(&folder, last, &bytes)?;
+    }
+    let mut created = r.removable.iter().collect::<Vec<_>>();
+    created.sort_by_key(|(name, _)| std::cmp::Reverse(name.len()));
+    for (name, hash) in created {
+        files::remove_created(
+            &held.game,
+            name,
+            hash.as_deref(),
+            "Patch-owned file changed during restoration.",
+        )?;
+    }
+    files::verify_held_hashes(&held.game, &p.plan.hashes)
 }
