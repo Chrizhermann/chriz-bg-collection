@@ -382,7 +382,7 @@ pub(super) fn check_restore(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result
         .filter(|(n, _)| !buffbot::writable(n) && !buffbot::runtime_mutable(n))
         .map(|(n, h)| (n.clone(), h.clone()))
         .collect();
-    verify_hashes(&ctx.game(), &guard, false)?;
+    verify_guards(&ctx.game(), &guard)?;
     let now = files::inventory(&ctx.game(), false)?;
     if undo {
         let a: Applied = read_json(&dir.join("applied.json"))?;
@@ -410,6 +410,25 @@ pub(super) fn check_restore(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result
                 "Files outside the update changed; automatic restoration needs investigation."
                     .into(),
             );
+        }
+    }
+    Ok(())
+}
+/// Like [`verify_hashes`] for the files an update relies on but never writes, except that
+/// `infinityloader.ini` may differ in its game-log setting alone: CEBG turns the game log for
+/// crash reports on and off there, and that never touches what the update relies on.
+fn verify_guards(game: &Path, hashes: &BTreeMap<String, String>) -> Result<(), String> {
+    for (name, hash) in hashes {
+        let path = game.join(name);
+        files::regular(&path)?;
+        if files::hash(&path)? != *hash
+            && !(name.eq_ignore_ascii_case("infinityloader.ini")
+                && crate::game_log::unchanged_apart_from_the_setting(
+                    &files::read(&path, crate::game_log::INI_LIMIT)?,
+                    hash,
+                ))
+        {
+            return Err(format!("File changed: {name}"));
         }
     }
     Ok(())

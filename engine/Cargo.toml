@@ -59,3 +59,7 @@ windows-sys = { version = "0.61", features = [
 minisign = "0.9.1"
 tiny_http = "0.12"
 sevenz-rust2 = { version = "0.22.2", default-features = false, features = ["compress", "util"] }
+
+[target.'cfg(windows)'.dev-dependencies]
+# The loader-settings tests compare the parser with Windows' own reading of InfinityLoader.ini.
+windows-sys = { version = "0.61", features = ["Win32_System_WindowsProgramming"] }

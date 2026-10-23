@@ -33,7 +33,8 @@ import type { OperationProgress } from "./contracts";
 import type { InputValue } from "./contracts";
 import { installationNameError } from "./components/installation-name";
 import type { ManualBreakpoint, ManualCheckpointStatus } from "./contracts";
-import type { LaunchInstallResult } from "./contracts";
+import type { GameLogStatus, LaunchInstallResult } from "./contracts";
+import type { GameLogView } from "./components/game-log";
 import { RadarLaunchPreferences } from "./radar-launch-preference";
 
 export interface AppHandle {
@@ -140,6 +141,11 @@ class AppController implements AppHandle {
   readonly #radarLaunchPreferences = new RadarLaunchPreferences();
   readonly #launchPending = new Set<string>();
   readonly #launchFeedback = new Map<string, LaunchInstallResult>();
+  // The game log in the collapsed Troubleshooting section: read only when the player opens it.
+  readonly #gameLogStatus = new Map<string, GameLogStatus>();
+  readonly #gameLogBusy = new Set<string>();
+  readonly #gameLogErrors = new Map<string, NonNullable<GameLogView["error"]>>();
+  #troubleshootingOpen = false;
   #logRenderTimer: number | null = null;
   #removalPreview: InstallationRemovalPreview | null = null;
   #removalBusy = false;
@@ -1328,6 +1334,64 @@ class AppController implements AppHandle {
     }
   }
 
+  #toggleTroubleshooting(installId: string, open: boolean): void {
+    if (open === this.#troubleshootingOpen) return;
+    this.#troubleshootingOpen = open;
+    if (open) void this.#gameLogOperation(installId, undefined, "troubleshooting");
+    else this.#render("troubleshooting");
+  }
+
+  /**
+   * Check the game log of one installation, or turn it on or off when `enabled` is given. Focus
+   * returns to the control that started it, which is disabled meanwhile, unless another
+   * installation is shown by then.
+   */
+  async #gameLogOperation(installId: string, enabled?: boolean, focusTarget = this.#focusedId()): Promise<void> {
+    const { gameLogStatus, setGameLog } = this.backend;
+    if (this.#gameLogBusy.has(installId) || !gameLogStatus || !setGameLog) return;
+    this.#gameLogBusy.add(installId);
+    this.#render(focusTarget);
+    try {
+      const status = enabled === undefined
+        ? await gameLogStatus.call(this.backend, installId)
+        : await setGameLog.call(this.backend, installId, enabled);
+      this.#gameLogStatus.set(installId, status);
+      this.#gameLogErrors.delete(installId);
+    } catch (error: unknown) {
+      const failure = error instanceof BackendCommandError ? error : null;
+      this.#gameLogErrors.set(installId, {
+        message: failure?.message ?? (enabled === undefined ? "The game log couldn't be checked." : "The game log setting wasn't changed."),
+        recoveryAction: failure?.recoveryAction ?? "Try again.",
+        technicalDetail: failure?.technicalDetail ?? (error instanceof Error ? error.message : String(error)),
+      });
+    } finally {
+      this.#gameLogBusy.delete(installId);
+      this.#render(this.#installId === installId ? focusTarget : this.#focusedId());
+    }
+  }
+
+  #focusedId(): string | undefined {
+    const active = document.activeElement;
+    return active instanceof HTMLElement && this.root.contains(active) && active.id ? active.id : undefined;
+  }
+
+  #gameLogView(installation: ManagedInstallation | undefined): GameLogView | null {
+    if (installation === undefined || !installation.available || !this.backend.gameLogStatus || !this.backend.setGameLog) return null;
+    return {
+      open: this.#troubleshootingOpen,
+      status: this.#gameLogStatus.get(installation.id) ?? null,
+      busy: this.#gameLogBusy.has(installation.id),
+      error: this.#gameLogErrors.get(installation.id) ?? null,
+      blockedReason: installation.patchRecoveryNeeded
+        ? "Finish patch recovery in Updates before changing the game log."
+        : this.#launchPending.has(installation.id)
+          ? "Wait until the game has started."
+          : this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy
+            ? "Wait until the current installation task has finished."
+            : null,
+    };
+  }
+
   async #openInstallFolder(installId: string): Promise<void> {
     await this.backend.openInstallFolder(installId);
   }
@@ -1417,6 +1481,7 @@ class AppController implements AppHandle {
   #selectManagedInstallation(installId: string): void {
     if (!this.#installations.some((installation) => installation.id === installId)) return;
     this.#installId = installId;
+    this.#troubleshootingOpen = false;
     rememberInstallId(installId);
     this.#render();
   }
@@ -1659,6 +1724,11 @@ class AppController implements AppHandle {
         remove: (installId) => safely(() => this.#previewInstallationRemoval(installId)),
         rename: this.backend.renameInstallation ? (installId, name) => this.#renameInstallation(installId, name) : undefined,
         removalDisabled: this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy,
+        gameLog: {
+          toggle: (installId, open) => this.#toggleTroubleshooting(installId, open),
+          set: (installId, enabled) => this.#gameLogOperation(installId, enabled),
+          refresh: (installId) => this.#gameLogOperation(installId),
+        },
       },
       this.#shortcutFeedback,
       this.#addonFeedback,
@@ -1667,6 +1737,7 @@ class AppController implements AppHandle {
         pending: this.#installId !== null && this.#launchPending.has(this.#installId),
         feedback: this.#installId === null ? undefined : this.#launchFeedback.get(this.#installId),
       },
+      this.#gameLogView(this.#installations.find((installation) => installation.id === this.#installId)),
     );
     let content: HTMLElement;
     switch (this.#state.route) {

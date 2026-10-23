@@ -15,8 +15,9 @@ function installation(id = "one", overrides: Partial<ManagedInstallation> = {}):
 
 function result(installId: string, state: LaunchInstallResult["radar"]["state"], detail: string | null = null,
   technicalDetail: string | null = null,
-  gameSettings: LaunchInstallResult["gameSettings"] = { state: "unchanged", technicalDetail: null }): LaunchInstallResult {
-  return { installId, radar: { state, detail, technicalDetail }, gameSettings };
+  gameSettings: LaunchInstallResult["gameSettings"] = { state: "unchanged", technicalDetail: null },
+  gameLog: LaunchInstallResult["gameLog"] = { state: "not-enabled", technicalDetail: null }): LaunchInstallResult {
+  return { installId, radar: { state, detail, technicalDetail }, gameSettings, gameLog };
 }
 
 function deferred<T>() {

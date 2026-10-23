@@ -45,6 +45,13 @@ published.
   data was still arriving, so EET or Infinity UI could not be downloaded below
   roughly 60 Mbit/s. A download is now retried only when it actually stalls: when
   no data has arrived for a minute.
+- **The game can write its own log for crash reports.** Open **Troubleshooting**
+  at the end of an installation on the home screen and check **Write a game log
+  for crash reports**. It works for existing installations without reinstalling,
+  takes effect at the next game start and turns off the same way; close the game
+  before changing it. The game starts a new log each time, so **Play** first keeps
+  the last session's log as `InfinityLoader-previous.log`. The section shows where
+  the log, that copy and the game's crash reports are, and which files to send.
 
 ## Collection changelog
 
@@ -247,3 +254,8 @@ existing games and saves are unchanged.
 - **EEex Remote Console v0.2.1** is a tag without GitHub release assets, like
   v0.2.0, so the pin is GitHub's commit archive of the tag commit. Its `START_SP` fix
   passed the README checklist on EET 2.7.3.0 with EEex v1.3.1 in the October 18 lab.
+- **The game-log switch** is tested against synthetic game folders, against
+  Windows' own reading of the loader settings, and against copies of two real
+  loader settings files, as EEex v1.3.1 ships it and from a played game; no game
+  was started with it. Check it once in a lab before the release (see
+  `FOLLOW_UPS.md`).

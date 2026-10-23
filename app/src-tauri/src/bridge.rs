@@ -40,8 +40,12 @@ use crate::updates::{
     UpdateCenterResponse,
 };
 
+mod game_log;
 mod game_settings;
 mod radar_launch;
+pub use game_log::{
+    GameLogFileResponse, GameLogLaunchResponse, GameLogLaunchState, GameLogStatusResponse,
+};
 pub use game_settings::{GameSettingsResponse, GameSettingsState};
 pub use radar_launch::{
     LaunchInstallResponse, RadarLaunchResponse, RadarLaunchState, RadarProcessOutcome,
@@ -1397,6 +1401,10 @@ impl NativeBridge {
         // game reads its profile. Playing never depends on it.
         let game_settings =
             GameSettingsResponse::from_repair(self.engine.repair_profile_settings(&record));
+        // The game empties its log when it starts, so the last session's log is kept first.
+        let game_log = GameLogLaunchResponse::from_kept(bg_engine::game_log::keep_previous(
+            &record.managed_root,
+        ));
         self.system
             .launch(&record.launch_path, working_directory)
             .map_err(|error| {
@@ -1421,6 +1429,7 @@ impl NativeBridge {
             install_id: install_id.to_owned(),
             radar,
             game_settings,
+            game_log,
         })
     }
 

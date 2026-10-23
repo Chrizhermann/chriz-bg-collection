@@ -97,10 +97,6 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Remaining compatibility follow-ups from the October 8 owner audits
   (`docs/audits/2026-10-08-*.md` in BG Rebalance): the Modpack and SoD items and the
   forks audit, after the sessions above land.
-- Installer: a hidden setting that turns on the game log for crash diagnosis
-  (InfinityLoader's `LogFile`), requested on 2026-10-18. The loader overwrites the log on
-  every start, so the feature has to keep the previous session's log; Windows crash dumps
-  are the other half of the evidence.
 
 **Waiting for Christopher**
 
@@ -312,6 +308,10 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   fix in the pinned v1.10.1 ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
   was checked in a lab through the engine's text object only; nobody has seen the notice
   on screen in a real combat stop yet.
+- [ ] Game-log switch (see Done): no game has started with it yet. In a lab, turn it on
+  in CEBG, start and quit the game twice with **Play**, and check that
+  `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first
+  session and that the loader shows no log warning.
 - [ ] Visually verify the Evandra portrait override in game.
 
 ## Conditional/future feature gates
@@ -363,6 +363,31 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   as a default Wizard Slayer.
 
 ## Done since 2026-09-04
+
+Done on 2026-10-23 on `claude/game-log-switch`
+([PR #30](https://github.com/Chrizhermann/chriz-bg-collection/pull/30)):
+
+- Installer: the hidden game-log switch for crash diagnosis (requested on 2026-10-17,
+  confirmed for the next release on 2026-10-23).
+  **Troubleshooting** at the end of an installation on the home screen stays closed
+  and reads nothing until opened; **Write a game log for crash reports** sets
+  InfinityLoader's `LogFile` in that installation's `InfinityLoader.ini` to
+  `InfinityLoader.log` or back to blank, changing no other byte, through held folder
+  handles and only while no program from the game folder runs. Before each **Play**,
+  CEBG keeps the last session's log as `InfinityLoader-previous.log` (its last 64 MiB at
+  most); a failure is reported and never blocks the game. The section shows where the
+  log, that copy and the crash reports (`InfinityLoader_Crash`) are and which files to
+  send. Turning the log on or off keeps a BuffBot update's Undo available. Evidence:
+  engine tests in `engine/src/game_log.rs` and `engine/src/mod_upgrades/tests.rs`,
+  command tests in `app/src-tauri/tests/command_contract.rs` and UI tests in
+  `app/tests/game-log.test.ts`; user help in [troubleshooting](../../troubleshooting.md).
+  A Windows test compares the settings parser with `GetPrivateProfileStringW` itself on
+  36 edge cases (line endings, section names, byte order mark, quotes, duplicates). The
+  opt-in engine test `real_loader_settings_change_only_in_their_log_file_line` switched
+  copies of two real `InfinityLoader.ini` files, as EEex v1.3.1 ships it (log off) and
+  from a played game (log on), and back: only their `LogFile` line changed, and
+  switching back gave the same bytes. The lab check with a real game start is under
+  Live/runtime acceptance.
 
 Done on 2026-10-18 in the EEex v1.3.1 runtime lab (EET over BG2:EE 2.7.3.0, full recipe,
 new BG1 game with a throwaway character, hidden quiet launches; branch

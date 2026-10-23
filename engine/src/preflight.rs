@@ -753,6 +753,16 @@ fn probe_existing_tlks(
         })
 }
 
+/// Refuses while a program started from inside `folder` runs, such as the game, its loader or an
+/// overlay kept in the game folder.
+pub(crate) fn check_no_program_running_under(
+    folder: &Path,
+    host: &dyn PreflightHost,
+) -> Result<(), PreflightError> {
+    let target = validate_target_directory(folder)?;
+    check_processes_under(&target, host)
+}
+
 fn check_processes_under(target: &Path, host: &dyn PreflightHost) -> Result<(), PreflightError> {
     let running = host
         .running_executable_paths()

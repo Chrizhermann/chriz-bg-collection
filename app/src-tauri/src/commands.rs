@@ -14,9 +14,10 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 use crate::bridge::{
     BootstrapResponse, DesktopShortcutResponse, DestinationEvaluationResponse,
     DiagnosticsExportResponse, EvaluateBuildResponse, FrozenReviewResponse, GameCandidateResponse,
-    GameDiscoveryResponse, InstallationDefaultsResponse, LaunchInstallResponse,
-    ManagedInstallationResponse, ManualArchiveResponse, ManualDownloadRequirementResponse,
-    NativeBridge, RunEventEnvelope, RunSnapshotResponse, StartBuildResponse,
+    GameDiscoveryResponse, GameLogStatusResponse, InstallationDefaultsResponse,
+    LaunchInstallResponse, ManagedInstallationResponse, ManualArchiveResponse,
+    ManualDownloadRequirementResponse, NativeBridge, RunEventEnvelope, RunSnapshotResponse,
+    StartBuildResponse,
 };
 use crate::error::CommandError;
 use crate::updates::UpdateCenterResponse;
@@ -536,6 +537,33 @@ pub async fn launch_install(
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .clone();
     background(move || bridge.launch_install(&install_id, start_radar.unwrap_or(false))).await
+}
+
+#[tauri::command]
+pub async fn game_log_status(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<GameLogStatusResponse, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.game_log_status(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn set_game_log(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    enabled: bool,
+) -> Result<GameLogStatusResponse, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.set_game_log(&install_id, enabled)).await
 }
 
 #[tauri::command]

@@ -63,6 +63,8 @@ pub fn run() -> tauri::Result<()> {
             commands::remove_installation,
             commands::export_diagnostics,
             commands::launch_install,
+            commands::game_log_status,
+            commands::set_game_log,
             commands::install_radar,
             commands::open_install_folder,
             commands::create_desktop_shortcut,

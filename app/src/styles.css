@@ -1728,14 +1728,16 @@ input[type="search"] {
   margin-block: 0.25rem;
 }
 
-.radar-launch-choice {
+.radar-launch-choice,
+.game-log-choice {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-height: 44px;
 }
 
-.radar-launch-choice input {
+.radar-launch-choice input,
+.game-log-choice input {
   flex: 0 0 auto;
   width: 1.1rem;
   height: 1.1rem;
@@ -1743,9 +1745,21 @@ input[type="search"] {
   accent-color: var(--teal);
 }
 
-.radar-launch-option p {
+.radar-launch-option p,
+.game-log-option p {
   margin-block: 0.35rem 0;
   font-size: 0.85rem;
+}
+
+.troubleshooting > p,
+.troubleshooting > .game-log-option,
+.troubleshooting > .shortcut-feedback,
+.troubleshooting > .game-log-files {
+  margin-block: 0 0.75rem;
+}
+
+.game-log-files dd span {
+  display: block;
 }
 
 .installation-metadata {

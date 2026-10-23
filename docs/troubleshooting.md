@@ -136,6 +136,28 @@ for example because parts of it were deleted or renamed by hand, CEBG never
 deletes anything in it. **Remove from list** then removes only the entry and shows
 why. Delete the folder yourself afterwards if you are sure you no longer need it.
 
+## The game crashes or freezes
+
+The next build adds a **Troubleshooting** section at the end of each installation
+on the home screen. It stays closed and changes nothing until you open it. There,
+**Write a game log for crash reports** makes the game write `InfinityLoader.log`
+in the installation's `game` folder from its next start. It is off initially,
+works for existing installations without reinstalling, and turns off the same way.
+Close the game before changing it; CEBG changes only the `LogFile` setting in the
+`game` folder's `InfinityLoader.ini`.
+
+The game starts a new log every time it starts. When you press **Play**, CEBG
+first keeps the log of the previous session as `InfinityLoader-previous.log`, so
+it survives one restart after a crash or freeze. Starting `InfinityLoader.exe`
+directly skips that copy.
+
+When the game crashes, it saves a report in the `InfinityLoader_Crash` folder
+inside the `game` folder: two dumps, `_small.dmp` and `_big.dmp`, and a `.log`
+file, numbered per crash. With the game log on, that `.log` file is a copy of the
+crashed session's log, even after a start outside CEBG; without it, there is at
+most a short Lua traceback. The Troubleshooting section shows where these files
+are and how many crash reports there are.
+
 ## What to send when asking for help
 
 - Your CEBG version and the step/action that failed.
@@ -143,6 +165,10 @@ why. Delete the folder yourself afterwards if you are sure you no longer need it
 - The diagnostics export, if available.
 - Whether the destination exists and which drives hold the clean games and the
   modded copy. Mention manual changes to the modded installation.
+- For a game crash: that crash's `.log` and `_small.dmp` files from
+  `InfinityLoader_Crash`. For a freeze, send `InfinityLoader.log`, or
+  `InfinityLoader-previous.log` if you have started the game again since. The
+  `_big.dmp` files take gigabytes; send one only when asked.
 
 Exports stay local until you share them. Review the ZIP first; do not include
 passwords, a whole game folder or saved games unless specifically needed.

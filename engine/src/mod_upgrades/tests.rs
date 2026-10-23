@@ -88,7 +88,7 @@ impl Fixture {
                 !s.directory
                     && (buffbot::writable(n)
                         || buffbot::runtime_mutable(n)
-                        || n.as_str() == "engine.lua")
+                        || ["engine.lua", "infinityloader.ini"].contains(&n.as_str()))
             })
             .map(|(n, _)| (n.clone(), files::hash(&ctx.game().join(n)).unwrap()))
             .collect();
@@ -238,6 +238,41 @@ fn incomplete_preparation_without_game_writes_does_not_block_play() {
         b"partial completion with missing evidence",
     );
     assert!(launch_guard(&f.record.managed_root).is_err());
+}
+/// The loader settings are relied on but never written by the update. Turning the game log on
+/// or off for crash reports changes only its line there and keeps Undo available; any other
+/// change still blocks it.
+#[test]
+fn undo_accepts_a_game_log_switch_but_no_other_loader_change() {
+    let ini = |log: &str, lua: &str| {
+        format!("[General]\r\nExeNames=Baldur.exe\r\nLogFile={log}\r\nLuaLibrary={lua}\r\n")
+    };
+    let f = Fixture::new();
+    f.change("infinityloader.ini", ini("", "lua51.dll").as_bytes());
+    let (dir, p) = f.prepare(1);
+    assert!(p.plan.hashes.contains_key("infinityloader.ini"));
+    finish(&f.ctx(), &dir, &p).unwrap();
+
+    f.change("infinityloader.ini", ini("", "").as_bytes());
+    assert_eq!(
+        transaction::check_restore(&f.ctx(), &dir, true).unwrap_err(),
+        "File changed: infinityloader.ini"
+    );
+    f.change(
+        "infinityloader.ini",
+        ini("InfinityLoader.log", "").as_bytes(),
+    );
+    assert!(transaction::check_restore(&f.ctx(), &dir, true).is_err());
+    f.change(
+        "infinityloader.ini",
+        ini("InfinityLoader.log", "lua51.dll").as_bytes(),
+    );
+    restore_files(&f.ctx(), &dir, true).unwrap();
+    f.assert_original();
+    assert_eq!(
+        fs::read(f.ctx().game().join("infinityloader.ini")).unwrap(),
+        ini("InfinityLoader.log", "lua51.dll").as_bytes()
+    );
 }
 #[test]
 fn tail_rejects_later_mods_wrong_versions_languages_or_order() {

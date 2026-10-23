@@ -4,6 +4,7 @@ pub mod diagnostics;
 pub mod digest;
 pub mod error;
 pub mod events;
+pub mod game_log;
 pub mod games;
 mod held_folder;
 pub mod installed_updates;
