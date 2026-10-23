@@ -1,6 +1,7 @@
 import type { LaunchInstallResult, ManagedInstallation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { errorDetails } from "../components/error-details";
+import { troubleshootingSection, type GameLogView } from "../components/game-log";
 import { installationNameEditor } from "../components/installation-name";
 
 export interface HomeActions {
@@ -15,6 +16,12 @@ export interface HomeActions {
   readonly remove?: (installId: string) => void | Promise<void>;
   readonly removalDisabled?: boolean;
   readonly rename?: (installId: string, name: string) => Promise<void>;
+  /** The game's own log for crash reports, in the collapsed Troubleshooting section. */
+  readonly gameLog?: {
+    readonly toggle: (installId: string, open: boolean) => void;
+    readonly set: (installId: string, enabled: boolean) => void | Promise<void>;
+    readonly refresh: (installId: string) => void | Promise<void>;
+  };
 }
 
 export interface ShortcutFeedback {
@@ -155,6 +162,7 @@ export function homeScreen(
   shortcutFeedback: ShortcutFeedback | null = null,
   addonFeedback: AddonFeedback | null = null,
   launchState: LaunchState = { startRadar: false, pending: false },
+  gameLog: GameLogView | null = null,
 ): HTMLElement {
   const page = element("div", "screen-stack launcher-screen");
   if (selected === null) {
@@ -279,6 +287,17 @@ export function homeScreen(
       if (gameSettings.technicalDetail) settings.append(errorDetails(gameSettings.technicalDetail));
       card.append(settings);
     }
+    const { gameLog: keptLog } = launchState.feedback;
+    if (keptLog.state === "failed") {
+      const log = element("div", "shortcut-feedback warning");
+      log.setAttribute("role", "alert");
+      log.append(
+        element("strong", undefined, "The log of your last game session couldn't be kept."),
+        element("p", undefined, "The game started anyway. Before the next start, close any program that has the game's log files open, such as a game that was still running."),
+      );
+      if (keptLog.technicalDetail) log.append(errorDetails(keptLog.technicalDetail));
+      card.append(log);
+    }
   }
   if (actions.remove) {
     const removal = actionButton("Delete / remove installation…", () => actions.remove!(selected.id), "danger-quiet");
@@ -301,6 +320,14 @@ export function homeScreen(
   const mods = installedMods(selected);
   if (mods !== null) card.append(mods);
   if (selected.available && !patchRecoveryNeeded) card.append(firstPlayGuide(selected));
+  const gameLogActions = actions.gameLog;
+  if (selected.available && gameLog !== null && gameLogActions !== undefined) {
+    card.append(troubleshootingSection(gameLog, {
+      toggle: (open) => gameLogActions.toggle(selected.id, open),
+      set: (enabled) => gameLogActions.set(selected.id, enabled),
+      refresh: () => gameLogActions.refresh(selected.id),
+    }));
+  }
   page.append(card);
   page.append(screenActions(null, actionButton("New installation", actions.begin, "quiet")));
   return page;

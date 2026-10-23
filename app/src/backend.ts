@@ -14,6 +14,8 @@ import type {
   Freshness,
   GameCandidate,
   GameDiscovery,
+  GameLogFile,
+  GameLogStatus,
   GameRole,
   InstallationDefaults,
   InstallationRemovalPreview,
@@ -81,6 +83,10 @@ export interface Backend {
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
   removeInstallation(installId: string, confirmationToken: string): Promise<void>;
   launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult>;
+  /** Reads only: whether the game writes its log for crash reports, and where the evidence is. */
+  gameLogStatus?(installId: string): Promise<GameLogStatus>;
+  /** Turns the game log on or off for the next game start. */
+  setGameLog?(installId: string, enabled: boolean): Promise<GameLogStatus>;
   openInstallFolder(installId: string): Promise<void>;
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
   installRadar(installId: string): Promise<void>;
@@ -641,6 +647,14 @@ export class NativeBackend implements Backend {
     return this.#command("launch_install", { installId, startRadar });
   }
 
+  gameLogStatus(installId: string): Promise<GameLogStatus> {
+    return this.#command("game_log_status", { installId });
+  }
+
+  setGameLog(installId: string, enabled: boolean): Promise<GameLogStatus> {
+    return this.#command("set_game_log", { installId, enabled });
+  }
+
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {
     return this.#command("preview_installation_removal", { installId });
   }
@@ -809,6 +823,8 @@ function wait(milliseconds: number): Promise<void> {
 export class FixtureBackend implements Backend {
   readonly #patches = new Map<string, PatchPreview>();
   readonly #modUpgrades = new Map<string, ModUpgradePreview>();
+  /** Installations whose game log is on. */
+  readonly #gameLogs = new Set<string>();
   #patchReviewSequence = 0;
   readonly #removedInstallations = new Set<string>();
   readonly #removalTokens = new Map<string, string>();
@@ -1005,7 +1021,28 @@ export class FixtureBackend implements Backend {
   launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult> {
     return Promise.resolve({ installId, radar: {
       state: startRadar ? "started" : "not-requested", detail: null, technicalDetail: null,
-    }, gameSettings: { state: "unchanged", technicalDetail: null } });
+    }, gameSettings: { state: "unchanged", technicalDetail: null },
+    gameLog: { state: this.#gameLogs.has(installId) ? "kept" : "not-enabled", technicalDetail: null } });
+  }
+
+  async gameLogStatus(installId: string): Promise<GameLogStatus> {
+    const installation = (await this.listManagedInstallations()).find((copy) => copy.id === installId && copy.available);
+    if (!installation) throw new Error("Unknown fixture installation.");
+    const game = `${installation.path}\\game`;
+    const enabled = this.#gameLogs.has(installId);
+    const file = (name: string, present: boolean): GameLogFile => ({
+      path: `${game}\\${name}`, state: present ? "present" : "missing", sizeBytes: present ? "1048576" : null,
+      modifiedAtMillis: present ? 1_788_451_200_000 : null, detail: null,
+    });
+    return { installId, setting: enabled ? "on" : "off", detail: null, log: file("InfinityLoader.log", enabled),
+      previousLog: file("InfinityLoader-previous.log", false), crashFolder: `${game}\\InfinityLoader_Crash`, crashReports: 0 };
+  }
+
+  async setGameLog(installId: string, enabled: boolean): Promise<GameLogStatus> {
+    await this.gameLogStatus(installId);
+    if (enabled) this.#gameLogs.add(installId);
+    else this.#gameLogs.delete(installId);
+    return this.gameLogStatus(installId);
   }
 
   async previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview> {

@@ -348,6 +348,34 @@ export interface LaunchInstallResult {
     readonly state: "unchanged" | "updated" | "failed";
     readonly technicalDetail: string | null;
   };
+  /** The last session's game log, kept before the game starts a new one; never blocks playing. */
+  readonly gameLog: {
+    readonly state: "not-enabled" | "nothing-to-keep" | "kept" | "failed";
+    readonly technicalDetail: string | null;
+  };
+}
+
+/** One file of the game log's evidence, as last seen. */
+export interface GameLogFile {
+  readonly path: string;
+  readonly state: "missing" | "present" | "not-a-file" | "unreadable";
+  /** Decimal byte counts remain strings across the native boundary. */
+  readonly sizeBytes: string | null;
+  readonly modifiedAtMillis: number | null;
+  readonly detail: string | null;
+}
+
+/** Whether the game writes its own log for crash reports, and where that evidence is. */
+export interface GameLogStatus {
+  readonly installId: string;
+  /** `other` names a log file set outside CEBG in `detail`; `unavailable` says why in `detail`. */
+  readonly setting: "off" | "on" | "other" | "unavailable";
+  readonly detail: string | null;
+  readonly log: GameLogFile;
+  readonly previousLog: GameLogFile;
+  readonly crashFolder: string;
+  /** Crashes with a report in the crash folder; null when it cannot be looked into. */
+  readonly crashReports: number | null;
 }
 
 export interface InstallationRemovalPreview {

@@ -9,6 +9,7 @@ use bg_engine::cli::{
 };
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink, StepOutcome};
+use bg_engine::game_log::GameLogSetting;
 use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameFinding, GameRole, Storefront,
 };
@@ -19,8 +20,8 @@ use bg_engine::session::{CampaignCreated, SessionEvent, SessionStore, SourceGame
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
 use chriz_bg_app_lib::bridge::{
     display_windows_path, installation_defaults, parse_startup_install_id, BridgeEngine,
-    BridgeSystem, NativeBridge, RadarLaunchState, RadarProcessOutcome, RunEventEnvelope,
-    SequencedEventSink,
+    BridgeSystem, GameLogLaunchState, NativeBridge, RadarLaunchState, RadarProcessOutcome,
+    RunEventEnvelope, SequencedEventSink,
 };
 use chriz_bg_app_lib::error::CommandError;
 use chriz_bg_app_lib::shortcut::{shortcut_file_name, ShortcutRequest};
@@ -2086,6 +2087,7 @@ fn radar_launch_opt_out_ignores_even_an_invalid_radar_installation() {
             "installId": "radar-fixture",
             "radar": {"state": "not-requested", "detail": null, "technicalDetail": null},
             "gameSettings": {"state": "unchanged", "technicalDetail": null},
+            "gameLog": {"state": "not-enabled", "technicalDetail": null},
         }),
     );
     fixture.assert_game_launched_once();
@@ -2106,6 +2108,7 @@ fn radar_launch_opt_in_starts_only_the_verified_overlay_after_the_game() {
             "installId": "radar-fixture",
             "radar": {"state": "started", "detail": null, "technicalDetail": null},
             "gameSettings": {"state": "unchanged", "technicalDetail": null},
+            "gameLog": {"state": "not-enabled", "technicalDetail": null},
         }),
     );
     fixture.assert_game_launched_once();
@@ -2260,6 +2263,127 @@ fn radar_launch_game_failure_stays_an_error_and_does_not_start_radar() {
         .unwrap_err();
     assert_eq!(error.code, "managed_launch_failed");
     assert!(fixture.system.radar_launches.lock().unwrap().is_empty());
+}
+
+/// InfinityLoader's settings as EEex installs them, shortened: the game writes no log.
+const LOADER_INI: &str = "[General]\r\nExeNames=Baldur.exe\r\nLogFile=\r\nLuaLibrary=lua51.dll\r\n";
+
+#[test]
+fn game_log_switch_changes_only_the_loader_setting_of_an_available_installation() {
+    let fixture = RadarLaunchFixture::new();
+    let game = fixture.managed.join("game");
+    let ini = game.join("InfinityLoader.ini");
+    fs::write(&ini, LOADER_INI).unwrap();
+    let display = |name: &str| display_windows_path(&game.join(name)).unwrap();
+    let missing = |name: &str| {
+        json!({"path": display(name), "state": "missing", "sizeBytes": null,
+            "modifiedAtMillis": null, "detail": null})
+    };
+
+    let status = fixture.bridge.game_log_status("radar-fixture").unwrap();
+    assert_eq!(
+        serde_json::to_value(&status).unwrap(),
+        json!({
+            "installId": "radar-fixture",
+            "setting": "off",
+            "detail": null,
+            "log": missing("InfinityLoader.log"),
+            "previousLog": missing("InfinityLoader-previous.log"),
+            "crashFolder": display("InfinityLoader_Crash"),
+            "crashReports": 0,
+        }),
+    );
+    assert!(!status.crash_folder.starts_with(r"\\?\"));
+
+    let enabled = fixture.bridge.set_game_log("radar-fixture", true).unwrap();
+    assert_eq!(enabled.setting, GameLogSetting::On);
+    assert_eq!(
+        fs::read_to_string(&ini).unwrap(),
+        LOADER_INI.replace("LogFile=", "LogFile=InfinityLoader.log")
+    );
+    let disabled = fixture.bridge.set_game_log("radar-fixture", false).unwrap();
+    assert_eq!(disabled.setting, GameLogSetting::Off);
+    assert_eq!(fs::read_to_string(&ini).unwrap(), LOADER_INI);
+
+    // Never while a build, update or removal runs, and only for a registered installation.
+    let update = fixture.bridge.begin_app_update().unwrap();
+    assert_eq!(
+        fixture
+            .bridge
+            .set_game_log("radar-fixture", true)
+            .unwrap_err()
+            .code,
+        "update_busy"
+    );
+    drop(update);
+    for error in [
+        fixture
+            .bridge
+            .set_game_log("not-a-registry-id", true)
+            .unwrap_err(),
+        fixture
+            .bridge
+            .game_log_status("not-a-registry-id")
+            .unwrap_err(),
+    ] {
+        assert_eq!(error.code, "managed_install_unknown");
+    }
+    assert_eq!(fs::read_to_string(&ini).unwrap(), LOADER_INI);
+    let mut names = fs::read_dir(&game)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect::<Vec<_>>();
+    names.sort();
+    assert_eq!(names, ["InfinityLoader.exe", "InfinityLoader.ini"]);
+}
+
+#[test]
+fn launch_keeps_the_last_game_log_first_and_never_fails_because_of_it() {
+    let fixture = RadarLaunchFixture::new();
+    let game = fixture.managed.join("game");
+    fs::write(
+        game.join("InfinityLoader.ini"),
+        LOADER_INI.replace("LogFile=", "LogFile=InfinityLoader.log"),
+    )
+    .unwrap();
+    fs::write(game.join("InfinityLoader.log"), b"last session").unwrap();
+
+    // The log is kept before Windows starts the game, so even a failed start keeps it.
+    *fixture.system.launch_error.lock().unwrap() = Some("mock game launch failure".to_owned());
+    assert_eq!(
+        fixture
+            .bridge
+            .launch_install("radar-fixture", false)
+            .unwrap_err()
+            .code,
+        "managed_launch_failed"
+    );
+    assert_eq!(
+        fs::read(game.join("InfinityLoader-previous.log")).unwrap(),
+        b"last session"
+    );
+    *fixture.system.launch_error.lock().unwrap() = None;
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", false)
+        .unwrap();
+    assert_eq!(
+        serde_json::to_value(result).unwrap()["gameLog"],
+        json!({"state": "kept", "technicalDetail": null}),
+    );
+
+    // A log that cannot be kept is reported, and the game still starts.
+    fs::remove_file(game.join("InfinityLoader-previous.log")).unwrap();
+    fs::create_dir(game.join("InfinityLoader-previous.log")).unwrap();
+    let result = fixture
+        .bridge
+        .launch_install("radar-fixture", false)
+        .unwrap();
+    assert_eq!(result.game_log.state, GameLogLaunchState::Failed);
+    let detail = result.game_log.technical_detail.unwrap();
+    assert!(detail.contains("InfinityLoader-previous.log"), "{detail}");
+    assert!(!detail.contains(r"\\?\"), "{detail}");
+    assert_eq!(fixture.system.launches.lock().unwrap().len(), 3);
 }
 
 #[test]
