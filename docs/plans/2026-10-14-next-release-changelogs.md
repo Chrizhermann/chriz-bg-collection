@@ -24,6 +24,12 @@ published.
 - **Removing an installation finishes** when its removal record cannot be
   cleaned up because another program holds it open. The installation used to
   stay listed as if removal had failed.
+- **Game fixes, the BuffBot update and removing an installation can no longer be
+  redirected by a folder link.** For these, including their Undo and backup
+  restore, CEBG now writes and deletes the game's files only through the game
+  folder it holds open, so a link swapped in meanwhile cannot lead it to files
+  outside the installation. While an installation is being removed, another
+  program can also no longer move a file out of it and have CEBG delete it there.
 - **A step whose WeiDU copy could not be prepared can be retried.** It used to
   require a fresh copy of the games.
 - **Challenge Mode can pick an option of a choice.** Switching it on now also
