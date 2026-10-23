@@ -49,6 +49,8 @@ the reference install.
   PPE replaces:
   - Rogue Rebalancing: 14 CREs (`RR#…S` portraits).
   - UB `15` NPC Portrait Restorations (optional in CEBG): 13 CREs, plus Suna Seni.
+  - BG1NPC's portrait for Drizzt (`DRIZZT`): not applicable to CEBG, where BG1NPC `160` is
+    unavailable.
   - Pai'Na (`SPPAIN`): her SoA party and dialogue portrait becomes PPE's picture of the
     vanilla Spellhold inmate; her record screen keeps `PainaL`, and her ToB CRE is not in
     PPE's table. This is the one visible party-portrait change; it is kept as PPE sets it.
