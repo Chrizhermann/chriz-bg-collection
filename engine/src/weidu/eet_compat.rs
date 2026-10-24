@@ -412,8 +412,8 @@ mod tests {
         assert_eq!(entries(&outside_lib), [MACROS]);
     }
 
-    /// Nothing above the target root is inspected. A link there, such as a cloud-files folder or
-    /// a volume mounted in a folder, is no reason to refuse, and the real file is corrected.
+    /// Nothing above the target root is inspected. A link there, such as a junction or a volume
+    /// mounted in a folder, is no reason to refuse, and the real file is corrected.
     #[cfg(windows)]
     #[test]
     fn eet_compat_patches_below_a_link_above_the_target_root() {

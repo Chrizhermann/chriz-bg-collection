@@ -383,8 +383,8 @@ mod tests {
             .contains("ambiguous"));
     }
 
-    /// Nothing above the staged root is inspected, so a link there, such as a cloud-files folder
-    /// or a volume mounted in a folder, is no reason to refuse.
+    /// Nothing above the staged root is inspected, so a link there, such as a junction or a volume
+    /// mounted in a folder, is no reason to refuse.
     #[cfg(windows)]
     #[test]
     fn discovery_accepts_a_link_above_the_staged_root() {

@@ -302,8 +302,8 @@ mod tests {
         assert_eq!(entries(&outside.join("cdtweaks")), Vec::<String>::new());
     }
 
-    /// Nothing above the target root is inspected, so a link there, such as a cloud-files folder
-    /// or a volume mounted in a folder, is no reason to refuse; the file lands in the real folder.
+    /// Nothing above the target root is inspected, so a link there, such as a junction or a volume
+    /// mounted in a folder, is no reason to refuse; the file lands in the real folder.
     #[cfg(windows)]
     #[test]
     fn places_below_a_link_above_the_target_root() {

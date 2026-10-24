@@ -8,8 +8,9 @@
 //! folder for a junction in between cannot redirect a read, a write or a removal.
 //!
 //! Nothing above the target root is inspected. Once the root is held, re-pointing a link above it
-//! no longer changes which folders the handles refer to, and a reparse point above it, such as a
-//! cloud-files folder or a volume mounted in a folder, is no reason to refuse.
+//! no longer changes which folders the handles refer to, and a link above it, such as a junction
+//! or a volume mounted in a folder, is no reason to refuse. OneDrive placeholders never look like
+//! links here: Windows shows them to ordinary programs as plain folders and files.
 
 use std::ffi::OsString;
 use std::fs::{self, Metadata};
@@ -2330,9 +2331,9 @@ pub(crate) mod tests {
         assert_eq!(fs::read(outside.join("inside.txt")).unwrap(), OTHER);
     }
 
-    /// A link above the target root, such as a cloud-files folder or a volume mounted in a
-    /// folder, is not inspected. Once the root is held, re-pointing such a link redirects every
-    /// path through it, but every read and write stays in the folders that were checked.
+    /// A link above the target root, such as a junction or a volume mounted in a folder, is not
+    /// inspected. Once the root is held, re-pointing such a link redirects every path through it,
+    /// but every read and write stays in the folders that were checked.
     #[cfg(windows)]
     #[test]
     fn works_in_the_held_folders_after_a_link_above_the_root_is_repointed() {
