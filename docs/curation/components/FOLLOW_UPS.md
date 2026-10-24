@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-23
+## Work queue at a glance — 2026-10-24
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -89,11 +89,15 @@ Cross-repository status. Component detail stays in the sections below and in the
   restart; globals survived. Next: compare the vanilla 2.7.3.0 effect-list loader with
   EEex's replacement and repeat the save/reload without EEex, on 2.6.6.0 and with a
   smaller stack. The result decides whether this blocks the v1.3.1 rollout.
-- Time Stop/Haste timing fix as a standalone EEex mod. Engine research and an observation
-  lab exist (BG Rebalance branch `wip/2026-10-17/main-checkout`,
-  `research/10-timestop-haste-engine-clocks.md` and `research/timestop-lab/`); nothing
-  has run in the game yet. The lab scripts pin EEex v1.3.0 (commit, version, tree hash,
-  WeiDU.log pattern) and refuse v1.3.1 until they are re-pinned.
+- Time Stop/Haste timing fix as a standalone EEex mod. The engine research and a disposable
+  2.7.3.0 lab on EEex v1.3.1 are on BG Rebalance branch `claude/timestop-lab-eeex-131`
+  (`research/10-timestop-haste-engine-clocks.md` and `research/timestop-lab/`), unmerged.
+  Native captures and a first correction prototype for one test actor and two test effects
+  ran there. Through Time Stop the buff kept its remaining time and the regeneration all its
+  healing; under Haste the healing kept its normal rate. Christopher closed that step on
+  2026-10-24. The next lab run takes two one-tick Haste residuals (R7, R8), attack and
+  movement rates under Haste, Improved and SR-shaped Haste, a pause during the correction,
+  consecutive stops, explicit removal and save/load.
 - Remaining compatibility follow-ups from the October 8 owner audits
   (`docs/audits/2026-10-08-*.md` in BG Rebalance): the Modpack and SoD items and the
   forks audit, after the sessions above land.
