@@ -63,6 +63,20 @@ Cross-repository status. Component detail stays in the sections below and in the
   other post-EET writers and before BuffBot. Fresh-download evidence:
   `manifest/evidence/release-intake-20261022.toml`. Still needed before the next CEBG
   release: one combined lab install (see Release gates).
+- Optional quest mods (Christopher's decisions of 2026-10-23), in both recipes on
+  `claude/optional-mods-20261022` ([PR #32](https://github.com/Chrizhermann/chriz-bg-collection/pull/32); fresh-download and native-order evidence in
+  `manifest/evidence/release-intake-20261023-quest-mods.toml`): Northern Tales of the
+  Sword Coast (upstream `master` f0ef953, not v5.0.0), Ascalon's Questpack v7.0,
+  Thalantyr Item Upgrade v4.5.1, the Icewind Dale Voice Pack 1.2.0 and Portraits
+  Portraits Everywhere (DaftHunk fork 417226ea, without `310`/`320`) are in the new
+  category "Quest mods": optional, unchecked, experimental and offered as is.
+  - BG1 Unfinished Business is now optional and unselected, like UB for BG2. NTotSC
+    `4`/`6` and BG1UB `30`/`32` are either-or; with both mods ticked, BG1UB's version is
+    kept.
+  - Black Hearts v2.05 is offered with a declared incompatibility: it is unavailable while
+    the SoD Remix is selected.
+  - Still needed: the component defaults inside the mods (see Waiting for Christopher) and
+    one combined lab install (see Release gates).
 - Hobgoblin challenge run (design with Christopher).
 - Campaign Item Randomiser (CIR): next version.
 - Vanguard Defensive Stance AI toggle: the fix shipped as Modpack `460` in alpha.13; the
@@ -114,6 +128,12 @@ Cross-repository status. Component detail stays in the sections below and in the
   (chapter-by-chapter XP caps, experimental alternative to `651` on top of `650`). `652`
   shipped with Christopher's 2026-10-18 values (Ch. 1-2 16,000 through ToB Ch. 22
   8,900,000). They are catalogued with open Decisions and are in no run.
+- Quest mods (2026-10-23): which components start selected when a quest mod is ticked.
+  Provisional: only the main component (NTotSC `0`, PPE core `0`); Ascalon's Questpack,
+  which has none, starts with the decided first variant of each pair (`2`, `5`, `10`).
+  Also open: whether ticking BG1 Unfinished Business preselects its 16 former defaults
+  (now every component starts unchecked, like UB), and whether Black Hearts may stay
+  selectable for players who untick the SoD Remix.
 - Installer link safety, remaining writers: staging publication, mod materialization and
   the WeiDU setup copy, then Radar and the `.chriz` state writers, still check a path and
   then write by path (inventory in PR #16). Moving them over waits for Christopher's go.
@@ -168,7 +188,9 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 - [ ] The release gate evaluates only the Recommended selection
   (`engine/src/release_validate.rs`). The optional post-EET runs `eeexremote-bg2` and
   `chriz-bg-modpack-campaign-xp-bg2` are not in `approved_tail_runs`, so a user who
-  enables them gets runs without tail approval. Approve or gate them.
+  enables them gets runs without tail approval. Approve or gate them. The six optional
+  quest-mod runs (2026-10-23) install before EET_end and need no tail approval, but, like
+  `eeexremote-bg2`, they have no static-test evidence record.
 - [ ] Four deferred catalog defaults (Ascension `40` / UB `19`, Warlock `0`, IWDification
   `120`, Aura) are recorded only as omission targets in `manifest/curation-map.toml`, not
   in `known-limitations.toml`.
@@ -220,6 +242,19 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
   German). Install them once together with the full Recommended selection in a lab
   before the next CEBG release, and check that the voices appear in character creation.
+- [ ] Quest mods ([NTOTSC](NTOTSC.md), [AC_QUEST](AC_QUEST.md), [BLACKHEARTS](BLACKHEARTS.md),
+  [THALAN](THALAN.md), [ZG_IWD_VOICES](ZG_IWD_VOICES.md), [PPE](PPE.md)) and the now
+  optional [BG1UB](BG1UB.md): static recipe checks only, nothing was installed. They stay
+  experimental until one combined lab install with the full Recommended selection and the
+  quest mods ticked. Open points for that lab:
+  - Icewind Dale Voice Pack on EET: probably only three of the seven "order acknowledged"
+    lines of each set play, because Graion's soundset helper uses another EET row layout.
+  - PPE: which portrait Edwina shows with Tweaks Anthology `1180` and PPE `25`; the
+    Thalantyr dialogue line that PPE's core and Thalantyr both patch; and which portraits
+    of other mods PPE's core replaces in a CEBG install (30 creatures in the reference
+    install, Pai'Na's SoA party portrait among them).
+  - Black Hearts can only be selected with the SoD Remix unticked; neither that
+    combination nor its SoD chapters have been installed.
 - [ ] [EEex](EEEX.md) options: decide whether to seed or document
   `[EEex] Uncap FPS Limit Enabled`. The installer sets no EEex options, and a played
   collection install runs with the limit off. (Clean stage, loader launch and the absence
@@ -365,6 +400,11 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   only (no memorized copy), and Kivan `198` is a kit-only Archer conversion with no
   proficiency or loadout rewrite. Sarah stays an Archer (`190`), and Shar-Teel is settled
   as a default Wizard Slayer.
+- [ ] Quest mods (2026-10-23): choose the component defaults inside
+  [NTotSC](NTOTSC.md), [Ascalon's Questpack](AC_QUEST.md) and [PPE](PPE.md) (provisional:
+  the main component, and for Ascalon's Questpack only its decided first variants),
+  whether [BG1UB](BG1UB.md)'s components start selected when it is ticked, and whether
+  [Black Hearts](BLACKHEARTS.md) stays selectable without the SoD Remix.
 
 ## Done since 2026-09-04
 

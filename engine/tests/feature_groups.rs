@@ -283,18 +283,25 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // changes, in the buffbot-bg2 run's artifact id. With v1.10.0 restored, the previous plan
     // digests return (manifest 69a7e052…, curated 34f2dae7…). Remote Console v0.2.1 is not
     // in the Recommended plan and changes no digest here.
+    // Re-pinned on October 23 for the optional quest mods (six runs, their features and
+    // preset entries) and BG1 Unfinished Business becoming optional and unselected. In both
+    // recipes the new Recommended plan equals the previous plan minus the bg1ub-bg1 run (its
+    // 16 former defaults): with BG1UB's decisions and preset entries restored, the previous
+    // plan digests return although the quest mods stay; with the quest mods removed as well,
+    // all six previous digests return (manifest bfc610ef…, 204329ad…, a9b52fae…; curated
+    // b6360c99…, 16a7e517…, acc45f71…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "bfc610ef317a5bd4ec57e7f947fcbc65dbebba2ddb3d9404b4684bd81c6bacfb",
-            "204329ad35fd43a56f854aeceaf25385cd7b2a008d26e97439c2b20c7b62d8b7",
-            "a9b52fae6d0a795994d4bf6a570725449c260531de2d9f060799f61ea661d6cc",
+            "da00f885ab1f965f8611b87ac207a149916da2aaf7d2bc7a986e03e6988824d9",
+            "87b3d5fc47ca3934a6376b34ec0b758555f961a46ca1f4bbfbcdb6a20256b6f8",
+            "f1ae47194d6f404aa8a7bdf6e051d749f64930762b1fc5f12b85c86649bee69e",
         ),
         (
             "../recipes/curated-full-current",
-            "b6360c994fce5f81888867b05301711d72073c46491840c22babd934f39c66de",
-            "16a7e51757c3ca0a61c8a6ed8a94c04ab4f46aa3038e8f582dc25456be71d909",
-            "acc45f71d3473bca6f4648e42673c063f5a6fd219052474c169179452571bf0e",
+            "122fb040203041fbac989e67edb07904e9348e5ced127ea2a932882d3ce6e019",
+            "18657bda528a17e6d456134890dcd9cf3f5f84565738e60b0fcf50a8320280c6",
+            "b8c01c679a363c6e3c2b20df21946a76464613a49ac7812ff2f3976881804c79",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

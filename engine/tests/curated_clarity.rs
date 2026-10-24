@@ -22,7 +22,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     // Unfinished Business became optional and unselected on October 17, so the
     // ub-bg2 run no longer runs by default.
     // The October 22 intake adds one run for each of the 18 default player voicepacks.
-    assert_eq!(result.plan.runs.len(), 70);
+    // BG1 Unfinished Business became optional and unselected on October 23, so the
+    // bg1ub-bg1 run no longer runs by default; the new quest mods are unchecked.
+    assert_eq!(result.plan.runs.len(), 69);
     assert_eq!(
         result
             .plan
@@ -40,7 +42,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // The October 20 intake adds Modpack EET join XP 239.
         // The October 22 intake adds the 18 player voicepacks (component 0 each).
         // The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292.
-        482
+        // The October 23 quest-mod intake removes the 16 formerly default BG1UB components.
+        466
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

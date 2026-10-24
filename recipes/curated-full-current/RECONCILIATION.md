@@ -3,10 +3,13 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 490 default/mandatory rows — conditional inactive: 6, deferred: 4, selected for installation: 480.
+Engine-equivalent resolved-selection summary: 479 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 464.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
+| `AC_QUEST:2` | default | `feature:ac-quest:component-2` | conditional inactive | ac-quest → ac-quest-7.0 7.0 (v7.0), component 2 | Parent mod:ac-quest is inactive. |
+| `AC_QUEST:5` | default | `feature:ac-quest:component-5` | conditional inactive | ac-quest → ac-quest-7.0 7.0 (v7.0), component 5 | Parent mod:ac-quest is inactive. |
+| `AC_QUEST:10` | default | `feature:ac-quest:component-10` | conditional inactive | ac-quest → ac-quest-7.0 7.0 (v7.0), component 10 | Parent mod:ac-quest is inactive. |
 | `ARTISANSKITPACK:1` | default | `feature:artisanskitpack:component-1` | selected for installation | artisanskitpack → artisans-kitpack-4.81a-dev.85928f9-chriz.1 4.81a-dev.85928f9-chriz.1 (v4.81a-dev.85928f9-chriz.1), component 1 |  |
 | `ARTISANSKITPACK:2` | default | `feature:artisanskitpack:component-2` | selected for installation | artisanskitpack → artisans-kitpack-4.81a-dev.85928f9-chriz.1 4.81a-dev.85928f9-chriz.1 (v4.81a-dev.85928f9-chriz.1), component 2 |  |
 | `ARTISANSKITPACK:20000` | default | `feature:artisanskitpack:component-20000` | selected for installation | artisanskitpack → artisans-kitpack-4.81a-dev.85928f9-chriz.1 4.81a-dev.85928f9-chriz.1 (v4.81a-dev.85928f9-chriz.1), component 20000 |  |
@@ -118,22 +121,6 @@ Engine-equivalent resolved-selection summary: 490 default/mandatory rows — con
 | `BG1NPC:160` | default | `feature:bg1npc:component-160` | deferred | bg1npc → bg1npc-32 32 (v32), component 160 | Upstream v32 deprecates this component due to copyright issues; it is unavailable in the public alpha until a distributable replacement is reviewed. |
 | `BG1NPC:200` | default | `feature:bg1npc:component-200` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 200 |  |
 | `BG1NPC:240` | default | `feature:bg1npc:component-240` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 240 |  |
-| `BG1UB:0` | default | `feature:bg1ub:component-0` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 0 |  |
-| `BG1UB:11` | default | `feature:bg1ub:component-11` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 11 |  |
-| `BG1UB:12` | default | `feature:bg1ub:component-12` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 12 |  |
-| `BG1UB:13` | default | `feature:bg1ub:component-13` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 13 |  |
-| `BG1UB:14` | default | `feature:bg1ub:component-14` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 14 |  |
-| `BG1UB:16` | default | `feature:bg1ub:component-16` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 16 |  |
-| `BG1UB:17` | default | `feature:bg1ub:component-17` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 17 |  |
-| `BG1UB:18` | default | `feature:bg1ub:component-18` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 18 |  |
-| `BG1UB:19` | default | `feature:bg1ub:component-19` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 19 |  |
-| `BG1UB:21` | default | `feature:bg1ub:component-21` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 21 |  |
-| `BG1UB:22` | default | `feature:bg1ub:component-22` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 22 |  |
-| `BG1UB:29` | default | `feature:bg1ub:component-29` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 29 |  |
-| `BG1UB:30` | default | `feature:bg1ub:component-30` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 30 |  |
-| `BG1UB:32` | default | `feature:bg1ub:component-32` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 32 |  |
-| `BG1UB:33` | default | `feature:bg1ub:component-33` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 33 |  |
-| `BG1UB:34` | default | `feature:bg1ub:component-34` | selected for installation | bg1ub → bg1ub-17.1 17.1 (v17.1), component 34 |  |
 | `BGGO:0` | default | `feature:bggo:component-0` | selected for installation | bggo → bggo-3.6 3.6 (v3.6), component 0 |  |
 | `BUBB_SPELL_MENU_EXTENDED:0` | default | `feature:bubb-spell-menu-extended:component-0` | selected for installation | bubb-spell-menu → bubb-spell-menu-5.2 5.2 (v5.2), component 0 |  |
 | `BUFFBOT:1` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.10.1 1.10.1 (v1.10.1), component 1 |  |
@@ -386,7 +373,9 @@ Engine-equivalent resolved-selection summary: 490 default/mandatory rows — con
 | `IWDIFICATION:30` | mandatory | `feature:iwdification:mandatory-components` | selected for installation | iwdification → iwdification-11 11 (v11), component 30 |  |
 | `IWDIFICATION:40` | mandatory | `feature:iwdification:mandatory-components` | selected for installation | iwdification → iwdification-11 11 (v11), component 40 |  |
 | `KLATU:2150` | default | `feature:klatu:component-2150` | selected for installation | klatu → klatu-tweaks-1.7.4 1.7.4 (Version-1.7.4), component 2150 |  |
+| `NTOTSC:0` | default | `feature:ntotsc:component-0` | conditional inactive | ntotsc → ntotsc-f0ef95323630bc38df7dd4c969a2b48a71ebec82 f0ef95323630bc38df7dd4c969a2b48a71ebec82 (f0ef95323630bc38df7dd4c969a2b48a71ebec82), component 0 | Parent mod:ntotsc is inactive. |
 | `PAINA:0` | mandatory | `feature:paina:mandatory-components` | selected for installation | paina → paina-1.9 1.9 (v1.9), component 0 |  |
+| `PPE:0` | default | `feature:ppe:component-0` | conditional inactive | ppe → ppe-417226ea6642b8c682b2d049d0ec6e86f38b7f47 417226ea6642b8c682b2d049d0ec6e86f38b7f47 (417226ea6642b8c682b2d049d0ec6e86f38b7f47), component 0 | Parent mod:ppe is inactive. |
 | `RANDOMISER:500` | default | `feature:randomiser:component-500` | selected for installation | randomiser → randomiser-8.1.1 8.1.1 (v8.1.1), component 500 |  |
 | `RANDOMISER:530` | default | `feature:randomiser:component-530` | selected for installation | randomiser → randomiser-8.1.1 8.1.1 (v8.1.1), component 530 |  |
 | `RANDOMISER:540` | default | `feature:randomiser:component-540` | selected for installation | randomiser → randomiser-8.1.1 8.1.1 (v8.1.1), component 540 |  |

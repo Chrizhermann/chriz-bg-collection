@@ -7,7 +7,9 @@ use serde::Deserialize;
 
 use crate::error::EngineError;
 use crate::manifest::{AcquisitionPolicy, Decision, Feature, InvocationMode, Phase, Readiness};
-use crate::recipe_view::{evaluate_preset, SelectionEvaluation};
+use crate::recipe_view::{
+    evaluate_preset, under_unrequested_optional_ancestor, SelectionEvaluation,
+};
 use crate::validate::{Finding, Severity};
 use crate::Manifest;
 
@@ -613,16 +615,15 @@ fn check_omission_coverage(
         .map(|feature| (feature.id.as_str(), feature))
         .collect::<BTreeMap<_, _>>();
 
+    let requested = &evaluation.normalized_selection.features;
     for control in &evaluation.view.controls {
-        let desired = evaluation
-            .normalized_selection
-            .features
-            .get(&control.id)
-            .copied()
-            .unwrap_or(false);
+        let desired = requested.get(&control.id).copied().unwrap_or(false);
+        // A default or mandatory outcome beneath an unticked optional parent is not requested,
+        // so it needs no omission record; one that drops out under a requested parent does.
         if desired
             && !control.selected
             && matches!(control.decision, Decision::Default | Decision::Mandatory)
+            && !under_unrequested_optional_ancestor(&control.id, &features, requested)
             && !omission_or_ancestor(&control.id, &features, &omissions)
         {
             release_error(

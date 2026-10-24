@@ -18,6 +18,7 @@ CATEGORY_LABELS = {
     "bg1-content": "BG1 content",
     "bg1-fixes": "BG1 fixes",
     "bg1-npcs": "BG1 NPCs",
+    "quest-mods": "Quest mods",
 }
 
 # The catalog option is intentionally terse because its prompt supplies the

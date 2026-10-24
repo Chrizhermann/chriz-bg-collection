@@ -406,6 +406,11 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "chriz-bg-modpack-ui-compat-bg2",
             "bubb-spell-menu-bg2",
             "bggo-bg2",
+            // October 23: the optional quest mods NTotSC, Ascalon's Questpack and
+            // Black Hearts, after EET and the fixpacks and before the NPC mods.
+            "ntotsc-bg2",
+            "ac-quest-bg2",
+            "blackhearts-bg2",
             "rr-bg2",
             "fade-bg2",
             "paina-bg2",
@@ -423,12 +428,19 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "crossmodbg2-bg2",
             "artisanskitpack-tweak-early-bg2",
             "hq-soundclips-bg2ee-bg2",
+            // October 23: IWD Voice Pack after the DLC Merger, and Thalantyr before
+            // the Item Randomiser.
+            "zg-iwd-voices-bg2",
+            "thalan-bg2",
             "randomiser-bg2",
             "srcb-rr-compat-bg2",
             "stratagems-bg2",
             "artisanskitpack-tweak-late-bg2",
             "artisanskitpack-npc-late-bg2",
             "chriz-bg-modpack-pre-continuity-bg2",
+            // October 23: PPE after every NPC mod, SCS and the Item Randomiser, and
+            // before Modpack continuity 199, which immediately precedes EET_end.
+            "ppe-bg2",
             "chriz-bg-modpack-continuity-bg2",
             "eet-end-bg2",
             "chriz-sod-remix-bg2",
@@ -465,24 +477,26 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "chriz-bg-modpack-scrolls-bg2",
         ]
     );
-    assert!(manifest.collection.runs[6..40]
+    // The six October 23 quest-mod runs are main-phase runs before EET_end too.
+    assert!(manifest.collection.runs[6..46]
         .iter()
         .all(|run| run.phase == Phase::Main));
+    assert_eq!(manifest.collection.runs[46].run_id, "eet-end-bg2");
     assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);
     assert_eq!(
-        manifest.collection.runs[16].components,
+        manifest.collection.runs[19].components,
         RR_AUTHORED_COMPONENTS
     );
     assert_eq!(
-        manifest.collection.runs[20].components,
+        manifest.collection.runs[23].components,
         UB_AUTHORED_COMPONENTS
     );
     assert_eq!(
-        manifest.collection.runs[24].components,
+        manifest.collection.runs[27].components,
         ASCENSION_COMPONENTS
     );
-    assert!(!manifest.collection.runs[20].components.contains(&19));
-    assert!(!manifest.collection.runs[24].components.contains(&40));
+    assert!(!manifest.collection.runs[23].components.contains(&19));
+    assert!(!manifest.collection.runs[27].components.contains(&40));
 }
 
 #[test]
