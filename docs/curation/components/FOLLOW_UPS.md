@@ -130,7 +130,10 @@ Cross-repository status. Component detail stays in the sections below and in the
   which has none, starts with the decided first variant of each pair (`2`, `5`, `10`).
   Also open: whether ticking BG1 Unfinished Business preselects its 16 former defaults
   (now every component starts unchecked, like UB), and whether Black Hearts may stay
-  selectable for players who untick the SoD Remix.
+  selectable for players who untick the SoD Remix. Christopher (2026-10-25): go through
+  the component choices together in detail; his principle for UB and BG1UB is that
+  ticking everything installs everything, otherwise components are picked one by one.
+  Black Hearts stays as it is for now.
 - Installer link safety, remaining writers: staging publication, mod materialization and
   the WeiDU setup copy, then Radar and the `.chriz` state writers, still check a path and
   then write by path (inventory in PR #16). Moving them over waits for Christopher's go.
@@ -401,7 +404,9 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   [NTotSC](NTOTSC.md), [Ascalon's Questpack](AC_QUEST.md) and [PPE](PPE.md) (provisional:
   the main component, and for Ascalon's Questpack only its decided first variants),
   whether [BG1UB](BG1UB.md)'s components start selected when it is ticked, and whether
-  [Black Hearts](BLACKHEARTS.md) stays selectable without the SoD Remix.
+  [Black Hearts](BLACKHEARTS.md) stays selectable without the SoD Remix. 2026-10-25: a
+  detailed walkthrough with Christopher is pending (his principle and Black Hearts: see
+  Waiting for Christopher).
 
 ## Done since 2026-09-04
 
