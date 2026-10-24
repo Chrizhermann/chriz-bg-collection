@@ -6,8 +6,9 @@ Listed at release version **v4.5.1** (CrevsDaak/thalan). Not in the reference in
 ## UI/dependency notes
 
 - Christopher's decision (2026-10-23): Thalantyr Item Upgrade is an optional, unchecked
-  third-party mod in "Quest mods", labelled experimental until the combined lab install,
-  and offered as is. Recommended does not include it.
+  third-party mod, labelled experimental until the combined lab install, and offered as
+  is. Recommended does not include it. Since 2026-10-25 (Christopher) it is in "Items"
+  instead of "Quest mods".
 - Thalantyr in High Hedge combines BG1 items, potions or scrolls and gold into improved
   items; his store gains five BG2-style bags and cases and two Remove Curse scrolls. Its
   dialogue additions are `EXTEND_TOP` blocks on THALAN states 2 and 35, plus a rumour reply

@@ -31,6 +31,9 @@ struct Pin {
     language: u32,
     /// Offered components in TP2 declaration order.
     components: &'static [u32],
+    /// Installer category of all of the mod's features (Christopher, 2026-10-25: existing
+    /// categories where they fit, Quest mods for the quest mods).
+    category: &'static str,
 }
 
 const NTOTSC: &str = "ntotsc-bg2";
@@ -59,6 +62,7 @@ const PINS: &[Pin] = &[
         tp2: "ntotsc/ntotsc.tp2",
         language: 0,
         components: &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        category: "quest-mods",
     },
     Pin {
         mod_id: "ac-quest",
@@ -76,6 +80,7 @@ const PINS: &[Pin] = &[
         // English is the second language in the TP2.
         language: 1,
         components: &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        category: "quest-mods",
     },
     Pin {
         mod_id: "blackhearts",
@@ -93,6 +98,7 @@ const PINS: &[Pin] = &[
         language: 0,
         // 20005 is the BG2:EE-without-EET variant and is not offered.
         components: &[1],
+        category: "quest-mods",
     },
     Pin {
         mod_id: "thalan",
@@ -109,6 +115,7 @@ const PINS: &[Pin] = &[
         tp2: "thalan/thalan.tp2",
         language: 0,
         components: &[0],
+        category: "items",
     },
     Pin {
         mod_id: "zg-iwd-voices",
@@ -125,6 +132,7 @@ const PINS: &[Pin] = &[
         tp2: "zg_iwd_voices/zg_iwd_voices.tp2",
         language: 0,
         components: &[0],
+        category: "audio",
     },
     Pin {
         mod_id: "ppe",
@@ -144,6 +152,7 @@ const PINS: &[Pin] = &[
         components: &[
             0, 100, 150, 10, 20, 25, 300, 301, 302, 311, 312, 322, 330, 332, 340, 342, 350, 30, 40,
         ],
+        category: "visuals",
     },
 ];
 
@@ -237,6 +246,17 @@ fn quest_runs() -> BTreeSet<&'static str> {
     PINS.iter().map(|pin| pin.run_id).collect()
 }
 
+/// The intake mod owning a feature, found by mod id: its `mod:` switch or `feature:<mod>:` rows.
+fn intake_pin(feature_id: &str) -> Option<&'static Pin> {
+    PINS.iter().find(|pin| {
+        feature_id.strip_prefix("mod:") == Some(pin.mod_id)
+            || feature_id
+                .strip_prefix("feature:")
+                .and_then(|rest| rest.strip_prefix(pin.mod_id))
+                .is_some_and(|rest| rest.starts_with(':'))
+    })
+}
+
 #[test]
 fn pins_the_reviewed_quest_mod_archives_and_offered_component_menus() {
     for (profile, manifest) in profiles() {
@@ -291,14 +311,34 @@ fn quest_mods_and_bg1ub_are_experimental_options_left_out_of_every_default_plan(
     let quest_runs = quest_runs();
     for (profile, manifest) in profiles() {
         let mut defaults = BTreeSet::new();
+        let mut owners = BTreeSet::new();
         for feature in &manifest.collection.features {
-            let quest = feature
+            let runs = feature
                 .components
                 .iter()
-                .any(|component| quest_runs.contains(component.run_id.as_str()))
-                || ["mod:ntotsc", "mod:ac-quest", "mod:ppe"].contains(&feature.id.as_str());
-            if quest {
-                assert_eq!(feature.category, "quest-mods", "{profile} {}", feature.id);
+                .map(|component| component.run_id.as_str())
+                .collect::<BTreeSet<_>>();
+            let owner = intake_pin(&feature.id);
+            // An intake feature installs only its own mod's run, and no other feature installs
+            // an intake run.
+            match owner {
+                Some(pin) => assert!(
+                    runs.iter().all(|run| *run == pin.run_id),
+                    "{profile} {}",
+                    feature.id
+                ),
+                None => assert!(runs.is_disjoint(&quest_runs), "{profile} {}", feature.id),
+            }
+            // Quest mods holds exactly the quest mods' features.
+            assert_eq!(
+                feature.category == "quest-mods",
+                owner.is_some_and(|pin| pin.category == "quest-mods"),
+                "{profile} {}",
+                feature.id
+            );
+            if let Some(pin) = owner {
+                owners.insert(pin.mod_id);
+                assert_eq!(feature.category, pin.category, "{profile} {}", feature.id);
                 assert_eq!(feature.readiness, Readiness::Experimental, "{}", feature.id);
                 match feature.decision {
                     Decision::Default => {
@@ -316,6 +356,11 @@ fn quest_mods_and_bg1ub_are_experimental_options_left_out_of_every_default_plan(
                 assert_eq!(feature.decision, Decision::Optional, "{}", feature.id);
             }
         }
+        assert_eq!(
+            owners,
+            PINS.iter().map(|pin| pin.mod_id).collect::<BTreeSet<_>>(),
+            "{profile}"
+        );
         let expected = DEFAULTS
             .iter()
             .map(|(run, component)| ((*run).to_owned(), *component))
@@ -396,7 +441,7 @@ fn every_quest_mod_choice_resolves_to_exactly_one_side() {
         let mut authored = BTreeMap::<String, Vec<String>>::new();
         for feature in &manifest.collection.features {
             if let Some(group) = &feature.choice_group {
-                if feature.category == "quest-mods" {
+                if intake_pin(&feature.id).is_some() {
                     authored
                         .entry(group.clone())
                         .or_default()

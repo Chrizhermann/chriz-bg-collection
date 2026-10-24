@@ -121,12 +121,13 @@ unchanged.
   Imoen before ending SoD. (SoD Remix v0.6.14)
 - **Quest mods** — **Optional**, experimental, each separately, in the new "Quest
   mods" category: Northern Tales of the Sword Coast (new quests, areas and dungeons
-  north of Baldur's Gate and along the Sword Coast), Ascalon's Questpack (nine small
-  BG1 quests and one for Shadows of Amn), Thalantyr Item Upgrade (Thalantyr in High
-  Hedge improves BG1 items), the Icewind Dale Voice Pack (Icewind Dale's player
-  voices) and Portraits Portraits Everywhere (dialogue portraits for speaking NPCs,
-  about 0.4 GB). They are third-party mods, offered as they are and not yet tested in
-  a combined installation.
+  north of Baldur's Gate and along the Sword Coast) and Ascalon's Questpack (nine
+  small BG1 quests and one for Shadows of Amn). Also new, optional and experimental,
+  in the existing categories: Thalantyr Item Upgrade (Thalantyr in High Hedge
+  improves BG1 items) in "Items", the Icewind Dale Voice Pack (Icewind Dale's player
+  voices) in "Audio" and Portraits Portraits Everywhere (dialogue portraits for
+  speaking NPCs, about 0.4 GB) in "Visuals". They are third-party mods, offered as
+  they are and not yet tested in a combined installation.
   - **Pending:** which of their components start selected when you tick one.
     Christopher decides.
 - **Black Hearts** — **Optional**, experimental, third-party: a BG1 and Siege of
@@ -245,10 +246,10 @@ into Shadows of Amn, by default as the BG2 thief/mage Imoen. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. The optional,
 experimental campaign XP caps with banked XP now work. New and optional, all
-experimental: five third-party mods in a new "Quest mods" category (Northern Tales
-of the Sword Coast, Ascalon's Questpack, Thalantyr Item Upgrade, the Icewind Dale
-Voice Pack and Portraits Portraits Everywhere), and Black Hearts for installations
-without the SoD Remix. Unfinished Business for BG1 and BG2 is now
+experimental: two third-party quest mods in a new "Quest mods" category (Northern
+Tales of the Sword Coast and Ascalon's Questpack), Thalantyr Item Upgrade, the
+Icewind Dale Voice Pack and Portraits Portraits Everywhere, and Black Hearts for
+installations without the SoD Remix. Unfinished Business for BG1 and BG2 is now
 optional; High Mastery now gives +5 damage, and the NPC move now includes
 Ajantis. In Bardic Wonders, the
 Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
@@ -296,14 +297,15 @@ existing games and saves are unchanged.
   loader settings files, as EEex v1.3.1 ships it and from a played game; no game
   was started with it. Check it once in a lab before the release (see
   `FOLLOW_UPS.md`).
-- **Quest mods** (six third-party mods, optional and experimental) and the now
-  optional BG1 Unfinished Business have static recipe checks only; nothing was
-  installed. They stay experimental until one combined lab install with the full
-  Recommended selection and the quest mods ticked (see `FOLLOW_UPS.md`). NTotSC and
+- **The six new third-party mods** (the quest mods, Thalantyr Item Upgrade, the
+  Icewind Dale Voice Pack and PPE; optional and experimental) and the now optional
+  BG1 Unfinished Business have static recipe checks only; nothing was installed.
+  They stay experimental until one combined lab install with the full Recommended
+  selection and these mods ticked (see `FOLLOW_UPS.md`). NTotSC and
   PPE are GitHub commit archives without a release; PPE is a 387 MB download.
 - **Default components under an unticked optional mod** are no longer reported as
   omitted defaults, neither in the installer's setup notes nor in release
-  validation (see the installer changelog). The quest mods' main components rely
+  validation (see the installer changelog). The new mods' main components rely
   on this: without it, Chris's Recommended would show five setup notes and need
   omission records for them. A default that drops out while its optional parent is
   ticked is still reported.

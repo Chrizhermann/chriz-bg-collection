@@ -2,7 +2,9 @@
 
 NTotSC at upstream master f0ef953, Ascalon's Questpack v7.0, Black Hearts v2.05, Thalantyr
 Item Upgrade v4.5.1, the Icewind Dale Voice Pack 1.2.0 and PPE at DaftHunk fork commit
-417226ea enter both recipe profiles unchecked in the Quest mods category. Static pin,
+417226ea enter both recipe profiles unchecked: NTotSC, Ascalon's Questpack and Black Hearts
+in the Quest mods category, and (Christopher, 2026-10-25) the voice pack in Audio, PPE in
+Visuals and Thalantyr Item Upgrade in Items. Static pin,
 evidence, catalog, selection and order checks only; nothing here is a game installation or
 gameplay acceptance.
 """
@@ -23,8 +25,9 @@ ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = "manifest/evidence/release-intake-20261023-quest-mods.toml"
 NTOTSC_COMMIT = "f0ef95323630bc38df7dd4c969a2b48a71ebec82"
 PPE_COMMIT = "417226ea6642b8c682b2d049d0ec6e86f38b7f47"
-# Per mod: the pin, its run, the offered components in TP2 order, and whether a GitHub
-# release (not only a commit) publishes the source.
+# Per mod: the pin, its run, the offered components in TP2 order, whether a GitHub
+# release (not only a commit) publishes the source, and the installer category of all of
+# its features (Christopher, 2026-10-25: existing categories where they fit).
 PINS = {
     "ntotsc": {
         "artifact": f"ntotsc-{NTOTSC_COMMIT}",
@@ -34,6 +37,7 @@ PINS = {
         "run": "ntotsc-bg2",
         "offered": list(range(17)),
         "published_release": False,
+        "category": "quest-mods",
     },
     "ac-quest": {
         "artifact": "ac-quest-7.0",
@@ -43,6 +47,7 @@ PINS = {
         "run": "ac-quest-bg2",
         "offered": list(range(13)),
         "published_release": True,
+        "category": "quest-mods",
     },
     "blackhearts": {
         "artifact": "blackhearts-2.05",
@@ -52,6 +57,7 @@ PINS = {
         "run": "blackhearts-bg2",
         "offered": [1],
         "published_release": True,
+        "category": "quest-mods",
     },
     "thalan": {
         "artifact": "thalan-4.5.1",
@@ -61,6 +67,7 @@ PINS = {
         "run": "thalan-bg2",
         "offered": [0],
         "published_release": True,
+        "category": "items",
     },
     "zg-iwd-voices": {
         "artifact": "zg-iwd-voices-1.2.0",
@@ -70,6 +77,7 @@ PINS = {
         "run": "zg-iwd-voices-bg2",
         "offered": [0],
         "published_release": True,
+        "category": "audio",
     },
     "ppe": {
         "artifact": f"ppe-{PPE_COMMIT}",
@@ -79,6 +87,7 @@ PINS = {
         "run": "ppe-bg2",
         "offered": [0, 100, 150, 10, 20, 25, 300, 301, 302, 311, 312, 322, 330, 332, 340, 342, 350, 30, 40],
         "published_release": False,
+        "category": "visuals",
     },
 }
 QUEST_RUNS = {pin["run"] for pin in PINS.values()}
@@ -154,6 +163,16 @@ def _load_profile(directory: Path) -> tuple[dict, dict]:
 
 def _feature(run_id: str, component: int) -> str:
     return f"feature:{run_id.removesuffix('-bg2')}:component-{component}"
+
+
+def _intake_features(collection: dict) -> dict[str, list[dict]]:
+    """Each intake mod's features, found by mod id: its `mod:` switch and `feature:<mod>:` rows."""
+    by_mod = {mod_id: [] for mod_id in PINS}
+    for feature in collection["features"]:
+        for mod_id in PINS:
+            if feature["id"] == f"mod:{mod_id}" or feature["id"].startswith(f"feature:{mod_id}:"):
+                by_mod[mod_id].append(feature)
+    return by_mod
 
 
 class Oct23QuestModsIntakeTests(unittest.TestCase):
@@ -267,9 +286,29 @@ class Oct23QuestModsIntakeTests(unittest.TestCase):
     def test_quest_mods_and_bg1ub_stay_out_of_recommended_and_the_default_selection(self):
         for name, _, collection, preset in self._each_profile():
             features = {feature["id"]: feature for feature in collection["features"]}
-            quest = [feature for feature in collection["features"] if feature["category"] == "quest-mods"]
+            by_mod = _intake_features(collection)
+            quest = [feature for mod_features in by_mod.values() for feature in mod_features]
             self.assertEqual(
                 {(ref["run_id"]) for feature in quest for ref in feature.get("components", [])}, QUEST_RUNS)
+            # Each mod's features use only its own run and all sit in the mod's category.
+            for mod_id, mod_features in by_mod.items():
+                self.assertTrue(mod_features, mod_id)
+                self.assertEqual(
+                    {ref["run_id"] for feature in mod_features for ref in feature.get("components", [])},
+                    {PINS[mod_id]["run"]}, mod_id)
+                for feature in mod_features:
+                    self.assertEqual(feature["category"], PINS[mod_id]["category"], feature["id"])
+            # No other feature installs an intake run, and Quest mods holds only the quest mods.
+            self.assertEqual(
+                {feature["id"] for feature in collection["features"]
+                 if {ref["run_id"] for ref in feature.get("components", [])} & QUEST_RUNS},
+                {feature["id"] for feature in quest if feature.get("components")},
+            )
+            self.assertEqual(
+                {feature["id"] for feature in collection["features"] if feature["category"] == "quest-mods"},
+                {feature["id"] for mod_id, mod_features in by_mod.items() for feature in mod_features
+                 if PINS[mod_id]["category"] == "quest-mods"},
+            )
             for feature in quest:
                 self.assertEqual(feature["readiness"], "experimental", feature["id"])
                 self.assertIn(feature["decision"], {"optional", "default"}, feature["id"])
@@ -310,9 +349,10 @@ class Oct23QuestModsIntakeTests(unittest.TestCase):
         for name, _, collection, preset in self._each_profile():
             features = {feature["id"]: feature for feature in collection["features"]}
             groups = {}
-            for feature in collection["features"]:
-                if feature["category"] == "quest-mods" and feature.get("choice_group"):
-                    groups.setdefault(feature["choice_group"], []).append(feature["id"])
+            for mod_features in _intake_features(collection).values():
+                for feature in mod_features:
+                    if feature.get("choice_group"):
+                        groups.setdefault(feature["choice_group"], []).append(feature["id"])
             self.assertEqual(
                 sorted(groups.values()),
                 sorted([_feature(run_id, option) for option in options] for run_id, options, _ in CHOICES),

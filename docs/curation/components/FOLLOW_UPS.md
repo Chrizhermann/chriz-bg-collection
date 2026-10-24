@@ -66,10 +66,11 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Optional quest mods (Christopher's decisions of 2026-10-23), in both recipes on
   `claude/optional-mods-20261022` ([PR #32](https://github.com/Chrizhermann/chriz-bg-collection/pull/32); fresh-download and native-order evidence in
   `manifest/evidence/release-intake-20261023-quest-mods.toml`): Northern Tales of the
-  Sword Coast (upstream `master` f0ef953, not v5.0.0), Ascalon's Questpack v7.0,
-  Thalantyr Item Upgrade v4.5.1, the Icewind Dale Voice Pack 1.2.0 and Portraits
-  Portraits Everywhere (DaftHunk fork 417226ea, without `310`/`320`) are in the new
-  category "Quest mods": optional, unchecked, experimental and offered as is.
+  Sword Coast (upstream `master` f0ef953, not v5.0.0) and Ascalon's Questpack v7.0 are in
+  the new category "Quest mods"; Thalantyr Item Upgrade v4.5.1 is in "Items", the Icewind
+  Dale Voice Pack 1.2.0 in "Audio" and Portraits Portraits Everywhere (DaftHunk fork
+  417226ea, without `310`/`320`) in "Visuals" (Christopher, 2026-10-25: existing
+  categories where they fit). All are optional, unchecked, experimental and offered as is.
   - BG1 Unfinished Business is now optional and unselected, like UB for BG2. NTotSC
     `4`/`6` and BG1UB `30`/`32` are either-or; with both mods ticked, BG1UB's version is
     kept.

@@ -290,16 +290,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // plan digests return although the quest mods stay; with the quest mods removed as well,
     // all six previous digests return (manifest bfc610ef…, 204329ad…, a9b52fae…; curated
     // b6360c99…, 16a7e517…, acc45f71…).
+    // Re-pinned on October 25 when Christopher moved three of those mods into existing
+    // categories (Icewind Dale Voice Pack to audio, PPE to visuals, Thalantyr Item Upgrade to
+    // items): only the collection digests change, in those features' category and, in the
+    // curated recipe, the generated group label; the previous collection digests were manifest
+    // da00f885…, curated 122fb040….
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "da00f885ab1f965f8611b87ac207a149916da2aaf7d2bc7a986e03e6988824d9",
+            "d98f35929b27a989f788f6979df4c76922b15a3aaa3c05ba228c4d85e1a1bc8e",
             "87b3d5fc47ca3934a6376b34ec0b758555f961a46ca1f4bbfbcdb6a20256b6f8",
             "f1ae47194d6f404aa8a7bdf6e051d749f64930762b1fc5f12b85c86649bee69e",
         ),
         (
             "../recipes/curated-full-current",
-            "122fb040203041fbac989e67edb07904e9348e5ced127ea2a932882d3ce6e019",
+            "7175787c0980ddcba035c888cae8cb7f8c4a5f8a4cfbfd0dde12ab054fdb2fbe",
             "18657bda528a17e6d456134890dcd9cf3f5f84565738e60b0fcf50a8320280c6",
             "b8c01c679a363c6e3c2b20df21946a76464613a49ac7812ff2f3976881804c79",
         ),

@@ -7,9 +7,10 @@ the reference install.
 
 ## UI/dependency notes
 
-- Christopher's decisions (2026-10-23): PPE is an optional, unchecked third-party mod in
-  "Quest mods", labelled experimental until the combined lab install, and offered as is.
-  Recommended does not include it. Components `310` and `320` are not offered because
+- Christopher's decisions (2026-10-23): PPE is an optional, unchecked third-party mod,
+  labelled experimental until the combined lab install, and offered as is. Recommended
+  does not include it. Since 2026-10-25 (Christopher) it is in "Visuals", with the other
+  portrait components, instead of "Quest mods". Components `310` and `320` are not offered because
   they are expected to fail on EET. Pai'Na's portrait is left as PPE sets it.
 - Inside the mod only the provisional default is decided: the core component `0` starts
   selected when the mod is ticked, everything else starts unchecked. Christopher has not

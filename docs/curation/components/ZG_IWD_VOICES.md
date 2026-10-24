@@ -7,8 +7,9 @@ repository is archived). Not in the reference install.
 ## UI/dependency notes
 
 - Christopher's decision (2026-10-23): the Icewind Dale Voice Pack is an optional,
-  unchecked third-party mod in "Quest mods", labelled experimental until the combined lab
-  install, and offered as is. Recommended does not include it.
+  unchecked third-party mod, labelled experimental until the combined lab install, and
+  offered as is. Recommended does not include it. Since 2026-10-25 (Christopher) it is in
+  "Audio", with the other voice packs, instead of "Quest mods".
 - It appends its 30 Icewind Dale player soundsets (`ZGI101`–`ZGI183`, menu names in its own
   `M_zgiwd.lua`) to `charsnd.2da` and keeps the table at 99 rows, so the CEBG voicepacks'
   preflight passes in either order. No soundset name collides with CEBG's voicepacks.
