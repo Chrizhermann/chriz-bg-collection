@@ -16,8 +16,8 @@ curated per mod.
 | In, on by default | EEex; EE Fixpack; Bubb's Spell Menu Extended; BuffBot (after IWD:EE enablement); SCS; our own combat mod; Tweaks Anthology; IWD Unfinished Business; IWD Graphical Overhaul (IWDGO); companions Minerva, Karihi, Athanasios, Guldruk, Nirik, Cassia, Bethany, Dendjelion, Dusky, Hommet, Ina, L'anna, Oak-Maw, Orra, T'viy, Urchin, Vito; IWD Crossmod Banter Pack |
 | In, off by default | EEex Remote Console; LeUI-IWDEE and Infinity UI++ (alternatives, so the installer offers at most one); Lava's quests Below & Below Inn, Night of the Blinking Dead, Snowytoes Hamlet, Tale of Our Lady Dreamless, Terror of the Skineater, The Rediscovery of Kuldahar, The War of Bloom and Rot, Will of the Wisps |
 | In, default open | Hidden Gameplay Options |
-| Later | Frostforged and The Artisan's Armory ("look at it later"); IWDEE Tweaks and Fixes (wants a closer look) |
-| Out | Artisan's Kitpack and Bardic Wonders (changed from the September "if compatible"); Spell Revisions; all other inventory entries, including Kulyok's IWD NPC Project, Tipps and Geomantic Sorcerer, Talents of Faerûn, the subtledoctor and argent77 kit mods, Deities of Faerûn, Afaaq, Turald, Arszyk, Xikâsz, HoWMod, IWD:EE Reborn, the item mods, EEUITweaks, the lighting pack, the font pack and Premade Party Adder |
+| Later | Frostforged and The Artisan's Armory ("look at it later") |
+| Out | Artisan's Kitpack and Bardic Wonders (changed from the September "if compatible"); Spell Revisions; IWDEE Tweaks and Fixes (after a closer look; its BG2-style HLAs maybe later for the community, since IWD is not built for HLAs); all other inventory entries, including Kulyok's IWD NPC Project, Tipps and Geomantic Sorcerer, Talents of Faerûn, the subtledoctor and argent77 kit mods, Deities of Faerûn, Afaaq, Turald, Arszyk, Xikâsz, HoWMod, IWD:EE Reborn, the item mods, EEUITweaks, the lighting pack, the font pack and Premade Party Adder |
 | Stream rule only | Reroll limit (at most 10 rerolls, 2 stored rolls); no installer feature |
 
 Notes from the selection:

@@ -26,6 +26,10 @@ Christopher streams an Icewind Dale: Enhanced Edition playthrough in November 20
 | 2026-10-25 | Phase 1 priority: the installer works, SCS works on IWD:EE, and some enemy mages and priests prebuff. Encounter upgrades come after that, designed together; the fight shortlist is open for discussion. | Christopher, this session |
 | 2026-10-25 | Belhifet: reinforcements scale with difficulty; his blanket spell immunities should change (to discuss). Poquelin's unresisted Dispel Magic at the transformation goes. | Christopher, this session |
 | 2026-10-25 | The SCS defects found on IWD:EE are fixed in our own mod after SCS, not reported upstream. | Christopher, this session |
+| 2026-10-25 | No separate SCS-on-IWD:EE lab check: others have confirmed it works. The full lab install of the finished recipe stays. | Christopher, this session |
+| 2026-10-25 | Caster prebuffs stay modest: enemy mages and priests that SCS does not cover should not be "naked", nothing more. | Christopher, this session |
+| 2026-10-25 | Belhifet: the ring's immunity to all spell levels goes. Instead a small innate immunity to low spell levels (Christopher named 1–2, 1–3 or 1–4, "nicht zu krass") or simply high magic resistance (50–70 %), plus prebuffs and SCS-style rebuffs during the fight. No vulnerability windows. | Christopher, this session |
+| 2026-10-25 | Component selection: components that carry over one-to-one from the BG installer's choices may be preselected; Christopher reviews them. | Christopher, this session |
 
 Curation stays Christopher's: the agent delivers neutral inventories; he decides mods,
 components and defaults.
