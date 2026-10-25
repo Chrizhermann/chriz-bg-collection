@@ -86,10 +86,16 @@ Cross-repository status. Component detail stays in the sections below and in the
     bank could not take a change, so the engine stopped resolving the rest of that
     creature's timed effect list. The effects queued behind it stayed frozen, and the
     creature `LOCALS` they set were lost at the next save. EEex is not the cause.
-    - The never-return-0 fix is done for alpha.14.
-    - Accepted rare cases (Christopher, 2026-10-25): an XP change can lose its bank
-      booking, banking can pause, and a character excluded from banking stays excluded
-      in saves.
+    - The never-return-0 fix is done for alpha.14. With it, the #19 scenario passed in a
+      disposable lab on 2026-10-23: the locals and all local-variable effects survived
+      save/load in the same process and after a restart, also with refused XP changes.
+    - Accepted rare cases (Christopher, 2026-10-25): when the bank cannot tell what an
+      XP change stored, that change can end without adding XP, and the character then
+      gets XP the normal way, without the campaign cap, also after saving and loading.
+      If a character were ever created or removed outside the game's main thread (no
+      known way on 2.7.3.0), banking stops for everyone until the game restarts, a
+      script XP change caught at that moment can be lost, and saves made after that keep
+      those characters out of banking.
     - `650` stays optional, experimental and off in the collection. A fifth review round
       follows after the release.
     - #19 is closed once `650` ships.
@@ -359,7 +365,8 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] Creature `LOCALS` survive save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)). In the 2026-10-18
   EEex v1.3.1 lab they did not, in the same process and after a restart; `GLOBAL`
   variables did. The cause was Modpack `650`'s XP effect, not EEex; the fix is done for
-  alpha.14 (see In progress). Open: the same check with alpha.14 and `650` on.
+  alpha.14 (see In progress), and the check passed with it in a lab on 2026-10-23.
+  Open: repeat it with the released alpha.14 package and `650` on.
 - [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md) Tempus APR: under the pinned EEex (v1.3.1), verify
   steady 1.5 APR with a two-pip weapon, 2.5 under Holy Power, no cycling, and immediate
   loss of the bonus with a zero-pip weapon.
