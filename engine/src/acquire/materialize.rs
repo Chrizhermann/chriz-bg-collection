@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 
+use crate::fs_retry::{self, CheckedRenameError};
+
 use super::archive::{casefold, join_relative, normalize_relative_path, verify_extracted_artifact};
 use super::{AcquireError, ExtractedArtifact};
 
@@ -727,33 +729,44 @@ fn publish_one(
         }
         PublishAction::Replace {
             expected_input_sha256,
-        } => {
-            let Some((_length, actual)) = inspect_optional_regular_file(&target)? else {
-                return Err(AcquireError::CollisionRuleRejected {
-                    path: plan.payload.relative_path.clone(),
-                    message: "replacement input disappeared before publication".to_owned(),
-                });
-            };
-            if &actual != expected_input_sha256 {
-                Err(AcquireError::CollisionRuleRejected {
-                    path: plan.payload.relative_path.clone(),
-                    message: "replacement input changed before publication".to_owned(),
-                })
-            } else {
-                fs::rename(&temporary, &target).map_err(|source| AcquireError::Io {
-                    action: "publish signed collision replacement",
-                    path: target,
-                    source,
-                })?;
-                Ok(())
-            }
-        }
+        } => match fs_retry::rename_checked(&temporary, &target, || {
+            check_replacement_input(&target, expected_input_sha256, &plan.payload.relative_path)
+        }) {
+            Ok(()) => Ok(()),
+            Err(CheckedRenameError::Check(error)) => Err(error),
+            Err(CheckedRenameError::Rename(source)) => Err(AcquireError::Io {
+                action: "publish signed collision replacement",
+                path: target,
+                source,
+            }),
+        },
         PublishAction::Identical { .. } => unreachable!(),
     };
     if publication.is_err() {
         let _ = fs::remove_file(&temporary);
     }
     publication
+}
+
+/// Re-hash the bytes a signed collision rule replaces, before every replacement attempt.
+fn check_replacement_input(
+    target: &Path,
+    expected_input_sha256: &str,
+    relative_path: &str,
+) -> Result<(), AcquireError> {
+    let Some((_length, actual)) = inspect_optional_regular_file(target)? else {
+        return Err(AcquireError::CollisionRuleRejected {
+            path: relative_path.to_owned(),
+            message: "replacement input disappeared before publication".to_owned(),
+        });
+    };
+    if actual != expected_input_sha256 {
+        return Err(AcquireError::CollisionRuleRejected {
+            path: relative_path.to_owned(),
+            message: "replacement input changed before publication".to_owned(),
+        });
+    }
+    Ok(())
 }
 
 fn write_synced_temporary(payload: &PayloadFile, temporary: &Path) -> Result<(), AcquireError> {
@@ -881,7 +894,7 @@ fn persist_manifest(
         source,
     })?;
     drop(file);
-    fs::rename(&temporary, manifest_path).map_err(|source| AcquireError::Io {
+    fs_retry::rename(&temporary, manifest_path).map_err(|source| AcquireError::Io {
         action: "publish publication manifest",
         path: manifest_path.to_path_buf(),
         source,
