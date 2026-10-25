@@ -702,6 +702,16 @@ fn publish_registry(
     receipt: &RecoveryReceipt,
     path: &Path,
 ) -> Result<(), CliError> {
+    // Checked again right before the write, as completion does: the folder may have become an
+    // alias of the Baldur's Gate folder, or moved, since recovery started.
+    let current = checked_application_data_root(&frozen.collection, &receipt.managed_root)?;
+    if current != app_data {
+        return Err(error(format!(
+            "the application data folder changed from {} to {} during recovery",
+            app_data.display(),
+            current.display()
+        )));
+    }
     ManagedInstallRegistry::open_or_create(app_data)
         .and_then(|registry| {
             registry.publish(&ManagedInstallRecord {

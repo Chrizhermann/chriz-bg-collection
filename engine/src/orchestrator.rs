@@ -295,10 +295,21 @@ pub enum OrchestratorError {
     /// The durable campaign ledger could not be linked from the application-data index.
     #[error("could not publish campaign start index: {0}")]
     CampaignIndex(String),
+    /// The campaign may not be recorded from this place; nothing was written.
+    #[error("the campaign cannot be recorded here: {0}")]
+    CampaignPlacement(String),
 }
 
 /// Publishes the minimal restart pointer after ledger record zero is durable and verified.
 pub trait CampaignRecorder {
+    /// Checks, under the target lock and before ledger record zero is created or replayed,
+    /// that this campaign may be recorded at all. Taking the lock can itself change the file
+    /// system (it creates the lock folder), so a check made before the lock is not enough. A
+    /// refusal leaves no campaign state behind. Accepts by default.
+    fn before_campaign_state(&mut self, _created: &CampaignCreated) -> Result<(), StepFailure> {
+        Ok(())
+    }
+
     /// Record this exact campaign identity without replacing an earlier pointer.
     fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure>;
 }
@@ -500,6 +511,9 @@ where
         TargetLock::try_acquire(&request.registry_root, &request.created.managed_root)?;
     emit_finished(sink, "lock", StepOutcome::Succeeded);
 
+    dependencies
+        .before_campaign_state(&request.created)
+        .map_err(|failure| OrchestratorError::CampaignPlacement(failure.into_message()))?;
     emit_started(sink, "freeze", "Freeze campaign recipe and identity");
     let (store, replay, resumed) = open_or_create_campaign(request, &target_lock)?;
     emit_finished(sink, "freeze", StepOutcome::Succeeded);

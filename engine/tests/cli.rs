@@ -4150,3 +4150,41 @@ fn set_recipe_application_data_directory_back(fixture: &StandaloneFixture, name:
     );
     fs::write(path, text).unwrap();
 }
+
+/// The Baldur's Gate folder does not exist yet, so `CHRIZB~1` names nothing when the install
+/// starts. Taking the target lock creates `Chriz BG Collection\locks`, and Windows then gives
+/// that folder the alias `CHRIZB~1`. The placement is checked again under the lock, before the
+/// campaign ledger is created, so the install is refused without leaving an unregistered,
+/// unresumable campaign behind.
+#[cfg(windows)]
+#[test]
+fn an_alias_that_appears_when_the_lock_folder_is_created_leaves_no_campaign() {
+    let fixture = standalone_fixture();
+    let probe = fixture.app_data.parent().unwrap().join("probe");
+    fs::create_dir_all(probe.join("Chriz BG Collection")).unwrap();
+    let Some(alias) = short_name(&probe.join("Chriz BG Collection")) else {
+        eprintln!("8.3 names are disabled here; this ordering cannot occur");
+        return;
+    };
+    assert_eq!(alias, "CHRIZB~1");
+    let bg = fixture.app_data.join("Chriz BG Collection");
+    assert!(!bg.exists());
+    set_recipe_application_data_directory(&fixture, &alias);
+
+    let mut install = standalone_command(&fixture);
+    install.args(standalone_install_args(&fixture));
+    let output = install.output().expect("install through a future alias");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(
+        json_stdout(&output)["error"]["code"],
+        "application_data_shared",
+        "{}",
+        stdout(&output)
+    );
+    assert_eq!(short_name(&bg).as_deref(), Some(alias.as_str()));
+    assert!(
+        !fixture.managed.join(".chriz").exists(),
+        "an unregistered campaign ledger was left behind"
+    );
+    assert_bg_application_data_holds_only_locks(&fixture.app_data);
+}

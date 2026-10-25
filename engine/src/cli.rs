@@ -1321,8 +1321,13 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
         sink,
         controls.clone(),
     );
-    let outcome = run_campaign_controlled(&request, &mut dependencies, sink, controls)
-        .map_err(|error| map_orchestrator_error(error, &created))?;
+    let outcome =
+        run_campaign_controlled(&request, &mut dependencies, sink, controls).map_err(|error| {
+            dependencies
+                .placement_error
+                .take()
+                .unwrap_or_else(|| map_orchestrator_error(error, &created))
+        })?;
     Ok(CampaignReport {
         install_id: created.install_id,
         managed_root: created.managed_root,
@@ -2440,6 +2445,8 @@ struct GuardedCliDependencies<'a, S> {
     app_data: PathBuf,
     sink: &'a S,
     controls: RunnerControlHandle,
+    /// The placement refusal behind a failed registry recheck, reported with its own code.
+    placement_error: Option<CliError>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -2540,6 +2547,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             app_data,
             sink,
             controls,
+            placement_error: None,
         }
     }
 
@@ -3013,10 +3021,19 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
     /// Proves again, right before a registry write, that the registry folder is still this
     /// collection's own and outside the campaign: a folder replaced by an alias or link while
     /// the campaign ran must not receive its record.
-    fn recheck_application_data(&self) -> Result<(), StepFailure> {
-        let current =
-            checked_application_data_root(&self.frozen.collection, &self.created.managed_root)
-                .map_err(|error| StepFailure::new(error.to_string()))?;
+    fn recheck_application_data(&mut self) -> Result<(), StepFailure> {
+        let current = match checked_application_data_root(
+            &self.frozen.collection,
+            &self.created.managed_root,
+        ) {
+            Ok(current) => current,
+            Err(error) => {
+                let failure = StepFailure::new(error.to_string());
+                // Reported with its own code rather than as a generic campaign error.
+                self.placement_error = Some(error);
+                return Err(failure);
+            }
+        };
         if current != self.app_data {
             return Err(StepFailure::new(format!(
                 "the application data folder changed from {} to {} during the campaign",
@@ -3029,6 +3046,10 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
 }
 
 impl<S: EventSink> CampaignRecorder for GuardedCliDependencies<'_, S> {
+    fn before_campaign_state(&mut self, _created: &CampaignCreated) -> Result<(), StepFailure> {
+        self.recheck_application_data()
+    }
+
     fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
         self.recheck_application_data()?;
         ManagedInstallRegistry::open_or_create(&self.app_data)
