@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::digest::sha256_bytes;
 use crate::error::EngineError;
 use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
-use crate::lock::TargetLock;
+use crate::lock::TargetLockNamespace;
 use crate::preflight::{
     recheck_staging_target_before_mutation_with, PreflightHost, SystemPreflight,
 };
@@ -253,22 +253,24 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
     Ok(plan)
 }
 
-/// Revalidates the preview under the same cross-process lock used by installation.
-pub fn execute(app_data: &Path, expected: &RemovalPlan) -> Result<(), RemovalError> {
-    execute_with(app_data, expected, &SystemPreflight, &mut |_| Ok(()))
+/// Revalidates the preview under the same cross-process lock used by installation, taken in
+/// `locks` whatever folder `app_data` (the registry) is.
+pub fn execute(
+    app_data: &Path,
+    locks: &TargetLockNamespace,
+    expected: &RemovalPlan,
+) -> Result<(), RemovalError> {
+    execute_with(app_data, locks, expected, &SystemPreflight, &mut |_| Ok(()))
 }
 
 fn execute_with(
     app_data: &Path,
+    locks: &TargetLockNamespace,
     expected: &RemovalPlan,
     host: &dyn PreflightHost,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
 ) -> Result<(), RemovalError> {
-    let _lock = TargetLock::try_acquire(
-        crate::lock::shared_target_lock_root(app_data),
-        &expected.managed_root,
-    )
-    .map_err(failure)?;
+    let _lock = locks.try_acquire(&expected.managed_root).map_err(failure)?;
     let current = preview(app_data, &expected.install_id)?;
     if current != *expected {
         return Err(failure(
@@ -608,6 +610,8 @@ mod tests {
     struct Fixture {
         _temp: tempfile::TempDir,
         app: PathBuf,
+        local: PathBuf,
+        locks: TargetLockNamespace,
         root: PathBuf,
         cache: PathBuf,
         source: PathBuf,
@@ -618,7 +622,10 @@ mod tests {
         let root = base.join("managed");
         let cache = base.join("cache");
         let source = base.join("source");
-        let app = base.join("app-data");
+        // A registry at a custom path, unrelated to where the target locks live.
+        let app = base.join("Vendor").join("Chriz Easy IWD");
+        let local = base.join("local");
+        let locks = TargetLockNamespace::in_local_application_data(&local).unwrap();
         for path in [&root, &cache, &source] {
             fs::create_dir(path).unwrap();
         }
@@ -662,13 +669,15 @@ mod tests {
         Fixture {
             _temp: temp,
             app,
+            local,
+            locks,
             root,
             cache,
             source,
         }
     }
     fn run(f: &Fixture, plan: &RemovalPlan) -> Result<(), RemovalError> {
-        execute_with(&f.app, plan, &Host::default(), &mut |_| Ok(()))
+        execute_with(&f.app, &f.locks, plan, &Host::default(), &mut |_| Ok(()))
     }
     #[test]
     fn preview_and_cancel_do_not_remove_anything() {
@@ -761,21 +770,25 @@ mod tests {
     fn active_target_lock_and_process_refuse_deletion() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        let lock =
-            TargetLock::try_acquire(crate::lock::shared_target_lock_root(&f.app), &f.root).unwrap();
+        // Held at the legacy path, as an older build or the CLI would hold it.
+        let lock = crate::lock::TargetLock::try_acquire(
+            f.local.join("Chriz BG Collection").join("locks"),
+            &f.root,
+        )
+        .unwrap();
         assert!(run(&f, &plan).is_err());
         drop(lock);
         let host = Host {
             running: vec![f.root.join("game/game.exe")],
         };
-        assert!(execute_with(&f.app, &plan, &host, &mut |_| Ok(())).is_err());
+        assert!(execute_with(&f.app, &f.locks, &plan, &host, &mut |_| Ok(())).is_err());
         assert!(f.root.join("game/game.exe").exists());
     }
     #[test]
     fn interrupted_final_metadata_cleanup_is_retryable_without_losing_registry_identity() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        let error = execute_with(&f.app, &plan, &Host::default(), &mut |path| {
+        let error = execute_with(&f.app, &f.locks, &plan, &Host::default(), &mut |path| {
             if path == f.root {
                 Err(io::Error::new(
                     io::ErrorKind::PermissionDenied,
@@ -800,7 +813,7 @@ mod tests {
     fn partial_deletion_journal_cannot_authorize_replacement_folder() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        execute_with(&f.app, &plan, &Host::default(), &mut |_| {
+        execute_with(&f.app, &f.locks, &plan, &Host::default(), &mut |_| {
             Err(io::Error::other("stop"))
         })
         .unwrap_err();
@@ -893,8 +906,7 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert_eq!(plan.action, RemovalAction::Unlist);
 
-        let lock =
-            TargetLock::try_acquire(crate::lock::shared_target_lock_root(&f.app), &f.root).unwrap();
+        let lock = f.locks.try_acquire(&f.root).unwrap();
         assert!(run(&f, &plan).is_err());
         drop(lock);
         assert_eq!(registered_campaigns(&f), 1);
@@ -1087,7 +1099,7 @@ mod tests {
     fn delete_with_last_step(f: &Fixture, last_step: &mut dyn FnMut()) -> Result<(), RemovalError> {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert_eq!(plan.action, RemovalAction::Delete);
-        execute_with(&f.app, &plan, &Host::default(), &mut |path| {
+        execute_with(&f.app, &f.locks, &plan, &Host::default(), &mut |path| {
             if path == f.root {
                 assert!(journal_path(&f.app, "fixture-removal").is_file());
                 last_step();
@@ -1259,7 +1271,7 @@ mod tests {
         let mut swapped = false;
 
         let game = f.root.join("game");
-        let error = execute_with(&f.app, &plan, &Host::default(), &mut |path| {
+        let error = execute_with(&f.app, &f.locks, &plan, &Host::default(), &mut |path| {
             // Neither while its contents are removed nor once it is empty.
             if path == game.join("game.exe") || path == game {
                 let moved = fs::rename(&game, f._temp.path().join("moved"));

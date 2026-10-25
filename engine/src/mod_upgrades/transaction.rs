@@ -6,7 +6,6 @@ use crate::{
     },
     events::ConsoleSink,
     held_folder::{EntryError, EntryErrorKind},
-    lock::TargetLock,
     patches::files::Inventory,
     weidu::{
         invocation::{Invocation, VerifiedWeidu},
@@ -451,11 +450,10 @@ pub fn apply_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<ModUpgradePreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(
-        crate::lock::shared_target_lock_root(ctx.app_data),
-        &ctx.record.managed_root,
-    )
-    .map_err(err)?;
+    let _lock = ctx
+        .locks
+        .try_acquire(&ctx.record.managed_root)
+        .map_err(err)?;
     validate_context(ctx)?;
     launch_guard(&ctx.record.managed_root)?;
     if active_upgrade(&ctx.record.managed_root)?.is_some() {
@@ -737,11 +735,10 @@ pub fn restore_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<ModUpgradePreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(
-        crate::lock::shared_target_lock_root(ctx.app_data),
-        &ctx.record.managed_root,
-    )
-    .map_err(err)?;
+    let _lock = ctx
+        .locks
+        .try_acquire(&ctx.record.managed_root)
+        .map_err(err)?;
     validate_context(ctx)?;
     let h = history(&ctx.record.managed_root)?;
     let last = h.last().ok_or("No mod update to restore")?;

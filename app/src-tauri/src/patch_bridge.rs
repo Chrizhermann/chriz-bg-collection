@@ -24,12 +24,17 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
-        let _target =
-            bg_engine::lock::TargetLock::try_acquire(bg_engine::lock::shared_target_lock_root(app_data), &record.managed_root)
-                .map_err(patch_error)?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| patch_error("Application data unavailable"))?;
+        let _target = locks
+            .try_acquire(&record.managed_root)
+            .map_err(patch_error)?;
         let ctx = bg_engine::patches::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
         };
         bg_engine::patches::inspect(&ctx, &packaged_patch_catalog()?).map_err(patch_error)
@@ -58,9 +63,14 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| patch_error("Application data unavailable"))?;
         let ctx = bg_engine::patches::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
         };
         bg_engine::patches::apply_with_progress(
@@ -93,9 +103,14 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| patch_error("Application data unavailable"))?;
         let ctx = bg_engine::patches::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
         };
         bg_engine::patches::restore_with_progress(&ctx, &packaged_patch_catalog()?, undo, progress)

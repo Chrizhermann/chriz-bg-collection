@@ -2,10 +2,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use bg_engine::digest::{plan_digest, sha256_bytes};
+use bg_engine::games::{GameRole, Storefront};
 use bg_engine::manifest::{GameRoot, Phase};
 use bg_engine::receipt::{
     ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
-    LogComponentReceipt, ReceiptOutcome, ReceiptVersions, RECEIPT_SCHEMA_VERSION,
+    LogComponentReceipt, ReceiptOutcome, ReceiptVersions, SourceGameReceipt,
+    RECEIPT_SCHEMA_VERSION,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::recovery_receipt::{
@@ -609,4 +611,67 @@ fn create_directory_symlink(original: &Path, link: &Path) -> std::io::Result<()>
 #[cfg(not(windows))]
 fn create_directory_symlink(original: &Path, link: &Path) -> std::io::Result<()> {
     std::os::unix::fs::symlink(original, link)
+}
+
+fn source(role: GameRole) -> SourceGameReceipt {
+    SourceGameReceipt {
+        role,
+        storefront: Storefront::Steam,
+        version: "2.7.3.0".to_owned(),
+        fingerprint: "ab".repeat(32),
+    }
+}
+
+/// The fixture with `roles` as the base receipt's source evidence, its file and lineage updated.
+fn with_sources(mut fixture: Fixture, roles: &[GameRole]) -> Fixture {
+    fixture.base.source_games = roles.iter().copied().map(source).collect();
+    let bytes = write_base(&fixture.root, &fixture.base);
+    fixture.recovery.base_receipt_sha256 = sha256_bytes(&bytes);
+    fixture
+}
+
+/// A failed attempt may record only part of its source evidence; what it records must belong
+/// to the base installation's staging, once per source.
+#[test]
+fn recovery_checks_recorded_source_evidence_against_the_base_staging() {
+    use GameRole::{Bg2ee, BgeeSod, Iwdee};
+
+    for (case, roles, accepted) in [
+        ("both EET sources", &[BgeeSod, Bg2ee][..], true),
+        (
+            "only the BG2 source of a failed attempt",
+            &[Bg2ee][..],
+            true,
+        ),
+        (
+            "only the BG1 source of a failed attempt",
+            &[BgeeSod][..],
+            true,
+        ),
+        ("a standalone source", &[BgeeSod, Iwdee][..], false),
+        (
+            "a duplicated BG2 source",
+            &[BgeeSod, Bg2ee, Bg2ee][..],
+            false,
+        ),
+    ] {
+        let fixture = with_sources(fixture(), roles);
+        let result = fixture.recovery.validate(&fixture.base);
+        assert_eq!(result.is_ok(), accepted, "EET base with {case}: {result:?}");
+    }
+
+    for (case, roles, accepted) in [
+        ("its one game", &[Iwdee][..], true),
+        ("a BG1 source", &[BgeeSod][..], false),
+        ("a BG2 source", &[Bg2ee][..], false),
+        ("its game twice", &[Iwdee, Iwdee][..], false),
+    ] {
+        let fixture = with_sources(standalone_fixture(), roles);
+        let result = fixture.recovery.validate(&fixture.base);
+        assert_eq!(
+            result.is_ok(),
+            accepted,
+            "standalone base with {case}: {result:?}"
+        );
+    }
 }

@@ -105,20 +105,76 @@ impl Drop for CacheDigestLock {
     }
 }
 
-/// Folder whose `targets` subfolder holds the target lock of every managed installation, for
-/// every application: `Chriz BG Collection\locks` next to `application_data`.
+/// Where every CEBG application locks managed installations:
+/// `<local application data>\Chriz BG Collection\locks`, whose `targets` folder holds one lock
+/// file per managed root.
 ///
-/// `application_data` is an application's own folder directly below `LOCALAPPDATA`. Its
-/// registry may live in its own folder, but locks never do: two processes with different
-/// application folders, such as a Baldur's Gate build and a standalone-game build, or a resume
-/// started without the standalone folder, must exclude each other on the same managed root.
-/// For the Baldur's Gate folder itself this is its legacy `locks` folder, so EET lock paths and
-/// older builds are unaffected.
-pub fn shared_target_lock_root(application_data: &Path) -> PathBuf {
-    let shared = crate::registry::names::DEFAULT_APPLICATION_DATA_DIRECTORY;
-    match application_data.parent() {
-        Some(local) if !local.as_os_str().is_empty() => local.join(shared).join("locks"),
-        _ => application_data.join("locks"),
+/// It never depends on the folder an application uses for its registry, so a Baldur's Gate
+/// build, a standalone-game build, a build with a custom registry path, and every older build
+/// (which locked `<LOCALAPPDATA>\Chriz BG Collection\locks`) all exclude each other on the same
+/// managed root. Production code uses [`Self::system`]; tests and custom configurations inject
+/// their own local application data folder with [`Self::in_local_application_data`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TargetLockNamespace {
+    root: PathBuf,
+}
+
+impl TargetLockNamespace {
+    /// The namespace below this user's `LOCALAPPDATA`. Fails closed when it is unset or unsafe,
+    /// because target locking cannot then guarantee exclusion.
+    pub fn system() -> Result<Self, LockError> {
+        let local = std::env::var_os("LOCALAPPDATA").ok_or_else(|| LockError::UnsafePath {
+            path: PathBuf::from("%LOCALAPPDATA%"),
+            reason: "LOCALAPPDATA is unavailable; target locking cannot fail closed".to_owned(),
+        })?;
+        Self::in_local_application_data(PathBuf::from(local))
+    }
+
+    /// The namespace below an explicit local application data folder. It must be an absolute,
+    /// normalized folder below a filesystem root, so that every process resolves the same lock
+    /// files and none falls back to a relative or root-level folder.
+    pub fn in_local_application_data(local: impl AsRef<Path>) -> Result<Self, LockError> {
+        let local = local.as_ref();
+        let unsafe_path = |reason: &str| LockError::UnsafePath {
+            path: local.to_path_buf(),
+            reason: reason.to_owned(),
+        };
+        if !local.is_absolute() {
+            return Err(unsafe_path(
+                "the local application data folder must be absolute",
+            ));
+        }
+        if local
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+        {
+            return Err(unsafe_path(
+                "the local application data folder must not contain `..`",
+            ));
+        }
+        // Rebuilt from its components so that `.` and repeated separators never change the
+        // lock file path.
+        let local = local.components().collect::<PathBuf>();
+        if local.file_name().is_none() {
+            return Err(unsafe_path(
+                "the local application data folder cannot be a filesystem root",
+            ));
+        }
+        Ok(Self {
+            root: local
+                .join(crate::registry::names::DEFAULT_APPLICATION_DATA_DIRECTORY)
+                .join("locks"),
+        })
+    }
+
+    /// The folder whose `targets` subfolder holds the lock files.
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// Attempts to lock `managed_root` in this namespace without waiting.
+    pub fn try_acquire(&self, managed_root: impl AsRef<Path>) -> Result<TargetLock, LockError> {
+        TargetLock::try_acquire(&self.root, managed_root)
     }
 }
 

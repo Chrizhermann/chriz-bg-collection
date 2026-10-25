@@ -28,8 +28,12 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| mod_upgrade_inspection_error("Application data is unavailable."))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| mod_upgrade_inspection_error("Application data is unavailable."))?;
         let _target =
-            bg_engine::lock::TargetLock::try_acquire(bg_engine::lock::shared_target_lock_root(app_data), &record.managed_root)
+            locks.try_acquire(&record.managed_root)
                 .map_err(|error| {
                     CommandError::new(
                 "mod_upgrade_busy",
@@ -41,6 +45,7 @@ impl NativeBridge {
         bg_engine::mod_upgrades::inspect(&bg_engine::mod_upgrades::Context {
             record: &record,
             app_data,
+            locks,
             cache: &self.cache,
             recipe: &self.recipe,
         })
@@ -77,11 +82,16 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
         // The engine acquires and holds the target lock through backup and mutation.
         bg_engine::mod_upgrades::apply_with_progress(
             &bg_engine::mod_upgrades::Context {
                 record: &record,
                 app_data,
+                locks,
                 cache: &self.cache,
                 recipe: &self.recipe,
             },
@@ -113,10 +123,15 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| mod_upgrade_error("Application data is unavailable."))?;
         bg_engine::mod_upgrades::restore_with_progress(
             &bg_engine::mod_upgrades::Context {
                 record: &record,
                 app_data,
+                locks,
                 cache: &self.cache,
                 recipe: &self.recipe,
             },
@@ -137,6 +152,7 @@ mod mod_upgrade_bridge_tests {
             "recommended".to_owned(),
             root.join("cache"),
             Some(root.join("app-data")),
+            bg_engine::lock::TargetLockNamespace::in_local_application_data(root).ok(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
         )
@@ -194,6 +210,8 @@ mod mod_upgrade_bridge_tests {
         let expected_detail = bg_engine::mod_upgrades::inspect(&bg_engine::mod_upgrades::Context {
             record: &record,
             app_data: &root.join("app-data"),
+            locks: &bg_engine::lock::TargetLockNamespace::in_local_application_data(&root)
+                .unwrap(),
             cache: &root.join("cache"),
             recipe: &root.join("recipe"),
         })

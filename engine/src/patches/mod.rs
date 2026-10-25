@@ -43,6 +43,8 @@ pub struct PatchPreview {
 pub struct Context<'a> {
     pub record: &'a ManagedInstallRecord,
     pub app_data: &'a Path,
+    /// Where the installation is locked, independent of `app_data`.
+    pub locks: &'a crate::lock::TargetLockNamespace,
     pub cache: &'a Path,
 }
 impl Context<'_> {

@@ -336,6 +336,8 @@ pub struct NativeBridge {
     preset: String,
     cache: PathBuf,
     app_data: Option<PathBuf>,
+    /// Where installations are locked: below LOCALAPPDATA, independent of `app_data`.
+    target_locks: Option<bg_engine::lock::TargetLockNamespace>,
     engine: Arc<dyn BridgeEngine>,
     system: Arc<dyn BridgeSystem>,
     startup_install_id: Option<String>,
@@ -686,6 +688,7 @@ impl NativeBridge {
             preset.into(),
             cache,
             default_application_data_root(),
+            system_target_locks(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
         )
@@ -706,6 +709,7 @@ impl NativeBridge {
             "chris-recommended".to_owned(),
             cache.to_path_buf(),
             default_application_data_root(),
+            system_target_locks(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
         );
@@ -827,6 +831,7 @@ impl NativeBridge {
             preset.into(),
             cache,
             default_application_data_root(),
+            system_target_locks(),
             Arc::new(DiscovererBridgeEngine {
                 discoverer: Arc::new(discoverer),
                 system: SystemBridgeEngine,
@@ -848,11 +853,13 @@ impl NativeBridge {
             .parent()
             .unwrap_or_else(|| Path::new("."))
             .join("app-data");
+        let target_locks = test_target_locks(&app_data);
         Self::with_configuration(
             recipe.into(),
             preset.into(),
             cache,
             Some(app_data),
+            target_locks,
             engine,
             Arc::new(SystemBridgeSystem),
         )
@@ -868,11 +875,14 @@ impl NativeBridge {
         engine: Arc<dyn BridgeEngine>,
         system: Arc<dyn BridgeSystem>,
     ) -> Self {
+        let app_data = app_data.into();
+        let target_locks = test_target_locks(&app_data);
         Self::with_configuration(
             recipe.into(),
             preset.into(),
             cache.into(),
-            Some(app_data.into()),
+            Some(app_data),
+            target_locks,
             engine,
             system,
         )
@@ -1362,15 +1372,11 @@ impl NativeBridge {
             ));
         }
         let record = self.available_managed_install(install_id)?.record;
-        let app_data = self
-            .app_data
+        let locks = self
+            .target_locks
             .as_ref()
             .ok_or_else(|| removal_error("Application data is unavailable."))?;
-        let _target_lock = bg_engine::lock::TargetLock::try_acquire(
-            bg_engine::lock::shared_target_lock_root(app_data),
-            &record.managed_root,
-        )
-        .map_err(|error| {
+        let _target_lock = locks.try_acquire(&record.managed_root).map_err(|error| {
             CommandError::new(
                 "managed_install_busy",
                 "This installation is in use.",
@@ -1954,6 +1960,7 @@ impl NativeBridge {
         preset: String,
         cache: PathBuf,
         app_data: Option<PathBuf>,
+        target_locks: Option<bg_engine::lock::TargetLockNamespace>,
         engine: Arc<dyn BridgeEngine>,
         system: Arc<dyn BridgeSystem>,
     ) -> Self {
@@ -1964,6 +1971,7 @@ impl NativeBridge {
             preset,
             cache,
             app_data,
+            target_locks,
             engine,
             system,
             startup_install_id: None,
@@ -2060,7 +2068,11 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| removal_error("Application data is unavailable."))?;
-        bg_engine::removal::execute(app_data, &plan).map_err(removal_error)?;
+        let locks = self
+            .target_locks
+            .as_ref()
+            .ok_or_else(|| removal_error("Application data is unavailable."))?;
+        bg_engine::removal::execute(app_data, locks, &plan).map_err(removal_error)?;
         self.runtime_lock().known_installs.remove(install_id);
         Ok(())
     }
@@ -2500,6 +2512,16 @@ fn selection_overrides(selection: &NormalizedSelection) -> SelectionOverrides {
         );
     }
     overrides
+}
+
+/// The production lock namespace below LOCALAPPDATA; `None` fails every locked operation closed.
+fn system_target_locks() -> Option<bg_engine::lock::TargetLockNamespace> {
+    bg_engine::lock::TargetLockNamespace::system().ok()
+}
+
+/// Test bridges lock in the folder that holds their injected application data.
+fn test_target_locks(app_data: &Path) -> Option<bg_engine::lock::TargetLockNamespace> {
+    bg_engine::lock::TargetLockNamespace::in_local_application_data(app_data.parent()?).ok()
 }
 
 fn default_application_data_root() -> Option<PathBuf> {

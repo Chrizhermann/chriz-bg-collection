@@ -228,6 +228,7 @@ mod installation_name_tests {
             "fixture".into(),
             temp.path().join("cache"),
             Some(app_data),
+            bg_engine::lock::TargetLockNamespace::in_local_application_data(temp.path()).ok(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
         );

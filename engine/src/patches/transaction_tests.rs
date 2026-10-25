@@ -36,6 +36,7 @@ struct Fixture {
     _temp: tempfile::TempDir,
     record: ManagedInstallRecord,
     app_data: PathBuf,
+    locks: crate::lock::TargetLockNamespace,
     cache: PathBuf,
     original: BTreeMap<String, Vec<u8>>,
     receipt: Vec<u8>,
@@ -72,6 +73,7 @@ impl Fixture {
             b"synthetic save; immutable",
         );
         let app_data = temp.path().join("app-data");
+        let temp_local = temp.path().join("local");
         fs::create_dir(&app_data).unwrap();
         let cache = temp.path().join("download-cache");
         let install_plan = InstallPlan { runs: Vec::new() };
@@ -145,6 +147,7 @@ impl Fixture {
             _temp: temp,
             record,
             app_data,
+            locks: crate::lock::TargetLockNamespace::in_local_application_data(temp_local).unwrap(),
             cache,
             original,
             receipt,
@@ -155,6 +158,7 @@ impl Fixture {
         Context {
             record: &self.record,
             app_data: &self.app_data,
+            locks: &self.locks,
             cache: &self.cache,
         }
     }

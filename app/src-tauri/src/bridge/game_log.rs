@@ -127,11 +127,11 @@ impl NativeBridge {
     ) -> Result<GameLogStatusResponse, CommandError> {
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(install_id)?.record;
-        let app_data = self
-            .app_data
+        let locks = self
+            .target_locks
             .as_ref()
             .ok_or_else(|| game_log_error("Application data is unavailable."))?;
-        let status = bg_engine::game_log::set(app_data, &record.managed_root, enabled)
+        let status = bg_engine::game_log::set(locks, &record.managed_root, enabled)
             .map_err(game_log_error)?;
         GameLogStatusResponse::new(install_id, status)
     }

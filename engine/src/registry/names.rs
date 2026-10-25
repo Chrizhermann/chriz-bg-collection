@@ -55,10 +55,10 @@ pub fn check_application_data_directory(name: &str) -> Result<(), &'static str> 
     Ok(())
 }
 
-/// CON, PRN, AUX, NUL, and COM or LPT followed by one digit 0-9 or superscript 1-3, in any
+/// CON, PRN, AUX, NUL, CONIN$, CONOUT$, and COM or LPT followed by one digit 0-9 or superscript 1-3, in any
 /// ASCII case. Compared by character, so a multi-byte superscript is never misread.
 fn is_reserved_device_name(stem: &str) -> bool {
-    if ["CON", "PRN", "AUX", "NUL"]
+    if ["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"]
         .iter()
         .any(|device| stem.eq_ignore_ascii_case(device))
     {

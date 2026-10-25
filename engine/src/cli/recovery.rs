@@ -616,7 +616,7 @@ pub fn accept_supervised_recovery(
     let _lock = crate::lock::TargetLock::try_acquire(target_lock_root()?, &request.managed_root)
         .map_err(error)?;
     let checked = inspect(request)?;
-    let app_data = collection_application_data_root(&checked.frozen.collection)?;
+    let app_data = checked_application_data_root(&checked.frozen.collection, &checked.root)?;
     let root = &checked.root;
     let install_receipt = root.join(".chriz/install-receipt.json");
     if install_receipt.exists() {

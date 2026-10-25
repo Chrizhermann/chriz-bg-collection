@@ -5,7 +5,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use bg_engine::lock::{
-    acquire_target_for_update, shared_target_lock_root, CacheDigestLock, LockError, TargetLock,
+    acquire_target_for_update, CacheDigestLock, LockError, TargetLock, TargetLockNamespace,
 };
 
 const CHILD_ROOT: &str = "CHRIZ_TEST_LOCK_CHILD_ROOT";
@@ -144,31 +144,54 @@ fn lock_holder_child() {
     }
 }
 
-/// Target locks do not depend on an application's own data folder: every application locks
-/// a managed root in the legacy `Chriz BG Collection\locks` folder next to its own folder.
+/// Every application locks a managed root in `<local>\Chriz BG Collection\locks`, the exact
+/// folder older builds use, whatever folder it keeps its registry in: the namespace is chosen
+/// from the local application data folder alone, never from a registry path.
 #[test]
-fn target_locks_are_shared_by_every_application_data_folder() {
+fn target_locks_live_in_one_namespace_whatever_the_registry_path() {
     let temp = tempfile::tempdir().unwrap();
     let root = managed_root(&temp);
-    let local = temp.path().join("LocalAppData");
-    let legacy = local.join("Chriz BG Collection");
-    let iwd = shared_target_lock_root(&local.join("Chriz Easy IWD"));
-    let other = shared_target_lock_root(&local.join("Another Game"));
-    let default = shared_target_lock_root(&legacy);
-    assert_eq!(default, legacy.join("locks"));
-    assert_eq!(iwd, default);
-    assert_eq!(other, default);
+    let local = temp.path().join("Local");
+    let locks = TargetLockNamespace::in_local_application_data(&local).unwrap();
+    let legacy = local.join("Chriz BG Collection").join("locks");
+    assert_eq!(locks.root(), legacy);
 
-    let held = TargetLock::try_acquire(&iwd, &root).unwrap();
-    assert!(held
-        .path()
-        .starts_with(legacy.join("locks").join("targets")));
-    for contender in [&other, &default] {
-        assert!(matches!(
-            TargetLock::try_acquire(contender, &root),
-            Err(LockError::Contended { kind: "target", .. })
-        ));
-    }
+    let held = locks.try_acquire(&root).unwrap();
+    assert!(held.path().starts_with(legacy.join("targets")));
+    // An older build locks the legacy folder directly; it is the same lock file.
+    assert!(matches!(
+        TargetLock::try_acquire(&legacy, &root),
+        Err(LockError::Contended { kind: "target", .. })
+    ));
+    let same = TargetLockNamespace::in_local_application_data(&local).unwrap();
+    assert!(matches!(
+        same.try_acquire(&root),
+        Err(LockError::Contended { kind: "target", .. })
+    ));
     drop(held);
-    TargetLock::try_acquire(&other, &root).unwrap();
+    TargetLock::try_acquire(&legacy, &root).unwrap();
+}
+
+/// A relative, parent-relative or root-level local folder would give different processes
+/// different lock files, or put locks at a drive root, so it is refused instead of falling back.
+#[test]
+fn target_lock_namespace_refuses_relative_unnormalized_and_root_folders() {
+    let temp = tempfile::tempdir().unwrap();
+    let drive_root = temp.path().ancestors().last().unwrap().to_path_buf();
+    for local in [
+        std::path::PathBuf::from("IWD"),
+        std::path::PathBuf::from(r"Local\Programs"),
+        std::path::PathBuf::from(""),
+        drive_root,
+        temp.path().join("Local").join("..").join("Other"),
+    ] {
+        assert!(
+            matches!(
+                TargetLockNamespace::in_local_application_data(&local),
+                Err(LockError::UnsafePath { .. })
+            ),
+            "{} was accepted",
+            local.display()
+        );
+    }
 }

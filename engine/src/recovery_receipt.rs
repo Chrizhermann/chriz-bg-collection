@@ -469,17 +469,28 @@ impl BaseShape {
         } else {
             Self::Standalone
         };
-        // Older receipts may carry no source list; when present it must agree with staging.
-        if !base.source_games.is_empty() {
-            let has_bg1_source = base
-                .source_games
-                .iter()
-                .any(|source| source.role == GameRole::BgeeSod);
-            if has_bg1_source != (shape == Self::Eet) {
-                return Err(
-                    "recovery base receipt sources disagree with its staged BG1 root".to_owned(),
-                );
+        // A failed attempt may record only part of its source evidence (the receipt writer
+        // allows that), so a missing source is accepted; a recorded one must belong to this
+        // staging, and each role appears at most once.
+        let mut recorded = Vec::new();
+        for source in &base.source_games {
+            let belongs = match shape {
+                Self::Eet => matches!(source.role, GameRole::BgeeSod | GameRole::Bg2ee),
+                Self::Standalone => source.role.is_standalone(),
+            };
+            if !belongs {
+                return Err(format!(
+                    "recovery base receipt records a {} source that its staging does not have",
+                    source.role.display_name()
+                ));
             }
+            if recorded.contains(&source.role) {
+                return Err(format!(
+                    "recovery base receipt records the {} source more than once",
+                    source.role.display_name()
+                ));
+            }
+            recorded.push(source.role);
         }
         if shape == Self::Standalone && base.plan.runs.iter().any(|run| run.target == GameRoot::Bg1)
         {

@@ -3836,21 +3836,41 @@ fn legacy_eet_campaign_is_resumed_and_completed_by_this_engine() {
         std::env::var_os("CEBG_LEGACY_INSTALL_EXE").expect("CEBG_LEGACY_INSTALL_EXE is set"),
     );
     let fixture = executable_fixture();
-    let mut install = Command::new(&legacy);
-    install
-        .env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", "")
-        .env("LOCALAPPDATA", &fixture.app_data)
-        .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
-        .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2")
-        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
-        ));
-    let interrupted = install.output().expect("run the legacy installer");
+    let legacy_command = |interrupt: bool| {
+        let mut command = Command::new(&legacy);
+        command
+            .env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", "")
+            .env("LOCALAPPDATA", &fixture.app_data)
+            .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
+            .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2")
+            .args(install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ));
+        if interrupt {
+            command.env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1");
+        }
+        command
+    };
+
+    // This engine's lock namespace and the legacy build lock the same file.
+    let held = bg_engine::lock::TargetLockNamespace::in_local_application_data(&fixture.app_data)
+        .unwrap()
+        .try_acquire(&fixture.managed)
+        .unwrap();
+    let blocked = legacy_command(false)
+        .output()
+        .expect("run the legacy installer");
+    assert_eq!(blocked.status.code(), Some(1), "{}", stderr(&blocked));
+    assert_eq!(json_stdout(&blocked)["error"]["code"], "target_locked");
+    drop(held);
+
+    let interrupted = legacy_command(true)
+        .output()
+        .expect("run the legacy installer");
     assert_eq!(
         interrupted.status.code(),
         Some(1),
@@ -3915,4 +3935,218 @@ fn legacy_eet_campaign_is_resumed_and_completed_by_this_engine() {
             .unwrap();
     assert_eq!(cards.len(), 1);
     assert_eq!(cards[0].record.recipe_id, None);
+}
+
+fn standalone_install_args_into<'a>(
+    fixture: &'a StandaloneFixture,
+    managed: &'a Path,
+) -> Vec<&'a str> {
+    let mut args = standalone_install_args(fixture);
+    let index = args
+        .iter()
+        .position(|arg| *arg == "--managed-root")
+        .unwrap();
+    args[index + 1] = managed.to_str().unwrap();
+    args
+}
+
+fn set_recipe_application_data_directory(fixture: &StandaloneFixture, name: &str) {
+    let path = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&path).unwrap().replace(
+        &format!("application_data_directory = \"{IWD_APP_DATA}\""),
+        &format!("application_data_directory = \"{name}\""),
+    );
+    assert!(text.contains(name));
+    fs::write(path, text).unwrap();
+}
+
+#[cfg(windows)]
+fn create_junction(link: &Path, target: &Path) {
+    // A junction needs no privilege, unlike a symbolic link.
+    let output = Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(link)
+        .arg(target)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// The DOS 8.3 alias Windows generated for `path`'s last component, when it has one.
+#[cfg(windows)]
+fn short_name(path: &Path) -> Option<String> {
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+    use windows_sys::Win32::Storage::FileSystem::GetShortPathNameW;
+
+    let wide = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let mut buffer = vec![0_u16; 1024];
+    // SAFETY: both buffers are valid, the input is NUL-terminated, and the length is in u16s.
+    let length = unsafe { GetShortPathNameW(wide.as_ptr(), buffer.as_mut_ptr(), 1024) } as usize;
+    if length == 0 || length >= buffer.len() {
+        return None;
+    }
+    let short = PathBuf::from(std::ffi::OsString::from_wide(&buffer[..length]));
+    let name = short.file_name()?.to_string_lossy().into_owned();
+    (name != path.file_name()?.to_string_lossy()).then_some(name)
+}
+
+/// A destination inside a folder the install writes outside the campaign (its registry folder or
+/// the shared lock folder) would be filled with that state before staging and then refused as
+/// unowned, so it is refused first, and nothing is written.
+#[cfg(windows)]
+#[test]
+fn a_destination_inside_application_data_is_refused_before_anything_is_written() {
+    let fixture = standalone_fixture();
+    let registry = fixture.app_data.join(IWD_APP_DATA);
+    let shared = fixture.app_data.join("Chriz BG Collection");
+    for (case, managed) in [
+        ("absent registry folder", registry.clone()),
+        ("empty registry folder", registry.clone()),
+        (
+            "inside the registry folder",
+            registry.join("games").join("IWD"),
+        ),
+        ("the shared lock owner", shared.clone()),
+        ("above the registry folder", fixture.app_data.clone()),
+    ] {
+        if case == "empty registry folder" {
+            fs::create_dir_all(&managed).unwrap();
+        }
+        let before = tree_snapshot(&fixture.app_data);
+        let mut install = standalone_command(&fixture);
+        install.args(standalone_install_args_into(&fixture, &managed));
+        let output = install
+            .output()
+            .expect("run overlapping standalone install");
+        assert_eq!(output.status.code(), Some(1), "{case}: {}", stderr(&output));
+        let response = json_stdout(&output);
+        assert_eq!(
+            response["error"]["code"], "application_data_overlap",
+            "{case}: {response:#}"
+        );
+        assert!(
+            tree_snapshot(&fixture.app_data) == before,
+            "{case} wrote state"
+        );
+        if case == "empty registry folder" {
+            fs::remove_dir(&managed).unwrap();
+        }
+    }
+}
+
+/// A campaign whose destination is inside this process's application data folder (for example
+/// because LOCALAPPDATA moved) is not resumed, and nothing changes.
+#[cfg(windows)]
+#[test]
+fn resume_refuses_a_campaign_inside_its_application_data_folder() {
+    let fixture = standalone_fixture();
+    let other_local = fixture.app_data.parent().unwrap().join("other-local");
+    let managed = other_local.join(IWD_APP_DATA);
+    let mut install = standalone_command(&fixture);
+    install
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
+        .args(standalone_install_args_into(&fixture, &managed));
+    let output = install
+        .output()
+        .expect("execute interrupted standalone install");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(json_stdout(&output)["error"]["code"], "campaign_failed");
+
+    let before = tree_snapshot(&other_local);
+    let mut resume = standalone_command(&fixture);
+    resume
+        .env("LOCALAPPDATA", &other_local)
+        .args(["--json", "resume", managed.to_str().unwrap()]);
+    let output = resume.output().expect("resume inside application data");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(
+        json_stdout(&output)["error"]["code"],
+        "application_data_overlap"
+    );
+    assert!(tree_snapshot(&other_local) == before);
+}
+
+/// A standalone recipe cannot reach the Baldur's Gate registry through another name for its
+/// folder: a DOS 8.3 alias or a junction. Install and resume both refuse before writing.
+#[cfg(windows)]
+#[test]
+fn a_standalone_folder_that_is_the_baldurs_gate_folder_under_another_name_is_refused() {
+    let fixture = standalone_fixture();
+    let bg = fixture.app_data.join("Chriz BG Collection");
+    fs::create_dir_all(&bg).unwrap();
+    let mut aliases = vec!["IWD Link".to_owned()];
+    create_junction(&fixture.app_data.join("IWD Link"), &bg);
+    match short_name(&bg) {
+        Some(alias) => aliases.push(alias),
+        None => eprintln!("8.3 names are disabled here; only the junction alias is tested"),
+    }
+    for alias in &aliases {
+        set_recipe_application_data_directory(&fixture, alias);
+        let before = tree_snapshot(&bg);
+        let mut install = standalone_command(&fixture);
+        install.args(standalone_install_args(&fixture));
+        let output = install.output().expect("install through an alias");
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{alias}: {}",
+            stderr(&output)
+        );
+        assert_eq!(
+            json_stdout(&output)["error"]["code"],
+            "application_data_shared",
+            "{alias}"
+        );
+        assert!(!fixture.managed.exists(), "{alias}");
+        assert!(tree_snapshot(&bg) == before, "{alias}");
+        set_recipe_application_data_directory_back(&fixture, alias);
+    }
+
+    // The folder becomes an alias only after the campaign started: resuming refuses.
+    set_recipe_application_data_directory(&fixture, "IWD Later");
+    let mut install = standalone_command(&fixture);
+    install
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
+        .args(standalone_install_args(&fixture));
+    let output = install
+        .output()
+        .expect("execute interrupted standalone install");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(json_stdout(&output)["error"]["code"], "campaign_failed");
+    // The campaign's registry folder is moved aside and replaced by a junction to the
+    // Baldur's Gate folder.
+    let later = fixture.app_data.join("IWD Later");
+    if later.exists() {
+        fs::rename(&later, fixture.app_data.join("IWD Later (moved)")).unwrap();
+    }
+    create_junction(&later, &bg);
+    let managed_before = tree_snapshot(&fixture.managed);
+    let bg_before = tree_snapshot(&bg);
+    let mut resume = standalone_command(&fixture);
+    resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+    let output = resume.output().expect("resume through an alias");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(
+        json_stdout(&output)["error"]["code"],
+        "application_data_shared"
+    );
+    assert!(tree_snapshot(&fixture.managed) == managed_before);
+    assert!(tree_snapshot(&bg) == bg_before);
+}
+
+fn set_recipe_application_data_directory_back(fixture: &StandaloneFixture, name: &str) {
+    let path = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&path).unwrap().replace(
+        &format!("application_data_directory = \"{name}\""),
+        &format!("application_data_directory = \"{IWD_APP_DATA}\""),
+    );
+    fs::write(path, text).unwrap();
 }

@@ -813,6 +813,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
             ),
         )
     })?;
+    // The folder must agree with this process before anything else is checked.
     collection_application_data_directory(&manifest.collection)?;
     let unsupported = crate::release_validate::validate_production_invocations(&manifest);
     if !unsupported.is_empty() {
@@ -883,6 +884,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     }
     source_roots.push((primary_label, bg2.root.as_path()));
     reject_campaign_path_overlaps(&managed_root, &cache_root, &source_roots)?;
+    checked_application_data_root(&manifest.collection, &managed_root)?;
     let release_version = recipe_release_version(&manifest.root)?;
     let recipe_id = if game.is_standalone() {
         recipe_release_id(&manifest.root, release_version.as_deref())?
@@ -1069,9 +1071,9 @@ fn resumable_frozen_recipe(
             )
         })?;
     validate_frozen_cli_recipe(created, &frozen)?;
-    // A campaign is resumed only into its own application data folder; this runs before the
-    // deleted-cache repair or anything else writes.
-    collection_application_data_directory(&frozen.collection)?;
+    // A campaign is resumed only into its own, safely placed application data folder; this runs
+    // before the deleted-cache repair or anything else writes.
+    checked_application_data_root(&frozen.collection, managed_root)?;
     Ok(frozen)
 }
 
@@ -1297,7 +1299,7 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
-    let app_data = collection_application_data_root(&frozen.collection)?;
+    let app_data = checked_application_data_root(&frozen.collection, &created.managed_root)?;
     let registry_root = target_lock_root()?;
     let current_bg1 = frozen
         .bg1
@@ -2121,9 +2123,9 @@ fn local_application_data() -> Result<PathBuf, CliError> {
 /// Target locks of every application and collection: the legacy Baldur's Gate `locks` folder,
 /// whatever application data folder this process or recipe uses for its registry.
 fn target_lock_root() -> Result<PathBuf, CliError> {
-    Ok(crate::lock::shared_target_lock_root(
-        &local_application_data()?.join(APPLICATION_DATA_DIRECTORY),
-    ))
+    crate::lock::TargetLockNamespace::in_local_application_data(local_application_data()?)
+        .map(|locks| locks.root().to_path_buf())
+        .map_err(|error| CliError::new("application_data_unavailable", error.to_string()))
 }
 
 /// The application data folder that holds the registry and evidence of `collection`: its own
@@ -2149,10 +2151,93 @@ fn collection_application_data_directory(collection: &Collection) -> Result<&str
     }
 }
 
-/// Full path of [`collection_application_data_directory`] below `LOCALAPPDATA`.
-fn collection_application_data_root(collection: &Collection) -> Result<PathBuf, CliError> {
+/// The registry folder of `collection` below `LOCALAPPDATA`, after proving that writing it is
+/// safe for the campaign at `managed_root`:
+///
+/// - A standalone collection's folder must not be, contain or lie inside the Baldur's Gate
+///   folder under any name. Its final path is compared, so a DOS 8.3 alias (`CHRIZB~1`), a
+///   junction or a symbolic link is caught, not only the literal name.
+/// - Neither the registry folder nor the shared target-lock folder may overlap the managed
+///   root: the registry would otherwise be written into the campaign before staging, which then
+///   refuses those entries as unowned, and removal refuses the overlap, leaving a registered
+///   campaign that needs manual cleanup.
+///
+/// Every operation that creates campaign state or publishes a registry record calls this first.
+fn checked_application_data_root(
+    collection: &Collection,
+    managed_root: &Path,
+) -> Result<PathBuf, CliError> {
     let directory = collection_application_data_directory(collection)?;
-    Ok(local_application_data()?.join(directory))
+    let local = local_application_data()?;
+    let registry = local.join(directory);
+    if collection.game.is_standalone() {
+        let shared = resolved_path_identity(&local.join(APPLICATION_DATA_DIRECTORY))?;
+        let own = resolved_path_identity(&registry)?;
+        if paths_overlap(&own, &shared) {
+            return Err(CliError::new(
+                "application_data_shared",
+                format!(
+                    "the {} application data folder {} resolves to {}, which is or overlaps the Baldur's Gate application data folder {}",
+                    collection.game.display_name(),
+                    registry.display(),
+                    own.display(),
+                    shared.display()
+                ),
+            ));
+        }
+    }
+    let managed = resolved_path_identity(managed_root)?;
+    for (label, folder) in [
+        ("application data", registry.clone()),
+        ("target lock", target_lock_root()?),
+    ] {
+        let resolved = resolved_path_identity(&folder)?;
+        if paths_overlap(&managed, &resolved) {
+            return Err(CliError::new(
+                "application_data_overlap",
+                format!(
+                    "managed root {} overlaps the {label} folder {}; choose a destination outside {}",
+                    managed_root.display(),
+                    folder.display(),
+                    local.display()
+                ),
+            ));
+        }
+    }
+    Ok(registry)
+}
+
+/// The final path of `path`: its deepest existing ancestor resolved by the file system (long
+/// names for 8.3 aliases, junction and link targets), followed by the components that do not
+/// exist yet.
+fn resolved_path_identity(path: &Path) -> Result<PathBuf, CliError> {
+    let unavailable = |error: std::io::Error| {
+        CliError::new(
+            "application_data_unavailable",
+            format!("could not resolve {}: {error}", path.display()),
+        )
+    };
+    let absolute = std::path::absolute(path).map_err(unavailable)?;
+    let mut existing = absolute.as_path();
+    let mut missing = Vec::new();
+    loop {
+        match fs::canonicalize(existing) {
+            Ok(mut resolved) => {
+                for component in missing.iter().rev() {
+                    resolved.push(component);
+                }
+                return Ok(resolved);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                let (Some(name), Some(parent)) = (existing.file_name(), existing.parent()) else {
+                    return Err(unavailable(error));
+                };
+                missing.push(name.to_os_string());
+                existing = parent;
+            }
+            Err(error) => return Err(unavailable(error)),
+        }
+    }
 }
 
 fn canonical_existing_directory(path: &Path, label: &str) -> Result<PathBuf, CliError> {
@@ -2924,8 +3009,28 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 }
 
+impl<S: EventSink> GuardedCliDependencies<'_, S> {
+    /// Proves again, right before a registry write, that the registry folder is still this
+    /// collection's own and outside the campaign: a folder replaced by an alias or link while
+    /// the campaign ran must not receive its record.
+    fn recheck_application_data(&self) -> Result<(), StepFailure> {
+        let current =
+            checked_application_data_root(&self.frozen.collection, &self.created.managed_root)
+                .map_err(|error| StepFailure::new(error.to_string()))?;
+        if current != self.app_data {
+            return Err(StepFailure::new(format!(
+                "the application data folder changed from {} to {} during the campaign",
+                self.app_data.display(),
+                current.display()
+            )));
+        }
+        Ok(())
+    }
+}
+
 impl<S: EventSink> CampaignRecorder for GuardedCliDependencies<'_, S> {
     fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
+        self.recheck_application_data()?;
         ManagedInstallRegistry::open_or_create(&self.app_data)
             .and_then(|registry| {
                 registry.publish_campaign_named(created, self.frozen.effective_display_name())
@@ -3983,6 +4088,7 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
     fn write(&mut self, draft: &ReceiptDraft) -> Result<(), StepFailure> {
         let store = ReceiptStore::open(&self.created.managed_root, &self.created.install_id)
             .map_err(|error| StepFailure::new(error.to_string()))?;
+        self.recheck_application_data()?;
         let registry = ManagedInstallRegistry::open_or_create(&self.app_data)
             .map_err(|error| StepFailure::new(error.to_string()))?;
         let artifacts = self
@@ -5603,6 +5709,9 @@ mod tests {
             "LPT\u{b9}",
             "lpt\u{b2}.log",
             "LPT\u{b3} ",
+            "CONIN$",
+            "conout$",
+            "CONIN$.txt",
             "tab\there",
             &"x".repeat(65),
         ] {

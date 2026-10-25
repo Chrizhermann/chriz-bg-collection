@@ -6,12 +6,12 @@ impl NativeBridge {
     ) -> Result<bg_engine::installed_updates::InstalledUpdatePlan, CommandError> {
         self.ensure_update_idle()?;
         let record = self.available_managed_install(id)?.record;
-        let app_data = self
-            .app_data
+        let locks = self
+            .target_locks
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
         let _target =
-            bg_engine::lock::TargetLock::try_acquire(bg_engine::lock::shared_target_lock_root(app_data), &record.managed_root)
+            locks.try_acquire(&record.managed_root)
                 .map_err(|error| {
                     CommandError::new(
                         "installed_update_busy",

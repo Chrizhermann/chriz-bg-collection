@@ -28,7 +28,7 @@ use serde::Serialize;
 
 use crate::digest::sha256_bytes;
 use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
-use crate::lock::TargetLock;
+use crate::lock::TargetLockNamespace;
 use crate::preflight::{PreflightError, PreflightHost, SystemPreflight};
 
 /// The log file CEBG sets, in the game folder.
@@ -153,21 +153,26 @@ pub fn status(managed_root: &Path) -> GameLogStatus {
 
 /// Turn the game log of the installation in `managed_root` on or off for the next game start.
 /// Only the `LogFile` value in the `[General]` section of `InfinityLoader.ini` changes, and only
-/// when it is not already as requested. A log set outside CEBG counts as on.
-pub fn set(app_data: &Path, managed_root: &Path, enabled: bool) -> Result<GameLogStatus, String> {
-    set_with(app_data, managed_root, enabled, &SystemPreflight)
+/// when it is not already as requested. A log set outside CEBG counts as on. The installation is
+/// locked in `locks` for the change.
+pub fn set(
+    locks: &TargetLockNamespace,
+    managed_root: &Path,
+    enabled: bool,
+) -> Result<GameLogStatus, String> {
+    set_with(locks, managed_root, enabled, &SystemPreflight)
 }
 
 /// [`set`] with the programs that run supplied by `host`.
 pub fn set_with(
-    app_data: &Path,
+    locks: &TargetLockNamespace,
     managed_root: &Path,
     enabled: bool,
     host: &dyn PreflightHost,
 ) -> Result<GameLogStatus, String> {
-    let _lock =
-        TargetLock::try_acquire(crate::lock::shared_target_lock_root(app_data), managed_root)
-            .map_err(|error| format!("This installation is in use: {error}"))?;
+    let _lock = locks
+        .try_acquire(managed_root)
+        .map_err(|error| format!("This installation is in use: {error}"))?;
     crate::patches::launch_guard(managed_root)?;
     crate::mod_upgrades::launch_guard(managed_root)?;
     // The loader's crash handler reads the setting when the game crashes: changing it while the
@@ -641,6 +646,11 @@ fn trim(mut bytes: &[u8]) -> &[u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A lock namespace inside the test's own folder.
+    fn test_locks(temp: &Path) -> TargetLockNamespace {
+        TargetLockNamespace::in_local_application_data(temp.join("local")).unwrap()
+    }
     use crate::held_folder::tests::entries;
     use std::fs;
 
@@ -1142,7 +1152,7 @@ mod tests {
     #[test]
     fn the_switch_changes_only_the_log_setting_and_only_when_needed() {
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let root = installation(temp.path(), EEEX_INI.as_bytes());
         let none = Programs(vec![]);
 
@@ -1181,7 +1191,7 @@ mod tests {
     #[test]
     fn the_switch_refuses_while_the_game_runs_or_the_installation_is_busy() {
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let root = installation(temp.path(), EEEX_INI.as_bytes());
         let game = root.join(GAME).join("Baldur.exe");
         fs::write(&game, b"game").unwrap();
@@ -1198,8 +1208,7 @@ mod tests {
         set_with(&app, &root, true, &Programs(vec![elsewhere])).unwrap();
         assert_eq!(ini_of(&root), on(EEEX_INI).as_bytes());
 
-        let lock =
-            TargetLock::try_acquire(crate::lock::shared_target_lock_root(&app), &root).unwrap();
+        let lock = app.try_acquire(&root).unwrap();
         let error = set_with(&app, &root, false, &Programs(vec![])).unwrap_err();
         assert!(error.starts_with("This installation is in use"), "{error}");
         drop(lock);
@@ -1215,7 +1224,7 @@ mod tests {
     #[test]
     fn the_switch_refuses_an_ini_it_cannot_change() {
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let root = installation(temp.path(), b"[Other]\nLogFile=\n");
         let none = Programs(vec![]);
 
@@ -1273,7 +1282,7 @@ mod tests {
             let recorded = sha256_bytes(&original);
 
             let temp = tempfile::tempdir().unwrap();
-            let app = temp.path().join("app");
+            let app = test_locks(temp.path());
             let root = installation(temp.path(), &original);
             // Switched to the other setting, then back.
             for enabled in [
@@ -1487,7 +1496,7 @@ mod tests {
         use crate::held_folder::tests::junction;
 
         let temp = tempfile::tempdir().unwrap();
-        let app = temp.path().join("app");
+        let app = test_locks(temp.path());
         let outside = installation(&temp.path().join("outside"), EEEX_INI.as_bytes());
         let none = Programs(vec![]);
 

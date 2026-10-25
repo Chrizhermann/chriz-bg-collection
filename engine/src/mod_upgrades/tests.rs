@@ -8,6 +8,7 @@ struct Fixture {
     _temp: tempfile::TempDir,
     record: ManagedInstallRecord,
     app: PathBuf,
+    locks: crate::lock::TargetLockNamespace,
     cache: PathBuf,
     original: BTreeMap<String, Vec<u8>>,
 }
@@ -66,6 +67,10 @@ impl Fixture {
         );
         Self {
             app: temp.path().join("app"),
+            locks: crate::lock::TargetLockNamespace::in_local_application_data(
+                temp.path().join("local"),
+            )
+            .unwrap(),
             cache: temp.path().join("cache"),
             _temp: temp,
             record,
@@ -76,6 +81,7 @@ impl Fixture {
         Context {
             record: &self.record,
             app_data: &self.app,
+            locks: &self.locks,
             cache: &self.cache,
             recipe: self._temp.path(),
         }
