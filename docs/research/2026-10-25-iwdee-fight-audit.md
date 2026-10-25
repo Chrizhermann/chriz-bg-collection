@@ -78,7 +78,8 @@ Probably wasted effort:
 **Base game: Belhifet (AR1105)** [V]
 - **Stats:** BELHIF is IMP 15, 350 HP, AC -12, THAC0 3, 3 APR. His +5 weapon does 1d10+5 with poison and disease. MR 50, fire 100, cold 50.
 - **Spell immunity:** his ring BRING gives immunity to spell levels 1-9 (op102 x9) plus 44 named spells. Party spells cannot touch him.
-- **Other protection:** weapon immunities (op120); a min-HP ring keeps him at 1 HP.
+- **Other protection:** his amulet BEHAMU makes him immune to non-magical, +1 and +2 weapons (op120 type 2 plus type 0 with enchantment 1 and 2, the same set as the spell Mantle, SPWI708), so only +3 or better hits him. SCS's pit-fiend macro leaves the amulet alone. A min-HP ring keeps him at 1 HP.
+- **What the party can have by then** (base game, without random treasure): about 17 melee weapons of +3 or better as loot, almost all from the later chapters, plus thirteen single +3/+4 weapons at two stores (base prices 5,100-42,000 gold, sold at 150-180 %). +3 ammunition is loot only: Arrows of Piercing +3 from one late group of archers (up to 190, minus what they shoot). There are no +3 bolts, bullets, darts or launchers. Arrows, bolts and bullets +2 can be bought in the later chapters.
 - **Arrival:** Poquelin talks. A dialogue branch opens the portal and walks two cornugons out of it.
 - **Transformation:** cutscene EEPOQCNG casts an unresisted Dispel Magic on the nearest PC. SPIN183 (opcode 151) turns Poquelin into Belhifet, and the two iron golems turn hostile.
 - **Minions:** golems melee and drop a poison cloud every 49 s. Cornugons only melee.
@@ -352,7 +353,7 @@ Full stats are in the generated inventory and `fights_detail.md`: class/level, H
 5. SCS behaviours never observed: Lizard King idle, potions on per-actor caster clones, the models, the AR9717 beholder text swap.
 6. SPIN182's opcodes not listed.
 7. Heart of Fury effects.
-8. Op120 thresholds on Belhifet's amulet (which enchantment hits him).
+8. ~~Op120 thresholds on Belhifet's amulet (which enchantment hits him).~~ Resolved on 2026-10-25: +3 or better (see A3).
 9. Dialogue texts were read only for their actions.
 10. Boss flags are heuristic; allies such as Arundel and Everard appear as rows.
 11. The engine's script-slot order used in the slot plans [I].
