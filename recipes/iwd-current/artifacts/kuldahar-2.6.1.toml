@@ -1,11 +1,11 @@
 id = "kuldahar-2.6.1"
 name = "The Rediscovery of Kuldahar"
 version = "2.6.1"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/the-rediscovery-of-kuldahar/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/the-rediscovery-of-kuldahar/?wpdmdl=420"
 reference = "2.6.1"
 expected_filename = "Kuldahar-v2.6.1.zip"
 expected_length = 39452216
@@ -27,6 +27,6 @@ max_compression_ratio = 200
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/the-rediscovery-of-kuldahar/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/the-rediscovery-of-kuldahar/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

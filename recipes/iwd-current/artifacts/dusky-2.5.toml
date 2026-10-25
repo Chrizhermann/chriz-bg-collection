@@ -1,11 +1,11 @@
 id = "dusky-2.5"
 name = "Dusky"
 version = "2.5"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/dusky-iwdee-npc/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/dusky-iwdee-npc/?wpdmdl=129"
 reference = "2.5"
 expected_filename = "Dusky-v2.5.zip"
 expected_length = 6209880
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/dusky-iwdee-npc/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/dusky-iwdee-npc/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

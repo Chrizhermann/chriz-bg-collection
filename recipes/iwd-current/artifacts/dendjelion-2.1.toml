@@ -1,11 +1,11 @@
 id = "dendjelion-2.1"
 name = "Dendjelion"
 version = "2.1"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/dendjelion/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/dendjelion/?wpdmdl=286"
 reference = "2.1"
 expected_filename = "dendjelion-v2.1.zip"
 expected_length = 12598744
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/dendjelion/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/dendjelion/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

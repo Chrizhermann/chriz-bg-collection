@@ -1,11 +1,11 @@
 id = "innbb-3.1"
 name = "Below & Below Inn"
 version = "3.1"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/below-below-inn/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/below-below-inn/?wpdmdl=369"
 reference = "3.1"
 expected_filename = "InnBB-v3.1.zip"
 expected_length = 13649964
@@ -27,6 +27,6 @@ max_compression_ratio = 1000
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/below-below-inn/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/below-below-inn/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

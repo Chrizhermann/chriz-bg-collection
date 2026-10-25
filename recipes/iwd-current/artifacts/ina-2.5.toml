@@ -1,11 +1,11 @@
 id = "ina-2.5"
 name = "Ina"
 version = "2.5"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/ina/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/ina/?wpdmdl=288"
 reference = "2.5"
 expected_filename = "Ina-v2.5.zip"
 expected_length = 5978882
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/ina/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/ina/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

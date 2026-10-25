@@ -1,11 +1,11 @@
 id = "vito-1.1"
 name = "Vito"
 version = "1.1"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/vito/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/vito/?wpdmdl=878"
 reference = "1.1"
 expected_filename = "Vito-v1.1.zip"
 expected_length = 10748549
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/vito/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/vito/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

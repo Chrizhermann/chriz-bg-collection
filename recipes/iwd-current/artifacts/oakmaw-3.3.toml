@@ -1,11 +1,11 @@
 id = "oakmaw-3.3"
 name = "Oak-Maw"
 version = "3.3"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/oak-maw/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/oak-maw/?wpdmdl=290"
 reference = "3.3"
 expected_filename = "OakMaw v3.3.zip"
 expected_length = 4852691
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/oak-maw/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/oak-maw/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

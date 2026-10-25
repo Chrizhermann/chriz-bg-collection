@@ -1,11 +1,11 @@
 id = "lanna-1.8"
 name = "L'anna"
 version = "1.8"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/lanna/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/lanna/?wpdmdl=437"
 reference = "1.8"
 expected_filename = "Lanna v1.8.zip"
 expected_length = 14379906
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/lanna/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/lanna/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

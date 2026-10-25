@@ -1,11 +1,11 @@
 id = "skineater-2.6"
 name = "Terror of the Skineater"
 version = "2.6"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/terror-of-the-skineater/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/terror-of-the-skineater/?wpdmdl=372"
 reference = "2.6"
 expected_filename = "Skineater-v2.6.zip"
 expected_length = 33852186
@@ -27,6 +27,6 @@ max_compression_ratio = 1000
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/terror-of-the-skineater/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/terror-of-the-skineater/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

@@ -1,11 +1,11 @@
 id = "bethany-1.03"
 name = "Bethany"
 version = "1.03"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/bethany/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/bethany/?wpdmdl=751"
 reference = "1.03"
 expected_filename = "Bethany-v1.03.zip"
 expected_length = 3759411
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/bethany/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/bethany/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

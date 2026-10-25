@@ -1,11 +1,11 @@
 id = "hommet-1.2"
 name = "Hommet"
 version = "1.2"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/hommet/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/hommet/?wpdmdl=441"
 reference = "1.2"
 expected_filename = "Hommet-v1.2.zip"
 expected_length = 4373752
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/hommet/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/hommet/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

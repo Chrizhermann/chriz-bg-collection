@@ -1,11 +1,11 @@
 id = "tviy-2.4"
 name = "T'viy"
 version = "2.4"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/tviy/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/tviy/?wpdmdl=309"
 reference = "2.4"
 expected_filename = "Tviy v2.4.zip"
 expected_length = 6382769
@@ -27,6 +27,6 @@ max_compression_ratio = 100
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/tviy/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/tviy/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"

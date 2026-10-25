@@ -1,11 +1,11 @@
 id = "snowytoes-1.6"
 name = "Snowytoes Hamlet"
 version = "1.6"
-acquisition = "manual-user-supplied"
+acquisition = "fetch-only"
 
 [source]
-kind = "manual"
-url = "https://downloads.weaselmods.net/download/snowytoes-hamlet/"
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/snowytoes-hamlet/?wpdmdl=557"
 reference = "1.6"
 expected_filename = "Snowytoes-v1.6.zip"
 expected_length = 17766463
@@ -27,6 +27,6 @@ max_compression_ratio = 200
 
 [provenance]
 homepage = "https://downloads.weaselmods.net/download/snowytoes-hamlet/"
-license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
 url = "https://downloads.weaselmods.net/download/snowytoes-hamlet/"
-reviewed_on = "2026-10-25"
+reviewed_on = "2026-10-26"
