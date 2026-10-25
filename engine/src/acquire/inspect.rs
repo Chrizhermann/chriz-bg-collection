@@ -7,6 +7,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use sha2::{Digest, Sha256};
 use url::Url;
 
+use crate::fs_retry;
+
 use super::http::HttpClient;
 use super::AcquireError;
 
@@ -132,7 +134,7 @@ pub fn download_for_inspection(
         }
         remove_file_if_present(&temporary)?;
     } else {
-        fs::rename(&temporary, &destination).map_err(|source| AcquireError::Io {
+        fs_retry::rename(&temporary, &destination).map_err(|source| AcquireError::Io {
             action: "publish quarantined inspection download",
             path: destination.clone(),
             source,

@@ -19,6 +19,7 @@ use walkdir::WalkDir;
 
 use crate::acquire::{ArtifactCache, CacheDisposition, DownloadRequest};
 use crate::events::EventSink;
+use crate::fs_retry;
 
 /// Upstream repository whose normal Latest release supplies the add-on.
 pub const RADAR_REPOSITORY: &str = "tapahob/BG2RadarOverlay";
@@ -994,7 +995,7 @@ fn publish_transaction(
                 io_error("remove empty Radar directory", &roots.install, source)
             })?;
         }
-        if let Err(source) = fs::rename(publication, &roots.install) {
+        if let Err(source) = fs_retry::rename(publication, &roots.install) {
             remove_file_if_present(&receipt_temp);
             return Err(io_error(
                 "publish Radar install directory",
@@ -1002,8 +1003,8 @@ fn publish_transaction(
                 source,
             ));
         }
-        if let Err(source) = fs::rename(&receipt_temp, &roots.receipt) {
-            let _ = fs::rename(&roots.install, publication);
+        if let Err(source) = fs_retry::rename(&receipt_temp, &roots.receipt) {
+            let _ = fs_retry::rename(&roots.install, publication);
             remove_directory_if_present(publication);
             remove_file_if_present(&receipt_temp);
             return Err(io_error("publish Radar receipt", &roots.receipt, source));
@@ -1013,12 +1014,12 @@ fn publish_transaction(
 
     let backup = unique_sibling(&roots.install, "backup")?;
     let receipt_backup = unique_sibling(&roots.receipt, "backup")?;
-    if let Err(source) = fs::rename(&roots.receipt, &receipt_backup) {
+    if let Err(source) = fs_retry::rename(&roots.receipt, &receipt_backup) {
         remove_file_if_present(&receipt_temp);
         return Err(io_error("back up Radar receipt", &roots.receipt, source));
     }
-    if let Err(source) = fs::rename(&roots.install, &backup) {
-        let _ = fs::rename(&receipt_backup, &roots.receipt);
+    if let Err(source) = fs_retry::rename(&roots.install, &backup) {
+        let _ = fs_retry::rename(&receipt_backup, &roots.receipt);
         remove_file_if_present(&receipt_temp);
         return Err(io_error(
             "back up Radar install directory",
@@ -1026,9 +1027,9 @@ fn publish_transaction(
             source,
         ));
     }
-    if let Err(source) = fs::rename(publication, &roots.install) {
-        let _ = fs::rename(&backup, &roots.install);
-        let _ = fs::rename(&receipt_backup, &roots.receipt);
+    if let Err(source) = fs_retry::rename(publication, &roots.install) {
+        let _ = fs_retry::rename(&backup, &roots.install);
+        let _ = fs_retry::rename(&receipt_backup, &roots.receipt);
         remove_file_if_present(&receipt_temp);
         return Err(io_error(
             "publish Radar update directory",
@@ -1036,11 +1037,11 @@ fn publish_transaction(
             source,
         ));
     }
-    if let Err(source) = fs::rename(&receipt_temp, &roots.receipt) {
+    if let Err(source) = fs_retry::rename(&receipt_temp, &roots.receipt) {
         let failed = unique_sibling(&roots.install, "failed")?;
-        let _ = fs::rename(&roots.install, &failed);
-        let _ = fs::rename(&backup, &roots.install);
-        let _ = fs::rename(&receipt_backup, &roots.receipt);
+        let _ = fs_retry::rename(&roots.install, &failed);
+        let _ = fs_retry::rename(&backup, &roots.install);
+        let _ = fs_retry::rename(&receipt_backup, &roots.receipt);
         remove_directory_if_present(&failed);
         remove_file_if_present(&receipt_temp);
         return Err(io_error(

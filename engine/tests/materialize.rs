@@ -322,6 +322,80 @@ fn signed_collision_rule_requires_both_owners_and_exact_input_output_hashes() {
     );
 }
 
+#[cfg(windows)]
+#[test]
+fn signed_collision_replacement_outlasts_a_brief_hold_on_the_replaced_file() {
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::time::{Duration, Instant};
+    use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
+
+    let temp = TempDir::new().unwrap();
+    let old = extracted(
+        &temp,
+        "old",
+        &[("mod/setup-mod.tp2", TP2), ("mod/data.txt", b"old bytes")],
+        &["mod"],
+        &["mod/setup-mod.tp2"],
+    );
+    let new = extracted(
+        &temp,
+        "new",
+        &[("mod/setup-mod.tp2", TP2), ("mod/data.txt", b"new bytes")],
+        &["mod"],
+        &["mod/setup-mod.tp2"],
+    );
+    let destination = temp.path().join("game");
+    std::fs::create_dir(&destination).unwrap();
+    materialize(
+        &old,
+        &destination,
+        &request("old-run", "old-owner", &["mod"], &["mod/setup-mod.tp2"]),
+    )
+    .unwrap();
+    let mut replacement = request("new-run", "new-owner", &["mod"], &["mod/setup-mod.tp2"]);
+    replacement.collision_rules.push(SignedCollisionRule {
+        relative_path: "mod/data.txt".to_owned(),
+        existing_owner: "old-owner".to_owned(),
+        incoming_owner: "new-owner".to_owned(),
+        expected_input_sha256: sha256_bytes(b"old bytes"),
+        expected_output_sha256: sha256_bytes(b"new bytes"),
+    });
+
+    // Held the way a virus scanner holds a file: readable, but not replaceable.
+    let target = destination.join("mod/data.txt");
+    let holder = std::fs::OpenOptions::new()
+        .read(true)
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+        .open(&target)
+        .unwrap();
+    let staged = temp_sibling(&target, "new-run");
+    let watched = staged.clone();
+    let release = std::thread::spawn(move || {
+        // Let go well after the replacement is staged, synced and first renamed, but long
+        // before the retries end.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !watched.exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        std::thread::sleep(Duration::from_millis(500));
+        drop(holder);
+    });
+
+    let result = materialize(&new, &destination, &replacement);
+    release.join().unwrap();
+
+    let entry = result
+        .unwrap()
+        .manifest
+        .entries
+        .into_iter()
+        .find(|entry| entry.relative_path == "mod/data.txt")
+        .unwrap();
+    assert_eq!(entry.owner, "new-owner");
+    assert_eq!(std::fs::read(&target).unwrap(), b"new bytes");
+    assert!(!staged.exists());
+}
+
 #[test]
 fn resume_removes_only_its_temp_and_reconciles_an_identical_published_prefix() {
     let temp = TempDir::new().unwrap();

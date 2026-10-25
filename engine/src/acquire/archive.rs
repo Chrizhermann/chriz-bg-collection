@@ -12,6 +12,8 @@ use zip::{CompressionMethod, ZipArchive};
 #[cfg(windows)]
 use widestring::WideCString;
 
+use crate::fs_retry;
+
 use super::AcquireError;
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -291,7 +293,7 @@ pub fn extract_archive(
         path: parent.to_path_buf(),
         source,
     })?;
-    match fs::rename(&temporary, &final_root) {
+    match fs_retry::rename(&temporary, &final_root) {
         Ok(()) => {}
         Err(_source) if final_root.exists() => {
             let _ = fs::remove_dir_all(&temporary);
