@@ -30,6 +30,8 @@ Christopher streams an Icewind Dale: Enhanced Edition playthrough in November 20
 | 2026-10-25 | Caster prebuffs stay modest: enemy mages and priests that SCS does not cover should not be "naked", nothing more. | Christopher, this session |
 | 2026-10-25 | Belhifet: the ring's immunity to all spell levels goes. Instead a small innate immunity to low spell levels (Christopher named 1–2, 1–3 or 1–4, "nicht zu krass") or simply high magic resistance (50–70 %), plus prebuffs and SCS-style rebuffs during the fight. No vulnerability windows. | Christopher, this session |
 | 2026-10-25 | Component selection: components that carry over one-to-one from the BG installer's choices may be preselected; Christopher reviews them. | Christopher, this session |
+| 2026-10-25 | Belhifet: +2 weapons are enough. He stays immune only to non-magical and +1 weapons, so archers with bought ammunition can hit him too (+3 ammunition is loot-only). | Christopher ("viel besser") |
+| 2026-10-25 | Difficulty principle for our fight changes: make fights hard through behaviour and situations that leave several ways to win, not through walls of numbers (very high AC, saves, resistances, immunities). More hit points are acceptable, because the games' hit points on high difficulties are too low. Belhifet probably needs more hit points, scaled by difficulty. | Christopher, this session |
 
 Curation stays Christopher's: the agent delivers neutral inventories; he decides mods,
 components and defaults.
