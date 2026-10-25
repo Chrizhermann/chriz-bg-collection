@@ -1,0 +1,11 @@
+id = "vito"
+artifact_id = "vito-1.1"
+name = "Vito"
+tp2 = "Vito/Vito.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Vito, the Kenku Diviner"

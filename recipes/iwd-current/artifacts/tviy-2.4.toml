@@ -1,0 +1,32 @@
+id = "tviy-2.4"
+name = "T'viy"
+version = "2.4"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://downloads.weaselmods.net/download/tviy/"
+reference = "2.4"
+expected_filename = "Tviy v2.4.zip"
+expected_length = 6382769
+sha256 = "457a88611d91ff4e279163b9f1df1824e336f37d9c5c92100df84c9429acdb69"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Tviy"]
+tp2_paths = ["Tviy/Tviy.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/tviy/"
+license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/tviy/"
+reviewed_on = "2026-10-25"

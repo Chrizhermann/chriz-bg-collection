@@ -1,0 +1,15 @@
+id = "innbb"
+artifact_id = "innbb-3.1"
+name = "Below & Below Inn"
+tp2 = "InnBB/InnBB.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Below & Below Inn (IWD EE) -> Yes, but don't patch existing save games"
+
+[[components]]
+id = 1
+name = "Below & Below Inn (IWD EE) -> Yes and patch existing save games"

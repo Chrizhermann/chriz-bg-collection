@@ -1,0 +1,47 @@
+id = "eeex"
+artifact_id = "eeex-1.3.1"
+name = "EEex"
+tp2 = "EEex/EEex.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Quick Menu Core"
+
+[[components]]
+id = 1
+name = "EEex"
+
+[[components]]
+id = 9
+name = "Enable attack info module: Show to-hit chances when hovering attack cursor over target"
+
+[[components]]
+id = 2
+name = "Enable effect menu module: LShift-on-hover to view spells affecting creature"
+
+[[components]]
+id = 3
+name = "Enable empty container module: Highlight empty containers in gray instead of cyan"
+
+[[components]]
+id = 4
+name = "Enable hotkey module: Edit override/B3Hotkey.lua to create advanced spell hotkeys"
+
+[[components]]
+id = 5
+name = "Enable scale module: Customizable UI scaling factor"
+
+[[components]]
+id = 6
+name = "Enable time step module: Advance 1 game tick on keypress"
+
+[[components]]
+id = 7
+name = "Enable timer module: Visual indicators for modal actions, contingencies, and spell/item cooldowns"
+
+[[components]]
+id = 8
+name = "Experimental - Use LuaJIT: Can help stuttering | WARNING: May cause crashes when combined with certain mods"

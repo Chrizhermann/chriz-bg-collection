@@ -1,0 +1,23 @@
+id = "willowisp"
+artifact_id = "willowisp-3.6"
+name = "Will of the Wisps"
+tp2 = "willowisp/willowisp.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 2
+name = "Witchlight Shaman Standalone Kit"
+
+[[components]]
+id = 3
+name = "Town Medium (Shaman) Kit"
+
+[[components]]
+id = 4
+name = "New items for shamans and undead NPCs"
+
+[[components]]
+id = 5
+name = "Optional: Drider, Dark Treant, Will-o'-wisp Enemies"

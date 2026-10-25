@@ -1,0 +1,32 @@
+id = "cdtweaks-18"
+name = "The Tweaks Anthology"
+version = "18"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gibberlings3/Tweaks-Anthology/releases/download/v18/the-tweaks-anthology-v18.iemod"
+reference = "v18"
+expected_filename = "the-tweaks-anthology-v18.iemod"
+expected_length = 21817521
+sha256 = "776212ec781ddf14071a9f74df075824fe8430a13302d2bea7d11fd91d179b17"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["cdtweaks"]
+tp2_paths = ["cdtweaks/setup-cdtweaks.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 256
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/Tweaks-Anthology"
+license = "Fetch-only third-party release; the collection does not redistribute it"
+url = "https://github.com/Gibberlings3/Tweaks-Anthology/releases/tag/v18"
+reviewed_on = "2026-09-05"

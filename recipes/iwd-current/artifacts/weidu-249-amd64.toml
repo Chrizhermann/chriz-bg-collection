@@ -1,0 +1,39 @@
+id = "weidu-249-amd64"
+name = "WeiDU 249 for Windows x64"
+version = "249.00"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/WeiDUorg/weidu/releases/download/v249.00/WeiDU-Windows-249-amd64.zip"
+reference = "v249.00"
+expected_filename = "WeiDU-Windows-249-amd64.zip"
+expected_length = 2154755
+sha256 = "b156910cbec69359fc2e42f6739aa959d49047d6fd3dc172f6bed88ffad8f927"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["weidu.exe"]
+tp2_paths = []
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[tool]
+executable = "weidu.exe"
+expected_length = 1364992
+sha256 = "ad70f5897a6d0ba4b0d226f845a9b14cf345f56cc9697ca8d05cac9fe4932c1a"
+weidu_version = "24900"
+pe_machine = "x86-64"
+
+[provenance]
+homepage = "https://weidu.org/"
+license = "GPL-2.0"
+url = "https://github.com/WeiDUorg/weidu/releases/tag/v249.00"
+reviewed_on = "2026-09-03"

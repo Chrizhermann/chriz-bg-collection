@@ -1,0 +1,32 @@
+id = "iwdgo-fda64dea40a33336d1e60d54584a4a6c6a4667d6"
+name = "Icewind Dale Graphical Overhaul"
+version = "fda64dea40a33336d1e60d54584a4a6c6a4667d6"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Spellhold-Studios/Icewind-Dale-Graphical-Overhaul/zip/fda64dea40a33336d1e60d54584a4a6c6a4667d6"
+reference = "fda64dea40a33336d1e60d54584a4a6c6a4667d6"
+expected_filename = "Icewind-Dale-Graphical-Overhaul-fda64dea40a33336d1e60d54584a4a6c6a4667d6.zip"
+expected_length = 346739468
+sha256 = "276a143864118e9f9f6e52e2cce5dba0c7ab2ab5e5c674b2b24bda5ee396b995"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["iwdgo"]
+tp2_paths = ["iwdgo/iwdgo.tp2"]
+
+[archive.limits]
+max_depth = 10
+max_entries = 4096
+max_entry_uncompressed_bytes = 33554432
+max_total_uncompressed_bytes = 1073741824
+max_compression_ratio = 200
+
+[provenance]
+homepage = "https://github.com/Spellhold-Studios/Icewind-Dale-Graphical-Overhaul"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/Spellhold-Studios/Icewind-Dale-Graphical-Overhaul/commit/fda64dea40a33336d1e60d54584a4a6c6a4667d6"
+reviewed_on = "2026-10-25"

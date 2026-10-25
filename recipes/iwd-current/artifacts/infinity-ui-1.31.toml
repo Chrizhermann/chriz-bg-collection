@@ -1,0 +1,32 @@
+id = "infinity-ui-1.31"
+name = "Infinity UI++"
+version = "1.31"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-tag-archive"
+url = "https://codeload.github.com/Renegade0/InfinityUI/zip/refs/tags/v1.31"
+reference = "v1.31"
+expected_filename = "InfinityUI-1.31.zip"
+expected_length = 272024105
+sha256 = "4541f7f99cbf375ca30d0ff1f37df8df11e07a5e34bb09e158efbbee476b6685"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["infinity_ui"]
+tp2_paths = ["infinity_ui/infinity_ui.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 8192
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 1073741824
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Renegade0/InfinityUI"
+license = "Fetch-only from the author's official release; no redistribution by CEBG"
+url = "https://github.com/Renegade0/InfinityUI/releases/tag/v1.31"
+reviewed_on = "2026-10-25"

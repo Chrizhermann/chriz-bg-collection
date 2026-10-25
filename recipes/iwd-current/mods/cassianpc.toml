@@ -1,0 +1,15 @@
+id = "cassianpc"
+artifact_id = "cassianpc-8f9af4ca4e76ec72240f961b18a1d83739acd994"
+name = "Cassia NPC for IWD:EE"
+tp2 = "CassiaNPC/Setup-CassiaNPC.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Cassia NPC for Icewind Dale: Enhanced Edition"
+
+[[components]]
+id = 1
+name = "Replace Healing Spells with copies that can affect Tieflings?"

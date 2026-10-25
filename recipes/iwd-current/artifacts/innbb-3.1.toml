@@ -1,0 +1,32 @@
+id = "innbb-3.1"
+name = "Below & Below Inn"
+version = "3.1"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://downloads.weaselmods.net/download/below-below-inn/"
+reference = "3.1"
+expected_filename = "InnBB-v3.1.zip"
+expected_length = 13649964
+sha256 = "159a82621b39c9eb494fbed3eab5c52570e5b30e8a119eac6b37464da12e8f62"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["InnBB"]
+tp2_paths = ["InnBB/InnBB.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/below-below-inn/"
+license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/below-below-inn/"
+reviewed_on = "2026-10-25"

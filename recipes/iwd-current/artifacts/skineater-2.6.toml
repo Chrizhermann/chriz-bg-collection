@@ -1,0 +1,32 @@
+id = "skineater-2.6"
+name = "Terror of the Skineater"
+version = "2.6"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://downloads.weaselmods.net/download/terror-of-the-skineater/"
+reference = "2.6"
+expected_filename = "Skineater-v2.6.zip"
+expected_length = 33852186
+sha256 = "077e892cecbd4e99f88c1a5153639620f547839a9614ff8bde47cc3fdcae8983"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Skineater"]
+tp2_paths = ["Skineater/Skineater.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/terror-of-the-skineater/"
+license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/terror-of-the-skineater/"
+reviewed_on = "2026-10-25"

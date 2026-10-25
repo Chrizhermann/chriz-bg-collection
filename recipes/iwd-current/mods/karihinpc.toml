@@ -1,0 +1,11 @@
+id = "karihinpc"
+artifact_id = "karihinpc-1.02"
+name = "Karihi NPC for IWD:EE"
+tp2 = "KarihiNPC/KarihiNPC.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Karihi NPC for Icewind Dale: Enhanced Edition"

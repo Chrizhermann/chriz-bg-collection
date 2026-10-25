@@ -1,0 +1,15 @@
+id = "ourlady"
+artifact_id = "ourlady-2.7"
+name = "Tale of Our Lady Dreamless"
+tp2 = "OurLady/OurLady.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Tale of Our Lady Dreamless (IWD EE) -> Yes, but don't patch existing save games"
+
+[[components]]
+id = 1
+name = "Tale of Our Lady Dreamless (IWD EE) -> Yes and patch existing save games"

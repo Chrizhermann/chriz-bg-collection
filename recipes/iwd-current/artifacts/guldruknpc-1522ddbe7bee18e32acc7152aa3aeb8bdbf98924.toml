@@ -1,0 +1,32 @@
+id = "guldruknpc-1522ddbe7bee18e32acc7152aa3aeb8bdbf98924"
+name = "Guldruk NPC for IWD:EE"
+version = "1522ddbe7bee18e32acc7152aa3aeb8bdbf98924"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/TheArtisanBG/IWD-Guldruk-NPC/zip/1522ddbe7bee18e32acc7152aa3aeb8bdbf98924"
+reference = "1522ddbe7bee18e32acc7152aa3aeb8bdbf98924"
+expected_filename = "IWD-Guldruk-NPC-1522ddbe7bee18e32acc7152aa3aeb8bdbf98924.zip"
+expected_length = 3103020
+sha256 = "7852755da148a5e46d29d314ad9e8aa0c7a36ada7a7fe975f1cdc1bac3639bbf"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["GuldrukNPC"]
+tp2_paths = ["GuldrukNPC/GuldrukNPC.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/TheArtisanBG/IWD-Guldruk-NPC"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/TheArtisanBG/IWD-Guldruk-NPC/commit/1522ddbe7bee18e32acc7152aa3aeb8bdbf98924"
+reviewed_on = "2026-10-25"

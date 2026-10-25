@@ -1,0 +1,32 @@
+id = "orra-2.7"
+name = "Orra"
+version = "2.7"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://downloads.weaselmods.net/download/orra/"
+reference = "2.7"
+expected_filename = "Orra-v2.7.zip"
+expected_length = 3459689
+sha256 = "ae6e593c99fd720f31d40d6e76213ace6a636d57c7ddae3040b17792908bbef9"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Orra"]
+tp2_paths = ["Orra/Orra.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/orra/"
+license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/orra/"
+reviewed_on = "2026-10-25"

@@ -1,0 +1,32 @@
+id = "dendjelion-2.1"
+name = "Dendjelion"
+version = "2.1"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://downloads.weaselmods.net/download/dendjelion/"
+reference = "2.1"
+expected_filename = "dendjelion-v2.1.zip"
+expected_length = 12598744
+sha256 = "43fbf9c21474aa673a73dbc44c2852afb01217ea3573c9c0c8905340ac011493"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["dendjelion"]
+tp2_paths = ["dendjelion/Dendjelion.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/dendjelion/"
+license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/dendjelion/"
+reviewed_on = "2026-10-25"

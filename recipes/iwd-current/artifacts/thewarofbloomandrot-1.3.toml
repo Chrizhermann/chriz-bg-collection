@@ -1,0 +1,32 @@
+id = "thewarofbloomandrot-1.3"
+name = "The War of Bloom and Rot"
+version = "1.3"
+acquisition = "manual-user-supplied"
+
+[source]
+kind = "manual"
+url = "https://downloads.weaselmods.net/download/the-war-of-bloom-and-rot/"
+reference = "1.3"
+expected_filename = "TheWarOfBloomAndRot-v1.3.zip"
+expected_length = 41160100
+sha256 = "8cd969ede1757d9b77e4a4a80eda5c0dc3d6ba5522d660dce331afd7a7bbc737"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["TheWarOfBloomAndRot"]
+tp2_paths = ["TheWarOfBloomAndRot/TheWarOfBloomAndRot.tp2"]
+
+[archive.limits]
+max_depth = 9
+max_entries = 2048
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 2000
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/the-war-of-bloom-and-rot/"
+license = "User downloads the official release from Weasel Mods; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/the-war-of-bloom-and-rot/"
+reviewed_on = "2026-10-25"

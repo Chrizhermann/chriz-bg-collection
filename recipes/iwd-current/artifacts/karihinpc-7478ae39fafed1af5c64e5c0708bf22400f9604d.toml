@@ -1,0 +1,32 @@
+id = "karihinpc-7478ae39fafed1af5c64e5c0708bf22400f9604d"
+name = "Karihi NPC for IWD:EE"
+version = "7478ae39fafed1af5c64e5c0708bf22400f9604d"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/TheArtisanBG/KarihiNPC/zip/7478ae39fafed1af5c64e5c0708bf22400f9604d"
+reference = "7478ae39fafed1af5c64e5c0708bf22400f9604d"
+expected_filename = "KarihiNPC-7478ae39fafed1af5c64e5c0708bf22400f9604d.zip"
+expected_length = 7057250
+sha256 = "45a1e9737ea55cad8de326a07e79327fee5d02fb0c99a482dee339042ee641be"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["KarihiNPC"]
+tp2_paths = ["KarihiNPC/KarihiNPC.tp2"]
+
+[archive.limits]
+max_depth = 9
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/TheArtisanBG/KarihiNPC"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/TheArtisanBG/KarihiNPC/commit/7478ae39fafed1af5c64e5c0708bf22400f9604d"
+reviewed_on = "2026-10-25"

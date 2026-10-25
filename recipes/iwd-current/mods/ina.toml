@@ -1,0 +1,11 @@
+id = "ina"
+artifact_id = "ina-2.5"
+name = "Ina"
+tp2 = "Ina/Ina.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Ina NPC for IWD:EE"
