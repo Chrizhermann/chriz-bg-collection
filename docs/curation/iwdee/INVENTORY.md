@@ -13,7 +13,7 @@ Status 2026-10-25. Read-only research by a subagent. Neutral facts only: no reco
 - **GH-rel:** a versioned GitHub release asset, so a stable URL.
 - **tag-zip:** a GitHub tag archive (`archive/refs/tags/<tag>.zip` or codeload). It is stable unless the tag is moved.
 - **branch:** there is no release or tag for the current state. It needs a commit pin (CEBG kind `github-commit-zip`).
-- **WPDM:** a weaselmods download page (WordPress Download Manager), at `https://downloads.weaselmods.net/download/<slug>/`. The page URL is stable, but the file link carries a per-visit `refresh` token. A token-free `?wpdmdl=<post id>` link was not tested, because no archives were downloaded. A Dropbox folder mirror also exists: `https://www.dropbox.com/sh/56dr4q8h2q7djri/AACJfi0A2mV7hFlH3eqDLTcEa?dl=0`.
+- **WPDM:** a weaselmods download page (WordPress Download Manager), at `https://downloads.weaselmods.net/download/<slug>/`. The page URL is stable, but the file link on the page carries a per-visit `refresh` token. The token-free `?wpdmdl=<post id>` link serves the same archive without cookies or login: on 2026-10-26 all 19 pinned Lava packages downloaded through it with the pinned length and SHA-256, and the installer fetches them that way. A Dropbox folder mirror also exists: `https://www.dropbox.com/sh/56dr4q8h2q7djri/AACJfi0A2mV7hFlH3eqDLTcEa?dl=0`.
 - **forum:** a forum attachment.
 
 **IWD:EE**
@@ -263,7 +263,7 @@ Expansion-area data, for verification only: the Artisan NPC repos contain area s
 | G3 text | EE Fixpack, Tweaks Anthology, IWD Crossmod Banter Pack, IWD Unfinished Business, Item Upgrade for IWD, Divine Remix. |
 | Kitpack (Chriz fork) README | Any redistribution should credit Artemius_I first and link to the current website. |
 | IWDEE Tweaks and Fixes | Custom licence: use, copying, modification and redistribution of the mod's own code are allowed under conditions, including credit. |
-| Lava (weaselmods forum thread `https://www.weaselmods.net/showthread.php?tid=3091`, 2026-10-07) | Lava does not make forks or alternative versions of the mods and does not allow others to do so. No licence clause was found on the weaselmods download pages or forum info threads. The readmes inside the archives were not checked. |
+| Lava (weaselmods forum thread `https://www.weaselmods.net/showthread.php?tid=3091`, 2026-10-07) | Lava does not make forks or alternative versions of the mods and does not allow others to do so. No licence clause was found on the weaselmods download pages or forum info threads. Inside the 19 pinned archives (checked 2026-10-26) the readmes hold credits, a version history and the usual trademark disclaimer; no archive has a licence file or a redistribution or compilation clause. The installer installs them unchanged from weaselmods. |
 
 **Open licences:**
 - MIT: BuffBot, Chriz Item Randomiser, EEex Remote Console, Erevain, BG-EE-Point-Buy.
@@ -280,8 +280,8 @@ Expansion-area data, for verification only: the Artisan NPC repos contain area s
 
 ## 13. Open questions
 
-1. **Lava archives:** the licence and readme text inside the archives was not checked (no downloads). The 2026-10-07 statement concerns forks and alternative versions.
-2. **WPDM links:** each weaselmods file link carries a per-visit token. A token-free `?wpdmdl=<id>` link and the Dropbox mirror were not tested for automatic fetching.
+1. **Lava archives:** resolved 2026-10-26 for the 19 pinned packages: no licence or compilation clause inside (section 12). The 2026-10-07 statement concerns forks and alternative versions.
+2. **WPDM links:** resolved 2026-10-26: the token-free `?wpdmdl=<id>` link works for automatic fetching (see "WPDM" under Keys). The Dropbox mirror was not needed and stays untested.
 3. **No release assets** (would need commit or tag pins):
    - The Artisan's IWD NPCs: Minerva and Karihi have tags but no assets; Athanasios, Guldruk and Nirik have neither.
    - HoWMod, Frostforged, Armory, Font Pack, HLAs, Shaman Tweaks, Shadow Magic (tags only), Warlock and House Rule Tweaks (releases without assets).
