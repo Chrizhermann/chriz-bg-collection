@@ -130,7 +130,7 @@ Cross-repository status. Component detail stays in the sections below and in the
     2026-10-25; Christopher's decisions of 2026-10-23 and 2026-10-25): Aid gives only hit
     points, Luck lasts 90 seconds, Bless 30 seconds + 1 round per level, druids can cast
     Bless and Chaotic Commands again, and Prayer and Recitation no longer stack. Not run
-    in a game yet.
+    in a game yet. The collection offers `340` as a default (Christopher, 2026-10-25).
   - The collection still pins Rebalance v0.8.3 and the fork's v4.21-chriz.5; the alpha.22
     batch moves them to v0.8.5 and v4.21-chriz.7.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
@@ -418,9 +418,6 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   `7000`, `7007`, and `7008`, plus tweak components `20021`, `1020000`, and `2000001`.
 - [ ] Curate newly discovered Bardic Wonders components `2011`, `2012`, and `2013`.
 - [ ] [BGGO](BGGO.md) `4`: decide whether Alternate Graphics is excluded, optional, or default.
-- [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md) `340` Chris Revisions (new in v0.8.5,
-  which the alpha.22 batch pins): decide whether it is offered, and as what. No catalog
-  row records a choice yet.
 - [ ] [Warlock](C0WARLOCK.md): choose Yes or No for the Contingency UI-based
   spell-learning prompt. The component remains a default either way.
 - [ ] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
