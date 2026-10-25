@@ -613,11 +613,10 @@ fn expected_recovery_log_components(
 pub fn accept_supervised_recovery(
     request: &SupervisedRecoveryRequest,
 ) -> Result<RecoveryReceipt, CliError> {
-    let app_data = application_data_root()?;
-    let _lock =
-        crate::lock::TargetLock::try_acquire(app_data.join(LOCKS_DIRECTORY), &request.managed_root)
-            .map_err(error)?;
+    let _lock = crate::lock::TargetLock::try_acquire(target_lock_root()?, &request.managed_root)
+        .map_err(error)?;
     let checked = inspect(request)?;
+    let app_data = collection_application_data_root(&checked.frozen.collection)?;
     let root = &checked.root;
     let install_receipt = root.join(".chriz/install-receipt.json");
     if install_receipt.exists() {
@@ -755,6 +754,20 @@ pub(super) fn report_recovery(
             ))
         }
     };
+    // Every frozen root must have its log checked, not only the logs the receipt carries.
+    let recorded = receipt
+        .final_state
+        .logs
+        .iter()
+        .map(|log| log.target)
+        .collect::<std::collections::BTreeSet<_>>();
+    if receipt.final_state.logs.len() != recorded.len()
+        || recorded != frozen.targets().into_iter().collect()
+    {
+        return Err(error(
+            "recovered receipt does not record exactly the frozen game roots",
+        ));
+    }
     for log in &receipt.final_state.logs {
         if log.components != expected_recovery_log_components(frozen, log.target, append)? {
             return Err(error(

@@ -455,8 +455,11 @@ pub fn apply_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<PatchPreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
-        .map_err(err)?;
+    let _lock = TargetLock::try_acquire(
+        crate::lock::shared_target_lock_root(ctx.app_data),
+        &ctx.record.managed_root,
+    )
+    .map_err(err)?;
     crate::mod_upgrades::launch_guard(&ctx.record.managed_root)?;
     launch_guard(&ctx.record.managed_root)?;
     let plan = plan(ctx, catalog)?;
@@ -765,8 +768,11 @@ pub fn restore_with_progress(
     progress: crate::operation_progress::ProgressSink<'_>,
 ) -> Result<PatchPreview, String> {
     crate::operation_progress::stage(progress, "checking");
-    let _lock = TargetLock::try_acquire(ctx.app_data.join("locks"), &ctx.record.managed_root)
-        .map_err(err)?;
+    let _lock = TargetLock::try_acquire(
+        crate::lock::shared_target_lock_root(ctx.app_data),
+        &ctx.record.managed_root,
+    )
+    .map_err(err)?;
     crate::mod_upgrades::launch_guard(&ctx.record.managed_root)?;
     validate_context(ctx)?;
     let (dir, state) = latest(ctx)?.ok_or("There is no patch to restore.")?;

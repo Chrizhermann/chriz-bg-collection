@@ -653,6 +653,12 @@ pub struct Collection {
     /// Game this collection installs. Defaults to EET and is omitted when it is EET.
     #[serde(default, skip_serializing_if = "CollectionGame::is_eet")]
     pub game: CollectionGame,
+    /// Folder under `LOCALAPPDATA` that keeps this collection's installation registry and
+    /// evidence. A standalone collection must name its own folder; an EET collection never
+    /// names one and always uses `Chriz BG Collection`. Omitted when absent, so EET recipes
+    /// serialize and digest exactly as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub application_data_directory: Option<String>,
     /// Required Enhanced Edition game build.
     pub game_build: String,
     /// Explicit ordered installer invocations.

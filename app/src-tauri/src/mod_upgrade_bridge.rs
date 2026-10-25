@@ -29,7 +29,7 @@ impl NativeBridge {
             .as_ref()
             .ok_or_else(|| mod_upgrade_inspection_error("Application data is unavailable."))?;
         let _target =
-            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
+            bg_engine::lock::TargetLock::try_acquire(bg_engine::lock::shared_target_lock_root(app_data), &record.managed_root)
                 .map_err(|error| {
                     CommandError::new(
                 "mod_upgrade_busy",

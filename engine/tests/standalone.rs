@@ -12,7 +12,10 @@ use bg_engine::games::{
     SystemFileSystem,
 };
 use bg_engine::manifest::{Collection, CollectionGame, GameRoot, Phase, RunArg};
-use bg_engine::validate::{validate, Finding, Severity, RULE_EET_ANCHORS, RULE_STANDALONE_GAME};
+use bg_engine::validate::{
+    validate, Finding, Severity, RULE_APPLICATION_DATA_DIRECTORY, RULE_EET_ANCHORS,
+    RULE_STANDALONE_GAME,
+};
 use bg_engine::Manifest;
 
 const GAME_FIXTURES: &str = "tests/fixtures/games";
@@ -177,6 +180,63 @@ fn eet_recipe_still_requires_its_anchors_and_ignores_standalone_rules() {
     );
 }
 
+#[test]
+fn standalone_recipe_must_name_its_own_application_data_folder() {
+    let manifest = iwd_manifest();
+    assert_eq!(
+        manifest.collection.application_data_directory.as_deref(),
+        Some("Chriz Easy IWD")
+    );
+    let json = serde_json::to_value(&manifest.collection).unwrap();
+    assert_eq!(json["application_data_directory"], "Chriz Easy IWD");
+    assert!(serde_json::to_value(&eet_manifest().collection)
+        .unwrap()
+        .get("application_data_directory")
+        .is_none());
+
+    for (value, expected) in [
+        (None, "must name its own application_data_directory"),
+        (
+            Some("Chriz BG Collection"),
+            "must not share the Baldur's Gate application data folder",
+        ),
+        (
+            Some("chriz bg collection"),
+            "must not share the Baldur's Gate application data folder",
+        ),
+        (Some("COM\u{b9}"), "is a reserved Windows device name"),
+        (Some(r"Chriz\IWD"), "must be one folder name"),
+    ] {
+        let mut manifest = iwd_manifest();
+        manifest.collection.application_data_directory = value.map(str::to_owned);
+        let findings = validate(&manifest);
+        assert!(
+            errors(&findings)
+                .iter()
+                .any(|finding| finding.rule == RULE_APPLICATION_DATA_DIRECTORY
+                    && finding.message.contains(expected)),
+            "{value:?}: {findings:#?}"
+        );
+    }
+}
+
+#[test]
+fn eet_recipe_never_names_an_application_data_folder() {
+    // EET installations always keep their records in the Baldur's Gate folder; naming it,
+    // even as the default, would give the same recipe a second payload digest.
+    for value in ["Chriz BG Collection", "Chriz Easy IWD"] {
+        let mut manifest = eet_manifest();
+        manifest.collection.application_data_directory = Some(value.to_owned());
+        let findings = validate(&manifest);
+        assert!(
+            errors(&findings)
+                .iter()
+                .any(|finding| finding.rule == RULE_APPLICATION_DATA_DIRECTORY
+                    && finding.message.contains("Enhanced Edition Trilogy")),
+            "{value:?}: {findings:#?}"
+        );
+    }
+}
 #[derive(Default)]
 struct VersionedFileSystem {
     versions: BTreeMap<PathBuf, String>,

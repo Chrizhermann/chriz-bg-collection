@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::digest::{plan_digest, sha256_bytes};
+use crate::games::GameRole;
 use crate::manifest::GameRoot;
 use crate::postcondition::is_safe_normalized_relative_path;
 use crate::receipt::{
@@ -192,7 +193,8 @@ impl RecoveryReceipt {
         self.validate_replacements(base)?;
         self.validate_append_missing_components(base)?;
         validate_evidence_manifest(&self.evidence)?;
-        validate_final_state(&self.managed_root, &self.final_state)
+        let shape = BaseShape::of(base)?;
+        validate_final_state(&self.managed_root, shape, &self.final_state)
     }
 
     fn validate_replacements(&self, base: &InstallReceipt) -> Result<(), String> {
@@ -450,7 +452,72 @@ fn validate_evidence_manifest(evidence: &[EvidenceFile]) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_final_state(root: &Path, state: &FinalReceiptState) -> Result<(), String> {
+/// Which game roots the immutable base installation staged. The recovered final state must
+/// record exactly these, so its own optional fields can never choose the shape.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BaseShape {
+    /// Enhanced Edition Trilogy: a staged BG1 root and the BG2 root.
+    Eet,
+    /// One standalone game in the primary root and no BG1.
+    Standalone,
+}
+
+impl BaseShape {
+    fn of(base: &InstallReceipt) -> Result<Self, String> {
+        let shape = if base.staged_bg1.is_some() {
+            Self::Eet
+        } else {
+            Self::Standalone
+        };
+        // Older receipts may carry no source list; when present it must agree with staging.
+        if !base.source_games.is_empty() {
+            let has_bg1_source = base
+                .source_games
+                .iter()
+                .any(|source| source.role == GameRole::BgeeSod);
+            if has_bg1_source != (shape == Self::Eet) {
+                return Err(
+                    "recovery base receipt sources disagree with its staged BG1 root".to_owned(),
+                );
+            }
+        }
+        if shape == Self::Standalone && base.plan.runs.iter().any(|run| run.target == GameRoot::Bg1)
+        {
+            return Err(
+                "recovery base without a staged BG1 root plans a run against BG1".to_owned(),
+            );
+        }
+        Ok(shape)
+    }
+
+    fn targets(self) -> BTreeSet<GameRoot> {
+        match self {
+            Self::Eet => BTreeSet::from([GameRoot::Bg1, GameRoot::Bg2]),
+            Self::Standalone => BTreeSet::from([GameRoot::Bg2]),
+        }
+    }
+}
+
+fn validate_final_state(
+    root: &Path,
+    shape: BaseShape,
+    state: &FinalReceiptState,
+) -> Result<(), String> {
+    match (shape, &state.bg1_engine_name) {
+        (BaseShape::Eet, None) => {
+            return Err(
+                "recovery final state of an EET installation lacks the BG1 engine identity"
+                    .to_owned(),
+            )
+        }
+        (BaseShape::Standalone, Some(_)) => {
+            return Err(
+                "recovery final state of a standalone installation records a BG1 engine identity"
+                    .to_owned(),
+            )
+        }
+        _ => {}
+    }
     if state
         .bg1_engine_name
         .as_deref()
@@ -470,19 +537,16 @@ fn validate_final_state(root: &Path, state: &FinalReceiptState) -> Result<(), St
     {
         return Err("recovery launch path must be normalized below the managed root".to_owned());
     }
-    // An EET final state records BG1's identity and both logs; a standalone one records only
-    // its single game root.
-    let eet = state.bg1_engine_name.is_some();
-    let expected_targets = if eet {
-        BTreeSet::from([GameRoot::Bg1, GameRoot::Bg2])
-    } else {
-        BTreeSet::from([GameRoot::Bg2])
-    };
+    // The base installation's staging decides the logs: BG1 and BG2 for EET, the one game
+    // root for a standalone game.
+    let eet = shape == BaseShape::Eet;
+    let expected_targets = shape.targets();
     if state.logs.len() != expected_targets.len() {
         return Err(if eet {
             "recovery final state requires exactly one BG1 and one BG2 log".to_owned()
         } else {
-            "recovery final state requires exactly one game log".to_owned()
+            "recovery final state of a standalone installation requires exactly one game log and no BG1 log"
+                .to_owned()
         });
     }
     let mut targets = BTreeSet::new();
@@ -513,7 +577,8 @@ fn validate_final_state(root: &Path, state: &FinalReceiptState) -> Result<(), St
         return Err(if eet {
             "recovery final state requires both BG1 and BG2 logs".to_owned()
         } else {
-            "recovery final state requires exactly one game log".to_owned()
+            "recovery final state of a standalone installation requires exactly one game log and no BG1 log"
+                .to_owned()
         });
     }
     Ok(())

@@ -165,8 +165,9 @@ pub fn set_with(
     enabled: bool,
     host: &dyn PreflightHost,
 ) -> Result<GameLogStatus, String> {
-    let _lock = TargetLock::try_acquire(app_data.join("locks"), managed_root)
-        .map_err(|error| format!("This installation is in use: {error}"))?;
+    let _lock =
+        TargetLock::try_acquire(crate::lock::shared_target_lock_root(app_data), managed_root)
+            .map_err(|error| format!("This installation is in use: {error}"))?;
     crate::patches::launch_guard(managed_root)?;
     crate::mod_upgrades::launch_guard(managed_root)?;
     // The loader's crash handler reads the setting when the game crashes: changing it while the
@@ -1197,7 +1198,8 @@ mod tests {
         set_with(&app, &root, true, &Programs(vec![elsewhere])).unwrap();
         assert_eq!(ini_of(&root), on(EEEX_INI).as_bytes());
 
-        let lock = TargetLock::try_acquire(app.join("locks"), &root).unwrap();
+        let lock =
+            TargetLock::try_acquire(crate::lock::shared_target_lock_root(&app), &root).unwrap();
         let error = set_with(&app, &root, false, &Programs(vec![])).unwrap_err();
         assert!(error.starts_with("This installation is in use"), "{error}");
         drop(lock);

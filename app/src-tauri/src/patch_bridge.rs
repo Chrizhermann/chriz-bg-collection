@@ -25,7 +25,7 @@ impl NativeBridge {
             .as_ref()
             .ok_or_else(|| patch_error("Application data unavailable"))?;
         let _target =
-            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
+            bg_engine::lock::TargetLock::try_acquire(bg_engine::lock::shared_target_lock_root(app_data), &record.managed_root)
                 .map_err(patch_error)?;
         let ctx = bg_engine::patches::Context {
             record: &record,

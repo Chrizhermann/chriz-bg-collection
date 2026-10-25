@@ -95,7 +95,6 @@ const LEGACY_CLI_FROZEN_RECIPE_SCHEMA: u32 = 1;
 const CLI_FROZEN_RECIPE_SCHEMA: u32 = 2;
 const LEGACY_DISPLAY_NAME: &str = "Chriz BG Collection";
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
-const LOCKS_DIRECTORY: &str = "locks";
 const EVIDENCE_DIRECTORY: &str = "evidence";
 /// Later, accepted acquisitions of an artifact whose final URL differs from its write-once first
 /// acquisition evidence, or that were downloaded anew. Stored as
@@ -814,6 +813,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
             ),
         )
     })?;
+    collection_application_data_directory(&manifest.collection)?;
     let unsupported = crate::release_validate::validate_production_invocations(&manifest);
     if !unsupported.is_empty() {
         return Err(CliError::new(
@@ -920,12 +920,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     };
     let recipe_payload = serialize_frozen_recipe(&frozen)?;
     let recipe_payload_sha256 = sha256_bytes(&recipe_payload);
-    let recipe_envelope = serde_json::to_vec(&FrozenRecipeEnvelope {
-        schema: CLI_FROZEN_RECIPE_SCHEMA,
-        kind: "local-cli-frozen-recipe",
-        payload_sha256: &recipe_payload_sha256,
-    })
-    .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?;
+    let recipe_envelope = frozen_recipe_envelope(&recipe_payload_sha256)?;
     let seed = new_campaign_seed(&managed_root, &recipe_payload_sha256)?;
     let created = CampaignCreated {
         install_id: format!("install-{}", &seed[..20]),
@@ -1074,6 +1069,9 @@ fn resumable_frozen_recipe(
             )
         })?;
     validate_frozen_cli_recipe(created, &frozen)?;
+    // A campaign is resumed only into its own application data folder; this runs before the
+    // deleted-cache repair or anything else writes.
+    collection_application_data_directory(&frozen.collection)?;
     Ok(frozen)
 }
 
@@ -1193,7 +1191,7 @@ pub fn inspect_manual_checkpoint(
     expected_install_id: &str,
     check_changes: bool,
 ) -> Result<Option<crate::manual_checkpoint::ManualCheckpointStatus>, CliError> {
-    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let lock_root = target_lock_root()?;
     let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
         .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
     let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
@@ -1226,7 +1224,7 @@ pub fn accept_manual_checkpoint(
     review_token: &str,
     accept_additions: bool,
 ) -> Result<(), CliError> {
-    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let lock_root = target_lock_root()?;
     let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
         .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
     let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
@@ -1299,8 +1297,8 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
-    let app_data = application_data_root()?;
-    let registry_root = app_data.join(LOCKS_DIRECTORY);
+    let app_data = collection_application_data_root(&frozen.collection)?;
+    let registry_root = target_lock_root()?;
     let current_bg1 = frozen
         .bg1
         .as_ref()
@@ -1806,6 +1804,16 @@ impl FrozenSource {
     }
 }
 
+/// The envelope bytes recorded beside a frozen payload with digest `payload_sha256`.
+fn frozen_recipe_envelope(payload_sha256: &str) -> Result<Vec<u8>, CliError> {
+    serde_json::to_vec(&FrozenRecipeEnvelope {
+        schema: CLI_FROZEN_RECIPE_SCHEMA,
+        kind: "local-cli-frozen-recipe",
+        payload_sha256,
+    })
+    .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))
+}
+
 fn serialize_frozen_recipe(frozen: &FrozenCliRecipe) -> Result<Vec<u8>, CliError> {
     serde_json::to_vec(frozen)
         .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))
@@ -1913,6 +1921,12 @@ fn validate_frozen_cli_recipe(
         return Err(CliError::new(
             "resume_unavailable",
             "an Enhanced Edition Trilogy frozen recipe unexpectedly records a recipe id",
+        ));
+    }
+    if standalone_role.is_some() != frozen.collection.application_data_directory.is_some() {
+        return Err(CliError::new(
+            "resume_unavailable",
+            "a frozen recipe must name its own application data folder exactly when it installs a standalone game",
         ));
     }
     Ok(())
@@ -2049,12 +2063,14 @@ fn inspect_frozen_source(
     })
 }
 
-/// Selects the folder under `LOCALAPPDATA` that holds locks, evidence, and the installation
-/// registry for this process, instead of the default `Chriz BG Collection`.
+/// Declares the folder under `LOCALAPPDATA` that this process expects to hold the installation
+/// registry and evidence, instead of the default `Chriz BG Collection`.
 ///
-/// A standalone-game launcher calls this once, before any other command, so its installations
-/// never share a registry with the Baldur's Gate launcher. The name must be one plain folder
-/// name. It can be set once per process; setting the same name again is accepted.
+/// The recipe decides the folder (`application_data_directory` in a standalone collection, the
+/// default for EET); this declaration only guards it: installing, resuming or recovering a
+/// collection whose folder differs fails with `application_data_mismatch` before anything is
+/// written. Target locks never depend on it. The name must be one plain folder name. It can be
+/// set once per process; setting the same name again is accepted.
 pub fn set_application_data_directory(name: &str) -> Result<(), CliError> {
     validate_application_data_directory(name)?;
     let stored = APPLICATION_DATA_DIRECTORY_OVERRIDE.get_or_init(|| name.to_owned());
@@ -2067,7 +2083,9 @@ pub fn set_application_data_directory(name: &str) -> Result<(), CliError> {
     Ok(())
 }
 
-/// Folder name under `LOCALAPPDATA` used by this process for locks, evidence, and the registry.
+/// Folder name under `LOCALAPPDATA` this process was declared for: the value given to
+/// [`set_application_data_directory`], or `Chriz BG Collection`. Each installation still uses
+/// the folder its recipe requires.
 pub fn application_data_directory() -> &'static str {
     APPLICATION_DATA_DIRECTORY_OVERRIDE
         .get()
@@ -2075,47 +2093,15 @@ pub fn application_data_directory() -> &'static str {
 }
 
 fn validate_application_data_directory(name: &str) -> Result<(), CliError> {
-    let invalid = |reason: &str| {
+    crate::registry::names::check_application_data_directory(name).map_err(|reason| {
         CliError::new(
             "application_data_unavailable",
             format!("application data folder {name:?} {reason}"),
         )
-    };
-    if name.trim().is_empty() || name.len() > 64 {
-        return Err(invalid("must be 1-64 characters"));
-    }
-    if matches!(name, "." | "..") || name.ends_with(['.', ' ']) || name.starts_with(' ') {
-        return Err(invalid("is not a plain folder name"));
-    }
-    if name.chars().any(|character| {
-        character.is_control()
-            || matches!(
-                character,
-                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
-            )
-    }) {
-        return Err(invalid(
-            "must be one folder name without path or reserved characters",
-        ));
-    }
-    let stem = name.split('.').next().unwrap_or(name).trim_end();
-    let reserved = ["CON", "PRN", "AUX", "NUL"]
-        .iter()
-        .any(|device| stem.eq_ignore_ascii_case(device))
-        || matches!(
-            stem.as_bytes(),
-            [first, second, third, digit]
-                if digit.is_ascii_digit()
-                    && ([*first, *second, *third].eq_ignore_ascii_case(b"COM")
-                        || [*first, *second, *third].eq_ignore_ascii_case(b"LPT"))
-        );
-    if reserved {
-        return Err(invalid("is a reserved Windows device name"));
-    }
-    Ok(())
+    })
 }
 
-fn application_data_root() -> Result<PathBuf, CliError> {
+fn local_application_data() -> Result<PathBuf, CliError> {
     let root = std::env::var_os("LOCALAPPDATA").ok_or_else(|| {
         CliError::new(
             "application_data_unavailable",
@@ -2129,7 +2115,44 @@ fn application_data_root() -> Result<PathBuf, CliError> {
             format!("LOCALAPPDATA is not absolute: {}", root.display()),
         ));
     }
-    Ok(root.join(application_data_directory()))
+    Ok(root)
+}
+
+/// Target locks of every application and collection: the legacy Baldur's Gate `locks` folder,
+/// whatever application data folder this process or recipe uses for its registry.
+fn target_lock_root() -> Result<PathBuf, CliError> {
+    Ok(crate::lock::shared_target_lock_root(
+        &local_application_data()?.join(APPLICATION_DATA_DIRECTORY),
+    ))
+}
+
+/// The application data folder that holds the registry and evidence of `collection`: its own
+/// folder for a standalone game, the Baldur's Gate folder for EET.
+///
+/// The recipe decides. A folder chosen explicitly for this process (`--app-data-directory` or
+/// [`set_application_data_directory`]) must agree, otherwise this fails before anything is
+/// written, so a standalone installation can never land in another application's registry.
+fn collection_application_data_directory(collection: &Collection) -> Result<&str, CliError> {
+    let required = collection
+        .application_data_directory
+        .as_deref()
+        .unwrap_or(APPLICATION_DATA_DIRECTORY);
+    match APPLICATION_DATA_DIRECTORY_OVERRIDE.get() {
+        Some(chosen) if chosen != required => Err(CliError::new(
+            "application_data_mismatch",
+            format!(
+                "this {} installation keeps its records in the application data folder {required:?}, but this process was started for {chosen:?}",
+                collection.game.display_name()
+            ),
+        )),
+        _ => Ok(required),
+    }
+}
+
+/// Full path of [`collection_application_data_directory`] below `LOCALAPPDATA`.
+fn collection_application_data_root(collection: &Collection) -> Result<PathBuf, CliError> {
+    let directory = collection_application_data_directory(collection)?;
+    Ok(local_application_data()?.join(directory))
 }
 
 fn canonical_existing_directory(path: &Path, label: &str) -> Result<PathBuf, CliError> {
@@ -5294,7 +5317,12 @@ mod tests {
             completed_at_millis: 1_761_400_900_000,
             recipe_id: None,
         });
+        // The ledger fixture above records a literal envelope; the production envelope of the
+        // same payload has its own golden.
+        let envelope =
+            super::frozen_recipe_envelope(&sha256_bytes(&payload)).expect("build envelope");
         vec![
+            ("recipe-envelope.json", envelope),
             ("frozen-payload.json", payload),
             ("ledger-record-0.json", ledger),
             ("review-identity.json", review),
@@ -5541,6 +5569,12 @@ mod tests {
             "COMX",
             "CON1",
             "A\u{20ac}",
+            // Only superscript one to three are reserved, and only right after COM or LPT.
+            "COM\u{2074}",
+            "COM\u{b9}x",
+            "\u{b9}COM",
+            "Ich\u{b9}",
+            "Eisw\u{fc}ste",
         ] {
             super::validate_application_data_directory(accepted)
                 .unwrap_or_else(|error| panic!("{accepted:?} rejected: {error:?}"));
@@ -5560,6 +5594,15 @@ mod tests {
             "nul.txt",
             "COM1",
             "lpt9",
+            "COM0",
+            "LPT0.dat",
+            // Windows also reserves COM and LPT with superscript digits one to three.
+            "COM\u{b9}",
+            "com\u{b2}",
+            "COM\u{b3}.txt",
+            "LPT\u{b9}",
+            "lpt\u{b2}.log",
+            "LPT\u{b3} ",
             "tab\there",
             &"x".repeat(65),
         ] {

@@ -1,5 +1,6 @@
 schema = 2
 game = "iwdee"
+application_data_directory = "Chriz Easy IWD"
 game_build = "2.7.3.0"
 
 [[runs]]

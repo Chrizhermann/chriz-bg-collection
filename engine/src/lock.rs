@@ -105,6 +105,23 @@ impl Drop for CacheDigestLock {
     }
 }
 
+/// Folder whose `targets` subfolder holds the target lock of every managed installation, for
+/// every application: `Chriz BG Collection\locks` next to `application_data`.
+///
+/// `application_data` is an application's own folder directly below `LOCALAPPDATA`. Its
+/// registry may live in its own folder, but locks never do: two processes with different
+/// application folders, such as a Baldur's Gate build and a standalone-game build, or a resume
+/// started without the standalone folder, must exclude each other on the same managed root.
+/// For the Baldur's Gate folder itself this is its legacy `locks` folder, so EET lock paths and
+/// older builds are unaffected.
+pub fn shared_target_lock_root(application_data: &Path) -> PathBuf {
+    let shared = crate::registry::names::DEFAULT_APPLICATION_DATA_DIRECTORY;
+    match application_data.parent() {
+        Some(local) if !local.as_os_str().is_empty() => local.join(shared).join("locks"),
+        _ => application_data.join("locks"),
+    }
+}
+
 /// Acquires the target lock for the complete app or recipe replacement operation.
 ///
 /// The caller must retain the returned guard until replacement is fully committed; returning

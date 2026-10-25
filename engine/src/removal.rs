@@ -264,8 +264,11 @@ fn execute_with(
     host: &dyn PreflightHost,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
 ) -> Result<(), RemovalError> {
-    let _lock =
-        TargetLock::try_acquire(app_data.join("locks"), &expected.managed_root).map_err(failure)?;
+    let _lock = TargetLock::try_acquire(
+        crate::lock::shared_target_lock_root(app_data),
+        &expected.managed_root,
+    )
+    .map_err(failure)?;
     let current = preview(app_data, &expected.install_id)?;
     if current != *expected {
         return Err(failure(
@@ -758,7 +761,8 @@ mod tests {
     fn active_target_lock_and_process_refuse_deletion() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        let lock = TargetLock::try_acquire(f.app.join("locks"), &f.root).unwrap();
+        let lock =
+            TargetLock::try_acquire(crate::lock::shared_target_lock_root(&f.app), &f.root).unwrap();
         assert!(run(&f, &plan).is_err());
         drop(lock);
         let host = Host {
@@ -889,7 +893,8 @@ mod tests {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert_eq!(plan.action, RemovalAction::Unlist);
 
-        let lock = TargetLock::try_acquire(f.app.join("locks"), &f.root).unwrap();
+        let lock =
+            TargetLock::try_acquire(crate::lock::shared_target_lock_root(&f.app), &f.root).unwrap();
         assert!(run(&f, &plan).is_err());
         drop(lock);
         assert_eq!(registered_campaigns(&f), 1);

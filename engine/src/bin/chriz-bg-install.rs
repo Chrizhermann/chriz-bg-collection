@@ -25,8 +25,8 @@ struct Cli {
     /// Emit one deterministic JSON value instead of human-readable output.
     #[arg(long, global = true)]
     json: bool,
-    /// Folder name under LOCALAPPDATA for locks, evidence, and the installation registry.
-    /// Defaults to `Chriz BG Collection`; a standalone-game launcher passes its own name.
+    /// Application data folder under LOCALAPPDATA this process expects for the installation
+    /// registry. The recipe decides the folder; a different value here is refused.
     #[arg(long, global = true, value_name = "NAME")]
     app_data_directory: Option<String>,
     #[command(subcommand)]

@@ -3409,9 +3409,47 @@ fn standalone_command(fixture: &StandaloneFixture) -> Command {
     command
         .env("LOCALAPPDATA", &fixture.app_data)
         .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
-        .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "IWD_Fix/IWD_Fix.tp2")
-        .args(["--app-data-directory", IWD_APP_DATA]);
+        .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "IWD_Fix/IWD_Fix.tp2");
     command
+}
+
+/// Asserts that the Baldur's Gate application folder holds nothing but the shared target locks.
+fn assert_bg_application_data_holds_only_locks(app_data: &Path) {
+    let bg = app_data.join("Chriz BG Collection");
+    if !bg.exists() {
+        return;
+    }
+    let entries = fs::read_dir(&bg)
+        .expect("read Baldur's Gate application data")
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        entries,
+        vec!["locks".to_owned()],
+        "a standalone install wrote Baldur's Gate application data"
+    );
+}
+
+/// Every file below `root` with its bytes, and every folder, for proving that nothing changed.
+fn tree_snapshot(root: &Path) -> BTreeMap<PathBuf, Option<Vec<u8>>> {
+    let mut snapshot = BTreeMap::new();
+    if !root.exists() {
+        return snapshot;
+    }
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(directory) = pending.pop() {
+        for entry in fs::read_dir(&directory).expect("read snapshot folder") {
+            let path = entry.expect("read snapshot entry").path();
+            let relative = path.strip_prefix(root).unwrap().to_path_buf();
+            if path.is_dir() {
+                snapshot.insert(relative, None);
+                pending.push(path);
+            } else {
+                snapshot.insert(relative, Some(fs::read(&path).expect("read snapshot file")));
+            }
+        }
+    }
+    snapshot
 }
 
 fn standalone_install_args(fixture: &StandaloneFixture) -> Vec<&str> {
@@ -3439,9 +3477,11 @@ fn standalone_iwdee_install_survives_an_interruption_and_verifies_one_game() {
     use bg_engine::manifest::GameRoot;
 
     let fixture = standalone_fixture();
+    // The install names its folder explicitly (matching the recipe); the resume below does not.
     let mut install = standalone_command(&fixture);
     install
         .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
+        .args(["--app-data-directory", IWD_APP_DATA])
         .args(standalone_install_args(&fixture));
 
     let interrupted = install
@@ -3551,10 +3591,133 @@ fn standalone_iwdee_install_survives_an_interruption_and_verifies_one_game() {
     assert_eq!(cards[0].record.display_name, "Chriz Easy IWD");
     assert_eq!(cards[0].record.recipe_id.as_deref(), Some("chriz-easy-iwd"));
     assert_eq!(cards[0].record.launch_path, final_state.launch_path);
+    assert_bg_application_data_holds_only_locks(&fixture.app_data);
+}
+
+#[cfg(windows)]
+#[test]
+fn standalone_install_without_a_flag_keeps_its_records_in_the_recipe_folder() {
+    let fixture = standalone_fixture();
+    let mut install = standalone_command(&fixture);
+    install.args(standalone_install_args(&fixture));
+    let output = install.output().expect("execute standalone install");
     assert!(
-        !fixture.app_data.join("Chriz BG Collection").exists(),
-        "a standalone install touched the Baldur's Gate application data"
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
     );
+
+    let cards = ManagedInstallRegistry::open_or_create(&fixture.app_data.join(IWD_APP_DATA))
+        .expect("open the standalone registry")
+        .list()
+        .expect("list standalone installations");
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].record.recipe_id.as_deref(), Some("chriz-easy-iwd"));
+    assert_bg_application_data_holds_only_locks(&fixture.app_data);
+    let frozen: Value = serde_json::from_slice(
+        &SessionStore::open(&fixture.managed)
+            .unwrap()
+            .replay()
+            .unwrap()
+            .created()
+            .recipe_payload,
+    )
+    .unwrap();
+    assert_eq!(
+        frozen["collection"]["application_data_directory"],
+        IWD_APP_DATA
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn a_conflicting_application_data_folder_is_rejected_before_anything_changes() {
+    let fixture = standalone_fixture();
+
+    // A fresh install whose flag names another folder never starts.
+    let mut install = standalone_command(&fixture);
+    install
+        .args(["--app-data-directory", "Chriz BG Collection"])
+        .args(standalone_install_args(&fixture));
+    let output = install
+        .output()
+        .expect("run conflicting standalone install");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let response = json_stdout(&output);
+    assert_eq!(response["error"]["code"], "application_data_mismatch");
+    let message = response["error"]["message"].as_str().unwrap();
+    assert!(message.contains(IWD_APP_DATA), "{message}");
+    assert!(message.contains("Chriz BG Collection"), "{message}");
+    assert!(!fixture.managed.exists());
+    assert!(tree_snapshot(&fixture.app_data).is_empty());
+
+    // An interrupted campaign is not resumed into another folder, and nothing changes.
+    let mut interrupted = standalone_command(&fixture);
+    interrupted
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
+        .args(standalone_install_args(&fixture));
+    let output = interrupted
+        .output()
+        .expect("execute interrupted standalone install");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let managed_before = tree_snapshot(&fixture.managed);
+    let app_data_before = tree_snapshot(&fixture.app_data);
+    let mut resume = standalone_command(&fixture);
+    resume.args([
+        "--app-data-directory",
+        "Another Game",
+        "--json",
+        "resume",
+        fixture.managed.to_str().unwrap(),
+    ]);
+    let output = resume.output().expect("resume into another folder");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(
+        json_stdout(&output)["error"]["code"],
+        "application_data_mismatch"
+    );
+    assert!(tree_snapshot(&fixture.managed) == managed_before);
+    assert!(tree_snapshot(&fixture.app_data) == app_data_before);
+    assert!(!fixture.app_data.join("Another Game").exists());
+
+    // An EET recipe keeps its records in the Baldur's Gate folder only.
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_profiles(&temp);
+    use_production_invocation_mode(&recipe);
+    let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
+    let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
+    let managed = temp.path().join("managed");
+    let cache = temp.path().join("cache");
+    fs::create_dir(&cache).unwrap();
+    let mut eet = cli();
+    eet.env("LOCALAPPDATA", temp.path().join("app-data"))
+        .args(["--app-data-directory", IWD_APP_DATA])
+        .args(install_args(&recipe, &bg1, &bg2, &managed, &cache));
+    let output = eet.output().expect("run EET install with another folder");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(
+        json_stdout(&output)["error"]["code"],
+        "application_data_mismatch"
+    );
+    assert!(!managed.exists());
+}
+
+/// A standalone launcher and the Baldur's Gate app lock a managed root in the same place, so a
+/// lock held under the legacy Baldur's Gate folder stops a standalone install of that root.
+#[cfg(windows)]
+#[test]
+fn a_target_lock_held_by_another_application_blocks_a_standalone_install() {
+    let fixture = standalone_fixture();
+    let legacy_locks = fixture.app_data.join("Chriz BG Collection").join("locks");
+    let _held = TargetLock::try_acquire(&legacy_locks, &fixture.managed).expect("hold target lock");
+
+    let mut install = standalone_command(&fixture);
+    install.args(standalone_install_args(&fixture));
+    let output = install.output().expect("run contending standalone install");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    assert_eq!(json_stdout(&output)["error"]["code"], "target_locked");
+    assert!(!fixture.managed.join(".chriz").exists());
 }
 
 impl StandaloneFixture {
@@ -3658,4 +3821,98 @@ fn recipes_reject_sources_shaped_for_the_other_game() {
         .unwrap()
         .contains("Enhanced Edition Trilogy"));
     assert!(!managed.exists());
+}
+
+/// An EET campaign interrupted by an engine built before standalone games existed is resumed and
+/// completed by this engine, with its frozen ledger untouched. Point CEBG_LEGACY_INSTALL_EXE at
+/// a debug build of `chriz-bg-install` from commit 5106b53.
+#[cfg(windows)]
+#[test]
+#[ignore = "requires CEBG_LEGACY_INSTALL_EXE, a chriz-bg-install debug build of commit 5106b53"]
+fn legacy_eet_campaign_is_resumed_and_completed_by_this_engine() {
+    use bg_engine::manifest::GameRoot;
+
+    let legacy = PathBuf::from(
+        std::env::var_os("CEBG_LEGACY_INSTALL_EXE").expect("CEBG_LEGACY_INSTALL_EXE is set"),
+    );
+    let fixture = executable_fixture();
+    let mut install = Command::new(&legacy);
+    install
+        .env("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES", "")
+        .env("LOCALAPPDATA", &fixture.app_data)
+        .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
+        .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2")
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ));
+    let interrupted = install.output().expect("run the legacy installer");
+    assert_eq!(
+        interrupted.status.code(),
+        Some(1),
+        "{}",
+        stderr(&interrupted)
+    );
+    assert_eq!(
+        json_stdout(&interrupted)["error"]["code"],
+        "campaign_failed"
+    );
+    let legacy_replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    let legacy_records = legacy_replay.records.clone();
+    let payload: Value = serde_json::from_slice(&legacy_replay.created().recipe_payload).unwrap();
+    assert!(payload.get("recipe_id").is_none());
+    assert!(payload["collection"].get("game").is_none());
+    assert!(payload["collection"]
+        .get("application_data_directory")
+        .is_none());
+
+    let mut resume = executable_command(&fixture);
+    resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+    let resumed = resume.output().expect("resume with this engine");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert_eq!(
+        replay.records[..legacy_records.len()],
+        legacy_records[..],
+        "the legacy ledger prefix changed"
+    );
+    let receipt: InstallReceipt = serde_json::from_slice(
+        &fs::read(fixture.managed.join(".chriz/install-receipt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert_eq!(receipt.staged_bg1, Some(fixture.managed.join("bg1")));
+    let final_state = receipt.final_state.unwrap();
+    assert_eq!(
+        final_state
+            .logs
+            .iter()
+            .map(|log| log.target)
+            .collect::<Vec<_>>(),
+        vec![GameRoot::Bg1, GameRoot::Bg2]
+    );
+    assert!(final_state.bg1_engine_name.is_some());
+    let cards =
+        ManagedInstallRegistry::open_or_create(&fixture.app_data.join("Chriz BG Collection"))
+            .unwrap()
+            .list()
+            .unwrap();
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].record.recipe_id, None);
 }

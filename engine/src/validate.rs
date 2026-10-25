@@ -95,6 +95,9 @@ pub const RULE_PHASE_ORDER: &str = "phase-order";
 pub const RULE_EET_ANCHORS: &str = "eet-anchors";
 /// Rule limiting a standalone single-game collection to its one staged game root.
 pub const RULE_STANDALONE_GAME: &str = "standalone-game";
+/// Rule giving a standalone collection its own application data folder and keeping EET in the
+/// Baldur's Gate folder.
+pub const RULE_APPLICATION_DATA_DIRECTORY: &str = "application-data-directory";
 /// Warning emitted for legacy stdin that lacks a terminating newline.
 pub const RULE_STDIN_NEWLINE: &str = "stdin-newline";
 /// Rule requiring semantic feature ids and references to resolve exactly.
@@ -151,6 +154,7 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     } else {
         check_eet_anchors(manifest, &mut findings);
     }
+    check_application_data_directory(manifest, &mut findings);
     check_stdin(manifest, &mut findings);
     check_feature_references(manifest, &mut findings);
     check_feature_cycles(manifest, &mut findings);
@@ -1165,6 +1169,55 @@ fn check_phase_order(manifest: &Manifest, findings: &mut Vec<Finding>) {
     }
 }
 
+/// A standalone collection keeps its registry in its own folder under `LOCALAPPDATA`, so its
+/// installations never appear in, or are removed through, the Baldur's Gate app. EET recipes
+/// never name a folder: they always use the Baldur's Gate folder, and naming it explicitly would
+/// give the same recipe a second payload digest.
+fn check_application_data_directory(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    use crate::registry::names::{
+        check_application_data_directory as check_name, DEFAULT_APPLICATION_DATA_DIRECTORY,
+    };
+    let game = manifest.collection.game;
+    match (
+        game.is_standalone(),
+        manifest.collection.application_data_directory.as_deref(),
+    ) {
+        (false, None) => {}
+        (false, Some(name)) => error(
+            findings,
+            RULE_APPLICATION_DATA_DIRECTORY,
+            format!(
+                "an Enhanced Edition Trilogy collection always uses the {DEFAULT_APPLICATION_DATA_DIRECTORY:?} application data folder and must not set application_data_directory ({name:?})"
+            ),
+        ),
+        (true, None) => error(
+            findings,
+            RULE_APPLICATION_DATA_DIRECTORY,
+            format!(
+                "a standalone {} collection must name its own application_data_directory",
+                game.display_name()
+            ),
+        ),
+        (true, Some(name)) => {
+            if let Err(reason) = check_name(name) {
+                error(
+                    findings,
+                    RULE_APPLICATION_DATA_DIRECTORY,
+                    format!("application_data_directory {name:?} {reason}"),
+                );
+            } else if name.eq_ignore_ascii_case(DEFAULT_APPLICATION_DATA_DIRECTORY) {
+                error(
+                    findings,
+                    RULE_APPLICATION_DATA_DIRECTORY,
+                    format!(
+                        "a standalone {} collection must not share the Baldur's Gate application data folder {name:?}",
+                        game.display_name()
+                    ),
+                );
+            }
+        }
+    }
+}
 fn check_eet_anchors(manifest: &Manifest, findings: &mut Vec<Finding>) {
     let runs = &manifest.collection.runs;
     let has_eet_sequence = runs.iter().any(|run| {

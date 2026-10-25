@@ -1366,16 +1366,18 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| removal_error("Application data is unavailable."))?;
-        let _target_lock =
-            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
-                .map_err(|error| {
-                    CommandError::new(
-                        "managed_install_busy",
-                        "This installation is in use.",
-                        "Wait for its installation or removal to finish before launching it.",
-                        error.to_string(),
-                    )
-                })?;
+        let _target_lock = bg_engine::lock::TargetLock::try_acquire(
+            bg_engine::lock::shared_target_lock_root(app_data),
+            &record.managed_root,
+        )
+        .map_err(|error| {
+            CommandError::new(
+                "managed_install_busy",
+                "This installation is in use.",
+                "Wait for its installation or removal to finish before launching it.",
+                error.to_string(),
+            )
+        })?;
         bg_engine::patches::launch_guard(&record.managed_root).map_err(patch_error)?;
         bg_engine::mod_upgrades::launch_guard(&record.managed_root).map_err(mod_upgrade_error)?;
         let launch_name = record

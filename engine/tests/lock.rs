@@ -4,7 +4,9 @@ use std::process::{Child, Command};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use bg_engine::lock::{acquire_target_for_update, CacheDigestLock, LockError, TargetLock};
+use bg_engine::lock::{
+    acquire_target_for_update, shared_target_lock_root, CacheDigestLock, LockError, TargetLock,
+};
 
 const CHILD_ROOT: &str = "CHRIZ_TEST_LOCK_CHILD_ROOT";
 const CHILD_REGISTRY: &str = "CHRIZ_TEST_LOCK_CHILD_REGISTRY";
@@ -140,4 +142,33 @@ fn lock_holder_child() {
     loop {
         thread::sleep(Duration::from_secs(1));
     }
+}
+
+/// Target locks do not depend on an application's own data folder: every application locks
+/// a managed root in the legacy `Chriz BG Collection\locks` folder next to its own folder.
+#[test]
+fn target_locks_are_shared_by_every_application_data_folder() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = managed_root(&temp);
+    let local = temp.path().join("LocalAppData");
+    let legacy = local.join("Chriz BG Collection");
+    let iwd = shared_target_lock_root(&local.join("Chriz Easy IWD"));
+    let other = shared_target_lock_root(&local.join("Another Game"));
+    let default = shared_target_lock_root(&legacy);
+    assert_eq!(default, legacy.join("locks"));
+    assert_eq!(iwd, default);
+    assert_eq!(other, default);
+
+    let held = TargetLock::try_acquire(&iwd, &root).unwrap();
+    assert!(held
+        .path()
+        .starts_with(legacy.join("locks").join("targets")));
+    for contender in [&other, &default] {
+        assert!(matches!(
+            TargetLock::try_acquire(contender, &root),
+            Err(LockError::Contended { kind: "target", .. })
+        ));
+    }
+    drop(held);
+    TargetLock::try_acquire(&other, &root).unwrap();
 }
