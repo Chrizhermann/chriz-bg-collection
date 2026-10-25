@@ -22,6 +22,10 @@ Christopher streams an Icewind Dale: Enhanced Edition playthrough in November 20
 | 2026-10-25 | "No-reload" is a stream rule only; the installer needs nothing for it. | Christopher, this session |
 | 2026-10-25 | The fight audit may show everything (names, places, final boss); Christopher designs the big strokes. NPC and quest summaries stay spoiler-free. | Christopher, this session |
 | 2026-10-25 | Combat upgrades: plain WeiDU/BAF scripts in a small own mod, one component per fight or fight group, installed after SCS, each change described so it can later move to the script engine. Small creative calls are the agent's; shortlist and boss idea go to Christopher early. | Hand-off of 2026-10-25 |
+| 2026-10-25 | Mod-level selection made; see the [worksheet](../curation/iwdee/WORKSHEET.md). | Christopher, selection page |
+| 2026-10-25 | Phase 1 priority: the installer works, SCS works on IWD:EE, and some enemy mages and priests prebuff. Encounter upgrades come after that, designed together; the fight shortlist is open for discussion. | Christopher, this session |
+| 2026-10-25 | Belhifet: reinforcements scale with difficulty; his blanket spell immunities should change (to discuss). Poquelin's unresisted Dispel Magic at the transformation goes. | Christopher, this session |
+| 2026-10-25 | The SCS defects found on IWD:EE are fixed in our own mod after SCS, not reported upstream. | Christopher, this session |
 
 Curation stays Christopher's: the agent delivers neutral inventories; he decides mods,
 components and defaults.
