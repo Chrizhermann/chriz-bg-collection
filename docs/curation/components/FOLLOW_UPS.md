@@ -99,10 +99,14 @@ Cross-repository status. Component detail stays in the sections below and in the
     - `650` stays optional, experimental and off in the collection. A fifth review round
       follows after the release.
     - #19 is closed once `650` ships.
-  - `430`: plan A is in progress (see Release gates).
+  - `430` (scrolls at the reader's level): plan A is done, and a last small round is in
+    progress (see Release gates). Christopher, 2026-10-25: the collection offers `430`
+    as a default. It reaches the catalogs and recipes with the alpha.14 pin.
   - No technical notices inside the game: fallback information from our mods goes to the
-    log only (Christopher, 2026-10-23, confirmed 2026-10-25). `430` and `650` are being
-    changed to match.
+    log only (Christopher, 2026-10-23, confirmed 2026-10-25). `650` and `430` now do
+    this. The one exception (Christopher, 2026-10-25), being added to `430`: if it cannot
+    start cleanly and cannot fully undo its start, a short line at the main menu asks the
+    player to restart the game before loading or saving.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -277,13 +281,20 @@ content, evaluated component by component (keep, fix or extend).
   its EEex error box ("copied action construction overlaps an existing lifetime") and
   disables itself, because the engine destroys most `CAIAction` objects inline, without
   the destructor `430` hooks. It is probably also the cause of a player's container-open
-  error report. Plan A for alpha.14 is in progress on an unreleased Modpack branch; once
-  it is done, Christopher decides whether `430` stays a default. Plan A covers:
-  - a quiet fallback that is written to the log only;
-  - a duplicate startup disables the runtime;
+  error report. Plan A for alpha.14 is done on an unreleased Modpack branch, and `430`
+  stays a default (Christopher, 2026-10-25):
+  - every fallback is quiet and written to the log only, and a second start turns the
+    runtime off;
   - wording fixes and documented known limitations;
-  - a lab check of whether `430` turns itself off in normal play (reload, area change,
-    party changes).
+  - in a 2026-10-25 lab, normal play kept `430` on: save and reload, area changes, the
+    reader left behind, the reader leaving and rejoining the party. It turns itself off
+    for one session only when a save holds a running scroll effect whose reader is
+    neither in the party nor in a loaded area when the effect's delayed part comes due.
+    Scrolls then cast at their normal level and saves stay usable; this is documented as
+    a known limitation.
+  - Still open: the restart line at the main menu (see Modpack alpha.14 above), the log
+    name and two typos. Then check the loader log in the Recommended lab run before the
+    release, because no ongoing playthrough has run with `430` yet.
 - [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
   `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
