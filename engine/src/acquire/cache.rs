@@ -97,6 +97,7 @@ impl ArtifactCache {
     ) -> Result<AcquiredArtifact, AcquireError> {
         let digest = validate_request(request)?;
         validate_download_url(&request.url)?;
+        request.route.check_request(&request.url)?;
         let paths = self.paths(request, &digest);
 
         let mut repaired = None;
@@ -230,7 +231,11 @@ impl ArtifactCache {
             .map(|candidate| (candidate.start, candidate.etag.as_str()));
         let response = self
             .client
-            .get_with_reviewed_redirects(&request.url, range, &request.redirect_hosts)
+            .get_with_redirect_policy(
+                &request.url,
+                range,
+                request.route.redirect_policy(&request.redirect_hosts),
+            )
             .map_err(classify_transport_error)?;
 
         if let Some(candidate) = resume {
@@ -251,7 +256,11 @@ impl ArtifactCache {
                     remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?;
                     let fresh = self
                         .client
-                        .get_with_reviewed_redirects(&request.url, None, &request.redirect_hosts)
+                        .get_with_redirect_policy(
+                            &request.url,
+                            None,
+                            request.route.redirect_policy(&request.redirect_hosts),
+                        )
                         .map_err(classify_transport_error)?;
                     return handle_fresh_response(fresh, request, paths, sink);
                 }
@@ -391,6 +400,11 @@ fn stream_response(
     start: u64,
     truncate: bool,
 ) -> Result<TransferResult, AttemptFailure> {
+    // Before anything is written: a page instead of the archive is not a partial download.
+    request
+        .route
+        .check_response(&response)
+        .map_err(AttemptFailure::Fatal)?;
     let response_length = header_u64(&response.response, "content-length");
     let expected_response_length = request.expected_length - start;
     if let Some(actual) = response_length {
@@ -793,7 +807,7 @@ mod tests {
 
     use super::{retry_transfer, validate_request, ArtifactCache, AttemptFailure};
     use crate::acquire::http::{HttpClient, HttpTimeouts};
-    use crate::acquire::{AcquireError, CacheDisposition, DownloadRequest};
+    use crate::acquire::{AcquireError, CacheDisposition, DownloadRequest, DownloadRoute};
     use crate::events::{ChannelSink, EngineEvent, Stream};
 
     fn retry_request(max_attempts: u32) -> DownloadRequest {
@@ -804,6 +818,7 @@ mod tests {
             expected_sha256: "0".repeat(64),
             redirect_hosts: Vec::new(),
             max_attempts,
+            route: DownloadRoute::Generic,
         }
     }
 
@@ -948,6 +963,7 @@ mod tests {
                 .to_owned(),
             redirect_hosts: Vec::new(),
             max_attempts: 1,
+            route: DownloadRoute::Generic,
         };
 
         assert!(validate_request(&request).is_ok());
@@ -1073,6 +1089,7 @@ mod tests {
             expected_sha256: hex::encode(Sha256::digest(bytes)),
             redirect_hosts: Vec::new(),
             max_attempts: 1,
+            route: DownloadRoute::Generic,
         }
     }
 

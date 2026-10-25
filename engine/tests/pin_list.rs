@@ -28,6 +28,7 @@ fn source_label(kind: &SourceKind) -> &'static str {
         SourceKind::GithubTagArchive => "tag archive",
         SourceKind::GithubCommitZip => "commit archive",
         SourceKind::Manual => "manual download",
+        SourceKind::WeaselmodsDownload => "Weasel Mods download",
     }
 }
 

@@ -6,7 +6,7 @@ use std::process::ExitCode;
 
 use bg_engine::acquire::{
     download_for_inspection, extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode,
-    ArchiveRequirements, ArtifactCache, CacheDisposition, DownloadRequest,
+    ArchiveRequirements, ArtifactCache, CacheDisposition, DownloadRequest, DownloadRoute,
     DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use bg_engine::events::ChannelSink;
@@ -392,6 +392,7 @@ fn verify_artifact(
         expected_sha256: artifact.source.sha256.clone(),
         redirect_hosts: artifact.source.redirect_hosts.clone(),
         max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
+        route: DownloadRoute::for_source(&artifact.source)?,
     };
     let (sink, _events) = ChannelSink::unbounded();
     let acquired = production_cache.acquire(&request, &sink)?;

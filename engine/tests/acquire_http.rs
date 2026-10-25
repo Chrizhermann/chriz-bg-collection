@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 use bg_engine::acquire::{
     validate_redirect_target, AcquireError, ArtifactCache, CacheDisposition, DownloadRequest,
+    DownloadRoute,
 };
 use bg_engine::events::{ChannelSink, EngineEvent};
 use sha2::{Digest, Sha256};
@@ -177,6 +178,7 @@ fn request(id: &str, url: String, bytes: &[u8], max_attempts: u32) -> DownloadRe
         expected_sha256: sha256(bytes),
         redirect_hosts: Vec::new(),
         max_attempts,
+        route: DownloadRoute::Generic,
     }
 }
 

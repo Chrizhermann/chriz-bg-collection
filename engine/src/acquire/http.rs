@@ -26,6 +26,19 @@ pub(crate) struct HttpResponse {
     pub final_url: String,
 }
 
+/// Which redirects a request follows. Every followed redirect must also stay on HTTPS (or
+/// loopback HTTP).
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum RedirectPolicy<'a> {
+    /// Any host, for inspection downloads of unreviewed candidates.
+    Any,
+    /// The original host, or one of the reviewed hosts.
+    OriginalOrReviewed(&'a [String]),
+    /// Only a reviewed host, so with none reviewed every redirect fails, even on the original
+    /// host.
+    ReviewedOnly(&'a [String]),
+}
+
 /// Connection setup, header wait and body stall limits of one request.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct HttpTimeouts {
@@ -62,23 +75,16 @@ impl HttpClient {
         original_url: &str,
         range: Option<(u64, &str)>,
     ) -> Result<HttpResponse, AcquireError> {
-        self.get_with_redirect_hosts(original_url, range, None)
+        self.get_with_redirect_policy(original_url, range, RedirectPolicy::Any)
     }
 
-    pub fn get_with_reviewed_redirects(
+    /// Follows at most [`MAX_REDIRECTS`] redirects that `policy` allows; a redirect it does not
+    /// allow fails before its target is contacted.
+    pub fn get_with_redirect_policy(
         &self,
         original_url: &str,
         range: Option<(u64, &str)>,
-        redirect_hosts: &[String],
-    ) -> Result<HttpResponse, AcquireError> {
-        self.get_with_redirect_hosts(original_url, range, Some(redirect_hosts))
-    }
-
-    fn get_with_redirect_hosts(
-        &self,
-        original_url: &str,
-        range: Option<(u64, &str)>,
-        redirect_hosts: Option<&[String]>,
+        policy: RedirectPolicy<'_>,
     ) -> Result<HttpResponse, AcquireError> {
         let mut current = parse_download_url(original_url)?;
         let original_host = current.host_str().map(str::to_owned);
@@ -118,22 +124,30 @@ impl HttpClient {
                     url: current.to_string(),
                 })?;
             let target = resolve_redirect(&current, location)?;
-            if let Some(redirect_hosts) = redirect_hosts {
-                let target_host = target.host_str();
-                let reviewed = target_host.is_some_and(|host| {
-                    original_host
-                        .as_deref()
-                        .is_some_and(|original| original.eq_ignore_ascii_case(host))
-                        || redirect_hosts
-                            .iter()
-                            .any(|reviewed| reviewed.eq_ignore_ascii_case(host))
-                });
-                if !reviewed {
-                    return Err(AcquireError::UnreviewedRedirect {
-                        from: current.to_string(),
-                        to: target.to_string(),
-                    });
+            let listed = |redirect_hosts: &[String], host: &str| {
+                redirect_hosts
+                    .iter()
+                    .any(|reviewed| reviewed.eq_ignore_ascii_case(host))
+            };
+            let allowed = match policy {
+                RedirectPolicy::Any => true,
+                RedirectPolicy::OriginalOrReviewed(redirect_hosts) => {
+                    target.host_str().is_some_and(|host| {
+                        original_host
+                            .as_deref()
+                            .is_some_and(|original| original.eq_ignore_ascii_case(host))
+                            || listed(redirect_hosts, host)
+                    })
                 }
+                RedirectPolicy::ReviewedOnly(redirect_hosts) => target
+                    .host_str()
+                    .is_some_and(|host| listed(redirect_hosts, host)),
+            };
+            if !allowed {
+                return Err(AcquireError::UnreviewedRedirect {
+                    from: current.to_string(),
+                    to: target.to_string(),
+                });
             }
             current = target;
         }

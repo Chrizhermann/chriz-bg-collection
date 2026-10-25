@@ -281,6 +281,7 @@ pub(super) fn payloads(ctx: &Context<'_>) -> Result<Payloads, String> {
                     expected_sha256: hash.into(),
                     redirect_hosts: vec!["release-assets.githubusercontent.com".into()],
                     max_attempts: crate::acquire::DEFAULT_DOWNLOAD_ATTEMPTS,
+                    route: crate::acquire::DownloadRoute::Generic,
                 },
                 &ConsoleSink,
             )

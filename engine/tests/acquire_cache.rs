@@ -5,7 +5,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use bg_engine::acquire::{
-    AcquireError, ArtifactCache, CacheDisposition, DownloadRequest, StopSignal,
+    AcquireError, ArtifactCache, CacheDisposition, DownloadRequest, DownloadRoute, StopSignal,
 };
 use bg_engine::events::ChannelSink;
 use sha2::{Digest, Sha256};
@@ -24,6 +24,7 @@ fn request(id: &str, url: String, bytes: &[u8]) -> DownloadRequest {
         expected_sha256: sha256(bytes),
         redirect_hosts: Vec::new(),
         max_attempts: 1,
+        route: DownloadRoute::Generic,
     }
 }
 
@@ -454,6 +455,7 @@ fn hash_mismatch_never_publishes_a_cache_object() {
         expected_sha256: "00".repeat(32),
         redirect_hosts: Vec::new(),
         max_attempts: 1,
+        route: DownloadRoute::Generic,
     };
 
     assert!(matches!(

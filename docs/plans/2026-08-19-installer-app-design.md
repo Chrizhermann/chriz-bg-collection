@@ -93,7 +93,11 @@ prohibitions, knock-on exclusions) become CI-checked validation rules.
 
 Per-mod file: `id`, `name`, `version`, `tp2`, `language`, `weidu` (pin), `platforms`,
 `phase` (`bg1-pre-merge | main | post-eet-end`), `[source]` (`kind` =
-`github-release | github-tag-archive | github-commit-zip | manual`, `url`, `sha256`),
+`github-release | github-tag-archive | github-commit-zip | manual | weaselmods-download`,
+`url`, `sha256`; `weaselmods-download` fetches a Weasel Mods package link
+`https://downloads.weaselmods.net/download/<slug>/?wpdmdl=<id>` unattended and also needs
+`expected_filename` (the percent-decoded attachment name), `expected_length` and a `zip`
+`[archive]`; see `SourceKind::WeaselmodsDownload` in `engine/src/manifest.rs`),
 `[[components]]` (`id` = DESIGNATED number — subcomponent choices are just numbers —
 optional `stdin`). `collection.toml`: `game_build`, stack-level pins (EET master SHA),
 flat `order` (mod/component granularity where needed, e.g. Artisan Kitpack Tweaks

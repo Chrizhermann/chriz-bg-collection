@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use bg_engine::acquire::{ArtifactCache, DownloadRequest};
+use bg_engine::acquire::{ArtifactCache, DownloadRequest, DownloadRoute};
 use bg_engine::cli::{
     install_campaign_reviewed, resume_campaign_controlled_expected, review_install,
     InstallCommandRequest, SelectionOverrides,
@@ -476,6 +476,7 @@ fn executable_fixture() -> ExecutableFixture {
                     expected_sha256: sha256_bytes(bytes),
                     redirect_hosts: Vec::new(),
                     max_attempts: 1,
+                    route: DownloadRoute::Generic,
                 },
                 &sink,
             )
@@ -2453,6 +2454,7 @@ fn reacquire_through_signed_redirect(fixture: &ExecutableFixture, path: &str, by
                 expected_sha256: digest,
                 redirect_hosts: Vec::new(),
                 max_attempts: 1,
+                route: DownloadRoute::Generic,
             },
             &sink,
         )
@@ -2645,6 +2647,7 @@ fn resume_recreates_a_deleted_download_cache() {
                     expected_sha256: sha256_bytes(bytes),
                     redirect_hosts: Vec::new(),
                     max_attempts: 1,
+                    route: DownloadRoute::Generic,
                 },
                 &sink,
             )
@@ -3356,6 +3359,7 @@ fn standalone_fixture() -> StandaloneFixture {
                     expected_sha256: sha256_bytes(bytes),
                     redirect_hosts: Vec::new(),
                     max_attempts: 1,
+                    route: DownloadRoute::Generic,
                 },
                 &sink,
             )

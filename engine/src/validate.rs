@@ -693,6 +693,10 @@ fn check_artifact_source(
         );
     }
 
+    if artifact.source.kind == SourceKind::WeaselmodsDownload {
+        check_weaselmods_source(id, artifact, allow_loopback_http, findings);
+    }
+
     if github_url_requires_redirect_review(&artifact.source.url)
         && artifact.source.redirect_hosts.is_empty()
     {
@@ -701,6 +705,56 @@ fn check_artifact_source(
             RULE_UNREVIEWED_REDIRECT,
             format!(
                 "artifact {id:?} uses a GitHub route that redirects but declares no reviewed redirect host"
+            ),
+        );
+    }
+}
+
+/// A Weasel Mods package is fetched only through its canonical link, and only when the served
+/// attachment name and ZIP type can be checked, so these gaps are errors rather than warnings.
+fn check_weaselmods_source(
+    id: &str,
+    artifact: &Artifact,
+    allow_loopback_http: bool,
+    findings: &mut Vec<Finding>,
+) {
+    if let Err(message) =
+        crate::acquire::check_weaselmods_download_url(&artifact.source.url, allow_loopback_http)
+    {
+        error(
+            findings,
+            RULE_SOURCES,
+            format!(
+                "artifact {id:?} weaselmods-download url {:?} is not a package link: {message}",
+                artifact.source.url
+            ),
+        );
+    }
+    match artifact.source.expected_filename.as_deref() {
+        None => error(
+            findings,
+            RULE_SOURCES,
+            format!("artifact {id:?} weaselmods-download source needs the expected filename"),
+        ),
+        Some(filename) => {
+            if let Err(message) = crate::acquire::check_saved_filename(filename) {
+                error(
+                    findings,
+                    RULE_SOURCES,
+                    format!(
+                        "artifact {id:?} weaselmods-download expected filename {filename:?} is unusable: {message}"
+                    ),
+                );
+            }
+        }
+    }
+    if artifact.archive.kind != crate::manifest::ArchiveKind::Zip {
+        error(
+            findings,
+            RULE_SOURCES,
+            format!(
+                "artifact {id:?} weaselmods-download source serves ZIP archives, not {:?}",
+                artifact.archive.kind
             ),
         );
     }
@@ -1085,7 +1139,9 @@ fn is_immutable_source_reference(source: &Source) -> bool {
             looks_like_version_tag(reference)
                 && github_route_matches_reference(&source.url, source.kind, reference)
         }
-        SourceKind::Manual => {
+        // A package link names no revision, so the release version is the identity and the
+        // pinned length and SHA-256 decide whether the served bytes still match it.
+        SourceKind::Manual | SourceKind::WeaselmodsDownload => {
             !reference.is_empty()
                 && !matches!(
                     reference.to_ascii_lowercase().as_str(),
@@ -1135,7 +1191,7 @@ fn github_route_matches_reference(url: &str, kind: SourceKind, reference: &str) 
         SourceKind::GithubCommitZip => segments
             .iter()
             .any(|segment| segment.strip_suffix(".zip").unwrap_or(segment) == reference),
-        SourceKind::Manual => true,
+        SourceKind::Manual | SourceKind::WeaselmodsDownload => true,
     }
 }
 

@@ -195,6 +195,83 @@ fn archive_kind_must_agree_with_a_stable_expected_filename() {
     assert_finding(&manifest, "artifact-contract", Severity::Warning);
 }
 
+/// The recipe fixture's payload as a Weasel Mods package, which validates cleanly.
+fn weaselmods_recipe() -> Manifest {
+    let mut manifest = recipe();
+    let artifact = manifest.artifacts.get_mut("eefixpack").unwrap();
+    artifact.source.kind = SourceKind::WeaselmodsDownload;
+    artifact.source.url = "https://downloads.weaselmods.net/download/lanna/?wpdmdl=437".into();
+    artifact.source.reference = "1.8".into();
+    artifact.source.expected_filename = Some("Lanna v1.8.zip".into());
+    artifact.source.redirect_hosts.clear();
+    manifest
+}
+
+#[track_caller]
+fn assert_weaselmods_error(edit: impl FnOnce(&mut Artifact), expected: &str) {
+    let mut manifest = weaselmods_recipe();
+    edit(manifest.artifacts.get_mut("eefixpack").unwrap());
+    let findings = validate(&manifest);
+    assert!(
+        findings.iter().any(|finding| finding.rule == "sources"
+            && finding.severity == Severity::Error
+            && finding.message.contains(expected)),
+        "expected a sources error containing {expected:?}, got {findings:#?}"
+    );
+}
+
+#[test]
+fn a_weaselmods_package_link_parses_and_validates_cleanly() {
+    let text = COMPLETE_WEIDU_ARTIFACT.replace(
+        r#"kind = "github-release""#,
+        r#"kind = "weaselmods-download""#,
+    );
+    let artifact: Artifact = toml::from_str(&text).unwrap();
+    assert_eq!(artifact.source.kind, SourceKind::WeaselmodsDownload);
+
+    let manifest = weaselmods_recipe();
+    assert!(validate(&manifest).is_empty(), "{:#?}", validate(&manifest));
+}
+
+#[test]
+fn a_weaselmods_source_needs_the_package_link_its_served_name_and_a_zip() {
+    for (url, expected) in [
+        (
+            "https://example.invalid/download/lanna/?wpdmdl=437",
+            "is not a package link",
+        ),
+        (
+            "https://downloads.weaselmods.net/download/lanna/",
+            "is not a package link",
+        ),
+        (
+            "https://downloads.weaselmods.net/download/lanna/?wpdmdl=437&refresh=6adad8d9a8013",
+            "is not a package link",
+        ),
+        (
+            "http://127.0.0.1:8080/download/lanna/?wpdmdl=437",
+            "is not a package link",
+        ),
+    ] {
+        assert_weaselmods_error(|artifact| artifact.source.url = url.into(), expected);
+    }
+    assert_weaselmods_error(
+        |artifact| artifact.source.expected_filename = None,
+        "needs the expected filename",
+    );
+    assert_weaselmods_error(
+        |artifact| artifact.source.expected_filename = Some("../Lanna v1.8.zip".into()),
+        "is unusable",
+    );
+    assert_weaselmods_error(
+        |artifact| {
+            artifact.archive.kind = bg_engine::manifest::ArchiveKind::Iemod;
+            artifact.source.expected_filename = Some("Lanna v1.8.iemod".into());
+        },
+        "serves ZIP archives",
+    );
+}
+
 #[test]
 fn rejects_http_downgrade_and_ambiguous_tp2_roots() {
     let mut manifest = recipe();
@@ -700,6 +777,114 @@ fn verify_uses_production_cache_and_proves_pinned_archive_layout() {
     assert_eq!(report["archive"]["wrapper_directory"], "sample-v1");
     assert!(temp.path().join("cache/production/sha256").is_dir());
     assert!(!temp.path().join("cache/authoring-quarantine").exists());
+}
+
+/// Answers one request like the Weasel Mods download manager, with the given
+/// `Content-Disposition` (or none), at a package-link path.
+fn serve_package_once(
+    body: Vec<u8>,
+    disposition: Option<&'static str>,
+) -> (String, thread::JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let handle = thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let mut stream = loop {
+            match listener.accept() {
+                Ok((stream, _)) => break stream,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    if Instant::now() >= deadline {
+                        return;
+                    }
+                    thread::sleep(Duration::from_millis(5));
+                }
+                Err(error) => panic!("accept package request: {error}"),
+            }
+        };
+        stream.set_nonblocking(false).unwrap();
+        let mut request = [0_u8; 4096];
+        let _ = stream.read(&mut request).unwrap();
+        let disposition = disposition
+            .map(|value| format!("Content-Disposition: {value}\r\n"))
+            .unwrap_or_default();
+        write!(
+            stream,
+            "HTTP/1.1 200 OK\r\nContent-Type: application/zip\r\n{disposition}Content-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        )
+        .unwrap();
+        // A refused response may be closed by the client before its body is read.
+        let _ = stream.write_all(&body);
+    });
+    (
+        format!("http://{address}/download/sample/?wpdmdl=42"),
+        handle,
+    )
+}
+
+fn weaselmods_artifact_toml(url: &str, bytes: &[u8], sha256: &str) -> String {
+    payload_artifact_toml(url, bytes, sha256)
+        .replace(
+            r#"kind = "github-release""#,
+            r#"kind = "weaselmods-download""#,
+        )
+        .replace(
+            r#"expected_filename = "sample-v1.zip""#,
+            r#"expected_filename = "Sample v1.zip""#,
+        )
+        .replace(r#"reference = "v1.2.3""#, r#"reference = "1.2.3""#)
+}
+
+#[test]
+fn verify_fetches_a_weaselmods_package_only_with_its_served_name() {
+    let archive = sample_archive(None);
+    let digest = sha256(&archive);
+    for (disposition, verified) in [
+        (Some(r#"attachment;filename="Sample%20v1.zip""#), true),
+        (None, false),
+        (Some(r#"attachment;filename="Other.zip""#), false),
+    ] {
+        let (url, server) = serve_package_once(archive.clone(), disposition);
+        let temp = tempfile::tempdir().unwrap();
+        let artifact_path = temp.path().join("sample.toml");
+        std::fs::write(
+            &artifact_path,
+            weaselmods_artifact_toml(&url, &archive, &digest),
+        )
+        .unwrap();
+
+        let output = Command::new(env!("CARGO_BIN_EXE_chriz-bg-author"))
+            .args(["artifact", "verify"])
+            .arg(&artifact_path)
+            .arg("--cache-root")
+            .arg(temp.path().join("cache"))
+            .output()
+            .unwrap();
+        server.join().unwrap();
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(
+            output.status.success(),
+            verified,
+            "{disposition:?}: {stderr}"
+        );
+        if verified {
+            let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+            assert_eq!(report["sha256"], digest);
+        } else {
+            assert!(
+                stderr.contains("unexpected response"),
+                "{disposition:?}: {stderr}"
+            );
+            assert!(!temp
+                .path()
+                .join("cache/production/sha256")
+                .read_dir()
+                .unwrap()
+                .any(|_| true));
+        }
+    }
 }
 
 #[test]

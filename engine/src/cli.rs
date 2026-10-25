@@ -18,7 +18,7 @@ use thiserror::Error;
 use crate::acquire::{
     extract_archive_with_stop, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
     ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
-    DownloadRequest, ExtractedArtifact, MaterializationRequest, StopSignal,
+    DownloadRequest, DownloadRoute, ExtractedArtifact, MaterializationRequest, StopSignal,
     DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
@@ -2661,8 +2661,11 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             .acquisition
         {
             AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
-                let acquired = ArtifactCache::open(&self.created.cache_root)
-                    .and_then(|cache| {
+                let acquired = DownloadRoute::for_source(&artifact.source)
+                    .and_then(|route| {
+                        ArtifactCache::open(&self.created.cache_root).map(|cache| (cache, route))
+                    })
+                    .and_then(|(cache, route)| {
                         cache.acquire_with_stop(
                             &DownloadRequest {
                                 request_id: artifact.id.clone(),
@@ -2671,6 +2674,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                                 expected_sha256: artifact.source.sha256.clone(),
                                 redirect_hosts: artifact.source.redirect_hosts.clone(),
                                 max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
+                                route,
                             },
                             self.sink,
                             &self.stop_signal(),

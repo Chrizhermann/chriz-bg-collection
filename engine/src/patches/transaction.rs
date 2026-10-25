@@ -378,6 +378,7 @@ fn download(
                 expected_sha256: hash.into(),
                 redirect_hosts,
                 max_attempts: crate::acquire::DEFAULT_DOWNLOAD_ATTEMPTS,
+                route: crate::acquire::DownloadRoute::Generic,
             },
             &ConsoleSink,
         )

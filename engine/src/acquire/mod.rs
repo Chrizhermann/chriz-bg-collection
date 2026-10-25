@@ -15,6 +15,7 @@ mod http;
 mod inspect;
 mod manual;
 mod materialize;
+mod route;
 
 pub use archive::{
     extract_archive, extract_archive_reporting_repair, extract_archive_with_stop, ArchiveFormat,
@@ -28,6 +29,9 @@ pub use manual::{provide_manual_archive, publish_manual_archive, VerifiedManualA
 pub use materialize::{
     materialize, MaterializationRequest, MaterializationResult, PublicationManifest, PublishedPath,
     SignedCollisionRule,
+};
+pub use route::{
+    check_saved_filename, check_weaselmods_download_url, DownloadRoute, WEASELMODS_DOWNLOAD_HOST,
 };
 
 /// Standard archive budget: initial attempt, then retries after 0, 2, 10 and 30 seconds.
@@ -82,6 +86,8 @@ pub struct DownloadRequest {
     /// Maximum number of transient transport attempts, including the first request.
     /// Must be at least one. Retries wait 0, 2, 10, then at most 30 seconds each.
     pub max_attempts: u32,
+    /// Publication route whose response checks apply on top of the general contract.
+    pub route: DownloadRoute,
 }
 
 /// Whether acquisition used an existing verified object or published a new one.
@@ -193,6 +199,15 @@ pub enum AcquireError {
     MissingRedirectLocation {
         /// URL that returned the redirect.
         url: String,
+    },
+    /// The response is not the archive the publication route serves, such as an HTML page or
+    /// a different filename; its body is not kept.
+    #[error("unexpected response from `{url}`: {message}")]
+    UnexpectedResponse {
+        /// Final response URL.
+        url: String,
+        /// Which declared property did not match.
+        message: String,
     },
     /// The bounded redirect limit was exhausted.
     #[error("too many redirects while downloading from `{url}`")]

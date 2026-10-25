@@ -83,6 +83,19 @@ pub enum SourceKind {
     GithubCommitZip,
     /// A page-gated or otherwise user-supplied archive.
     Manual,
+    /// A package of the Weasel Mods download manager, fetched unattended from its anonymous
+    /// direct link `https://downloads.weaselmods.net/download/<slug>/?wpdmdl=<package id>`.
+    ///
+    /// The link names a package, not a revision: the author may replace the file behind it,
+    /// so `reference` holds the release version and the pinned `expected_length` and `sha256`
+    /// decide whether the served archive is still the reviewed one. Fetching fails closed
+    /// unless the URL has exactly that canonical shape on that host, the response is a ZIP
+    /// (`Content-Type: application/zip`) with an exact `Content-Length`, and its
+    /// `Content-Disposition` attachment filename, percent-decoded the way a browser saves it,
+    /// equals `expected_filename`. Redirects are followed only to hosts listed in
+    /// `redirect_hosts`; with none listed, any redirect fails. No cookies, login or
+    /// per-visit page token are used. The archive kind must be `zip`.
+    WeaselmodsDownload,
 }
 
 /// Source identity and integrity pin for an artifact archive.

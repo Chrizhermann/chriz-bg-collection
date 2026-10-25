@@ -465,6 +465,7 @@ pub fn install(
                 Vec::new()
             },
             max_attempts: 2,
+            route: crate::acquire::DownloadRoute::Generic,
         },
         sink,
     )?;
