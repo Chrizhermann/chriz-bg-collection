@@ -41,8 +41,13 @@ components and defaults.
   empty override. `engine.lua` has `engine_mode = 2`. Data includes `PATCH24/26/27` BIFs.
 - **EEex v1.3.1** (2026-10-07) supports it: the TP2 admits `iwdee`, picks the version by
   `data/PATCH27.BIF`, and ships `loader/v2.7.3.0/iwdee/` function and profiler databases;
-  InfinityLoader's `ExeNames` includes `icewind.exe`. Live boot not yet tested.
-- **Bubb's Spell Menu Extended v5.2** declares IWD:EE support (Sept research; recheck pin).
+  InfinityLoader's `ExeNames` includes `icewind.exe`.
+- **Bubb's Spell Menu Extended v5.2** declares IWD:EE support; its installer reports
+  "Using IWD:EE Configuration".
+- **Live boot (2026-10-25):** EEex 1.3.1 (components 0 and 1, no LuaJIT) plus Bubb's Spell
+  Menu Extended 5.2, installed with WeiDU 249 into a disposable lab copy, reach the main
+  menu through InfinityLoader with EEex active and the Spell Menu's Lua and menu loaded; no
+  error dialog or crash. Not yet tested: the spell menu inside a game, save/load, BuffBot.
 - **BuffBot v1.11.0** still gates both components to `GAME_IS ~bgee bg2ee eet~`. The
   September source review found no other IWD blocker (UI hooks and graphics exist in
   IWD:EE); enablement plus a lab test is needed in the BuffBot repository.
@@ -51,9 +56,9 @@ components and defaults.
   Smarter Priests, Potions for NPCs, Improved fiends and celestials, Smarter dragons,
   Smarter beholders, IWD-only "Revised Icewind Dale Undead", IWD spell/scroll tweaks.
   Most BG tactical encounter packs are gated off for IWD.
-- **Lab tooling** (`bg_lab_slots.py`, `lab_quiet_run.py`) only recognises `Baldur.exe`
-  and `InfinityLoader.exe` as game processes; it must learn `icewind.exe` before the
-  first IWD lab launch, with its tests.
+- **Lab tooling** (`bg_lab_slots.py`, `lab_quiet_run.py`) counts `icewind.exe` as a game
+  process since 2026-10-25, with tests. The first IWD lab run stayed muted and windowed,
+  never confined the pointer and left no process behind.
 
 ## Architecture
 

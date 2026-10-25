@@ -22,8 +22,9 @@ user's decisions. Started 2026-09-10.
   authored override data; see [the source audit](SCS-RESEARCH.md). This is source evidence.
 - [ ] Verify release-payload parity and trace the unresolved override-array plumbing
   before concluding that all authored individual spell choices take effect.
-- [ ] Build an isolated SCS baseline later and measure actual coverage anonymously:
-  actor selection, generated spellbooks, prebuff routines, first-contact behavior.
+- [x] ~~Build an isolated SCS baseline later and measure actual coverage anonymously.~~
+  Dropped on 2026-10-25: Christopher wants no separate SCS lab check, since others have
+  confirmed SCS on IWD:EE; the full lab install of the finished recipe covers it.
 - [ ] Distinguish absent coverage, delayed execution, weak choices and deliberately
   unprepared casters. Do not infer all enemies are affected from source support alone.
 - [ ] Propose conservative caster-role recipes or targeted exceptions where justified,
@@ -33,6 +34,8 @@ user's decisions. Started 2026-09-10.
 
 ## Technical implementation and acceptance
 
+- [x] Boot EEex 1.3.1 and Bubb's Spell Menu Extended 5.2 on IWD:EE 2.7.3.0 in a
+  disposable lab (2026-10-25; main menu reached, both loaded).
 - [ ] Confirm supported source builds and pin the matched EEex release.
 - [ ] Complete BuffBot IWDEE enablement and focused UI/casting/persistence checks in its repo.
 - [ ] Verify selected Artisan/Bardic components and custom NPC interactions.
