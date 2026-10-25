@@ -220,6 +220,7 @@ mod installation_name_tests {
                 launch_path: managed.join("game/InfinityLoader.exe"),
                 receipt_sha256: sha256_bytes(b"receipt"),
                 completed_at_millis: 1,
+                recipe_id: None,
             })
             .unwrap();
         let bridge = NativeBridge::with_configuration(

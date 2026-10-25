@@ -58,6 +58,7 @@ impl Fixture {
             launch_path: root.join("game/Baldur.exe"),
             receipt_sha256: sha256_bytes(receipt),
             completed_at_millis: 1,
+            recipe_id: None,
         };
         write(
             &record.managed_save_root.join("save/one.gam"),

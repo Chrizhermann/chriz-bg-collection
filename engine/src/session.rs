@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::digest::{selection_digest, sha256_bytes};
 use crate::error::{EngineError, Result};
+use crate::games::GameRole;
 use crate::recipe_view::NormalizedSelection;
 
 const STATE_DIRECTORY: &str = ".chriz";
@@ -24,14 +25,29 @@ const FIRST_PREVIOUS_SHA256: &str =
     "0000000000000000000000000000000000000000000000000000000000000000";
 const MAX_SEQUENCE: u64 = 9_999_999_999;
 
-/// Core fingerprints for the exact source pair accepted when a campaign was created.
+/// Core fingerprints for the exact sources accepted when a campaign was created.
+///
+/// An EET campaign records both sources and no standalone role. A standalone campaign records
+/// its single source in `bg2` (the primary staged game, staged at `game`), no `bg1`, and the
+/// role of that source. Absent fields are omitted, so EET records serialize unchanged.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SourceGameFingerprints {
-    /// BGEE plus SoD source identity.
-    pub bg1: String,
-    /// BG2EE source identity.
+    /// BGEE plus SoD source identity; absent for a standalone campaign.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bg1: Option<String>,
+    /// Primary source identity: BG2EE for EET, otherwise the standalone game.
     pub bg2: String,
+    /// Role of the single source of a standalone campaign; absent for EET.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standalone_role: Option<GameRole>,
+}
+
+impl SourceGameFingerprints {
+    /// Returns the role of the primary source staged at `game`.
+    pub fn primary_role(&self) -> GameRole {
+        self.standalone_role.unwrap_or(GameRole::Bg2ee)
+    }
 }
 
 /// Immutable identity of one payload archive or executable tool.
@@ -80,10 +96,18 @@ pub struct CampaignCreated {
     pub artifact_identities: Vec<FrozenIdentity>,
     /// Executable tool identities sorted by stable id.
     pub tool_identities: Vec<FrozenIdentity>,
-    /// Frozen BG1 staged-copy path.
-    pub staged_bg1: PathBuf,
-    /// Frozen BG2/EET staged-copy path.
+    /// Frozen BG1 staged-copy path; absent for a standalone campaign.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staged_bg1: Option<PathBuf>,
+    /// Frozen primary staged-copy path: BG2/EET, or the standalone game.
     pub staged_bg2: PathBuf,
+}
+
+impl CampaignCreated {
+    /// Returns `true` when this campaign stages one standalone game instead of EET.
+    pub fn is_standalone(&self) -> bool {
+        self.source_games.standalone_role.is_some()
+    }
 }
 
 /// One append-only campaign transition.
@@ -234,8 +258,8 @@ impl SessionReplay {
         )?;
         compare_identity(
             "staged BG1 path",
-            &display_path(&self.created.staged_bg1),
-            &display_path(&expected.staged_bg1),
+            &optional_display_path(self.created.staged_bg1.as_deref()),
+            &optional_display_path(expected.staged_bg1.as_deref()),
         )?;
         compare_identity(
             "staged BG2 path",
@@ -657,11 +681,22 @@ fn normalize_created(
         }
         Err(error) => return Err(error),
     };
-    if created.staged_bg1 != canonical_managed_root.join("bg1") {
+    let expected_bg1 = match created.source_games.standalone_role {
+        None => Some(canonical_managed_root.join("bg1")),
+        Some(role) if role.is_standalone() => None,
+        Some(role) => {
+            return Err(identity_mismatch(
+                "standalone source role",
+                "a standalone game role",
+                &format!("{role:?}"),
+            ));
+        }
+    };
+    if created.staged_bg1 != expected_bg1 {
         return Err(identity_mismatch(
             "staged BG1 path",
-            &display_path(&canonical_managed_root.join("bg1")),
-            &display_path(&created.staged_bg1),
+            &optional_display_path(expected_bg1.as_deref()),
+            &optional_display_path(created.staged_bg1.as_deref()),
         ));
     }
     if created.staged_bg2 != canonical_managed_root.join("game") {
@@ -691,8 +726,35 @@ fn normalize_created(
     created.recipe_envelope_sha256 = created.recipe_envelope_sha256.to_ascii_lowercase();
     created.selection_sha256 = created.selection_sha256.to_ascii_lowercase();
     created.plan_sha256 = normalize_hash("resolved plan", &created.plan_sha256)?;
-    created.source_games.bg1 = normalize_hash("BG1 source fingerprint", &created.source_games.bg1)?;
-    created.source_games.bg2 = normalize_hash("BG2 source fingerprint", &created.source_games.bg2)?;
+    created.source_games.bg1 = match (
+        created.source_games.standalone_role,
+        created.source_games.bg1.as_deref(),
+    ) {
+        (None, Some(bg1)) => Some(normalize_hash("BG1 source fingerprint", bg1)?),
+        (Some(_), None) => None,
+        (None, None) => {
+            return Err(identity_mismatch(
+                "BG1 source fingerprint",
+                "a recorded fingerprint",
+                "none",
+            ));
+        }
+        (Some(_), Some(bg1)) => {
+            return Err(identity_mismatch(
+                "BG1 source fingerprint",
+                "none for a standalone campaign",
+                bg1,
+            ));
+        }
+    };
+    created.source_games.bg2 = normalize_hash(
+        if created.source_games.standalone_role.is_some() {
+            "source fingerprint"
+        } else {
+            "BG2 source fingerprint"
+        },
+        &created.source_games.bg2,
+    )?;
     normalize_identities(
         "artifact identities",
         &mut created.artifact_identities,
@@ -1177,6 +1239,10 @@ fn identity_mismatch(field: &'static str, expected: &str, found: &str) -> Engine
 
 fn display_path(path: &Path) -> String {
     path.to_string_lossy().into_owned()
+}
+
+fn optional_display_path(path: Option<&Path>) -> String {
+    path.map_or_else(|| "none".to_owned(), display_path)
 }
 
 fn ledger_error(path: &Path, message: &str) -> EngineError {

@@ -1,0 +1,22 @@
+schema = 2
+game = "iwdee"
+game_build = "2.7.3.0"
+
+[[runs]]
+run_id = "iwdfix-main"
+mod_id = "iwdfix"
+phase = "main"
+components = [0, 1]
+args = []
+
+[[features]]
+id = "iwd-fixes"
+title = "Icewind Dale fixes"
+description = "Fixture Icewind Dale fixes"
+category = "foundation"
+decision = "default"
+readiness = "ready"
+components = [
+  { run_id = "iwdfix-main", component = 0 },
+  { run_id = "iwdfix-main", component = 1 },
+]

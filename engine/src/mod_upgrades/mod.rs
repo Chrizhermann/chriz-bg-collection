@@ -107,6 +107,10 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
         return Err("Original installation receipt changed.".into());
     }
     let complete = crate::recovery_receipt::read_completed_state(&r.managed_root)?;
+    if complete.bg1_engine_name.is_none() {
+        // Recorded mod upgrades target the Enhanced Edition Trilogy only.
+        return Err("Mod upgrades are available only for Baldur's Gate installations.".into());
+    }
     if complete.bg2_engine_name != r.engine_name
         || complete.managed_save_root != r.managed_save_root
         || complete.launch_path != r.launch_path

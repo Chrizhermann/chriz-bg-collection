@@ -87,6 +87,10 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
         return Err("Patching is restricted to a separate managed game installation.".into());
     }
     let completed = crate::recovery_receipt::read_completed_state(root)?;
+    if completed.bg1_engine_name.is_none() {
+        // The patch catalog targets the Enhanced Edition Trilogy only.
+        return Err("Patches are available only for Baldur's Gate installations.".into());
+    }
     if completed.bg2_engine_name != ctx.record.engine_name
         || completed.managed_save_root != ctx.record.managed_save_root
         || crate::stage::read_engine_name(ctx.game()).map_err(err)? != ctx.record.engine_name

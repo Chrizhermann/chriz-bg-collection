@@ -35,7 +35,7 @@ fn creates_the_exact_managed_layout_outside_both_sources() {
     let temp = tempfile::tempdir().unwrap();
     let (layout, bg1, bg2) = layout(&temp);
 
-    assert_eq!(layout.bg1_source(), fs::canonicalize(bg1).unwrap());
+    assert_eq!(layout.bg1_source().unwrap(), fs::canonicalize(bg1).unwrap());
     assert_eq!(layout.bg2_source(), fs::canonicalize(bg2).unwrap());
     assert_eq!(layout.bg1_root(), layout.root().join("bg1"));
     assert_eq!(layout.game_root(), layout.root().join("game"));
@@ -1203,4 +1203,126 @@ fn symlink_file(source: &Path, destination: &Path) -> io::Result<()> {
 #[cfg(windows)]
 fn symlink_directory(source: &Path, destination: &Path) -> io::Result<()> {
     std::os::windows::fs::symlink_dir(source, destination)
+}
+
+fn standalone_layout(temp: &tempfile::TempDir) -> (ManagedLayout, PathBuf) {
+    let source = source_tree(temp.path(), "source-iwd");
+    fs::write(
+        source.join("engine.lua"),
+        b"engine_name = \"Icewind Dale - Enhanced Edition\"\r\nengine_mode = 2\r\n",
+    )
+    .unwrap();
+    let layout =
+        ManagedLayout::prepare_standalone(temp.path().join("managed"), GameRole::Iwdee, &source)
+            .unwrap();
+    (layout, source)
+}
+
+#[test]
+fn standalone_layout_owns_only_the_game_and_state_folders() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, source) = standalone_layout(&temp);
+
+    assert!(layout.is_standalone());
+    assert_eq!(layout.primary_role(), GameRole::Iwdee);
+    assert_eq!(layout.bg1_source(), None);
+    assert_eq!(layout.bg2_source(), fs::canonicalize(source).unwrap());
+    assert!(layout.game_root().is_dir());
+    assert!(layout.state_root().is_dir());
+    assert!(!layout.bg1_root().exists());
+    let mut names = fs::read_dir(layout.root())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    names.sort();
+    assert_eq!(names, vec![".chriz", "game"]);
+}
+
+#[test]
+fn standalone_layout_rejects_an_eet_role_and_a_leftover_bg1_folder() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = source_tree(temp.path(), "source-iwd");
+    let error =
+        ManagedLayout::prepare_standalone(temp.path().join("managed"), GameRole::Bg2ee, &source)
+            .unwrap_err();
+    assert!(
+        error.to_string().contains("cannot be installed alone"),
+        "{error}"
+    );
+    assert!(!temp.path().join("managed").exists());
+
+    let managed = temp.path().join("managed-with-bg1");
+    fs::create_dir_all(managed.join("bg1")).unwrap();
+    let error = ManagedLayout::prepare_standalone(&managed, GameRole::Iwdee, &source).unwrap_err();
+    assert!(
+        error.to_string().contains("unowned top-level entry"),
+        "{error:?}"
+    );
+}
+
+#[test]
+fn standalone_staging_copies_only_its_game_and_refuses_other_roles() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _) = standalone_layout(&temp);
+
+    let report = stage_game_copy(&layout, GameRole::Iwdee).unwrap();
+
+    assert_eq!(report.copied_files, 2);
+    assert_eq!(
+        fs::read(layout.game_root().join("data/base.bif")).unwrap(),
+        b"base payload"
+    );
+    for role in [GameRole::BgeeSod, GameRole::Bg2ee] {
+        let error = stage_game_copy(&layout, role).unwrap_err();
+        assert!(error.to_string().contains("does not stage"), "{error}");
+    }
+    assert!(!layout.bg1_root().exists());
+}
+
+#[test]
+fn standalone_final_identity_patches_the_game_and_seeds_no_baldur_profile() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _) = standalone_layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents),
+        &layout,
+        "Chriz Easy IWD",
+        "install-iwd",
+    )
+    .unwrap();
+    stage_game_copy(&layout, GameRole::Iwdee).unwrap();
+    // A Baldur's Gate interval-save component in the log must not seed `Baldur.lua` here.
+    fs::write(
+        layout.game_root().join("WeiDU.log"),
+        "~CDTWEAKS/SETUP-CDTWEAKS.TP2~ #0 #3354 // Installed interval saves\n",
+    )
+    .unwrap();
+
+    finalize_game_identity(&layout, &identity).unwrap();
+
+    assert!(identity.engine_name.starts_with("Chriz Easy IWD - "));
+    assert_eq!(
+        read_engine_name(layout.game_root()).unwrap(),
+        identity.engine_name
+    );
+    assert!(!identity.save_root.join("Baldur.lua").exists());
+    verify_profile_settings(&layout, &identity).unwrap();
+}
+
+#[test]
+fn standalone_save_name_falls_back_to_the_game_not_eet() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _) = standalone_layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+
+    let identity = propose_save_identity(&documents, &layout, "!!!", "install-iwd").unwrap();
+
+    assert!(
+        identity.engine_name.starts_with("Chriz IWD - "),
+        "{}",
+        identity.engine_name
+    );
 }

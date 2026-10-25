@@ -451,7 +451,10 @@ fn validate_evidence_manifest(evidence: &[EvidenceFile]) -> Result<(), String> {
 }
 
 fn validate_final_state(root: &Path, state: &FinalReceiptState) -> Result<(), String> {
-    if state.bg1_engine_name.trim().is_empty()
+    if state
+        .bg1_engine_name
+        .as_deref()
+        .is_some_and(|name| name.trim().is_empty())
         || state.bg2_engine_name.trim().is_empty()
         || state.verification_summary.trim().is_empty()
     {
@@ -467,8 +470,20 @@ fn validate_final_state(root: &Path, state: &FinalReceiptState) -> Result<(), St
     {
         return Err("recovery launch path must be normalized below the managed root".to_owned());
     }
-    if state.logs.len() != 2 {
-        return Err("recovery final state requires exactly one BG1 and one BG2 log".to_owned());
+    // An EET final state records BG1's identity and both logs; a standalone one records only
+    // its single game root.
+    let eet = state.bg1_engine_name.is_some();
+    let expected_targets = if eet {
+        BTreeSet::from([GameRoot::Bg1, GameRoot::Bg2])
+    } else {
+        BTreeSet::from([GameRoot::Bg2])
+    };
+    if state.logs.len() != expected_targets.len() {
+        return Err(if eet {
+            "recovery final state requires exactly one BG1 and one BG2 log".to_owned()
+        } else {
+            "recovery final state requires exactly one game log".to_owned()
+        });
     }
     let mut targets = BTreeSet::new();
     let mut components = BTreeSet::new();
@@ -494,8 +509,12 @@ fn validate_final_state(root: &Path, state: &FinalReceiptState) -> Result<(), St
             }
         }
     }
-    if !targets.contains(&GameRoot::Bg1) || !targets.contains(&GameRoot::Bg2) {
-        return Err("recovery final state requires both BG1 and BG2 logs".to_owned());
+    if targets != expected_targets {
+        return Err(if eet {
+            "recovery final state requires both BG1 and BG2 logs".to_owned()
+        } else {
+            "recovery final state requires exactly one game log".to_owned()
+        });
     }
     Ok(())
 }

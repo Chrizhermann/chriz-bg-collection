@@ -917,6 +917,10 @@ impl NativeBridge {
         let mut bg2_candidates = Vec::new();
         for candidate in candidates {
             let role = candidate.role;
+            if role == GameRole::Iwdee {
+                // This Baldur's Gate launcher never installs Icewind Dale; ignore its candidates.
+                continue;
+            }
             let response = project_candidate(candidate.clone())?;
             self.runtime_lock()
                 .candidates
@@ -924,6 +928,7 @@ impl NativeBridge {
             match role {
                 GameRole::BgeeSod => bg1_candidates.push(response),
                 GameRole::Bg2ee => bg2_candidates.push(response),
+                GameRole::Iwdee => {}
             }
         }
         sort_candidates(&mut bg1_candidates);
@@ -1669,7 +1674,7 @@ impl NativeBridge {
             preset: self.preset.clone(),
             platform: normalized_selection.platform.clone(),
             overrides: selection_overrides(normalized_selection),
-            bg1: bg1.root.clone(),
+            bg1: Some(bg1.root.clone()),
             bg2: bg2.root.clone(),
             managed_root: destination_path,
             cache,
@@ -2902,7 +2907,7 @@ fn review_digest(
         engine_identity.recipe_payload_sha256,
         engine_identity.selection_sha256,
         engine_identity.plan_sha256,
-        engine_identity.source_games.bg1,
+        engine_identity.source_games.bg1.as_deref().unwrap_or_default(),
         engine_identity.source_games.bg2,
         engine_identity.display_name,
     );
@@ -3162,6 +3167,7 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
     let role = match candidate.role {
         GameRole::BgeeSod => "BG:EE + SoD",
         GameRole::Bg2ee => "BGII:EE",
+        GameRole::Iwdee => "Icewind Dale: Enhanced Edition",
     };
     let (storefront_id, storefront) = match candidate.storefront {
         Storefront::Steam => ("steam", "Steam"),

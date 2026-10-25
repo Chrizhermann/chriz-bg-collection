@@ -372,7 +372,15 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
         ));
     }
     let logs = final_logs(&root, &frozen, request.append_missing_component.as_ref())?;
-    let launch_path = verified_launch_path(&frozen.plan, &root.join("game")).map_err(error)?;
+    let fallback = frozen.fallback_executable().map_err(error)?;
+    let root_label = if frozen.bg1.is_some() {
+        "staged BG2 root".to_owned()
+    } else {
+        format!("staged {} folder", frozen.bg2.role.display_name())
+    };
+    let launch_path =
+        verified_launch_path(&frozen.plan, &root.join("game"), &fallback, &root_label)
+            .map_err(error)?;
     Ok(Inspected {
         root,
         base,
@@ -530,7 +538,8 @@ fn final_logs(
     frozen: &FrozenCliRecipe,
     append: Option<&AppendMissingComponentAuthorization>,
 ) -> Result<Vec<FinalLogReceipt>, CliError> {
-    [GameRoot::Bg1, GameRoot::Bg2]
+    frozen
+        .targets()
         .into_iter()
         .map(|target| {
             let folder = if target == GameRoot::Bg1 {
@@ -635,8 +644,7 @@ pub fn accept_supervised_recovery(
     // Check process/TLK ownership without installing anything. Then reuse the already
     // reserved save identity instead of allowing the game to share EET's default folder.
     recheck_target_before_mutation(&root.join("game"), "en_US").map_err(error)?;
-    let layout = ManagedLayout::prepare(root, &checked.frozen.bg1.root, &checked.frozen.bg2.root)
-        .map_err(error)?;
+    let layout = frozen_layout(root, &checked.frozen).map_err(error)?;
     let identity = reserve_save_identity(
         &CliDocumentsLocator,
         &layout,
@@ -644,14 +652,23 @@ pub fn accept_supervised_recovery(
         &checked.base.install_id,
     )
     .map_err(error)?;
-    let bg1_engine_name = read_engine_name(layout.bg1_root()).map_err(error)?;
-    if bg1_engine_name != identity.engine_name {
-        return Err(error("BG1 save identity differs from its reservation"));
-    }
+    let bg1_engine_name = if layout.is_standalone() {
+        None
+    } else {
+        let name = read_engine_name(layout.bg1_root()).map_err(error)?;
+        if name != identity.engine_name {
+            return Err(error("BG1 save identity differs from its reservation"));
+        }
+        Some(name)
+    };
     finalize_game_identity(&layout, &identity).map_err(error)?;
     let bg2_engine_name = read_engine_name(layout.game_root()).map_err(error)?;
     if bg2_engine_name != identity.engine_name {
-        return Err(error("final EET save identity was not retained"));
+        return Err(error(if layout.is_standalone() {
+            "final save identity was not retained"
+        } else {
+            "final EET save identity was not retained"
+        }));
     }
     let base_path = root
         .join(".chriz/attempts")
@@ -705,6 +722,7 @@ fn publish_registry(
                     }
                 })?),
                 completed_at_millis: receipt.completed_at_millis,
+                recipe_id: frozen.recipe_id.clone(),
             })
         })
         .map_err(error)?;

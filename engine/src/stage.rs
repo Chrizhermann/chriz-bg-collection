@@ -18,12 +18,21 @@ mod profile_settings;
 use folder_diagnostics::{context as folder_context, io_failure, with_cleanup_failure};
 pub use profile_settings::{repair_installed_profile_settings, verify_profile_settings};
 
-/// The fixed on-disk roots owned by one managed EET installation.
+/// Top-level entries an EET managed root may contain.
+const EET_OWNED_TOP_LEVEL: &[&str] = &[".chriz", "bg1", "game"];
+/// Top-level entries a standalone managed root may contain.
+const STANDALONE_OWNED_TOP_LEVEL: &[&str] = &[".chriz", "game"];
+
+/// The fixed on-disk roots owned by one managed installation.
+///
+/// An EET layout owns `bg1`, `game`, and `.chriz`. A standalone layout stages its single game
+/// at `game` and owns only `game` and `.chriz`; it never creates `bg1`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManagedLayout {
     root: PathBuf,
-    bg1_source: PathBuf,
+    bg1_source: Option<PathBuf>,
     bg2_source: PathBuf,
+    primary_role: GameRole,
     bg1_root: PathBuf,
     game_root: PathBuf,
     state_root: PathBuf,
@@ -43,20 +52,70 @@ impl ManagedLayout {
         let bg1_source = canonical_direct_directory(bg1_source.as_ref()).map_err(|error| {
             folder_context("check BG1 source folder", bg1_source.as_ref(), error)
         })?;
-        let bg2_source = canonical_direct_directory(bg2_source.as_ref()).map_err(|error| {
-            folder_context("check BG2 source folder", bg2_source.as_ref(), error)
-        })?;
-        reject_overlapping_roots(&bg1_source, &bg2_source)?;
+        Self::prepare_with(
+            managed_root.as_ref(),
+            Some(bg1_source),
+            bg2_source.as_ref(),
+            GameRole::Bg2ee,
+        )
+    }
 
-        let requested_root = absolute_path(managed_root.as_ref()).map_err(|error| {
-            folder_context("resolve installation folder", managed_root.as_ref(), error)
-        })?;
+    /// Validates one read-only standalone source and creates its managed directory layout.
+    ///
+    /// The source is staged at `game`; no `bg1` folder is created. Existing managed roots may
+    /// contain only `game` and `.chriz`. `role` must be a standalone game role.
+    pub fn prepare_standalone(
+        managed_root: impl AsRef<Path>,
+        role: GameRole,
+        source: impl AsRef<Path>,
+    ) -> Result<Self> {
+        if !role.is_standalone() {
+            return Err(EngineError::UnsafeStagingEntry {
+                path: source.as_ref().to_path_buf(),
+                reason: format!(
+                    "{} is part of the Enhanced Edition Trilogy and cannot be installed alone",
+                    role.display_name()
+                ),
+            });
+        }
+        Self::prepare_with(managed_root.as_ref(), None, source.as_ref(), role)
+    }
+
+    fn prepare_with(
+        managed_root: &Path,
+        bg1_source: Option<PathBuf>,
+        primary_source: &Path,
+        primary_role: GameRole,
+    ) -> Result<Self> {
+        let primary_label = if bg1_source.is_some() {
+            "check BG2 source folder"
+        } else {
+            "check game source folder"
+        };
+        let bg2_source = canonical_direct_directory(primary_source)
+            .map_err(|error| folder_context(primary_label, primary_source, error))?;
+        let sources = bg1_source
+            .iter()
+            .chain(std::iter::once(&bg2_source))
+            .collect::<Vec<_>>();
+        if let Some(bg1_source) = &bg1_source {
+            reject_overlapping_roots(bg1_source, &bg2_source)?;
+        }
+
+        let requested_root = absolute_path(managed_root)
+            .map_err(|error| folder_context("resolve installation folder", managed_root, error))?;
         let prospective_root = canonicalize_for_creation(&requested_root)
             .map_err(|error| folder_context("check installation folder", &requested_root, error))?;
-        reject_overlapping_roots(&bg1_source, &prospective_root)?;
-        reject_overlapping_roots(&bg2_source, &prospective_root)?;
+        for source in &sources {
+            reject_overlapping_roots(source, &prospective_root)?;
+        }
 
-        inspect_existing_managed_root(&requested_root)
+        let owned = if bg1_source.is_some() {
+            EET_OWNED_TOP_LEVEL
+        } else {
+            STANDALONE_OWNED_TOP_LEVEL
+        };
+        inspect_existing_managed_root(&requested_root, owned)
             .map_err(|error| folder_context("check installation folder", &requested_root, error))?;
         create_directories(&requested_root).map_err(|error| {
             folder_context("create installation folder", &requested_root, error)
@@ -64,13 +123,19 @@ impl ManagedLayout {
         let root = canonical_direct_directory(&requested_root).map_err(|error| {
             folder_context("revalidate installation folder", &requested_root, error)
         })?;
-        reject_overlapping_roots(&bg1_source, &root)?;
-        reject_overlapping_roots(&bg2_source, &root)?;
+        for source in &sources {
+            reject_overlapping_roots(source, &root)?;
+        }
 
         let state_root = root.join(".chriz");
         let bg1_root = root.join("bg1");
         let game_root = root.join("game");
-        for path in [&state_root, &bg1_root, &game_root] {
+        let mut created = vec![&state_root];
+        if bg1_source.is_some() {
+            created.push(&bg1_root);
+        }
+        created.push(&game_root);
+        for path in created {
             create_directories(path)
                 .map_err(|error| folder_context("create installation folder", path, error))?;
             ensure_direct_directory(path)
@@ -81,6 +146,7 @@ impl ManagedLayout {
             root,
             bg1_source,
             bg2_source,
+            primary_role,
             bg1_root,
             game_root,
             state_root,
@@ -92,22 +158,32 @@ impl ManagedLayout {
         &self.root
     }
 
-    /// Canonical, read-only BGEE+SoD source root.
-    pub fn bg1_source(&self) -> &Path {
-        &self.bg1_source
+    /// Returns `true` when this layout stages one standalone game instead of EET.
+    pub fn is_standalone(&self) -> bool {
+        self.bg1_source.is_none()
     }
 
-    /// Canonical, read-only BG2EE source root.
+    /// Role of the source staged at `game`: BG2EE for EET, otherwise the standalone game.
+    pub fn primary_role(&self) -> GameRole {
+        self.primary_role
+    }
+
+    /// Canonical, read-only BGEE+SoD source root; `None` for a standalone layout.
+    pub fn bg1_source(&self) -> Option<&Path> {
+        self.bg1_source.as_deref()
+    }
+
+    /// Canonical, read-only source root staged at `game`: BG2EE, or the standalone game.
     pub fn bg2_source(&self) -> &Path {
         &self.bg2_source
     }
 
-    /// Managed BGEE+SoD working copy.
+    /// Fixed managed BGEE+SoD working-copy path. A standalone layout never creates it.
     pub fn bg1_root(&self) -> &Path {
         &self.bg1_root
     }
 
-    /// Managed BG2EE/EET working copy.
+    /// Managed BG2EE/EET or standalone game working copy.
     pub fn game_root(&self) -> &Path {
         &self.game_root
     }
@@ -117,18 +193,22 @@ impl ManagedLayout {
         &self.state_root
     }
 
-    fn paths_for(&self, role: GameRole) -> (&Path, &Path, PathBuf) {
-        match role {
-            GameRole::BgeeSod => (
-                &self.bg1_source,
+    fn paths_for(&self, role: GameRole) -> Result<(&Path, &Path, PathBuf)> {
+        match (&self.bg1_source, role) {
+            (Some(bg1_source), GameRole::BgeeSod) => Ok((
+                bg1_source,
                 &self.bg1_root,
                 self.state_root.join("staging/bg1"),
-            ),
-            GameRole::Bg2ee => (
+            )),
+            (_, role) if role == self.primary_role => Ok((
                 &self.bg2_source,
                 &self.game_root,
                 self.state_root.join("staging/game"),
-            ),
+            )),
+            (_, role) => Err(EngineError::StagingVerification {
+                path: self.root.clone(),
+                reason: format!("this installation does not stage {}", role.display_name()),
+            }),
         }
     }
 }
@@ -316,7 +396,7 @@ pub fn propose_save_identity(
         ));
     }
 
-    let normalized_name = normalize_display_name(display_name);
+    let normalized_name = normalize_display_name(display_name, layout.primary_role());
     let managed_root = identity_path(layout.root())?;
     let mut digest = Sha256::new();
     digest.update(install_id.as_bytes());
@@ -428,7 +508,7 @@ pub fn stage_bgee_sod(
     let isolate_bg1 = verify_reserved_save_identity(layout, identity)
         .and_then(|()| patch_engine_name(layout.bg1_root(), identity));
     if let Err(error) = isolate_bg1 {
-        let (_, target, scratch) = layout.paths_for(GameRole::BgeeSod);
+        let (_, target, scratch) = layout.paths_for(GameRole::BgeeSod)?;
         return Err(with_cleanup_failure(
             error,
             discard_role_stage(layout, target, &scratch)
@@ -438,7 +518,8 @@ pub fn stage_bgee_sod(
     Ok(bg1)
 }
 
-/// Reapplies and verifies the isolated identity after EET has finalized BG2EE.
+/// Reapplies and verifies the isolated identity after EET has finalized BG2EE, or after the
+/// last run of a standalone game.
 pub fn finalize_game_identity(
     layout: &ManagedLayout,
     identity: &ReservedSaveIdentity,
@@ -470,7 +551,7 @@ pub fn read_engine_name(game_root: impl AsRef<Path>) -> Result<String> {
     Ok(assignments[0].value.clone())
 }
 
-fn normalize_display_name(display_name: &str) -> String {
+fn normalize_display_name(display_name: &str, primary_role: GameRole) -> String {
     let mut normalized = String::new();
     let mut separator_pending = false;
     for character in display_name.chars() {
@@ -489,7 +570,10 @@ fn normalize_display_name(display_name: &str) -> String {
     }
     let normalized = normalized.trim_matches([' ', '.', '-']).trim();
     if normalized.is_empty() {
-        "Chriz EET".to_owned()
+        match primary_role {
+            GameRole::Iwdee => "Chriz IWD".to_owned(),
+            GameRole::BgeeSod | GameRole::Bg2ee => "Chriz EET".to_owned(),
+        }
     } else {
         normalized.to_owned()
     }
@@ -930,7 +1014,7 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
     role: GameRole,
     observer: &mut O,
 ) -> Result<StageReport> {
-    let (source, target, scratch) = layout.paths_for(role);
+    let (source, target, scratch) = layout.paths_for(role)?;
     let before = snapshot_tree(source)?;
     create_directories(target)?;
     ensure_expected_destination_entries(target, &before)?;
@@ -1464,7 +1548,7 @@ fn hash_and_length(path: &Path) -> Result<(u64, String)> {
     Ok((length, hex::encode(digest.finalize())))
 }
 
-fn inspect_existing_managed_root(root: &Path) -> Result<()> {
+fn inspect_existing_managed_root(root: &Path, owned: &[&str]) -> Result<()> {
     let metadata = match fs::symlink_metadata(root) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
@@ -1491,9 +1575,7 @@ fn inspect_existing_managed_root(root: &Path) -> Result<()> {
             source,
         })?;
         let name = child.file_name();
-        let allowed = [".chriz", "bg1", "game"]
-            .iter()
-            .any(|allowed| os_name_eq(&name, allowed));
+        let allowed = owned.iter().any(|allowed| os_name_eq(&name, allowed));
         if !allowed {
             return Err(EngineError::UnsafeStagingEntry {
                 path: child.path(),
@@ -1877,7 +1959,8 @@ fn source_changed_error(source: &Path, expected: &str, found: Option<&str>) -> E
 }
 
 fn discard_role_stage(layout: &ManagedLayout, target: &Path, scratch: &Path) -> Result<()> {
-    let expected_target = target == layout.bg1_root || target == layout.game_root;
+    let expected_target =
+        (target == layout.bg1_root && !layout.is_standalone()) || target == layout.game_root;
     if !expected_target || target.parent() != Some(layout.root.as_path()) {
         return Err(EngineError::StagingVerification {
             path: target.to_path_buf(),
@@ -1891,7 +1974,7 @@ fn discard_role_stage(layout: &ManagedLayout, target: &Path, scratch: &Path) -> 
 fn remove_owned_scratch(layout: &ManagedLayout, scratch: &Path) -> Result<()> {
     let expected_bg1 = layout.state_root.join("staging/bg1");
     let expected_game = layout.state_root.join("staging/game");
-    if scratch != expected_bg1 && scratch != expected_game {
+    if (scratch != expected_bg1 || layout.is_standalone()) && scratch != expected_game {
         return Err(EngineError::StagingVerification {
             path: scratch.to_path_buf(),
             reason: "refused to remove scratch outside the fixed managed layout".to_owned(),

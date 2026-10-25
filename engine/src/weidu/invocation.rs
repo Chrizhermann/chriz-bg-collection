@@ -35,17 +35,20 @@ pub struct ResolvedPrompt {
 /// Canonical staged roots available to typed invocation arguments.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StagedRoots {
-    /// Staged BG:EE plus SoD root.
-    pub bg1: PathBuf,
-    /// Staged BG2:EE / EET root.
+    /// Staged BG:EE plus SoD root; `None` for a standalone installation.
+    pub bg1: Option<PathBuf>,
+    /// Staged BG2:EE / EET root, or the one standalone game root.
     pub bg2: PathBuf,
 }
 
 impl StagedRoots {
-    fn get(&self, root: GameRoot) -> &Path {
+    fn get(&self, root: GameRoot) -> Result<&Path, InvocationError> {
         match root {
-            GameRoot::Bg1 => &self.bg1,
-            GameRoot::Bg2 => &self.bg2,
+            GameRoot::Bg1 => self
+                .bg1
+                .as_deref()
+                .ok_or(InvocationError::MissingStagedRoot { root }),
+            GameRoot::Bg2 => Ok(&self.bg2),
         }
     }
 }
@@ -512,6 +515,12 @@ pub struct Invocation {
 /// Failure to validate or construct a safe WeiDU invocation.
 #[derive(Debug, Error)]
 pub enum InvocationError {
+    /// A run or argument names a staged root this installation does not stage.
+    #[error("this installation stages no {root:?} game root")]
+    MissingStagedRoot {
+        /// The absent staged root.
+        root: GameRoot,
+    },
     /// A filesystem operation failed at a named path.
     #[error("{path}: {source}")]
     Io {
@@ -709,9 +718,9 @@ pub fn build(
     validate_components(&input.remaining_components)?;
     validate_run_arguments(&input.run_args)?;
 
-    let cwd = canonical_game_root(roots.get(input.target))?;
+    let cwd = canonical_game_root(roots.get(input.target)?)?;
     let canonical_roots = CanonicalRoots {
-        bg1: canonical_game_root(&roots.bg1)?,
+        bg1: roots.bg1.as_deref().map(canonical_game_root).transpose()?,
         bg2: canonical_game_root(&roots.bg2)?,
     };
     let debug_path = resolve_debug_path(attempt_dir)?;
@@ -750,7 +759,7 @@ pub fn build(
     for argument in &input.run_args {
         match argument {
             RunArg::Literal(value) => args.push(OsString::from(value)),
-            RunArg::StagedRoot(root) => args.push(mod_script_path(canonical_roots.get(*root))),
+            RunArg::StagedRoot(root) => args.push(mod_script_path(canonical_roots.get(*root)?)),
         }
     }
 
@@ -801,15 +810,18 @@ pub fn setup_executable_name(tp2: &str) -> Result<String, InvocationError> {
 }
 
 struct CanonicalRoots {
-    bg1: PathBuf,
+    bg1: Option<PathBuf>,
     bg2: PathBuf,
 }
 
 impl CanonicalRoots {
-    fn get(&self, root: GameRoot) -> &Path {
+    fn get(&self, root: GameRoot) -> Result<&Path, InvocationError> {
         match root {
-            GameRoot::Bg1 => &self.bg1,
-            GameRoot::Bg2 => &self.bg2,
+            GameRoot::Bg1 => self
+                .bg1
+                .as_deref()
+                .ok_or(InvocationError::MissingStagedRoot { root }),
+            GameRoot::Bg2 => Ok(&self.bg2),
         }
     }
 }
@@ -1223,7 +1235,10 @@ mod tests {
 
             Self {
                 _temp: temp,
-                roots: StagedRoots { bg1, bg2 },
+                roots: StagedRoots {
+                    bg1: Some(bg1),
+                    bg2,
+                },
                 attempt,
                 tool,
             }
@@ -1347,7 +1362,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(bg1.cwd, canonical(&bg1_fixture.roots.bg1));
+        assert_eq!(bg1.cwd, canonical(bg1_fixture.roots.bg1.as_ref().unwrap()));
         assert_eq!(bg2.cwd, canonical(&bg2_fixture.roots.bg2));
     }
 
@@ -1368,7 +1383,7 @@ mod tests {
         assert_eq!(tail[0], OsStr::new("--args-list"));
         assert_eq!(tail[1], OsStr::new("p"));
         assert!(!tail.iter().any(|arg| arg == OsStr::new("s")));
-        let canonical_bg1 = canonical(&fixture.roots.bg1);
+        let canonical_bg1 = canonical(fixture.roots.bg1.as_ref().unwrap());
         let canonical_bg1_text = canonical_bg1.to_string_lossy();
         let expected_bg1 = canonical_bg1_text
             .strip_prefix(r"\\?\")

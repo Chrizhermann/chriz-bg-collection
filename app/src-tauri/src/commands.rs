@@ -335,6 +335,7 @@ pub async fn choose_game_folder(
         let title = match role {
             GameRole::BgeeSod => "Choose Baldur's Gate: Enhanced Edition with SoD",
             GameRole::Bg2ee => "Choose Baldur's Gate II: Enhanced Edition",
+            GameRole::Iwdee => "Choose Icewind Dale: Enhanced Edition",
         };
         let selected = local_path(app.dialog().file().set_title(title).blocking_pick_folder())?;
         bridge.choose_game_folder(role, selected)

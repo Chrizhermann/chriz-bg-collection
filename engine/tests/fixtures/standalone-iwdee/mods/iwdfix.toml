@@ -1,0 +1,15 @@
+id = "iwdfix"
+artifact_id = "iwdfix"
+name = "Icewind Dale fixes"
+tp2 = "IWD_Fix/IWD_Fix.tp2"
+language = 0
+weidu_artifact_id = "weidu"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Core fixes"
+
+[[components]]
+id = 1
+name = "Optional fixes"

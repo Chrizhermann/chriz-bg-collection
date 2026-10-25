@@ -174,7 +174,19 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
         let sources = serde_json::from_slice::<serde_json::Value>(&created.recipe_payload)
             .ok()
             .map(|payload| {
-                ["bg1", "bg2"]
+                // A standalone collection records its game and has one source, `bg2`; an EET
+                // payload, which never records a game, must still name both sources.
+                let standalone = payload
+                    .get("collection")
+                    .and_then(|collection| collection.get("game"))
+                    .and_then(|game| game.as_str())
+                    .is_some_and(|game| game != "eet");
+                let roles: &[&str] = if standalone {
+                    &["bg2"]
+                } else {
+                    &["bg1", "bg2"]
+                };
+                roles
                     .iter()
                     .map(|role| {
                         payload
@@ -184,6 +196,7 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
                             .map(PathBuf::from)
                     })
                     .collect::<Option<Vec<_>>>()
+                    .filter(|_| !standalone || payload.get("bg1").is_none())
                     .map(|sources| (sources, payload))
             });
         let Some(Some((sources, payload))) = sources else {
@@ -629,12 +642,13 @@ mod tests {
             normalized_selection: selection,
             plan_sha256: plan_digest(&InstallPlan { runs: vec![] }).unwrap(),
             source_games: SourceGameFingerprints {
-                bg1: "11".repeat(32),
+                bg1: Some("11".repeat(32)),
                 bg2: "22".repeat(32),
+                standalone_role: None,
             },
             artifact_identities: vec![],
             tool_identities: vec![],
-            staged_bg1: root.join("bg1"),
+            staged_bg1: Some(root.join("bg1")),
             staged_bg2: root.join("game"),
         };
         SessionStore::create(&root, SessionEvent::Created(Box::new(created.clone()))).unwrap();
@@ -687,6 +701,7 @@ mod tests {
                 launch_path: f.root.join("game/game.exe"),
                 receipt_sha256: sha256_bytes(b"completed receipt"),
                 completed_at_millis: 1,
+                recipe_id: None,
             })
             .unwrap();
         assert_eq!(

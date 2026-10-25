@@ -25,6 +25,10 @@ struct Cli {
     /// Emit one deterministic JSON value instead of human-readable output.
     #[arg(long, global = true)]
     json: bool,
+    /// Folder name under LOCALAPPDATA for locks, evidence, and the installation registry.
+    /// Defaults to `Chriz BG Collection`; a standalone-game launcher passes its own name.
+    #[arg(long, global = true, value_name = "NAME")]
+    app_data_directory: Option<String>,
     #[command(subcommand)]
     command: Command,
 }
@@ -38,7 +42,7 @@ enum Command {
     /// Discover or inspect clean source games.
     Games(GamesArgs),
     /// Start one new isolated managed installation.
-    Install(InstallArgs),
+    Install(Box<InstallArgs>),
     /// Resume one exact frozen managed installation.
     Resume { managed_root: PathBuf },
     /// Inspect append-only additions at a declared manual installation pause.
@@ -143,6 +147,7 @@ enum RoleArg {
     #[value(name = "bgee-sod")]
     BgeeSod,
     Bg2ee,
+    Iwdee,
 }
 
 impl From<RoleArg> for GameRole {
@@ -150,6 +155,7 @@ impl From<RoleArg> for GameRole {
         match value {
             RoleArg::BgeeSod => Self::BgeeSod,
             RoleArg::Bg2ee => Self::Bg2ee,
+            RoleArg::Iwdee => Self::Iwdee,
         }
     }
 }
@@ -157,14 +163,21 @@ impl From<RoleArg> for GameRole {
 #[derive(Debug, Args)]
 struct InstallArgs {
     recipe: PathBuf,
-    #[arg(long, default_value = "Chriz Easy BG")]
-    name: String,
+    /// Installation name; defaults to `Chriz Easy BG` for an EET install and is required with
+    /// `--game`.
+    #[arg(long)]
+    name: Option<String>,
     #[arg(long)]
     preset: String,
-    #[arg(long)]
-    bg1: PathBuf,
-    #[arg(long)]
-    bg2: PathBuf,
+    /// BGEE+SoD source of an Enhanced Edition Trilogy recipe.
+    #[arg(long, required_unless_present = "game", requires = "bg2")]
+    bg1: Option<PathBuf>,
+    /// BG2EE source of an Enhanced Edition Trilogy recipe.
+    #[arg(long, required_unless_present = "game", requires = "bg1")]
+    bg2: Option<PathBuf>,
+    /// The one source game of a standalone recipe, such as Icewind Dale: Enhanced Edition.
+    #[arg(long, conflicts_with_all = ["bg1", "bg2"], requires = "name")]
+    game: Option<PathBuf>,
     #[arg(long)]
     managed_root: PathBuf,
     #[arg(long)]
@@ -210,6 +223,9 @@ fn main() -> ExitCode {
 }
 
 fn execute(cli: &Cli) -> Result<(), CliError> {
+    if let Some(directory) = &cli.app_data_directory {
+        bg_engine::cli::set_application_data_directory(directory)?;
+    }
     match &cli.command {
         Command::CheckManualCheckpoint {
             managed_root,
@@ -338,9 +354,27 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
         Command::Install(args) => {
             let controls = RunnerControlHandle::new();
             install_interrupt_handler(&controls)?;
+            let (bg1, bg2) = match (&args.game, &args.bg1, &args.bg2) {
+                (Some(game), None, None) => (None, game.clone()),
+                (None, Some(bg1), Some(bg2)) => (Some(bg1.clone()), bg2.clone()),
+                _ => {
+                    return Err(CliError::invalid_arguments(
+                        "pass either --bg1 and --bg2, or --game alone",
+                    ))
+                }
+            };
+            let display_name = match (&args.name, &args.game) {
+                (Some(name), _) => name.clone(),
+                (None, None) => "Chriz Easy BG".to_owned(),
+                (None, Some(_)) => {
+                    return Err(CliError::invalid_arguments(
+                        "--name is required with --game",
+                    ))
+                }
+            };
             let request = InstallCommandRequest {
                 application_version: None,
-                display_name: args.name.clone(),
+                display_name,
                 recipe: args.recipe.clone(),
                 preset: args.preset.clone(),
                 platform: args.platform.clone(),
@@ -350,8 +384,8 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     inputs: args.inputs.clone(),
                     manual_breakpoints: args.manual_breakpoints.clone(),
                 },
-                bg1: args.bg1.clone(),
-                bg2: args.bg2.clone(),
+                bg1,
+                bg2,
                 managed_root: args.managed_root.clone(),
                 cache: args.cache.clone(),
             };

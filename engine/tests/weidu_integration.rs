@@ -68,7 +68,7 @@ impl Harness {
         copy_fixture(&fixture_root(), &game.root);
         let protected_before = snapshot_protected(&game);
         let roots = StagedRoots {
-            bg1: game.root.clone(),
+            bg1: Some(game.root.clone()),
             bg2: game.root.clone(),
         };
 

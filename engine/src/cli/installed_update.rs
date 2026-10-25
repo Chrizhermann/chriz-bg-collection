@@ -180,7 +180,11 @@ pub(crate) fn verify_installed_baseline(
             ));
         }
         let game = match final_log.target {
-            GameRoot::Bg1 => &created.staged_bg1,
+            GameRoot::Bg1 => created.staged_bg1.as_ref().ok_or_else(|| {
+                problem(
+                    "The completed installation records a mod list for a game it does not have.",
+                )
+            })?,
             GameRoot::Bg2 => &created.staged_bg2,
         };
         let bytes = bounded_file(&root, &game.join("WeiDU.log"))?;
@@ -206,7 +210,7 @@ pub(crate) fn verify_installed_baseline(
             return Err(problem("The installed mod list changed outside CEBG's recorded work. Automatic game updates are unavailable for this copy; app updates still work."));
         }
     }
-    if seen != BTreeSet::from([GameRoot::Bg1, GameRoot::Bg2]) {
+    if seen != frozen.targets().into_iter().collect::<BTreeSet<_>>() {
         return Err(problem(
             "The completed installation is missing a verified game mod list.",
         ));

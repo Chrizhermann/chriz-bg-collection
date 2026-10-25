@@ -134,13 +134,13 @@ impl Fixture {
             plan: evaluation.plan,
             normalized_selection: evaluation.normalized_selection,
             preset: "recommended".into(),
-            bg1: FrozenSource {
+            bg1: Some(FrozenSource {
                 role: GameRole::BgeeSod,
                 storefront: Storefront::Steam,
                 root: base.join("source-bg1"),
                 build: Some("2.7.3.0".into()),
                 fingerprint: "11".repeat(32),
-            },
+            }),
             bg2: FrozenSource {
                 role: GameRole::Bg2ee,
                 storefront: Storefront::Steam,
@@ -148,6 +148,7 @@ impl Fixture {
                 build: Some("2.7.3.0".into()),
                 fingerprint: "22".repeat(32),
             },
+            recipe_id: None,
         };
         let payload = serialize_frozen_recipe(&frozen).unwrap();
         let envelope = b"fixture-only-envelope".to_vec();
@@ -164,12 +165,13 @@ impl Fixture {
             normalized_selection: frozen.normalized_selection.clone(),
             plan_sha256: plan_digest(&frozen.plan).unwrap(),
             source_games: SourceGameFingerprints {
-                bg1: frozen.bg1.fingerprint.clone(),
+                bg1: frozen.bg1.as_ref().map(|bg1| bg1.fingerprint.clone()),
                 bg2: frozen.bg2.fingerprint.clone(),
+                standalone_role: None,
             },
             artifact_identities: frozen_payload_identities(&frozen).unwrap(),
             tool_identities: frozen_tool_identities(&frozen).unwrap(),
-            staged_bg1: root.join("bg1"),
+            staged_bg1: Some(root.join("bg1")),
             staged_bg2: root.join("game"),
         };
         let store =
@@ -192,7 +194,7 @@ impl Fixture {
         } else {
             String::new()
         };
-        fs::write(created.staged_bg1.join("WeiDU.log"), b"").unwrap();
+        fs::write(created.staged_bg1.as_ref().unwrap().join("WeiDU.log"), b"").unwrap();
         fs::write(created.staged_bg2.join("WeiDU.log"), &bg2_log).unwrap();
         let bg2_components: Vec<LogComponentReceipt> = if selected {
             [1, 0]
@@ -223,7 +225,7 @@ impl Fixture {
                     },
                 })
                 .collect(),
-            bg1_engine_name: "Fixture staging".into(),
+            bg1_engine_name: Some("Fixture staging".into()),
             bg2_engine_name: "Fixture installation".into(),
             managed_save_root: base.join("saves"),
             launch_path: root.join("game/InfinityLoader.exe"),
@@ -248,7 +250,11 @@ impl Fixture {
                 manifest_schema: frozen.collection.schema,
                 recipe: "0.1.0".into(),
             },
-            source_games: vec![frozen.bg1.receipt(), frozen.bg2.receipt()],
+            source_games: frozen
+                .sources()
+                .into_iter()
+                .map(FrozenSource::receipt)
+                .collect(),
             recipe_payload_sha256: created.recipe_payload_sha256.clone(),
             recipe_envelope_sha256: created.recipe_envelope_sha256.clone(),
             selection_sha256: created.selection_sha256.clone(),
@@ -330,6 +336,7 @@ impl Fixture {
             launch_path: final_state.launch_path,
             receipt_sha256: sha256_bytes(&receipt_bytes),
             completed_at_millis: completion.recorded_at,
+            recipe_id: None,
         };
         let registry = ManagedInstallRegistry::open_or_create(&base.join("app-data")).unwrap();
         let registry_path = registry.publish(&record).unwrap();

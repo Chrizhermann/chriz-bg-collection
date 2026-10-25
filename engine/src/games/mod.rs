@@ -20,7 +20,7 @@ pub use profile::{
     GameProfile, GameProfiles, InventoryKind, InventorySurface,
 };
 
-/// Logical source-game role in an EET build.
+/// Logical source-game role: one of the two EET sources, or a standalone game.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GameRole {
@@ -28,6 +28,33 @@ pub enum GameRole {
     BgeeSod,
     /// Baldur's Gate II: Enhanced Edition.
     Bg2ee,
+    /// Icewind Dale: Enhanced Edition, installed as a standalone single-source collection.
+    Iwdee,
+}
+
+impl GameRole {
+    /// Returns the full player-facing game name.
+    pub const fn display_name(self) -> &'static str {
+        match self {
+            Self::BgeeSod => "Baldur's Gate: Enhanced Edition",
+            Self::Bg2ee => "Baldur's Gate II: Enhanced Edition",
+            Self::Iwdee => "Icewind Dale: Enhanced Edition",
+        }
+    }
+
+    /// Returns a short player-facing game label.
+    pub const fn short_label(self) -> &'static str {
+        match self {
+            Self::BgeeSod => "BGEE+SoD",
+            Self::Bg2ee => "BG2EE",
+            Self::Iwdee => "IWD:EE",
+        }
+    }
+
+    /// Returns `true` for a role that is installed alone instead of as one half of EET.
+    pub const fn is_standalone(self) -> bool {
+        matches!(self, Self::Iwdee)
+    }
 }
 
 /// Storefront that owns a discovered source installation.

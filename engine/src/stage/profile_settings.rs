@@ -359,6 +359,11 @@ pub(super) fn ensure_profile_settings(
     identity: &ReservedSaveIdentity,
 ) -> Result<()> {
     verify_reserved_save_identity(layout, identity)?;
+    if layout.is_standalone() {
+        // The seeded settings are Baldur's Gate profile values written to `Baldur.lua`;
+        // a standalone game keeps its own profile file and needs none of them.
+        return Ok(());
+    }
     ensure_settings(layout.game_root(), &identity.save_root)?;
     verify_profile_settings(layout, identity)
 }
@@ -371,6 +376,9 @@ pub fn verify_profile_settings(
     identity: &ReservedSaveIdentity,
 ) -> Result<()> {
     verify_reserved_save_identity(layout, identity)?;
+    if layout.is_standalone() {
+        return Ok(());
+    }
     verify_settings(layout.game_root(), &identity.save_root)
 }
 
@@ -378,6 +386,9 @@ pub fn verify_profile_settings(
 /// its installed components need, for installations made before a setting was
 /// seeded. Only a save folder that still carries this installation's ownership
 /// marker is changed. Returns whether the profile changed.
+///
+/// This applies only to EET installations: the settings are Baldur's Gate `Baldur.lua`
+/// values, so callers must not pass a standalone (for example Icewind Dale) installation.
 pub fn repair_installed_profile_settings(
     managed_root: &Path,
     install_id: &str,

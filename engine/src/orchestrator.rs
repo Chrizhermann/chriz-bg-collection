@@ -629,10 +629,20 @@ fn build_schedule(
         }
     }
 
+    let primary_role = request.created.source_games.primary_role();
+    let standalone = request.created.is_standalone();
     let mut acquisition_ids = Vec::new();
     let mut seen_acquisitions = BTreeSet::new();
     for run in &request.plan.runs {
         validate_run(run, &archive_identities, &tool_identities)?;
+        if standalone && (run.target != GameRoot::Bg2 || run.phase != Phase::Main) {
+            return Err(OrchestratorError::InvalidCampaign(format!(
+                "run {:?} has phase {:?}, but a standalone {} installation runs only the main phase against its one game",
+                run.run_id,
+                run.phase,
+                primary_role.display_name()
+            )));
+        }
         for id in [&run.artifact_id, &run.weidu_artifact_id] {
             if seen_acquisitions.insert(id.clone()) {
                 acquisition_ids.push(id.clone());
@@ -672,25 +682,34 @@ fn build_schedule(
             kind: PipelineKind::Acquire(identity, kind),
         });
     }
-    schedule.extend([
-        PipelineStep {
-            id: "stage:bg1".to_owned(),
-            label: "Stage Baldur's Gate: Enhanced Edition".to_owned(),
-            kind: PipelineKind::Stage(GameRole::BgeeSod),
-        },
-        PipelineStep {
-            id: "stage:bg2".to_owned(),
-            label: "Stage Baldur's Gate II: Enhanced Edition".to_owned(),
-            kind: PipelineKind::Stage(GameRole::Bg2ee),
-        },
-    ]);
+    if standalone {
+        // One staged game: the step id names the managed folder, never a Baldur's Gate root.
+        schedule.push(PipelineStep {
+            id: "stage:game".to_owned(),
+            label: format!("Stage {}", primary_role.display_name()),
+            kind: PipelineKind::Stage(primary_role),
+        });
+    } else {
+        schedule.extend([
+            PipelineStep {
+                id: "stage:bg1".to_owned(),
+                label: "Stage Baldur's Gate: Enhanced Edition".to_owned(),
+                kind: PipelineKind::Stage(GameRole::BgeeSod),
+            },
+            PipelineStep {
+                id: "stage:bg2".to_owned(),
+                label: "Stage Baldur's Gate II: Enhanced Edition".to_owned(),
+                kind: PipelineKind::Stage(GameRole::Bg2ee),
+            },
+        ]);
+    }
     for task in materializations {
         schedule.push(PipelineStep {
             id: task.step_id(),
             label: format!(
                 "Prepare {} for {}",
                 task.artifact_id,
-                game_root_label(task.target)
+                game_root_label(task.target, primary_role)
             ),
             kind: PipelineKind::Materialize(task),
         });
@@ -1338,7 +1357,12 @@ where
         attempt: &StepAttempt,
     ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
         let root = match run.target {
-            GameRoot::Bg1 => &self.request.created.staged_bg1,
+            GameRoot::Bg1 => self.request.created.staged_bg1.as_ref().ok_or_else(|| {
+                OrchestratorError::InvalidCampaign(format!(
+                    "run {:?} targets a Baldur's Gate root this installation does not stage",
+                    run.run_id
+                ))
+            })?,
             GameRoot::Bg2 => &self.request.created.staged_bg2,
         };
         let Err(error) = postcondition::verify(root, &run.postconditions) else {
@@ -1545,7 +1569,7 @@ fn open_or_create_campaign(
 
     let state_root = canonical.join(".chriz");
     let (store, resumed) = if state_root.exists() {
-        validate_owned_top_level(&canonical)?;
+        validate_owned_top_level(&canonical, request.created.is_standalone())?;
         (SessionStore::open(&canonical)?, true)
     } else {
         if existed
@@ -1648,7 +1672,12 @@ fn claim_new_root(root: &Path) -> Result<(), OrchestratorError> {
     })
 }
 
-fn validate_owned_top_level(root: &Path) -> Result<(), OrchestratorError> {
+fn validate_owned_top_level(root: &Path, standalone: bool) -> Result<(), OrchestratorError> {
+    let owned: &[&str] = if standalone {
+        &[".chriz", "game"]
+    } else {
+        &[".chriz", "bg1", "game"]
+    };
     for entry in fs::read_dir(root).map_err(|source| OrchestratorError::UnsafeTarget {
         path: root.to_path_buf(),
         reason: source.to_string(),
@@ -1658,7 +1687,7 @@ fn validate_owned_top_level(root: &Path) -> Result<(), OrchestratorError> {
             reason: source.to_string(),
         })?;
         let name = entry.file_name();
-        let allowed = [".chriz", "bg1", "game"]
+        let allowed = owned
             .iter()
             .any(|expected| os_name_eq(&name.to_string_lossy(), expected));
         if !allowed {
@@ -1902,10 +1931,12 @@ fn nonempty_detail(detail: &str) -> String {
     }
 }
 
+/// Staged root of one source role. A standalone game is the primary staged root, which the
+/// engine addresses as [`GameRoot::Bg2`] internally and stages at the managed `game` folder.
 fn role_target(role: GameRole) -> GameRoot {
     match role {
         GameRole::BgeeSod => GameRoot::Bg1,
-        GameRole::Bg2ee => GameRoot::Bg2,
+        GameRole::Bg2ee | GameRole::Iwdee => GameRoot::Bg2,
     }
 }
 
@@ -1916,10 +1947,10 @@ fn game_root_id(root: GameRoot) -> &'static str {
     }
 }
 
-fn game_root_label(root: GameRoot) -> &'static str {
+fn game_root_label(root: GameRoot, primary_role: GameRole) -> &'static str {
     match root {
         GameRoot::Bg1 => "Baldur's Gate: Enhanced Edition",
-        GameRoot::Bg2 => "Baldur's Gate II: Enhanced Edition",
+        GameRoot::Bg2 => primary_role.display_name(),
     }
 }
 

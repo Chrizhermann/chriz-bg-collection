@@ -56,7 +56,7 @@ fn success_receipt(root: &Path) -> InstallReceipt {
         attempt_id: "attempt-001".to_owned(),
         evidence_attempt_id: "attempt-001".to_owned(),
         managed_root: root.to_path_buf(),
-        staged_bg1: root.join("bg1"),
+        staged_bg1: Some(root.join("bg1")),
         staged_bg2: root.join("game"),
         started_at_millis: 10,
         completed_at_millis: 20,
@@ -142,7 +142,7 @@ fn success_receipt(root: &Path) -> InstallReceipt {
                 sha256: "ff".repeat(32),
                 components: vec![component],
             }],
-            bg1_engine_name: "Chriz BG Collection - BG1 - abc123".to_owned(),
+            bg1_engine_name: Some("Chriz BG Collection - BG1 - abc123".to_owned()),
             bg2_engine_name: "Chriz BG Collection - abc123".to_owned(),
             managed_save_root: root.join("Documents/Chriz BG Collection - abc123"),
             launch_path: root.join("game/InfinityLoader.exe"),
@@ -180,7 +180,7 @@ fn publishes_a_complete_success_receipt_create_once_in_both_locations() {
     assert_eq!(stored, receipt);
     assert_eq!(stored.evidence_attempt_id, "attempt-001");
     assert_eq!(stored.managed_root, root);
-    assert_eq!(stored.staged_bg1, root.join("bg1"));
+    assert_eq!(stored.staged_bg1, Some(root.join("bg1")));
     assert_eq!(stored.staged_bg2, root.join("game"));
     assert!(stored.normalized_selection.features["recommended"]);
     assert_eq!(
@@ -366,8 +366,9 @@ fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
         normalized_selection: selected,
         plan_sha256: bg_engine::digest::plan_digest(&frozen_plan).unwrap(),
         source_games: SourceGameFingerprints {
-            bg1: "11".repeat(32),
+            bg1: Some("11".repeat(32)),
             bg2: "22".repeat(32),
+            standalone_role: None,
         },
         artifact_identities: vec![FrozenIdentity {
             id: "eet".to_owned(),
@@ -381,7 +382,7 @@ fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
             sha256: "88".repeat(32),
             length: 2_048,
         }],
-        staged_bg1: managed.join("bg1"),
+        staged_bg1: Some(managed.join("bg1")),
         staged_bg2: managed.join("game"),
     };
     let draft = ReceiptDraft {
@@ -464,12 +465,13 @@ fn real_writer_publishes_failure_attempt_without_claiming_or_registering_success
         normalized_selection: selected,
         plan_sha256: bg_engine::digest::plan_digest(&frozen_plan).unwrap(),
         source_games: SourceGameFingerprints {
-            bg1: "11".repeat(32),
+            bg1: Some("11".repeat(32)),
             bg2: "22".repeat(32),
+            standalone_role: None,
         },
         artifact_identities: vec![frozen("eet", "77", 1_024)],
         tool_identities: vec![frozen("weidu", "88", 2_048)],
-        staged_bg1: canonical_managed.join("bg1"),
+        staged_bg1: Some(canonical_managed.join("bg1")),
         staged_bg2: canonical_managed.join("game"),
     };
     let draft = ReceiptDraft {

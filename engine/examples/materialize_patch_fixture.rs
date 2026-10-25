@@ -133,12 +133,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             normalized_selection: selection.clone(),
             plan_sha256: plan_digest(&install_plan)?,
             source_games: SourceGameFingerprints {
-                bg1: "11".repeat(32),
+                bg1: Some("11".repeat(32)),
                 bg2: "22".repeat(32),
+                standalone_role: None,
             },
             artifact_identities: Vec::new(),
             tool_identities: Vec::new(),
-            staged_bg1: root.join("bg1"),
+            staged_bg1: Some(root.join("bg1")),
             staged_bg2: game.clone(),
         })),
     )?;
@@ -150,7 +151,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         attempt_id: "attempt-complete".into(),
         evidence_attempt_id: "attempt-complete".into(),
         managed_root: root.clone(),
-        staged_bg1: root.join("bg1"),
+        staged_bg1: Some(root.join("bg1")),
         staged_bg2: game.clone(),
         started_at_millis: 1,
         completed_at_millis: 2,
@@ -182,7 +183,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     component: 7004,
                 }],
             }],
-            bg1_engine_name: ENGINE_NAME.into(),
+            bg1_engine_name: Some(ENGINE_NAME.into()),
             bg2_engine_name: ENGINE_NAME.into(),
             managed_save_root: save_root.clone(),
             launch_path: game.join("Baldur.exe"),
@@ -207,6 +208,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         launch_path: game.join("Baldur.exe"),
         receipt_sha256: sha256_bytes(&receipt),
         completed_at_millis: 2,
+        recipe_id: None,
     })?;
 
     println!("LOCALAPPDATA={}", local_app_data.display());

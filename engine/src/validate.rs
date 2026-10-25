@@ -7,8 +7,8 @@ use std::path::{Component as PathComponent, Path};
 use crate::error::EngineError;
 use crate::manifest::{
     AcquisitionPolicy, Artifact, ComponentRef, Decision, Feature, FeatureGroup, GameRoot,
-    InputSpec, InvocationMode, PeMachine, Phase, Postcondition, PromptAnswer, Readiness, Source,
-    SourceKind, MAX_CONFIG_FILE_BYTES,
+    InputSpec, InvocationMode, PeMachine, Phase, Postcondition, PromptAnswer, Readiness, RunArg,
+    Source, SourceKind, MAX_CONFIG_FILE_BYTES,
 };
 use crate::postcondition::{
     is_safe_normalized_relative_path, marker_len_exceeds, MAX_TEXT_FILE_MARKER_BYTES,
@@ -93,6 +93,8 @@ pub const RULE_TOOL_ARCHITECTURE: &str = "tool-architecture";
 pub const RULE_PHASE_ORDER: &str = "phase-order";
 /// Rule enforcing the EET initialization and finalization boundaries.
 pub const RULE_EET_ANCHORS: &str = "eet-anchors";
+/// Rule limiting a standalone single-game collection to its one staged game root.
+pub const RULE_STANDALONE_GAME: &str = "standalone-game";
 /// Warning emitted for legacy stdin that lacks a terminating newline.
 pub const RULE_STDIN_NEWLINE: &str = "stdin-newline";
 /// Rule requiring semantic feature ids and references to resolve exactly.
@@ -144,7 +146,11 @@ pub fn validate(manifest: &Manifest) -> Vec<Finding> {
     check_shared_artifacts(manifest, &mut findings);
     check_tool_architecture(manifest, &mut findings);
     check_phase_order(manifest, &mut findings);
-    check_eet_anchors(manifest, &mut findings);
+    if manifest.collection.game.is_standalone() {
+        check_standalone_game(manifest, &mut findings);
+    } else {
+        check_eet_anchors(manifest, &mut findings);
+    }
     check_stdin(manifest, &mut findings);
     check_feature_references(manifest, &mut findings);
     check_feature_cycles(manifest, &mut findings);
@@ -1231,6 +1237,49 @@ fn check_eet_anchors(manifest: &Manifest, findings: &mut Vec<Finding>) {
                 runs[index].run_id
             ),
         );
+    }
+}
+
+/// A standalone collection stages exactly one game, so every run must target that game.
+///
+/// Only [`Phase::Main`] is meaningful there: every preparation, initialization, and
+/// finalization phase belongs to the two-source EET build and would either target the absent
+/// BG1 root or invoke an EET boundary that does not exist for this game.
+fn check_standalone_game(manifest: &Manifest, findings: &mut Vec<Finding>) {
+    let game = manifest.collection.game.display_name();
+    for (index, run) in manifest.collection.runs.iter().enumerate() {
+        if run.phase != Phase::Main {
+            error(
+                findings,
+                RULE_STANDALONE_GAME,
+                format!(
+                    "run {index} ({:?}) has phase {:?}, but a standalone {game} collection supports only the main phase",
+                    run.run_id, run.phase
+                ),
+            );
+        }
+        if run.phase.game_root() == GameRoot::Bg1 {
+            error(
+                findings,
+                RULE_STANDALONE_GAME,
+                format!(
+                    "run {index} ({:?}) targets the Baldur's Gate root, which a standalone {game} collection does not stage",
+                    run.run_id
+                ),
+            );
+        }
+        for arg in &run.args {
+            if *arg == RunArg::StagedRoot(GameRoot::Bg1) {
+                error(
+                    findings,
+                    RULE_STANDALONE_GAME,
+                    format!(
+                        "run {index} ({:?}) passes the Baldur's Gate root as an argument, which a standalone {game} collection does not stage",
+                        run.run_id
+                    ),
+                );
+            }
+        }
     }
 }
 

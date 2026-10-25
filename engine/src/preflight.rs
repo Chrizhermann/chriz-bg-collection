@@ -14,9 +14,10 @@ use crate::games::{Eligibility, GameCandidate, GameRole};
 use crate::resolve::InstallPlan;
 use crate::session::{CampaignCreated, FrozenIdentity, SessionReplay};
 
-const CREATOR_PROTECTED_ROOTS: [&str; 2] = [
+const CREATOR_PROTECTED_ROOTS: [&str; 3] = [
     r"C:\Games\Baldur's Gate II Enhanced Edition modded",
     r"C:\Games\Baldurs Gate 1 and 2 mods",
+    r"C:\Games\Icewind Dale Enhanced Edition",
 ];
 const DEFAULT_LANGUAGE: &str = "en_US";
 static WRITE_PROBE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -69,9 +70,9 @@ impl SpaceRequirement {
 
 /// Inputs checked before a build may move past its frozen Review screen.
 pub struct InitialPreflight<'a> {
-    /// Freshly inspected BGEE+SoD candidate.
-    pub bg1_source: &'a GameCandidate,
-    /// Freshly inspected BG2EE candidate.
+    /// Freshly inspected BGEE+SoD candidate; `None` for a standalone campaign.
+    pub bg1_source: Option<&'a GameCandidate>,
+    /// Freshly inspected primary candidate: BG2EE for EET, otherwise the standalone game.
     pub bg2_source: &'a GameCandidate,
     pub destination: &'a Path,
     pub space: SpaceRequirement,
@@ -230,27 +231,46 @@ pub fn initial_preflight_with(
         return Err(PreflightError::ReviewMismatch);
     }
 
-    let bg1 = validate_source_candidate(
-        request.bg1_source,
-        GameRole::BgeeSod,
-        "BGEE+SoD",
-        &frozen.source_games.bg1,
-    )?;
+    let bg1 = match (request.bg1_source, frozen.source_games.bg1.as_deref()) {
+        (Some(candidate), Some(fingerprint)) => Some(validate_source_candidate(
+            candidate,
+            GameRole::BgeeSod,
+            "BGEE+SoD",
+            fingerprint,
+        )?),
+        (None, None) => None,
+        (Some(_), None) => {
+            return Err(PreflightError::FrozenCampaignMismatch {
+                field: "source games",
+                reason: "a BGEE+SoD source was supplied for a standalone campaign".to_owned(),
+            });
+        }
+        (None, Some(_)) => {
+            return Err(PreflightError::FrozenCampaignMismatch {
+                field: "source games",
+                reason: "the campaign requires a BGEE+SoD source".to_owned(),
+            });
+        }
+    };
+    let primary_role = frozen.source_games.primary_role();
     let bg2 = validate_source_candidate(
         request.bg2_source,
-        GameRole::Bg2ee,
-        "BG2EE",
+        primary_role,
+        primary_role.short_label(),
         &frozen.source_games.bg2,
     )?;
-    if paths_equal(&bg1, &bg2) {
-        return Err(PreflightError::DuplicateSource { path: bg1 });
+    if let (Some(bg1), Some(bg1_source)) = (&bg1, request.bg1_source) {
+        if paths_equal(bg1, &bg2) {
+            return Err(PreflightError::DuplicateSource { path: bg1.clone() });
+        }
+        if bg1_source.build != request.bg2_source.build {
+            return Err(PreflightError::SourceNotFresh {
+                label: "source pair",
+                reason: "supported build identities differ".to_owned(),
+            });
+        }
     }
-    if request.bg1_source.build != request.bg2_source.build {
-        return Err(PreflightError::SourceNotFresh {
-            label: "source pair",
-            reason: "supported build identities differ".to_owned(),
-        });
-    }
+    let sources = bg1.iter().chain(std::iter::once(&bg2)).collect::<Vec<_>>();
     validate_required_inputs(
         "artifact",
         request.required_artifacts,
@@ -272,10 +292,9 @@ pub fn initial_preflight_with(
             ),
         });
     }
-    if path_is_under(&target, &bg1)
-        || path_is_under(&bg1, &target)
-        || path_is_under(&target, &bg2)
-        || path_is_under(&bg2, &target)
+    if sources
+        .iter()
+        .any(|source| path_is_under(&target, source) || path_is_under(source, &target))
     {
         return Err(PreflightError::DestinationNotWritable {
             path: target,
@@ -284,7 +303,7 @@ pub fn initial_preflight_with(
     }
 
     let cache = validate_cache_root(&frozen.cache_root)?;
-    check_cache_root_placement(&cache, &bg1, &bg2, &target)?;
+    check_cache_root_placement(&cache, &sources, &target)?;
     host.probe_directory_writable(&writable_root)
         .map_err(|source| PreflightError::DestinationNotWritable {
             path: writable_root.clone(),
@@ -428,10 +447,9 @@ pub fn recheck_staging_target_before_mutation_with(
 /// Refuses a download cache at `cache` inside a protected creator reference path, or overlapping
 /// a read-only source game or the managed `target`. Only paths are compared, so a deleted cache
 /// can be checked before it is created again.
-pub(crate) fn check_cache_root_placement(
+pub(crate) fn check_cache_root_placement<S: AsRef<Path>>(
     cache: &Path,
-    bg1: &Path,
-    bg2: &Path,
+    sources: &[S],
     target: &Path,
 ) -> Result<(), PreflightError> {
     if is_creator_protected_destination(cache) {
@@ -443,11 +461,9 @@ pub(crate) fn check_cache_root_placement(
             ),
         });
     }
-    if path_is_under(cache, bg1)
-        || path_is_under(bg1, cache)
-        || path_is_under(cache, bg2)
-        || path_is_under(bg2, cache)
-        || path_is_under(cache, target)
+    if sources.iter().any(|source| {
+        path_is_under(cache, source.as_ref()) || path_is_under(source.as_ref(), cache)
+    }) || path_is_under(cache, target)
         || path_is_under(target, cache)
     {
         return Err(PreflightError::CacheNotWritable {
@@ -1271,7 +1287,7 @@ fn is_relevant_process_name(name: &str) -> bool {
     let name = name.to_ascii_lowercase();
     matches!(
         name.as_str(),
-        "baldur.exe" | "infinityloader.exe" | "weidu.exe" | "eeex.exe"
+        "baldur.exe" | "icewind.exe" | "infinityloader.exe" | "weidu.exe" | "eeex.exe"
     ) || (name.starts_with("setup-") && name.ends_with(".exe"))
 }
 

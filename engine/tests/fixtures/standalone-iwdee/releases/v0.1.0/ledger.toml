@@ -1,0 +1,5 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.0"
+published_at = "2026-10-25T00:00:00Z"
+minimum_app_version = "0.1.0"

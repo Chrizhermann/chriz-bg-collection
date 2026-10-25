@@ -600,12 +600,59 @@ pub struct PresetFile {
     pub selections: BTreeMap<String, String>,
 }
 
+/// Game a collection installs.
+///
+/// Omitted from serialized recipes when it is the default [`CollectionGame::Eet`], so every
+/// existing Baldur's Gate recipe freezes and digests exactly as before the field existed.
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum CollectionGame {
+    /// Enhanced Edition Trilogy built from a BG:EE+SoD source and a BG2:EE source.
+    #[default]
+    Eet,
+    /// A standalone Icewind Dale: Enhanced Edition collection built from one source game.
+    Iwdee,
+}
+
+impl CollectionGame {
+    /// Returns `true` for the default EET collection; used to omit the field when serializing.
+    pub fn is_eet(&self) -> bool {
+        *self == Self::Eet
+    }
+
+    /// Returns `true` when the collection installs one standalone source game.
+    pub const fn is_standalone(self) -> bool {
+        !matches!(self, Self::Eet)
+    }
+
+    /// Returns the player-facing name of the installed game.
+    pub const fn display_name(self) -> &'static str {
+        match self {
+            Self::Eet => "Enhanced Edition Trilogy",
+            Self::Iwdee => "Icewind Dale: Enhanced Edition",
+        }
+    }
+
+    /// Returns the single source-game role of a standalone collection, or `None` for EET.
+    pub const fn standalone_role(self) -> Option<crate::games::GameRole> {
+        match self {
+            Self::Eet => None,
+            Self::Iwdee => Some(crate::games::GameRole::Iwdee),
+        }
+    }
+}
+
 /// Collection-level executable recipe from `collection.toml`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Collection {
     /// Manifest schema version; this engine understands version 2.
     pub schema: u32,
+    /// Game this collection installs. Defaults to EET and is omitted when it is EET.
+    #[serde(default, skip_serializing_if = "CollectionGame::is_eet")]
+    pub game: CollectionGame,
     /// Required Enhanced Edition game build.
     pub game_build: String,
     /// Explicit ordered installer invocations.

@@ -305,7 +305,7 @@ fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
         preset: "recommended".to_owned(),
         platform: "windows".to_owned(),
         overrides: SelectionOverrides::default(),
-        bg1: fixture.bg1.clone(),
+        bg1: Some(fixture.bg1.clone()),
         bg2: fixture.bg2.clone(),
         managed_root: fixture.managed.clone(),
         cache: fixture.cache.clone(),
@@ -546,14 +546,26 @@ fn use_production_invocation_mode(recipe: &Path) {
 }
 
 fn install_versioned_fixture_executable(recipe: &Path, game: &Path, profile_name: &str) {
+    install_versioned_game_executable(recipe, game, profile_name, "Baldur.exe");
+}
+
+/// Replaces the fixture game's `game_executable` with a real versioned PE and points the copied
+/// profile's ProductVersion and fingerprint at it.
+fn install_versioned_game_executable(
+    recipe: &Path,
+    game: &Path,
+    profile_name: &str,
+    game_executable: &str,
+) {
     let system_root = std::env::var_os("SystemRoot").expect("SystemRoot for Windows fixture");
     let executable = PathBuf::from(system_root).join("System32/notepad.exe");
     let version = SystemFileSystem
         .product_version(&executable)
         .expect("read fixture PE ProductVersion");
-    let old_bytes = fs::read(game.join("Baldur.exe")).expect("read old fixture executable");
+    let old_bytes = fs::read(game.join(game_executable)).expect("read old fixture executable");
     let new_bytes = fs::read(&executable).expect("read versioned fixture executable");
-    fs::write(game.join("Baldur.exe"), &new_bytes).expect("install versioned fixture executable");
+    fs::write(game.join(game_executable), &new_bytes)
+        .expect("install versioned fixture executable");
     let profile = recipe.join("game-builds").join(profile_name);
     let text = fs::read_to_string(&profile)
         .expect("read fixture profile")
@@ -3275,4 +3287,375 @@ fn missing_manual_archive_is_reported_as_a_persistent_machine_readable_action() 
         .as_str()
         .unwrap()
         .ends_with("cache\\manual"));
+}
+
+const STANDALONE_RECIPE: &str = "tests/fixtures/standalone-iwdee";
+const IWD_APP_DATA: &str = "Chriz Easy IWD";
+
+struct StandaloneFixture {
+    _temp: TempDir,
+    _server: ArtifactServer,
+    recipe: PathBuf,
+    game: PathBuf,
+    managed: PathBuf,
+    cache: PathBuf,
+    app_data: PathBuf,
+    documents: PathBuf,
+}
+
+/// A synthetic Icewind Dale: Enhanced Edition source, its standalone recipe, and a verified
+/// artifact cache, so an install runs end to end against the mock WeiDU.
+fn standalone_fixture() -> StandaloneFixture {
+    let temp = fixture_tempdir();
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let recipe = temp.path().join("recipe");
+    copy_tree(&manifest_dir.join(STANDALONE_RECIPE), &recipe);
+    copy_tree(
+        &manifest_dir.join(GAME_FIXTURES).join("iwdee-profiles"),
+        &recipe.join("game-builds"),
+    );
+    let game = temp.path().join("iwd");
+    copy_tree(
+        &manifest_dir
+            .join(GAME_FIXTURES)
+            .join("content")
+            .join("steam-iwdee"),
+        &game,
+    );
+    install_versioned_game_executable(&recipe, &game, "steam-iwdee.toml", "icewind.exe");
+    let managed = temp.path().join("managed");
+    let cache = temp.path().join("cache");
+    let app_data = temp.path().join("app-data");
+    let documents = temp.path().join("Documents");
+    for directory in [&cache, &app_data, &documents] {
+        fs::create_dir(directory).expect("create standalone fixture directory");
+    }
+
+    let payload = zip_bytes(&[(
+        "IWD_Fix/IWD_Fix.tp2",
+        b"BEGIN ~Synthetic IWD Fix~\nDESIGNATED 0\n",
+    )]);
+    let tool_bytes = fs::read(MOCK_CHILD).expect("read pinned synthetic WeiDU executable");
+    let tool_archive = zip_bytes(&[("weidu.exe", &tool_bytes)]);
+    let server = ArtifactServer::start(BTreeMap::from([
+        ("/iwd-fix.zip".to_owned(), payload.clone()),
+        ("/weidu.zip".to_owned(), tool_archive.clone()),
+    ]));
+    let artifact_cache = ArtifactCache::open(&cache).expect("open fixture artifact cache");
+    let (sink, _events) = ChannelSink::unbounded();
+    for (id, path, bytes) in [
+        ("iwdfix", "/iwd-fix.zip", payload.as_slice()),
+        ("weidu", "/weidu.zip", tool_archive.as_slice()),
+    ] {
+        artifact_cache
+            .acquire(
+                &DownloadRequest {
+                    request_id: format!("fixture-{id}"),
+                    url: format!("{}{path}", server.base_url),
+                    expected_length: bytes.len() as u64,
+                    expected_sha256: sha256_bytes(bytes),
+                    redirect_hosts: Vec::new(),
+                    max_attempts: 1,
+                },
+                &sink,
+            )
+            .expect("prepopulate verified fixture cache");
+    }
+    fs::write(
+        recipe.join("artifacts/iwdfix.toml"),
+        artifact_toml(
+            "iwdfix",
+            "Icewind Dale fixes",
+            "2026.08",
+            "https://example.invalid/iwd-fix.zip",
+            "iwd-fix.zip",
+            &payload,
+            &["IWD_Fix"],
+            &["IWD_Fix/IWD_Fix.tp2"],
+            None,
+        ),
+    )
+    .expect("write synthetic payload contract");
+    fs::write(
+        recipe.join("artifacts/weidu.toml"),
+        artifact_toml(
+            "weidu",
+            "WeiDU",
+            "249.00",
+            "https://example.invalid/weidu.zip",
+            "weidu.zip",
+            &tool_archive,
+            &["weidu.exe"],
+            &[],
+            Some((&tool_bytes, "24900")),
+        ),
+    )
+    .expect("write synthetic tool contract");
+
+    StandaloneFixture {
+        _temp: temp,
+        _server: server,
+        recipe,
+        game,
+        managed,
+        cache,
+        app_data,
+        documents,
+    }
+}
+
+fn standalone_command(fixture: &StandaloneFixture) -> Command {
+    let mut command = cli();
+    command
+        .env("LOCALAPPDATA", &fixture.app_data)
+        .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
+        .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "IWD_Fix/IWD_Fix.tp2")
+        .args(["--app-data-directory", IWD_APP_DATA]);
+    command
+}
+
+fn standalone_install_args(fixture: &StandaloneFixture) -> Vec<&str> {
+    vec![
+        "--json",
+        "install",
+        fixture.recipe.to_str().unwrap(),
+        "--preset",
+        "recommended",
+        "--game",
+        fixture.game.to_str().unwrap(),
+        "--name",
+        "Chriz Easy IWD",
+        "--managed-root",
+        fixture.managed.to_str().unwrap(),
+        "--cache",
+        fixture.cache.to_str().unwrap(),
+    ]
+}
+
+#[cfg(windows)]
+#[test]
+fn standalone_iwdee_install_survives_an_interruption_and_verifies_one_game() {
+    use bg_engine::games::GameRole;
+    use bg_engine::manifest::GameRoot;
+
+    let fixture = standalone_fixture();
+    let mut install = standalone_command(&fixture);
+    install
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU", "1")
+        .args(standalone_install_args(&fixture));
+
+    let interrupted = install
+        .output()
+        .expect("execute interrupted standalone install");
+    assert_eq!(
+        interrupted.status.code(),
+        Some(1),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&interrupted),
+        stderr(&interrupted)
+    );
+    let interrupted = json_stdout(&interrupted);
+    assert_eq!(interrupted["error"]["code"], "campaign_failed");
+    assert!(stdout_from_value(&interrupted).contains("simulated interruption after WeiDU exit"));
+    assert_eq!(
+        fs::read_to_string(fixture.managed.join("game/WeiDU.log"))
+            .expect("committed synthetic WeiDU log")
+            .lines()
+            .count(),
+        2
+    );
+    assert!(!fixture.managed.join("bg1").exists());
+    assert!(!fixture.receipt_path().exists());
+
+    let mut resume = standalone_command(&fixture);
+    resume.args(["--json", "resume", fixture.managed.to_str().unwrap()]);
+    let resumed = resume
+        .output()
+        .expect("resume interrupted standalone install");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+    assert_eq!(json_stdout(&resumed)["status"]["status"], "complete");
+
+    let receipt: InstallReceipt =
+        serde_json::from_slice(&fs::read(fixture.receipt_path()).expect("success receipt"))
+            .expect("parse success receipt");
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert_eq!(receipt.staged_bg1, None);
+    assert_eq!(receipt.staged_bg2, fixture.managed.join("game"));
+    assert_eq!(receipt.versions.recipe, "0.1.0");
+    assert_eq!(receipt.source_games.len(), 1);
+    assert_eq!(receipt.source_games[0].role, GameRole::Iwdee);
+    assert_eq!(receipt.runs.len(), 1);
+    assert_eq!(receipt.runs[0].attempts.len(), 1);
+    assert_eq!(receipt.runs[0].attempts[0].exit_code, -1);
+    let final_state = receipt
+        .final_state
+        .as_ref()
+        .expect("final verification state");
+    assert_eq!(
+        final_state
+            .logs
+            .iter()
+            .map(|log| log.target)
+            .collect::<Vec<_>>(),
+        vec![GameRoot::Bg2]
+    );
+    assert_eq!(
+        final_state.logs[0]
+            .components
+            .iter()
+            .map(|component| (component.tp2.as_str(), component.component))
+            .collect::<Vec<_>>(),
+        // Final logs record the normalized (lowercase) TP2 identity.
+        vec![("iwd_fix/iwd_fix.tp2", 0), ("iwd_fix/iwd_fix.tp2", 1)]
+    );
+    assert_eq!(final_state.bg1_engine_name, None);
+    assert!(final_state.bg2_engine_name.starts_with("Chriz Easy IWD - "));
+    assert_eq!(
+        final_state.launch_path,
+        fixture.managed.join("game").join("icewind.exe")
+    );
+    assert_eq!(
+        final_state.managed_save_root,
+        fixture.documents.join(&final_state.bg2_engine_name)
+    );
+    assert!(!final_state.managed_save_root.join("Baldur.lua").exists());
+    assert!(fixture.managed.join("game/IWD_Fix/IWD_Fix.tp2").is_file());
+    assert!(!fixture.managed.join("bg1").exists());
+
+    let replay = SessionStore::open(&fixture.managed)
+        .expect("open standalone ledger")
+        .replay()
+        .expect("replay standalone ledger");
+    assert!(replay.created().staged_bg1.is_none());
+    assert!(replay.created().source_games.bg1.is_none());
+    let ledger = serde_json::to_string(&replay.records).expect("serialize ledger records");
+    assert!(ledger.contains("\"stage:game\""), "{ledger}");
+    assert!(!ledger.contains("stage:bg1"), "{ledger}");
+    assert!(!ledger.contains("stage:bg2"), "{ledger}");
+    let frozen: Value = serde_json::from_slice(&replay.created().recipe_payload)
+        .expect("parse frozen standalone recipe");
+    assert_eq!(frozen["recipe_id"], "chriz-easy-iwd");
+    assert_eq!(frozen["collection"]["game"], "iwdee");
+    assert!(frozen.get("bg1").is_none());
+
+    let cards = ManagedInstallRegistry::open_or_create(&fixture.app_data.join(IWD_APP_DATA))
+        .expect("open the standalone registry")
+        .list()
+        .expect("list standalone installations");
+    assert_eq!(cards.len(), 1);
+    assert_eq!(cards[0].record.display_name, "Chriz Easy IWD");
+    assert_eq!(cards[0].record.recipe_id.as_deref(), Some("chriz-easy-iwd"));
+    assert_eq!(cards[0].record.launch_path, final_state.launch_path);
+    assert!(
+        !fixture.app_data.join("Chriz BG Collection").exists(),
+        "a standalone install touched the Baldur's Gate application data"
+    );
+}
+
+impl StandaloneFixture {
+    fn receipt_path(&self) -> PathBuf {
+        self.managed.join(".chriz/install-receipt.json")
+    }
+}
+
+#[test]
+fn standalone_game_argument_cannot_mix_with_eet_sources_or_omit_a_name() {
+    let recipe = Path::new(env!("CARGO_MANIFEST_DIR")).join(STANDALONE_RECIPE);
+    let base = [
+        "install",
+        recipe.to_str().unwrap(),
+        "--preset",
+        "recommended",
+        "--managed-root",
+        "z",
+        "--cache",
+        "c",
+    ];
+    for extra in [
+        &["--game", "g", "--name", "n", "--bg1", "x"][..],
+        &["--game", "g", "--name", "n", "--bg2", "y"][..],
+        &["--game", "g"][..],
+        &["--bg1", "x"][..],
+        &[][..],
+    ] {
+        let output = run(&[&base[..], extra].concat());
+        assert_eq!(
+            output.status.code(),
+            Some(2),
+            "{extra:?}: {}",
+            stderr(&output)
+        );
+    }
+}
+
+#[test]
+fn recipes_reject_sources_shaped_for_the_other_game() {
+    let fixture = standalone_fixture();
+    let mut eet_sources = standalone_command(&fixture);
+    eet_sources.args([
+        "--json",
+        "install",
+        fixture.recipe.to_str().unwrap(),
+        "--preset",
+        "recommended",
+        "--bg1",
+        fixture.game.to_str().unwrap(),
+        "--bg2",
+        fixture.game.to_str().unwrap(),
+        "--managed-root",
+        fixture.managed.to_str().unwrap(),
+        "--cache",
+        fixture.cache.to_str().unwrap(),
+    ]);
+    let output = eet_sources
+        .output()
+        .expect("run IWD recipe with EET sources");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let response = json_stdout(&output);
+    assert_eq!(response["error"]["code"], "invalid_sources");
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("Icewind Dale: Enhanced Edition"));
+    assert!(!fixture.managed.exists());
+
+    let temp = fixture_tempdir();
+    let recipe = recipe_with_profiles(&temp);
+    use_production_invocation_mode(&recipe);
+    let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
+    let managed = temp.path().join("managed");
+    let cache = temp.path().join("cache");
+    fs::create_dir(&cache).unwrap();
+    let mut command = cli();
+    command
+        .env("LOCALAPPDATA", temp.path().join("app-data"))
+        .args([
+            "--json",
+            "install",
+            recipe.to_str().unwrap(),
+            "--preset",
+            "recommended",
+            "--game",
+            bg2.to_str().unwrap(),
+            "--name",
+            "Chriz Easy BG",
+            "--managed-root",
+            managed.to_str().unwrap(),
+            "--cache",
+            cache.to_str().unwrap(),
+        ]);
+    let output = command.output().expect("run EET recipe with one game");
+    assert_eq!(output.status.code(), Some(1), "{}", stderr(&output));
+    let response = json_stdout(&output);
+    assert_eq!(response["error"]["code"], "invalid_sources");
+    assert!(response["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("Enhanced Edition Trilogy"));
+    assert!(!managed.exists());
 }

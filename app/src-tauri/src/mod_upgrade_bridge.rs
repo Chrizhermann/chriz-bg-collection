@@ -184,6 +184,7 @@ mod mod_upgrade_bridge_tests {
             launch_path: launch.clone(),
             receipt_sha256: sha256_bytes(receipt_bytes),
             completed_at_millis: 1,
+            recipe_id: None,
         };
         ManagedInstallRegistry::open_or_create(&root.join("app-data"))
             .unwrap()
@@ -310,6 +311,7 @@ mod mod_upgrade_bridge_tests {
                 launch_path: root.join("game/InfinityLoader.exe"),
                 receipt_sha256: "22".repeat(32),
                 completed_at_millis: 1,
+                recipe_id: None,
             },
         })
         .unwrap();

@@ -53,8 +53,9 @@ fn campaign_fixture() -> CampaignFixture {
         normalized_selection: selection,
         plan_sha256: plan_digest(&plan).unwrap(),
         source_games: SourceGameFingerprints {
-            bg1: "11".repeat(32),
+            bg1: Some("11".repeat(32)),
             bg2: "22".repeat(32),
+            standalone_role: None,
         },
         artifact_identities: vec![FrozenIdentity {
             id: "eet".to_owned(),
@@ -68,7 +69,7 @@ fn campaign_fixture() -> CampaignFixture {
             sha256: "44".repeat(32),
             length: 2_048,
         }],
-        staged_bg1: managed_root.join("bg1"),
+        staged_bg1: Some(managed_root.join("bg1")),
         staged_bg2: managed_root.join("game"),
     };
     CampaignFixture {
@@ -427,7 +428,7 @@ fn resume_rejects_every_consequential_identity_change() {
         ),
         (
             "source game",
-            Box::new(|created| created.source_games.bg1 = "77".repeat(32)),
+            Box::new(|created| created.source_games.bg1 = Some("77".repeat(32))),
         ),
         (
             "artifact",
@@ -584,4 +585,104 @@ fn mismatched_or_tampered_fresh_copy_seal_is_rejected() {
     std::fs::write(&path, serde_json::to_vec_pretty(&record).unwrap()).unwrap();
 
     assert!(store.replay().is_err());
+}
+
+fn standalone_fixture() -> CampaignFixture {
+    let mut fixture = campaign_fixture();
+    fixture.created.source_games = SourceGameFingerprints {
+        bg1: None,
+        bg2: "55".repeat(32),
+        standalone_role: Some(bg_engine::games::GameRole::Iwdee),
+    };
+    fixture.created.staged_bg1 = None;
+    fixture
+}
+
+#[test]
+fn standalone_campaign_records_one_source_and_no_bg1_root() {
+    let fixture = standalone_fixture();
+    let store = create_store(&fixture);
+
+    let replay = store.replay().unwrap();
+
+    assert_eq!(replay.created(), &fixture.created);
+    assert!(replay.created().is_standalone());
+    replay.validate_resume(&fixture.created).unwrap();
+    let record =
+        std::fs::read_to_string(fixture.managed_root.join(".chriz/ledger/0000000000.json"))
+            .unwrap();
+    assert!(
+        record.contains("\"standalone_role\": \"iwdee\""),
+        "{record}"
+    );
+    assert!(!record.contains("staged_bg1"), "{record}");
+    assert!(!record.contains("\"bg1\""), "{record}");
+}
+
+#[test]
+fn eet_campaign_record_keeps_its_exact_legacy_fields() {
+    let fixture = campaign_fixture();
+    create_store(&fixture);
+
+    let record =
+        std::fs::read_to_string(fixture.managed_root.join(".chriz/ledger/0000000000.json"))
+            .unwrap();
+
+    assert!(record.contains("\"staged_bg1\""), "{record}");
+    assert!(record.contains("\"bg1\""), "{record}");
+    assert!(!record.contains("standalone_role"), "{record}");
+}
+
+#[test]
+fn inconsistent_standalone_and_eet_source_identities_are_rejected() {
+    let changes: Vec<IdentityChange> = vec![
+        (
+            "standalone campaign with a BG1 root",
+            Box::new(|created| {
+                created.staged_bg1 = Some(created.managed_root.join("bg1"));
+            }),
+        ),
+        (
+            "standalone campaign with a BG1 fingerprint",
+            Box::new(|created| created.source_games.bg1 = Some("11".repeat(32))),
+        ),
+        (
+            "standalone campaign with an EET role",
+            Box::new(|created| {
+                created.source_games.standalone_role = Some(bg_engine::games::GameRole::Bg2ee);
+            }),
+        ),
+        (
+            "EET campaign without a BG1 root",
+            Box::new(|created| {
+                created.source_games.standalone_role = None;
+                created.source_games.bg1 = Some("11".repeat(32));
+            }),
+        ),
+        (
+            "EET campaign without a BG1 fingerprint",
+            Box::new(|created| {
+                created.source_games.standalone_role = None;
+                created.staged_bg1 = Some(created.managed_root.join("bg1"));
+            }),
+        ),
+    ];
+    for (label, change) in changes {
+        let mut fixture = standalone_fixture();
+        change(&mut fixture.created);
+
+        let error = SessionStore::create(
+            &fixture.managed_root,
+            SessionEvent::Created(Box::new(fixture.created.clone())),
+        )
+        .unwrap_err();
+
+        assert!(
+            matches!(
+                error,
+                bg_engine::error::EngineError::SessionIdentityMismatch { .. }
+            ),
+            "{label}: {error}"
+        );
+    }
 }

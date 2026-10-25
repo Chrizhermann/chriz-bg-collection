@@ -76,7 +76,7 @@ pub struct ReceiptVersions {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SourceGameReceipt {
-    /// Source role in the two-root EET build.
+    /// Source role: BGEE+SoD or BG2EE in an EET build, or the one game of a standalone build.
     pub role: GameRole,
     /// Storefront whose clean profile matched.
     pub storefront: Storefront,
@@ -238,11 +238,13 @@ pub struct FinalLogReceipt {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FinalReceiptState {
-    /// Final BG1 and BG2 WeiDU.log identities.
+    /// Final WeiDU.log identities of every staged root: BG1 and BG2 for EET, or the one
+    /// standalone game root.
     pub logs: Vec<FinalLogReceipt>,
-    /// Read-back BG1 staging identity.
-    pub bg1_engine_name: String,
-    /// Read-back final EET identity.
+    /// Read-back BG1 staging identity; absent for a standalone install.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bg1_engine_name: Option<String>,
+    /// Read-back final identity of the primary game: EET, or the standalone game.
     pub bg2_engine_name: String,
     /// Reserved per-user directory for saves and configuration.
     pub managed_save_root: PathBuf,
@@ -266,9 +268,10 @@ pub struct InstallReceipt {
     pub evidence_attempt_id: String,
     /// Canonical root of the managed installation.
     pub managed_root: PathBuf,
-    /// Frozen managed BG1 pre-merge staging root.
-    pub staged_bg1: PathBuf,
-    /// Frozen managed BG2/EET game root.
+    /// Frozen managed BG1 pre-merge staging root; absent for a standalone install.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staged_bg1: Option<PathBuf>,
+    /// Frozen managed game root: BG2/EET, or the standalone game.
     pub staged_bg2: PathBuf,
     /// Attempt start in Unix epoch milliseconds.
     pub started_at_millis: u64,
@@ -278,7 +281,7 @@ pub struct InstallReceipt {
     pub outcome: ReceiptOutcome,
     /// Application and data format versions.
     pub versions: ReceiptVersions,
-    /// Both clean source-game identities.
+    /// Every clean source-game identity: both EET sources, or the one standalone source.
     pub source_games: Vec<SourceGameReceipt>,
     /// Frozen signed recipe-payload digest.
     pub recipe_payload_sha256: String,
@@ -410,6 +413,7 @@ pub struct ManagedReceiptWriter {
     registry: ManagedInstallRegistry,
     display_name: String,
     evidence: ReceiptEvidence,
+    recipe_id: Option<String>,
 }
 
 impl ManagedReceiptWriter {
@@ -425,7 +429,14 @@ impl ManagedReceiptWriter {
             registry,
             display_name,
             evidence,
+            recipe_id: None,
         }
+    }
+
+    /// Record the stable recipe id in the registry record, for recipes that publish one.
+    pub fn with_recipe_id(mut self, recipe_id: Option<String>) -> Self {
+        self.recipe_id = recipe_id;
+        self
     }
 
     /// Assemble, publish, and register the successful campaign hand-off.
@@ -516,6 +527,7 @@ impl ManagedReceiptWriter {
             launch_path: final_state.launch_path,
             receipt_sha256: crate::digest::sha256_bytes(&receipt_bytes),
             completed_at_millis: draft.completed_at_millis,
+            recipe_id: self.recipe_id.clone(),
         };
         self.registry.publish(&record)?;
         Ok(published)
@@ -696,26 +708,29 @@ fn validate_source_evidence(
     draft: &ReceiptDraft,
     require_complete: bool,
 ) -> Result<(), ManagedReceiptError> {
+    let frozen = &draft.created.source_games;
+    let expects_bg1 = frozen.bg1.is_some();
+    let primary_role = frozen.primary_role();
     let mut bg1 = 0_usize;
     let mut bg2 = 0_usize;
     for source in sources {
-        let expected = match source.role {
-            GameRole::BgeeSod => {
-                bg1 += 1;
-                &draft.created.source_games.bg1
-            }
-            GameRole::Bg2ee => {
-                bg2 += 1;
-                &draft.created.source_games.bg2
-            }
+        let expected = if source.role == GameRole::BgeeSod && expects_bg1 {
+            bg1 += 1;
+            frozen.bg1.as_deref()
+        } else if source.role == primary_role {
+            bg2 += 1;
+            Some(frozen.bg2.as_str())
+        } else {
+            None
         };
-        if !source.fingerprint.eq_ignore_ascii_case(expected) {
+        if !expected.is_some_and(|expected| source.fingerprint.eq_ignore_ascii_case(expected)) {
             return Err(ManagedReceiptError::Evidence(
                 "source fingerprints differ from CampaignCreated".to_owned(),
             ));
         }
     }
-    if bg1 > 1 || bg2 > 1 || (require_complete && (bg1 != 1 || bg2 != 1)) {
+    let expected_bg1 = usize::from(expects_bg1);
+    if bg1 > expected_bg1 || bg2 > 1 || (require_complete && (bg1 != expected_bg1 || bg2 != 1)) {
         return Err(ManagedReceiptError::Evidence(
             "source evidence is duplicated or incomplete".to_owned(),
         ));

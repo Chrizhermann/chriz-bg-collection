@@ -345,6 +345,7 @@ fn publish_managed_install(app_data: &Path, managed: &Path, install_id: &str) {
             launch_path: launch.canonicalize().unwrap(),
             receipt_sha256: sha256_bytes(b"immutable receipt"),
             completed_at_millis: 1,
+            recipe_id: None,
         })
         .unwrap();
 }
@@ -395,12 +396,13 @@ fn publish_started_campaign_with_payload(
         normalized_selection: selection,
         plan_sha256: plan_digest(&plan).unwrap(),
         source_games: SourceGameFingerprints {
-            bg1: "11".repeat(32),
+            bg1: Some("11".repeat(32)),
             bg2: "22".repeat(32),
+            standalone_role: None,
         },
         artifact_identities: Vec::new(),
         tool_identities: Vec::new(),
-        staged_bg1: managed.join("bg1"),
+        staged_bg1: Some(managed.join("bg1")),
         staged_bg2: managed.join("game"),
     };
     let store =
@@ -476,8 +478,9 @@ impl BridgeEngine for FakeBridgeEngine {
             selection_sha256: "bb".repeat(32),
             plan_sha256: "cc".repeat(32),
             source_games: SourceGameFingerprints {
-                bg1: "11".repeat(32),
+                bg1: Some("11".repeat(32)),
                 bg2: "11".repeat(32),
+                standalone_role: None,
             },
             managed_root: request.managed_root.clone(),
             cache_root: request.cache.clone(),
@@ -1160,7 +1163,7 @@ fn destination_review_freezes_exact_server_side_inputs_and_is_single_use() {
     assert!(matches!(first.event, EngineEvent::CampaignStarted { .. }));
     assert_eq!(engine.installs.lock().unwrap().len(), 1);
     let installed = &engine.installs.lock().unwrap()[0];
-    assert_eq!(installed.0.bg1, bg1.canonicalize().unwrap());
+    assert_eq!(installed.0.bg1, Some(bg1.canonicalize().unwrap()));
     assert_eq!(installed.0.bg2, bg2.canonicalize().unwrap());
     assert_eq!(installed.0.managed_root, canonical_destination);
     assert_eq!(installed.0.cache, cache.canonicalize().unwrap());
