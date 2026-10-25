@@ -5,6 +5,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use sha2::{Digest, Sha256};
 
+use crate::fs_retry;
+
 use super::AcquireError;
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -130,14 +132,8 @@ pub fn publish_manual_archive(
         let _ = fs::remove_file(&temporary);
         return Err(error);
     }
-    if destination.exists() {
-        fs::remove_file(destination).map_err(|source| AcquireError::Io {
-            action: "remove invalid manual archive cache file",
-            path: destination.to_path_buf(),
-            source,
-        })?;
-    }
-    if let Err(source) = fs::rename(&temporary, destination) {
+    // The rename replaces an invalid cache file in one step; the path is never left empty.
+    if let Err(source) = fs_retry::rename(&temporary, destination) {
         let _ = fs::remove_file(&temporary);
         return Err(AcquireError::Io {
             action: "publish verified manual archive",

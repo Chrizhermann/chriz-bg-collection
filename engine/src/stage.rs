@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::error::{EngineError, Result};
+use crate::fs_retry;
 use crate::games::GameRole;
 
 /// The fixed on-disk roots owned by one managed EET installation.
@@ -1798,25 +1799,28 @@ fn publish_replace(source: &Path, destination: &Path) -> Result<()> {
         .encode_wide()
         .chain(std::iter::once(0))
         .collect::<Vec<_>>();
-    let result = unsafe {
-        MoveFileExW(
-            source_wide.as_ptr(),
-            destination_wide.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    };
-    if result == 0 {
-        return Err(EngineError::Io {
-            path: destination.to_path_buf(),
-            source: io::Error::last_os_error(),
-        });
-    }
-    Ok(())
+    fs_retry::retry_transient(|| {
+        let result = unsafe {
+            MoveFileExW(
+                source_wide.as_ptr(),
+                destination_wide.as_ptr(),
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+            )
+        };
+        if result == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    })
+    .map_err(|source| EngineError::Io {
+        path: destination.to_path_buf(),
+        source,
+    })
 }
 
 #[cfg(not(windows))]
 fn publish_replace(source: &Path, destination: &Path) -> Result<()> {
-    fs::rename(source, destination).map_err(|source| EngineError::Io {
+    fs_retry::rename(source, destination).map_err(|source| EngineError::Io {
         path: destination.to_path_buf(),
         source,
     })

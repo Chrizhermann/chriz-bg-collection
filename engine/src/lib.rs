@@ -4,6 +4,7 @@ pub mod diagnostics;
 pub mod digest;
 pub mod error;
 pub mod events;
+mod fs_retry;
 pub mod games;
 pub mod loader;
 pub mod lock;

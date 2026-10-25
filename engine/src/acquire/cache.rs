@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::events::{EngineEvent, EventSink};
+use crate::fs_retry;
 
 use super::http::{validate_download_url, HttpClient, HttpResponse};
 use super::{AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest};
@@ -686,12 +687,12 @@ fn publish(
     })?;
     drop(file);
 
-    fs::rename(&paths.partial, &paths.archive).map_err(|source| AcquireError::Io {
+    fs_retry::rename(&paths.partial, &paths.archive).map_err(|source| AcquireError::Io {
         action: "publish verified archive",
         path: paths.archive.clone(),
         source,
     })?;
-    fs::rename(&metadata_temp, &paths.metadata).map_err(|source| AcquireError::Io {
+    fs_retry::rename(&metadata_temp, &paths.metadata).map_err(|source| AcquireError::Io {
         action: "publish cache metadata",
         path: paths.metadata.clone(),
         source,
