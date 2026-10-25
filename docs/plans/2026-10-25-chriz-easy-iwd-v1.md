@@ -32,6 +32,8 @@ Christopher streams an Icewind Dale: Enhanced Edition playthrough in November 20
 | 2026-10-25 | Component selection: components that carry over one-to-one from the BG installer's choices may be preselected; Christopher reviews them. | Christopher, this session |
 | 2026-10-25 | Belhifet: +2 weapons are enough. He stays immune only to non-magical and +1 weapons, so archers with bought ammunition can hit him too (+3 ammunition is loot-only). | Christopher ("viel besser") |
 | 2026-10-25 | Difficulty principle for our fight changes: make fights hard through behaviour and situations that leave several ways to win, not through walls of numbers (very high AC, saves, resistances, immunities). More hit points are acceptable, because the games' hit points on high difficulties are too low. Belhifet probably needs more hit points, scaled by difficulty. | Christopher, this session |
+| 2026-10-26 | Belhifet: his immunity to spell levels 1-3 goes too; only the protections that keep his scripted ending from being skipped stay. Instead he gets more hit points, scaled by difficulty. The final fight should last a while and not be gimmicky. | Christopher ("Yep. Denke der letzte Fight sollte etwas dauern und nicht gimicky sein.") |
+| 2026-10-26 | Heart of Fury is not a balancing target (Christopher: hardly anyone plays it, like Legacy of Bhaal in BG). Our changes are tuned for the normal difficulty levels and only need to keep working in Heart of Fury. | Christopher, this session |
 
 Curation stays Christopher's: the agent delivers neutral inventories; he decides mods,
 components and defaults.
