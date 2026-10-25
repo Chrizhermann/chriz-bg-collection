@@ -80,4 +80,5 @@ and unavailability reasons belong in their corresponding notes/mapping fields.
   the fight audit (enemy names, places, final boss) and designs the big strokes.
 
 Current stage (2026-10-25): see the [v1 plan](../../plans/2026-10-25-chriz-easy-iwd-v1.md).
-Neutral inventory, fight audit and the engine standalone mode are in progress.
+The neutral mod inventory is in [INVENTORY.md](INVENTORY.md); Christopher's mod-level
+choices are being collected. The fight audit and the engine standalone mode are in progress.
