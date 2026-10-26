@@ -1,4 +1,4 @@
-; Uninstaller hooks for Chriz Easy BG. See src/application_data.rs.
+; Uninstaller hooks for Chriz Easy BG and Chriz Easy IWD. See src/application_data.rs.
 ;
 ; With "Delete the application data" checked, Tauri's uninstaller deletes
 ; $APPDATA\${BUNDLEID} and $LOCALAPPDATA\${BUNDLEID} with RMDir /r. That leaves

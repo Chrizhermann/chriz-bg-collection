@@ -13,6 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 installation-lookup-diagnostics = []
 
 [build-dependencies]
+serde_json = "1"
 tauri-build = { version = "=2.6.3", features = [] }
 
 [dependencies]

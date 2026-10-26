@@ -618,6 +618,12 @@ pub async fn check_updates(
         .clone();
     let mut summary =
         background(move || bridge.unconfigured_update_center(env!("CARGO_PKG_VERSION"))).await?;
+    // An app without its own signed update feed has no updater to ask; its collection
+    // arrives only with a new app download.
+    if !crate::flavor::CURRENT.app_updates {
+        crate::installation_lookup_trace::updates_returned(&summary);
+        return Ok(summary);
+    }
     let radar_bridge = state
         .bridge
         .lock()
@@ -640,7 +646,10 @@ pub async fn check_updates(
         .recipe_version()?
         .unwrap_or_else(|| "bundled".to_owned());
     summary.recipe.state = crate::updates::RecipeUpdateState::UpToDate;
-    summary.recipe.detail = "The collection is included with your CEBG version.".to_owned();
+    summary.recipe.detail = format!(
+        "The collection is included with your {} version.",
+        crate::flavor::CURRENT.short_name
+    );
     summary.recipe.disposition = "up-to-date".to_owned();
     match candidate {
         Ok(candidate) => {
@@ -652,11 +661,16 @@ pub async fn check_updates(
             }
             .to_owned();
             summary.application.detail = if candidate.is_some() {
-                "A newer CEBG version is available."
+                format!(
+                    "A newer {} version is available.",
+                    crate::flavor::CURRENT.short_name
+                )
             } else {
-                "You're using the latest CEBG version."
-            }
-            .to_owned();
+                format!(
+                    "You're using the latest {} version.",
+                    crate::flavor::CURRENT.short_name
+                )
+            };
             if let Some(update) = &candidate {
                 summary.application.available_version = Some(update.version.clone());
                 summary.application.release_notes = update.body.clone();
@@ -669,7 +683,7 @@ pub async fn check_updates(
                         summary.recipe.state = crate::updates::RecipeUpdateState::RequiresApp;
                         summary.recipe.available_version = Some(recipe_version.to_owned());
                         summary.recipe.disposition = "app-update-required".to_owned();
-                        summary.recipe.detail = "Install the CEBG update to get this collection. Existing games remain on their recorded version.".to_owned();
+                        summary.recipe.detail = format!("Install the {} update to get this collection. Existing games remain on their recorded version.", crate::flavor::CURRENT.short_name);
                     }
                 }
             }
@@ -681,7 +695,10 @@ pub async fn check_updates(
         Err(error) => {
             summary.network_state = "offline".to_owned();
             summary.application.state = "offline".to_owned();
-            summary.application.detail = format!("Could not check for CEBG updates: {error}");
+            summary.application.detail = format!(
+                "Could not check for {} updates: {error}",
+                crate::flavor::CURRENT.short_name
+            );
             summary.recipe.state = crate::updates::RecipeUpdateState::Offline;
             summary.recipe.detail = "Collection updates could not be checked.".to_owned();
             *state
@@ -736,6 +753,17 @@ pub async fn install_app_update(
     on_progress: Option<JavaScriptChannelId>,
 ) -> Result<(), CommandError> {
     let on_progress = on_progress.map(|id| id.channel_on(webview));
+    if !crate::flavor::CURRENT.app_updates {
+        return Err(CommandError::new(
+            "update_not_checked",
+            format!(
+                "{} updates arrive as a new download.",
+                crate::flavor::CURRENT.product_name
+            ),
+            "Download the new version and install it over this one.",
+            "this app has no signed update feed",
+        ));
+    }
     let bridge = state
         .bridge
         .lock()
@@ -791,7 +819,10 @@ pub async fn install_app_update(
 fn update_error(error: impl std::fmt::Display) -> CommandError {
     CommandError::new(
         "application_update_failed",
-        "The CEBG update could not be installed.",
+        format!(
+            "The {} update could not be installed.",
+            crate::flavor::CURRENT.short_name
+        ),
         "Check your connection and try again.",
         error.to_string(),
     )
@@ -811,7 +842,7 @@ pub async fn activate_recipe_update(
         bridge.ensure_update_idle()?;
         Err(CommandError::new(
             "recipe_requires_app_update",
-            "This collection is delivered with a CEBG update.",
+            format!("This collection is delivered with a {} update.", crate::flavor::CURRENT.short_name),
             "Install the application update, then create a new installation.",
             format!("requested recipe version {version}; collection replacement requires the signed app package"),
         ))

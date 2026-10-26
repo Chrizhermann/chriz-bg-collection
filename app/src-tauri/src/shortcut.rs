@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-/// All native-owned fields needed to create or verify one CEBG launcher shortcut.
+use crate::flavor::AppFlavor;
+
+/// All native-owned fields needed to create or verify one launcher shortcut of this app.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShortcutRequest {
     pub install_id: String,
@@ -14,9 +16,18 @@ const MAX_SHORTCUT_STEM_UTF16: usize = 120;
 
 /// Produces a bounded Windows-compatible filename while preserving ordinary Unicode.
 pub fn shortcut_file_name(display_name: &str) -> String {
+    shortcut_file_name_for(crate::flavor::CURRENT, display_name)
+}
+
+/// [`shortcut_file_name`] for the shortcuts of one app flavor.
+pub fn shortcut_file_name_for(flavor: &AppFlavor, display_name: &str) -> String {
     format!(
         "Play {}.lnk",
-        shortcut_stem(display_name, MAX_SHORTCUT_STEM_UTF16 - "Play ".len())
+        shortcut_stem(
+            display_name,
+            MAX_SHORTCUT_STEM_UTF16 - "Play ".len(),
+            flavor
+        )
     )
 }
 
@@ -28,12 +39,13 @@ fn collision_file_name(request: &ShortcutRequest) -> String {
         "Play {}{suffix}.lnk",
         shortcut_stem(
             &request.display_name,
-            MAX_SHORTCUT_STEM_UTF16 - "Play ".len() - suffix.len()
+            MAX_SHORTCUT_STEM_UTF16 - "Play ".len() - suffix.len(),
+            crate::flavor::CURRENT
         )
     )
 }
 
-fn shortcut_stem(display_name: &str, max_utf16: usize) -> String {
+fn shortcut_stem(display_name: &str, max_utf16: usize, flavor: &AppFlavor) -> String {
     let mut sanitized = display_name
         .chars()
         .filter(|character| {
@@ -46,7 +58,7 @@ fn shortcut_stem(display_name: &str, max_utf16: usize) -> String {
         .collect::<String>();
     sanitized = sanitized.trim().trim_end_matches(['.', ' ']).to_owned();
     if sanitized.is_empty() || matches!(sanitized.as_str(), "." | "..") {
-        sanitized = "Chriz Easy BG".to_owned();
+        sanitized = flavor.product_name.to_owned();
     }
     let device_stem = sanitized
         .split('.')
@@ -79,7 +91,7 @@ fn shortcut_stem(display_name: &str, max_utf16: usize) -> String {
             | "LPT9"
     );
     if reserved {
-        sanitized = format!("CEBG - {sanitized}");
+        sanitized = format!("{} - {sanitized}", flavor.short_name);
     }
     let mut bounded = String::new();
     let mut units = 0;
@@ -93,7 +105,7 @@ fn shortcut_stem(display_name: &str, max_utf16: usize) -> String {
     }
     let bounded = bounded.trim_end_matches(['.', ' ']);
     let bounded = if bounded.is_empty() {
-        "Chriz Easy BG"
+        flavor.product_name
     } else {
         bounded
     };
@@ -270,10 +282,14 @@ fn write_shortcut(desktop: &Path, request: &ShortcutRequest) -> Result<PathBuf, 
     {
         return Err("Desktop shortcut paths must be absolute.".to_owned());
     }
-    let marker = format!("Chriz Easy BG launcher; install-id={}", request.install_id);
+    let product = crate::flavor::CURRENT;
+    let marker = format!(
+        "{} launcher; install-id={}",
+        product.product_name, request.install_id
+    );
     let legacy = desktop.join(format!(
         "{}.lnk",
-        shortcut_stem(&request.display_name, MAX_SHORTCUT_STEM_UTF16)
+        shortcut_stem(&request.display_name, MAX_SHORTCUT_STEM_UTF16, product)
     ));
     let primary = desktop.join(shortcut_file_name(&request.display_name));
     let fallback = desktop.join(collision_file_name(request));
@@ -297,8 +313,8 @@ fn write_shortcut(desktop: &Path, request: &ShortcutRequest) -> Result<PathBuf, 
         })
         .ok_or_else(|| {
             format!(
-                "A different item already exists at both {} and {}. Neither is owned by this CEBG installation.",
-                candidates[1].display(), candidates[2].display()
+                "A different item already exists at both {} and {}. Neither is owned by this {} installation.",
+                candidates[1].display(), candidates[2].display(), product.short_name
             )
         })?;
     let shortcut_path = &candidates[selected];
@@ -340,14 +356,45 @@ mod tests {
 
     #[test]
     fn shortcut_filename_sanitizes_windows_names_without_losing_unicode() {
+        use crate::flavor::BG;
         assert_eq!(
-            shortcut_file_name(" Ordinary — 이름<>:\"/\\|?*... "),
+            shortcut_file_name_for(&BG, " Ordinary — 이름<>:\"/\\|?*... "),
             "Play Ordinary — 이름.lnk"
         );
-        assert_eq!(shortcut_file_name("CON"), "Play CEBG - CON.lnk");
-        assert_eq!(shortcut_file_name(" ... "), "Play Chriz Easy BG.lnk");
-        assert!(shortcut_file_name(&"이".repeat(200)).encode_utf16().count() <= 124);
-        assert!(shortcut_file_name(&"🎲".repeat(200)).encode_utf16().count() <= 124);
+        assert_eq!(shortcut_file_name_for(&BG, "CON"), "Play CEBG - CON.lnk");
+        assert_eq!(
+            shortcut_file_name_for(&BG, " ... "),
+            "Play Chriz Easy BG.lnk"
+        );
+        assert!(
+            shortcut_file_name_for(&BG, &"이".repeat(200))
+                .encode_utf16()
+                .count()
+                <= 124
+        );
+        assert!(
+            shortcut_file_name_for(&BG, &"🎲".repeat(200))
+                .encode_utf16()
+                .count()
+                <= 124
+        );
+    }
+
+    #[test]
+    fn iwd_shortcut_names_use_its_own_product_name() {
+        use crate::flavor::IWD;
+        assert_eq!(
+            shortcut_file_name_for(&IWD, "Kuldahar run"),
+            "Play Kuldahar run.lnk"
+        );
+        assert_eq!(
+            shortcut_file_name_for(&IWD, "CON"),
+            "Play Chriz Easy IWD - CON.lnk"
+        );
+        assert_eq!(
+            shortcut_file_name_for(&IWD, " ... "),
+            "Play Chriz Easy IWD.lnk"
+        );
     }
 
     #[cfg(windows)]

@@ -34,6 +34,7 @@ use bg_engine::weidu::runner::RunnerControlHandle;
 use serde::Serialize;
 
 use crate::error::CommandError;
+use crate::flavor::AppFlavor;
 use crate::shortcut::{self, ShortcutRequest};
 use crate::updates::{
     ApplicationUpdateResponse, ManagedCopyUpdateResponse, RecipeUpdateResponse, RecipeUpdateState,
@@ -64,7 +65,6 @@ fn radar_error(error: impl std::fmt::Display) -> CommandError {
 
 const REVIEW_LIFETIME: Duration = Duration::from_secs(10 * 60);
 const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
-const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 
 include!("patch_bridge.rs");
 include!("installed_update_bridge.rs");
@@ -321,15 +321,26 @@ struct ReviewSnapshot {
     recipe_digest: String,
     selection_digest: String,
     plan_digest: String,
-    bg1: GameCandidate,
+    /// The BG:EE + SoD source; `None` for a standalone collection.
+    bg1: Option<GameCandidate>,
+    /// The BG2:EE source, or a standalone collection's one game.
     bg2: GameCandidate,
     request: InstallCommandRequest,
     engine_identity: InstallReviewIdentity,
 }
 
+/// The wire slot whose candidate id names a source game.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SourceSlot {
+    Bg1,
+    Bg2,
+}
+
 /// Native adapter configuration and process-local review/run registries shared by commands.
 #[derive(Clone)]
 pub struct NativeBridge {
+    /// The app this bridge serves: its collection, folders, texts and features.
+    flavor: &'static AppFlavor,
     resource_root: Option<PathBuf>,
     profile_id: String,
     recipe: PathBuf,
@@ -549,6 +560,32 @@ pub struct BootstrapResponse {
     pub recipe_version: Option<String>,
     /// Optional semantic launcher hint; callers must still match it to a current registry record.
     pub startup_install_id: Option<String>,
+    /// The standalone collection a standalone app installs; absent in the Baldur's Gate app,
+    /// whose interface knows its two sources.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection: Option<CollectionResponse>,
+}
+
+/// What the interface of a standalone app needs to know about its collection.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CollectionResponse {
+    /// Flavor key the interface compares with the flavor it was built for.
+    pub flavor: String,
+    pub game: bg_engine::manifest::CollectionGame,
+    pub product_name: String,
+    /// The source games, in the wire slots their candidate ids use.
+    pub sources: Vec<SourceSlotResponse>,
+}
+
+/// One source game of a collection and the wire slot that carries its candidate id.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceSlotResponse {
+    /// `bg1` or `bg2`; a standalone collection's one game uses `bg2`.
+    pub slot: String,
+    pub role: GameRole,
+    pub label: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -687,7 +724,7 @@ impl NativeBridge {
             recipe,
             preset.into(),
             cache,
-            default_application_data_root(),
+            default_application_data_root(crate::flavor::CURRENT),
             system_target_locks(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
@@ -704,31 +741,68 @@ impl NativeBridge {
 
     /// Creates the production adapter with a native-owned writable cache directory.
     pub fn from_resource_dir_with_cache(resource_dir: &Path, cache: &Path) -> Self {
+        Self::from_resource_dir_for_flavor(resource_dir, cache, crate::flavor::CURRENT)
+    }
+
+    /// Creates the adapter of one app flavor over packaged resources: its bundled collection,
+    /// its registry folder below `LOCALAPPDATA` and its features.
+    #[doc(hidden)]
+    pub fn from_resource_dir_for_flavor(
+        resource_dir: &Path,
+        cache: &Path,
+        flavor: &'static AppFlavor,
+    ) -> Self {
         let mut bridge = Self::with_configuration(
             resource_dir.join("manifest"),
             "chris-recommended".to_owned(),
             cache.to_path_buf(),
-            default_application_data_root(),
+            default_application_data_root(flavor),
             system_target_locks(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
         );
+        bridge.flavor = flavor;
         bridge.resource_root = Some(resource_dir.to_path_buf());
         bridge.use_packaged_default();
         bridge
     }
 
+    /// Serves another app flavor with the injected engine, host and application data. Only
+    /// tests switch flavors; production bridges are built for the compiled one.
+    #[doc(hidden)]
+    pub fn with_flavor(mut self, flavor: &'static AppFlavor) -> Self {
+        self.flavor = flavor;
+        if let Some(collection) = &flavor.standalone {
+            self.profile_id = collection.profile_id.to_owned();
+        }
+        self
+    }
+
     fn use_packaged_default(&mut self) {
-        if let Some(root) = &self.resource_root {
-            let curated = root.join("recipes/curated-full-current");
-            if curated.join("collection.toml").is_file() {
-                self.recipe = curated;
-                self.profile_id = "curated-full-current".to_owned();
-            }
+        let Some(root) = &self.resource_root else {
+            return;
+        };
+        if let Some(collection) = &self.flavor.standalone {
+            // A standalone app installs only its own collection; it has no fallback recipe.
+            self.recipe = root.join(collection.recipe);
+            self.profile_id = collection.profile_id.to_owned();
+            return;
+        }
+        let curated = root.join("recipes/curated-full-current");
+        if curated.join("collection.toml").is_file() {
+            self.recipe = curated;
+            self.profile_id = "curated-full-current".to_owned();
         }
     }
 
     pub fn profiles(&self) -> Vec<InstallProfileResponse> {
+        if let Some(collection) = &self.flavor.standalone {
+            return vec![InstallProfileResponse {
+                id: collection.profile_id.to_owned(),
+                label: collection.profile_label.to_owned(),
+                description: collection.profile_description.to_owned(),
+            }];
+        }
         // A bundled historical recipe is evidence, not an approved install selection.
         let mut profiles = Vec::new();
         if self.resource_root.as_ref().is_some_and(|root| {
@@ -781,16 +855,16 @@ impl NativeBridge {
             CommandError::new(
                 "unknown_profile",
                 "Setup selection is unavailable.",
-                "Use a packaged CEBG release.",
+                format!("Use a packaged {} release.", self.flavor.short_name),
                 "no packaged resource root",
             )
         })?;
         let mut next = self.clone();
         next.profile_id = id.to_owned();
-        next.recipe = root.join(if id == "curated-full-current" {
-            "recipes/curated-full-current"
-        } else {
-            "manifest"
+        next.recipe = root.join(match &self.flavor.standalone {
+            Some(collection) => collection.recipe,
+            None if id == "curated-full-current" => "recipes/curated-full-current",
+            None => "manifest",
         });
         next.preset = "chris-recommended".to_owned();
         runtime.reviews.clear();
@@ -812,6 +886,10 @@ impl NativeBridge {
     }
 
     /// Replaces only host discovery, allowing deterministic command-contract tests.
+    ///
+    /// Like the other test constructors, it serves the Baldur's Gate app in either build, so
+    /// command-contract tests do not depend on the compiled flavor; [`Self::with_flavor`]
+    /// switches it.
     #[doc(hidden)]
     pub fn with_discoverer<F>(
         recipe: impl Into<PathBuf>,
@@ -830,7 +908,7 @@ impl NativeBridge {
             recipe,
             preset.into(),
             cache,
-            default_application_data_root(),
+            default_application_data_root(&crate::flavor::BG),
             system_target_locks(),
             Arc::new(DiscovererBridgeEngine {
                 discoverer: Arc::new(discoverer),
@@ -838,6 +916,7 @@ impl NativeBridge {
             }),
             Arc::new(SystemBridgeSystem),
         )
+        .with_flavor(&crate::flavor::BG)
     }
 
     /// Injects all engine effects while retaining the production bridge state machine.
@@ -863,6 +942,7 @@ impl NativeBridge {
             engine,
             Arc::new(SystemBridgeSystem),
         )
+        .with_flavor(&crate::flavor::BG)
     }
 
     /// Injects engine and host services plus the exact managed-install registry root.
@@ -886,11 +966,13 @@ impl NativeBridge {
             engine,
             system,
         )
+        .with_flavor(&crate::flavor::BG)
     }
 
     /// Validates the complete public-alpha recipe and its configured preset.
     pub fn bootstrap(&self) -> Result<BootstrapResponse, CommandError> {
         validate_recipe(&self.recipe, self.validation_profile()).map_err(CommandError::from_cli)?;
+        self.check_collection(&Manifest::load(&self.recipe).map_err(recipe_load_error)?)?;
         GameProfiles::load(self.recipe.join("game-builds")).map_err(|error| {
             CommandError::new(
                 "game_profiles_failed",
@@ -914,7 +996,69 @@ impl NativeBridge {
             selected_profile: self.profile_id.clone(),
             recipe_version: self.recipe_version()?,
             startup_install_id: self.startup_install_id.clone(),
+            collection: self.collection_response(),
         })
+    }
+
+    fn collection_response(&self) -> Option<CollectionResponse> {
+        let collection = self.flavor.standalone.as_ref()?;
+        Some(CollectionResponse {
+            flavor: self.flavor.key.to_owned(),
+            game: self.flavor.game,
+            product_name: self.flavor.product_name.to_owned(),
+            sources: vec![SourceSlotResponse {
+                slot: "bg2".to_owned(),
+                role: collection.source_role,
+                label: collection.source_role.display_name().to_owned(),
+            }],
+        })
+    }
+
+    /// Refuses a recipe made for another app: its game and its registry folder must be this
+    /// app's, or its installations would land in a registry this app never lists.
+    fn check_collection(&self, manifest: &Manifest) -> Result<(), CommandError> {
+        let collection = &manifest.collection;
+        let directory = collection
+            .application_data_directory
+            .as_deref()
+            .unwrap_or(bg_engine::registry::names::DEFAULT_APPLICATION_DATA_DIRECTORY);
+        if collection.game == self.flavor.game
+            && directory == self.flavor.application_data_directory
+        {
+            return Ok(());
+        }
+        Err(CommandError::new(
+            "collection_mismatch",
+            format!(
+                "This installer recipe is not a {} collection.",
+                self.flavor.product_name
+            ),
+            format!(
+                "Reinstall {} from its official download.",
+                self.flavor.product_name
+            ),
+            format!(
+                "recipe {} installs {:?} with records in {directory:?}; {} installs {:?} with records in {:?}",
+                manifest.root.display(),
+                collection.game,
+                self.flavor.product_name,
+                self.flavor.game,
+                self.flavor.application_data_directory
+            ),
+        ))
+    }
+
+    /// The wire slot of a source role in this app: BG1 and BG2 in the Baldur's Gate app, `bg2`
+    /// for the one game of a standalone app, and none for another app's game.
+    fn source_slot(&self, role: GameRole) -> Option<SourceSlot> {
+        match &self.flavor.standalone {
+            Some(collection) => (role == collection.source_role).then_some(SourceSlot::Bg2),
+            None => match role {
+                GameRole::BgeeSod => Some(SourceSlot::Bg1),
+                GameRole::Bg2ee => Some(SourceSlot::Bg2),
+                GameRole::Iwdee => None,
+            },
+        }
     }
 
     /// Discovers and independently groups installed BG1 and BG2 sources.
@@ -926,19 +1070,17 @@ impl NativeBridge {
         let mut bg1_candidates = Vec::new();
         let mut bg2_candidates = Vec::new();
         for candidate in candidates {
-            let role = candidate.role;
-            if role == GameRole::Iwdee {
-                // This Baldur's Gate launcher never installs Icewind Dale; ignore its candidates.
+            // This app never installs another app's game; ignore its candidates.
+            let Some(slot) = self.source_slot(candidate.role) else {
                 continue;
-            }
+            };
             let response = project_candidate(candidate.clone())?;
             self.runtime_lock()
                 .candidates
                 .insert(response.id.clone(), candidate);
-            match role {
-                GameRole::BgeeSod => bg1_candidates.push(response),
-                GameRole::Bg2ee => bg2_candidates.push(response),
-                GameRole::Iwdee => {}
+            match slot {
+                SourceSlot::Bg1 => bg1_candidates.push(response),
+                SourceSlot::Bg2 => bg2_candidates.push(response),
             }
         }
         sort_candidates(&mut bg1_candidates);
@@ -1123,6 +1265,7 @@ impl NativeBridge {
     }
 
     /// Validates a prospective managed-copy destination without creating or claiming it.
+    /// A standalone app passes an empty `bg1_candidate_id` and its one game in the `bg2` slot.
     pub fn inspect_destination(
         &self,
         destination: &Path,
@@ -1130,8 +1273,12 @@ impl NativeBridge {
         bg2_candidate_id: &str,
     ) -> Result<DestinationEvaluationResponse, CommandError> {
         let (bg1, bg2) = self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
-        let mut response =
-            inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        let mut response = inspect_destination_path(
+            destination,
+            &source_roots(bg1.as_ref(), &bg2),
+            &self.cache,
+            self.flavor.short_name,
+        )?;
         response.path = display_windows_path(Path::new(&response.path))?;
         Ok(response)
     }
@@ -1339,7 +1486,7 @@ impl NativeBridge {
                 campaigns
                     .into_iter()
                     .filter(|card| !completed_ids.contains(&card.record.install_id))
-                    .map(project_managed_campaign)
+                    .map(|card| project_managed_campaign(card, self.flavor.product_name))
                     .collect::<Result<Vec<_>, _>>()?,
             );
             responses.sort_by(|left, right| left.id.cmp(&right.id));
@@ -1355,12 +1502,16 @@ impl NativeBridge {
         result
     }
 
-    /// Launches the exact verified InfinityLoader path owned by one available registry id.
+    /// Launches the exact verified InfinityLoader path owned by one available registry id. A
+    /// standalone installation without EEex launches its game's own verified executable.
     pub fn launch_install(
         &self,
         install_id: &str,
         start_radar: bool,
     ) -> Result<LaunchInstallResponse, CommandError> {
+        if start_radar {
+            self.ensure_feature(self.flavor.radar, "BG Radar Overlay")?;
+        }
         // Serialize launch with local removal from the check through process creation.
         let runtime = self.runtime_lock();
         if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
@@ -1391,7 +1542,11 @@ impl NativeBridge {
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or_default();
-        if !launch_name.eq_ignore_ascii_case("InfinityLoader.exe") {
+        let game_executable =
+            self.flavor.standalone.as_ref().is_some_and(|collection| {
+                launch_name.eq_ignore_ascii_case(collection.game_executable)
+            });
+        if !launch_name.eq_ignore_ascii_case("InfinityLoader.exe") && !game_executable {
             return Err(CommandError::new(
                 "managed_launch_invalid",
                 "The managed campaign has no verified InfinityLoader executable.",
@@ -1411,9 +1566,14 @@ impl NativeBridge {
             )
         })?;
         // Installations made before the installer seeded a setting get it before the
-        // game reads its profile. Playing never depends on it.
+        // game reads its profile. Playing never depends on it. Those settings are EET's;
+        // a standalone game has none.
         let game_settings =
-            GameSettingsResponse::from_repair(self.engine.repair_profile_settings(&record));
+            GameSettingsResponse::from_repair(if self.flavor.standalone.is_some() {
+                Ok(false)
+            } else {
+                self.engine.repair_profile_settings(&record)
+            });
         // The game empties its log when it starts, so the last session's log is kept first.
         let game_log = GameLogLaunchResponse::from_kept(bg_engine::game_log::keep_previous(
             &record.managed_root,
@@ -1450,6 +1610,7 @@ impl NativeBridge {
         &self,
         install_id: &str,
     ) -> Result<bg_engine::radar::RadarInstallResult, CommandError> {
+        self.ensure_feature(self.flavor.radar, "BG Radar Overlay")?;
         let release = bg_engine::radar::check_latest().map_err(radar_error)?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(install_id)?.record;
@@ -1524,11 +1685,12 @@ impl NativeBridge {
         install_id: &str,
     ) -> Result<DesktopShortcutResponse, CommandError> {
         let record = self.available_managed_install(install_id)?.record;
+        let app = self.flavor.short_name;
         let target = self.system.current_exe().map_err(|error| {
             CommandError::new(
                 "application_executable_unavailable",
-                "The CEBG application path could not be found.",
-                "Open CEBG normally, then try creating the shortcut again.",
+                format!("The {app} application path could not be found."),
+                format!("Open {app} normally, then try creating the shortcut again."),
                 error,
             )
         })?;
@@ -1540,8 +1702,8 @@ impl NativeBridge {
         {
             return Err(CommandError::new(
                 "application_executable_invalid",
-                "The CEBG application path is not safe for a shortcut.",
-                "Open the installed CEBG application, then try again.",
+                format!("The {app} application path is not safe for a shortcut."),
+                format!("Open the installed {app} application, then try again."),
                 format!("current executable resolved to {}", target.display()),
             ));
         }
@@ -1550,8 +1712,8 @@ impl NativeBridge {
             .ok_or_else(|| {
                 CommandError::new(
                     "application_executable_invalid",
-                    "The CEBG application folder could not be found.",
-                    "Open the installed CEBG application, then try again.",
+                    format!("The {app} application folder could not be found."),
+                    format!("Open the installed {app} application, then try again."),
                     format!("current executable has no parent: {}", target.display()),
                 )
             })?
@@ -1646,14 +1808,25 @@ impl NativeBridge {
         let overrides = selection_overrides(selection);
         let plan_report = plan_recipe(&self.recipe, &self.preset, &selection.platform, &overrides)
             .map_err(CommandError::from_cli)?;
+        let manifest = Manifest::load(&self.recipe)
+            .map_err(|error| checkpoint_command_error("recipe_load_failed", error))?;
+        self.check_collection(&manifest)?;
         bg_engine::manual_checkpoint::split_plan(&plan_report.evaluation.plan, manual_breakpoints)
             .map_err(|error| checkpoint_command_error("invalid_manual_breakpoint", error))?;
         self.ensure_manual_downloads_ready(&plan_report.evaluation.plan)?;
         let (registered_bg1, registered_bg2) =
             self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
-        let bg1 = self.reinspect_source(&registered_bg1, GameRole::BgeeSod)?;
-        let bg2 = self.reinspect_source(&registered_bg2, GameRole::Bg2ee)?;
-        let destination = inspect_destination_path(destination, &bg1.root, &bg2.root, &self.cache)?;
+        let bg1 = registered_bg1
+            .as_ref()
+            .map(|bg1| self.reinspect_source(bg1, GameRole::BgeeSod))
+            .transpose()?;
+        let bg2 = self.reinspect_source(&registered_bg2, self.flavor.primary_role())?;
+        let destination = inspect_destination_path(
+            destination,
+            &source_roots(bg1.as_ref(), &bg2),
+            &self.cache,
+            self.flavor.short_name,
+        )?;
         let destination_path = PathBuf::from(&destination.path);
         bg_engine::acquire::ArtifactCache::open(&self.cache).map_err(|error| {
             CommandError::new(
@@ -1682,7 +1855,7 @@ impl NativeBridge {
             preset: self.preset.clone(),
             platform: normalized_selection.platform.clone(),
             overrides: selection_overrides(normalized_selection),
-            bg1: Some(bg1.root.clone()),
+            bg1: bg1.as_ref().map(|bg1| bg1.root.clone()),
             bg2: bg2.root.clone(),
             managed_root: destination_path,
             cache,
@@ -1697,7 +1870,7 @@ impl NativeBridge {
             &recipe_digest,
             &selection_digest,
             &plan_digest,
-            &bg1,
+            bg1.as_ref(),
             &bg2,
             &destination.path,
             &engine_identity,
@@ -1722,18 +1895,18 @@ impl NativeBridge {
                 engine_identity,
             },
         );
-        let game_labels = vec![project_candidate(bg1)?.label, project_candidate(bg2)?.label];
+        let game_labels = bg1
+            .into_iter()
+            .chain([bg2])
+            .map(|candidate| project_candidate(candidate).map(|response| response.label))
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(FrozenReviewResponse {
             review_token,
             digest,
             display_name: frozen_display_name,
             destination: display_windows_path(Path::new(&destination.path))?,
             game_labels,
-            evaluation: project_evaluation(
-                plan_report.evaluation,
-                &Manifest::load(&self.recipe)
-                    .map_err(|error| checkpoint_command_error("recipe_load_failed", error))?,
-            ),
+            evaluation: project_evaluation(plan_report.evaluation, &manifest),
         })
     }
 
@@ -1965,6 +2138,7 @@ impl NativeBridge {
         system: Arc<dyn BridgeSystem>,
     ) -> Self {
         Self {
+            flavor: crate::flavor::CURRENT,
             resource_root: None,
             profile_id: "public-alpha".to_owned(),
             recipe,
@@ -2175,22 +2349,39 @@ impl NativeBridge {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
+    /// The registered sources named by the wire slots: BG1 and BG2 in the Baldur's Gate app, or
+    /// a standalone app's one game in `bg2` with an empty `bg1`.
     fn registered_sources(
         &self,
         bg1_candidate_id: &str,
         bg2_candidate_id: &str,
-    ) -> Result<(GameCandidate, GameCandidate), CommandError> {
+    ) -> Result<(Option<GameCandidate>, GameCandidate), CommandError> {
         let runtime = self.runtime_lock();
-        let bg1 = runtime
-            .candidates
-            .get(bg1_candidate_id)
-            .cloned()
-            .ok_or_else(|| unregistered_candidate(bg1_candidate_id))?;
-        let bg2 = runtime
-            .candidates
-            .get(bg2_candidate_id)
-            .cloned()
-            .ok_or_else(|| unregistered_candidate(bg2_candidate_id))?;
+        let registered = |candidate_id: &str| {
+            runtime
+                .candidates
+                .get(candidate_id)
+                .cloned()
+                .ok_or_else(|| unregistered_candidate(candidate_id))
+        };
+        if let Some(collection) = &self.flavor.standalone {
+            let game = registered(bg2_candidate_id)?;
+            if !bg1_candidate_id.is_empty() || game.role != collection.source_role {
+                let name = collection.source_role.display_name();
+                return Err(CommandError::new(
+                    "game_candidate_role_mismatch",
+                    format!("The selected game folder is not {name}."),
+                    format!("Select one clean {name} folder."),
+                    format!(
+                        "BG1 id {bg1_candidate_id:?}; game id role {:?}; {} installs {:?}",
+                        game.role, self.flavor.product_name, collection.source_role
+                    ),
+                ));
+            }
+            return Ok((None, game));
+        }
+        let bg1 = registered(bg1_candidate_id)?;
+        let bg2 = registered(bg2_candidate_id)?;
         if bg1.role != GameRole::BgeeSod || bg2.role != GameRole::Bg2ee {
             return Err(CommandError::new(
                 "game_candidate_role_mismatch",
@@ -2199,7 +2390,20 @@ impl NativeBridge {
                 format!("BG1 id role {:?}; BG2 id role {:?}", bg1.role, bg2.role),
             ));
         }
-        Ok((bg1, bg2))
+        Ok((Some(bg1), bg2))
+    }
+
+    /// Refuses a feature this app does not offer, before it reads or changes anything.
+    fn ensure_feature(&self, offered: bool, feature: &str) -> Result<(), CommandError> {
+        if offered {
+            return Ok(());
+        }
+        Err(CommandError::new(
+            "feature_unavailable",
+            format!("{feature} is not part of {}.", self.flavor.product_name),
+            "Return to My installs; nothing was changed.",
+            format!("{feature} is disabled in the {:?} app", self.flavor.key),
+        ))
     }
 
     fn reinspect_source(
@@ -2261,13 +2465,17 @@ impl NativeBridge {
         {
             return Err(changed_review("selection or resolved plan changed"));
         }
-        let bg1 = self.reinspect_source(&review.bg1, GameRole::BgeeSod)?;
-        let bg2 = self.reinspect_source(&review.bg2, GameRole::Bg2ee)?;
+        let bg1 = review
+            .bg1
+            .as_ref()
+            .map(|bg1| self.reinspect_source(bg1, GameRole::BgeeSod))
+            .transpose()?;
+        let bg2 = self.reinspect_source(&review.bg2, self.flavor.primary_role())?;
         let destination = inspect_destination_path(
             &review.request.managed_root,
-            &bg1.root,
-            &bg2.root,
+            &source_roots(bg1.as_ref(), &bg2),
             &review.request.cache,
+            self.flavor.short_name,
         )?;
         let current_engine_identity = self
             .engine
@@ -2280,7 +2488,7 @@ impl NativeBridge {
             &recipe_digest,
             &current_selection_digest,
             &current_plan_digest,
-            &bg1,
+            bg1.as_ref(),
             &bg2,
             &destination.path,
             &current_engine_identity,
@@ -2524,10 +2732,12 @@ fn test_target_locks(app_data: &Path) -> Option<bg_engine::lock::TargetLockNames
     bg_engine::lock::TargetLockNamespace::in_local_application_data(app_data.parent()?).ok()
 }
 
-fn default_application_data_root() -> Option<PathBuf> {
+/// The app's installation registry below `LOCALAPPDATA`: `Chriz BG Collection`, or the folder a
+/// standalone app's collection names.
+fn default_application_data_root(flavor: &AppFlavor) -> Option<PathBuf> {
     let root = PathBuf::from(std::env::var_os("LOCALAPPDATA")?);
     root.is_absolute()
-        .then(|| root.join(APPLICATION_DATA_DIRECTORY))
+        .then(|| root.join(flavor.application_data_directory))
 }
 
 /// Suggests the initial player-facing name and location beneath an injected home path.
@@ -2594,11 +2804,23 @@ fn canonical_candidate(mut candidate: GameCandidate) -> Result<GameCandidate, Co
     Ok(candidate)
 }
 
+/// The source folders a destination must stay clear of, by the label its messages use.
+fn source_roots<'a>(
+    bg1: Option<&'a GameCandidate>,
+    primary: &'a GameCandidate,
+) -> Vec<(&'static str, &'a Path)> {
+    match bg1 {
+        Some(bg1) => vec![("BG1", bg1.root.as_path()), ("BG2", primary.root.as_path())],
+        None => vec![("game", primary.root.as_path())],
+    }
+}
+
+/// `app` names the installer in the result, such as `CEBG`.
 fn inspect_destination_path(
     destination: &Path,
-    bg1: &Path,
-    bg2: &Path,
+    sources: &[(&str, &Path)],
     cache: &Path,
+    app: &str,
 ) -> Result<DestinationEvaluationResponse, CommandError> {
     if !destination.is_absolute()
         || destination
@@ -2617,28 +2839,20 @@ fn inspect_destination_path(
         ));
     }
     let normalized = normalize_prospective_path(destination)?;
-    let bg1 = bg1.canonicalize().map_err(|error| {
-        path_error(
-            "game_path_unavailable",
-            "The selected BG1 source is no longer available.",
-            bg1,
-            error,
-        )
-    })?;
-    let bg2 = bg2.canonicalize().map_err(|error| {
-        path_error(
-            "game_path_unavailable",
-            "The selected BG2 source is no longer available.",
-            bg2,
-            error,
-        )
-    })?;
-    let cache = normalize_prospective_path(cache)?;
-    for (label, protected) in [
-        ("BG1 source", &bg1),
-        ("BG2 source", &bg2),
-        ("cache", &cache),
-    ] {
+    let mut protected = Vec::with_capacity(sources.len() + 1);
+    for (label, source) in sources {
+        let root = source.canonicalize().map_err(|error| {
+            path_error(
+                "game_path_unavailable",
+                &format!("The selected {label} source is no longer available."),
+                source,
+                error,
+            )
+        })?;
+        protected.push((format!("{label} source"), root));
+    }
+    protected.push(("cache".to_owned(), normalize_prospective_path(cache)?));
+    for (label, protected) in &protected {
         if paths_overlap(&normalized, protected) {
             return Err(unsafe_destination(
                 destination,
@@ -2701,11 +2915,9 @@ fn inspect_destination_path(
         safe: true,
         title: "Ready to install".to_owned(),
         detail: if destination_exists {
-            "CEBG will use this empty folder and repeat its safety checks when installation starts."
-                .to_owned()
+            format!("{app} will use this empty folder and repeat its safety checks when installation starts.")
         } else {
-            "CEBG will create this folder when installation starts, then repeat its safety checks."
-                .to_owned()
+            format!("{app} will create this folder when installation starts, then repeat its safety checks.")
         },
     })
 }
@@ -2905,19 +3117,38 @@ fn collect_recipe_files(
     Ok(())
 }
 
+/// The frozen review identity. A standalone collection (no `bg1`) uses its own versioned
+/// layout, so the Baldur's Gate digest stays exactly `review-v3`.
 fn review_digest(
     recipe_digest: &str,
     selection_digest: &str,
     plan_digest: &str,
-    bg1: &GameCandidate,
+    bg1: Option<&GameCandidate>,
     bg2: &GameCandidate,
     destination: &str,
     engine_identity: &InstallReviewIdentity,
 ) -> Result<String, CommandError> {
-    let bg1_path = path_to_string(&bg1.root)?;
     let bg2_path = path_to_string(&bg2.root)?;
     let engine_managed_root = path_to_string(&engine_identity.managed_root)?;
     let engine_cache_root = path_to_string(&engine_identity.cache_root)?;
+    let Some(bg1) = bg1 else {
+        let identity = format!(
+            "review-standalone-v1\0{recipe_digest}\0{selection_digest}\0{plan_digest}\0{:?}\0{:?}\0{}\0{}\0{destination}\0{}\0{}\0{}\0{:?}\0{}\0{:?}\0{}\0{engine_managed_root}\0{engine_cache_root}",
+            bg2.role,
+            bg2.storefront,
+            bg2_path,
+            bg2.fingerprint.as_deref().unwrap_or_default(),
+            engine_identity.recipe_payload_sha256,
+            engine_identity.selection_sha256,
+            engine_identity.plan_sha256,
+            engine_identity.source_games.bg1,
+            engine_identity.source_games.bg2,
+            engine_identity.source_games.standalone_role,
+            engine_identity.display_name,
+        );
+        return Ok(sha256_bytes(identity.as_bytes()));
+    };
+    let bg1_path = path_to_string(&bg1.root)?;
     let identity = format!(
         "review-v3\0{recipe_digest}\0{selection_digest}\0{plan_digest}\0{:?}\0{:?}\0{}\0{}\0{:?}\0{:?}\0{}\0{}\0{destination}\0{}\0{}\0{}\0{}\0{}\0{}\0{engine_managed_root}\0{engine_cache_root}",
         bg1.role,
@@ -2975,6 +3206,15 @@ fn unix_nanos() -> Result<u128, CommandError> {
                 error.to_string(),
             )
         })
+}
+
+fn recipe_load_error(error: impl std::fmt::Display) -> CommandError {
+    CommandError::new(
+        "recipe_load_failed",
+        "The installer recipe could not be verified.",
+        "Repair or replace the installer recipe, then try again.",
+        error.to_string(),
+    )
 }
 
 fn digest_error(error: impl std::fmt::Display) -> CommandError {
@@ -3276,6 +3516,7 @@ fn project_managed_install(
 
 fn project_managed_campaign(
     card: ManagedCampaignCard,
+    product_name: &str,
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let path = display_windows_path(&card.record.managed_root)?;
     let manual_pause = bg_engine::session::SessionStore::open(&card.record.managed_root)
@@ -3298,7 +3539,7 @@ fn project_managed_campaign(
     };
     Ok(ManagedInstallationResponse {
         id: card.record.install_id,
-        name: "Chriz Easy BG — incomplete installation".to_owned(),
+        name: format!("{product_name} — incomplete installation"),
         path,
         status: status.to_owned(),
         receipt_path: None,

@@ -121,6 +121,22 @@ jobs:
           cargo clippy --locked --workspace --all-targets -- -D warnings 2>&1 | Tee-Object -FilePath target/ci-evidence/clippy.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # Chriz Easy IWD is this app built with tauri.iwd.conf.json. The Tauri CLI hands that
+      # configuration patch to the build as TAURI_CONFIG, from which build.rs selects the flavor.
+      - name: Test and lint the Chriz Easy IWD build
+        if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
+        run: |
+          $env:TAURI_CONFIG = Get-Content -LiteralPath app/src-tauri/tauri.iwd.conf.json -Raw
+          cargo test --locked -p chriz-bg-app --no-fail-fast 2>&1 | Tee-Object -FilePath target/ci-evidence/cargo-test-iwd.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --locked -p chriz-bg-app --all-targets -- -D warnings 2>&1 | Tee-Object -FilePath target/ci-evidence/clippy-iwd.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Push-Location app
+          npm.cmd run build -- --mode iwd 2>&1 | Tee-Object -FilePath ../target/ci-evidence/frontend-iwd.log
+          $cebgIwdBuild = $LASTEXITCODE
+          Pop-Location
+          if ($cebgIwdBuild -ne 0) { exit $cebgIwdBuild }
+
       - name: Test authoring and packaging tools
         if: ${{ !cancelled() && (steps.native_tests.outcome == 'success' || steps.native_tests.outcome == 'failure') }}
         run: |

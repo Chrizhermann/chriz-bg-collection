@@ -26,7 +26,7 @@ impl NativeBridge {
         }
         let registry = self.registry()?;
         let name = registry
-            .suggested_display_name()
+            .suggested_display_name_from(self.flavor.default_installation_name)
             .map_err(installation_name_error)?;
         let completed = registry.list().map_err(installation_name_error)?;
         let campaigns = registry.list_campaigns().map_err(installation_name_error)?;
@@ -43,7 +43,7 @@ impl NativeBridge {
     pub fn suggest_installation_name(&self) -> Result<InstallationNameResponse, CommandError> {
         let name = self
             .registry()?
-            .suggested_display_name()
+            .suggested_display_name_from(self.flavor.default_installation_name)
             .map_err(installation_name_error)?;
         Ok(InstallationNameResponse { name })
     }
@@ -231,7 +231,9 @@ mod installation_name_tests {
             bg_engine::lock::TargetLockNamespace::in_local_application_data(temp.path()).ok(),
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
-        );
+        )
+        // The Baldur's Gate app's names, also in the Icewind Dale build.
+        .with_flavor(&crate::flavor::BG);
         (temp, bridge, managed)
     }
 

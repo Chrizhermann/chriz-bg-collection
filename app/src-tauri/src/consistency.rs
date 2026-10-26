@@ -164,13 +164,16 @@ fn check_logs_with_patch_verifier(
     Ok(ConsistencySummary {
         state: if changed { "changed" } else { "matches" }.to_owned(),
         detail: if changed {
-            "The mod list has changed since CEBG installed this game."
+            format!(
+                "The mod list has changed since {} installed this game.",
+                crate::flavor::CURRENT.short_name
+            )
         } else if !patch_suffix.is_empty() {
             "The mod list matches the completed installation and its verified applied fixes."
+                .to_owned()
         } else {
-            "The mod list matches the completed installation."
-        }
-        .to_owned(),
+            "The mod list matches the completed installation.".to_owned()
+        },
         component_count: count,
         mod_count: mods.len(),
         components,

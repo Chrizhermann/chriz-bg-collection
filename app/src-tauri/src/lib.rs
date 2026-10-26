@@ -3,6 +3,7 @@ pub mod bridge;
 mod commands;
 pub mod consistency;
 pub mod error;
+pub mod flavor;
 mod installation_lookup_trace;
 mod removal_size;
 pub mod shortcut;
@@ -16,15 +17,34 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogResult};
 /// Runs the desktop shell with only the reviewed native command surface enabled.
 pub fn run() -> tauri::Result<()> {
     let startup_install_id = bridge::parse_startup_install_id(std::env::args_os());
-    let app = tauri::Builder::default()
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+    let product = flavor::CURRENT;
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    // An app without its own signed update feed never loads the updater.
+    if product.app_updates {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+    let app = builder
         .setup(move |app| {
+            // Folders, registry and texts follow the flavor compiled from this configuration.
+            let identifier = &app.config().identifier;
+            if identifier != product.identifier {
+                return Err(format!(
+                    "this {} build was configured as {identifier:?}, not {:?}",
+                    product.product_name, product.identifier
+                )
+                .into());
+            }
+            if product.standalone.is_some() {
+                // Every engine operation of this process then fails closed for a recipe whose
+                // records belong in another application data folder.
+                bg_engine::cli::set_application_data_directory(product.application_data_directory)
+                    .map_err(|error| error.to_string())?;
+            }
             let resource_dir = app.path().resource_dir()?;
             let cache_dir = app.path().app_cache_dir()?;
             if cfg!(feature = "installation-lookup-diagnostics") {
                 if let Some(window) = app.get_webview_window("main") {
-                    window.set_title("Chriz Easy BG — Diagnostics")?;
+                    window.set_title(&format!("{} — Diagnostics", product.product_name))?;
                 }
             }
             app.manage(BridgeState::new(
@@ -93,7 +113,7 @@ pub fn run() -> tauri::Result<()> {
         let state = app.state::<BridgeState>();
         if state.file_update_active() {
             api.prevent_close();
-            app.dialog().message("A file update or backup is still running. Keep CEBG open until it finishes.").title("Update in progress").show(|_| {});
+            app.dialog().message(format!("A file update or backup is still running. Keep {} open until it finishes.", flavor::CURRENT.short_name)).title("Update in progress").show(|_| {});
             return;
         }
         let Some(run_id) = state.active_run_id() else {
@@ -102,7 +122,7 @@ pub fn run() -> tauri::Result<()> {
         api.prevent_close();
         let app = app.clone();
         app.dialog()
-            .message("A build is active. Pause safely waits for the current mod and records a resumable checkpoint. Stop now force-terminates WeiDU and may require repair. CEBG will remain open while either action finishes.")
+            .message(format!("A build is active. Pause safely waits for the current mod and records a resumable checkpoint. Stop now force-terminates WeiDU and may require repair. {} will remain open while either action finishes.", flavor::CURRENT.short_name))
             .title("Installation still running")
             .buttons(MessageDialogButtons::YesNoCancelCustom(
                 "Pause safely".to_owned(),

@@ -15,8 +15,9 @@ use std::time::Duration;
 /// Argument with which the uninstaller asks the app to remove its data, followed by the bundle
 /// identifier whose folders the uninstaller would delete.
 pub const REMOVE_APPLICATION_DATA: &str = "--remove-application-data";
-/// The bundle identifier in `tauri.conf.json`, which names the application data folders.
-pub const IDENTIFIER: &str = "dev.chrizhermann.bgcollection";
+/// The bundle identifier of this app's Tauri configuration, which names the application data
+/// folders.
+pub const IDENTIFIER: &str = crate::flavor::CURRENT.identifier;
 /// Exit code: no application data folder remains.
 pub const REMOVED: i32 = 0;
 /// Exit code: some application data could not be removed; it is reported on standard error.
@@ -235,8 +236,12 @@ mod tests {
 
     #[test]
     fn the_identifier_is_the_bundle_identifier() {
-        let config: serde_json::Value =
-            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let config = if cfg!(chriz_flavor_iwd) {
+            include_str!("../tauri.iwd.conf.json")
+        } else {
+            include_str!("../tauri.conf.json")
+        };
+        let config: serde_json::Value = serde_json::from_str(config).unwrap();
         assert_eq!(config["identifier"], IDENTIFIER);
     }
 

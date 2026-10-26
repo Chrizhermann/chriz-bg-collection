@@ -113,6 +113,10 @@ fn acceptance_input(name: &str) -> String {
 // the feed request only and hands out the update without a timeout, so a slow setup download
 // that keeps progressing is not cut off by it.
 #[test]
+#[cfg_attr(
+    chriz_flavor_iwd,
+    ignore = "the Icewind Dale app has no updater configuration or plugin"
+)]
 fn a_slow_update_download_outlasts_the_feed_check_timeout() {
     let check_timeout = Duration::from_secs(1);
     let setup: Vec<u8> = (0..60_000).map(|index| (index % 251) as u8).collect();

@@ -22,6 +22,7 @@ impl NativeBridge {
         &self,
         install_id: &str,
     ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+        self.ensure_feature(self.flavor.mod_upgrades, "Installed mod updates")?;
         self.ensure_update_idle()?;
         let record = self.available_managed_install(install_id)?.record;
         let app_data = self
@@ -76,6 +77,7 @@ impl NativeBridge {
         backup_saves: bool,
         progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+        self.ensure_feature(self.flavor.mod_upgrades, "Installed mod updates")?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(install_id)?.record;
         let app_data = self
@@ -117,6 +119,7 @@ impl NativeBridge {
         undo: bool,
         progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::mod_upgrades::ModUpgradePreview, CommandError> {
+        self.ensure_feature(self.flavor.mod_upgrades, "Installed mod updates")?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(install_id)?.record;
         let app_data = self
@@ -156,6 +159,8 @@ mod mod_upgrade_bridge_tests {
             Arc::new(SystemBridgeEngine),
             Arc::new(SystemBridgeSystem),
         )
+        // Installed mod updates are a Baldur's Gate app feature, also in the Icewind Dale build.
+        .with_flavor(&crate::flavor::BG)
     }
 
     #[test]

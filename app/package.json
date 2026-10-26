@@ -9,6 +9,7 @@
     "test": "vitest",
     "build": "vite build",
     "check:recipe-defaults": "cd .. && python -m tools.evandra_defaults --recipe recipes/curated-full-current",
+    "check:iwd-recipe": "cd .. && cargo run --quiet --locked -p chriz-bg-engine --bin chriz-bg-install -- validate recipes/iwd-current --profile public-alpha",
     "tauri": "tauri",
     "check": "npm run typecheck && npm test -- --run && npm run build"
   },

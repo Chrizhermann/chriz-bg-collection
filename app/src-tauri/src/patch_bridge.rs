@@ -19,6 +19,7 @@ impl NativeBridge {
         &self,
         id: &str,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        self.ensure_feature(self.flavor.install_patches, "Game fixes")?;
         let record = self.available_managed_install(id)?.record;
         let app_data = self
             .app_data
@@ -57,6 +58,7 @@ impl NativeBridge {
         saves: bool,
         progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        self.ensure_feature(self.flavor.install_patches, "Game fixes")?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(id)?.record;
         let app_data = self
@@ -97,6 +99,7 @@ impl NativeBridge {
         undo: bool,
         progress: bg_engine::operation_progress::ProgressSink<'_>,
     ) -> Result<bg_engine::patches::PatchPreview, CommandError> {
+        self.ensure_feature(self.flavor.install_patches, "Game fixes")?;
         let _guard = self.begin_app_update()?;
         let record = self.available_managed_install(id)?.record;
         let app_data = self

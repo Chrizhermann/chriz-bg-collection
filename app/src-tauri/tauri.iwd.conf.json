@@ -1,0 +1,40 @@
+{
+  "productName": "Chriz Easy IWD",
+  "mainBinaryName": "chriz-easy-iwd",
+  "identifier": "dev.chrizhermann.iwdcollection",
+  "build": {
+    "beforeDevCommand": "npm run dev -- --mode iwd",
+    "beforeBuildCommand": "npm run check:iwd-recipe && npm run build -- --mode iwd"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Chriz Easy IWD",
+        "width": 1160,
+        "height": 760,
+        "minWidth": 640,
+        "minHeight": 520,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  },
+  "bundle": {
+    "createUpdaterArtifacts": false,
+    "resources": {
+      "../../manifest/collection.toml": null,
+      "../../manifest/release.json": null,
+      "../../manifest/artifacts/": null,
+      "../../manifest/mods/": null,
+      "../../manifest/presets/": null,
+      "../../manifest/game-builds/": null,
+      "../../manifest/releases/": null,
+      "../../recipes/curated-full-current/": null,
+      "../../recipes/iwd-current/": "recipes/iwd-current/"
+    }
+  },
+  "plugins": {
+    "updater": null
+  }
+}
