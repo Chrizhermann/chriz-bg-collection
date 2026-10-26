@@ -224,6 +224,36 @@ fn blocked_default_requires_an_explicit_omission_record() {
     assert!(has_rule(&findings, RULE_RELEASE_OMISSION));
 }
 
+/// A mod the release leaves off still describes what it installs when a player turns it on;
+/// those default and mandatory children are no omission of the release.
+#[test]
+fn children_of_a_mod_the_release_leaves_off_are_not_omissions() {
+    let mut manifest = recipe();
+    let parent = "mod:hidden-gameplay-options";
+    let children = manifest
+        .collection
+        .features
+        .iter()
+        .filter(|feature| {
+            feature.parent.as_deref() == Some(parent)
+                && feature.decision == bg_engine::manifest::Decision::Default
+        })
+        .count();
+    assert!(
+        children > 0,
+        "the fixture needs default children of {parent}"
+    );
+    manifest
+        .presets
+        .get_mut("chris-recommended")
+        .unwrap()
+        .selections
+        .insert(parent.to_owned(), "off".to_owned());
+
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(!has_rule(&findings, RULE_RELEASE_OMISSION), "{findings:#?}");
+}
+
 #[test]
 fn omitted_default_requires_christopher_approval_reason_and_visible_limitation() {
     for field in ["approved_by", "reason", "user_facing_limitation"] {

@@ -623,6 +623,11 @@ fn check_omission_coverage(
         if desired
             && !control.selected
             && matches!(control.decision, Decision::Default | Decision::Mandatory)
+            && !ancestor_left_off(
+                &control.id,
+                &features,
+                &evaluation.normalized_selection.features,
+            )
             && !omission_or_ancestor(&control.id, &features, &omissions)
         {
             release_error(
@@ -635,6 +640,30 @@ fn check_omission_coverage(
             );
         }
     }
+}
+
+/// Whether the release selection itself leaves off an ancestor of `feature_id`: an optional mod
+/// that is off by default, or a default one the preset turns off. A default or mandatory child of
+/// such an ancestor describes what that mod installs when a player turns it on, which the release
+/// never promised, so its absence is no omission. A mandatory ancestor is always promised.
+fn ancestor_left_off(
+    feature_id: &str,
+    features: &BTreeMap<&str, &Feature>,
+    desired: &BTreeMap<String, bool>,
+) -> bool {
+    let mut current = features
+        .get(feature_id)
+        .and_then(|feature| feature.parent.as_deref());
+    for _ in 0..features.len() {
+        let Some(feature) = current.and_then(|id| features.get(id)) else {
+            return false;
+        };
+        if feature.decision != Decision::Mandatory && desired.get(&feature.id) == Some(&false) {
+            return true;
+        }
+        current = feature.parent.as_deref();
+    }
+    false
 }
 
 fn omission_or_ancestor(
