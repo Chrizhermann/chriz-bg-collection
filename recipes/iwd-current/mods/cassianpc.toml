@@ -9,6 +9,7 @@ invocation_mode = "setup-name"
 [[components]]
 id = 0
 name = "Cassia NPC for Icewind Dale: Enhanced Edition"
+prompts = [{ expected_output = "[2] Darker blue by Takeda11", answer = { kind = "literal", value = { kind = "integer", value = 1 } } }]
 
 [[components]]
 id = 1
