@@ -70,7 +70,7 @@ args = [
 run_id = "eeex-bg2"
 mod_id = "eeex"
 phase = "main"
-components = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+components = [0, 1, 9, 2, 3, 4, 5, 6, 7, 8]
 args = []
 
 [[runs]]
@@ -371,7 +371,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340]
 args = []
 
 [[runs]]
@@ -960,6 +960,17 @@ components = [
   { run_id = "eeex-bg2", component = 7 },
   { run_id = "eeex-bg2", component = 8 },
 ]
+
+[[features]]
+id = "feature:eeex:component-9"
+title = "EEex attack info"
+description = "Show your chance to hit when you hover the attack cursor over a target. You can also switch it on or off later in EEex's in-game options; the change takes effect after a restart."
+category = "engine"
+decision = "optional"
+readiness = "ready"
+parent = "mod:eeex"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "eeex-bg2", component = 9 }]
 
 [[features]]
 id = "feature:eeexremote:component-0"
@@ -4597,6 +4608,16 @@ decision = "default"
 readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 332 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-340"
+title = "Chris Revisions: Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation"
+description = "Aid grants only hit points: 1d8 +1 per caster level (at most +10), and recasting replaces it. Luck lasts 15 rounds. Bless lasts 30 seconds plus 1 round per caster level (up to 150 seconds). Druids and rangers can cast Bless again, and druids Chaotic Commands. Prayer and Recitation no longer stack: Recitation's bonus or penalty replaces Prayer's of the same kind while it lasts."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 340 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:bard-spell-ceilings"

@@ -1,7 +1,11 @@
 # ARTISANSKITPACK_TWEAK — components
 
 Refreshed for the selected Artisan fork release **v4.81a-dev.85928f9-chriz.1**
-(`0798dc4ee3d09b5d97c56b69c80d9d2ac2317911`).
+(`0798dc4ee3d09b5d97c56b69c80d9d2ac2317911`). The recipes pin
+**v4.81a-dev.85928f9-chriz.2** (tag commit `d2a8d13`, pinned 2026-10-26): its tweak TP2
+declares the same 18 components in the same order and changes only its version. The
+sorcerer weapon fix (see [ARTISANSKITPACK](ARTISANSKITPACK.md)) also reaches `1010000`
+(Update EEex-based Weapon Usability Changes), which the collection does not offer.
 18 entries, 7 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

@@ -7,9 +7,11 @@ use bg_engine::recipe_view::{evaluate, evaluate_preset};
 use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
-const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.1";
-const ARTIFACT_SHA256: &str = "6d954fab27b86c4a94b8fc06b2f8b5a34b9ae0b3f09cb03ce38de1d5ce80a73b";
-const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.1";
+// chriz.2 (October 26 intake) restores the sorcerer class weapons; against chriz.1 the
+// three TP2s change only their VERSION, so components, order and this route are unchanged.
+const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.2";
+const ARTIFACT_SHA256: &str = "520ed7057cc62762db00c2e791dca80b571d390f2931cc2cfea5f9a3685f2d21";
+const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.2";
 
 const MAIN_AUTHORED: &[u32] = &[
     1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005,
@@ -50,7 +52,7 @@ fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
             "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-{RELEASE_TAG}.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(89_631_846));
+    assert_eq!(artifact.source.expected_length, Some(89_649_026));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

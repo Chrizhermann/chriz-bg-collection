@@ -1,7 +1,17 @@
 # ARTISANSKITPACK — components
 
 Listed at reference version **6.0**; refreshed for the selected fork release
-**chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`).
+**chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
+**v4.81a-dev.85928f9-chriz.2** (tag commit `d2a8d13`, pinned 2026-10-26), whose TP2
+declares the same 59 components as listed here. Against chriz.1 it only lets every
+sorcerer kit, the Dragon Disciple included, equip daggers, quarterstaves, darts and
+slings without proficiency pips again, like mages, when the EEex weapon usability is
+installed. Since upstream commit `7464043` the class weapon grants come from
+`WEAPPROF.2DA`, which has no sorcerer column; both the first-run generator and the
+"Update EEex-based Weapon Usability Changes" tweak now use the mage column for
+sorcerers. No component, order or decision changes. Still open in the fork: Eldritch
+Knight and Arcane Trickster sorcerers lose their extra kit weapons at every level-up
+until Kitpack's helper creature gives them back (after a reload or an area change).
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

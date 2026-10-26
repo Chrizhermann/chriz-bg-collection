@@ -3,8 +3,8 @@
 The reference install used **v0.11.0-alpha**. This catalog is refreshed to the current
 collection target, **v1.3.1** (reviewed 2026-10-18). v1.2's new core plus the eight old
 capabilities produce nine components that are all included whenever EEex is included.
-v1.3.0 added component `9`, the Attack Info module; its Decision is open, so it is not
-installed yet.
+v1.3.0 added component `9`, the Attack Info module: optional and off by default
+(Christopher, 2026-10-25).
 
 10 entries, 8 reference equivalents installed. ✓ = capability present in the reference.
 Subgroup = choose one.
@@ -20,19 +20,23 @@ Subgroup = choose one.
 | 6 | Enable time step module - Advance 1 game tick on keypress |  |  | ✓ | mandatory |
 | 7 | Enable timer module - Visual indicators for modal actions, contingencies, and spell/item cooldowns |  |  | ✓ | mandatory |
 | 8 | Experimental - Use LuaJIT (can help stuttering) |  |  | ✓ | mandatory |
-| 9 | Enable attack info module - Show to-hit chances when hovering attack cursor over target |  |  |  |  |
+| 9 | Enable attack info module - Show to-hit chances when hovering attack cursor over target |  |  |  | optional |
 
 ## Collection behavior
 
-- This deliberately selects upstream's **Experimental** tier: component `1` requires
-  `0`, and components `2` through `9` require `1`. Upstream's Full and Experimental
-  tiers include `9` since v1.3.0.
+- The mandatory set is upstream's **Experimental** tier without `9`: component `1`
+  requires `0`, and components `2` through `9` require `1`. Upstream's Full and
+  Experimental tiers include `9` since v1.3.0.
 - Component `8` retains upstream's experimental/crash warning, but it is also required
   by EEex Remote Console. Explain that tradeoff in the UI rather than silently omitting it.
 - Component `9` only sets `Enable=1` under `[Attack Info Module]` in `EEex.ini`. The
   module's code ships with component `1`, defaults to off, and players can switch it in
   EEex's in-game options (takes effect after a restart). The TP2 declares `9` directly
   after `1`, so a run that adds it must keep that native order (`0, 1, 9, 2…8`).
+- The collection offers `9` as an optional checkbox under EEex that starts unchecked
+  (Christopher, 2026-10-25), so the recommended preset leaves the module off. Ticking it
+  adds `9` to the existing `eeex-bg2` run in that native order; it requires the
+  mandatory components.
 - Start the game through `InfinityLoader.exe`/`EEex.exe`; do not launch the vanilla game
   executable after EEex is installed.
 

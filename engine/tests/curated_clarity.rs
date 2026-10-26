@@ -43,7 +43,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // The October 22 intake adds the 18 player voicepacks (component 0 each).
         // The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292.
         // The October 23 quest-mod intake removes the 16 formerly default BG1UB components.
-        466
+        // The October 26 intake adds default Rebalance Chris Revisions 340; EEex 9 is
+        // offered unchecked.
+        467
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -88,14 +90,14 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.3"
+        "chriz-bg-rebalance-0.8.5"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
                 100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420,
-                421, 310, 130, 220, 320, 331, 332,
+                421, 310, 130, 220, 320, 331, 332, 340,
             ][..]
         )
     );

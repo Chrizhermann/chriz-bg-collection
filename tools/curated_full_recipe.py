@@ -45,8 +45,9 @@ BG1NPC_NATIVE_ORDER = [
     240, 241, 150, 155, 160, 200,
 ]
 
-# Exact pinned Artisan v4.81a-dev.85928f9-chriz.1 and Randomiser v8.1.1 TP2 order, restricted
-# to offered choices. Re-audit a newly offered ID instead of guessing its position.
+# Exact pinned Artisan v4.81a-dev.85928f9-chriz.2 (same order as chriz.1) and Randomiser v8.1.1
+# TP2 order, restricted to offered choices. Re-audit a newly offered ID instead of guessing its
+# position.
 NATIVE_RUN_ORDERS = {
     "artisanskitpack-main-bg2": [
         1, 2, 20000, 20001, 8001, 8101, 8002, 8004,
@@ -67,8 +68,9 @@ NATIVE_RUN_ORDERS = {
     "chriz-bg-modpack-campaign-xp-bg2": [650, 651],
     # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
     # Verify new source pins with tools/check_native_component_order.py.
-    # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last.
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332],
+    # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last;
+    # v0.8.5 (October 25) declares Chris Revisions 340 after them.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],

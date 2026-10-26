@@ -24,7 +24,11 @@ Cross-repository status. Component detail stays in the sections below and in the
      v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
      fork `v4.81a-dev.85928f9-chriz.2` (sorcerer weapon fix, below), EEex `9` (Attack
      Info) optional and off, and maybe the Campaign Item Randomiser (below). Time Clocks is
-     likely in the release too (see Ready to start).
+     likely in the release too (see Ready to start). BG Rebalance, Spell Revisions,
+     BuffBot, the Kitpack and EEex `9` are pinned in both recipes on
+     `claude/pin-alpha22`, stacked on PRs #32 and #33 (fresh-download and native-order
+     evidence in `manifest/evidence/release-intake-20261026.toml`); Modpack alpha.14
+     follows there once it is published.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -41,7 +45,9 @@ Cross-repository status. Component detail stays in the sections below and in the
   ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)) were not an EEex fault: Modpack `650` caused them (see Modpack
   alpha.14 below); `650` works on v1.3.1 since alpha.13.
   - Attack Info `9` (Christopher, 2026-10-25): optional and off by default; players can
-    also switch it on in EEex's in-game options. It comes with the alpha.22 pin batch.
+    also switch it on in EEex's in-game options. `claude/pin-alpha22` offers it that way,
+    in EEex's own order directly after `1`; static checks only, not installed in a lab
+    yet.
   - Still open: how existing installations move from v1.2.0 (see Waiting for
     Christopher).
 - SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes since
@@ -68,8 +74,10 @@ Cross-repository status. Component detail stays in the sections below and in the
     before the scroll policy `430`.
   - Remote Console v0.2.1 carries the EEex v1.2/v1.3 guidance and the `START_SP` fix.
     Component `0` is unchanged and stays optional.
-  - BuffBot v1.11.0 (released on 2026-10-24) goes into the alpha.22 pin batch
-    (Christopher, 2026-10-25).
+  - BuffBot v1.11.0 (released on 2026-10-24) replaces v1.10.1 on `claude/pin-alpha22`
+    (alpha.22 pin batch, Christopher, 2026-10-25). Components `1` and `0`, their order and
+    the run position are unchanged. Not run in a collection lab yet; its own validation
+    ran without Modpack `430` (see Live/runtime acceptance).
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -126,7 +134,12 @@ Cross-repository status. Component detail stays in the sections below and in the
     which has no sorcerer column. The fix gives sorcerers the mage column.
   - Lab-verified on 2.7.3.0 with EEex v1.3.1: sorcerer, Dragon Disciple and mage, after
     joining, after a level-up and after a reload. Saves need no change.
-  - It goes into the alpha.22 pin batch. Christopher posts the upstream report himself.
+  - Pinned for all three Kitpack installers on `claude/pin-alpha22` (alpha.22 pin
+    batch); components, order and decisions are unchanged. Christopher posts the
+    upstream report himself.
+  - Existing installations get the fix only from the fork's `AKCB_SORCERER_WEAPONS`
+    tail patch (in the release archive), which CEBG does not install; how they get it
+    is open.
   - A separate, older Kitpack bug showed up in the same lab: Eldritch Knight and Arcane
     Trickster sorcerers lose their kit's extra weapons at every level-up until the next
     reload or area change. A fix is waiting for Christopher.
@@ -179,8 +192,10 @@ Cross-repository status. Component detail stays in the sections below and in the
     points, Luck lasts 90 seconds, Bless 30 seconds + 1 round per level, druids can cast
     Bless and Chaotic Commands again, and Prayer and Recitation no longer stack. Not run
     in a game yet. The collection offers `340` as a default (Christopher, 2026-10-25).
-  - The collection still pins Rebalance v0.8.3 and the fork's v4.21-chriz.5; the alpha.22
-    batch moves them to v0.8.5 and v4.21-chriz.7.
+  - Pinned in both recipes on `claude/pin-alpha22` (alpha.22 pin batch): Rebalance
+    v0.8.5, with `340` as a default at the end of its run, and the fork's v4.21-chriz.7
+    with `srcb-rr-compat` from the same release. All other components, decisions and
+    their order are unchanged.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
 - Icewind Dale: Enhanced Edition installer on the CEBG framework, for Christopher's
@@ -204,10 +219,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Remaining compatibility follow-ups from the October 8 owner audits
   (`docs/audits/2026-10-08-*.md` in BG Rebalance): the Modpack and SoD items and the
   forks audit. The BG Rebalance and Spell Revisions items are released (above).
-- Small documentation fixes: [BUFFBOT](BUFFBOT.md) still says the collection needs its
-  own BG1 start/save/reload smoke, which passed on 2026-10-18 (see Done); the Remote
-  Console README's EEex v1.3.1 lab note still says "this branch". Also open: whether
-  Remote Console gets GitHub releases (it has tags only).
+- Small documentation fixes: the Remote Console README's EEex v1.3.1 lab note still says
+  "this branch". Also open: whether Remote Console gets GitHub releases (it has tags
+  only).
 
 **Waiting for Christopher**
 
@@ -215,7 +229,8 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Modpack `430`: whether the restart box may appear while the game starts, before the
   main menu, or must be shown on the visible main menu (a follow-up change).
 - Artisan's Kitpack fork: whether to fix the Eldritch Knight / Arcane Trickster extra
-  weapons in a next fork version, and whether the upstream report mentions them.
+  weapons in a next fork version, and whether the upstream report mentions them. Also
+  how existing installations get the sorcerer weapon fix (the fork's tail patch, above).
 - EEex v1.3.1: how existing installations move from v1.2.0.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
@@ -388,7 +403,7 @@ content, evaluated component by component (keep, fix or extend).
   Keep `30001`, `300010` and `8102` unavailable until priest delivery is redesigned.
   Latent: NPC `10004` does not require main `10003` (unselectable today because SR blocks
   it).
-- [ ] Fix legacy EEex dependency checks: Artisan (`v4.81a-dev.85928f9-chriz.1`), Bardic
+- [ ] Fix legacy EEex dependency checks: Artisan (`v4.81a-dev.85928f9-chriz.2`), Bardic
   Wonders (`v2.9c-balance.8`) and Bubb's Spell Menu still test EEex component `0`, which
   is only Quick Menu Core since EEex v1.2 (unchanged in v1.3.1). Require main component `1` or use a
   version-independent capability check; the mandatory EEex `0`–`8` only masks this.
@@ -462,14 +477,19 @@ content, evaluated component by component (keep, fix or extend).
   statically.)
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
-- [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed (see Done). Open: toggle
+- [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed with v1.10.0 (see
+  Done); the pinned v1.11.0 has not run in a collection lab. Open: toggle
   stances with opcode 214 variants count as buffs, so a new party's Long preset enables
   Artisan's Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
   ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)). The combat-stop notice
-  fix in the pinned v1.10.1 ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
+  fix (since v1.10.1, [bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
   was checked in a lab through the engine's text object only; nobody has seen the notice
-  on screen in a real combat stop yet.
+  on screen in a real combat stop yet. v1.11.0's own EET/SR/SCS/Modpack labs ran with
+  Modpack `430` uninstalled, and its notes do not accept the configuration with `430`
+  yet, which the recommended preset installs: check BuffBot with `430` in the
+  Recommended lab run. Also check there its new column headers and control artwork, and
+  that no other mod in the stack writes its PVRZ pages `MOS88809`–`MOS88993`.
 - [ ] Game-log switch (see Done): no game has started with it yet. In a lab, turn it on
   in CEBG, start and quit the game twice with **Play**, and check that
   `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first

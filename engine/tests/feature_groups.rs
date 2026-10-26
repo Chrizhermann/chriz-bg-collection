@@ -295,18 +295,26 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // items): only the collection digests change, in those features' category and, in the
     // curated recipe, the generated group label; the previous collection digests were manifest
     // da00f885…, curated 122fb040….
+    // Re-pinned on October 26 for the alpha.22 pin batch: Rebalance v0.8.5 with default Chris
+    // Revisions 340, Spell Revisions v4.21-chriz.7 with its SR/RR package, BuffBot v1.11.0 and
+    // Artisan's Kitpack chriz.2, plus EEex Attack Info 9, offered unchecked. With 340 and 9
+    // removed (features, run components and the preset entry), the collection and selection
+    // digests return in both recipes, and the plans differ from the previous ones only in the
+    // ten updated runs' artifact ids (manifest 12cbbbb6…, curated 26fb65ca…); with the previous
+    // pins restored as well, all six previous digests return (manifest d98f3592…, 87b3d5fc…,
+    // f1ae4719…; curated 7175787c…, 18657bda…, b8c01c67…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "d98f35929b27a989f788f6979df4c76922b15a3aaa3c05ba228c4d85e1a1bc8e",
-            "87b3d5fc47ca3934a6376b34ec0b758555f961a46ca1f4bbfbcdb6a20256b6f8",
-            "f1ae47194d6f404aa8a7bdf6e051d749f64930762b1fc5f12b85c86649bee69e",
+            "b1f25835104c02f867ca76e8aa6a12f30fd83db2b85e2b08cec625fae31f3269",
+            "c9354b831e85271e7267824c635ba4758671c01b5f7c68c2d8926cbd887bd3c3",
+            "240a09c51f206c2c3d24c345d927a2de702ccd68cc063d1526a293fe2bb3038c",
         ),
         (
             "../recipes/curated-full-current",
-            "7175787c0980ddcba035c888cae8cb7f8c4a5f8a4cfbfd0dde12ab054fdb2fbe",
-            "18657bda528a17e6d456134890dcd9cf3f5f84565738e60b0fcf50a8320280c6",
-            "b8c01c679a363c6e3c2b20df21946a76464613a49ac7812ff2f3976881804c79",
+            "c9107bcb55ae77f74459573ecc7ec8cefd87d096bc7174d5ea4edaf9de84254f",
+            "d63e6c3b3e50032fd70679abe1a199ae06778db4e690a82dd7e932a6eadf8f8e",
+            "fb2f26bde71ab29bffcdc3bd65f963c87694d6d3b9839b0033cf3bcac81c3742",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

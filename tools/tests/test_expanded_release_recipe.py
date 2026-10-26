@@ -126,8 +126,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292 to the SoD run.
         # The October 23 quest-mod intake makes BG1UB optional and unselected, which removes
         # its 16 former defaults and the bg1ub-bg1 run; the new quest mods are unchecked.
-        self.assertEqual(len(without_controls), 465)
-        self.assertEqual(len(selected), 466)
+        # The October 26 intake adds default Chris Revisions 340 to the Rebalance run;
+        # EEex Attack Info 9 is offered unchecked.
+        self.assertEqual(len(without_controls), 466)
+        self.assertEqual(len(selected), 467)
         self.assertEqual(len({run for run, _ in selected}), 69)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -224,7 +226,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 466)
+        self.assertEqual(len(baseline), 467)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -244,7 +246,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_including_default_bard_ceilings(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertIn((run_id, component), self.selected())

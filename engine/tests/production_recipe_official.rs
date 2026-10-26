@@ -8,6 +8,10 @@ use bg_engine::recipe_view::evaluate_preset;
 use bg_engine::Manifest;
 
 const EEEX_COMPONENTS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8];
+// October 26: Attack Info 9 is offered unchecked (Christopher, 2026-10-25). The run lists it
+// in its TP2 declaration position after 1; the mod's component list adds it at the end.
+const EEEX_MENU_COMPONENTS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const EEEX_RUN_COMPONENTS: &[u32] = &[0, 1, 9, 2, 3, 4, 5, 6, 7, 8];
 const RR_AUTHORED_COMPONENTS: &[u32] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 999];
 const RR_DEFAULT_COMPONENTS: &[u32] = &[0, 3, 7, 8, 11, 12, 999];
 const UB_AUTHORED_COMPONENTS: &[u32] = &[
@@ -328,7 +332,7 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
 fn declares_the_reviewed_component_menus_and_late_hgo_run() {
     let manifest = recipe();
     let expected = BTreeMap::from([
-        ("eeex", EEEX_COMPONENTS),
+        ("eeex", EEEX_MENU_COMPONENTS),
         ("hidden-gameplay-options", HGO_COMPONENTS),
         ("rr", RR_AUTHORED_COMPONENTS),
         ("fade", &[0, 2][..]),
@@ -482,7 +486,7 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
         .iter()
         .all(|run| run.phase == Phase::Main));
     assert_eq!(manifest.collection.runs[46].run_id, "eet-end-bg2");
-    assert_eq!(manifest.collection.runs[6].components, EEEX_COMPONENTS);
+    assert_eq!(manifest.collection.runs[6].components, EEEX_RUN_COMPONENTS);
     assert_eq!(
         manifest.collection.runs[19].components,
         RR_AUTHORED_COMPONENTS

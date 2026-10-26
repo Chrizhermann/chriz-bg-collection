@@ -1,5 +1,5 @@
 id = "spell-rev"
-artifact_id = "spell-revisions-4.21-chriz.5"
+artifact_id = "spell-revisions-4.21-chriz.7"
 name = "Spell Revisions"
 tp2 = "spell_rev/setup-spell_rev.tp2"
 language = 0

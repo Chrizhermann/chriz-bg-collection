@@ -213,10 +213,10 @@ fn freezes_the_reviewed_release_sources() {
     for (mod_id, artifact_id, reference, length, sha256) in [
         (
             "srcb-rr-compat",
-            "srcb-rr-compat-4.21-chriz.5",
-            "v4.21-chriz.5",
-            1_450_569,
-            "c7958b467f9197cbe364791796e15678b95f11020d27b14e45ed471b0ff6968d",
+            "srcb-rr-compat-4.21-chriz.7",
+            "v4.21-chriz.7",
+            1_455_556,
+            "705289651b9953ae77889e9fd2f3d87a968f425ca721c1db5484ab928b02f1cb",
         ),
         (
             "chriz-bg-modpack",
@@ -234,10 +234,10 @@ fn freezes_the_reviewed_release_sources() {
         ),
         (
             "spell-rev",
-            "spell-revisions-4.21-chriz.5",
-            "v4.21-chriz.5",
-            10_244_415,
-            "fdbb5cf9c48ece39f051b7120c537f530eb21ecedb780aa65e5ebda2e1191075",
+            "spell-revisions-4.21-chriz.7",
+            "v4.21-chriz.7",
+            10_252_628,
+            "613fca7d637b9aa5b30ec42e98783c56527c4423118e397f4837336310810d89",
         ),
     ] {
         assert_eq!(manifest.mods[mod_id].artifact_id, artifact_id);

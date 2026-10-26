@@ -14,10 +14,12 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-The recipe pins **v0.8.3** (published 2026-10-14), which adds potion uniqueness
-`330`/`331` and the Heroism family `332` (see below).
+The recipe pins **v0.8.5** (published 2026-10-25), which adds Chris Revisions `340`
+(see below). v0.8.3 added potion uniqueness `330`/`331` and the Heroism family `332`;
+v0.8.4 (2026-10-23) released the October 8 compatibility follow-ups for existing
+components (see below).
 
-32 curated entries, 23 recommended selections for the next release. Bard spell-level
+33 curated entries, 24 recommended selections for the next release. Bard spell-level
 ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
 2026-10-13)** (see below).
 ✓ = selected and receipt-verified in the isolated
@@ -77,6 +79,7 @@ release-candidate provenance.
 | 330 | Potion uniqueness: all temporary potion types | Cross-cutting audits | Potion uniqueness |  | optional |
 | 331 | Potion uniqueness: all temporary potion types except Potions of Genius | Cross-cutting audits | Potion uniqueness |  | default |
 | 332 | Heroism family: Heroism, Greater Heroism and the Potion of Heroism do not combine | Cross-cutting audits |  |  | default |
+| 340 | Chris Revisions: Christopher's spell balance changes (Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation) | Spell balance |  |  | default |
 
 ## Atomic Tempus UI behavior
 
@@ -138,6 +141,48 @@ release-candidate provenance.
   included; they run at the end of the existing Rebalance run in TP2 order
   (`..., 320, 330/331, 332`). Later runs (Modpack, Safana, Klatu, BuffBot, EEex Remote)
   add no potion types. Effects already active in an existing save can stack once more.
+
+## Chris Revisions — v0.8.5 (Christopher's decision, 2026-10-25)
+
+- `340` bundles Christopher's spell balance changes of 2026-10-23 and 2026-10-25
+  ([BG Rebalance PR #13](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/13)),
+  with or without Spell Revisions:
+  - Aid grants 1d8 hit points +1 per caster level (at most +10) for one turn per level
+    and no longer gives +1 to attack rolls, damage and saving throws; casting it again
+    replaces the bonus. Exact copies, such as Bardic Wonders' Troubadour Aid, change
+    with it.
+  - Luck and its exact copies last 15 rounds; the bonuses are unchanged.
+  - Bless lasts 30 seconds + 1 round per caster level (36 to 150 seconds). Exact copies
+    and SCS's instant prebuff copy change with it. Spell Revisions' druid exclusion is
+    removed, so druids and rangers can cast Bless again.
+  - Chaotic Commands: only Spell Revisions' druid exclusion is removed, so druids can
+    cast it again.
+  - Prayer and Recitation no longer stack: on each creature, Recitation's bonus or
+    penalty replaces Prayer's of the same kind and blocks it while it lasts. Bless and
+    Chant are unchanged.
+  - A part whose spells are missing is skipped; a part that cannot be changed safely is
+    left unchanged with an installer warning.
+- **`340` is default** in the recommended preset (Christopher, 2026-10-25) and can be
+  deselected. Its TP2 requires BG2:EE or EET only; it needs no EEex.
+- The TP2 declares `340` last, after `332`, so it runs at the end of the existing
+  post-EET-end Rebalance run (`..., 330/331, 332, 340`): after SCS, Spell Revisions and
+  Bardic Wonders, whose copies it changes, and before Spell Revisions' NPC spellbook
+  pass `60` and Modpack's scroll policy `430`.
+- Not run in a game yet; the owner's checks are automated WeiDU tests.
+
+## v0.8.4 compatibility follow-ups
+
+v0.8.4 (2026-10-23) released the October 8 compatibility audit's follow-ups for
+components the collection already offers; no component was added or removed and the TP2
+order is unchanged. `130`, `220`, `301`, `320`, `400`, `401`–`403` and `404` now keep
+other mods' changes to the resources they patch and find their targets by what they do;
+where a change cannot be applied correctly, the installation now stops with the reason
+instead of guessing. `220` and SR's Haste or Improved Haste no longer stack when the
+spell is cast first, and `310` leaves short full-immunity windows, such as SCS's Divine
+Protection, uncapped. These are fixes of the existing defaults, so no decision changes.
+The owner's 2.7.3.0 lab of 2026-10-20 ran `130`, `220`, `301`, `320` and `404` in game;
+`220`'s fix was then checked on patched copies of the two SR spells, and `400`–`403`
+were not run in game.
 
 ## Emotion — optional for the next release
 

@@ -1,7 +1,10 @@
 # ARTISANSKITPACK_NPC — components
 
 Refreshed for the selected Artisan fork release **chriz-v1.3.1**
-(`ac718614991e34b4f720807bec5edc96266c6c5e`).
+(`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
+**v4.81a-dev.85928f9-chriz.2** (tag commit `d2a8d13`, pinned 2026-10-26), whose NPC TP2
+declares the same 18 components in the same order as chriz.1; only its version changed
+(the sorcerer weapon fix is in the main installer, see [ARTISANSKITPACK](ARTISANSKITPACK.md)).
 18 entries, 6 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

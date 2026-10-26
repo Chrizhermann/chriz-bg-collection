@@ -292,7 +292,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292 to both.
     // The October 23 quest-mod intake makes BG1 Unfinished Business optional and
     // unselected, which removes its 16 former defaults from both plans.
-    // This 368-component base plan is distinct from the 466-component curated plan.
+    // The October 26 intake adds default Rebalance Chris Revisions 340 to both plans;
+    // EEex Attack Info 9 is offered unchecked.
+    // This 369-component base plan is distinct from the 467-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -300,7 +302,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        368
+        369
     );
 }
 

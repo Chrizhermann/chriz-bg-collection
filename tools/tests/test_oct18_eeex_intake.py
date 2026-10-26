@@ -64,7 +64,7 @@ class Oct18EeexIntakeTests(unittest.TestCase):
                 # v1.2.0 stays available for installations made from earlier recipes.
                 self.assertTrue((directory / "artifacts/eeex-1.2.0.toml").is_file())
 
-    def test_runs_keep_the_native_order_and_leave_attack_info_out(self):
+    def test_runs_keep_the_native_order_and_attack_info_stays_out_of_recommended(self):
         native = self.record["native_components"]
         # Attack Info 9 is declared right after the main component.
         self.assertEqual(native, [0, 1, 9, 2, 3, 4, 5, 6, 7, 8])
@@ -74,23 +74,27 @@ class Oct18EeexIntakeTests(unittest.TestCase):
                 (run,) = [run for run in collection["runs"] if run["mod_id"] == "eeex"]
                 self.assertEqual(run["run_id"], EEEX_RUN)
                 self.assertEqual(run["components"], [c for c in native if c in run["components"]])
-                self.assertEqual(run["components"], [0, 1, 2, 3, 4, 5, 6, 7, 8])
+                # Since the October 26 intake (test_oct26_alpha22_pins_recipe) the run
+                # offers 9 in its native position.
+                self.assertEqual(run["components"], native)
                 features = {feature["id"]: feature for feature in collection["features"]}
                 self.assertEqual(
                     {ref["component"] for ref in features[EEEX_CORE]["components"]}, set(range(9)))
-                offered = {
-                    ref["component"]
+                offered_by = {
+                    feature["id"]
                     for feature in collection["features"]
                     for ref in feature.get("components", [])
-                    if ref["run_id"] == EEEX_RUN
+                    if ref["run_id"] == EEEX_RUN and ref["component"] == 9
                 }
-                self.assertNotIn(9, offered)
+                self.assertEqual(offered_by, {"feature:eeex:component-9"})
                 state = _effective_features(collection, preset)
                 self.assertTrue(state[EEEX_CORE])
+                self.assertFalse(state["feature:eeex:component-9"])
 
-    def test_catalog_lists_attack_info_without_a_decision(self):
+    def test_catalog_lists_attack_info_as_optional(self):
         rows = {RowKey(row.catalog, row.component_id): row for row in load_catalogs(ROOT / "docs/curation/components")}
-        self.assertEqual(rows[RowKey("EEEX", 9)].decision, Decision.EXCLUDED)
+        # Christopher, 2026-10-25: optional and off by default (it had no Decision before).
+        self.assertEqual(rows[RowKey("EEEX", 9)].decision, Decision.OPTIONAL)
         self.assertFalse(rows[RowKey("EEEX", 9)].installed)
         for component in range(9):
             self.assertEqual(rows[RowKey("EEEX", component)].decision, Decision.MANDATORY)

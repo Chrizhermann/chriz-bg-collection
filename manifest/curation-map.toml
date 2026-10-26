@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1336
+expected_rows = 1337
 expected_choice_groups = 87
 expected_optional_none_groups = 30
 expected_fixed_groups = 11
@@ -215,7 +215,7 @@ excluded = [10]
 
 [[catalogs]]
 id = "EEEX"
-excluded = [9]
+excluded = []
 
 [[catalogs]]
 id = "EEEXREMOTE"
@@ -434,6 +434,12 @@ parent = "mod:dlcmerger"
 id = "feature:eeex:mandatory-components"
 kind = "feature"
 rows = ["EEEX:0", "EEEX:1", "EEEX:2", "EEEX:3", "EEEX:4", "EEEX:5", "EEEX:6", "EEEX:7", "EEEX:8"]
+parent = "mod:eeex"
+
+[[targets]]
+id = "feature:eeex:component-9"
+kind = "feature"
+rows = ["EEEX:9"]
 parent = "mod:eeex"
 
 [[targets]]
@@ -4030,6 +4036,12 @@ parent = "mod:chriz-bg-rebalance"
 id = "feature:chriz-bg-rebalance:component-332"
 kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:332"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-340"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:340"]
 parent = "mod:chriz-bg-rebalance"
 
 [[targets]]

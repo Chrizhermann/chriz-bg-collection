@@ -1,0 +1,152 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-26"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "The alpha.22 pin batch: BG Rebalance v0.8.5 (published 2026-10-25, replaces v0.8.3), the Spell Revisions fork v4.21-chriz.7 with its SR/RR compatibility package (2026-10-24, replace v4.21-chriz.5), BuffBot v1.11.0 (2026-10-24, replaces v1.10.1) and the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.2 (2026-10-26, replaces chriz.1 for the main, NPC and tweak installers), all normal GitHub releases, in both recipe profiles. Each release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset, and the native TP2 declaration order matches both recipes except where a record says otherwise. Archive layouts and limits are unchanged from the previous pins. EEex is not re-downloaded: its v1.3.1 pin is unchanged, and component 9, which now joins the eeex-bg2 run as an option, is placed by the declaration-order audit in release-intake-20261018.toml (the order checker refuses EEex's TP2 by design). This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
+
+# Against v0.8.3 the TP2 adds Chris Revisions 340, declared last after 332, and changes
+# its VERSION; v0.8.4 changed how 130, 220, 301, 310, 320 and 400-404 apply their
+# changes, without adding a component or changing the order. The collection offers 340
+# as a default (Christopher, 2026-10-25).
+[[artifacts]]
+mod_id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.8.5"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.8.5"
+source_commit = "3bb48816af7f7eb21eab58e8c99a005f4d3d4c24"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.5/chriz-bg-rebalance-v0.8.5-windows.zip"
+actual_length = 1800408
+actual_sha256 = "48e12ed836537982da4fa421d0b1d627eda423c8dfa56977071823a52abed244"
+tp2_sha256 = "21c60bf11654610e6f25b62e470780f3c741cef82dee1badb5a453af44130618"
+native_components = [
+  100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 402, 403, 404, 405, 406,
+  407, 409, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# v4.21-chriz.6 changes how 80/81 find Lightning Bolt's damage halves; v4.21-chriz.7
+# changes only notes and the VERSION line. The main component, 60 and the component
+# list are unchanged.
+[[artifacts]]
+mod_id = "spell-rev"
+artifact_id = "spell-revisions-4.21-chriz.7"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.21-chriz.7"
+source_commit = "897f3b2694fa83c952ef864cfeac60d2d23b2a93"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/spell_rev-v4-21-chriz-7.zip"
+actual_length = 10252628
+actual_sha256 = "613fca7d637b9aa5b30ec42e98783c56527c4423118e397f4837336310810d89"
+tp2_sha256 = "3fa0efcf641a5a8c67fb86f223485c15c262fde2adf355151b2a0e2708ea88fa"
+native_components = [0, 10, 20, 30, 55, 60, 65, 70, 80, 81]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# Same release as Spell Revisions. v4.21-chriz.6 corrects component 0 (Rogue
+# Rebalancing's level-5 Chaos copies become level-5 spells); 0 stays the only component.
+[[artifacts]]
+mod_id = "srcb-rr-compat"
+artifact_id = "srcb-rr-compat-4.21-chriz.7"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.21-chriz.7"
+source_commit = "897f3b2694fa83c952ef864cfeac60d2d23b2a93"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/SRCB_RR_COMPAT-v4-21-chriz-7.zip"
+actual_length = 1455556
+actual_sha256 = "705289651b9953ae77889e9fd2f3d87a968f425ca721c1db5484ab928b02f1cb"
+tp2_sha256 = "4a1b0d4a02f2f0ada50ad3f9cd335182f5604393166f89bcc4dee31d7cff475c"
+native_components = [0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# v1.11.0 is a lightweight tag. Against v1.10.1 the TP2 changes its VERSION and copies
+# BfBotFst.lua and the buffbot/visual artwork (BAMs with PVRZ pages MOS88809-MOS88993);
+# components 1 and 0 are unchanged.
+[[artifacts]]
+mod_id = "buffbot"
+artifact_id = "buffbot-1.11.0"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.11.0"
+source_commit = "66f684045942f863ce2f550bbca8a6c1727a1765"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.11.0/buffbot-v1.11.0.zip"
+actual_length = 5879508
+actual_sha256 = "c147919db1e6a41c606f04dd26fc3fd246d7ac6b63339c0c2069fc4a66c76a0d"
+tp2_sha256 = "ad52288912834b19374d52e277ee0433cfe33d122768fe7f8fa6b5c9058d251c"
+native_components = [1, 0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# One archive serves the main, NPC and tweak installers. Against chriz.1 all three TP2s
+# change only VERSION; the sorcerer weapon fix is in the main installer's EEex weapon
+# usability libraries. Components and declaration order are unchanged.
+# The curated profile's main run follows this native order. The manifest profile's main
+# run keeps the authored order it has had since chriz.1 (10002 before 10001, 1100 after
+# 1009), which the order checker rejects; this intake does not change it, and
+# engine/tests/production_recipe_artisan.rs pins it. native_order_recipe_profiles names
+# the profiles whose runs were checked against this record.
+[[artifacts]]
+mod_id = "artisanskitpack"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+native_order_recipe_profiles = ["recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.2"
+source_commit = "d2a8d13d80130f24ed798b098cfbdb5b46596b0e"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.2/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.2.zip"
+actual_length = 89649026
+actual_sha256 = "520ed7057cc62762db00c2e791dca80b571d390f2931cc2cfea5f9a3685f2d21"
+tp2_sha256 = "cdbd10031332d66fc9cecaad24d32a9f40c1daefab6a4e3f7526f008de283a46"
+native_components = [
+  1, 2, 3, 20000, 20001, 8001, 8101, 8102, 8002, 8003, 8004, 10001, 10002, 10003, 10004, 1100,
+  1003, 1006, 1004, 1005, 1007, 1002, 1000, 1001, 1008, 1009, 1010, 2000, 2010, 2011, 2012, 2002,
+  2003, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5300, 5100, 5110, 5111, 5200, 5001, 5002,
+  7000, 7004, 7007, 7006, 7008, 7001, 7002, 7003, 7005, 9001, 30001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "artisanskitpack-npc"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.2"
+source_commit = "d2a8d13d80130f24ed798b098cfbdb5b46596b0e"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.2/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.2.zip"
+actual_length = 89649026
+actual_sha256 = "520ed7057cc62762db00c2e791dca80b571d390f2931cc2cfea5f9a3685f2d21"
+tp2_sha256 = "5052bf451970e828b7000d567f6dddaef0e456c2844941f3d68e1caa353acf32"
+native_components = [
+  1101, 1102, 1103, 1104, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004,
+  20002, 200010, 99001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+[[artifacts]]
+mod_id = "artisanskitpack-tweak"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.2"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.2"
+source_commit = "d2a8d13d80130f24ed798b098cfbdb5b46596b0e"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.2/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.2.zip"
+actual_length = 89649026
+actual_sha256 = "520ed7057cc62762db00c2e791dca80b571d390f2931cc2cfea5f9a3685f2d21"
+tp2_sha256 = "6a614fe11261a2fad527b39a6f75725a1cb54abc78e33c49dacb39f4fdd59506"
+native_components = [
+  51010, 20101, 12012, 20021, 3210, 1209, 1110, 3202, 3302, 7203, 8204, 110000, 1, 2, 300010,
+  1010000, 1020000, 2000001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
