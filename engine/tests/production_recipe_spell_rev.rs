@@ -59,7 +59,7 @@ fn freezes_the_reviewed_spell_revisions_successor_release() {
 fn authors_the_exact_spell_revisions_menu_and_split_run_order() {
     let manifest = recipe();
     let installer = &manifest.mods["spell-rev"];
-    assert_eq!(installer.artifact_id, "spell-revisions-4.21-chriz.5");
+    assert_eq!(installer.artifact_id, "spell-revisions-4.21-chriz.7");
     assert_eq!(installer.tp2, "spell_rev/setup-spell_rev.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");

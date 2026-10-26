@@ -295,18 +295,33 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // items): only the collection digests change, in those features' category and, in the
     // curated recipe, the generated group label; the previous collection digests were manifest
     // da00f885…, curated 122fb040….
+    // Re-pinned on October 26 for the alpha.22 pin batch: Rebalance v0.8.5 with default Chris
+    // Revisions 340, Spell Revisions v4.21-chriz.7 with its SR/RR package, BuffBot v1.11.0 and
+    // Artisan's Kitpack chriz.3, plus EEex Attack Info 9, offered unchecked. With 340 and 9
+    // removed (features, run components and the preset entry), the collection and selection
+    // digests return in both recipes, and the plans differ from the previous ones only in the
+    // ten updated runs' artifact ids (manifest 2c107ce8…, curated 76003acc…); with the previous
+    // pins restored as well, all six previous digests return (manifest d98f3592…, 87b3d5fc…,
+    // f1ae4719…; curated 7175787c…, 18657bda…, b8c01c67…).
+    // Re-pinned on October 26 for Modpack alpha.14 in the same batch, with alpha.13's default
+    // 135 and 460 and optional 652 (Christopher, 2026-10-25). With those three removed
+    // (features, run components, preset entries and 651's conflict edge), the collection and
+    // selection digests return in both recipes, and the plans differ only in the six selected
+    // Modpack runs' artifact ids (manifest 27ade74c…, curated 44268f93…); with alpha.13
+    // restored as well, all six previous digests return (manifest b1f25835…, c9354b83…,
+    // e9ca1fbd…; curated c9107bcb…, d63e6c3b…, 8f5ae74a…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "d98f35929b27a989f788f6979df4c76922b15a3aaa3c05ba228c4d85e1a1bc8e",
-            "87b3d5fc47ca3934a6376b34ec0b758555f961a46ca1f4bbfbcdb6a20256b6f8",
-            "f1ae47194d6f404aa8a7bdf6e051d749f64930762b1fc5f12b85c86649bee69e",
+            "ea31c07f2cd0d050fcf590cbf601b3fd1a189cf5b35856895f87ad012eb340d4",
+            "d27b9fa5ffe8046cf0f53dcf73cb2355226da536eb47504b0c54cf85968df49e",
+            "acea4e17a537e10de70bf41860eb90df1fe744a88507f5415084cc111eee638b",
         ),
         (
             "../recipes/curated-full-current",
-            "7175787c0980ddcba035c888cae8cb7f8c4a5f8a4cfbfd0dde12ab054fdb2fbe",
-            "18657bda528a17e6d456134890dcd9cf3f5f84565738e60b0fcf50a8320280c6",
-            "b8c01c679a363c6e3c2b20df21946a76464613a49ac7812ff2f3976881804c79",
+            "bfa199cc50d38892d273ab6f05c4e6e673fa47f6c4393fa91c08ec103ec8fc63",
+            "90d4ffb4ea605c241f2f8834e32bf20ae85b6c77e1d6b22da9e50f7240c019dd",
+            "9e88b9c524cd2e90f455ee18a705dc3162898598a6b96382fa5c486ef1e773b8",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

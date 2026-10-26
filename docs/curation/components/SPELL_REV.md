@@ -1,8 +1,14 @@
 # SPELL_REV — components
 
 The captured install used **v4.19**. The production recipe now pins the immutable
-**v4.21-chriz.5** successor release, including the approved Lightning Bolt alternatives
-and the reviewed protection-refresh and hidden-subspell repairs.
+**v4.21-chriz.7** successor release (tag commit `897f3b2`, pinned 2026-10-26), including
+the approved Lightning Bolt alternatives and the reviewed protection-refresh and
+hidden-subspell repairs. Against v4.21-chriz.5, v4.21-chriz.6 (2026-10-23) makes the
+Lightning Bolt options `80`/`81` find SR's two damage halves by meaning, so damage
+another mod adds to the bolt is kept instead of stopping the installation, and corrects
+the [SR/RR compatibility installer](SRCB_RR_COMPAT.md). v4.21-chriz.7 (2026-10-24)
+changes only notes and the version label. The main component, `60` and the component
+list are unchanged, so no decision changes.
 10 entries, 7 historically installed. ✓ = installed. Subgroup = choose one.
 
 ## UI/dependency notes

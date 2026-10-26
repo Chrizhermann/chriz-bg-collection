@@ -58,7 +58,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         run_id = "chriz-bg-rebalance-bg2"
         runs = tomllib.loads(collection)["runs"]
         run = next(run for run in runs if run["run_id"] == run_id)
-        self.assertEqual(run["components"][-11:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332])
+        self.assertEqual(run["components"][-12:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340])
         # Regression: sorting numerical IDs recreated the September 30 failure.
         sorted_source = collection.replace(
             f"components = {run['components']}",
@@ -281,7 +281,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.14")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -380,7 +380,16 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # optional and off; with BG1UB restored and the quest mods removed, the
                 # SoD Remix digest
                 # 6eca33a3b76bb009637b7c006cf6f36261f03fd7b567f8e419a36195f4537e25 returns.
-                "e36aa8a8b61479a3d64eb9558e2ef6117fae96f5924e092ca358ed23fac0549f",
+                # October 26 intake (alpha.22 pin batch): default Chris Revisions 340 at the
+                # end of the Rebalance run and optional, unchecked EEex Attack Info 9 after 1
+                # in the EEex run; without both the quest-mod digest
+                # e36aa8a8b61479a3d64eb9558e2ef6117fae96f5924e092ca358ed23fac0549f returns.
+                # October 26, Modpack alpha.14 pin (Christopher's decisions of 2026-10-25):
+                # default 135 and 460 in the main post-EET_end Modpack run in TP2 order, and
+                # optional chapter caps 652 after 651 in the campaign XP run, the two
+                # conflicting both ways; without them the alpha.22 batch digest
+                # 711cb8c56f4e7679a1b2bc361ddce03afd7d36e10087c2b9bc02976c6a4318d2 returns.
+                "c36f30ba2623c54d723078f5ed9ecc05355724ae42bb25c4bfe32a4d1b9522c0",
             )
 
             legacy_bg1npc_groups = {
@@ -523,15 +532,15 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             buffbot = tomllib.loads((output / "mods/buffbot.toml").read_text(encoding="utf-8"))
-            self.assertEqual(buffbot["artifact_id"], "buffbot-1.10.1")
+            self.assertEqual(buffbot["artifact_id"], "buffbot-1.11.0")
             buffbot_artifact = tomllib.loads(
-                (output / "artifacts/buffbot-1.10.1.toml").read_text(encoding="utf-8")
+                (output / "artifacts/buffbot-1.11.0.toml").read_text(encoding="utf-8")
             )
-            self.assertEqual(buffbot_artifact["version"], "1.10.1")
-            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.10.1")
-            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.10.1.zip")
-            self.assertEqual(buffbot_artifact["source"]["expected_length"], 4270988)
-            self.assertEqual(buffbot_artifact["source"]["sha256"], "4aadd0ea5dba2dd082b3af5b63da06db61139e997ea87e8adff1a2853fa31a7e")
+            self.assertEqual(buffbot_artifact["version"], "1.11.0")
+            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.11.0")
+            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.11.0.zip")
+            self.assertEqual(buffbot_artifact["source"]["expected_length"], 5879508)
+            self.assertEqual(buffbot_artifact["source"]["sha256"], "c147919db1e6a41c606f04dd26fc3fd246d7ac6b63339c0c2069fc4a66c76a0d")
             self.assertEqual(runs["buffbot-bg2"]["components"], [1, 0])
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
@@ -691,18 +700,18 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.3")
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.5")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.3.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.5.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.3")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.3")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1766746)
+            self.assertEqual(bg_artifact["version"], "0.8.5")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.5")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1800408)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "d03714f8da0943380f36bc5876d15ec50f23ab2d26194b249eaa5ab961e26a41",
+                "48e12ed836537982da4fa421d0b1d627eda423c8dfa56977071823a52abed244",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.20")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19"):
@@ -1053,7 +1062,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertTrue(all(f"feature:chriz-bg-rebalance:component-{id_}" not in features for id_ in (420, 421)))
         run = next(run for run in collection["runs"] if run["run_id"] == "chriz-bg-rebalance-bg2")
         self.assertEqual(run["phase"], "post-eet-end")
-        self.assertEqual(run["components"][-11:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332])
+        self.assertEqual(run["components"][-12:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340])
 
     def test_shifted_dialogue_is_optional_and_requires_either_kit_without_eeex(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))

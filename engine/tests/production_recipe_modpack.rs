@@ -8,9 +8,9 @@ use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
 const MODPACK_COMPONENTS: &[u32] = &[
-    110, 130, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222, 223,
-    224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 610, 611, 620, 630, 640, 235, 236,
-    237, 238, 239, 660, 650, 651,
+    110, 130, 135, 140, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221, 222,
+    223, 224, 225, 230, 231, 232, 233, 234, 400, 410, 430, 440, 450, 460, 610, 611, 620, 630, 640,
+    235, 236, 237, 238, 239, 660, 650, 651, 652,
 ];
 
 /// The September 16 intake split the single post-EET modpack run into the
@@ -26,14 +26,16 @@ const PRE_CONTINUITY_COMPONENTS: &[u32] = &[
 const CONTINUITY_COMPONENTS: &[u32] = &[199];
 
 /// The October 13 intake (Modpack alpha.11 candidate) moves scroll policy 430 into
-/// its own final run and adds Degrodel 660 after 630 in TP2 order.
-const POST_EET_END_COMPONENTS: &[u32] = &[130, 400, 410, 440, 450, 610, 611, 630, 660];
+/// its own final run and adds Degrodel 660 after 630 in TP2 order. The October 26
+/// alpha.14 pin adds alpha.13's Dorn ambush fix 135 after 130 and its party AI
+/// Defensive Stance fix 460 after 450, in TP2 order.
+const POST_EET_END_COMPONENTS: &[u32] = &[130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
     110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234,
 ];
 
-const RECOMMENDED_COMPONENTS: &[u32] = &[130, 410, 440, 450, 611, 660];
+const RECOMMENDED_COMPONENTS: &[u32] = &[130, 135, 410, 440, 450, 460, 611, 660];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -47,27 +49,27 @@ fn recipe() -> Manifest {
 fn freezes_the_public_modpack_alpha_without_publishing_its_bundled_weidu() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-modpack"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.13");
+    assert_eq!(artifact_id, "chriz-bg-modpack-0.2.0-alpha.14");
     let artifact = &manifest.artifacts[artifact_id];
     assert!(!manifest
         .artifacts
         .contains_key("chriz-bg-modpack-0.2.0-alpha.5"));
-    assert_eq!(artifact.version, "0.2.0-alpha.13");
+    assert_eq!(artifact.version, "0.2.0-alpha.14");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
-    assert_eq!(artifact.source.reference, "v0.2.0-alpha.13");
+    assert_eq!(artifact.source.reference, "v0.2.0-alpha.14");
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.13/chriz-bg-modpack-v0.2.0-alpha.13.zip"
+        "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip"
     );
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-modpack-v0.2.0-alpha.13.zip")
+        Some("chriz-bg-modpack-v0.2.0-alpha.14.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(10_479_090));
+    assert_eq!(artifact.source.expected_length, Some(10_550_312));
     assert_eq!(
         artifact.source.sha256,
-        "afbf05eec35bf65280cdab5276417f83e767ca5594de93602934d0398a68a381"
+        "45c767b21342d1c7c23ded6cd52aef29b4054daf9cc949613d8f6620207a356c"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -134,7 +136,8 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     // October 20: Modpack alpha.13's EET join XP 239 follows 238 in TP2 order and precedes 650.
     assert_eq!(late.components, [189, 237, 238, 239, 620]);
     assert_eq!(runs[campaign_xp].phase, Phase::PostEetEnd);
-    assert_eq!(runs[campaign_xp].components, [650, 651]);
+    // October 26: alpha.13's chapter caps 652 follow 651, the alternative they exclude.
+    assert_eq!(runs[campaign_xp].components, [650, 651, 652]);
     assert_eq!(runs[scrolls].phase, Phase::PostEetEnd);
     assert_eq!(runs[scrolls].components, [430]);
     assert_eq!(runs[edwin].phase, Phase::Main);
@@ -143,7 +146,7 @@ fn authors_all_approved_components_between_remote_console_and_buffbot() {
     assert_eq!(runs[baeloth].components, [235]);
 
     let installer = &manifest.mods["chriz-bg-modpack"];
-    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.13");
+    assert_eq!(installer.artifact_id, "chriz-bg-modpack-0.2.0-alpha.14");
     assert_eq!(installer.tp2, "setup-chriz-bg-modpack.tp2");
     assert_eq!(installer.language, 0);
     assert_eq!(installer.weidu_artifact_id, "weidu-249-amd64");
@@ -202,9 +205,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // recruitment XP 237 and Degrodel 660 are deselectable defaults.
     // October 14: companion stats 230-234 (Modpack alpha.12) are defaults too.
     // October 20: so is EET join XP 239 (Modpack alpha.13).
+    // October 26: and alpha.13's Dorn ambush fix 135 and party AI fix 460 (alpha.14 pin).
     for component in [
-        110, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234, 236, 237,
-        239, 430, 611, 660,
+        110, 135, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234, 236,
+        237, 239, 430, 460, 611, 660,
     ] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
@@ -238,8 +242,8 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(!control.selected, "{id}");
     }
 
-    // Campaign XP caps 650/651 ship experimental, optional and unchecked.
-    for component in [650, 651] {
+    // Campaign XP caps 650/651 and chapter caps 652 ship experimental, optional and unchecked.
+    for component in [650, 651, 652] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -292,7 +296,10 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292 to both.
     // The October 23 quest-mod intake makes BG1 Unfinished Business optional and
     // unselected, which removes its 16 former defaults from both plans.
-    // This 368-component base plan is distinct from the 466-component curated plan.
+    // The October 26 intake adds default Rebalance Chris Revisions 340 to both plans;
+    // EEex Attack Info 9 is offered unchecked. Its Modpack alpha.14 pin adds default
+    // 135 and 460 to both plans; chapter caps 652 are offered unchecked.
+    // This 371-component base plan is distinct from the 469-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -300,8 +307,65 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        368
+        371
     );
+}
+
+#[test]
+fn chapter_caps_652_and_the_soa_cap_651_are_alternatives_on_top_of_650() {
+    // Alpha.13's TP2 refuses 651 with 652 installed and 652 with 651 installed; both
+    // need 650. Both recipes encode that as a conflict in each direction.
+    let run = "chriz-bg-modpack-campaign-xp-bg2";
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(baseline.plan.components_for(run), None, "{directory}");
+        for component in [651, 652] {
+            let id = format!("feature:chriz-bg-modpack:component-{component}");
+            let other = format!(
+                "feature:chriz-bg-modpack:component-{}",
+                651 + 652 - component
+            );
+            let feature = manifest
+                .collection
+                .features
+                .iter()
+                .find(|feature| feature.id == id)
+                .unwrap_or_else(|| panic!("{directory}: missing {id}"));
+            assert_eq!(feature.requires, ["feature:chriz-bg-modpack:component-650"]);
+            assert_eq!(
+                feature
+                    .conflicts
+                    .iter()
+                    .map(|conflict| conflict.feature_id.as_str())
+                    .collect::<Vec<_>>(),
+                [other.as_str()],
+                "{directory}: {id}"
+            );
+        }
+        for (soa, chapters, expected) in [
+            (true, false, vec![650, 651]),
+            (false, true, vec![650, 652]),
+            (false, false, vec![650]),
+            (true, true, vec![650]),
+        ] {
+            let mut selection = baseline.normalized_selection.to_selection();
+            selection.set_feature("feature:chriz-bg-modpack:component-650", true);
+            selection.set_feature("feature:chriz-bg-modpack:component-651", soa);
+            selection.set_feature("feature:chriz-bg-modpack:component-652", chapters);
+            let result = evaluate(&manifest, &selection).unwrap();
+            assert_eq!(
+                result.plan.components_for(run).map(<[u32]>::to_vec),
+                Some(expected),
+                "{directory}: 651={soa} 652={chapters}"
+            );
+        }
+        // Without 650 neither cap policy installs.
+        let mut selection = baseline.normalized_selection.to_selection();
+        selection.set_feature("feature:chriz-bg-modpack:component-652", true);
+        let result = evaluate(&manifest, &selection).unwrap();
+        assert_eq!(result.plan.components_for(run), None, "{directory}");
+    }
 }
 
 #[test]

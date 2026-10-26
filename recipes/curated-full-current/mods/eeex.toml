@@ -41,3 +41,7 @@ name = "Enable timer module"
 [[components]]
 id = 8
 name = "Experimental - Use LuaJIT"
+
+[[components]]
+id = 9
+name = "Enable attack info module"

@@ -62,7 +62,13 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292.
         # The October 23 quest-mod intake makes BG1UB optional and unselected (its 16
         # former defaults and its run leave); the new quest mods are unchecked.
-        self.assertEqual(self.result["componentCount"], 466)
+        # The October 26 intake adds default Rebalance 340; EEex 9 stays unchecked.
+        # Its Modpack alpha.14 pin adds default 135 and 460; chapter caps 652 stay unchecked.
+        self.assertIn(340, actual["chriz-bg-rebalance-bg2"])
+        self.assertNotIn(9, actual["eeex-bg2"])
+        self.assertTrue({135, 460} <= set(actual["chriz-bg-modpack-bg2"]))
+        self.assertNotIn("chriz-bg-modpack-campaign-xp-bg2", actual)
+        self.assertEqual(self.result["componentCount"], 469)
         self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

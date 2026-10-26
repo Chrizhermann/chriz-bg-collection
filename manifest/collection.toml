@@ -70,7 +70,7 @@ args = [
 run_id = "eeex-bg2"
 mod_id = "eeex"
 phase = "main"
-components = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+components = [0, 1, 9, 2, 3, 4, 5, 6, 7, 8]
 args = []
 
 [[runs]]
@@ -371,7 +371,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340]
 args = []
 
 [[runs]]
@@ -385,7 +385,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 400, 410, 440, 450, 610, 611, 630, 660]
+components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660]
 args = []
 
 [[runs]]
@@ -406,7 +406,7 @@ args = []
 run_id = "chriz-bg-modpack-campaign-xp-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [650, 651]
+components = [650, 651, 652]
 args = []
 
 [[runs]]
@@ -960,6 +960,17 @@ components = [
   { run_id = "eeex-bg2", component = 7 },
   { run_id = "eeex-bg2", component = 8 },
 ]
+
+[[features]]
+id = "feature:eeex:component-9"
+title = "EEex attack info"
+description = "Show your chance to hit when you hover the attack cursor over a target. You can also switch it on or off later in EEex's in-game options; the change takes effect after a restart."
+category = "engine"
+decision = "optional"
+readiness = "ready"
+parent = "mod:eeex"
+requires = ["feature:eeex:mandatory-components"]
+components = [{ run_id = "eeex-bg2", component = 9 }]
 
 [[features]]
 id = "feature:eeexremote:component-0"
@@ -4599,6 +4610,16 @@ parent = "mod:chriz-bg-rebalance"
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 332 }]
 
 [[features]]
+id = "feature:chriz-bg-rebalance:component-340"
+title = "Chris Revisions: Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation"
+description = "Aid grants only hit points: 1d8 +1 per caster level (at most +10), and recasting replaces it. Luck lasts 15 rounds. Bless lasts 30 seconds plus 1 round per caster level (up to 150 seconds). Druids and rangers can cast Bless again, and druids Chaotic Commands. Prayer and Recitation no longer stack: Recitation's bonus or penalty replaces Prayer's of the same kind while it lasts."
+category = "spells"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 340 }]
+
+[[features]]
 id = "feature:chriz-bg-rebalance:bard-spell-ceilings"
 title = "Bard spell-level ceilings"
 description = "Bards and Jesters follow the Icewind Dale bard progression up to 7th-level spells, unlocked at bard level 21. Blades and Skalds keep the original progression, capped at 6th level. Requires EEex. Existing characters gain the new spell capacity at their next level-up."
@@ -4682,6 +4703,17 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:bg1npc:component-10", "feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 130 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-135"
+title = "Stop the crash after Dorn's BG1 ambush"
+description = "When Dorn catches up with Senjak and Dorotea, the cutscene no longer locks the camera on Senjak. If their conversation stalls, leaving the area no longer crashes the game; a completed conversation still ends with Senjak and Dorotea attacking."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 135 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-140"
@@ -4896,6 +4928,16 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 450 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-460"
+title = "Party AI: Defensive Stance only with \"Use special abilities\" on"
+description = "The party AI scripts use Defensive Stance only while \"Use special abilities\" is on. EET's BG1 stance block in the default party AI ignored that option, so the protagonist and others kept entering the stance with it off."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 460 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-610"
@@ -5214,7 +5256,20 @@ decision = "optional"
 readiness = "experimental"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:chriz-bg-modpack:component-650"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-652", reason = "Choose either the Shadows of Amn cap or chapter-by-chapter XP caps." }]
 components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 651 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-652"
+title = "Chapter-by-chapter XP caps (experimental)"
+description = "With campaign XP caps on, usable XP is capped chapter by chapter instead: in BG1 from 16,000 (Chapters 1-2) up to 161,000 (Chapter 7), in SoD up to 500,000, in SoA from 500,000 up to 3,500,000 and in ToB from 5,000,000 up to 8,900,000. XP above the current cap stays banked until a later chapter raises it. Baeloth's Larswood scene waits for Chapter 5, so his starting XP fits under the cap. Use it instead of the Shadows of Amn cap. Not yet tested in a full playthrough."
+category = "rules"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:chriz-bg-modpack:component-650"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-651", reason = "Choose either chapter-by-chapter XP caps or the Shadows of Amn cap." }]
+components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 652 }]
 
 [[features]]
 id = "feature:chriz-sod-remix:component-257"

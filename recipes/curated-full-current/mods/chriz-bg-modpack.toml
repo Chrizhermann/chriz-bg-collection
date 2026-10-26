@@ -1,5 +1,5 @@
 id = "chriz-bg-modpack"
-artifact_id = "chriz-bg-modpack-0.2.0-alpha.13"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.14"
 name = "chriz-bg-modpack"
 tp2 = "setup-chriz-bg-modpack.tp2"
 language = 0
@@ -13,6 +13,10 @@ name = "Fade: complete Fighter/Thief conversion, proficiencies, and amulet usabi
 [[components]]
 id = 130
 name = "BG1NPC Kivan sea-elf quest: SCS dialogue-phase guard"
+
+[[components]]
+id = 135
+name = "Dorn's BG1 ambush: no camera lock on Senjak (prevents a crash after leaving the area)"
 
 [[components]]
 id = 140
@@ -131,6 +135,10 @@ id = 450
 name = "SCS shapechange spells: repair the EE Fixpack interaction"
 
 [[components]]
+id = 460
+name = "Party AI Defensive Stance: obey the \"Use special abilities\" option"
+
+[[components]]
 id = 610
 name = "Progressive utility XP for locks, traps, and learning spells"
 
@@ -181,3 +189,7 @@ name = "Campaign XP caps - keep excess XP for later (BG1/SoD; experimental)"
 [[components]]
 id = 651
 name = "Campaign XP caps - also cap SoA until ToB (requires 650; experimental)"
+
+[[components]]
+id = 652
+name = "Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental)"

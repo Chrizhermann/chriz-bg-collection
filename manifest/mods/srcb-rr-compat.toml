@@ -1,5 +1,5 @@
 id = "srcb-rr-compat"
-artifact_id = "srcb-rr-compat-4.21-chriz.5"
+artifact_id = "srcb-rr-compat-4.21-chriz.7"
 name = "Spell Revisions / Rogue Rebalancing compatibility"
 tp2 = "SRCB_RR_COMPAT/setup-SRCB_RR_COMPAT.tp2"
 language = 0

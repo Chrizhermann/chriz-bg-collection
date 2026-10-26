@@ -134,7 +134,8 @@ class CatalogParserTests(unittest.TestCase):
         # October 23: SoD Remix v0.6.15 adds the Imoen choice 292 (default), 293/294.
         # October 23: six optional quest-mod catalogs add 55 rows (NTOTSC 17,
         # AC_QUEST 13, BLACKHEARTS 2, ZG_IWD_VOICES 1, THALAN 1, PPE 21).
-        self.assertEqual(len(rows), 1_336)
+        # October 26: Rebalance v0.8.5 adds Chris Revisions 340; Modpack alpha.14 adds no row.
+        self.assertEqual(len(rows), 1_337)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -143,7 +144,9 @@ class CatalogParserTests(unittest.TestCase):
                 # October 18: EEex 9 is not installed until Christopher decides.
                 # October 20: neither are Modpack 135, 460 and 652.
                 # October 23: nor Black Hearts 20005 (BG2:EE without EET) and PPE 310/320.
-                Decision.EXCLUDED: 528,
+                # October 26: EEex 9 leaves the excluded rows (Christopher, 2026-10-25),
+                # and so do Modpack 135, 460 and 652 with the alpha.14 pin.
+                Decision.EXCLUDED: 524,
                 # September 22 approval moves HGO 38 from optional to default.
                 # October 12 moves Emotion 301 back to optional.
                 # October 13 makes EET's desktop shortcut (EET 100) optional.
@@ -153,7 +156,9 @@ class CatalogParserTests(unittest.TestCase):
                 # October 23: SoD Imoen alternatives 293/294 are optional.
                 # October 23: the 16 BG1UB defaults become optional, and so are 47 of the
                 # 55 quest-mod rows (all but their 5 defaults and 3 excluded rows).
-                Decision.OPTIONAL: 329,
+                # October 26: EEex Attack Info 9 is optional and off (Christopher, 2026-10-25),
+                # and so is Modpack chapter XP caps 652, which needs 650.
+                Decision.OPTIONAL: 331,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -168,7 +173,9 @@ class CatalogParserTests(unittest.TestCase):
                 # October 23: BG1UB leaves the defaults (16 rows move to optional); the
                 # quest mods' main components NTotSC 0 and PPE 0 and Ascalon's first
                 # variants 2/5/10 are defaults inside their unchecked mods.
-                Decision.DEFAULT: 325,
+                # October 26: Rebalance Chris Revisions 340 is a default (Christopher, 2026-10-25),
+                # and so are Modpack 135 (Dorn's ambush fix) and 460 (party AI Defensive Stance).
+                Decision.DEFAULT: 328,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -397,9 +404,11 @@ default = "none"
         # October 22: each of the 18 voicepack rows maps to its own feature.
         # October 23: SoD Remix 292/293/294 map to one feature each.
         # October 23: the 52 offered quest-mod rows map to one feature each.
-        self.assertEqual(result.mapped_rows, 1_336)
-        self.assertEqual(result.excluded_rows, 528)
-        self.assertEqual(result.feature_rows + result.omission_rows, 808)
+        # October 26: EEex 9 and Rebalance 340 map to one feature each, and so do
+        # Modpack 135, 460 and 652 (alpha.14 pin).
+        self.assertEqual(result.mapped_rows, 1_337)
+        self.assertEqual(result.excluded_rows, 524)
+        self.assertEqual(result.feature_rows + result.omission_rows, 813)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -408,7 +417,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 87)
         self.assertEqual(result.optional_none_groups, 30)
         self.assertEqual(result.fixed_groups, 11)
-        self.assertIn("rows=1336", coverage_report(rows, result))
+        self.assertIn("rows=1337", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

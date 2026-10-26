@@ -13,23 +13,50 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-24
+## Work queue at a glance — 2026-10-26
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
 **In progress (separate sessions)**
 
+- CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order:
+  1. One pin batch: Modpack alpha.14 (released on 2026-10-26, see below), BG Rebalance
+     v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
+     fork `v4.81a-dev.85928f9-chriz.3` (sorcerer and kit weapon fixes, below), EEex `9`
+     (Attack Info) optional and off, and maybe the Campaign Item Randomiser (below). Time
+     Clocks is likely in the release too (see Ready to start). All of them but the Campaign
+     Item Randomiser are pinned in both recipes on `claude/pin-alpha22`
+     ([PR #36](https://github.com/Chrizhermann/chriz-bg-collection/pull/36); fresh-download
+     and native-order evidence in `manifest/evidence/release-intake-20261026.toml`), which
+     contains PRs #32 and #33. Christopher approved merging #32, #33 and #36 into the
+     next-release branch once their checks are green (2026-10-26): #32 is merged (merge
+     commit 1f6f60b), and #33 goes in with #36, which contains it. Kitpack chriz.4 (below)
+     joins the batch if it is ready in time.
+  2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
+     [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
+  3. A full lab run of the Recommended selection.
+  4. Acceptance, build, signing and publishing, and the website.
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
-  everywhere): pinned in both recipes on `claude/eeex-131-pin` with fresh-download and
-  native-order evidence. On 2026-10-18 a disposable 2.7.3.0 lab with the full recipe
-  booted every EEex user cleanly; a new BG1 game in that lab then exercised the EEex
-  modules, Remote Console and BuffBot (see Done). Remote Console v0.2.1 with [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3)
-  and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4) is pinned (below). Open from that lab: creature
-  `LOCALS` are missing after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19), cause open) and Modpack `430`
-  on v1.3.1 (see Release gates); Modpack `650` works on v1.3.1 since alpha.13 (below).
-  Attack Info `9` waits for Christopher.
-- SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes on
-  `claude/sod-remix-0615-pin` (fresh-download evidence in
+  everywhere): pinned in both recipes since
+  [PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18) (merged on
+  2026-10-20) with fresh-download and native-order evidence. On 2026-10-18 a disposable
+  2.7.3.0 lab with the full recipe booted every EEex user cleanly; a new BG1 game in that
+  lab then exercised the EEex modules, Remote Console and BuffBot (see Done).
+  Remote Console v0.2.1 with [eeex-remote-console#3](https://github.com/Chrizhermann/eeex-remote-console/pull/3)
+  and the `START_SP` fix [eeex-remote-console#4](https://github.com/Chrizhermann/eeex-remote-console/pull/4) is pinned (below). Open from that lab: Modpack
+  `430` on v1.3.1, fixed in the pinned alpha.14 (see Release gates). The creature `LOCALS`
+  lost after save/load
+  ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)) were not an EEex fault: Modpack `650` caused them; alpha.14 fixes
+  that, and #19 is closed (see Modpack alpha.14 below).
+  - Attack Info `9` (Christopher, 2026-10-25): optional and off by default; players can
+    also switch it on in EEex's in-game options. `claude/pin-alpha22` offers it that way,
+    in EEex's own order directly after `1`; static checks only, not installed in a lab
+    yet. Its "ready" flag stays as it is for now, like Chris Revisions `340`'s; the
+    Recommended lab run decides both (Christopher, 2026-10-26).
+  - Still open: how existing installations move from v1.2.0 (see Waiting for
+    Christopher).
+- SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes since
+  [PR #27](https://github.com/Chrizhermann/chriz-bg-collection/pull/27) (merged on 2026-10-23; fresh-download evidence in
   `manifest/evidence/release-intake-20261023.toml`):
   - Imoen's handover from BG1/SoD into SoA (`292`/`293`/`294`, since v0.6.14): one
     choice group with the vanilla Thief→Mage dual `292` as the default and `293`/`294`
@@ -38,8 +65,13 @@ Cross-repository status. Component detail stays in the sections below and in the
   - `256` × Tweaks Anthology `3500` ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)):
     fixed in v0.6.15 (option 1, Christopher's choice of 2026-10-18); the combined
     Recommended lab install with `3500` on is still a release gate (see Release gates).
+  - [chriz-sod-rebalance#34](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/34),
+    merged on 2026-10-23: `265` and six other components read timer names from the
+    game's own `GTIMES.IDS`, so a mod that gives a timer value another name no longer
+    stops them. It ships with the next SoD Remix release.
 - BuffBot v1.10.1 (released on 2026-10-20) and EEex Remote Console v0.2.1 (tagged on
-  2026-10-23), pinned in both recipes on `claude/buffbot-rc-repin` (fresh-download
+  2026-10-23), pinned in both recipes since
+  [PR #28](https://github.com/Chrizhermann/chriz-bg-collection/pull/28) (merged on 2026-10-23; fresh-download
   evidence in `manifest/evidence/release-intake-20261023-buffbot-eeexremote.toml`):
   - BuffBot v1.10.1 shows the combat-stop notice, which earlier versions always lost
     ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76)). Its
@@ -47,24 +79,100 @@ Cross-repository status. Component detail stays in the sections below and in the
     before the scroll policy `430`.
   - Remote Console v0.2.1 carries the EEex v1.2/v1.3 guidance and the `START_SP` fix.
     Component `0` is unchanged and stays optional.
+  - BuffBot v1.11.0 (released on 2026-10-24) replaces v1.10.1 on `claude/pin-alpha22`
+    (alpha.22 pin batch, Christopher, 2026-10-25). Components `1` and `0`, their order and
+    the run position are unchanged. Not run in a collection lab yet; its own validation
+    ran without Modpack `430`, so the Recommended lab run checks it together with `430`
+    (see Live/runtime acceptance).
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
   `BD_JOINXP` block (see Sarah below), which the collection offers as a default (decided
-  2026-10-18). Pinned in both recipes on `claude/modpack-a13-pin` (fresh-download and
-  native-order evidence in `manifest/evidence/release-intake-20261020.toml`); `650`/`651`
-  stay optional, experimental and off. The new `135` (Dorn ambush camera fix), `460`
-  (party AI Defensive Stance) and `652` (chapter caps) are not offered until Christopher
-  decides. `430` still fails on v1.3.1; a fix is in progress in a separate session (see
-  Release gates).
+  2026-10-18). Pinned in both recipes from
+  [PR #23](https://github.com/Chrizhermann/chriz-bg-collection/pull/23) (merged on 2026-10-22; fresh-download and
+  native-order evidence in `manifest/evidence/release-intake-20261020.toml`) until the
+  alpha.14 pin; `650`/`651` stay optional, experimental and off.
+- Modpack v0.2.0-alpha.14, released on 2026-10-26 (annotated tag on the Modpack's main
+  commit ec39b61), pinned in both recipes on `claude/pin-alpha22` (alpha.22 pin batch,
+  [PR #36](https://github.com/Chrizhermann/chriz-bg-collection/pull/36); fresh-download and
+  native-order evidence in `manifest/evidence/release-intake-20261026.toml`). It adds and
+  removes no component and keeps the order:
+  - It merges the `430` and `650` work onto alpha.13. Its release notes report the full
+    suite passing (3,059 tests with real WeiDU 249) and the release archive's own checks.
+  - A combined lab smoke with the release candidate's package (2.7.3.0, EEex v1.3.1)
+    passed: a normal start without a box, a scroll at the reader's level, an XP award
+    banked, and the #19 check (script variables survived a save made while the bank
+    refused, in the same and in a new game process).
+  - Christopher, 2026-10-25: the collection offers `135` (Dorn ambush camera fix) and
+    `460` (party AI Defensive Stance obeys "Use special abilities") as defaults, and
+    `652` (chapter-by-chapter XP caps) as an option that starts off, because it needs
+    `650`. The alpha.14 pin puts `135` and `460` into the main post-EET_end Modpack run
+    and `652` after `651` into the campaign XP run, in TP2 order; `651` and `652` exclude
+    each other, as in the TP2.
+  - `650` caused [#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19): up to alpha.13 its XP effect (opcode 104) returned 0 when the
+    bank could not take a change, so the engine stopped resolving the rest of that
+    creature's timed effect list. The effects queued behind it stayed frozen, and the
+    creature `LOCALS` they set were lost at the next save. EEex is not the cause.
+    - The never-return-0 fix is done for alpha.14. With it, the #19 scenario passed in a
+      disposable lab on 2026-10-23: the locals and all local-variable effects survived
+      save/load in the same process and after a restart, also with refused XP changes.
+    - Accepted rare cases (Christopher, 2026-10-25): when the bank cannot tell what an
+      XP change stored, that change can end without adding XP, and the character then
+      gets XP the normal way, without the campaign cap, also after saving and loading.
+      If a character were ever created or removed outside the game's main thread (no
+      known way on 2.7.3.0), banking stops for everyone until the game restarts, a
+      script XP change caught at that moment can be lost, and saves made after that keep
+      those characters out of banking.
+    - `650` stays optional, experimental and off in the collection. A fifth review round
+      follows after the release.
+    - #19 was closed with the release (2026-10-26).
+  - `430` (scrolls at the reader's level): plan A and the last small round are done (see
+    Release gates). Christopher, 2026-10-25: the collection offers `430` as a default; it
+    is one in both recipes with the alpha.14 pin.
+  - No technical notices inside the game: fallback information from our mods goes to the
+    log only (Christopher, 2026-10-23, confirmed 2026-10-25). `650` and `430` now do
+    this. The one exception (Christopher, 2026-10-25) is in `430`. If it cannot start
+    cleanly and cannot fully undo its start, one short box asks the player to restart the
+    game before loading or saving. The box appears while the game starts, just before the
+    main menu; Christopher confirmed that placement on 2026-10-26.
+- Artisan's Kitpack fork `v4.81a-dev.85928f9-chriz.3`, released on 2026-10-26 (fork
+  PR #14); it contains chriz.2, released the same day:
+  - The sorcerer bug, fixed in chriz.2: sorcerer kits, the Dragon Disciple included,
+    could not equip daggers, quarterstaves or darts without a proficiency point. It was
+    reported by stream viewers. Every fork release since chriz-v1.0.0 has it, including
+    the alpha.21 pin.
+  - The cause: upstream commit 7464043 builds the class weapon grants from `WEAPPROF.2DA`,
+    which has no sorcerer column. The fix gives sorcerers the mage column.
+  - Lab-verified on 2.7.3.0 with EEex v1.3.1: sorcerer, Dragon Disciple and mage, after
+    joining, after a level-up and after a reload. Saves need no change.
+  - The older kit weapon bug, fixed in chriz.3: Eldritch Knight and Arcane Trickster
+    sorcerers (and the Favored Soul, which the collection does not offer) lost their
+    kit's extra weapons at every level-up, and a newly created Arcane Trickster sorcerer
+    had none, until the next reload or area change. `C0PR#CL` now applies the kit weapon
+    chains again (`C0PR#KG`). Lab-verified on BG2:EE 2.7.3.0 with EEex v1.3.1, freshly
+    installed in CEBG's Kitpack order: the kit weapons stayed after joining, a level-up,
+    save/load and a new game process. Not covered there: EET and characters created
+    before the install.
+  - chriz.3 is pinned for all three Kitpack installers on `claude/pin-alpha22` (alpha.22
+    pin batch, in place of chriz.2); components, order and decisions are unchanged.
+    Christopher posts the upstream report himself.
+  - Existing installations get the two weapon fixes only through a new installation
+    (Christopher, 2026-10-26); the changelog draft says so. The fork's
+    `AKCB_SORCERER_WEAPONS` tail patch (in the release archive) stays outside CEBG, and
+    the kit weapon fix has no tail; in existing games the helper creature gives the
+    weapons back as before.
+  - chriz.4 (approved by Christopher on 2026-10-26, in progress, for new installations):
+    monks lack the quarterstaff grant after Monk Revisions, and plain shamans can equip
+    every weapon until the Kitpack's helper creature appears. The alpha.22 batch pins it
+    if it is ready in time.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
-  in both recipes on `claude/voicepacks-intake-20261022` as defaults under "Voicepacks"
+  in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
   other post-EET writers and before BuffBot. Fresh-download evidence:
   `manifest/evidence/release-intake-20261022.toml`. Still needed before the next CEBG
   release: one combined lab install (see Release gates).
-- Optional quest mods (Christopher's decisions of 2026-10-23), in both recipes on
-  `claude/optional-mods-20261022` ([PR #32](https://github.com/Chrizhermann/chriz-bg-collection/pull/32); fresh-download and native-order evidence in
+- Optional quest mods (Christopher's decisions of 2026-10-23), in both recipes since
+  [PR #32](https://github.com/Chrizhermann/chriz-bg-collection/pull/32) (merged on 2026-10-26; fresh-download and native-order evidence in
   `manifest/evidence/release-intake-20261023-quest-mods.toml`): Northern Tales of the
   Sword Coast (upstream `master` f0ef953, not v5.0.0) and Ascalon's Questpack v7.0 are in
   the new category "Quest mods"; Thalantyr Item Upgrade v4.5.1 is in "Items", the Icewind
@@ -79,33 +187,52 @@ Cross-repository status. Component detail stays in the sections below and in the
   - Still needed: the component defaults inside the mods (see Waiting for Christopher) and
     one combined lab install (see Release gates).
 - Hobgoblin challenge run (design with Christopher).
-- Campaign Item Randomiser (CIR): next version.
-- Vanguard Defensive Stance AI toggle: the fix shipped as Modpack `460` in alpha.13; the
-  collection offers it once Christopher decides (see below).
+- Campaign Item Randomiser (CIR) v1.0.2 (released on 2026-10-24): it replaces Randomiser
+  v8.1.1 only after CEBG integration and a lab test (Christopher, 2026-10-25). Its next
+  version is in progress: draft
+  [chriz-item-randomiser#23](https://github.com/Chrizhermann/chriz-item-randomiser/pull/23)
+  adds the Sahuagin treasury to the extended pools; the lab play test is pending.
+- Vanguard Defensive Stance AI toggle: the fix shipped as Modpack `460` in alpha.13; it
+  is a default in both recipes since the alpha.14 pin (Christopher, 2026-10-25; PR #36).
 - InfinityLoader crash analysis: causes found; follow-up decisions are Christopher's.
-- Compatibility follow-ups from the October 8 audit for BG Rebalance and the Spell
-  Revisions fork (`docs/audits/2026-10-08-sr-rebalance-compatibility.md` in BG
-  Rebalance): all seven implemented and reviewed, unreleased, in
-  [BG Rebalance PR #10](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/10) and
-  [Spell Revisions fork PR #2](https://github.com/Chrizhermann/chriz-spell-revisions-patch/pull/2).
-  Cloud forms (320): 75% stays the target for immunity, not a cap (decided 2026-10-20).
-  A lab check on 2.7.3.0 is running; the release and the CEBG pin need Christopher's
-  approval.
-- Installer link safety: patch restore, mod upgrades and uninstall now read and write
-  through held folder handles too (PR #17, in review; approved for the next CEBG release
-  on 2026-10-23). The ancestor checks above an installation stay as they are: the planned
-  OneDrive classification is dropped (Christopher, 2026-10-19), because Windows shows
-  OneDrive's placeholders to the installer as plain folders and files.
+- BG Rebalance and the Spell Revisions fork:
+  - The seven compatibility follow-ups from the October 8 audit
+    (`docs/audits/2026-10-08-sr-rebalance-compatibility.md` in BG Rebalance) are
+    released: BG Rebalance v0.8.4 (2026-10-23,
+    [PR #10](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/10)) and the fork's
+    v4.21-chriz.6 (2026-10-23,
+    [PR #2](https://github.com/Chrizhermann/chriz-spell-revisions-patch/pull/2) with the
+    lab correction [PR #3](https://github.com/Chrizhermann/chriz-spell-revisions-patch/pull/3)).
+    v4.21-chriz.7 (2026-10-24) corrects only its update notes. Cloud forms (`320`): 75%
+    stays the target for immunity, not a cap (decided 2026-10-20).
+  - v0.8.4 also fixes Divine Protection under the party physical-resistance cap `310`:
+    short immunity windows stay uncapped
+    ([PR #11](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/11)).
+  - v0.8.5 (released on 2026-10-25) adds `340` Chris Revisions
+    ([PR #13](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/13), merged on
+    2026-10-25; Christopher's decisions of 2026-10-23 and 2026-10-25): Aid gives only hit
+    points, Luck lasts 90 seconds, Bless 30 seconds + 1 round per level, druids can cast
+    Bless and Chaotic Commands again, and Prayer and Recitation no longer stack. Not run
+    in a game yet. The collection offers `340` as a default (Christopher, 2026-10-25).
+    Its "ready" flag stays as it is for now; the Recommended lab run decides it
+    (Christopher, 2026-10-26).
+  - Pinned in both recipes on `claude/pin-alpha22` (alpha.22 pin batch): Rebalance
+    v0.8.5, with `340` as a default at the end of its run, and the fork's v4.21-chriz.7
+    with `srcb-rr-compat` from the same release. All other components, decisions and
+    their order are unchanged.
+  - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
+    Rebalance `220` as released and `400`-`403`.
+- Icewind Dale: Enhanced Edition installer on the CEBG framework, for Christopher's
+  November stream (2026-10-25; urgent, in its own session): only a few mods, plus a
+  small own mod with SCS-style scripts for selected IWD fights, because the script
+  engine (Larger projects) will not be ready in time.
 
 **Ready to start**
 
-- Creature `LOCALS` after save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)): in the EEex v1.3.1 lab,
-  locals set before saving were missing after loading, in the same process and after a
-  restart; globals survived. Next: compare the vanilla 2.7.3.0 effect-list loader with
-  EEex's replacement and repeat the save/reload without EEex, on 2.6.6.0 and with a
-  smaller stack. The result decides whether this blocks the v1.3.1 rollout.
-- Time Stop/Haste timing fix as a standalone EEex mod. The engine research and a disposable
-  2.7.3.0 lab on EEex v1.3.1 are on BG Rebalance branch `claude/timestop-lab-eeex-131`
+- Time Clocks, the Time Stop/Haste timing fix as a standalone EEex mod: likely in the
+  next release (Christopher, 2026-10-25). Its repository is not public yet; that needs
+  Christopher's go. The engine research and a disposable 2.7.3.0 lab on EEex v1.3.1 are
+  on BG Rebalance branch `claude/timestop-lab-eeex-131`
   (`research/10-timestop-haste-engine-clocks.md` and `research/timestop-lab/`), unmerged.
   Native captures and a first correction prototype for one test actor and two test effects
   ran there. Through Time Stop the buff kept its remaining time and the regeneration all its
@@ -115,20 +242,19 @@ Cross-repository status. Component detail stays in the sections below and in the
   consecutive stops, explicit removal and save/load.
 - Remaining compatibility follow-ups from the October 8 owner audits
   (`docs/audits/2026-10-08-*.md` in BG Rebalance): the Modpack and SoD items and the
-  forks audit, after the sessions above land.
+  forks audit. The BG Rebalance and Spell Revisions items are released (above).
+- Small documentation fixes: the Remote Console README's EEex v1.3.1 lab note still says
+  "this branch". Also open: whether Remote Console gets GitHub releases (it has tags
+  only).
 
 **Waiting for Christopher**
 
-- EEex v1.3.1: whether to offer Attack Info `9`, and how existing installations
-  (including the stream game) move from v1.2.0.
-- Small spell durations (Luck, Bless, Aid) and druid Chaotic Commands: in discussion.
+- Artisan's Kitpack fork: whether the upstream report also mentions the Eldritch Knight /
+  Arcane Trickster kit weapons (fixed in chriz.3). Decided on 2026-10-26: existing
+  installations get the weapon fixes only through a new installation (above).
+- EEex v1.3.1: how existing installations move from v1.2.0.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
-- Modpack alpha.13 (2026-10-20): whether the collection offers `135` (Dorn ambush
-  camera fix), `460` (party AI Defensive Stance obeys "Use special abilities") and `652`
-  (chapter-by-chapter XP caps, experimental alternative to `651` on top of `650`). `652`
-  shipped with Christopher's 2026-10-18 values (Ch. 1-2 16,000 through ToB Ch. 22
-  8,900,000). They are catalogued with open Decisions and are in no run.
 - Quest mods (2026-10-23): which components start selected when a quest mod is ticked.
   Provisional: only the main component (NTotSC `0`, PPE core `0`); Ascalon's Questpack,
   which has none, starts with the decided first variant of each pair (`2`, `5`, `10`).
@@ -145,9 +271,13 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **Deferred by decision**
 
-- Next collection release (lab run with Bardic `balance.8`, optional Unfinished Business
-  and the fixed Modpack): later.
 - Aura fork work: parked (2026-10-17).
+
+**After alpha.22**
+
+- Christopher's own Elementalist Druid mod: the design continues right after alpha.22
+  (Christopher, 2026-10-25). A design record from May/June 2026 exists; which sprites
+  the forms use is still open.
 
 **Ideas for later (community, recorded 2026-10-20)**
 
@@ -177,10 +307,18 @@ Cross-repository status. Component detail stays in the sections below and in the
   must not be forced. Brainstorm with Christopher before any work.
 - German language support: later, low priority.
 
-**Larger projects:** Time Stop/Haste (above); script engine / Fight Director (design with
-Christopher); configurable Spell Revisions (recover branch `codex/configurable-sr-catalog`);
-dragon encounters (Thaxll, Nizid, Saladrex); the remaining Challenge Mode rules (wands,
-traps, one Wish per combat, one memorized Time Stop and others); optional or regular SoD.
+**Ideas for later (Christopher, 2026-10-23)**
+
+- Challenge Mode rules: Time Stop at most once per caster per rest and never chained,
+  also not through a Wild Mage's Reckless Dweomer; no rest loops through Wish. They add
+  to the remaining Challenge Mode rules under Larger projects.
+
+**Larger projects:** Time Stop/Haste (Time Clocks, above); script engine / Fight Director
+(design with Christopher); configurable Spell Revisions (recover branch
+`codex/configurable-sr-catalog`); dragon encounters (Thaxll, Nizid, Saladrex); the
+remaining Challenge Mode rules (wands, traps, one Wish per combat, one memorized Time Stop
+and others); optional or regular SoD; long-term, Unfinished Business's BG1 and BG2 cut
+content, evaluated component by component (keep, fix or extend).
 
 ## Release records
 
@@ -188,7 +326,7 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   and `recipes/curated-full-current/`). A full 2.7.3 collection install has since booted
   and been played with saves, but no acceptance record captures loader boot, BG1 start or
   save/reload, and the record's "no clean BG1 source" reason is outdated. The `430`
-  record still says the alpha.11 pin awaits publication although alpha.13 is pinned.
+  record still says the alpha.11 pin awaits publication although alpha.14 is pinned.
 - [ ] The release gate evaluates only the Recommended selection
   (`engine/src/release_validate.rs`). The optional post-EET runs `eeexremote-bg2` and
   `chriz-bg-modpack-campaign-xp-bg2` are not in `approved_tail_runs`, so a user who
@@ -201,11 +339,6 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
 
 ## Release gates — source and immutable pins
 
-- [ ] [EEex](EEEX.md): v1.3.1 (2026-10-07) replaces v1.2.0 on `claude/eeex-131-pin`:
-  fresh download, published release, archive shape and a native-order source audit in
-  `manifest/evidence/release-intake-20261018.toml`. The lab smoke test of every EEex
-  user is recorded in the pin pull request (2026-10-18); check this once the branch is
-  merged.
 - [ ] [EET](EET.md): at each manifest freeze, recheck official releases (v14.1 is still the
   newest). Upstream `master` is six commits ahead of the pinned `74e91d72` archive,
   including a Windows shortcut-path fix (#206) that may matter for EET `100`.
@@ -233,14 +366,31 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   owner reinstalled `256` and the rest of the remix tail in the disposable October 18
   lab with `3500` on (chriz-sod-rebalance PR #32). The combined install now also
   includes the default Imoen choice `292`.
-- [ ] Modpack `430` (scrolls at the reader's caster level) fails on 2.7.3.0 with EEex
-  v1.3.1, in alpha.12 and alpha.13: on the first load, a new game or an NPC join it shows
+- [ ] Modpack `430` (scrolls at the reader's caster level) failed on 2.7.3.0 with EEex
+  v1.3.1 in alpha.11 to alpha.13: on the first load, a new game or an NPC join it showed
   its EEex error box ("copied action construction overlaps an existing lifetime") and
-  disables itself, because the engine destroys most `CAIAction` objects inline, without
-  the destructor `430` hooks. It is probably also the cause of a player's container-open
-  error report. A proper fix is in progress in a separate session. `430` is a default,
-  so the next collection release needs that fix or Christopher's decision about the
-  default.
+  disabled itself, because the engine destroys most `CAIAction` objects inline, without
+  the destructor `430` hooks. It was probably also the cause of a player's container-open
+  error report. Plan A shipped in alpha.14 (released and pinned on 2026-10-26), and `430`
+  stays a default (Christopher, 2026-10-25):
+  - every fallback is quiet and written to the log only, and a second start turns the
+    runtime off;
+  - wording fixes and documented known limitations;
+  - in a 2026-10-25 lab, normal play kept `430` on: save and reload, area changes, the
+    reader left behind, the reader leaving and rejoining the party. It turns itself off
+    for one session only when a save holds a running scroll effect whose reader is
+    neither in the party nor in a loaded area when the effect's delayed part comes due.
+    Scrolls then cast at their normal level and saves stay usable; this is documented as
+    a known limitation.
+  - Done on 2026-10-26:
+    - the restart box for the one exception (see Modpack alpha.14 above), whose
+      placement Christopher confirmed;
+    - the `[CBM scroll]` tag for its loader-log lines;
+    - the typos.
+    A lab smoke showed no box in normal play.
+  - Still open: check the loader log in the Recommended lab run before the release,
+    because no ongoing playthrough has run with `430` yet; the same run checks BuffBot
+    v1.11.0 together with `430`.
 - [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
   `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
@@ -276,7 +426,7 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   Keep `30001`, `300010` and `8102` unavailable until priest delivery is redesigned.
   Latent: NPC `10004` does not require main `10003` (unselectable today because SR blocks
   it).
-- [ ] Fix legacy EEex dependency checks: Artisan (`v4.81a-dev.85928f9-chriz.1`), Bardic
+- [ ] Fix legacy EEex dependency checks: Artisan (`v4.81a-dev.85928f9-chriz.3`), Bardic
   Wonders (`v2.9c-balance.8`) and Bubb's Spell Menu still test EEex component `0`, which
   is only Quick Menu Core since EEex v1.2 (unchanged in v1.3.1). Require main component `1` or use a
   version-independent capability check; the mandatory EEex `0`–`8` only masks this.
@@ -286,8 +436,12 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   to a maintained conditional component and redesign NPC stat transfer `200`. (`300` is
   replaced by Tweaks Anthology `3121`, Edwin `400` by Modpack `236`, and the historical
   package is not exposed.)
-- [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md): the v0.8.3 README covers `401`–`403`
-  but not `400` or `404`–`409`; recheck whether final SCS supersedes `100` or `101`.
+- [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md): the README (v0.8.5) covers `401`–`403`
+  but not `400` or `404`–`409`; recheck whether final SCS supersedes `100` or `101`. Its
+  status column still calls the in-engine checks of `130` and `310`, the combat check of
+  `320` and a status-entry retest of `301` pending, although v0.8.4's release notes
+  record lab runs of all four (`130`, `301` and `320` in game on 2026-10-20, `310` in two
+  engine labs); update the column after checking what each run covered.
 - [ ] [22-fix migration inventory](COLLECTION_TAIL_FIXES.md): still blocked are
   `BARD_SPELL_FIX` (old modpack `100`), `SAFANA_SNARE_FIX` (`150`), `SAFANA_LATE_SPELLS`
   and `PRIEST_DELIVERY_FIX`. Its Evandra line is stale: `224` is released and in the
@@ -311,8 +465,8 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
     the release package), a fresh Sarah joined at 750,000 XP. Mod NPCs that got the
     ladder are then no longer raised to 2,500,000 at the ToB transition, which matches
     EET's vanilla NPCs. Christopher decided on 2026-10-18 that the collection offers
-    `239` as a default, because it is a fix; it is a default in both recipes on
-    `claude/modpack-a13-pin`, in the late-companion run before campaign XP `650`. Open:
+    `239` as a default, because it is a fix; it is a default in both recipes since
+    [PR #23](https://github.com/Chrizhermann/chriz-bg-collection/pull/23), in the late-companion run before campaign XP `650`. Open:
     the ToB raise was not exercised in a game, and the fix reaches players with the next
     collection release.
 - [ ] Vanguard Defensive Stance: PraetorFallen reports that disabling "Use special
@@ -322,14 +476,18 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   ([Gibberlings3/EET#210](https://github.com/Gibberlings3/EET/issues/210)). The fix,
   first built on Artisan branch `claude/defensive-stance-ai-toggle`, shipped as Modpack
   `460` in alpha.13; in the October 20 lab there was no stance with the option off and
-  the stance was used with it on. Open: whether the collection offers `460` (see
-  Decisions) and whether the Artisan branch is still needed.
+  the stance was used with it on. Christopher decided on 2026-10-25 that the collection
+  offers `460` as a default; it is one in both recipes since the alpha.14 pin. Open:
+  whether the Artisan branch is still needed.
 - [ ] [EEex](EEEX.md): the modules ran in the 2026-10-18 v1.3.1 lab (see Done), but that
   lab is hidden, so nothing was seen on screen. Check `B3Scale` at a resolution wider
   than 4:3 and the empty-container highlight in a visible game.
 - [ ] Creature `LOCALS` survive save/load ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)). In the 2026-10-18
   EEex v1.3.1 lab they did not, in the same process and after a restart; `GLOBAL`
-  variables did.
+  variables did. The cause was Modpack `650`'s XP effect, not EEex; alpha.14 fixes it
+  (see In progress), and the check passed with the fix in labs on 2026-10-23 and, with
+  the release candidate's package, on 2026-10-26. #19 was closed with the release.
+  Open: repeat it with the published alpha.14 package and `650` on.
 - [ ] [CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md) Tempus APR: under the pinned EEex (v1.3.1), verify
   steady 1.5 APR with a two-pip weapon, 2.5 under Holy Power, no cycling, and immediate
   loss of the bonus with a zero-pip weapon.
@@ -343,14 +501,19 @@ traps, one Wish per combat, one memorized Time Stop and others); optional or reg
   statically.)
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
-- [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed (see Done). Open: toggle
+- [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed with v1.10.0 (see
+  Done); the pinned v1.11.0 has not run in a collection lab. Open: toggle
   stances with opcode 214 variants count as buffs, so a new party's Long preset enables
   Artisan's Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
   ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)). The combat-stop notice
-  fix in the pinned v1.10.1 ([bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
+  fix (since v1.10.1, [bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
   was checked in a lab through the engine's text object only; nobody has seen the notice
-  on screen in a real combat stop yet.
+  on screen in a real combat stop yet. v1.11.0's own EET/SR/SCS/Modpack labs ran with
+  Modpack `430` uninstalled, and its notes do not accept the configuration with `430`
+  yet, which the recommended preset installs: check BuffBot with `430` in the
+  Recommended lab run. Also check there its new column headers and control artwork, and
+  that no other mod in the stack writes its PVRZ pages `MOS88809`–`MOS88993`.
 - [ ] Game-log switch (see Done): no game has started with it yet. In a lab, turn it on
   in CEBG, start and quit the game twice with **Play**, and check that
   `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first
@@ -369,7 +532,8 @@ These are nonblocking while their parent feature remains unavailable.
 - [ ] Prove fresh-install retirement of modpack `200`, `210` and `300`, and verify all six
   legacy Aura item changes before retiring that snapshot.
 - [ ] Keep Randomiser's expanded Mode-1 pool unavailable until separately curated and
-  accepted. The same applies to the Campaign Item Randomiser (CIR) until its release.
+  accepted. The same applies to the Campaign Item Randomiser (CIR), released since
+  2026-10-19, until its CEBG integration and a lab test (see In progress).
 - [ ] [Warlock](C0WARLOCK.md): script the chosen answer to the hidden Contingency UI
   spell-learning prompt, then test its pit-fiend spell loadout under SR, copied demon AI
   under SCS, Bubb menu integration and EEex v1.3.1 behavior. Warlock is not in the recipe.
@@ -387,12 +551,6 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   `7000`, `7007`, and `7008`, plus tweak components `20021`, `1020000`, and `2000001`.
 - [ ] Curate newly discovered Bardic Wonders components `2011`, `2012`, and `2013`.
 - [ ] [BGGO](BGGO.md) `4`: decide whether Alternate Graphics is excluded, optional, or default.
-- [ ] [EEex](EEEX.md) `9` Attack Info (new in v1.3.0; to-hit chances on the attack cursor):
-  decide whether it stays out or becomes optional, default or mandatory. Players can switch
-  the module on in EEex's in-game options either way.
-- [ ] [Modpack](CHRIZ-BG-MODPACK.md) alpha.13 `135` (Dorn ambush camera fix), `460` (party AI
-  Defensive Stance obeys "Use special abilities") and `652` (chapter-by-chapter XP caps,
-  experimental): decide whether each stays out or is offered, and as what.
 - [ ] [Warlock](C0WARLOCK.md): choose Yes or No for the Contingency UI-based
   spell-learning prompt. The component remains a default either way.
 - [ ] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
@@ -414,8 +572,20 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
 
 ## Done since 2026-09-04
 
-Done on 2026-10-23 on `claude/game-log-switch`
-([PR #30](https://github.com/Chrizhermann/chriz-bg-collection/pull/30)):
+Done on 2026-10-24 ([PR #17](https://github.com/Chrizhermann/chriz-bg-collection/pull/17),
+approved for the next CEBG release on 2026-10-23):
+
+- Installer link safety: patch restore with its adapter payload, BuffBot update writes
+  and their restore, and uninstall now read, write and delete through held folder
+  handles; uninstall also refuses a root that no longer has the confirmed identity.
+  Evidence in the pull request: junction and reparse-point tests at every level, and a
+  mutation check whose 20 mutations the new tests all caught. The ancestor checks above
+  an installation stay as they are: the planned OneDrive classification is dropped
+  (Christopher, 2026-10-19), because Windows shows OneDrive's placeholders to the
+  installer as plain folders and files.
+
+Done on 2026-10-23 ([PR #30](https://github.com/Chrizhermann/chriz-bg-collection/pull/30),
+merged on 2026-10-24):
 
 - Installer: the hidden game-log switch for crash diagnosis (requested on 2026-10-17,
   confirmed for the next release on 2026-10-23).
@@ -439,9 +609,26 @@ Done on 2026-10-23 on `claude/game-log-switch`
   switching back gave the same bytes. The lab check with a real game start is under
   Live/runtime acceptance.
 
+Done on 2026-10-23 ([PR #26](https://github.com/Chrizhermann/chriz-bg-collection/pull/26)):
+
+- Installer downloads: archives (for the collection cache and `chriz-bg-author artifact
+  inspect`/`verify`) no longer have a total time limit. An attempt fails only when no
+  data arrives for 60 seconds; connecting stays bounded. Retry, resume and hash checks
+  are unchanged. Evidence: loopback engine tests with injected limits, mutation checks,
+  an updater test and live `artifact verify` runs from a fresh cache
+  (`docs/download-stall-timeout-2026-10-22.md`). Not fixed: the app's own setup download
+  still has no stall detection.
+
+Done on 2026-10-20 ([PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18)):
+
+- [EEex](EEEX.md) v1.3.1 (2026-10-07) replaces v1.2.0 in both recipes: fresh download,
+  published release, archive shape and a native-order source audit in
+  `manifest/evidence/release-intake-20261018.toml`. The lab smoke test of every EEex
+  user is recorded in the pull request (2026-10-18).
+
 Done on 2026-10-18 in the EEex v1.3.1 runtime lab (EET over BG2:EE 2.7.3.0, full recipe,
-new BG1 game with a throwaway character, hidden quiet launches; branch
-`claude/eeex-131-pin`). Checked through Lua state, not on screen:
+new BG1 game with a throwaway character, hidden quiet launches;
+[PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18)). Checked through Lua state, not on screen:
 
 - [EEex](EEEX.md) modules: the effect menu opened while Left Shift was held and listed
   Bless after a cast; the empty-container hook was installed and gave the empty
@@ -460,7 +647,7 @@ new BG1 game with a throwaway character, hidden quiet launches; branch
   [bg-eeex-buffbot#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78) and
   [#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79).
 
-Done on 2026-10-18 on `claude/recipe-fixes-20261018`:
+Done on 2026-10-18 ([PR #14](https://github.com/Chrizhermann/chriz-bg-collection/pull/14)):
 
 - Both `known-limitations.toml` files name Artisan `8101` and NPC `10004` correctly,
   checked against the Artisan tag `v4.81a-dev.85928f9-chriz.1`.
@@ -476,7 +663,7 @@ Done on 2026-10-18 on `claude/recipe-fixes-20261018`:
   percent movement, casting-speed increase off, portrait icon on). Recipe components
   can now declare configuration files, which the installer places in the mod's
   published folder before the run and records as `config-files.json` evidence
-  (branch `claude/mod-config-files-20261018`).
+  ([PR #15](https://github.com/Chrizhermann/chriz-bg-collection/pull/15)).
 
 Verified on 2026-10-17 against `claude/cebg-installer-fixes-20261014`:
 

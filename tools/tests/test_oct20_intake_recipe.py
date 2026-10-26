@@ -2,7 +2,9 @@
 
 Static recipe, selection, dependency and order checks for both recipe profiles only.
 The pin follows the October 20 publication; nothing here is a game installation or
-gameplay acceptance.
+gameplay acceptance. Modpack alpha.14 (October 26, test_oct26_alpha22_pins_recipe)
+supersedes the alpha.13 pin, keeps its components and order, and brings the collection
+offer of alpha.13's 135, 460 and 652; the alpha.13 record and artifact stay as verified here.
 """
 
 from pathlib import Path
@@ -18,13 +20,16 @@ ROOT = Path(__file__).resolve().parents[2]
 MOD_ID = "chriz-bg-modpack"
 ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.13"
 PREVIOUS_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.12"
+# The October 26 alpha.22 pin batch replaces this pin.
+SUCCESSOR_ARTIFACT_ID = "chriz-bg-modpack-0.2.0-alpha.14"
 LATE_RUN = "chriz-bg-modpack-late-companions-bg2"
 CAMPAIGN_RUN = "chriz-bg-modpack-campaign-xp-bg2"
 MODPACK = "feature:chriz-bg-modpack:component-{}"
 JOIN_XP = MODPACK.format(239)
 EET_CORE = "feature:eet:mandatory-components"
-# Released in alpha.13; the collection offer waits for Christopher's decision.
-UNDECIDED = (135, 460, 652)
+# Released in alpha.13 and not offered with it; Christopher's decisions of 2026-10-25
+# offer them from the alpha.14 pin (test_oct26_alpha22_pins_recipe).
+LATER_OFFERED = (135, 460, 652)
 ALPHA13_NATIVE = [
     110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221,
     222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450,
@@ -133,7 +138,9 @@ class Oct20IntakeTests(unittest.TestCase):
             banking = self._selected(collection, preset, **{MODPACK.format(650): "on"})
             self.assertEqual(banking - baseline, {(CAMPAIGN_RUN, 650)})
 
-    def test_undecided_alpha13_components_are_not_offered(self):
+    def test_alpha13_components_left_open_here_are_offered_since_alpha14(self):
+        # They stayed out of every run until Christopher decided (2026-10-25); the
+        # alpha.14 intake checks their decisions, features and placement.
         for _, directory, collection, _ in self._each_profile():
             features = {feature["id"] for feature in collection["features"]}
             installed = {
@@ -143,10 +150,10 @@ class Oct20IntakeTests(unittest.TestCase):
             mod = tomllib.loads((directory / f"mods/{MOD_ID}.toml").read_text(encoding="utf-8"))
             declared = {component["id"] for component in mod["components"]}
             self.assertIn(239, declared)
-            for component in UNDECIDED:
-                self.assertNotIn(MODPACK.format(component), features)
-                self.assertNotIn(component, installed)
-                self.assertNotIn(component, declared)
+            for component in LATER_OFFERED:
+                self.assertIn(MODPACK.format(component), features)
+                self.assertIn(component, installed)
+                self.assertIn(component, declared)
 
     def test_catalog_rows_record_the_intake_decisions(self):
         rows = {RowKey(row.catalog, row.component_id): row for row in load_catalogs(ROOT / "docs/curation/components")}
@@ -155,14 +162,14 @@ class Oct20IntakeTests(unittest.TestCase):
             # Unchanged by this intake.
             237: Decision.DEFAULT, 238: Decision.DEFAULT, 430: Decision.DEFAULT,
             650: Decision.OPTIONAL, 651: Decision.OPTIONAL,
-            # Open Decisions parse as not installed, like EEex 9.
-            **{component: Decision.EXCLUDED for component in UNDECIDED},
+            # Open here; decided on 2026-10-25 and recorded with the alpha.14 pin.
+            135: Decision.DEFAULT, 460: Decision.DEFAULT, 652: Decision.OPTIONAL,
         }
         for component, decision in expected.items():
             self.assertEqual(rows[RowKey("CHRIZ-BG-MODPACK", component)].decision, decision, component)
         mapping = load_curation_map(ROOT / "manifest/curation-map.toml")
         [modpack] = [catalog for catalog in mapping.catalogs if catalog.catalog == "CHRIZ-BG-MODPACK"]
-        self.assertTrue(set(UNDECIDED) <= set(modpack.excluded))
+        self.assertFalse(set(LATER_OFFERED) & set(modpack.excluded))
         self.assertNotIn(239, modpack.excluded)
         targets = {target.target_id: target for target in mapping.targets}
         self.assertEqual(targets[JOIN_XP].rows, (RowKey("CHRIZ-BG-MODPACK", 239),))
@@ -181,7 +188,8 @@ class Oct20IntakeTests(unittest.TestCase):
         for profile in (ROOT / "manifest", ROOT / "recipes/curated-full-current", self.output):
             with self.subTest(profile=str(profile)):
                 mod = tomllib.loads((profile / f"mods/{MOD_ID}.toml").read_text(encoding="utf-8"))
-                self.assertEqual(mod["artifact_id"], ARTIFACT_ID)
+                # Superseded by alpha.14; this verified pin stays available as history.
+                self.assertEqual(mod["artifact_id"], SUCCESSOR_ARTIFACT_ID)
                 artifact = tomllib.loads((profile / f"artifacts/{ARTIFACT_ID}.toml").read_text(encoding="utf-8"))
                 for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
                                       ("url", "immutable_source_url"), ("reference", "source_reference")):
@@ -195,6 +203,7 @@ class Oct20IntakeTests(unittest.TestCase):
                 collection = tomllib.loads((profile / "collection.toml").read_text(encoding="utf-8"))
                 runs = [run for run in collection["runs"] if run["mod_id"] == MOD_ID]
                 self.assertEqual(len(runs), 9)
+                # Alpha.14 keeps alpha.13's declaration order.
                 for run in runs:
                     self.assertEqual(run["components"], [c for c in ALPHA13_NATIVE if c in run["components"]],
                                      run["run_id"])

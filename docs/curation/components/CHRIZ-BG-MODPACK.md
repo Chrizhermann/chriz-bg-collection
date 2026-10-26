@@ -5,11 +5,13 @@ approved in the [September 16 candidate](../../alpha16-candidate-2026-09-16.md).
 Rows `237`, `238`, `650`, `651` and `660` and the reworked `430` came with
 **v0.2.0-alpha.11** (October 13 intake, see
 [next batch intake](../../plans/2026-10-13-next-batch-intake.md)). **v0.2.0-alpha.12**
-(2026-10-14) added the companion stat rows `230`–`234`. The recipe now pins
-**v0.2.0-alpha.13** (published 2026-10-20), which adds EET join XP `239` and makes
-campaign XP banking `650`/`651` work. Its other new components `135`, `460` and `652`
-are not offered yet (see below).
-64 current or historical entries; the collection exposes 44. Component `195` already includes the work from standalone component
+(2026-10-14) added the companion stat rows `230`–`234`. **v0.2.0-alpha.13**
+(2026-10-20) added EET join XP `239`, Dorn's ambush fix `135`, the party AI fix `460` and
+chapter XP caps `652`, and made campaign XP banking `650`/`651` work. The recipe now pins
+**v0.2.0-alpha.14** (published 2026-10-26), which keeps scrolls `430` on for the whole
+session and stops `650` from losing script variables; it adds and removes no component.
+With the alpha.14 pin the collection also offers `135`, `460` and `652` (see below).
+64 current or historical entries; the collection exposes 47. Component `195` already includes the work from standalone component
 `160`; Hexxat's three class routes are one at-most-one choice.
 The four ✓ marks record the old reference install, not the new default recipe.
 
@@ -37,15 +39,36 @@ The four ✓ marks record the old reference install, not the new default recipe.
 - The public alpha implements `110`, `130`, `140`, `160`, `170`, `190`, `192`–`198`,
   `188`, `189`, `199`, `220`–`225`, `400`, `410`, `430`, `440`, `450`, `610`, `611`, `620`, `630`, and `640`. It contains no advertised
   FAIL placeholders. Alpha.11 added `237`, `238`, `650`, `651` and `660`; alpha.12 added
-  `230`–`234`; alpha.13 adds `135`, `239`, `460` and `652`.
-- Alpha.13's Dorn ambush camera fix `135`, party AI Defensive Stance `460` and
-  chapter-by-chapter XP caps `652` (experimental alternative to `651` on top of `650`) are
-  released but **not offered in the collection: the offer waits for Christopher's
-  decision**. Their rows below have an open Decision, so they are not installed and have
-  no recipe features until he decides (like EEex `9`).
+  `230`–`234`; alpha.13 added `135`, `239`, `460` and `652`; alpha.14 adds none.
+- Dorn's ambush fix `135` (alpha.13) is **default (Christopher's decision,
+  2026-10-25)**. When Dorn catches up with Senjak and Dorotea in BG1, the cutscene no
+  longer locks the camera on Senjak, and Senjak's script releases a lock once he turns
+  hostile. Leaving the area after a stalled conversation therefore no longer crashes the
+  game; a completed conversation still ends in the fight. Its TP2 needs `CUTDN1B.BCS`,
+  which this BG2-based install gets from EET's BG1 import, so the feature requires EET's
+  core. It runs in the main post-EET_end Modpack run right after `130`, in TP2 order, so
+  it follows EET and SCS, as its
+  [guide](https://github.com/Chrizhermann/chriz-bg-modpack/blob/v0.2.0-alpha.14/docs/dorn-ambush-camera.md)
+  requires (after the mods that change `CUTDN1B.BCS` or `SENJACK.BCS`).
+- Party AI fix `460` (alpha.13) is **default (Christopher's decision, 2026-10-25)**: the
+  party AI scripts use Defensive Stance only while "Use special abilities" is on. EET's
+  BG1 stance block in the default party AI script `BDDEFAI` ignored that option
+  ([Gibberlings3/EET#210](https://github.com/Gibberlings3/EET/issues/210)). It patches
+  the scripts `PARTYAI.2DA` names and needs no other mod. It runs in the main
+  post-EET_end Modpack run after `450`, in TP2 order, so it follows EET and every party
+  AI writer in the earlier runs, as the Modpack README requires.
+- Chapter XP caps `652` (alpha.13) are **optional, unchecked and experimental
+  (Christopher's decision, 2026-10-25)**, because they need `650`. Instead of `651`'s
+  single SoA cap they cap usable XP per chapter across BG1, SoD, SoA and ToB, from 16,000
+  in BG1 Chapters 1-2 up to 8,900,000 in ToB Chapter 10, and bank the excess. The TP2
+  makes `651` and `652` mutually exclusive, and so do their features. `652` also makes
+  Baeloth's Larswood entrance (`BAINVI.BCS`) wait for Chapter 5, so his 40,000 starting XP
+  fits under that chapter's cap; if another mod replaced the scene, it leaves the script
+  unchanged and warns. It runs after `650` and `651` in the campaign XP run. The ToB
+  Chapter 10 cap of 8,900,000 needs an XP cap remover such as Tweaks Anthology `2090`, a
+  default in the curated recipe.
 - The collection exposes every implemented component except standalone `160`, whose exact
-  skill repair is invoked atomically by the default Skie component `195`, and the
-  undecided alpha.13 components `135`, `460` and `652`.
+  skill repair is invoked atomically by the default Skie component `195`.
 - Component `400` remains visible but conditionally inactive unless its Branwen /
   Spell Revisions prerequisites are selected.
 - Scrolls `430` (alpha.11) is default and no longer uses Tweaks Anthology `2170`: it
@@ -53,8 +76,12 @@ The four ✓ marks record the old reference install, not the new default recipe.
   arcane or divine caster level; other readers, such as Use Any Item users, half their
   highest class level, minimum 1). At install time it hashes every scroll and the spells
   they cast, so it runs in its own final run `chriz-bg-modpack-scrolls-bg2`, after BuffBot
-  and every other spell/item writer. On 2.7.3.0 with EEex v1.3.1 it shows its EEex error
-  box and disables itself (alpha.12 and alpha.13); see the open item in
+  and every other spell/item writer. Alpha.11 to alpha.13 turned it off for the session on
+  2.7.3.0 with EEex v1.3.1 after a load, a new game, an NPC joining or opening a
+  container, with an EEex message box; alpha.14 fixes this, and `430` stays a default
+  (Christopher, 2026-10-25). Its fallback information goes to the loader log only; one
+  box remains for the rare case that it cannot start cleanly and cannot undo its start.
+  The loader-log check in the Recommended lab run is still open; see
   [FOLLOW_UPS](FOLLOW_UPS.md).
 - Fade `237` and Evandra `238` are default whenever Fade or Evandra is selected: at the
   first SoA recruitment they raise the companion to the highest protagonist XP threshold
@@ -73,7 +100,12 @@ The four ✓ marks record the old reference install, not the new default recipe.
   (2,950,000, requires `650`) are optional, unchecked and experimental. Both require EEex
   and run in their own run `chriz-bg-modpack-campaign-xp-bg2` right after the
   late-companion run. Alpha.11 and alpha.12 refused every permanent XP award with `650`
-  installed; alpha.13 fixes the banking, lab-verified on 2.7.3.0 with EEex v1.3.1.
+  installed; alpha.13 fixes the banking, lab-verified on 2.7.3.0 with EEex v1.3.1. Up to
+  alpha.13 an XP change the bank could not take stopped the rest of that character's
+  effects, so script variables set behind it were lost at the next save
+  ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)); alpha.14 fixes
+  this and writes `650`'s fallbacks to the loader log only. `651` and chapter caps `652`
+  are either-or.
 - Degrodel `660` is default: refusing to hand over the Helm of Balduran makes Degrodel
   and his servants attack; handing it over keeps the normal reward. It runs in the main
   post-EET_end Modpack run after `630`.
@@ -119,7 +151,7 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 110 | Fade NPC: Fighter/Thief multiclass conversion | chriz-bg-modpack: NPC fixes |  |  | default |
 | 120 | Fade NPC: proficiency pips + amulet usability | chriz-bg-modpack: NPC fixes |  |  | |
 | 130 | BG1NPC Kivan Sea Elf Quest — SCS compatibility fix | chriz-bg-modpack: NPC fixes |  |  | mandatory |
-| 135 | Dorn's BG1 ambush: no camera lock on Senjak (prevents a crash after leaving the area) | chriz-bg-modpack: NPC fixes |  |  |  |
+| 135 | Dorn's BG1 ambush: no camera lock on Senjak (prevents a crash after leaving the area) | chriz-bg-modpack: NPC fixes |  |  | default |
 | 140 | Mazzy: cap Short Bow at 4 pips, redistribute to Short Sword | chriz-bg-modpack: NPC fixes |  |  | mandatory |
 | 150 | Safana: remove Thief Set Snare (SPCL412) from CRE | chriz-bg-modpack: NPC fixes |  |  | |
 | 160 | Skie: redistribute Move Silently to Open Locks (Swashbuckler fix) | chriz-bg-modpack: NPC fixes |  |  | |
@@ -173,7 +205,7 @@ The four ✓ marks record the old reference install, not the new default recipe.
 | 630 | Hide unidentified item appearance | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 650 | Campaign XP caps - keep excess XP for later (BG1/SoD; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 651 | Campaign XP caps - also cap SoA until ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
-| 652 | Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | |
+| 652 | Campaign XP caps - chapter-by-chapter XP caps across BG1, SoD, SoA, and ToB (requires 650; experimental) | chriz-bg-modpack: Gameplay tweaks | | | optional |
 | 660 | Degrodel: hand over the Helm of Balduran or keep it and fight him | chriz-bg-modpack: Gameplay tweaks | | | default |
 | 640 | Legacy UI translation helper compatibility | chriz-bg-modpack: Compatibility | | | mandatory |
-| 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | |
+| 460 | Party AI Defensive Stance: obey the "Use special abilities" option | chriz-bg-modpack: Compatibility | | | default |

@@ -1,5 +1,5 @@
 """October 14 intake: Modpack v0.2.0-alpha.12, Rebalance v0.8.3, SCS fine weapons, Tweaks 7649ced,
-Bardic Wonders v2.9c-balance.8.
+Bardic Wonders v2.9c-balance.8. Later intakes supersede the Modpack and Rebalance pins.
 
 Static recipe, selection, dependency and order checks for both recipe profiles only.
 The pins follow the October 14 publications and the unreleased Tweaks Anthology master
@@ -113,8 +113,11 @@ class Oct14IntakeTests(unittest.TestCase):
             runs = {run["run_id"]: run for run in collection["runs"]}
             features = {feature["id"]: feature for feature in collection["features"]}
             components = runs[REBALANCE_RUN]["components"]
-            self.assertEqual(components[-3:], [330, 331, 332])
-            self.assertEqual(components, self._native("chriz-bg-rebalance", components))
+            # v0.8.5 (test_oct26_alpha22_pins_recipe) declares Chris Revisions 340 after
+            # them, checked against its own evidence; the v0.8.3 rows keep their order.
+            self.assertEqual(components[-4:], [330, 331, 332, 340])
+            v083_rows = [component for component in components if component != 340]
+            self.assertEqual(v083_rows, self._native("chriz-bg-rebalance", v083_rows))
             self.assertEqual((features[strict]["decision"], features[genius]["decision"], features[heroism]["decision"]),
                              ("optional", "default", "default"))
             self.assertEqual(features[strict]["choice_group"], features[genius]["choice_group"])
@@ -228,9 +231,10 @@ class Oct14IntakeTests(unittest.TestCase):
             "manifest": [ROOT / "manifest"],
             "recipes/curated-full-current": [ROOT / "recipes/curated-full-current", self.output],
         }
-        # The October 20 intake (test_oct20_intake_recipe) supersedes the Modpack pin;
-        # its pinned files stay exactly as verified here.
-        superseded = {"chriz-bg-modpack"}
+        # The October 20 intake (test_oct20_intake_recipe) supersedes the Modpack pin and
+        # the October 26 intake (test_oct26_alpha22_pins_recipe) the Rebalance pin; their
+        # pinned files stay exactly as verified here.
+        superseded = {"chriz-bg-modpack", "chriz-bg-rebalance"}
         for record in self.evidence["artifacts"]:
             for flag in ("fresh_download", "fresh_extraction", "native_component_order_verified"):
                 self.assertIs(record[flag], True, (record["mod_id"], flag))

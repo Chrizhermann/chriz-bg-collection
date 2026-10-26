@@ -45,8 +45,9 @@ BG1NPC_NATIVE_ORDER = [
     240, 241, 150, 155, 160, 200,
 ]
 
-# Exact pinned Artisan v4.81a-dev.85928f9-chriz.1 and Randomiser v8.1.1 TP2 order, restricted
-# to offered choices. Re-audit a newly offered ID instead of guessing its position.
+# Exact pinned Artisan v4.81a-dev.85928f9-chriz.3 (same order as chriz.1) and Randomiser v8.1.1
+# TP2 order, restricted to offered choices. Re-audit a newly offered ID instead of guessing its
+# position.
 NATIVE_RUN_ORDERS = {
     "artisanskitpack-main-bg2": [
         1, 2, 20000, 20001, 8001, 8101, 8002, 8004,
@@ -60,15 +61,19 @@ NATIVE_RUN_ORDERS = {
     "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234],
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
     # Degrodel 660 is declared after 640 and before the campaign XP pair 650/651.
-    "chriz-bg-modpack-bg2": [130, 400, 410, 440, 450, 610, 611, 630, 660],
+    # Alpha.13 declares Dorn's ambush fix 135 after 130 and the party AI fix 460 after
+    # 450; the collection offers both from the alpha.14 pin (October 26).
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],
-    "chriz-bg-modpack-campaign-xp-bg2": [650, 651],
+    # Chapter caps 652 (offered from alpha.14) follow 651, the alternative they exclude.
+    "chriz-bg-modpack-campaign-xp-bg2": [650, 651, 652],
     # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
     # Verify new source pins with tools/check_native_component_order.py.
-    # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last.
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332],
+    # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last;
+    # v0.8.5 (October 25) declares Chris Revisions 340 after them.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],

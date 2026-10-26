@@ -2,7 +2,7 @@
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Both pins follow their October releases; nothing here is a game installation or gameplay
-acceptance.
+acceptance. The October 26 intake supersedes the BuffBot pin.
 """
 
 from pathlib import Path
@@ -40,6 +40,9 @@ PINS = {
         "published_release": False,
     },
 }
+# The October 26 intake (test_oct26_alpha22_pins_recipe) moves BuffBot to v1.11.0; the
+# v1.10.1 artifact stays exactly as verified here.
+SUPERSEDED = {"buffbot"}
 # Neither release adds or changes a component, so the catalogs keep these rows and decisions.
 CATALOG_ROWS = {
     "BUFFBOT": {1: Decision.MANDATORY, 0: Decision.MANDATORY},
@@ -122,7 +125,10 @@ class Oct23BuffBotRemoteConsoleIntakeTests(unittest.TestCase):
                 record = self.records[mod_id]
                 with self.subTest(profile=str(profile), mod=mod_id):
                     mod = tomllib.loads((profile / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                    self.assertEqual(mod["artifact_id"], pin["artifact"])
+                    if mod_id in SUPERSEDED:
+                        self.assertNotIn(mod["artifact_id"], (pin["artifact"], pin["previous"]))
+                    else:
+                        self.assertEqual(mod["artifact_id"], pin["artifact"])
                     artifact = tomllib.loads(
                         (profile / f"artifacts/{pin['artifact']}.toml").read_text(encoding="utf-8"))
                     for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
