@@ -29,8 +29,8 @@ Cross-repository status. Component detail stays in the sections below and in the
      [PR #36](https://github.com/Chrizhermann/chriz-bg-collection/pull/36) (fresh-download
      and native-order evidence in `manifest/evidence/release-intake-20261026.toml`), merged
      into the next-release branch on 2026-10-26 together with #33, after #32 (Christopher's
-     approval of 2026-10-26). Kitpack chriz.4 (below) joins the batch if it is ready in
-     time.
+     approval of 2026-10-26). Kitpack chriz.4 (released on 2026-10-27, below) joins the
+     batch once Christopher approves the pin.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -164,17 +164,22 @@ Cross-repository status. Component detail stays in the sections below and in the
     `AKCB_SORCERER_WEAPONS` tail patch (in the release archive) stays outside CEBG, and
     the kit weapon fix has no tail; in existing games the helper creature gives the
     weapons back as before.
-  - chriz.4 (approved by Christopher on 2026-10-26, in progress, for new installations):
-    monks lack the quarterstaff grant after Monk Revisions, and plain shamans can equip
-    every weapon until the Kitpack's helper creature appears. The alpha.22 batch pins it
-    if it is ready in time.
-    - 2026-10-27: both gaps were reproduced on chriz.3 in a lab; the chriz.4 candidate
-      fixed both in labs in CEBG's order (with Spell Revisions) and in another order
-      (without it).
-    - Being closed before the release: in an order where the Kitpack's components
-      `10003`/`10004` run after its weapon tables are built, their kits (Sacred Fist,
-      Enlightened Fist, Ninja) miss the grant, like the shamans above. CEBG's order is
-      not affected, because `30001` runs after them there.
+  - [chriz.4](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.4),
+    released on 2026-10-27 (fork PR #15; approved by Christopher on 2026-10-26, for new
+    installations). It fixes two gaps: monks lacked the quarterstaff grant after Monk
+    Revisions, and plain shamans could equip every weapon until the Kitpack's helper
+    creature appeared.
+    - Both gaps were reproduced on chriz.3 in a lab.
+    - The release also covers kits that the Kitpack's components `10003`/`10004` add
+      after its weapon tables are built (Sacred Fist, Enlightened Fist, Ninja).
+    - Lab-verified on BG2:EE 2.7.3.0 with EEex v1.3.1, in CEBG's order (with Spell
+      Revisions) and in another order with those late kits (without it). The monk,
+      shaman, Favored Soul and Ninja kept the right weapons after joining, the helper
+      creature, a level-up and a reload.
+    - Not covered there: EET, other kits, a new game process and characters created
+      before the install.
+    - Not pinned yet: chriz.3 stays pinned until Christopher approves the chriz.4 pin for
+      the alpha.22 batch.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
