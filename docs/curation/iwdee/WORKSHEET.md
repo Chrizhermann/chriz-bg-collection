@@ -1,15 +1,14 @@
 # Chriz Easy IWD — mod worksheet
 
-This worksheet records Christopher's direction from 2026-09-08 through 2026-09-10 and
-his mod-level selection of 2026-10-25. It does not supply executable component
-decisions. Source versions and all applicable component menus must be reviewed before
-the IWD recipe is frozen.
+This worksheet records Christopher's direction from 2026-09-08 through 2026-09-10, his
+mod-level selection of 2026-10-25 and his component selection of 2026-10-26. The
+executable decisions live in the recipe (`recipes/iwd-current`).
 
 ## Mod-level selection (2026-10-25)
 
 Christopher chose from the neutral [inventory](INVENTORY.md). "On" and "off" mean
-selected or unselected by default in the installer. Component menus are still to be
-curated per mod.
+selected or unselected by default in the installer. The component menus follow in the
+next section.
 
 | Decision | Mods |
 |---|---|
@@ -25,7 +24,30 @@ Notes from the selection:
   it has no priority now.
 - The Rediscovery of Kuldahar needs IWDGO installed first and a new game.
 - Lava's downloads use per-visit tokens; automatic fetching is untested and needed for
-  eleven companions and eight quests.
+  eleven companions and eight quests. (Solved 2026-10-26: the installer fetches them
+  unattended.)
+
+## Component selection (2026-10-26)
+
+Christopher went through the component menus of the selected mods on a private selection
+page: 434 installable parts, each marked mandatory, on by default, offered (off by default)
+or not offered. Where he made no pick, the page's suggestion applies: the BG installer's
+decision when the version and label are the same, otherwise a mod's main part on and the
+rest as the page proposed. The recipe `recipes/iwd-current` (branch `claude/iwdee-recipe`)
+holds every resulting decision. His own choices:
+
+| Mod | Christopher's choices |
+|---|---|
+| SCS | All spell tweaks, after asking for SCS's own recommendation (they also bring Baldur's Gate versions of some IWD spells), so the per-category choices are not offered. On by default: Baldur's Gate-style Insect Plague and Creeping Doom, Baldur's Gate-style Mordenkainen's Sword next to the IWD one, revised elementals and elemental summoning, wider availability of wizard spell scrolls, improved shapeshifting. Mandatory: revised IWD undead. |
+| Tweaks Anthology | On: NPCs answer the main character, not whoever talks to them. Offered: Baldur's Gate casting graphics, restored IWD tooltips, game ends when the main character dies, Heart of Winter at any level, both variants of the Hjollder tweak, two-handed bastard swords, katanas and axes, the three random-drop variants. Not offered: the five Baldur's Gate druid progression variants. |
+| EEex | Offered: the attack-info module (to-hit chance on the attack cursor). |
+| Hidden Gameplay Options | Offered: improved "Quit Game" options. Its option for Tweaks Anthology's restored loading hints is left out, since that tweak is not chosen. Whether the mod is on by default is still open. |
+| Infinity UI++ | Four quicksave slots on by default; one, two, three, five or six slots offered instead (chat, 2026-10-26). Offered: transparent tooltip background, its Dialog.tlk string updates. |
+| IWD Crossmod Banter Pack | Banter timer of 30 minutes on by default, 15 minutes (the mod's recommendation) offered; crossmod romance conflicts on. |
+| IWD Unfinished Business | On: Marketh's Ring, actual shadows in the Vale of Shadows, the wardstone for Lower Dorn's Deep. |
+| Will of the Wisps | On: new items for shamans and undead NPCs. Offered: the Witchlight Shaman and Town Medium kits, the optional new enemies. |
+| Athanasios | Fighter/Cleric. |
+| Cassia | The grey default portrait; the installer answers the mod's question. |
 
 ## Shared mods and adaptations
 
