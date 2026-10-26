@@ -136,6 +136,7 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         Phase::Main,
         &[2310, 2311, 2312],
     ),
+    ("buffbot-main", "buffbot", Phase::Main, &[1, 0]),
     ("eeexremote-main", "eeexremote", Phase::Main, &[0]),
 ];
 
@@ -157,6 +158,7 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "bubb-spell-menu-5.2",
         "bubb_spell_menu_extended/bubb_spell_menu_extended.tp2",
     ),
+    ("buffbot", "buffbot-1.12.0", "buffbot/setup-buffbot.tp2"),
     (
         "cassianpc",
         "cassianpc-8f9af4ca4e76ec72240f961b18a1d83739acd994",
@@ -277,6 +279,16 @@ const ARTIFACTS: &[Pin] = &[
         filename: "Bubbs-Spell-Menu-Extended-5.2.zip",
         length: 1_432_756,
         sha256: "ac5380e99a534dd96200e97fa4358ca22ff2738266570d95195eac85d8f82e12",
+    },
+    Pin {
+        id: "buffbot-1.12.0",
+        version: "1.12.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.0/buffbot-v1.12.0.zip",
+        reference: "v1.12.0",
+        filename: "buffbot-v1.12.0.zip",
+        length: 5_695_718,
+        sha256: "f8c417bcefb321a00d195d95c015e85de48c5090ebf2f9c89cc210167332e7a6",
     },
     Pin {
         id: "cassianpc-8f9af4ca4e76ec72240f961b18a1d83739acd994",
@@ -672,6 +684,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
         ],
     ),
     ("cdtweaks-spell-save-penalties", &[2312]),
+    ("buffbot-main", &[1, 0]),
 ];
 
 #[test]
@@ -691,7 +704,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 298);
+    assert_eq!(manifest.collection.features.len(), 301);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -767,6 +780,12 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     );
     assert!(
         position(&manifest, "cdtweaks-main") < position(&manifest, "hidden-gameplay-options-main")
+    );
+    // BuffBot after EEex, late as in the BG installer.
+    assert!(position(&manifest, "eeex-main") < position(&manifest, "buffbot-main"));
+    assert_eq!(
+        position(&manifest, "buffbot-main") + 1,
+        position(&manifest, "eeexremote-main")
     );
 }
 
@@ -903,7 +922,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 95);
+    assert_eq!(components, 97);
 }
 
 #[test]
@@ -1112,6 +1131,44 @@ fn remote_console_requires_eeex_and_luajit_and_is_off_by_default() {
     );
     let eeex = enabled.plan.components_for("eeex-main").unwrap();
     assert!(eeex.contains(&1) && eeex.contains(&8));
+}
+
+#[test]
+fn buffbot_is_on_by_default_and_installs_its_luajit_support_first() {
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let parent = evaluation.view.control("mod:buffbot").unwrap();
+    assert_eq!(parent.decision, Decision::Default);
+    assert!(parent.selected);
+    let luajit = evaluation
+        .view
+        .control("feature:buffbot:component-1")
+        .unwrap();
+    let automation = evaluation
+        .view
+        .control("feature:buffbot:component-0")
+        .unwrap();
+    for control in [luajit, automation] {
+        assert_eq!(control.decision, Decision::Mandatory, "{}", control.id);
+        assert_eq!(
+            control.parent.as_deref(),
+            Some("mod:buffbot"),
+            "{}",
+            control.id
+        );
+        assert!(control.selected, "{}", control.id);
+    }
+    assert_eq!(luajit.requires, ["feature:eeex:component-1"]);
+    assert_eq!(automation.requires, ["feature:buffbot:component-1"]);
+    assert_eq!(
+        evaluation.plan.components_for("buffbot-main"),
+        Some(&[1, 0][..])
+    );
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:buffbot", false);
+    let without = evaluate(&manifest, &selection).unwrap();
+    assert!(without.plan.components_for("buffbot-main").is_none());
 }
 
 #[test]
