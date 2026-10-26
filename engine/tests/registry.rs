@@ -530,6 +530,29 @@ fn name_defaults_include_failed_missing_and_completed_entries() {
 }
 
 #[test]
+fn name_defaults_can_start_from_another_product_name() {
+    let (_temp, _app_data, managed, registry) = setup();
+    assert_eq!(
+        registry
+            .suggested_display_name_from("  Chriz Easy IWD ")
+            .unwrap(),
+        "Chriz Easy IWD"
+    );
+    let mut completed = record(&managed);
+    completed.display_name = "chriz easy iwd".to_owned();
+    completed.receipt_sha256 = sha256_bytes(b"immutable receipt");
+    registry.publish(&completed).unwrap();
+    assert_eq!(
+        registry
+            .suggested_display_name_from("Chriz Easy IWD")
+            .unwrap(),
+        "Chriz Easy IWD (2)"
+    );
+    assert_eq!(registry.suggested_display_name().unwrap(), "Chriz Easy BG");
+    assert!(registry.suggested_display_name_from("Chriz/Easy").is_err());
+}
+
+#[test]
 fn name_validation_trims_compares_case_insensitively_and_rejects_invalid_input() {
     use bg_engine::registry::names::normalize_display_name;
     let (temp, _app_data, _managed, registry) = setup();

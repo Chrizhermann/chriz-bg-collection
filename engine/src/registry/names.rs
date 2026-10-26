@@ -122,12 +122,19 @@ struct NamedIdentity {
 impl ManagedInstallRegistry {
     /// Suggest a currently unused numbered default; creation rechecks it under a lock.
     pub fn suggested_display_name(&self) -> Result<String, RegistryError> {
+        self.suggested_display_name_from(DEFAULT_INSTALLATION_NAME)
+    }
+
+    /// Suggest a currently unused numbered name built on `base`, such as the product name of
+    /// another application; creation rechecks it under a lock.
+    pub fn suggested_display_name_from(&self, base: &str) -> Result<String, RegistryError> {
+        let base = normalize_display_name(base)?;
         let names = self.named_identities()?;
         for suffix in 1_u64.. {
             let name = if suffix == 1 {
-                DEFAULT_INSTALLATION_NAME.to_owned()
+                base.clone()
             } else {
-                format!("{DEFAULT_INSTALLATION_NAME} ({suffix})")
+                format!("{base} ({suffix})")
             };
             if !names
                 .values()
