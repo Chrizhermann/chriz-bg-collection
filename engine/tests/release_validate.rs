@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use bg_engine::manifest::InvocationMode;
+use bg_engine::manifest::{Decision, InvocationMode, Readiness};
 use bg_engine::release_validate::{
     validate_public_alpha_at, RULE_RELEASE_FAIL_STUB, RULE_RELEASE_OMISSION,
     RULE_RELEASE_OMISSION_APPROVAL, RULE_RELEASE_STATIC_EVIDENCE, RULE_RELEASE_TAIL,
@@ -247,6 +247,111 @@ fn omitted_default_requires_christopher_approval_reason_and_visible_limitation()
             "blank {field:?} unexpectedly passed"
         );
     }
+}
+
+const HGO: &str = "mod:hidden-gameplay-options";
+const HGO_DEFAULT: &str = "feature:hiddengameplayoptions:component-10";
+
+fn set_preset(manifest: &mut Manifest, feature_id: &str, value: &str) {
+    manifest
+        .presets
+        .get_mut("chris-recommended")
+        .expect("public alpha preset")
+        .selections
+        .insert(feature_id.to_owned(), value.to_owned());
+}
+
+fn omitted(findings: &[bg_engine::validate::Finding], feature_id: &str) -> bool {
+    let quoted = format!("{feature_id:?}");
+    findings
+        .iter()
+        .any(|finding| finding.rule == RULE_RELEASE_OMISSION && finding.message.contains(&quoted))
+}
+
+#[test]
+fn defaults_beneath_an_unticked_optional_parent_need_no_omission_record() {
+    let mut manifest = recipe();
+    set_preset(&mut manifest, HGO, "off");
+    // The preset still asks for the defaults beneath the unticked switch; they only show what
+    // ticking it would add.
+    let evaluation =
+        bg_engine::recipe_view::evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    assert!(evaluation.normalized_selection.features[HGO_DEFAULT]);
+    assert!(!evaluation.view.control(HGO_DEFAULT).unwrap().selected);
+
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(findings.is_empty(), "{findings:#?}");
+}
+
+#[test]
+fn a_default_that_drops_out_under_a_ticked_optional_parent_needs_an_omission_record() {
+    let mut manifest = recipe();
+    let feature = manifest
+        .collection
+        .features
+        .iter_mut()
+        .find(|feature| feature.id == HGO_DEFAULT)
+        .unwrap();
+    feature.readiness = Readiness::Blocked;
+    feature.unavailable_reason = Some("Held back for this check.".to_owned());
+
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(omitted(&findings, HGO_DEFAULT), "{findings:#?}");
+}
+
+#[test]
+fn outcomes_beneath_a_switched_off_default_parent_still_need_omission_records() {
+    let mut manifest = recipe();
+    // Default children of a default mod, and a mandatory child of another default mod.
+    set_preset(&mut manifest, "mod:bg1npc", "off");
+    set_preset(&mut manifest, "mod:paina", "off");
+    let paina_child = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| {
+            feature.parent.as_deref() == Some("mod:paina")
+                && feature.decision == Decision::Mandatory
+        })
+        .expect("Pai'Na mandatory child")
+        .id
+        .clone();
+
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(
+        omitted(&findings, "feature:bg1npc:component-0"),
+        "{findings:#?}"
+    );
+    assert!(omitted(&findings, &paina_child), "{findings:#?}");
+}
+
+#[test]
+fn an_unticked_optional_grandparent_covers_a_default_parent_and_its_defaults() {
+    let mut manifest = recipe();
+    let position = manifest
+        .collection
+        .features
+        .iter()
+        .position(|feature| feature.id == HGO)
+        .unwrap();
+    let mut grandparent = manifest.collection.features[position].clone();
+    grandparent.id = "test:optional-grandparent".to_owned();
+    grandparent.title = "Optional grandparent".to_owned();
+    let parent = &mut manifest.collection.features[position];
+    parent.decision = Decision::Default;
+    parent.parent = Some(grandparent.id.clone());
+    manifest.collection.features.insert(position, grandparent);
+
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(findings.is_empty(), "{findings:#?}");
+
+    // Ticked, the default parent and its defaults are requested and planned again.
+    set_preset(&mut manifest, "test:optional-grandparent", "on");
+    let evaluation =
+        bg_engine::recipe_view::evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+    assert!(evaluation.view.control(HGO_DEFAULT).unwrap().selected);
+    let findings = validate_public_alpha_at(&manifest, &release_root()).unwrap();
+    assert!(findings.is_empty(), "{findings:#?}");
 }
 
 #[test]

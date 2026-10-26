@@ -1,0 +1,32 @@
+id = "ppe-417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+name = "Portraits Portraits Everywhere (DaftHunk fork)"
+version = "417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/DaftHunk/Portraits-Portraits-Everywhere/zip/417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+reference = "417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+expected_filename = "Portraits-Portraits-Everywhere-417226ea6642b8c682b2d049d0ec6e86f38b7f47.zip"
+expected_length = 387318340
+sha256 = "fc250193d9cc69823032529fc4dac1d66f3765e5d9a9877f28c269dc5654b539"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["PPE"]
+tp2_paths = ["PPE/setup-PPE.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 8192
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 1073741824
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://github.com/DaftHunk/Portraits-Portraits-Everywhere"
+license = "Fetch-only official upstream commit archive; no redistribution by CEBG"
+url = "https://github.com/DaftHunk/Portraits-Portraits-Everywhere/commit/417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+reviewed_on = "2026-10-22"

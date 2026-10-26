@@ -138,6 +138,27 @@ components = [0]
 args = []
 
 [[runs]]
+run_id = "ntotsc-bg2"
+mod_id = "ntotsc"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+args = []
+
+[[runs]]
+run_id = "ac-quest-bg2"
+mod_id = "ac-quest"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+args = []
+
+[[runs]]
+run_id = "blackhearts-bg2"
+mod_id = "blackhearts"
+phase = "main"
+components = [1]
+args = []
+
+[[runs]]
 run_id = "rr-bg2"
 mod_id = "rr"
 phase = "main"
@@ -292,6 +313,20 @@ components = [0]
 args = []
 
 [[runs]]
+run_id = "zg-iwd-voices-bg2"
+mod_id = "zg-iwd-voices"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
+run_id = "thalan-bg2"
+mod_id = "thalan"
+phase = "main"
+components = [0]
+args = []
+
+[[runs]]
 run_id = "iwdification-bg2"
 mod_id = "iwdification"
 phase = "main"
@@ -345,6 +380,13 @@ run_id = "chriz-bg-modpack-pre-continuity-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "main"
 components = [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234]
+args = []
+
+[[runs]]
+run_id = "ppe-bg2"
+mod_id = "ppe"
+phase = "main"
+components = [0, 100, 150, 10, 20, 25, 300, 301, 302, 311, 312, 322, 330, 332, 340, 342, 350, 30, 40]
 args = []
 
 [[runs]]
@@ -663,7 +705,7 @@ description = "Restores the reviewed BG1 quests, encounters, and fixes before EE
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "BG1 content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 
 [[features]]
@@ -673,7 +715,7 @@ description = "Restore the second level of Ice Island."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 0 }]
@@ -685,7 +727,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 11 }]
@@ -697,7 +739,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 12 }]
@@ -709,7 +751,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 13 }]
@@ -721,7 +763,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 14 }]
@@ -733,7 +775,7 @@ description = "Apply the reviewed BG1 creature corrections."
 category = "bg1-fixes"
 source_label = "BG1 Unfinished Business"
 group_label = "Fixes and restorations"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 16 }]
@@ -745,7 +787,7 @@ description = "Apply the reviewed BG1 creature restorations."
 category = "bg1-fixes"
 source_label = "BG1 Unfinished Business"
 group_label = "Fixes and restorations"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 17 }]
@@ -757,7 +799,7 @@ description = "Restore reviewed BG1 creature names."
 category = "bg1-fixes"
 source_label = "BG1 Unfinished Business"
 group_label = "Fixes and restorations"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 18 }]
@@ -769,7 +811,7 @@ description = "Restore reviewed minor BG1 dialogue."
 category = "bg1-fixes"
 source_label = "BG1 Unfinished Business"
 group_label = "Fixes and restorations"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 19 }]
@@ -781,7 +823,7 @@ description = "Apply the reviewed store, tavern, and inn fixes."
 category = "bg1-fixes"
 source_label = "BG1 Unfinished Business"
 group_label = "Fixes and restorations"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 21 }]
@@ -793,7 +835,7 @@ description = "Apply the reviewed BG1 item fixes and restorations."
 category = "bg1-fixes"
 source_label = "BG1 Unfinished Business"
 group_label = "Fixes and restorations"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 22 }]
@@ -805,7 +847,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 29 }]
@@ -817,7 +859,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 30 }]
@@ -829,7 +871,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 32 }]
@@ -841,7 +883,7 @@ description = "Restore this reviewed BG1 encounter."
 category = "bg1-content"
 source_label = "BG1 Unfinished Business"
 group_label = "Restored content"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 33 }]
@@ -853,7 +895,7 @@ description = "Restore the reviewed Chapter 6 dialogue."
 category = "bg1-fixes"
 source_label = "BG1 Unfinished Business"
 group_label = "Fixes and restorations"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:bg1ub"
 components = [{ run_id = "bg1ub-bg1", component = 34 }]
@@ -1726,6 +1768,718 @@ group_label = "Visuals"
 decision = "default"
 readiness = "ready"
 components = [{ run_id = "rr-bg2", component = 999 }]
+
+[[features]]
+id = "mod:ntotsc"
+title = "Northern Tales of the Sword Coast"
+description = "Third-party BG1 quest mod with new quests, areas and dungeons north of Baldur's Gate and along the Sword Coast. Experimental: not yet tested in a combined CEBG install."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+
+[[features]]
+id = "feature:ntotsc:component-0"
+title = "NTotSC core"
+description = "The main quests and areas: the Northern Citadel, the Field of the Dead, Haeball's tower in Larswood, Nadarin's fishing village, the Island of the Sirines and two extra dungeons, started by Duke Eltan, in the Blade and Stars and in Ulgoth's Beard. Every other NTotSC component except the spell scrolls requires it."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Quest mods"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ntotsc"
+components = [{ run_id = "ntotsc-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ntotsc:component-1"
+title = "Fewer monsters on lower difficulties"
+description = "Reduces the number and variety of monsters in NTotSC's dungeons depending on the game difficulty."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Nerfs"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 1 }]
+
+[[features]]
+id = "feature:ntotsc:component-2"
+title = "Keelor the Dwarf"
+description = "Adds Keelor, a dwarf injured by gnolls, to NTotSC's Wood of the Dead. If he is healed well enough, his sister Nasha in the temple of Umberlee in Baldur's Gate heals the party for free afterwards."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Quests and Encounters"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 2 }]
+
+[[features]]
+id = "feature:ntotsc:component-3"
+title = "Llindellyn's Lucky Arrow"
+description = "Adds Llindellyn to NTotSC's Northern Wood; help him find his lucky arrow."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Quests and Encounters"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 3 }]
+
+[[features]]
+id = "feature:ntotsc:component-4"
+title = "Nim Furlwing's Hunting Hounds"
+description = "Adds Nim Furlwing and her hounds to NTotSC's Temple of the Black Hand; help save the hounds from a monster attack."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Quests and Encounters"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+conflicts = [{ feature_id = "feature:bg1ub:component-30", reason = "BG1 Unfinished Business already restores this encounter with its Nim Furlwing Encounter (component 30), and NTotSC refuses to add it a second time. To use NTotSC's version, untick Nim Furlwing Encounter under BG1 Unfinished Business." }]
+components = [{ run_id = "ntotsc-bg2", component = 4 }]
+
+[[features]]
+id = "feature:ntotsc:component-5"
+title = "Pilar and Gheldehar"
+description = "Adds two people in Baldur's Gate who each have an item the other wants back. The quest can only be solved by pickpocketing."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Quests and Encounters"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 5 }]
+
+[[features]]
+id = "feature:ntotsc:component-6"
+title = "Svlast's Torment"
+description = "Adds the fallen paladin Svlast to Firewine Bridge; one of the brethren he wronged is coming for him."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Quests and Encounters"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+conflicts = [{ feature_id = "feature:bg1ub:component-32", reason = "BG1 Unfinished Business already restores this encounter with its Svlast, the Fallen Paladin Encounter (component 32), and NTotSC refuses to add it a second time. To use NTotSC's version, untick Svlast, the Fallen Paladin Encounter under BG1 Unfinished Business." }]
+components = [{ run_id = "ntotsc-bg2", component = 6 }]
+
+[[features]]
+id = "feature:ntotsc:component-7"
+title = "Will O'Hara (joinable NPC)"
+description = "Adds Will O'Hara, a joinable companion met in Beregost. Apart from a few interjections in Beregost and some custom items he has no dialogue or banters."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "NPC"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 7 }]
+
+[[features]]
+id = "feature:ntotsc:component-8"
+title = "Will O'Hara's English soundset"
+description = "Installs the English audio of Will O'Hara's soundset."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "NPC"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-7"]
+components = [{ run_id = "ntotsc-bg2", component = 8 }]
+
+[[features]]
+id = "feature:ntotsc:component-9"
+title = "Fighting encounters"
+description = "Adds unrelated fights: two extra fighters for Lamalha in the Valley of the Tombs, a family in a Beregost house, six sisters in the Jovial Juggler, Officer Tytus in the Cloakwood Mines and Black Talon elite fighters in Cloakwood and its mines."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Tactical Challenges"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 9 }]
+
+[[features]]
+id = "feature:ntotsc:component-10"
+title = "Improved Lesser Fiends"
+description = "Turns the \"lesser fiends\" in the Fireleaf Forest dungeon into a succubus and two maurezi, and brings back some invisible stalkers on higher difficulties."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Tactical Challenges"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ntotsc:component-11"
+title = "Improved Haeball"
+description = "Turns Haeball into a vampire mage who reveals himself halfway through the fight, summons wolves, uses other vampiric powers and casts a better selection of spells."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Tactical Challenges"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 11 }]
+
+[[features]]
+id = "feature:ntotsc:component-12"
+title = "Improved Ghotal"
+description = "Turns General Ghotal into a ghost with unusual powers and ghostly minions, replaces the two death knights at the tomb entrance with stone golems and some of the weakest undead in the crypt with tougher ones."
+category = "quest-mods"
+source_label = "Northern Tales of the Sword Coast"
+group_label = "Tactical Challenges"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+components = [{ run_id = "ntotsc-bg2", component = 12 }]
+
+[[features]]
+id = "feature:ntotsc:component-13"
+title = "Remove Shaman Cloaks from generic Orc Priests"
+description = "Only one Shaman Cloak is left to find: the generic Orc Priests carry none and drop studded leather armor instead, which should make their fights easier."
+category = "quest-mods"
+group_label = "Reduce Number of Shaman Cloaks"
+source_label = "Northern Tales of the Sword Coast"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+choice_group = "choice:ntotsc:reduce-number-of-shaman-cloaks"
+conflicts = [{ feature_id = "feature:ntotsc:component-14", reason = "Choose one way to reduce the Shaman Cloaks." }]
+components = [{ run_id = "ntotsc-bg2", component = 13 }]
+
+[[features]]
+id = "feature:ntotsc:component-14"
+title = "Make Shaman Cloaks undroppable"
+description = "Only one Shaman Cloak is left to find: the Orc Priests still wear theirs, but the cloaks can't be looted, and the priests drop studded leather armor instead."
+category = "quest-mods"
+group_label = "Reduce Number of Shaman Cloaks"
+source_label = "Northern Tales of the Sword Coast"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+requires = ["feature:ntotsc:component-0"]
+choice_group = "choice:ntotsc:reduce-number-of-shaman-cloaks"
+conflicts = [{ feature_id = "feature:ntotsc:component-13", reason = "Choose one way to reduce the Shaman Cloaks." }]
+components = [{ run_id = "ntotsc-bg2", component = 14 }]
+
+[[features]]
+id = "feature:ntotsc:component-15"
+title = "Revised level 6 spell scrolls"
+description = "Adds two new wizard spells as level 6 spells, Skeleton Guard (summons a skeletal guard for one turn) and Fiery Cloud (4d4 fire damage per round in the cloud), and sells their scrolls at Sorcerous Sundries."
+category = "quest-mods"
+group_label = "Spell Scrolls"
+source_label = "Northern Tales of the Sword Coast"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+choice_group = "choice:ntotsc:spell-scrolls"
+conflicts = [{ feature_id = "feature:ntotsc:component-16", reason = "Choose one version of the spell scrolls." }]
+components = [{ run_id = "ntotsc-bg2", component = 15 }]
+
+[[features]]
+id = "feature:ntotsc:component-16"
+title = "Original level 7 and 8 spell scrolls"
+description = "Adds the two spells in their original strength, Skeleton Guard as a level 7 spell that summons two skeleton warriors for four hours and Fiery Cloud as a level 8 spell (1d4 fire damage per caster level each round, save for half), and sells their scrolls at Sorcerous Sundries."
+category = "quest-mods"
+group_label = "Spell Scrolls"
+source_label = "Northern Tales of the Sword Coast"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ntotsc"
+choice_group = "choice:ntotsc:spell-scrolls"
+conflicts = [{ feature_id = "feature:ntotsc:component-15", reason = "Choose one version of the spell scrolls." }]
+components = [{ run_id = "ntotsc-bg2", component = 16 }]
+
+[[features]]
+id = "mod:ac-quest"
+title = "Ascalon's Questpack"
+description = "Third-party quest pack: nine small BG1 quests and one for Shadows of Amn, some humorous, some tragic, with puzzles, fights and a few race- or class-specific turns. Experimental: not yet tested in a combined CEBG install."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+
+[[features]]
+id = "feature:ac-quest:component-0"
+title = "A Job Well-Paid"
+description = "A Beregost quest about adventurers who spend their first big reward a little too eagerly."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ac-quest:component-1"
+title = "A Feast for the Gnolls"
+description = "A romantic picnic went wrong: help Mrs Wellstone in Nashkel find her son."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 1 }]
+
+[[features]]
+id = "feature:ac-quest:component-2"
+title = "Jumper: Ugh and Jumper inside the cave (original)"
+description = "A comic tale of honour, friendship and a rabbit. Ugh and Jumper wait inside a cave west of the South Beregost Road."
+category = "quest-mods"
+group_label = "Jumper"
+source_label = "Ascalon's Questpack"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:jumper"
+conflicts = [{ feature_id = "feature:ac-quest:component-3", reason = "Choose one version of Jumper." }]
+components = [{ run_id = "ac-quest-bg2", component = 2 }]
+
+[[features]]
+id = "feature:ac-quest:component-3"
+title = "Jumper: Ugh and Jumper outside the cave"
+description = "The same quest with Ugh and Jumper outside the cave entrance. The author offers this placement for TheArtisan's Shadow Magic mod, which CEBG does not install."
+category = "quest-mods"
+group_label = "Jumper"
+source_label = "Ascalon's Questpack"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:jumper"
+conflicts = [{ feature_id = "feature:ac-quest:component-2", reason = "Choose one version of Jumper." }]
+components = [{ run_id = "ac-quest-bg2", component = 3 }]
+
+[[features]]
+id = "feature:ac-quest:component-4"
+title = "The Lost Son"
+description = "Meet Aphriel, a half-elf archer who gave up her bow for a quiet life, near the Cloakwood Lodge, and find out what changed."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 4 }]
+
+[[features]]
+id = "feature:ac-quest:component-5"
+title = "Of Wolves and Men: Aiwell's hut in High Hedge (original)"
+description = "The mage Aiwell has barred her doors from the outside; find out why. The couple lives in the hut near Thalantyr's in High Hedge."
+category = "quest-mods"
+group_label = "Of Wolves and Men"
+source_label = "Ascalon's Questpack"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:of-wolves-and-men"
+conflicts = [{ feature_id = "feature:ac-quest:component-6", reason = "Choose one version of Of Wolves and Men." }]
+components = [{ run_id = "ac-quest-bg2", component = 5 }]
+
+[[features]]
+id = "feature:ac-quest:component-6"
+title = "Of Wolves and Men: Aiwell's home in a Beregost house"
+description = "The same quest with the couple's home in a house in Beregost. The author offers this placement for Glam's NPC Pack, which CEBG does not install."
+category = "quest-mods"
+group_label = "Of Wolves and Men"
+source_label = "Ascalon's Questpack"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:of-wolves-and-men"
+conflicts = [{ feature_id = "feature:ac-quest:component-5", reason = "Choose one version of Of Wolves and Men." }]
+components = [{ run_id = "ac-quest-bg2", component = 6 }]
+
+[[features]]
+id = "feature:ac-quest:component-7"
+title = "The Great Carlini"
+description = "A curious gnome in the Friendly Arm Inn wants to try the spell that once cost the archmage Carlini his life."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 7 }]
+
+[[features]]
+id = "feature:ac-quest:component-8"
+title = "A Home for the Gibberlings"
+description = "An artist out of ideas makes trouble: see what Geraldo the Splendiferous in central Baldur's Gate has been up to."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 8 }]
+
+[[features]]
+id = "feature:ac-quest:component-9"
+title = "Fangirls"
+description = "Three devoted fans in north-western Baldur's Gate stay true to their idols."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 9 }]
+
+[[features]]
+id = "feature:ac-quest:component-10"
+title = "The Serpents of Abbathor: Original version (cliffhanger ending)"
+description = "A dwarven cult recruits along the Sword Coast; start by looting Mulahey's cave or by visiting south-western Baldur's Gate with a dwarf in the party. The original ends on a cliffhanger, because its planned sequels were never made."
+category = "quest-mods"
+group_label = "The Serpents of Abbathor"
+source_label = "Ascalon's Questpack"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:the-serpents-of-abbathor"
+conflicts = [{ feature_id = "feature:ac-quest:component-11", reason = "Choose one version of The Serpents of Abbathor." }]
+components = [{ run_id = "ac-quest-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ac-quest:component-11"
+title = "The Serpents of Abbathor: Tweaked version (ends in BG1)"
+description = "The same quest, tweaked by the Kerzenburgforum so that it ends in BG1, with more places to hand in the artifact on good and evil paths. On EET the good path has a small follow-up in Athkatla's slums, and the reward weapon can be upgraded by Cromwell and Cespenar."
+category = "quest-mods"
+group_label = "The Serpents of Abbathor"
+source_label = "Ascalon's Questpack"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+choice_group = "choice:ac-quest:the-serpents-of-abbathor"
+conflicts = [{ feature_id = "feature:ac-quest:component-10", reason = "Choose one version of The Serpents of Abbathor." }]
+components = [{ run_id = "ac-quest-bg2", component = 11 }]
+
+[[features]]
+id = "feature:ac-quest:component-12"
+title = "A Halfling among the Eyeless"
+description = "A Shadows of Amn quest: help Mrs Lawner find her missing son."
+category = "quest-mods"
+source_label = "Ascalon's Questpack"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ac-quest"
+components = [{ run_id = "ac-quest-bg2", component = 12 }]
+
+[[features]]
+id = "feature:blackhearts:component-1"
+title = "Black Hearts"
+description = "Third-party quest mod for BG1 and Siege of Dragonspear: Illasera hires the party in BG1 chapter 3 (The Huntress), and the story continues in SoD chapters 9 and 10 (Pilgrimage), with a short ToB dialogue on EET. Experimental: not yet tested in a combined CEBG install."
+category = "quest-mods"
+source_label = "Black Hearts"
+group_label = "Quest mods"
+decision = "optional"
+readiness = "experimental"
+conflicts = [{ feature_id = "feature:chriz-sod-remix:mandatory-components", reason = "Unavailable with CHRIZ-SOD-REMIX: Black Hearts' Siege of Dragonspear part runs through areas and scripts that the remix restructures." }]
+components = [{ run_id = "blackhearts-bg2", component = 1 }]
+
+[[features]]
+id = "feature:thalan:component-0"
+title = "Thalantyr Item Upgrade"
+description = "Thalantyr in High Hedge combines BG1 magic items, potions or scrolls and gold into improved items, and his store adds BG2's bags and cases and Remove Curse scrolls. On EE games its upgraded rings, cloak and amulet that contain a protection item are not marked exclusive, so they can be worn with other protection items. Experimental: not yet tested in a combined CEBG install."
+category = "items"
+source_label = "Thalantyr Item Upgrade"
+group_label = "Items"
+decision = "optional"
+readiness = "experimental"
+components = [{ run_id = "thalan-bg2", component = 0 }]
+
+[[features]]
+id = "feature:zg-iwd-voices:component-0"
+title = "Icewind Dale Voice Pack"
+description = "Adds Icewind Dale's player voice sets as selectable voices for your characters, in English. On EET possibly only three of each set's seven \"order acknowledged\" lines play; this is not yet checked in game. Experimental: not yet tested in a combined CEBG install."
+category = "audio"
+source_label = "Icewind Dale Voice Pack"
+group_label = "Audio"
+decision = "optional"
+readiness = "experimental"
+components = [{ run_id = "zg-iwd-voices-bg2", component = 0 }]
+
+[[features]]
+id = "mod:ppe"
+title = "Portraits Portraits Everywhere"
+description = "Third-party mod that adds dialogue portraits to speaking NPCs in BG1, SoD and BG2. It installs late, after nearly all NPC and content mods, so that their NPCs can get portraits too, and it replaces some portraits that other mods set. About 0.4 GB. Experimental: not yet tested in a combined CEBG install."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "Visuals"
+decision = "optional"
+readiness = "experimental"
+
+[[features]]
+id = "feature:ppe:component-0"
+title = "PPE core"
+description = "Gives the game's named speaking NPCs dialogue portraits from PPE's table. It writes the portrait even where another mod already set one, for example Pai'Na's party portrait in Shadows of Amn and several Rogue Rebalancing and Unfinished Business NPCs."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "Visuals"
+decision = "default"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 0 }]
+
+[[features]]
+id = "feature:ppe:component-100"
+title = "Category portraits in a fixed order"
+description = "Gives generic NPCs that still have no portrait (for example \"Thief\" or \"Commoner\") one from a matching pool, in a fixed order, so a reinstall gives the same result. Creatures that already have a portrait keep it."
+category = "visuals"
+group_label = "Category portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+requires = ["feature:ppe:component-0"]
+choice_group = "choice:ppe:category-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-150", reason = "Choose one way to assign category portraits." }]
+components = [{ run_id = "ppe-bg2", component = 100 }]
+
+[[features]]
+id = "feature:ppe:component-150"
+title = "Category portraits at random"
+description = "The same, but each portrait is picked at random from its pool."
+category = "visuals"
+group_label = "Category portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+requires = ["feature:ppe:component-0"]
+choice_group = "choice:ppe:category-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-100", reason = "Choose one way to assign category portraits." }]
+components = [{ run_id = "ppe-bg2", component = 150 }]
+
+[[features]]
+id = "feature:ppe:component-10"
+title = "Isandir's CHARNAME portraits"
+description = "Copies Isandir's set of portraits for your own character into the game."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "Visuals"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 10 }]
+
+[[features]]
+id = "feature:ppe:component-20"
+title = "Replace low-quality ToB and SoA portraits"
+description = "Replaces low-quality small portraits of major Shadows of Amn and Throne of Bhaal characters, such as the Five, Illasera, Melissan, Irenicus, Bodhi, Ellesime and the Solar. Ascension, installed earlier, sets some of the same files, so Bodhi, Balthazar, Gromnir and Abazigal end up with Ascension's large and PPE's small portraits."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "BG2 Companion Portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 20 }]
+
+[[features]]
+id = "feature:ppe:component-25"
+title = "Edwin/Edwina"
+description = "Adds portrait changes to Edwin's transformation into Edwina and back. The Tweaks Anthology's Female Edwina component does the same; with both installed, which portrait shows is not verified."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "BG2 Companion Portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 25 }]
+
+[[features]]
+id = "feature:ppe:component-300"
+title = "Imoen's BG1 portrait in BG1 and BG2"
+description = "Imoen uses her BG1 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Imoen portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-imoen-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-301", reason = "Choose one portrait for Imoen." }, { feature_id = "feature:ppe:component-302", reason = "Choose one portrait for Imoen." }]
+components = [{ run_id = "ppe-bg2", component = 300 }]
+
+[[features]]
+id = "feature:ppe:component-301"
+title = "Imoen's SoD portrait in BG1, SoD and BG2"
+description = "Imoen uses her SoD portrait in BG1, SoD and BG2."
+category = "visuals"
+group_label = "Change Imoen portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-imoen-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-300", reason = "Choose one portrait for Imoen." }, { feature_id = "feature:ppe:component-302", reason = "Choose one portrait for Imoen." }]
+components = [{ run_id = "ppe-bg2", component = 301 }]
+
+[[features]]
+id = "feature:ppe:component-302"
+title = "Imoen's BG2 portrait in BG1 and BG2"
+description = "Imoen uses her BG2 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Imoen portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-imoen-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-300", reason = "Choose one portrait for Imoen." }, { feature_id = "feature:ppe:component-301", reason = "Choose one portrait for Imoen." }]
+components = [{ run_id = "ppe-bg2", component = 302 }]
+
+[[features]]
+id = "feature:ppe:component-311"
+title = "Viconia's SoD portrait in BG1"
+description = "Viconia uses her SoD portrait in BG1. PPE writes her SoD and BG2 copies under file names the game does not read, so those portraits stay unchanged."
+category = "visuals"
+group_label = "Change Viconia portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-viconia-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-312", reason = "Choose one portrait for Viconia." }]
+components = [{ run_id = "ppe-bg2", component = 311 }]
+
+[[features]]
+id = "feature:ppe:component-312"
+title = "Viconia's BG2 portrait in BG1"
+description = "Viconia uses her BG2 portrait in BG1. PPE writes the BG2 copy under a file name the game does not read, so her BG2 portrait stays unchanged."
+category = "visuals"
+group_label = "Change Viconia portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-viconia-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-311", reason = "Choose one portrait for Viconia." }]
+components = [{ run_id = "ppe-bg2", component = 312 }]
+
+[[features]]
+id = "feature:ppe:component-322"
+title = "Jaheira's BG2 portrait in BG1"
+description = "Jaheira uses her BG2 portrait in BG1. PPE writes the BG2 copy under a file name the game does not read, so her BG2 portrait stays unchanged."
+category = "visuals"
+group_label = "Change Jaheira portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 322 }]
+
+[[features]]
+id = "feature:ppe:component-330"
+title = "Minsc's BG1 portrait in BG1 and BG2"
+description = "Minsc uses his BG1 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Minsc portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-minsc-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-332", reason = "Choose one portrait for Minsc." }]
+components = [{ run_id = "ppe-bg2", component = 330 }]
+
+[[features]]
+id = "feature:ppe:component-332"
+title = "Minsc's BG2 portrait in BG1 and BG2"
+description = "Minsc uses his BG2 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Minsc portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-minsc-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-330", reason = "Choose one portrait for Minsc." }]
+components = [{ run_id = "ppe-bg2", component = 332 }]
+
+[[features]]
+id = "feature:ppe:component-340"
+title = "Edwin's BG1 portrait in BG1 and BG2"
+description = "Edwin uses his BG1 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Edwin portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-edwin-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-342", reason = "Choose one portrait for Edwin." }]
+components = [{ run_id = "ppe-bg2", component = 340 }]
+
+[[features]]
+id = "feature:ppe:component-342"
+title = "Edwin's BG2 portrait in BG1 and BG2"
+description = "Edwin uses his BG2 portrait in BG1 and BG2."
+category = "visuals"
+group_label = "Change Edwin portraits"
+source_label = "Portraits Portraits Everywhere"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+choice_group = "choice:ppe:change-edwin-portraits"
+conflicts = [{ feature_id = "feature:ppe:component-340", reason = "Choose one portrait for Edwin." }]
+components = [{ run_id = "ppe-bg2", component = 342 }]
+
+[[features]]
+id = "feature:ppe:component-350"
+title = "Longhair Aerie"
+description = "Gives Aerie a long-haired portrait in Shadows of Amn and Throne of Bhaal, with matching drow and vampire variants."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "BG2 Companion Portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 350 }]
+
+[[features]]
+id = "feature:ppe:component-30"
+title = "Ust Natha drow NPCs"
+description = "While the party is disguised as drow in Ust Natha, the game's own companions show drow portraits. Companions from other mods keep their normal portraits."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "BG2 Companion Portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 30 }]
+
+[[features]]
+id = "feature:ppe:component-40"
+title = "Vampire NPCs"
+description = "Gives the vampire forms of Aerie, Anomen, Jaheira and Viconia vampire versions of their portraits."
+category = "visuals"
+source_label = "Portraits Portraits Everywhere"
+group_label = "BG2 Companion Portraits"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:ppe"
+components = [{ run_id = "ppe-bg2", component = 40 }]
 
 [[features]]
 id = "mod:evandra"

@@ -457,6 +457,7 @@ pub fn evaluate(manifest: &Manifest, selection: &Selection) -> Result<SelectionE
         if feature.decision == Decision::Default
             && desired.get(&feature.id).copied().unwrap_or(false)
             && !selected
+            && !under_unrequested_optional_ancestor(&feature.id, &features, &desired)
         {
             let (rule, message) = if feature.readiness == Readiness::Blocked {
                 (
@@ -1032,6 +1033,35 @@ fn effective_features(
         }
     }
     effective
+}
+
+/// Returns whether an optional ancestor of `feature_id` is not requested by the selection.
+///
+/// A default or mandatory feature beneath such a parent only describes what ticking the
+/// parent would add; it is not a requested outcome, so leaving it out is not an omission. A
+/// default or mandatory ancestor never qualifies, so a feature that drops out while its
+/// parents are requested is still reported.
+pub(crate) fn under_unrequested_optional_ancestor(
+    feature_id: &str,
+    features: &BTreeMap<&str, &Feature>,
+    desired: &BTreeMap<String, bool>,
+) -> bool {
+    let mut current = features
+        .get(feature_id)
+        .and_then(|feature| feature.parent.as_deref());
+    // Validation rejects parent cycles; the bound only keeps a malformed chain finite.
+    for _ in 0..=features.len() {
+        let Some(ancestor) = current.and_then(|id| features.get(id)) else {
+            return false;
+        };
+        if ancestor.decision == Decision::Optional
+            && !desired.get(&ancestor.id).copied().unwrap_or(false)
+        {
+            return true;
+        }
+        current = ancestor.parent.as_deref();
+    }
+    false
 }
 
 fn unavailable_reason(

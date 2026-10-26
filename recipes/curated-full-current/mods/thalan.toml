@@ -1,0 +1,11 @@
+id = "thalan"
+artifact_id = "thalan-4.5.1"
+name = "Thalantyr Item Upgrade"
+tp2 = "thalan/thalan.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Thalantyr Item Upgrade"
