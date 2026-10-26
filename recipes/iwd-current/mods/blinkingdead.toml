@@ -1,0 +1,15 @@
+id = "blinkingdead"
+artifact_id = "blinkingdead-3.1"
+name = "Night of the Blinking Dead"
+tp2 = "BlinkingDead/BlinkingDead.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Night of the Blinking Dead (IWD) -> Yes, but don't patch existing save games"
+
+[[components]]
+id = 1
+name = "Night of the Blinking Dead (IWD) -> Yes and patch existing save games"

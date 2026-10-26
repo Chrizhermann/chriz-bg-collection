@@ -1,0 +1,32 @@
+id = "bubb-spell-menu-5.2"
+name = "Bubb's Spell Menu Extended"
+version = "5.2"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-tag-archive"
+url = "https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2"
+reference = "v5.2"
+expected_filename = "Bubbs-Spell-Menu-Extended-5.2.zip"
+expected_length = 1432756
+sha256 = "ac5380e99a534dd96200e97fa4358ca22ff2738266570d95195eac85d8f82e12"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["bubb_spell_menu_extended"]
+tp2_paths = ["bubb_spell_menu_extended/bubb_spell_menu_extended.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 128
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 8388608
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Bubb13/Bubbs-Spell-Menu-Extended"
+license = "Fetch-only official upstream tag archive; the collection does not redistribute it"
+url = "https://github.com/Bubb13/Bubbs-Spell-Menu-Extended/releases/tag/v5.2"
+reviewed_on = "2026-09-04"

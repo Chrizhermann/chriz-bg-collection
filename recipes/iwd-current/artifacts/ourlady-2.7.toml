@@ -1,0 +1,32 @@
+id = "ourlady-2.7"
+name = "Tale of Our Lady Dreamless"
+version = "2.7"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/tale-of-our-lady-dreamless/?wpdmdl=365"
+reference = "2.7"
+expected_filename = "Tale-of-Our-Lady-Dreamless-v2.7.zip"
+expected_length = 10717208
+sha256 = "4f94e07df46d0043e8b746b7091bae6afe5119f04f3f9edd70c311b18acd267a"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["OurLady"]
+tp2_paths = ["OurLady/OurLady.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 200
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/tale-of-our-lady-dreamless/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/tale-of-our-lady-dreamless/"
+reviewed_on = "2026-10-26"

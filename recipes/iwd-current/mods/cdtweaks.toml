@@ -1,0 +1,1187 @@
+id = "cdtweaks"
+artifact_id = "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729"
+name = "The Tweaks Anthology"
+tp2 = "cdtweaks/setup-cdtweaks.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Batch Installer -- EXPERIMENTAL, use at own risk. Check the readme."
+
+[[components]]
+id = 10
+name = "Remove Helmet Animations"
+
+[[components]]
+id = 50
+name = "Avatar Morphing Script"
+
+[[components]]
+id = 60
+name = "Weapon Animation Tweaks"
+
+[[components]]
+id = 72
+name = "Baldur's Gate Casting Graphics [Andyr]"
+
+[[components]]
+id = 90
+name = "Disable Portrait Icons Added by Equipped Items"
+
+[[components]]
+id = 110
+name = "Icon Improvements"
+
+[[components]]
+id = 130
+name = "Force All Dialogue to Pause Game"
+
+[[components]]
+id = 160
+name = "Make Magic Shields Glow [plainab/grogerson]"
+
+[[components]]
+id = 170
+name = "Unique Icons [Lava] -> Only replace icons that aren't already unique"
+
+[[components]]
+id = 171
+name = "Unique Icons [Lava] -> Replace all icons"
+
+[[components]]
+id = 180
+name = "Unique Containers [Miloch] -> Fixes only"
+
+[[components]]
+id = 181
+name = "Unique Containers [Miloch] -> Unique icons only"
+
+[[components]]
+id = 182
+name = "Unique Containers [Miloch] -> Unique icons and names"
+
+[[components]]
+id = 190
+name = "Use Character Colors Instead of Item Colors -> For all shields and helmets"
+
+[[components]]
+id = 191
+name = "Use Character Colors Instead of Item Colors -> For non-magical shields and helmets"
+
+[[components]]
+id = 192
+name = "Use Character Colors Instead of Item Colors -> For all helmets"
+
+[[components]]
+id = 193
+name = "Use Character Colors Instead of Item Colors -> For non-magical helmets"
+
+[[components]]
+id = 194
+name = "Use Character Colors Instead of Item Colors -> For all shields"
+
+[[components]]
+id = 195
+name = "Use Character Colors Instead of Item Colors -> For non-magical shields"
+
+[[components]]
+id = 200
+name = "Remove Annoying Visual Effects from Equipped Items -> Remove blur effect"
+
+[[components]]
+id = 3150
+name = "Remove Annoying Visual Effects from Equipped Items -> Remove spell trap and reflection effects"
+
+[[components]]
+id = 3151
+name = "Remove Annoying Visual Effects from Equipped Items -> Remove all of the above"
+
+[[components]]
+id = 2010
+name = "Separate Resist Fire/Cold Icon into Separate Icons [Angel]"
+
+[[components]]
+id = 220
+name = "Enhanced Overlays for Colorblind Players [Fouinto]"
+
+[[components]]
+id = 230
+name = "Restore IWD Tooltips"
+
+[[components]]
+id = 240
+name = "Outline White Spell Icons for Accessibility -> Add Black Outline"
+
+[[components]]
+id = 241
+name = "Outline White Spell Icons for Accessibility -> Add Gray Outline"
+
+[[components]]
+id = 250
+name = "Colorize NPC Names and Tooltips -> Normal brightness"
+
+[[components]]
+id = 251
+name = "Colorize NPC Names and Tooltips -> Slightly increased brightness"
+
+[[components]]
+id = 252
+name = "Colorize NPC Names and Tooltips -> Moderately increased brightness"
+
+[[components]]
+id = 253
+name = "Colorize NPC Names and Tooltips -> Slightly decreased brightness"
+
+[[components]]
+id = 254
+name = "Colorize NPC Names and Tooltips -> Moderately decreased brightness"
+
+[[components]]
+id = 255
+name = "Colorize NPC Names and Tooltips -> Original color"
+
+[[components]]
+id = 1010
+name = "More Interjections"
+
+[[components]]
+id = 1070
+name = "Improved Multi-Player Kick-Out Dialogues"
+
+[[components]]
+id = 1100
+name = "Reveal City Maps When Entering Area"
+
+[[components]]
+id = 1120
+name = "Stores Sell Higher Stacks of Items"
+
+[[components]]
+id = 1140
+name = "Gems and Potions Require Identification -> Gems and potions"
+
+[[components]]
+id = 1141
+name = "Gems and Potions Require Identification -> Just gems"
+
+[[components]]
+id = 1142
+name = "Gems and Potions Require Identification -> Just potions"
+
+[[components]]
+id = 1150
+name = "Shapeshifter Rebalancing [Weimer]"
+
+[[components]]
+id = 1210
+name = "Use BG Walking Speeds"
+
+[[components]]
+id = 1280
+name = "Game Ends When the Main Character Dies"
+
+[[components]]
+id = 1290
+name = "NPCs Respond to the Main Character, Not to Whichever Character Talks to Them"
+
+[[components]]
+id = 1300
+name = "Make Heart of Winter Accessible at Any Level"
+
+[[components]]
+id = 1330
+name = "NPCs Cannot Use Doors"
+
+[[components]]
+id = 1360
+name = "Automatic Transition to the \"Heart of Winter\" Expansion -> Don't change the main game"
+
+[[components]]
+id = 1361
+name = "Automatic Transition to the \"Heart of Winter\" Expansion -> Remove Hjollder from Kuldahar"
+
+[[components]]
+id = 1370
+name = "Allow Monks to Change Damage Types with Hand Weapons"
+
+[[components]]
+id = 2020
+name = "Two-Handed Bastard Swords"
+
+[[components]]
+id = 2030
+name = "Two-Handed Katanas"
+
+[[components]]
+id = 2035
+name = "Two-Handed Axes"
+
+[[components]]
+id = 2040
+name = "Universal Clubs"
+
+[[components]]
+id = 2060
+name = "Weapon Styles for All"
+
+[[components]]
+id = 2090
+name = "Change Experience Point Cap -> Remove experience cap"
+
+[[components]]
+id = 2100
+name = "Allow Thieving and Stealth in Heavy Armor per PnP"
+
+[[components]]
+id = 2120
+name = "Allow Arcane Spellcasting in Heavy Armor"
+
+[[components]]
+id = 2140
+name = "Expanded Dual-Class Options"
+
+[[components]]
+id = 2150
+name = "Wear Multiple Protection Items -> PnP restrictions"
+
+[[components]]
+id = 2151
+name = "Wear Multiple Protection Items -> No restrictions"
+
+[[components]]
+id = 2152
+name = "Wear Multiple Protection Items -> Allow armor plus one protection item [Angel]"
+
+[[components]]
+id = 2160
+name = "Alter Weapon Proficiency System -> Rebalanced weapon proficiencies"
+
+[[components]]
+id = 2161
+name = "Alter Weapon Proficiency System -> BG-style weapon proficiencies, with weapon styles [the bigg]"
+
+[[components]]
+id = 2162
+name = "Alter Weapon Proficiency System -> BG-style weapon proficiencies, without weapon styles [the bigg]"
+
+[[components]]
+id = 2163
+name = "Alter Weapon Proficiency System -> IWD-style proficiencies with weapon styles"
+
+[[components]]
+id = 2164
+name = "Alter Weapon Proficiency System -> IWD-style proficiencies without weapon styles"
+
+[[components]]
+id = 2170
+name = "Cast Spells from Scrolls (and Other Items) at Character Level"
+
+[[components]]
+id = 2190
+name = "Limit Ability of Storekeepers to Identify Items -> Only mage and bard storekeepers can identify items"
+
+[[components]]
+id = 2191
+name = "Limit Ability of Storekeepers to Identify Items -> Identification ability is based on storekeeper's lore"
+
+[[components]]
+id = 2192
+name = "Limit Ability of Storekeepers to Identify Items -> Hybrid of both methods"
+
+[[components]]
+id = 2200
+name = "Multi-Class Grandmastery [Weimer]"
+
+[[components]]
+id = 2210
+name = "Change Grandmastery Bonuses -> True grandmastery [Baldurdash]"
+
+[[components]]
+id = 2213
+name = "Change Grandmastery Bonuses -> IWD grandmastery bonuses"
+
+[[components]]
+id = 2212
+name = "Change Grandmastery Bonuses -> EE-style grandmastery bonuses"
+
+[[components]]
+id = 2211
+name = "Change Grandmastery Bonuses -> BG2 grandmastery bonuses"
+
+[[components]]
+id = 2220
+name = "Change Magically Created Weapons to Zero Weight"
+
+[[components]]
+id = 2240
+name = "Un-Nerfed THAC0 Table"
+
+[[components]]
+id = 2250
+name = "Un-Nerfed Sorcerer Spell Progression Table"
+
+[[components]]
+id = 2260
+name = "Alter Mage Spell Progression Table -> Un-nerfed table [Blucher]"
+
+[[components]]
+id = 2261
+name = "Alter Mage Spell Progression Table -> PnP table"
+
+[[components]]
+id = 2270
+name = "Alter Bard Spell Progression Table -> Un-nerfed table [Blucher]"
+
+[[components]]
+id = 2271
+name = "Alter Bard Spell Progression Table -> PnP table"
+
+[[components]]
+id = 2280
+name = "Alter Cleric Spell Progression Table -> Un-nerfed table [Blucher]"
+
+[[components]]
+id = 2281
+name = "Alter Cleric Spell Progression Table -> PnP table"
+
+[[components]]
+id = 2288
+name = "Alter Druid Spell and Level Progression Tables -> No level progression changes, normal cleric spell table"
+
+[[components]]
+id = 2289
+name = "Alter Druid Spell and Level Progression Tables -> No level progression changes, un-nerfed cleric spell table [Blucher]"
+
+[[components]]
+id = 2290
+name = "Alter Druid Spell and Level Progression Tables -> No level progression changes, un-nerfed druid spell table only [Blucher]"
+
+[[components]]
+id = 2291
+name = "Alter Druid Spell and Level Progression Tables -> No level progression changes, PnP druid/cleric spell table only"
+
+[[components]]
+id = 2292
+name = "Alter Druid Spell and Level Progression Tables -> Use cleric level progression changes with normal druid spell table"
+
+[[components]]
+id = 2293
+name = "Alter Druid Spell and Level Progression Tables -> Use cleric level progression changes with un-nerfed druid spell table [Blucher]"
+
+[[components]]
+id = 2294
+name = "Alter Druid Spell and Level Progression Tables -> Use cleric level progression changes with pnp druid/cleric spell table"
+
+[[components]]
+id = 2295
+name = "Alter Druid Spell and Level Progression Tables -> Use cleric level progression changes with normal cleric spell table"
+
+[[components]]
+id = 2296
+name = "Alter Druid Spell and Level Progression Tables -> Use cleric level progression changes with un-nerfed cleric spell table [Blucher]"
+
+[[components]]
+id = 2735
+name = "Alter Druid Spell and Level Progression Tables -> Use BG/BG2 druid level progression changes with normal druid spell table"
+
+[[components]]
+id = 2736
+name = "Alter Druid Spell and Level Progression Tables -> Use BG/BG2 druid level progression changes with un-nerfed druid spell table [Blucher]"
+
+[[components]]
+id = 2737
+name = "Alter Druid Spell and Level Progression Tables -> Use BG/BG2 druid level progression changes with pnp druid/cleric spell table"
+
+[[components]]
+id = 2738
+name = "Alter Druid Spell and Level Progression Tables -> Use BG/BG2 druid level progression changes with normal cleric spell table"
+
+[[components]]
+id = 2739
+name = "Alter Druid Spell and Level Progression Tables -> Use BG/BG2 druid level progression changes with un-nerfed cleric spell table [Blucher]"
+
+[[components]]
+id = 2580
+name = "Alter Wisdom-Based Divine Bonus Spell Table -> Use PnP/PsT Table"
+
+[[components]]
+id = 2581
+name = "Alter Wisdom-Based Divine Bonus Spell Table -> Use BG/BG2/IWD Table"
+
+[[components]]
+id = 2310
+name = "Add Save Penalties for Spells Cast by High-Level Casters -> Arcane magic only"
+
+[[components]]
+id = 2311
+name = "Add Save Penalties for Spells Cast by High-Level Casters -> Divine magic only"
+
+[[components]]
+id = 2312
+name = "Add Save Penalties for Spells Cast by High-Level Casters -> Arcane and divine magic"
+
+[[components]]
+id = 2320
+name = "Trap Cap Removal [Ardanis/GeN1e]"
+
+[[components]]
+id = 2330
+name = "Remove Delay for Magical Traps [Ardanis/GeN1e]"
+
+[[components]]
+id = 2339
+name = "Remove Summoning Cap for Regular Summons"
+
+[[components]]
+id = 2360
+name = "Remove Racial Restrictions for Single-Classes"
+
+[[components]]
+id = 2380
+name = "Remove Racial Restrictions for Kits"
+
+[[components]]
+id = 2371
+name = "Alter Dual-Class Restrictions -> Allow non-humans to dual-class"
+
+[[components]]
+id = 2370
+name = "Alter Dual-Class Restrictions -> Humans can no longer dual-class"
+
+[[components]]
+id = 2372
+name = "Alter Dual-Class Restrictions -> Both options: *only* non-humans can dual-class"
+
+[[components]]
+id = 2350
+name = "Alter Multi-Class Restrictions -> Allow humans to multi-class"
+
+[[components]]
+id = 2351
+name = "Alter Multi-Class Restrictions -> Allow non-humans access to all multi-class combinations"
+
+[[components]]
+id = 2353
+name = "Alter Multi-Class Restrictions -> Allow non-humans access to a multi-classes only if they can access the single-classes"
+
+[[components]]
+id = 2357
+name = "Alter Multi-Class Restrictions -> Install options one and two (everyone can multi-class anything)"
+
+[[components]]
+id = 2358
+name = "Alter Multi-Class Restrictions -> Install options one and three (everyone can multi-class anything they can single-class)"
+
+[[components]]
+id = 2550
+name = "Alter Gnome Mage Kit/Multi-Class Options -> Keep gnome illusionist multi-class, enable all kits for single-class"
+
+[[components]]
+id = 2551
+name = "Alter Gnome Mage Kit/Multi-Class Options -> Generic mage multi-class, keep only illusionist kit for single-class"
+
+[[components]]
+id = 2552
+name = "Alter Gnome Mage Kit/Multi-Class Options -> Generic mage multi-class, enable all kits for single-class"
+
+[[components]]
+id = 2410
+name = "Druids Use 3E Alignment Restrictions"
+
+[[components]]
+id = 2420
+name = "Loosen Equipment Restrictions for Cleric Multi- and Dual-Classes"
+
+[[components]]
+id = 2430
+name = "Change Equipment Restrictions for Druid Multi- and Dual-Classes -> Loosen equipment restrictions"
+
+[[components]]
+id = 2431
+name = "Change Equipment Restrictions for Druid Multi- and Dual-Classes -> Tighten equipment restrictions [Angel]"
+
+[[components]]
+id = 2440
+name = "Everyone Gets Bonus APR from Specialization [subtledoctor]"
+
+[[components]]
+id = 2450
+name = "Enforce PnP Proficiency Rules on Dual-Classed Characters [subtledoctor]"
+
+[[components]]
+id = 2500
+name = "Exceptional Strength Weight Limit Changes [sarevok57]"
+
+[[components]]
+id = 2510
+name = "Level-Lock Spell Scrolls [Angel]"
+
+[[components]]
+id = 2520
+name = "Allow Mages to Use Bucklers and Thieves to Use Small Shields [Angel]"
+
+[[components]]
+id = 2530
+name = "Lightning Bolts Don't Bounce [Angel]"
+
+[[components]]
+id = 2560
+name = "Expand Usable Monk Equipment -> Allow Monks to Wear Helmets"
+
+[[components]]
+id = 2561
+name = "Expand Usable Monk Equipment -> Allow Monks to Use Staves"
+
+[[components]]
+id = 2562
+name = "Expand Usable Monk Equipment -> Allow Monks to Wear Helmets and Use Staves"
+
+[[components]]
+id = 2590
+name = "Thieves Can Backstab With More Weapons With \"Use Any Item\" or as Dual- and Multi-Classes"
+
+[[components]]
+id = 2620
+name = "Make Certain Creatures Immune to Backstab/Sneak Attack [Luke]"
+
+[[components]]
+id = 2630
+name = "Improved Cure/Cause Wounds [Luke]"
+
+[[components]]
+id = 2640
+name = "PnP Potions [Luke]"
+
+[[components]]
+id = 2650
+name = "Make Grease ignitable [Luke]"
+
+[[components]]
+id = 2660
+name = "Make Bears and Boars Continue Fighting after Reaching 0 Hit Points [Luke]"
+
+[[components]]
+id = 2670
+name = "Limit Resting Mechanic [Luke]"
+
+[[components]]
+id = 2680
+name = "Make Infravision Useful [Luke]"
+
+[[components]]
+id = 2690
+name = "Alternate Concentration Check [Luke] -> v1 (check readme)"
+
+[[components]]
+id = 2691
+name = "Alternate Concentration Check [Luke] -> v2 (check readme)"
+
+[[components]]
+id = 2692
+name = "Alternate Concentration Check [Luke] -> v3 (check readme)"
+
+[[components]]
+id = 2693
+name = "Alternate Concentration Check [Luke] -> v4 (check readme)"
+
+[[components]]
+id = 2700
+name = "Revised Troll Regeneration [Luke]"
+
+[[components]]
+id = 2710
+name = "NWN-Style Summons [Luke]"
+
+[[components]]
+id = 2740
+name = "Allow Shapeshifters to Wear Armor But Prevent Shapeshifting While Worn"
+
+[[components]]
+id = 2750
+name = "Force the AI to cast AoE spells on the ground [Luke]"
+
+[[components]]
+id = 2760
+name = "Disable stealing at fences [Luke]"
+
+[[components]]
+id = 2770
+name = "Standardize buying/selling markups for all stores [Luke]"
+
+[[components]]
+id = 2999
+name = "Max HP at Level One"
+
+[[components]]
+id = 3000
+name = "Higher HP on Level Up -> Maximum"
+
+[[components]]
+id = 3001
+name = "Higher HP on Level Up -> NWN-style"
+
+[[components]]
+id = 3002
+name = "Higher HP on Level Up -> Average rolls"
+
+[[components]]
+id = 3008
+name = "Allow HP Rolls Through Level 20 [Angel]"
+
+[[components]]
+id = 3010
+name = "Maximum HP Creatures [the bigg] -> For all creatures in game"
+
+[[components]]
+id = 3011
+name = "Maximum HP Creatures [the bigg] -> For non-party-joinable NPCs only"
+
+[[components]]
+id = 3012
+name = "Maximum HP Creatures [the bigg] -> For party-joinable NPCs only"
+
+[[components]]
+id = 3020
+name = "Identify All Items"
+
+[[components]]
+id = 3030
+name = "Easy Spell Learning -> 100% learn spells"
+
+[[components]]
+id = 3031
+name = "Easy Spell Learning -> 100% learn spells and no maximum cap"
+
+[[components]]
+id = 3040
+name = "Make Bags of Holding Bottomless"
+
+[[components]]
+id = 3050
+name = "Remove Fatigue from Restoration Spells"
+
+[[components]]
+id = 3070
+name = "Change Effect of Reputation on Store Prices -> Low Reputation Store Discount [Sabre]"
+
+[[components]]
+id = 3071
+name = "Change Effect of Reputation on Store Prices -> Reputation has no effect, stores price fixed at 100% [Luiz]"
+
+[[components]]
+id = 3072
+name = "Change Effect of Reputation on Store Prices -> Reputation has no effect, stores price fixed at 80% [Luiz]"
+
+[[components]]
+id = 3073
+name = "Change Effect of Reputation on Store Prices -> Reputation has no effect, stores price fixed at 60% [Luiz]"
+
+[[components]]
+id = 3080
+name = "Increase Ammo Stack Size -> Unlimited ammo stacking"
+
+[[components]]
+id = 3081
+name = "Increase Ammo Stack Size -> Stacks of 40"
+
+[[components]]
+id = 3082
+name = "Increase Ammo Stack Size -> Stacks of 80"
+
+[[components]]
+id = 3083
+name = "Increase Ammo Stack Size -> Stacks of 120"
+
+[[components]]
+id = 3090
+name = "Increase Jewelry, Gem, and Miscellaneous Item Stacks -> Unlimited jewelry, gem, and miscellaneous item stacking"
+
+[[components]]
+id = 3091
+name = "Increase Jewelry, Gem, and Miscellaneous Item Stacks -> Stacks of 40"
+
+[[components]]
+id = 3092
+name = "Increase Jewelry, Gem, and Miscellaneous Item Stacks -> Stacks of 80"
+
+[[components]]
+id = 3093
+name = "Increase Jewelry, Gem, and Miscellaneous Item Stacks -> Stacks of 120"
+
+[[components]]
+id = 3100
+name = "Increase Potion Stacking -> Unlimited potion stacking"
+
+[[components]]
+id = 3101
+name = "Increase Potion Stacking -> Stacks of 40"
+
+[[components]]
+id = 3102
+name = "Increase Potion Stacking -> Stacks of 80"
+
+[[components]]
+id = 3103
+name = "Increase Potion Stacking -> Stacks of 120"
+
+[[components]]
+id = 3110
+name = "Increase Scroll Stacking -> Unlimited scroll stacking"
+
+[[components]]
+id = 3111
+name = "Increase Scroll Stacking -> Stacks of 40"
+
+[[components]]
+id = 3112
+name = "Increase Scroll Stacking -> Stacks of 80"
+
+[[components]]
+id = 3113
+name = "Increase Scroll Stacking -> Stacks of 120"
+
+[[components]]
+id = 3120
+name = "Happy Patch - Alter How Party NPCs Complain About Reputation -> NPCs are never angry about reputation"
+
+[[components]]
+id = 3121
+name = "Happy Patch - Alter How Party NPCs Complain About Reputation -> NPCs can be angry about reputation but never leave [Salk]"
+
+[[components]]
+id = 3122
+name = "Happy Patch - Alter How Party NPCs Complain About Reputation -> NPCs are always neutral about reputation [Anomaly]"
+
+[[components]]
+id = 3125
+name = "Neutral Characters Make Happy Comments at Mid-Range Reputation [Luiz]"
+
+[[components]]
+id = 3130
+name = "No Traps or Locks [Weimer, argent77] -> Remove traps completely"
+
+[[components]]
+id = 3131
+name = "No Traps or Locks [Weimer, argent77] -> Remove only harmful trap effects"
+
+[[components]]
+id = 3132
+name = "No Traps or Locks [Weimer, argent77] -> Remove harmful trap effects and creatures summoned by alarms"
+
+[[components]]
+id = 3190
+name = "Rest Anywhere [japheth]"
+
+[[components]]
+id = 3191
+name = "Disable Non-Hostile Rest Spawns"
+
+[[components]]
+id = 3194
+name = "Alter Hostile Rest Spawns -> Disable completely"
+
+[[components]]
+id = 3195
+name = "Alter Hostile Rest Spawns -> Decrease frequency by 50%"
+
+[[components]]
+id = 3196
+name = "Alter Hostile Rest Spawns -> Increase frequency by 50%"
+
+[[components]]
+id = 3197
+name = "Alter Hostile Rest Spawns -> Double frequency"
+
+[[components]]
+id = 3198
+name = "Alter Hostile Rest Spawns -> Quadruple frequency"
+
+[[components]]
+id = 3200
+name = "Sellable Items [icelus]"
+
+[[components]]
+id = 3205
+name = "Stores Purchase All Item Types"
+
+[[components]]
+id = 3210
+name = "Minimum Stats Cheat"
+
+[[components]]
+id = 3240
+name = "Friendly Random Drops -> Randomize on reload"
+
+[[components]]
+id = 3241
+name = "Friendly Random Drops -> Choose your drop"
+
+[[components]]
+id = 3242
+name = "Friendly Random Drops -> Exchange with merchants"
+
+[[components]]
+id = 3260
+name = "Recoverable Ammunition [argent77] -> 25% chance to recover after a successful hit"
+
+[[components]]
+id = 3261
+name = "Recoverable Ammunition [argent77] -> 50% chance to recover after a successful hit"
+
+[[components]]
+id = 3262
+name = "Recoverable Ammunition [argent77] -> 75% chance to recover after a successful hit"
+
+[[components]]
+id = 3263
+name = "Recoverable Ammunition [argent77] -> 100% chance to recover after a successful hit"
+
+[[components]]
+id = 3264
+name = "Recoverable Ammunition [argent77] -> 25% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3265
+name = "Recoverable Ammunition [argent77] -> 50% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3266
+name = "Recoverable Ammunition [argent77] -> 75% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3267
+name = "Recoverable Ammunition [argent77] -> 100% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3270
+name = "Recoverable Throwing Weapons [argent77] -> 25% chance to recover after a successful hit"
+
+[[components]]
+id = 3271
+name = "Recoverable Throwing Weapons [argent77] -> 50% chance to recover after a successful hit"
+
+[[components]]
+id = 3272
+name = "Recoverable Throwing Weapons [argent77] -> 75% chance to recover after a successful hit"
+
+[[components]]
+id = 3273
+name = "Recoverable Throwing Weapons [argent77] -> 100% chance to recover after a successful hit"
+
+[[components]]
+id = 3274
+name = "Recoverable Throwing Weapons [argent77] -> 25% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3275
+name = "Recoverable Throwing Weapons [argent77] -> 50% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3276
+name = "Recoverable Throwing Weapons [argent77] -> 75% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3277
+name = "Recoverable Throwing Weapons [argent77] -> 100% chance to recover after a successful hit, vs. enemies only"
+
+[[components]]
+id = 3280
+name = "Give Every Class/Kit Four Weapon Slots"
+
+[[components]]
+id = 3290
+name = "Personalize Automatic Save Names -> Use scheme: 000000000-Protagonist-Save-Name"
+
+[[components]]
+id = 3291
+name = "Personalize Automatic Save Names -> Use scheme: 000000000-Protagonist Save-Name"
+
+[[components]]
+id = 3292
+name = "Personalize Automatic Save Names -> Use scheme: 000000000-(Protagonist)-Save-Name"
+
+[[components]]
+id = 3293
+name = "Personalize Automatic Save Names -> Use scheme: 000000000-(Protagonist) Save-Name"
+
+[[components]]
+id = 3294
+name = "Personalize Automatic Save Names -> Use scheme: 000000000-[Protagonist]-Save-Name"
+
+[[components]]
+id = 3295
+name = "Personalize Automatic Save Names -> Use scheme: 000000000-[Protagonist] Save-Name"
+
+[[components]]
+id = 3310
+name = "Start New Games with Party AI Turned Off"
+
+[[components]]
+id = 3320
+name = "No Depreciation in Stores"
+
+[[components]]
+id = 3340
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Movement speed by 50 percent"
+
+[[components]]
+id = 3341
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Movement speed by 100 percent"
+
+[[components]]
+id = 3342
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Movement speed by 150 percent"
+
+[[components]]
+id = 3343
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Movement speed by 50 percent and casting speed"
+
+[[components]]
+id = 3344
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Movement speed by 100 percent and casting speed"
+
+[[components]]
+id = 3345
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Movement speed by 150 percent and casting speed"
+
+[[components]]
+id = 3346
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Casting speed only"
+
+[[components]]
+id = 3347
+name = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77] -> Customize (via cdtweaks.txt)"
+
+[[components]]
+id = 3350
+name = "Create Interval Saves [argent77] -> Every 15 minutes (one save only)"
+
+[[components]]
+id = 3351
+name = "Create Interval Saves [argent77] -> Every 30 minutes (one save only)"
+
+[[components]]
+id = 3352
+name = "Create Interval Saves [argent77] -> Every 60 minutes (one save only)"
+
+[[components]]
+id = 3353
+name = "Create Interval Saves [argent77] -> Every 120 minutes (one save only)"
+
+[[components]]
+id = 3354
+name = "Create Interval Saves [argent77] -> Every 15 minutes (cycle through four saves)"
+
+[[components]]
+id = 3355
+name = "Create Interval Saves [argent77] -> Every 30 minutes (cycle through four saves)"
+
+[[components]]
+id = 3356
+name = "Create Interval Saves [argent77] -> Every 60 minutes (cycle through four saves)"
+
+[[components]]
+id = 3357
+name = "Create Interval Saves [argent77] -> Every 120 minutes (cycle through four saves)"
+
+[[components]]
+id = 3358
+name = "Create Interval Saves [argent77] -> Customize (via cdtweaks.txt)"
+
+[[components]]
+id = 3380
+name = "Sensible Regeneration When Traveling"
+
+[[components]]
+id = 3390
+name = "Automatic Use of Ranger Tracking Skill"
+
+[[components]]
+id = 3400
+name = "Restored Loading Hints"
+
+[[components]]
+id = 3410
+name = "Explicit Cast Warnings -> Mage and priest spells only"
+
+[[components]]
+id = 3411
+name = "Explicit Cast Warnings -> Mage, priest, and innate spells only"
+
+[[components]]
+id = 3412
+name = "Explicit Cast Warnings -> All spells (check readme)"
+
+[[components]]
+id = 3430
+name = "More Stoneskin Feedback [Luke]"
+
+[[components]]
+id = 3450
+name = "More Sensible Fireshield [Luke]"
+
+[[components]]
+id = 3460
+name = "More Sensible Blade Barrier [Luke]"
+
+[[components]]
+id = 3500
+name = "Summoned Creatures Clear Fog of War"
+
+[[components]]
+id = 3520
+name = "\"Bank\" XP when dualing a character [Luke (EEex)]"
+
+[[components]]
+id = 4020
+name = "ToB-Style NPCs"
+
+[[components]]
+id = 6000
+name = "Disarm Class Feat for Rogues [Luke]"
+
+[[components]]
+id = 6010
+name = "Knockdown Class Feat for Fighters and Monks [Luke]"
+
+[[components]]
+id = 6020
+name = "Spellcaster Skill/Counterspell Class Talent [Luke]"
+
+[[components]]
+id = 6030
+name = "Spontaneous Casting for Clerics [Luke]"
+
+[[components]]
+id = 6040
+name = "Weapon Finesse Class Feat for Thieves [Luke]"
+
+[[components]]
+id = 6050
+name = "Dual-Wield Class Feat for Rangers [Luke]"
+
+[[components]]
+id = 6060
+name = "NWN-Style Armor vs. Dexterity [Luke]"
+
+[[components]]
+id = 6070
+name = "Defensive Roll Class Feat for Thieves [Luke]"
+
+[[components]]
+id = 6080
+name = "Divine Grace/Dark Blessing Feat for Paladins/Blackguards [Luke]"
+
+[[components]]
+id = 6090
+name = "Good Aim Racial Feat for Halflings [Luke]"
+
+[[components]]
+id = 6100
+name = "Cleave Class Feat for Fighters and Monks [Luke]"
+
+[[components]]
+id = 6110
+name = "Sneak Attack Class Feat for Blackguards [Luke]"
+
+[[components]]
+id = 6120
+name = "Fearless Racial Feat for Halflings [Luke]"
+
+[[components]]
+id = 6130
+name = "Poison Save Class Feat for Assassins [Luke]"
+
+[[components]]
+id = 6140
+name = "Planar Turning Class Feat for Clerics/Paladins [Luke]"
+
+[[components]]
+id = 6150
+name = "Circle Kick Class Feat for Monks [Luke]"
+
+[[components]]
+id = 6160
+name = "NWN-style Barbarian Rage [Luke]"
+
+[[components]]
+id = 6170
+name = "\"Force\" the Archer Kit to Use Bows [Luke]"
+
+[[components]]
+id = 6180
+name = "Blind Fight Innate Feat for Berserkers [Luke]"
+
+[[components]]
+id = 6190
+name = "Dirty Fighting Class Feat for Chaotic-Aligned Rogues [Luke]"
+
+[[components]]
+id = 6200
+name = "Overwhelming/Devastating Critical Class Feat for Trueclass Fighters [Luke]"
+
+[[components]]
+id = 6210
+name = "Self Concealment Class Feat for Monks [Luke]"
+
+[[components]]
+id = 6220
+name = "Parry Mode Kit Feat for Blades and Swashbucklers [Luke]"
+
+[[components]]
+id = 6230
+name = "Armored Caster Class Feat for Bards [Luke]"
+
+[[components]]
+id = 6240
+name = "Trackless Step Class Feat for Rangers [Luke]"
+
+[[components]]
+id = 6250
+name = "Nature Sense Class Feat for Druids [Luke]"
+
+[[components]]
+id = 6260
+name = "Uncanny Dodge Class Feat for Barbarians and Rogues [Luke]"
+
+[[components]]
+id = 6270
+name = "NWN-style Sneak Attack/Crippling Strike Class Feat for Thieves and Stalkers [Luke]"
+
+[[components]]
+id = 6280
+name = "Evasion Class Feat for Monks and Rogues [Luke]"
+
+[[components]]
+id = 6290
+name = "Spell Penetration Class Feat for Spellcasters [Luke]"
+
+[[components]]
+id = 6300
+name = "Smite Evil/Good Class Feat for Paladins/Blackguards [Luke]"
+
+[[components]]
+id = 6310
+name = "Woodland Stride Class Feat for Druids [Luke]"
+
+[[components]]
+id = 6320
+name = "Bane of Enemies Class Feat for Rangers [Luke]"
+
+[[components]]
+id = 6330
+name = "Cantrips Class Feat for Spellcasters [Luke]"
+
+[[components]]
+id = 6340
+name = "Animal Companion Class Feat for Beastmasters [Luke]"
+
+[[components]]
+id = 6350
+name = "Opportunist Class Feat for Chaotic-Aligned Rogues [Luke]"
+
+[[components]]
+id = 6360
+name = "Quick To Master Racial Feat for Humans [Luke]"

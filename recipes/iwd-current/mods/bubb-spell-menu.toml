@@ -1,0 +1,11 @@
+id = "bubb-spell-menu"
+artifact_id = "bubb-spell-menu-5.2"
+name = "Bubb's Spell Menu Extended"
+tp2 = "bubb_spell_menu_extended/bubb_spell_menu_extended.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Bubb's Spell Menu Extended"

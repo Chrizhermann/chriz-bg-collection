@@ -1,0 +1,32 @@
+id = "kuldahar-2.6.1"
+name = "The Rediscovery of Kuldahar"
+version = "2.6.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/the-rediscovery-of-kuldahar/?wpdmdl=420"
+reference = "2.6.1"
+expected_filename = "Kuldahar-v2.6.1.zip"
+expected_length = 39452216
+sha256 = "dd854e7706d16ea487f2a19fed4e5430193ff29062112ec27daecb1254ed5565"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Kuldahar"]
+tp2_paths = ["Kuldahar/kuldahar.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 200
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/the-rediscovery-of-kuldahar/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/the-rediscovery-of-kuldahar/"
+reviewed_on = "2026-10-26"

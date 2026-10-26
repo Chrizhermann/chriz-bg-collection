@@ -1,0 +1,11 @@
+id = "lanna"
+artifact_id = "lanna-1.8"
+name = "L'anna"
+tp2 = "Lanna/lanna.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "L'anna - a new IWD EE companion"

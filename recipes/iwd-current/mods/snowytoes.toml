@@ -1,0 +1,15 @@
+id = "snowytoes"
+artifact_id = "snowytoes-1.6"
+name = "Snowytoes Hamlet"
+tp2 = "Snowytoes/Snowytoes.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Snowytoes Hamlet, a new area (IWD EE) -> Yes, but don't patch existing save games"
+
+[[components]]
+id = 1
+name = "Snowytoes Hamlet, a new area (IWD EE) -> Yes and patch existing save games"

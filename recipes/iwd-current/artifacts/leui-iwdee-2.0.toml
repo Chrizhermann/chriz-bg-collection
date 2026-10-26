@@ -1,0 +1,32 @@
+id = "leui-iwdee-2.0"
+name = "Lefreut's Enhanced UI for IWD:EE"
+version = "2.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/r-e-d/LeUI-IWDEE/releases/download/v2.0/lefreuts-enhanced-ui-for-iwdee-2.0.iemod"
+reference = "v2.0"
+expected_filename = "lefreuts-enhanced-ui-for-iwdee-2.0.iemod"
+expected_length = 1506856
+sha256 = "a0fbdd4dc244777c4ba0f63678047c2c3711ba6cc80b1d8492b3a0069b56c79f"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["LeUI-IWDEE"]
+tp2_paths = ["LeUI-IWDEE/LeUI-IWDEE.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 128
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/r-e-d/LeUI-IWDEE"
+license = "Fetch-only from the author's official release; no redistribution by CEBG"
+url = "https://github.com/r-e-d/LeUI-IWDEE/releases/tag/v2.0"
+reviewed_on = "2026-10-25"

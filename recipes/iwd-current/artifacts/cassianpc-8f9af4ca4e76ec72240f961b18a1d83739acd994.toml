@@ -1,0 +1,32 @@
+id = "cassianpc-8f9af4ca4e76ec72240f961b18a1d83739acd994"
+name = "Cassia NPC for IWD:EE"
+version = "8f9af4ca4e76ec72240f961b18a1d83739acd994"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Arvendor/CassiaNPC/zip/8f9af4ca4e76ec72240f961b18a1d83739acd994"
+reference = "8f9af4ca4e76ec72240f961b18a1d83739acd994"
+expected_filename = "CassiaNPC-8f9af4ca4e76ec72240f961b18a1d83739acd994.zip"
+expected_length = 3896221
+sha256 = "3d72034531f1cf7d98f8ed1c6510e624ebeb7aa15faba11a99a6bf98452b452e"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["CassiaNPC"]
+tp2_paths = ["CassiaNPC/Setup-CassiaNPC.tp2"]
+
+[archive.limits]
+max_depth = 9
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Arvendor/CassiaNPC"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/Arvendor/CassiaNPC/commit/8f9af4ca4e76ec72240f961b18a1d83739acd994"
+reviewed_on = "2026-10-25"

@@ -1,0 +1,3805 @@
+# Chriz Easy IWD: Icewind Dale: Enhanced Edition 2.7.3.0 collection.
+# Generated on 2026-10-26 from Christopher's component choices (his pick where he made one, else
+# the suggestion on his private selection page) and his mod-level selection in
+# docs/curation/iwdee/WORKSHEET.md. The generator is not in this repository yet (see
+# docs/curation/iwdee/FOLLOW_UPS.md); until it is, change a decision here and record it in
+# WORKSHEET.md.
+schema = 2
+game = "iwdee"
+application_data_directory = "Chriz Easy IWD"
+game_build = "2.7.3.0"
+
+# EE Fixpack readme: after the official patches, before other mods.
+[[runs]]
+run_id = "eefixpack-main"
+mod_id = "eefixpack"
+phase = "main"
+components = [0, 2]
+args = []
+
+# Early: Bubb's Spell Menu and 54 Tweaks Anthology components test for EEex #0, the Remote Console for #1.
+[[runs]]
+run_id = "eeex-main"
+mod_id = "eeex"
+phase = "main"
+components = [0, 1, 9, 2, 3, 4, 5, 6, 7, 8]
+args = []
+
+# Interface mods replace UI.MENU, so they come before every mod that patches it.
+[[runs]]
+run_id = "leui-iwdee-main"
+mod_id = "leui-iwdee"
+phase = "main"
+components = [0]
+args = []
+
+# Alternative to LeUI-IWDEE, same position.
+[[runs]]
+run_id = "infinity-ui-main"
+mod_id = "infinity-ui"
+phase = "main"
+components = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+args = []
+
+# Takes its layout from the interface mod installed before it.
+[[runs]]
+run_id = "bubb-spell-menu-main"
+mod_id = "bubb-spell-menu"
+phase = "main"
+components = [0]
+args = []
+
+# The Rediscovery of Kuldahar readme: install IWDGO before quest mods.
+[[runs]]
+run_id = "iwdgo-main"
+mod_id = "iwdgo"
+phase = "main"
+components = [0]
+args = []
+
+# Restored content before companions and quests.
+[[runs]]
+run_id = "ub-iwd-main"
+mod_id = "ub-iwd"
+phase = "main"
+components = [300, 700, 800]
+args = []
+
+# Before Bethany: its Town Medium kit refuses to install once Bethany has added the same kit (the readme says to install it before Bethany).
+[[runs]]
+run_id = "willowisp-main"
+mod_id = "willowisp"
+phase = "main"
+components = [2, 3, 4, 5]
+args = []
+
+# Companions; the Crossmod Banter Pack comes after all of them.
+[[runs]]
+run_id = "minervanpc-main"
+mod_id = "minervanpc"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "karihinpc-main"
+mod_id = "karihinpc"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "athanasiosnpc-main"
+mod_id = "athanasiosnpc"
+phase = "main"
+components = [0, 1]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "guldruknpc-main"
+mod_id = "guldruknpc"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "niriknpc-main"
+mod_id = "niriknpc"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "cassianpc-main"
+mod_id = "cassianpc"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "bethany-main"
+mod_id = "bethany"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "dendjelion-main"
+mod_id = "dendjelion"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "dusky-main"
+mod_id = "dusky"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "hommet-main"
+mod_id = "hommet"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "ina-main"
+mod_id = "ina"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "lanna-main"
+mod_id = "lanna"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "oakmaw-main"
+mod_id = "oakmaw"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "orra-main"
+mod_id = "orra"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "tviy-main"
+mod_id = "tviy"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "urchin-main"
+mod_id = "urchin"
+phase = "main"
+components = [0]
+args = []
+
+# Companion.
+[[runs]]
+run_id = "vito-main"
+mod_id = "vito"
+phase = "main"
+components = [0]
+args = []
+
+# Quest mod, after IWDGO.
+[[runs]]
+run_id = "innbb-main"
+mod_id = "innbb"
+phase = "main"
+components = [0]
+args = []
+
+# Quest mod, after IWDGO.
+[[runs]]
+run_id = "blinkingdead-main"
+mod_id = "blinkingdead"
+phase = "main"
+components = [0]
+args = []
+
+# Quest mod, after IWDGO.
+[[runs]]
+run_id = "snowytoes-main"
+mod_id = "snowytoes"
+phase = "main"
+components = [0]
+args = []
+
+# Quest mod, after IWDGO.
+[[runs]]
+run_id = "ourlady-main"
+mod_id = "ourlady"
+phase = "main"
+components = [0]
+args = []
+
+# Quest mod, after IWDGO.
+[[runs]]
+run_id = "skineater-main"
+mod_id = "skineater"
+phase = "main"
+components = [0]
+args = []
+
+# Quest mod; its readme asks for IWDGO first.
+[[runs]]
+run_id = "kuldahar-main"
+mod_id = "kuldahar"
+phase = "main"
+components = [0]
+args = []
+
+# Quest mod, after IWDGO.
+[[runs]]
+run_id = "thewarofbloomandrot-main"
+mod_id = "thewarofbloomandrot"
+phase = "main"
+components = [0]
+args = []
+
+# Picks its banters from the companions installed before it.
+[[runs]]
+run_id = "iwdcrossmodpack-main"
+mod_id = "iwdcrossmodpack"
+phase = "main"
+components = [10, 11, 12, 13, 14, 15, 30]
+args = []
+
+# Before SCS, as in the BG installer (SCS readme: either order works; SCS then sees spell changes).
+[[runs]]
+run_id = "cdtweaks-main"
+mod_id = "cdtweaks"
+phase = "main"
+components = [10, 50, 60, 72, 90, 110, 130, 160, 170, 171, 180, 181, 182, 190, 191, 192, 193, 194, 195, 200, 3150, 3151, 2010, 220, 230, 240, 241, 1010, 1100, 1120, 1140, 1141, 1142, 1280, 1290, 1300, 1360, 1361, 2020, 2030, 2035, 2090, 2151, 2152, 2170, 2190, 2191, 2192, 2210, 2220, 2250, 2260, 2270, 2280, 2292, 2380, 2410, 2420, 2430, 2500, 2520, 2590, 2760, 2999, 3000, 3001, 3002, 3008, 3010, 3011, 3012, 3030, 3031, 3040, 3070, 3071, 3072, 3073, 3080, 3081, 3082, 3083, 3090, 3091, 3092, 3093, 3100, 3101, 3102, 3103, 3110, 3111, 3112, 3113, 3120, 3121, 3122, 3125, 3130, 3131, 3132, 3191, 3194, 3195, 3196, 3197, 3198, 3200, 3205, 3240, 3241, 3242, 3290, 3291, 3292, 3293, 3294, 3295, 3310, 3320, 3340, 3341, 3342, 3343, 3344, 3345, 3346, 3347, 3350, 3351, 3352, 3353, 3354, 3355, 3356, 3357, 3390, 3500]
+args = []
+
+# SCS readme: towards the end, after mods that add creatures or items.
+[[runs]]
+run_id = "stratagems-main"
+mod_id = "stratagems"
+phase = "main"
+components = [1600, 1610, 2000, 2500, 2510, 2520, 3510, 3540, 3541, 4030, 4115, 4140, 4250, 5000, 5900, 6020, 6030, 6040, 6100, 6510, 6540, 6550, 6700]
+args = []
+
+# HGO readme: after Tweaks Anthology and any interface mods.
+[[runs]]
+run_id = "hidden-gameplay-options-main"
+mod_id = "hidden-gameplay-options"
+phase = "main"
+components = [10, 11, 12, 13, 14, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 200, 300, 301, 303, 304, 101, 102, 103]
+args = []
+
+# Save penalties after SCS, so they also cover the spells SCS adds (the BG installer runs them late too).
+[[runs]]
+run_id = "cdtweaks-spell-save-penalties"
+mod_id = "cdtweaks"
+phase = "main"
+components = [2310, 2311, 2312]
+args = []
+
+# Needs EEex #1 and #8 at install time.
+[[runs]]
+run_id = "eeexremote-main"
+mod_id = "eeexremote"
+phase = "main"
+components = [0]
+args = []
+
+[[features]]
+id = "mod:eeex"
+title = "EEex"
+description = "Extends the game engine. Bubb's Spell Menu and several tweaks need it."
+category = "foundation"
+source_label = "EEex"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:eeex:component-0"
+title = "Quick Menu Core"
+description = "Quick Menu Core"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 0 }]
+
+[[features]]
+id = "feature:eeex:component-1"
+title = "EEex"
+description = "EEex"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 1 }]
+requires = ["feature:eeex:component-0"]
+
+[[features]]
+id = "feature:eeex:component-9"
+title = "Enable attack info module: Show to-hit chances when hovering attack cursor over target"
+description = "Enable attack info module: Show to-hit chances when hovering attack cursor over target"
+category = "foundation"
+source_label = "EEex"
+decision = "optional"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 9 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:eeex:component-2"
+title = "Enable effect menu module: LShift-on-hover to view spells affecting creature"
+description = "Enable effect menu module: LShift-on-hover to view spells affecting creature"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 2 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:eeex:component-3"
+title = "Enable empty container module: Highlight empty containers in gray instead of cyan"
+description = "Enable empty container module: Highlight empty containers in gray instead of cyan"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 3 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:eeex:component-4"
+title = "Enable hotkey module: Edit override/B3Hotkey.lua to create advanced spell hotkeys"
+description = "Enable hotkey module: Edit override/B3Hotkey.lua to create advanced spell hotkeys"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 4 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:eeex:component-5"
+title = "Enable scale module: Customizable UI scaling factor"
+description = "Enable scale module: Customizable UI scaling factor"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 5 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:eeex:component-6"
+title = "Enable time step module: Advance 1 game tick on keypress"
+description = "Enable time step module: Advance 1 game tick on keypress"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 6 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:eeex:component-7"
+title = "Enable timer module: Visual indicators for modal actions, contingencies, and spell/item cooldowns"
+description = "Enable timer module: Visual indicators for modal actions, contingencies, and spell/item cooldowns"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 7 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "feature:eeex:component-8"
+title = "Experimental - Use LuaJIT: Can help stuttering | WARNING: May cause crashes when combined with certain mods"
+description = "Experimental - Use LuaJIT: Can help stuttering | WARNING: May cause crashes when combined with certain mods"
+category = "foundation"
+source_label = "EEex"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeex"
+components = [{ run_id = "eeex-main", component = 8 }]
+requires = ["feature:eeex:component-1"]
+
+[[features]]
+id = "mod:eefixpack"
+title = "Enhanced Edition Fixpack"
+description = "Community fixes for the Enhanced Edition games."
+category = "foundation"
+source_label = "Enhanced Edition Fixpack"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:eefixpack:component-0"
+title = "Core Fixes"
+description = "Core Fixes"
+category = "foundation"
+source_label = "Enhanced Edition Fixpack"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eefixpack"
+components = [{ run_id = "eefixpack-main", component = 0 }]
+
+[[features]]
+id = "feature:eefixpack:component-2"
+title = "Game Text Update"
+description = "Game Text Update"
+category = "foundation"
+source_label = "Enhanced Edition Fixpack"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eefixpack"
+components = [{ run_id = "eefixpack-main", component = 2 }]
+
+[[features]]
+id = "mod:bubb-spell-menu"
+title = "Bubb's Spell Menu Extended"
+description = "A spell and ability menu with search, opened from the action bar."
+category = "foundation"
+source_label = "Bubb's Spell Menu Extended"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:bubb-spell-menu:component-0"
+title = "Bubb's Spell Menu Extended"
+description = "Bubb's Spell Menu Extended"
+category = "foundation"
+source_label = "Bubb's Spell Menu Extended"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:bubb-spell-menu"
+components = [{ run_id = "bubb-spell-menu-main", component = 0 }]
+requires = ["feature:eeex:component-0"]
+
+[[features]]
+id = "mod:eeexremote"
+title = "EEex Remote Console"
+description = "Developer tool: send Lua commands to the running game."
+category = "foundation"
+source_label = "EEex Remote Console"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:eeexremote:component-0"
+title = "EEex Remote Console"
+description = "EEex Remote Console"
+category = "foundation"
+source_label = "EEex Remote Console"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:eeexremote"
+components = [{ run_id = "eeexremote-main", component = 0 }]
+requires = ["feature:eeex:component-1", "feature:eeex:component-8"]
+
+[[features]]
+id = "mod:stratagems"
+title = "Sword Coast Stratagems"
+description = "Sword Coast Stratagems: smarter enemies and improved encounters."
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:stratagems:component-1600"
+title = "Use Baldur's Gate-style Insect Plague and Creeping Doom instead of Icewind Dale versions"
+description = "Use Baldur's Gate-style Insect Plague and Creeping Doom instead of Icewind Dale versions"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 1600 }]
+
+[[features]]
+id = "feature:stratagems:component-1610"
+title = "Use Baldur's Gate-style Mordenkainen's Sword in addition to Icewind Dale version"
+description = "Use Baldur's Gate-style Mordenkainen's Sword in addition to Icewind Dale version"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 1610 }]
+
+[[features]]
+id = "feature:stratagems:component-2000"
+title = "Install all spell tweaks (if you don't select this, you will be given a chance to choose by category)"
+description = "Install all spell tweaks (if you don't select this, you will be given a chance to choose by category)"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 2000 }]
+
+[[features]]
+id = "feature:stratagems:component-2500"
+title = "Add 9 new arcane spells"
+description = "Add 9 new arcane spells"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 2500 }]
+
+[[features]]
+id = "feature:stratagems:component-2510"
+title = "Add 6 new divine spells (some borrowed from Divine Remix)"
+description = "Add 6 new divine spells (some borrowed from Divine Remix)"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 2510 }]
+
+[[features]]
+id = "feature:stratagems:component-2520"
+title = "Revised elementals and elemental summoning"
+description = "Revised elementals and elemental summoning"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 2520 }]
+
+[[features]]
+id = "feature:stratagems:component-3510"
+title = "Wider availability of wizard spell scrolls in Icewind Dale"
+description = "Wider availability of wizard spell scrolls in Icewind Dale"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 3510 }]
+
+[[features]]
+id = "feature:stratagems:component-3540"
+title = "Reduce the power of Inquisitors' Dispel Magic: Inquisitors dispel at 1.5 x their level (not twice their level)"
+description = "Reduce the power of Inquisitors' Dispel Magic: Inquisitors dispel at 1.5 x their level (not twice their level)"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+group_label = "Reduce the power of Inquisitors' Dispel Magic"
+choice_group = "stratagems:reduce-the-power-of-inquisitors-dispel-magic"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 3540 }]
+
+[[features]]
+id = "feature:stratagems:component-3541"
+title = "Reduce the power of Inquisitors' Dispel Magic: Inquisitors dispel at their level (not twice their level)"
+description = "Reduce the power of Inquisitors' Dispel Magic: Inquisitors dispel at their level (not twice their level)"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+group_label = "Reduce the power of Inquisitors' Dispel Magic"
+choice_group = "stratagems:reduce-the-power-of-inquisitors-dispel-magic"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 3541 }]
+
+[[features]]
+id = "feature:stratagems:component-4030"
+title = "Improved shapeshifting"
+description = "Improved shapeshifting"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 4030 }]
+
+[[features]]
+id = "feature:stratagems:component-4115"
+title = "Thieves assign skill points in multiples of five"
+description = "Thieves assign skill points in multiples of five"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 4115 }]
+
+[[features]]
+id = "feature:stratagems:component-4140"
+title = "Revised inn rooms: more expensive, more benefits"
+description = "Revised inn rooms: more expensive, more benefits"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 4140 }]
+
+[[features]]
+id = "feature:stratagems:component-4250"
+title = "Make spell sequencers and contingencies into innate abilities"
+description = "Make spell sequencers and contingencies into innate abilities"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "default"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 4250 }]
+
+[[features]]
+id = "feature:stratagems:component-5000"
+title = "Ease-of-use party AI"
+description = "Ease-of-use party AI"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "optional"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 5000 }]
+
+[[features]]
+id = "feature:stratagems:component-5900"
+title = "Initialise AI components (required for all tactical and AI components)"
+description = "Initialise AI components (required for all tactical and AI components)"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 5900 }]
+
+[[features]]
+id = "feature:stratagems:component-6020"
+title = "Smarter general AI and better calls for help"
+description = "Smarter general AI and better calls for help"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6020 }]
+requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "feature:stratagems:component-6030"
+title = "Smarter Mages"
+description = "Smarter Mages"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6030 }]
+requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "feature:stratagems:component-6040"
+title = "Smarter Priests"
+description = "Smarter Priests"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6040 }]
+requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "feature:stratagems:component-6100"
+title = "Potions for NPCs"
+description = "Potions for NPCs"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6100 }]
+requires_any = ["feature:stratagems:component-5900", "feature:stratagems:component-6020"]
+
+[[features]]
+id = "feature:stratagems:component-6510"
+title = "Improved fiends and celestials"
+description = "Improved fiends and celestials"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6510 }]
+requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "feature:stratagems:component-6540"
+title = "Smarter dragons"
+description = "Smarter dragons"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6540 }]
+requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "feature:stratagems:component-6550"
+title = "Smarter beholders"
+description = "Smarter beholders"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6550 }]
+requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "feature:stratagems:component-6700"
+title = "Revised Icewind Dale Undead"
+description = "Revised Icewind Dale Undead"
+category = "combat"
+source_label = "Sword Coast Stratagems"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:stratagems"
+components = [{ run_id = "stratagems-main", component = 6700 }]
+requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "mod:cdtweaks"
+title = "The Tweaks Anthology"
+description = "Tweaks Anthology: optional rule, convenience and cosmetic changes."
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:cdtweaks:component-10"
+title = "Remove Helmet Animations"
+description = "Remove Helmet Animations"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 10 }]
+
+[[features]]
+id = "feature:cdtweaks:component-50"
+title = "Avatar Morphing Script"
+description = "Avatar Morphing Script"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 50 }]
+
+[[features]]
+id = "feature:cdtweaks:component-60"
+title = "Weapon Animation Tweaks"
+description = "Weapon Animation Tweaks"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 60 }]
+
+[[features]]
+id = "feature:cdtweaks:component-72"
+title = "Baldur's Gate Casting Graphics [Andyr]"
+description = "Baldur's Gate Casting Graphics [Andyr]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 72 }]
+
+[[features]]
+id = "feature:cdtweaks:component-90"
+title = "Disable Portrait Icons Added by Equipped Items"
+description = "Disable Portrait Icons Added by Equipped Items"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 90 }]
+
+[[features]]
+id = "feature:cdtweaks:component-110"
+title = "Icon Improvements"
+description = "Icon Improvements"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 110 }]
+
+[[features]]
+id = "feature:cdtweaks:component-130"
+title = "Force All Dialogue to Pause Game"
+description = "Force All Dialogue to Pause Game"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 130 }]
+
+[[features]]
+id = "feature:cdtweaks:component-160"
+title = "Make Magic Shields Glow [plainab/grogerson]"
+description = "Make Magic Shields Glow [plainab/grogerson]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 160 }]
+
+[[features]]
+id = "feature:cdtweaks:component-170"
+title = "Unique Icons [Lava]: Only replace icons that aren't already unique"
+description = "Unique Icons [Lava]: Only replace icons that aren't already unique"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Unique Icons [Lava]"
+choice_group = "cdtweaks:unique-icons-lava"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 170 }]
+
+[[features]]
+id = "feature:cdtweaks:component-171"
+title = "Unique Icons [Lava]: Replace all icons"
+description = "Unique Icons [Lava]: Replace all icons"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Unique Icons [Lava]"
+choice_group = "cdtweaks:unique-icons-lava"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 171 }]
+
+[[features]]
+id = "feature:cdtweaks:component-180"
+title = "Unique Containers [Miloch]: Fixes only"
+description = "Unique Containers [Miloch]: Fixes only"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Unique Containers [Miloch]"
+choice_group = "cdtweaks:unique-containers-miloch"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 180 }]
+
+[[features]]
+id = "feature:cdtweaks:component-181"
+title = "Unique Containers [Miloch]: Unique icons only"
+description = "Unique Containers [Miloch]: Unique icons only"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Unique Containers [Miloch]"
+choice_group = "cdtweaks:unique-containers-miloch"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 181 }]
+
+[[features]]
+id = "feature:cdtweaks:component-182"
+title = "Unique Containers [Miloch]: Unique icons and names"
+description = "Unique Containers [Miloch]: Unique icons and names"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Unique Containers [Miloch]"
+choice_group = "cdtweaks:unique-containers-miloch"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 182 }]
+
+[[features]]
+id = "feature:cdtweaks:component-190"
+title = "Use Character Colors Instead of Item Colors: For all shields and helmets"
+description = "Use Character Colors Instead of Item Colors: For all shields and helmets"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Use Character Colors Instead of Item Colors"
+choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 190 }]
+
+[[features]]
+id = "feature:cdtweaks:component-191"
+title = "Use Character Colors Instead of Item Colors: For non-magical shields and helmets"
+description = "Use Character Colors Instead of Item Colors: For non-magical shields and helmets"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Use Character Colors Instead of Item Colors"
+choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 191 }]
+
+[[features]]
+id = "feature:cdtweaks:component-192"
+title = "Use Character Colors Instead of Item Colors: For all helmets"
+description = "Use Character Colors Instead of Item Colors: For all helmets"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Use Character Colors Instead of Item Colors"
+choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 192 }]
+
+[[features]]
+id = "feature:cdtweaks:component-193"
+title = "Use Character Colors Instead of Item Colors: For non-magical helmets"
+description = "Use Character Colors Instead of Item Colors: For non-magical helmets"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Use Character Colors Instead of Item Colors"
+choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 193 }]
+
+[[features]]
+id = "feature:cdtweaks:component-194"
+title = "Use Character Colors Instead of Item Colors: For all shields"
+description = "Use Character Colors Instead of Item Colors: For all shields"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Use Character Colors Instead of Item Colors"
+choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 194 }]
+
+[[features]]
+id = "feature:cdtweaks:component-195"
+title = "Use Character Colors Instead of Item Colors: For non-magical shields"
+description = "Use Character Colors Instead of Item Colors: For non-magical shields"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Use Character Colors Instead of Item Colors"
+choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 195 }]
+
+[[features]]
+id = "feature:cdtweaks:component-200"
+title = "Remove Annoying Visual Effects from Equipped Items: Remove blur effect"
+description = "Remove Annoying Visual Effects from Equipped Items: Remove blur effect"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Remove Annoying Visual Effects from Equipped Items"
+choice_group = "cdtweaks:remove-annoying-visual-effects-from-equipped-items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 200 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3150"
+title = "Remove Annoying Visual Effects from Equipped Items: Remove spell trap and reflection effects"
+description = "Remove Annoying Visual Effects from Equipped Items: Remove spell trap and reflection effects"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Remove Annoying Visual Effects from Equipped Items"
+choice_group = "cdtweaks:remove-annoying-visual-effects-from-equipped-items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3150 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3151"
+title = "Remove Annoying Visual Effects from Equipped Items: Remove all of the above"
+description = "Remove Annoying Visual Effects from Equipped Items: Remove all of the above"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Remove Annoying Visual Effects from Equipped Items"
+choice_group = "cdtweaks:remove-annoying-visual-effects-from-equipped-items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3151 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2010"
+title = "Separate Resist Fire/Cold Icon into Separate Icons [Angel]"
+description = "Separate Resist Fire/Cold Icon into Separate Icons [Angel]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2010 }]
+
+[[features]]
+id = "feature:cdtweaks:component-220"
+title = "Enhanced Overlays for Colorblind Players [Fouinto]"
+description = "Enhanced Overlays for Colorblind Players [Fouinto]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 220 }]
+
+[[features]]
+id = "feature:cdtweaks:component-230"
+title = "Restore IWD Tooltips"
+description = "Restore IWD Tooltips"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 230 }]
+
+[[features]]
+id = "feature:cdtweaks:component-240"
+title = "Outline White Spell Icons for Accessibility: Add Black Outline"
+description = "Outline White Spell Icons for Accessibility: Add Black Outline"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Outline White Spell Icons for Accessibility"
+choice_group = "cdtweaks:outline-white-spell-icons-for-accessibility"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 240 }]
+
+[[features]]
+id = "feature:cdtweaks:component-241"
+title = "Outline White Spell Icons for Accessibility: Add Gray Outline"
+description = "Outline White Spell Icons for Accessibility: Add Gray Outline"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Outline White Spell Icons for Accessibility"
+choice_group = "cdtweaks:outline-white-spell-icons-for-accessibility"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 241 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1010"
+title = "More Interjections"
+description = "More Interjections"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1010 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1100"
+title = "Reveal City Maps When Entering Area"
+description = "Reveal City Maps When Entering Area"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1100 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1120"
+title = "Stores Sell Higher Stacks of Items"
+description = "Stores Sell Higher Stacks of Items"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1120 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1140"
+title = "Gems and Potions Require Identification: Gems and potions"
+description = "Gems and Potions Require Identification: Gems and potions"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Gems and Potions Require Identification"
+choice_group = "cdtweaks:gems-and-potions-require-identification"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1140 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1141"
+title = "Gems and Potions Require Identification: Just gems"
+description = "Gems and Potions Require Identification: Just gems"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Gems and Potions Require Identification"
+choice_group = "cdtweaks:gems-and-potions-require-identification"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1141 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1142"
+title = "Gems and Potions Require Identification: Just potions"
+description = "Gems and Potions Require Identification: Just potions"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Gems and Potions Require Identification"
+choice_group = "cdtweaks:gems-and-potions-require-identification"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1142 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1280"
+title = "Game Ends When the Main Character Dies"
+description = "Game Ends When the Main Character Dies"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1280 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1290"
+title = "NPCs Respond to the Main Character, Not to Whichever Character Talks to Them"
+description = "NPCs Respond to the Main Character, Not to Whichever Character Talks to Them"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1290 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1300"
+title = "Make Heart of Winter Accessible at Any Level"
+description = "Make Heart of Winter Accessible at Any Level"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1300 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1360"
+title = "Automatic Transition to the \"Heart of Winter\" Expansion: Don't change the main game"
+description = "Automatic Transition to the \"Heart of Winter\" Expansion: Don't change the main game"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Automatic Transition to the \"Heart of Winter\" Expansion"
+choice_group = "cdtweaks:automatic-transition-to-the-heart-of-winter-expansion"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1360 }]
+
+[[features]]
+id = "feature:cdtweaks:component-1361"
+title = "Automatic Transition to the \"Heart of Winter\" Expansion: Remove Hjollder from Kuldahar"
+description = "Automatic Transition to the \"Heart of Winter\" Expansion: Remove Hjollder from Kuldahar"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Automatic Transition to the \"Heart of Winter\" Expansion"
+choice_group = "cdtweaks:automatic-transition-to-the-heart-of-winter-expansion"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 1361 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2020"
+title = "Two-Handed Bastard Swords"
+description = "Two-Handed Bastard Swords"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2020 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2030"
+title = "Two-Handed Katanas"
+description = "Two-Handed Katanas"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2030 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2035"
+title = "Two-Handed Axes"
+description = "Two-Handed Axes"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2035 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2090"
+title = "Change Experience Point Cap: Remove experience cap"
+description = "Change Experience Point Cap: Remove experience cap"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Change Experience Point Cap"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2090 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2151"
+title = "Wear Multiple Protection Items: No restrictions"
+description = "Wear Multiple Protection Items: No restrictions"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Wear Multiple Protection Items"
+choice_group = "cdtweaks:wear-multiple-protection-items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2151 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2152"
+title = "Wear Multiple Protection Items: Allow armor plus one protection item [Angel]"
+description = "Wear Multiple Protection Items: Allow armor plus one protection item [Angel]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Wear Multiple Protection Items"
+choice_group = "cdtweaks:wear-multiple-protection-items"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2152 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2170"
+title = "Cast Spells from Scrolls (and Other Items) at Character Level"
+description = "Cast Spells from Scrolls (and Other Items) at Character Level"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2170 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2190"
+title = "Limit Ability of Storekeepers to Identify Items: Only mage and bard storekeepers can identify items"
+description = "Limit Ability of Storekeepers to Identify Items: Only mage and bard storekeepers can identify items"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Limit Ability of Storekeepers to Identify Items"
+choice_group = "cdtweaks:limit-ability-of-storekeepers-to-identify-items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2190 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2191"
+title = "Limit Ability of Storekeepers to Identify Items: Identification ability is based on storekeeper's lore"
+description = "Limit Ability of Storekeepers to Identify Items: Identification ability is based on storekeeper's lore"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Limit Ability of Storekeepers to Identify Items"
+choice_group = "cdtweaks:limit-ability-of-storekeepers-to-identify-items"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2191 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2192"
+title = "Limit Ability of Storekeepers to Identify Items: Hybrid of both methods"
+description = "Limit Ability of Storekeepers to Identify Items: Hybrid of both methods"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Limit Ability of Storekeepers to Identify Items"
+choice_group = "cdtweaks:limit-ability-of-storekeepers-to-identify-items"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2192 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2210"
+title = "Change Grandmastery Bonuses: True grandmastery [Baldurdash]"
+description = "Change Grandmastery Bonuses: True grandmastery [Baldurdash]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Change Grandmastery Bonuses"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2210 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2220"
+title = "Change Magically Created Weapons to Zero Weight"
+description = "Change Magically Created Weapons to Zero Weight"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2220 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2250"
+title = "Un-Nerfed Sorcerer Spell Progression Table"
+description = "Un-Nerfed Sorcerer Spell Progression Table"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2250 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2260"
+title = "Alter Mage Spell Progression Table: Un-nerfed table [Blucher]"
+description = "Alter Mage Spell Progression Table: Un-nerfed table [Blucher]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Mage Spell Progression Table"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2260 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2270"
+title = "Alter Bard Spell Progression Table: Un-nerfed table [Blucher]"
+description = "Alter Bard Spell Progression Table: Un-nerfed table [Blucher]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Bard Spell Progression Table"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2270 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2280"
+title = "Alter Cleric Spell Progression Table: Un-nerfed table [Blucher]"
+description = "Alter Cleric Spell Progression Table: Un-nerfed table [Blucher]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Cleric Spell Progression Table"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2280 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2292"
+title = "Alter Druid Spell and Level Progression Tables: Use cleric level progression changes with normal druid spell table"
+description = "Alter Druid Spell and Level Progression Tables: Use cleric level progression changes with normal druid spell table"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Druid Spell and Level Progression Tables"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2292 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2310"
+title = "Add Save Penalties for Spells Cast by High-Level Casters: Arcane magic only"
+description = "Add Save Penalties for Spells Cast by High-Level Casters: Arcane magic only"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Add Save Penalties for Spells Cast by High-Level Casters"
+choice_group = "cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-spell-save-penalties", component = 2310 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2311"
+title = "Add Save Penalties for Spells Cast by High-Level Casters: Divine magic only"
+description = "Add Save Penalties for Spells Cast by High-Level Casters: Divine magic only"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Add Save Penalties for Spells Cast by High-Level Casters"
+choice_group = "cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-spell-save-penalties", component = 2311 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2312"
+title = "Add Save Penalties for Spells Cast by High-Level Casters: Arcane and divine magic"
+description = "Add Save Penalties for Spells Cast by High-Level Casters: Arcane and divine magic"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Add Save Penalties for Spells Cast by High-Level Casters"
+choice_group = "cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-spell-save-penalties", component = 2312 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2380"
+title = "Remove Racial Restrictions for Kits"
+description = "Remove Racial Restrictions for Kits"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2380 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2410"
+title = "Druids Use 3E Alignment Restrictions"
+description = "Druids Use 3E Alignment Restrictions"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2410 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2420"
+title = "Loosen Equipment Restrictions for Cleric Multi- and Dual-Classes"
+description = "Loosen Equipment Restrictions for Cleric Multi- and Dual-Classes"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2420 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2430"
+title = "Change Equipment Restrictions for Druid Multi- and Dual-Classes: Loosen equipment restrictions"
+description = "Change Equipment Restrictions for Druid Multi- and Dual-Classes: Loosen equipment restrictions"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Change Equipment Restrictions for Druid Multi- and Dual-Classes"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2430 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2500"
+title = "Exceptional Strength Weight Limit Changes [sarevok57]"
+description = "Exceptional Strength Weight Limit Changes [sarevok57]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2500 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2520"
+title = "Allow Mages to Use Bucklers and Thieves to Use Small Shields [Angel]"
+description = "Allow Mages to Use Bucklers and Thieves to Use Small Shields [Angel]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2520 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2590"
+title = "Thieves Can Backstab With More Weapons With \"Use Any Item\" or as Dual- and Multi-Classes"
+description = "Thieves Can Backstab With More Weapons With \"Use Any Item\" or as Dual- and Multi-Classes"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2590 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2760"
+title = "Disable stealing at fences [Luke]"
+description = "Disable stealing at fences [Luke]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2760 }]
+
+[[features]]
+id = "feature:cdtweaks:component-2999"
+title = "Max HP at Level One"
+description = "Max HP at Level One"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 2999 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3000"
+title = "Higher HP on Level Up: Maximum"
+description = "Higher HP on Level Up: Maximum"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Higher HP on Level Up"
+choice_group = "cdtweaks:higher-hp-on-level-up"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3000 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3001"
+title = "Higher HP on Level Up: NWN-style"
+description = "Higher HP on Level Up: NWN-style"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Higher HP on Level Up"
+choice_group = "cdtweaks:higher-hp-on-level-up"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3001 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3002"
+title = "Higher HP on Level Up: Average rolls"
+description = "Higher HP on Level Up: Average rolls"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Higher HP on Level Up"
+choice_group = "cdtweaks:higher-hp-on-level-up"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3002 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3008"
+title = "Allow HP Rolls Through Level 20 [Angel]"
+description = "Allow HP Rolls Through Level 20 [Angel]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3008 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3010"
+title = "Maximum HP Creatures [the bigg]: For all creatures in game"
+description = "Maximum HP Creatures [the bigg]: For all creatures in game"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Maximum HP Creatures [the bigg]"
+choice_group = "cdtweaks:maximum-hp-creatures-the-bigg"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3010 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3011"
+title = "Maximum HP Creatures [the bigg]: For non-party-joinable NPCs only"
+description = "Maximum HP Creatures [the bigg]: For non-party-joinable NPCs only"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Maximum HP Creatures [the bigg]"
+choice_group = "cdtweaks:maximum-hp-creatures-the-bigg"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3011 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3012"
+title = "Maximum HP Creatures [the bigg]: For party-joinable NPCs only"
+description = "Maximum HP Creatures [the bigg]: For party-joinable NPCs only"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Maximum HP Creatures [the bigg]"
+choice_group = "cdtweaks:maximum-hp-creatures-the-bigg"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3012 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3030"
+title = "Easy Spell Learning: 100% learn spells"
+description = "Easy Spell Learning: 100% learn spells"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Easy Spell Learning"
+choice_group = "cdtweaks:easy-spell-learning"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3030 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3031"
+title = "Easy Spell Learning: 100% learn spells and no maximum cap"
+description = "Easy Spell Learning: 100% learn spells and no maximum cap"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Easy Spell Learning"
+choice_group = "cdtweaks:easy-spell-learning"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3031 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3040"
+title = "Make Bags of Holding Bottomless"
+description = "Make Bags of Holding Bottomless"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3040 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3070"
+title = "Change Effect of Reputation on Store Prices: Low Reputation Store Discount [Sabre]"
+description = "Change Effect of Reputation on Store Prices: Low Reputation Store Discount [Sabre]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3070 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3071"
+title = "Change Effect of Reputation on Store Prices: Reputation has no effect, stores price fixed at 100% [Luiz]"
+description = "Change Effect of Reputation on Store Prices: Reputation has no effect, stores price fixed at 100% [Luiz]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3071 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3072"
+title = "Change Effect of Reputation on Store Prices: Reputation has no effect, stores price fixed at 80% [Luiz]"
+description = "Change Effect of Reputation on Store Prices: Reputation has no effect, stores price fixed at 80% [Luiz]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3072 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3073"
+title = "Change Effect of Reputation on Store Prices: Reputation has no effect, stores price fixed at 60% [Luiz]"
+description = "Change Effect of Reputation on Store Prices: Reputation has no effect, stores price fixed at 60% [Luiz]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Change Effect of Reputation on Store Prices"
+choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3073 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3080"
+title = "Increase Ammo Stack Size: Unlimited ammo stacking"
+description = "Increase Ammo Stack Size: Unlimited ammo stacking"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Ammo Stack Size"
+choice_group = "cdtweaks:increase-ammo-stack-size"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3080 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3081"
+title = "Increase Ammo Stack Size: Stacks of 40"
+description = "Increase Ammo Stack Size: Stacks of 40"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Ammo Stack Size"
+choice_group = "cdtweaks:increase-ammo-stack-size"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3081 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3082"
+title = "Increase Ammo Stack Size: Stacks of 80"
+description = "Increase Ammo Stack Size: Stacks of 80"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Ammo Stack Size"
+choice_group = "cdtweaks:increase-ammo-stack-size"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3082 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3083"
+title = "Increase Ammo Stack Size: Stacks of 120"
+description = "Increase Ammo Stack Size: Stacks of 120"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Ammo Stack Size"
+choice_group = "cdtweaks:increase-ammo-stack-size"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3083 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3090"
+title = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Unlimited jewelry, gem, and miscellaneous item stacking"
+description = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Unlimited jewelry, gem, and miscellaneous item stacking"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Jewelry, Gem, and Miscellaneous Item Stacks"
+choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3090 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3091"
+title = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Stacks of 40"
+description = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Stacks of 40"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Jewelry, Gem, and Miscellaneous Item Stacks"
+choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3091 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3092"
+title = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Stacks of 80"
+description = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Stacks of 80"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Jewelry, Gem, and Miscellaneous Item Stacks"
+choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3092 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3093"
+title = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Stacks of 120"
+description = "Increase Jewelry, Gem, and Miscellaneous Item Stacks: Stacks of 120"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Jewelry, Gem, and Miscellaneous Item Stacks"
+choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3093 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3100"
+title = "Increase Potion Stacking: Unlimited potion stacking"
+description = "Increase Potion Stacking: Unlimited potion stacking"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Potion Stacking"
+choice_group = "cdtweaks:increase-potion-stacking"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3100 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3101"
+title = "Increase Potion Stacking: Stacks of 40"
+description = "Increase Potion Stacking: Stacks of 40"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Potion Stacking"
+choice_group = "cdtweaks:increase-potion-stacking"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3101 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3102"
+title = "Increase Potion Stacking: Stacks of 80"
+description = "Increase Potion Stacking: Stacks of 80"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Potion Stacking"
+choice_group = "cdtweaks:increase-potion-stacking"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3102 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3103"
+title = "Increase Potion Stacking: Stacks of 120"
+description = "Increase Potion Stacking: Stacks of 120"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Potion Stacking"
+choice_group = "cdtweaks:increase-potion-stacking"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3103 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3110"
+title = "Increase Scroll Stacking: Unlimited scroll stacking"
+description = "Increase Scroll Stacking: Unlimited scroll stacking"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Scroll Stacking"
+choice_group = "cdtweaks:increase-scroll-stacking"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3110 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3111"
+title = "Increase Scroll Stacking: Stacks of 40"
+description = "Increase Scroll Stacking: Stacks of 40"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Scroll Stacking"
+choice_group = "cdtweaks:increase-scroll-stacking"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3111 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3112"
+title = "Increase Scroll Stacking: Stacks of 80"
+description = "Increase Scroll Stacking: Stacks of 80"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Scroll Stacking"
+choice_group = "cdtweaks:increase-scroll-stacking"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3112 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3113"
+title = "Increase Scroll Stacking: Stacks of 120"
+description = "Increase Scroll Stacking: Stacks of 120"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Scroll Stacking"
+choice_group = "cdtweaks:increase-scroll-stacking"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3113 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3120"
+title = "Happy Patch - Alter How Party NPCs Complain About Reputation: NPCs are never angry about reputation"
+description = "Happy Patch - Alter How Party NPCs Complain About Reputation: NPCs are never angry about reputation"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Happy Patch - Alter How Party NPCs Complain About Reputation"
+choice_group = "cdtweaks:happy-patch-alter-how-party-npcs-complain-about-reputation"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3120 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3121"
+title = "Happy Patch - Alter How Party NPCs Complain About Reputation: NPCs can be angry about reputation but never leave [Salk]"
+description = "Happy Patch - Alter How Party NPCs Complain About Reputation: NPCs can be angry about reputation but never leave [Salk]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Happy Patch - Alter How Party NPCs Complain About Reputation"
+choice_group = "cdtweaks:happy-patch-alter-how-party-npcs-complain-about-reputation"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3121 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3122"
+title = "Happy Patch - Alter How Party NPCs Complain About Reputation: NPCs are always neutral about reputation [Anomaly]"
+description = "Happy Patch - Alter How Party NPCs Complain About Reputation: NPCs are always neutral about reputation [Anomaly]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Happy Patch - Alter How Party NPCs Complain About Reputation"
+choice_group = "cdtweaks:happy-patch-alter-how-party-npcs-complain-about-reputation"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3122 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3125"
+title = "Neutral Characters Make Happy Comments at Mid-Range Reputation [Luiz]"
+description = "Neutral Characters Make Happy Comments at Mid-Range Reputation [Luiz]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3125 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3130"
+title = "No Traps or Locks [Weimer, argent77]: Remove traps completely"
+description = "No Traps or Locks [Weimer, argent77]: Remove traps completely"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "No Traps or Locks [Weimer, argent77]"
+choice_group = "cdtweaks:no-traps-or-locks-weimer-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3130 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3131"
+title = "No Traps or Locks [Weimer, argent77]: Remove only harmful trap effects"
+description = "No Traps or Locks [Weimer, argent77]: Remove only harmful trap effects"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "No Traps or Locks [Weimer, argent77]"
+choice_group = "cdtweaks:no-traps-or-locks-weimer-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3131 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3132"
+title = "No Traps or Locks [Weimer, argent77]: Remove harmful trap effects and creatures summoned by alarms"
+description = "No Traps or Locks [Weimer, argent77]: Remove harmful trap effects and creatures summoned by alarms"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "No Traps or Locks [Weimer, argent77]"
+choice_group = "cdtweaks:no-traps-or-locks-weimer-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3132 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3191"
+title = "Disable Non-Hostile Rest Spawns"
+description = "Disable Non-Hostile Rest Spawns"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3191 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3194"
+title = "Alter Hostile Rest Spawns: Disable completely"
+description = "Alter Hostile Rest Spawns: Disable completely"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3194 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3195"
+title = "Alter Hostile Rest Spawns: Decrease frequency by 50%"
+description = "Alter Hostile Rest Spawns: Decrease frequency by 50%"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3195 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3196"
+title = "Alter Hostile Rest Spawns: Increase frequency by 50%"
+description = "Alter Hostile Rest Spawns: Increase frequency by 50%"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3196 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3197"
+title = "Alter Hostile Rest Spawns: Double frequency"
+description = "Alter Hostile Rest Spawns: Double frequency"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3197 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3198"
+title = "Alter Hostile Rest Spawns: Quadruple frequency"
+description = "Alter Hostile Rest Spawns: Quadruple frequency"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Alter Hostile Rest Spawns"
+choice_group = "cdtweaks:alter-hostile-rest-spawns"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3198 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3200"
+title = "Sellable Items [icelus]"
+description = "Sellable Items [icelus]"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3200 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3205"
+title = "Stores Purchase All Item Types"
+description = "Stores Purchase All Item Types"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3205 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3240"
+title = "Friendly Random Drops: Randomize on reload"
+description = "Friendly Random Drops: Randomize on reload"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Friendly Random Drops"
+choice_group = "cdtweaks:friendly-random-drops"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3240 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3241"
+title = "Friendly Random Drops: Choose your drop"
+description = "Friendly Random Drops: Choose your drop"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Friendly Random Drops"
+choice_group = "cdtweaks:friendly-random-drops"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3241 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3242"
+title = "Friendly Random Drops: Exchange with merchants"
+description = "Friendly Random Drops: Exchange with merchants"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Friendly Random Drops"
+choice_group = "cdtweaks:friendly-random-drops"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3242 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3290"
+title = "Personalize Automatic Save Names: Use scheme: 000000000-Protagonist-Save-Name"
+description = "Personalize Automatic Save Names: Use scheme: 000000000-Protagonist-Save-Name"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Personalize Automatic Save Names"
+choice_group = "cdtweaks:personalize-automatic-save-names"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3290 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3291"
+title = "Personalize Automatic Save Names: Use scheme: 000000000-Protagonist Save-Name"
+description = "Personalize Automatic Save Names: Use scheme: 000000000-Protagonist Save-Name"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Personalize Automatic Save Names"
+choice_group = "cdtweaks:personalize-automatic-save-names"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3291 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3292"
+title = "Personalize Automatic Save Names: Use scheme: 000000000-(Protagonist)-Save-Name"
+description = "Personalize Automatic Save Names: Use scheme: 000000000-(Protagonist)-Save-Name"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Personalize Automatic Save Names"
+choice_group = "cdtweaks:personalize-automatic-save-names"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3292 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3293"
+title = "Personalize Automatic Save Names: Use scheme: 000000000-(Protagonist) Save-Name"
+description = "Personalize Automatic Save Names: Use scheme: 000000000-(Protagonist) Save-Name"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Personalize Automatic Save Names"
+choice_group = "cdtweaks:personalize-automatic-save-names"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3293 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3294"
+title = "Personalize Automatic Save Names: Use scheme: 000000000-[Protagonist]-Save-Name"
+description = "Personalize Automatic Save Names: Use scheme: 000000000-[Protagonist]-Save-Name"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Personalize Automatic Save Names"
+choice_group = "cdtweaks:personalize-automatic-save-names"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3294 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3295"
+title = "Personalize Automatic Save Names: Use scheme: 000000000-[Protagonist] Save-Name"
+description = "Personalize Automatic Save Names: Use scheme: 000000000-[Protagonist] Save-Name"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Personalize Automatic Save Names"
+choice_group = "cdtweaks:personalize-automatic-save-names"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3295 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3310"
+title = "Start New Games with Party AI Turned Off"
+description = "Start New Games with Party AI Turned Off"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3310 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3320"
+title = "No Depreciation in Stores"
+description = "No Depreciation in Stores"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3320 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3340"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 50 percent"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 50 percent"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3340 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3341"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 100 percent"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 100 percent"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3341 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3342"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 150 percent"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 150 percent"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3342 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3343"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 50 percent and casting speed"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 50 percent and casting speed"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3343 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3344"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 100 percent and casting speed"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 100 percent and casting speed"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3344 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3345"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 150 percent and casting speed"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Movement speed by 150 percent and casting speed"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3345 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3346"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Casting speed only"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Casting speed only"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3346 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3347"
+title = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Customize (via cdtweaks.txt)"
+description = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]: Customize (via cdtweaks.txt)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]"
+choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outside-of-combat-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3347 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3350"
+title = "Create Interval Saves [argent77]: Every 15 minutes (one save only)"
+description = "Create Interval Saves [argent77]: Every 15 minutes (one save only)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3350 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3351"
+title = "Create Interval Saves [argent77]: Every 30 minutes (one save only)"
+description = "Create Interval Saves [argent77]: Every 30 minutes (one save only)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3351 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3352"
+title = "Create Interval Saves [argent77]: Every 60 minutes (one save only)"
+description = "Create Interval Saves [argent77]: Every 60 minutes (one save only)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3352 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3353"
+title = "Create Interval Saves [argent77]: Every 120 minutes (one save only)"
+description = "Create Interval Saves [argent77]: Every 120 minutes (one save only)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3353 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3354"
+title = "Create Interval Saves [argent77]: Every 15 minutes (cycle through four saves)"
+description = "Create Interval Saves [argent77]: Every 15 minutes (cycle through four saves)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3354 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3355"
+title = "Create Interval Saves [argent77]: Every 30 minutes (cycle through four saves)"
+description = "Create Interval Saves [argent77]: Every 30 minutes (cycle through four saves)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3355 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3356"
+title = "Create Interval Saves [argent77]: Every 60 minutes (cycle through four saves)"
+description = "Create Interval Saves [argent77]: Every 60 minutes (cycle through four saves)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3356 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3357"
+title = "Create Interval Saves [argent77]: Every 120 minutes (cycle through four saves)"
+description = "Create Interval Saves [argent77]: Every 120 minutes (cycle through four saves)"
+category = "rules"
+source_label = "The Tweaks Anthology"
+group_label = "Create Interval Saves [argent77]"
+choice_group = "cdtweaks:create-interval-saves-argent77"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3357 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3390"
+title = "Automatic Use of Ranger Tracking Skill"
+description = "Automatic Use of Ranger Tracking Skill"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "optional"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3390 }]
+
+[[features]]
+id = "feature:cdtweaks:component-3500"
+title = "Summoned Creatures Clear Fog of War"
+description = "Summoned Creatures Clear Fog of War"
+category = "rules"
+source_label = "The Tweaks Anthology"
+decision = "default"
+readiness = "ready"
+parent = "mod:cdtweaks"
+components = [{ run_id = "cdtweaks-main", component = 3500 }]
+requires = ["feature:eeex:component-0"]
+
+[[features]]
+id = "mod:hidden-gameplay-options"
+title = "Hidden Gameplay Options"
+description = "Adds hidden engine settings to the in-game options."
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-10"
+title = "Add in-game option \"Enable Debug Mode\""
+description = "Add in-game option \"Enable Debug Mode\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 10 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-11"
+title = "Add in-game option \"Enable UI Edit Mode\""
+description = "Add in-game option \"Enable UI Edit Mode\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 11 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-12"
+title = "Add in-game option \"Show Strrefs\""
+description = "Add in-game option \"Show Strrefs\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 12 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-13"
+title = "Add in-game option \"Hotkeys On Tooltips\""
+description = "Add in-game option \"Hotkeys On Tooltips\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 13 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-14"
+title = "Add in-game option \"Show trigger icons on tab\""
+description = "Add in-game option \"Show trigger icons on tab\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 14 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-16"
+title = "Add in-game option \"Limit druidic spells for Cleric/Ranger\""
+description = "Add in-game option \"Limit druidic spells for Cleric/Ranger\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 16 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-18"
+title = "Add in-game option \"Critical Hit Screen Shake\""
+description = "Add in-game option \"Critical Hit Screen Shake\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 18 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-19"
+title = "Add in-game option \"Show extra combat info\""
+description = "Add in-game option \"Show extra combat info\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 19 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-20"
+title = "Add in-game option \"Show Game Date and Time on Pause\""
+description = "Add in-game option \"Show Game Date and Time on Pause\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 20 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-22"
+title = "Add in-game option \"Reverse Mouse Wheel Zoom\""
+description = "Add in-game option \"Reverse Mouse Wheel Zoom\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 22 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-23"
+title = "Add in-game option \"Pause Game on Map Screen\""
+description = "Add in-game option \"Pause Game on Map Screen\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 23 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-24"
+title = "Add in-game option \"Enable Fog\""
+description = "Add in-game option \"Enable Fog\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 24 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-25"
+title = "Add in-game option \"Disable Movies\""
+description = "Add in-game option \"Disable Movies\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 25 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-27"
+title = "Add in-game option \"XP Bonus in Nightmare Mode\""
+description = "Add in-game option \"XP Bonus in Nightmare Mode\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 27 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-28"
+title = "Add in-game option \"Trigger Bored Sounds\""
+description = "Add in-game option \"Trigger Bored Sounds\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 28 }]
+conflicts = [
+  { feature_id = "feature:leui-iwdee:component-0", reason = "Hidden Gameplay Options refuses this when Lefreut's Enhanced UI for IWD:EE is installed." },
+]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-29"
+title = "Add in-game option \"Frame Rate\" (experimental)"
+description = "Add in-game option \"Frame Rate\" (experimental)"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 29 }]
+conflicts = [
+  { feature_id = "feature:leui-iwdee:component-0", reason = "Hidden Gameplay Options refuses this when Lefreut's Enhanced UI for IWD:EE is installed." },
+  { feature_id = "feature:infinity-ui:component-0", reason = "Hidden Gameplay Options refuses this when Infinity UI++ is installed." },
+]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-30"
+title = "Add in-game option \"Action Feedback\""
+description = "Add in-game option \"Action Feedback\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 30 }]
+conflicts = [
+  { feature_id = "feature:leui-iwdee:component-0", reason = "Hidden Gameplay Options refuses this when Lefreut's Enhanced UI for IWD:EE is installed." },
+  { feature_id = "feature:infinity-ui:component-0", reason = "Hidden Gameplay Options refuses this when Infinity UI++ is installed." },
+]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-32"
+title = "Add in-game option \"Show Area of Effect Range\""
+description = "Add in-game option \"Show Area of Effect Range\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 32 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-33"
+title = "Add in-game option \"Enhanced Path Search\""
+description = "Add in-game option \"Enhanced Path Search\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 33 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-34"
+title = "Add in-game option \"Expire Trap Highlights\""
+description = "Add in-game option \"Expire Trap Highlights\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 34 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-35"
+title = "Add in-game option \"Show Learnable Spells\""
+description = "Add in-game option \"Show Learnable Spells\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 35 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-36"
+title = "Add in-game option \"Render Search Map\""
+description = "Add in-game option \"Render Search Map\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 36 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-37"
+title = "Add in-game option \"Render Dynamic Search Map\""
+description = "Add in-game option \"Render Dynamic Search Map\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 37 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-38"
+title = "Add in-game options for Tweak Anthology's \"Create Interval Saves\""
+description = "Add in-game options for Tweak Anthology's \"Create Interval Saves\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 38 }]
+requires_any = ["feature:cdtweaks:component-3350", "feature:cdtweaks:component-3351", "feature:cdtweaks:component-3352", "feature:cdtweaks:component-3353", "feature:cdtweaks:component-3354", "feature:cdtweaks:component-3355", "feature:cdtweaks:component-3356", "feature:cdtweaks:component-3357"]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-39"
+title = "Add in-game option \"Force Dialog Pause\""
+description = "Add in-game option \"Force Dialog Pause\""
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 39 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-200"
+title = "Improved Cheat Menu"
+description = "Improved Cheat Menu"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 200 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-300"
+title = "Improved \"Death Screen\" options"
+description = "Improved \"Death Screen\" options"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 300 }]
+conflicts = [
+  { feature_id = "feature:leui-iwdee:component-0", reason = "Hidden Gameplay Options refuses this when Lefreut's Enhanced UI for IWD:EE is installed." },
+  { feature_id = "feature:infinity-ui:component-0", reason = "Hidden Gameplay Options refuses this when Infinity UI++ is installed." },
+]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-301"
+title = "Improved \"Quit Game\" options"
+description = "Improved \"Quit Game\" options"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 301 }]
+conflicts = [
+  { feature_id = "feature:leui-iwdee:component-0", reason = "Hidden Gameplay Options refuses this when Lefreut's Enhanced UI for IWD:EE is installed." },
+  { feature_id = "feature:infinity-ui:component-0", reason = "Hidden Gameplay Options refuses this when Infinity UI++ is installed." },
+]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-303"
+title = "Game Menu: Improved \"Quit Game\" options"
+description = "Game Menu: Improved \"Quit Game\" options"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 303 }]
+conflicts = [
+  { feature_id = "feature:leui-iwdee:component-0", reason = "Hidden Gameplay Options refuses this when Lefreut's Enhanced UI for IWD:EE is installed." },
+  { feature_id = "feature:infinity-ui:component-0", reason = "Hidden Gameplay Options refuses this when Infinity UI++ is installed." },
+]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-304"
+title = "Game Menu: Improved \"Load Game\" options"
+description = "Game Menu: Improved \"Load Game\" options"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 304 }]
+conflicts = [
+  { feature_id = "feature:leui-iwdee:component-0", reason = "Hidden Gameplay Options refuses this when Lefreut's Enhanced UI for IWD:EE is installed." },
+  { feature_id = "feature:infinity-ui:component-0", reason = "Hidden Gameplay Options refuses this when Infinity UI++ is installed." },
+]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-101"
+title = "Update key bindings: for priest spells only"
+description = "Update key bindings: for priest spells only"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+group_label = "Update key bindings"
+choice_group = "hidden-gameplay-options:update-key-bindings"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 101 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-102"
+title = "Update key bindings: for mage spells only"
+description = "Update key bindings: for mage spells only"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+group_label = "Update key bindings"
+choice_group = "hidden-gameplay-options:update-key-bindings"
+decision = "optional"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 102 }]
+
+[[features]]
+id = "feature:hidden-gameplay-options:component-103"
+title = "Update key bindings: for priest and mage spells"
+description = "Update key bindings: for priest and mage spells"
+category = "rules"
+source_label = "Hidden Gameplay Options"
+group_label = "Update key bindings"
+choice_group = "hidden-gameplay-options:update-key-bindings"
+decision = "default"
+readiness = "ready"
+parent = "mod:hidden-gameplay-options"
+components = [{ run_id = "hidden-gameplay-options-main", component = 103 }]
+
+[[features]]
+id = "mod:ub-iwd"
+title = "Unfinished Business for Icewind Dale"
+description = "Restores cut content that the game does not restore itself."
+category = "content"
+source_label = "Unfinished Business for Icewind Dale"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:ub-iwd:component-300"
+title = "Marketh's Ring"
+description = "Marketh's Ring"
+category = "content"
+source_label = "Unfinished Business for Icewind Dale"
+decision = "default"
+readiness = "ready"
+parent = "mod:ub-iwd"
+components = [{ run_id = "ub-iwd-main", component = 300 }]
+
+[[features]]
+id = "feature:ub-iwd:component-700"
+title = "Actual Shadows in Vale of Shadows [Graion Dilach]"
+description = "Actual Shadows in Vale of Shadows [Graion Dilach]"
+category = "content"
+source_label = "Unfinished Business for Icewind Dale"
+decision = "default"
+readiness = "ready"
+parent = "mod:ub-iwd"
+components = [{ run_id = "ub-iwd-main", component = 700 }]
+
+[[features]]
+id = "feature:ub-iwd:component-800"
+title = "Add the Wardstone for Lower Dorn's Deep"
+description = "Add the Wardstone for Lower Dorn's Deep"
+category = "content"
+source_label = "Unfinished Business for Icewind Dale"
+decision = "default"
+readiness = "ready"
+parent = "mod:ub-iwd"
+components = [{ run_id = "ub-iwd-main", component = 800 }]
+
+[[features]]
+id = "mod:minervanpc"
+title = "Minerva NPC for IWD:EE"
+description = "Adds the companion Minerva."
+category = "companions"
+source_label = "Minerva NPC for IWD:EE"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:minervanpc:component-0"
+title = "Minerva NPC for Icewind Dale: Enhanced Edition"
+description = "Minerva NPC for Icewind Dale: Enhanced Edition"
+category = "companions"
+source_label = "Minerva NPC for IWD:EE"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:minervanpc"
+components = [{ run_id = "minervanpc-main", component = 0 }]
+
+[[features]]
+id = "mod:karihinpc"
+title = "Karihi NPC for IWD:EE"
+description = "Adds the companion Karihi."
+category = "companions"
+source_label = "Karihi NPC for IWD:EE"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:karihinpc:component-0"
+title = "Karihi NPC for Icewind Dale: Enhanced Edition"
+description = "Karihi NPC for Icewind Dale: Enhanced Edition"
+category = "companions"
+source_label = "Karihi NPC for IWD:EE"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:karihinpc"
+components = [{ run_id = "karihinpc-main", component = 0 }]
+
+[[features]]
+id = "mod:athanasiosnpc"
+title = "Athanasios NPC for IWD:EE"
+description = "Adds the companion Athanasios."
+category = "companions"
+source_label = "Athanasios NPC for IWD:EE"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:athanasiosnpc:component-0"
+title = "Athanasios NPC for Icewind Dale: Enhanced Edition"
+description = "Athanasios NPC for Icewind Dale: Enhanced Edition"
+category = "companions"
+source_label = "Athanasios NPC for IWD:EE"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:athanasiosnpc"
+components = [{ run_id = "athanasiosnpc-main", component = 0 }]
+
+[[features]]
+id = "feature:athanasiosnpc:component-1"
+title = "Athanasios NPC: Install Athanasios as a Fighter/Cleric"
+description = "Athanasios NPC: Install Athanasios as a Fighter/Cleric"
+category = "companions"
+source_label = "Athanasios NPC for IWD:EE"
+decision = "default"
+readiness = "ready"
+parent = "mod:athanasiosnpc"
+components = [{ run_id = "athanasiosnpc-main", component = 1 }]
+requires = ["feature:athanasiosnpc:component-0"]
+
+[[features]]
+id = "mod:guldruknpc"
+title = "Guldruk NPC for IWD:EE"
+description = "Adds the companion Guldruk."
+category = "companions"
+source_label = "Guldruk NPC for IWD:EE"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:guldruknpc:component-0"
+title = "Guldruk NPC for Icewind Dale: Enhanced Edition"
+description = "Guldruk NPC for Icewind Dale: Enhanced Edition"
+category = "companions"
+source_label = "Guldruk NPC for IWD:EE"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:guldruknpc"
+components = [{ run_id = "guldruknpc-main", component = 0 }]
+
+[[features]]
+id = "mod:niriknpc"
+title = "Nirik NPC for IWD:EE"
+description = "Adds the companion Nirik."
+category = "companions"
+source_label = "Nirik NPC for IWD:EE"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:niriknpc:component-0"
+title = "Nirik NPC for Icewind Dale: Enhanced Edition"
+description = "Nirik NPC for Icewind Dale: Enhanced Edition"
+category = "companions"
+source_label = "Nirik NPC for IWD:EE"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:niriknpc"
+components = [{ run_id = "niriknpc-main", component = 0 }]
+
+[[features]]
+id = "mod:cassianpc"
+title = "Cassia NPC for IWD:EE"
+description = "Adds the companion Cassia."
+category = "companions"
+source_label = "Cassia NPC for IWD:EE"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:cassianpc:component-0"
+title = "Cassia NPC for Icewind Dale: Enhanced Edition"
+description = "Cassia NPC for Icewind Dale: Enhanced Edition"
+category = "companions"
+source_label = "Cassia NPC for IWD:EE"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:cassianpc"
+components = [{ run_id = "cassianpc-main", component = 0 }]
+
+[[features]]
+id = "mod:bethany"
+title = "Bethany"
+description = "Adds the companion Bethany."
+category = "companions"
+source_label = "Bethany"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:bethany:component-0"
+title = "Bethany IWDEE companion"
+description = "Bethany IWDEE companion"
+category = "companions"
+source_label = "Bethany"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:bethany"
+components = [{ run_id = "bethany-main", component = 0 }]
+
+[[features]]
+id = "mod:dendjelion"
+title = "Dendjelion"
+description = "Adds the companion Dendjelion."
+category = "companions"
+source_label = "Dendjelion"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:dendjelion:component-0"
+title = "Dendjelion NPC for IWD:EE"
+description = "Dendjelion NPC for IWD:EE"
+category = "companions"
+source_label = "Dendjelion"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:dendjelion"
+components = [{ run_id = "dendjelion-main", component = 0 }]
+
+[[features]]
+id = "mod:dusky"
+title = "Dusky"
+description = "Adds the companion Dusky."
+category = "companions"
+source_label = "Dusky"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:dusky:component-0"
+title = "Dusky NPC for IWD:EE"
+description = "Dusky NPC for IWD:EE"
+category = "companions"
+source_label = "Dusky"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:dusky"
+components = [{ run_id = "dusky-main", component = 0 }]
+
+[[features]]
+id = "mod:hommet"
+title = "Hommet"
+description = "Adds the companion Hommet."
+category = "companions"
+source_label = "Hommet"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:hommet:component-0"
+title = "Hommet Shaw for IWD EE... because - hey, why not? I'm STARVING. What do they eat in Icewind Dale? Let's check it out."
+description = "Hommet Shaw for IWD EE... because - hey, why not? I'm STARVING. What do they eat in Icewind Dale? Let's check it out."
+category = "companions"
+source_label = "Hommet"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:hommet"
+components = [{ run_id = "hommet-main", component = 0 }]
+
+[[features]]
+id = "mod:ina"
+title = "Ina"
+description = "Adds the companion Ina."
+category = "companions"
+source_label = "Ina"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:ina:component-0"
+title = "Ina NPC for IWD:EE"
+description = "Ina NPC for IWD:EE"
+category = "companions"
+source_label = "Ina"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:ina"
+components = [{ run_id = "ina-main", component = 0 }]
+
+[[features]]
+id = "mod:lanna"
+title = "L'anna"
+description = "Adds the companion L'anna."
+category = "companions"
+source_label = "L'anna"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:lanna:component-0"
+title = "L'anna - a new IWD EE companion"
+description = "L'anna - a new IWD EE companion"
+category = "companions"
+source_label = "L'anna"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:lanna"
+components = [{ run_id = "lanna-main", component = 0 }]
+
+[[features]]
+id = "mod:oakmaw"
+title = "Oak-Maw"
+description = "Adds the companion Oak-Maw."
+category = "companions"
+source_label = "Oak-Maw"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:oakmaw:component-0"
+title = "Oak-Maw NPC for IWD:EE"
+description = "Oak-Maw NPC for IWD:EE"
+category = "companions"
+source_label = "Oak-Maw"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:oakmaw"
+components = [{ run_id = "oakmaw-main", component = 0 }]
+
+[[features]]
+id = "mod:orra"
+title = "Orra"
+description = "Adds the companion Orra."
+category = "companions"
+source_label = "Orra"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:orra:component-0"
+title = "Orra NPC for IWD:EE"
+description = "Orra NPC for IWD:EE"
+category = "companions"
+source_label = "Orra"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:orra"
+components = [{ run_id = "orra-main", component = 0 }]
+
+[[features]]
+id = "mod:tviy"
+title = "T'viy"
+description = "Adds the companion T'viy."
+category = "companions"
+source_label = "T'viy"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:tviy:component-0"
+title = "T'viy NPC for IWD:EE"
+description = "T'viy NPC for IWD:EE"
+category = "companions"
+source_label = "T'viy"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:tviy"
+components = [{ run_id = "tviy-main", component = 0 }]
+
+[[features]]
+id = "mod:urchin"
+title = "Urchin"
+description = "Adds the companion Urchin."
+category = "companions"
+source_label = "Urchin"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:urchin:component-0"
+title = "Urchin NPC for IWD:EE"
+description = "Urchin NPC for IWD:EE"
+category = "companions"
+source_label = "Urchin"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:urchin"
+components = [{ run_id = "urchin-main", component = 0 }]
+
+[[features]]
+id = "mod:vito"
+title = "Vito"
+description = "Adds the companion Vito."
+category = "companions"
+source_label = "Vito"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:vito:component-0"
+title = "Vito, the Kenku Diviner"
+description = "Vito, the Kenku Diviner"
+category = "companions"
+source_label = "Vito"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:vito"
+components = [{ run_id = "vito-main", component = 0 }]
+
+[[features]]
+id = "mod:iwdcrossmodpack"
+title = "Icewind Dale Crossmod Banter Pack"
+description = "Banters between the companions added by different mods."
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:iwdcrossmodpack:component-10"
+title = "Install Crossmod Banters With This Minimum Delay Between Banters:: 5 minutes"
+description = "Install Crossmod Banters With This Minimum Delay Between Banters:: 5 minutes"
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+group_label = "Install Crossmod Banters With This Minimum Delay Between Banters:"
+choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay-between-banters"
+decision = "optional"
+readiness = "ready"
+parent = "mod:iwdcrossmodpack"
+components = [{ run_id = "iwdcrossmodpack-main", component = 10 }]
+
+[[features]]
+id = "feature:iwdcrossmodpack:component-11"
+title = "Install Crossmod Banters With This Minimum Delay Between Banters:: 10 minutes"
+description = "Install Crossmod Banters With This Minimum Delay Between Banters:: 10 minutes"
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+group_label = "Install Crossmod Banters With This Minimum Delay Between Banters:"
+choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay-between-banters"
+decision = "optional"
+readiness = "ready"
+parent = "mod:iwdcrossmodpack"
+components = [{ run_id = "iwdcrossmodpack-main", component = 11 }]
+
+[[features]]
+id = "feature:iwdcrossmodpack:component-12"
+title = "Install Crossmod Banters With This Minimum Delay Between Banters:: 15 minutes (recommended)"
+description = "Install Crossmod Banters With This Minimum Delay Between Banters:: 15 minutes (recommended)"
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+group_label = "Install Crossmod Banters With This Minimum Delay Between Banters:"
+choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay-between-banters"
+decision = "optional"
+readiness = "ready"
+parent = "mod:iwdcrossmodpack"
+components = [{ run_id = "iwdcrossmodpack-main", component = 12 }]
+
+[[features]]
+id = "feature:iwdcrossmodpack:component-13"
+title = "Install Crossmod Banters With This Minimum Delay Between Banters:: 30 minutes"
+description = "Install Crossmod Banters With This Minimum Delay Between Banters:: 30 minutes"
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+group_label = "Install Crossmod Banters With This Minimum Delay Between Banters:"
+choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay-between-banters"
+decision = "default"
+readiness = "ready"
+parent = "mod:iwdcrossmodpack"
+components = [{ run_id = "iwdcrossmodpack-main", component = 13 }]
+
+[[features]]
+id = "feature:iwdcrossmodpack:component-14"
+title = "Install Crossmod Banters With This Minimum Delay Between Banters:: 45 minutes"
+description = "Install Crossmod Banters With This Minimum Delay Between Banters:: 45 minutes"
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+group_label = "Install Crossmod Banters With This Minimum Delay Between Banters:"
+choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay-between-banters"
+decision = "optional"
+readiness = "ready"
+parent = "mod:iwdcrossmodpack"
+components = [{ run_id = "iwdcrossmodpack-main", component = 14 }]
+
+[[features]]
+id = "feature:iwdcrossmodpack:component-15"
+title = "Install Crossmod Banters With This Minimum Delay Between Banters:: 1 hour"
+description = "Install Crossmod Banters With This Minimum Delay Between Banters:: 1 hour"
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+group_label = "Install Crossmod Banters With This Minimum Delay Between Banters:"
+choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay-between-banters"
+decision = "optional"
+readiness = "ready"
+parent = "mod:iwdcrossmodpack"
+components = [{ run_id = "iwdcrossmodpack-main", component = 15 }]
+
+[[features]]
+id = "feature:iwdcrossmodpack:component-30"
+title = "Crossmod Romance Conflicts"
+description = "Crossmod Romance Conflicts"
+category = "banter"
+source_label = "Icewind Dale Crossmod Banter Pack"
+decision = "default"
+readiness = "ready"
+parent = "mod:iwdcrossmodpack"
+components = [{ run_id = "iwdcrossmodpack-main", component = 30 }]
+
+[[features]]
+id = "mod:innbb"
+title = "Below & Below Inn"
+description = "Adds the quest Below & Below Inn."
+category = "quests"
+source_label = "Below & Below Inn"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:innbb:component-0"
+title = "Below & Below Inn (IWD EE): Yes, but don't patch existing save games"
+description = "Below & Below Inn (IWD EE): Yes, but don't patch existing save games"
+category = "quests"
+source_label = "Below & Below Inn"
+group_label = "Below & Below Inn (IWD EE)"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:innbb"
+components = [{ run_id = "innbb-main", component = 0 }]
+
+[[features]]
+id = "mod:blinkingdead"
+title = "Night of the Blinking Dead"
+description = "Adds the quest Night of the Blinking Dead."
+category = "quests"
+source_label = "Night of the Blinking Dead"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:blinkingdead:component-0"
+title = "Night of the Blinking Dead (IWD): Yes, but don't patch existing save games"
+description = "Night of the Blinking Dead (IWD): Yes, but don't patch existing save games"
+category = "quests"
+source_label = "Night of the Blinking Dead"
+group_label = "Night of the Blinking Dead (IWD)"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:blinkingdead"
+components = [{ run_id = "blinkingdead-main", component = 0 }]
+
+[[features]]
+id = "mod:snowytoes"
+title = "Snowytoes Hamlet"
+description = "Adds the quest Snowytoes Hamlet."
+category = "quests"
+source_label = "Snowytoes Hamlet"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:snowytoes:component-0"
+title = "Snowytoes Hamlet, a new area (IWD EE): Yes, but don't patch existing save games"
+description = "Snowytoes Hamlet, a new area (IWD EE): Yes, but don't patch existing save games"
+category = "quests"
+source_label = "Snowytoes Hamlet"
+group_label = "Snowytoes Hamlet, a new area (IWD EE)"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:snowytoes"
+components = [{ run_id = "snowytoes-main", component = 0 }]
+
+[[features]]
+id = "mod:ourlady"
+title = "Tale of Our Lady Dreamless"
+description = "Adds the quest Tale of Our Lady Dreamless."
+category = "quests"
+source_label = "Tale of Our Lady Dreamless"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:ourlady:component-0"
+title = "Tale of Our Lady Dreamless (IWD EE): Yes, but don't patch existing save games"
+description = "Tale of Our Lady Dreamless (IWD EE): Yes, but don't patch existing save games"
+category = "quests"
+source_label = "Tale of Our Lady Dreamless"
+group_label = "Tale of Our Lady Dreamless (IWD EE)"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:ourlady"
+components = [{ run_id = "ourlady-main", component = 0 }]
+
+[[features]]
+id = "mod:skineater"
+title = "Terror of the Skineater"
+description = "Adds the quest Terror of the Skineater."
+category = "quests"
+source_label = "Terror of the Skineater"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:skineater:component-0"
+title = "Terror of the Skineater (IWD EE): Yes, but don't patch existing save games"
+description = "Terror of the Skineater (IWD EE): Yes, but don't patch existing save games"
+category = "quests"
+source_label = "Terror of the Skineater"
+group_label = "Terror of the Skineater (IWD EE)"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:skineater"
+components = [{ run_id = "skineater-main", component = 0 }]
+
+[[features]]
+id = "mod:kuldahar"
+title = "The Rediscovery of Kuldahar"
+description = "Adds the quest The Rediscovery of Kuldahar."
+category = "quests"
+source_label = "The Rediscovery of Kuldahar"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:kuldahar:component-0"
+title = "The Rediscovery of Kuldahar (IWDEE): Yes, but don't patch existing save games"
+description = "The Rediscovery of Kuldahar (IWDEE): Yes, but don't patch existing save games"
+category = "quests"
+source_label = "The Rediscovery of Kuldahar"
+group_label = "The Rediscovery of Kuldahar (IWDEE)"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:kuldahar"
+components = [{ run_id = "kuldahar-main", component = 0 }]
+
+[[features]]
+id = "mod:thewarofbloomandrot"
+title = "The War of Bloom and Rot"
+description = "Adds the quest The War of Bloom and Rot."
+category = "quests"
+source_label = "The War of Bloom and Rot"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:thewarofbloomandrot:component-0"
+title = "The War of Bloom and Rot: Yes, but do not patch all savegames"
+description = "The War of Bloom and Rot: Yes, but do not patch all savegames"
+category = "quests"
+source_label = "The War of Bloom and Rot"
+group_label = "The War of Bloom and Rot"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:thewarofbloomandrot"
+components = [{ run_id = "thewarofbloomandrot-main", component = 0 }]
+
+[[features]]
+id = "mod:willowisp"
+title = "Will of the Wisps"
+description = "New shaman kits, shamanic items and optional new enemies."
+category = "quests"
+source_label = "Will of the Wisps"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:willowisp:component-2"
+title = "Witchlight Shaman Standalone Kit"
+description = "Witchlight Shaman Standalone Kit"
+category = "quests"
+source_label = "Will of the Wisps"
+decision = "optional"
+readiness = "ready"
+parent = "mod:willowisp"
+components = [{ run_id = "willowisp-main", component = 2 }]
+
+[[features]]
+id = "feature:willowisp:component-3"
+title = "Town Medium (Shaman) Kit"
+description = "Town Medium (Shaman) Kit"
+category = "quests"
+source_label = "Will of the Wisps"
+decision = "optional"
+readiness = "ready"
+parent = "mod:willowisp"
+components = [{ run_id = "willowisp-main", component = 3 }]
+
+[[features]]
+id = "feature:willowisp:component-4"
+title = "New items for shamans and undead NPCs"
+description = "New items for shamans and undead NPCs"
+category = "quests"
+source_label = "Will of the Wisps"
+decision = "default"
+readiness = "ready"
+parent = "mod:willowisp"
+components = [{ run_id = "willowisp-main", component = 4 }]
+
+[[features]]
+id = "feature:willowisp:component-5"
+title = "Optional: Drider, Dark Treant, Will-o'-wisp Enemies"
+description = "Optional: Drider, Dark Treant, Will-o'-wisp Enemies"
+category = "quests"
+source_label = "Will of the Wisps"
+decision = "optional"
+readiness = "ready"
+parent = "mod:willowisp"
+components = [{ run_id = "willowisp-main", component = 5 }]
+
+[[features]]
+id = "mod:leui-iwdee"
+title = "Lefreut's Enhanced UI for IWD:EE"
+description = "Lefreut's redesigned user interface for IWD:EE."
+category = "interface"
+source_label = "Lefreut's Enhanced UI for IWD:EE"
+group_label = "User interface"
+choice_group = "interface-overhaul"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:leui-iwdee:component-0"
+title = "lefreut's Enhanced UI - Core component"
+description = "lefreut's Enhanced UI - Core component"
+category = "interface"
+source_label = "Lefreut's Enhanced UI for IWD:EE"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:leui-iwdee"
+components = [{ run_id = "leui-iwdee-main", component = 0 }]
+
+[[features]]
+id = "mod:infinity-ui"
+title = "Infinity UI++"
+description = "Infinity UI++: a redesigned user interface."
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "User interface"
+choice_group = "interface-overhaul"
+decision = "optional"
+readiness = "ready"
+
+[[features]]
+id = "feature:infinity-ui:component-0"
+title = "Install Infinity UI++ Core Component"
+description = "Install Infinity UI++ Core Component"
+category = "interface"
+source_label = "Infinity UI++"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 0 }]
+
+[[features]]
+id = "feature:infinity-ui:component-1"
+title = "Add Transparent Tooltip Background"
+description = "Add Transparent Tooltip Background"
+category = "interface"
+source_label = "Infinity UI++"
+decision = "optional"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 1 }]
+
+[[features]]
+id = "feature:infinity-ui:component-2"
+title = "Update several strings in Dialog.tlk"
+description = "Update several strings in Dialog.tlk"
+category = "interface"
+source_label = "Infinity UI++"
+decision = "optional"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 2 }]
+
+[[features]]
+id = "feature:infinity-ui:component-3"
+title = "Select Number of Quicksave Slots: 1"
+description = "Select Number of Quicksave Slots: 1"
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Select Number of Quicksave Slots"
+choice_group = "infinity-ui:select-number-of-quicksave-slots"
+decision = "optional"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 3 }]
+
+[[features]]
+id = "feature:infinity-ui:component-4"
+title = "Select Number of Quicksave Slots: 2"
+description = "Select Number of Quicksave Slots: 2"
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Select Number of Quicksave Slots"
+choice_group = "infinity-ui:select-number-of-quicksave-slots"
+decision = "optional"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 4 }]
+
+[[features]]
+id = "feature:infinity-ui:component-5"
+title = "Select Number of Quicksave Slots: 3"
+description = "Select Number of Quicksave Slots: 3"
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Select Number of Quicksave Slots"
+choice_group = "infinity-ui:select-number-of-quicksave-slots"
+decision = "optional"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 5 }]
+
+[[features]]
+id = "feature:infinity-ui:component-6"
+title = "Select Number of Quicksave Slots: 4"
+description = "Select Number of Quicksave Slots: 4"
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Select Number of Quicksave Slots"
+choice_group = "infinity-ui:select-number-of-quicksave-slots"
+decision = "default"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 6 }]
+
+[[features]]
+id = "feature:infinity-ui:component-7"
+title = "Select Number of Quicksave Slots: 5"
+description = "Select Number of Quicksave Slots: 5"
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Select Number of Quicksave Slots"
+choice_group = "infinity-ui:select-number-of-quicksave-slots"
+decision = "optional"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 7 }]
+
+[[features]]
+id = "feature:infinity-ui:component-8"
+title = "Select Number of Quicksave Slots: 6"
+description = "Select Number of Quicksave Slots: 6"
+category = "interface"
+source_label = "Infinity UI++"
+group_label = "Select Number of Quicksave Slots"
+choice_group = "infinity-ui:select-number-of-quicksave-slots"
+decision = "optional"
+readiness = "ready"
+parent = "mod:infinity-ui"
+components = [{ run_id = "infinity-ui-main", component = 8 }]
+
+[[features]]
+id = "mod:iwdgo"
+title = "Icewind Dale Graphical Overhaul"
+description = "Higher-quality area graphics."
+category = "interface"
+source_label = "Icewind Dale Graphical Overhaul"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:iwdgo:component-0"
+title = "Icewind Dale Graphical Overhaul Core"
+description = "Icewind Dale Graphical Overhaul Core"
+category = "interface"
+source_label = "Icewind Dale Graphical Overhaul"
+decision = "mandatory"
+readiness = "ready"
+parent = "mod:iwdgo"
+components = [{ run_id = "iwdgo-main", component = 0 }]

@@ -1,0 +1,32 @@
+id = "lanna-1.8"
+name = "L'anna"
+version = "1.8"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/lanna/?wpdmdl=437"
+reference = "1.8"
+expected_filename = "Lanna v1.8.zip"
+expected_length = 14379906
+sha256 = "88eef0c49067a98652efd538650f23068c2ba7f7798bbd1f1f304276d950fdf9"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["Lanna"]
+tp2_paths = ["Lanna/lanna.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/lanna/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/lanna/"
+reviewed_on = "2026-10-26"

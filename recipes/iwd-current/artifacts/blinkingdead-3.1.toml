@@ -1,0 +1,32 @@
+id = "blinkingdead-3.1"
+name = "Night of the Blinking Dead"
+version = "3.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "weaselmods-download"
+url = "https://downloads.weaselmods.net/download/night-of-the-blinking-dead/?wpdmdl=376"
+reference = "3.1"
+expected_filename = "BlinkingDead-v3.1.zip"
+expected_length = 10707885
+sha256 = "2e765e78b83051df0e8734e234caf0eb30661b1b924b5a65be2915c3a1e6c3b7"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["BlinkingDead"]
+tp2_paths = ["BlinkingDead/BlinkingDead.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://downloads.weaselmods.net/download/night-of-the-blinking-dead/"
+license = "The installer downloads the official release from Weasel Mods at install time; CEBG does not redistribute it"
+url = "https://downloads.weaselmods.net/download/night-of-the-blinking-dead/"
+reviewed_on = "2026-10-26"
