@@ -28,8 +28,8 @@ user's decisions. Started 2026-09-10.
   page; until the generator is here, change a decision by hand in `collection.toml` and
   record it in the worksheet. The generator is kept in Christopher's private backup. Since
   2026-10-26 it also writes the exclusive choice groups and the "Chriz IWD Collection"
-  records folder. It reproduced the committed recipe exactly until BuffBot was added by hand
-  on 2026-10-27; it still needs that entry.
+  records folder. Since 2026-10-27 it also adds BuffBot, which Christopher chose after the
+  selection page, and again reproduces the committed recipe exactly.
 - [x] Alternatives are exclusive: the options of each of the 30 choice groups conflict
   pairwise, so the installer offers them as one choice and installs at most one
   (`claude/iwdee-app`, b4b0a2c; pinned by a static test, 17a563a).
