@@ -611,6 +611,9 @@ choice_group = "stratagems:reduce-the-power-of-inquisitors-dispel-magic"
 decision = "default"
 readiness = "ready"
 parent = "mod:stratagems"
+conflicts = [
+  { feature_id = "feature:stratagems:component-3541", reason = "Choose at most one option for Reduce the power of Inquisitors' Dispel Magic." },
+]
 components = [{ run_id = "stratagems-main", component = 3540 }]
 
 [[features]]
@@ -624,6 +627,9 @@ choice_group = "stratagems:reduce-the-power-of-inquisitors-dispel-magic"
 decision = "optional"
 readiness = "ready"
 parent = "mod:stratagems"
+conflicts = [
+  { feature_id = "feature:stratagems:component-3540", reason = "Choose at most one option for Reduce the power of Inquisitors' Dispel Magic." },
+]
 components = [{ run_id = "stratagems-main", component = 3541 }]
 
 [[features]]
@@ -896,6 +902,9 @@ choice_group = "cdtweaks:unique-icons-lava"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-171", reason = "Choose at most one option for Unique Icons [Lava]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 170 }]
 
 [[features]]
@@ -909,6 +918,9 @@ choice_group = "cdtweaks:unique-icons-lava"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-170", reason = "Choose at most one option for Unique Icons [Lava]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 171 }]
 
 [[features]]
@@ -922,6 +934,10 @@ choice_group = "cdtweaks:unique-containers-miloch"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-181", reason = "Choose at most one option for Unique Containers [Miloch]." },
+  { feature_id = "feature:cdtweaks:component-182", reason = "Choose at most one option for Unique Containers [Miloch]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 180 }]
 
 [[features]]
@@ -935,6 +951,10 @@ choice_group = "cdtweaks:unique-containers-miloch"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-180", reason = "Choose at most one option for Unique Containers [Miloch]." },
+  { feature_id = "feature:cdtweaks:component-182", reason = "Choose at most one option for Unique Containers [Miloch]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 181 }]
 
 [[features]]
@@ -948,6 +968,10 @@ choice_group = "cdtweaks:unique-containers-miloch"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-180", reason = "Choose at most one option for Unique Containers [Miloch]." },
+  { feature_id = "feature:cdtweaks:component-181", reason = "Choose at most one option for Unique Containers [Miloch]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 182 }]
 
 [[features]]
@@ -961,6 +985,13 @@ choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-191", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-192", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-193", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-194", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-195", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+]
 components = [{ run_id = "cdtweaks-main", component = 190 }]
 
 [[features]]
@@ -974,6 +1005,13 @@ choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-190", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-192", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-193", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-194", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-195", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+]
 components = [{ run_id = "cdtweaks-main", component = 191 }]
 
 [[features]]
@@ -987,6 +1025,13 @@ choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-190", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-191", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-193", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-194", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-195", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+]
 components = [{ run_id = "cdtweaks-main", component = 192 }]
 
 [[features]]
@@ -1000,6 +1045,13 @@ choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-190", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-191", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-192", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-194", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-195", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+]
 components = [{ run_id = "cdtweaks-main", component = 193 }]
 
 [[features]]
@@ -1013,6 +1065,13 @@ choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-190", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-191", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-192", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-193", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-195", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+]
 components = [{ run_id = "cdtweaks-main", component = 194 }]
 
 [[features]]
@@ -1026,6 +1085,13 @@ choice_group = "cdtweaks:use-character-colors-instead-of-item-colors"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-190", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-191", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-192", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-193", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+  { feature_id = "feature:cdtweaks:component-194", reason = "Choose at most one option for Use Character Colors Instead of Item Colors." },
+]
 components = [{ run_id = "cdtweaks-main", component = 195 }]
 
 [[features]]
@@ -1039,6 +1105,10 @@ choice_group = "cdtweaks:remove-annoying-visual-effects-from-equipped-items"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3150", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." },
+  { feature_id = "feature:cdtweaks:component-3151", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 200 }]
 
 [[features]]
@@ -1052,6 +1122,10 @@ choice_group = "cdtweaks:remove-annoying-visual-effects-from-equipped-items"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-200", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." },
+  { feature_id = "feature:cdtweaks:component-3151", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3150 }]
 
 [[features]]
@@ -1065,6 +1139,10 @@ choice_group = "cdtweaks:remove-annoying-visual-effects-from-equipped-items"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-200", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." },
+  { feature_id = "feature:cdtweaks:component-3150", reason = "Choose at most one option for Remove Annoying Visual Effects from Equipped Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3151 }]
 
 [[features]]
@@ -1111,6 +1189,9 @@ choice_group = "cdtweaks:outline-white-spell-icons-for-accessibility"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-241", reason = "Choose at most one option for Outline White Spell Icons for Accessibility." },
+]
 components = [{ run_id = "cdtweaks-main", component = 240 }]
 
 [[features]]
@@ -1124,6 +1205,9 @@ choice_group = "cdtweaks:outline-white-spell-icons-for-accessibility"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-240", reason = "Choose at most one option for Outline White Spell Icons for Accessibility." },
+]
 components = [{ run_id = "cdtweaks-main", component = 241 }]
 
 [[features]]
@@ -1170,6 +1254,10 @@ choice_group = "cdtweaks:gems-and-potions-require-identification"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-1141", reason = "Choose at most one option for Gems and Potions Require Identification." },
+  { feature_id = "feature:cdtweaks:component-1142", reason = "Choose at most one option for Gems and Potions Require Identification." },
+]
 components = [{ run_id = "cdtweaks-main", component = 1140 }]
 
 [[features]]
@@ -1183,6 +1271,10 @@ choice_group = "cdtweaks:gems-and-potions-require-identification"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-1140", reason = "Choose at most one option for Gems and Potions Require Identification." },
+  { feature_id = "feature:cdtweaks:component-1142", reason = "Choose at most one option for Gems and Potions Require Identification." },
+]
 components = [{ run_id = "cdtweaks-main", component = 1141 }]
 
 [[features]]
@@ -1196,6 +1288,10 @@ choice_group = "cdtweaks:gems-and-potions-require-identification"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-1140", reason = "Choose at most one option for Gems and Potions Require Identification." },
+  { feature_id = "feature:cdtweaks:component-1141", reason = "Choose at most one option for Gems and Potions Require Identification." },
+]
 components = [{ run_id = "cdtweaks-main", component = 1142 }]
 
 [[features]]
@@ -1242,6 +1338,9 @@ choice_group = "cdtweaks:automatic-transition-to-the-heart-of-winter-expansion"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-1361", reason = "Choose at most one option for Automatic Transition to the \"Heart of Winter\" Expansion." },
+]
 components = [{ run_id = "cdtweaks-main", component = 1360 }]
 
 [[features]]
@@ -1255,6 +1354,9 @@ choice_group = "cdtweaks:automatic-transition-to-the-heart-of-winter-expansion"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-1360", reason = "Choose at most one option for Automatic Transition to the \"Heart of Winter\" Expansion." },
+]
 components = [{ run_id = "cdtweaks-main", component = 1361 }]
 
 [[features]]
@@ -1313,6 +1415,9 @@ choice_group = "cdtweaks:wear-multiple-protection-items"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2152", reason = "Choose at most one option for Wear Multiple Protection Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 2151 }]
 
 [[features]]
@@ -1326,6 +1431,9 @@ choice_group = "cdtweaks:wear-multiple-protection-items"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2151", reason = "Choose at most one option for Wear Multiple Protection Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 2152 }]
 
 [[features]]
@@ -1350,6 +1458,10 @@ choice_group = "cdtweaks:limit-ability-of-storekeepers-to-identify-items"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2191", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." },
+  { feature_id = "feature:cdtweaks:component-2192", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 2190 }]
 
 [[features]]
@@ -1363,6 +1475,10 @@ choice_group = "cdtweaks:limit-ability-of-storekeepers-to-identify-items"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2190", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." },
+  { feature_id = "feature:cdtweaks:component-2192", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 2191 }]
 
 [[features]]
@@ -1376,6 +1492,10 @@ choice_group = "cdtweaks:limit-ability-of-storekeepers-to-identify-items"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2190", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." },
+  { feature_id = "feature:cdtweaks:component-2191", reason = "Choose at most one option for Limit Ability of Storekeepers to Identify Items." },
+]
 components = [{ run_id = "cdtweaks-main", component = 2192 }]
 
 [[features]]
@@ -1471,6 +1591,10 @@ choice_group = "cdtweaks:add-save-penalties-for-spells-cast-by-high-level-caster
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2311", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." },
+  { feature_id = "feature:cdtweaks:component-2312", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." },
+]
 components = [{ run_id = "cdtweaks-spell-save-penalties", component = 2310 }]
 
 [[features]]
@@ -1484,6 +1608,10 @@ choice_group = "cdtweaks:add-save-penalties-for-spells-cast-by-high-level-caster
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2310", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." },
+  { feature_id = "feature:cdtweaks:component-2312", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." },
+]
 components = [{ run_id = "cdtweaks-spell-save-penalties", component = 2311 }]
 
 [[features]]
@@ -1497,6 +1625,10 @@ choice_group = "cdtweaks:add-save-penalties-for-spells-cast-by-high-level-caster
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-2310", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." },
+  { feature_id = "feature:cdtweaks:component-2311", reason = "Choose at most one option for Add Save Penalties for Spells Cast by High-Level Casters." },
+]
 components = [{ run_id = "cdtweaks-spell-save-penalties", component = 2312 }]
 
 [[features]]
@@ -1610,6 +1742,10 @@ choice_group = "cdtweaks:higher-hp-on-level-up"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3001", reason = "Choose at most one option for Higher HP on Level Up." },
+  { feature_id = "feature:cdtweaks:component-3002", reason = "Choose at most one option for Higher HP on Level Up." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3000 }]
 
 [[features]]
@@ -1623,6 +1759,10 @@ choice_group = "cdtweaks:higher-hp-on-level-up"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3000", reason = "Choose at most one option for Higher HP on Level Up." },
+  { feature_id = "feature:cdtweaks:component-3002", reason = "Choose at most one option for Higher HP on Level Up." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3001 }]
 
 [[features]]
@@ -1636,6 +1776,10 @@ choice_group = "cdtweaks:higher-hp-on-level-up"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3000", reason = "Choose at most one option for Higher HP on Level Up." },
+  { feature_id = "feature:cdtweaks:component-3001", reason = "Choose at most one option for Higher HP on Level Up." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3002 }]
 
 [[features]]
@@ -1660,6 +1804,10 @@ choice_group = "cdtweaks:maximum-hp-creatures-the-bigg"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3011", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." },
+  { feature_id = "feature:cdtweaks:component-3012", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3010 }]
 
 [[features]]
@@ -1673,6 +1821,10 @@ choice_group = "cdtweaks:maximum-hp-creatures-the-bigg"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3010", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." },
+  { feature_id = "feature:cdtweaks:component-3012", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3011 }]
 
 [[features]]
@@ -1686,6 +1838,10 @@ choice_group = "cdtweaks:maximum-hp-creatures-the-bigg"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3010", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." },
+  { feature_id = "feature:cdtweaks:component-3011", reason = "Choose at most one option for Maximum HP Creatures [the bigg]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3012 }]
 
 [[features]]
@@ -1699,6 +1855,9 @@ choice_group = "cdtweaks:easy-spell-learning"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3031", reason = "Choose at most one option for Easy Spell Learning." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3030 }]
 
 [[features]]
@@ -1712,6 +1871,9 @@ choice_group = "cdtweaks:easy-spell-learning"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3030", reason = "Choose at most one option for Easy Spell Learning." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3031 }]
 
 [[features]]
@@ -1736,6 +1898,11 @@ choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3071", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3072", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3073", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3070 }]
 
 [[features]]
@@ -1749,6 +1916,11 @@ choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3070", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3072", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3073", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3071 }]
 
 [[features]]
@@ -1762,6 +1934,11 @@ choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3070", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3071", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3073", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3072 }]
 
 [[features]]
@@ -1775,6 +1952,11 @@ choice_group = "cdtweaks:change-effect-of-reputation-on-store-prices"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3070", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3071", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+  { feature_id = "feature:cdtweaks:component-3072", reason = "Choose at most one option for Change Effect of Reputation on Store Prices." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3073 }]
 
 [[features]]
@@ -1788,6 +1970,11 @@ choice_group = "cdtweaks:increase-ammo-stack-size"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3081", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3082", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3083", reason = "Choose at most one option for Increase Ammo Stack Size." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3080 }]
 
 [[features]]
@@ -1801,6 +1988,11 @@ choice_group = "cdtweaks:increase-ammo-stack-size"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3080", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3082", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3083", reason = "Choose at most one option for Increase Ammo Stack Size." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3081 }]
 
 [[features]]
@@ -1814,6 +2006,11 @@ choice_group = "cdtweaks:increase-ammo-stack-size"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3080", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3081", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3083", reason = "Choose at most one option for Increase Ammo Stack Size." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3082 }]
 
 [[features]]
@@ -1827,6 +2024,11 @@ choice_group = "cdtweaks:increase-ammo-stack-size"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3080", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3081", reason = "Choose at most one option for Increase Ammo Stack Size." },
+  { feature_id = "feature:cdtweaks:component-3082", reason = "Choose at most one option for Increase Ammo Stack Size." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3083 }]
 
 [[features]]
@@ -1840,6 +2042,11 @@ choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3091", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3092", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3093", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3090 }]
 
 [[features]]
@@ -1853,6 +2060,11 @@ choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3090", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3092", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3093", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3091 }]
 
 [[features]]
@@ -1866,6 +2078,11 @@ choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3090", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3091", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3093", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3092 }]
 
 [[features]]
@@ -1879,6 +2096,11 @@ choice_group = "cdtweaks:increase-jewelry-gem-and-miscellaneous-item-stacks"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3090", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3091", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+  { feature_id = "feature:cdtweaks:component-3092", reason = "Choose at most one option for Increase Jewelry, Gem, and Miscellaneous Item Stacks." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3093 }]
 
 [[features]]
@@ -1892,6 +2114,11 @@ choice_group = "cdtweaks:increase-potion-stacking"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3101", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3102", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3103", reason = "Choose at most one option for Increase Potion Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3100 }]
 
 [[features]]
@@ -1905,6 +2132,11 @@ choice_group = "cdtweaks:increase-potion-stacking"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3100", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3102", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3103", reason = "Choose at most one option for Increase Potion Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3101 }]
 
 [[features]]
@@ -1918,6 +2150,11 @@ choice_group = "cdtweaks:increase-potion-stacking"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3100", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3101", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3103", reason = "Choose at most one option for Increase Potion Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3102 }]
 
 [[features]]
@@ -1931,6 +2168,11 @@ choice_group = "cdtweaks:increase-potion-stacking"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3100", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3101", reason = "Choose at most one option for Increase Potion Stacking." },
+  { feature_id = "feature:cdtweaks:component-3102", reason = "Choose at most one option for Increase Potion Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3103 }]
 
 [[features]]
@@ -1944,6 +2186,11 @@ choice_group = "cdtweaks:increase-scroll-stacking"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3111", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3112", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3113", reason = "Choose at most one option for Increase Scroll Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3110 }]
 
 [[features]]
@@ -1957,6 +2204,11 @@ choice_group = "cdtweaks:increase-scroll-stacking"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3110", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3112", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3113", reason = "Choose at most one option for Increase Scroll Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3111 }]
 
 [[features]]
@@ -1970,6 +2222,11 @@ choice_group = "cdtweaks:increase-scroll-stacking"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3110", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3111", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3113", reason = "Choose at most one option for Increase Scroll Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3112 }]
 
 [[features]]
@@ -1983,6 +2240,11 @@ choice_group = "cdtweaks:increase-scroll-stacking"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3110", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3111", reason = "Choose at most one option for Increase Scroll Stacking." },
+  { feature_id = "feature:cdtweaks:component-3112", reason = "Choose at most one option for Increase Scroll Stacking." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3113 }]
 
 [[features]]
@@ -1996,6 +2258,10 @@ choice_group = "cdtweaks:happy-patch-alter-how-party-npcs-complain-about-reputat
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3121", reason = "Choose at most one option for Happy Patch - Alter How Party NPCs Complain About Reputation." },
+  { feature_id = "feature:cdtweaks:component-3122", reason = "Choose at most one option for Happy Patch - Alter How Party NPCs Complain About Reputation." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3120 }]
 
 [[features]]
@@ -2009,6 +2275,10 @@ choice_group = "cdtweaks:happy-patch-alter-how-party-npcs-complain-about-reputat
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3120", reason = "Choose at most one option for Happy Patch - Alter How Party NPCs Complain About Reputation." },
+  { feature_id = "feature:cdtweaks:component-3122", reason = "Choose at most one option for Happy Patch - Alter How Party NPCs Complain About Reputation." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3121 }]
 
 [[features]]
@@ -2022,6 +2292,10 @@ choice_group = "cdtweaks:happy-patch-alter-how-party-npcs-complain-about-reputat
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3120", reason = "Choose at most one option for Happy Patch - Alter How Party NPCs Complain About Reputation." },
+  { feature_id = "feature:cdtweaks:component-3121", reason = "Choose at most one option for Happy Patch - Alter How Party NPCs Complain About Reputation." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3122 }]
 
 [[features]]
@@ -2046,6 +2320,10 @@ choice_group = "cdtweaks:no-traps-or-locks-weimer-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3131", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." },
+  { feature_id = "feature:cdtweaks:component-3132", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3130 }]
 
 [[features]]
@@ -2059,6 +2337,10 @@ choice_group = "cdtweaks:no-traps-or-locks-weimer-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3130", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." },
+  { feature_id = "feature:cdtweaks:component-3132", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3131 }]
 
 [[features]]
@@ -2072,6 +2354,10 @@ choice_group = "cdtweaks:no-traps-or-locks-weimer-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3130", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." },
+  { feature_id = "feature:cdtweaks:component-3131", reason = "Choose at most one option for No Traps or Locks [Weimer, argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3132 }]
 
 [[features]]
@@ -2096,6 +2382,12 @@ choice_group = "cdtweaks:alter-hostile-rest-spawns"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3194 }]
 
 [[features]]
@@ -2109,6 +2401,12 @@ choice_group = "cdtweaks:alter-hostile-rest-spawns"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3195 }]
 
 [[features]]
@@ -2122,6 +2420,12 @@ choice_group = "cdtweaks:alter-hostile-rest-spawns"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3196 }]
 
 [[features]]
@@ -2135,6 +2439,12 @@ choice_group = "cdtweaks:alter-hostile-rest-spawns"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3198", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3197 }]
 
 [[features]]
@@ -2148,6 +2458,12 @@ choice_group = "cdtweaks:alter-hostile-rest-spawns"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3194", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3195", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3196", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+  { feature_id = "feature:cdtweaks:component-3197", reason = "Choose at most one option for Alter Hostile Rest Spawns." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3198 }]
 
 [[features]]
@@ -2183,6 +2499,10 @@ choice_group = "cdtweaks:friendly-random-drops"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3241", reason = "Choose at most one option for Friendly Random Drops." },
+  { feature_id = "feature:cdtweaks:component-3242", reason = "Choose at most one option for Friendly Random Drops." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3240 }]
 
 [[features]]
@@ -2196,6 +2516,10 @@ choice_group = "cdtweaks:friendly-random-drops"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3240", reason = "Choose at most one option for Friendly Random Drops." },
+  { feature_id = "feature:cdtweaks:component-3242", reason = "Choose at most one option for Friendly Random Drops." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3241 }]
 
 [[features]]
@@ -2209,6 +2533,10 @@ choice_group = "cdtweaks:friendly-random-drops"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3240", reason = "Choose at most one option for Friendly Random Drops." },
+  { feature_id = "feature:cdtweaks:component-3241", reason = "Choose at most one option for Friendly Random Drops." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3242 }]
 
 [[features]]
@@ -2222,6 +2550,13 @@ choice_group = "cdtweaks:personalize-automatic-save-names"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3291", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3292", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3293", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3294", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3295", reason = "Choose at most one option for Personalize Automatic Save Names." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3290 }]
 
 [[features]]
@@ -2235,6 +2570,13 @@ choice_group = "cdtweaks:personalize-automatic-save-names"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3290", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3292", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3293", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3294", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3295", reason = "Choose at most one option for Personalize Automatic Save Names." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3291 }]
 
 [[features]]
@@ -2248,6 +2590,13 @@ choice_group = "cdtweaks:personalize-automatic-save-names"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3290", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3291", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3293", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3294", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3295", reason = "Choose at most one option for Personalize Automatic Save Names." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3292 }]
 
 [[features]]
@@ -2261,6 +2610,13 @@ choice_group = "cdtweaks:personalize-automatic-save-names"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3290", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3291", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3292", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3294", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3295", reason = "Choose at most one option for Personalize Automatic Save Names." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3293 }]
 
 [[features]]
@@ -2274,6 +2630,13 @@ choice_group = "cdtweaks:personalize-automatic-save-names"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3290", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3291", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3292", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3293", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3295", reason = "Choose at most one option for Personalize Automatic Save Names." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3294 }]
 
 [[features]]
@@ -2287,6 +2650,13 @@ choice_group = "cdtweaks:personalize-automatic-save-names"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3290", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3291", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3292", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3293", reason = "Choose at most one option for Personalize Automatic Save Names." },
+  { feature_id = "feature:cdtweaks:component-3294", reason = "Choose at most one option for Personalize Automatic Save Names." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3295 }]
 
 [[features]]
@@ -2322,6 +2692,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3341", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3342", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3343", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3344", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3345", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3346", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3347", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3340 }]
 
 [[features]]
@@ -2335,6 +2714,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3340", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3342", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3343", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3344", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3345", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3346", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3347", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3341 }]
 
 [[features]]
@@ -2348,6 +2736,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3340", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3341", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3343", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3344", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3345", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3346", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3347", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3342 }]
 
 [[features]]
@@ -2361,6 +2758,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3340", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3341", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3342", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3344", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3345", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3346", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3347", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3343 }]
 
 [[features]]
@@ -2374,6 +2780,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3340", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3341", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3342", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3343", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3345", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3346", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3347", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3344 }]
 
 [[features]]
@@ -2387,6 +2802,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3340", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3341", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3342", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3343", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3344", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3346", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3347", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3345 }]
 
 [[features]]
@@ -2400,6 +2824,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3340", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3341", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3342", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3343", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3344", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3345", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3347", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3346 }]
 
 [[features]]
@@ -2413,6 +2846,15 @@ choice_group = "cdtweaks:increase-party-movement-speed-and-or-casting-speed-outs
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3340", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3341", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3342", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3343", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3344", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3345", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3346", reason = "Choose at most one option for Increase Party Movement Speed and/or Casting Speed Outside of Combat [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3347 }]
 
 [[features]]
@@ -2426,6 +2868,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3351", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3352", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3353", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3354", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3355", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3356", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3357", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3350 }]
 
 [[features]]
@@ -2439,6 +2890,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3350", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3352", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3353", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3354", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3355", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3356", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3357", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3351 }]
 
 [[features]]
@@ -2452,6 +2912,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3350", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3351", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3353", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3354", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3355", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3356", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3357", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3352 }]
 
 [[features]]
@@ -2465,6 +2934,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3350", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3351", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3352", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3354", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3355", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3356", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3357", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3353 }]
 
 [[features]]
@@ -2478,6 +2956,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "default"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3350", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3351", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3352", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3353", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3355", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3356", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3357", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3354 }]
 
 [[features]]
@@ -2491,6 +2978,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3350", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3351", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3352", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3353", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3354", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3356", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3357", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3355 }]
 
 [[features]]
@@ -2504,6 +3000,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3350", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3351", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3352", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3353", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3354", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3355", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3357", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3356 }]
 
 [[features]]
@@ -2517,6 +3022,15 @@ choice_group = "cdtweaks:create-interval-saves-argent77"
 decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
+conflicts = [
+  { feature_id = "feature:cdtweaks:component-3350", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3351", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3352", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3353", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3354", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3355", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+  { feature_id = "feature:cdtweaks:component-3356", reason = "Choose at most one option for Create Interval Saves [argent77]." },
+]
 components = [{ run_id = "cdtweaks-main", component = 3357 }]
 
 [[features]]
@@ -2920,6 +3434,10 @@ choice_group = "hidden-gameplay-options:update-key-bindings"
 decision = "optional"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
+conflicts = [
+  { feature_id = "feature:hidden-gameplay-options:component-102", reason = "Choose at most one option for Update key bindings." },
+  { feature_id = "feature:hidden-gameplay-options:component-103", reason = "Choose at most one option for Update key bindings." },
+]
 components = [{ run_id = "hidden-gameplay-options-main", component = 101 }]
 
 [[features]]
@@ -2933,6 +3451,10 @@ choice_group = "hidden-gameplay-options:update-key-bindings"
 decision = "optional"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
+conflicts = [
+  { feature_id = "feature:hidden-gameplay-options:component-101", reason = "Choose at most one option for Update key bindings." },
+  { feature_id = "feature:hidden-gameplay-options:component-103", reason = "Choose at most one option for Update key bindings." },
+]
 components = [{ run_id = "hidden-gameplay-options-main", component = 102 }]
 
 [[features]]
@@ -2946,6 +3468,10 @@ choice_group = "hidden-gameplay-options:update-key-bindings"
 decision = "default"
 readiness = "ready"
 parent = "mod:hidden-gameplay-options"
+conflicts = [
+  { feature_id = "feature:hidden-gameplay-options:component-101", reason = "Choose at most one option for Update key bindings." },
+  { feature_id = "feature:hidden-gameplay-options:component-102", reason = "Choose at most one option for Update key bindings." },
+]
 components = [{ run_id = "hidden-gameplay-options-main", component = 103 }]
 
 [[features]]
@@ -3362,6 +3888,13 @@ choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay
 decision = "optional"
 readiness = "ready"
 parent = "mod:iwdcrossmodpack"
+conflicts = [
+  { feature_id = "feature:iwdcrossmodpack:component-11", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-12", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-13", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-14", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-15", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+]
 components = [{ run_id = "iwdcrossmodpack-main", component = 10 }]
 
 [[features]]
@@ -3375,6 +3908,13 @@ choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay
 decision = "optional"
 readiness = "ready"
 parent = "mod:iwdcrossmodpack"
+conflicts = [
+  { feature_id = "feature:iwdcrossmodpack:component-10", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-12", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-13", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-14", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-15", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+]
 components = [{ run_id = "iwdcrossmodpack-main", component = 11 }]
 
 [[features]]
@@ -3388,6 +3928,13 @@ choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay
 decision = "optional"
 readiness = "ready"
 parent = "mod:iwdcrossmodpack"
+conflicts = [
+  { feature_id = "feature:iwdcrossmodpack:component-10", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-11", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-13", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-14", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-15", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+]
 components = [{ run_id = "iwdcrossmodpack-main", component = 12 }]
 
 [[features]]
@@ -3401,6 +3948,13 @@ choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay
 decision = "default"
 readiness = "ready"
 parent = "mod:iwdcrossmodpack"
+conflicts = [
+  { feature_id = "feature:iwdcrossmodpack:component-10", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-11", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-12", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-14", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-15", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+]
 components = [{ run_id = "iwdcrossmodpack-main", component = 13 }]
 
 [[features]]
@@ -3414,6 +3968,13 @@ choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay
 decision = "optional"
 readiness = "ready"
 parent = "mod:iwdcrossmodpack"
+conflicts = [
+  { feature_id = "feature:iwdcrossmodpack:component-10", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-11", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-12", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-13", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-15", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+]
 components = [{ run_id = "iwdcrossmodpack-main", component = 14 }]
 
 [[features]]
@@ -3427,6 +3988,13 @@ choice_group = "iwdcrossmodpack:install-crossmod-banters-with-this-minimum-delay
 decision = "optional"
 readiness = "ready"
 parent = "mod:iwdcrossmodpack"
+conflicts = [
+  { feature_id = "feature:iwdcrossmodpack:component-10", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-11", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-12", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-13", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+  { feature_id = "feature:iwdcrossmodpack:component-14", reason = "Choose at most one option for Install Crossmod Banters With This Minimum Delay Between Banters." },
+]
 components = [{ run_id = "iwdcrossmodpack-main", component = 15 }]
 
 [[features]]
@@ -3650,6 +4218,9 @@ group_label = "User interface"
 choice_group = "interface-overhaul"
 decision = "optional"
 readiness = "ready"
+conflicts = [
+  { feature_id = "mod:infinity-ui", reason = "Choose at most one option for User interface." },
+]
 
 [[features]]
 id = "feature:leui-iwdee:component-0"
@@ -3672,6 +4243,9 @@ group_label = "User interface"
 choice_group = "interface-overhaul"
 decision = "optional"
 readiness = "ready"
+conflicts = [
+  { feature_id = "mod:leui-iwdee", reason = "Choose at most one option for User interface." },
+]
 
 [[features]]
 id = "feature:infinity-ui:component-0"
@@ -3717,6 +4291,13 @@ choice_group = "infinity-ui:select-number-of-quicksave-slots"
 decision = "optional"
 readiness = "ready"
 parent = "mod:infinity-ui"
+conflicts = [
+  { feature_id = "feature:infinity-ui:component-4", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-5", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-6", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-7", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-8", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+]
 components = [{ run_id = "infinity-ui-main", component = 3 }]
 
 [[features]]
@@ -3730,6 +4311,13 @@ choice_group = "infinity-ui:select-number-of-quicksave-slots"
 decision = "optional"
 readiness = "ready"
 parent = "mod:infinity-ui"
+conflicts = [
+  { feature_id = "feature:infinity-ui:component-3", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-5", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-6", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-7", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-8", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+]
 components = [{ run_id = "infinity-ui-main", component = 4 }]
 
 [[features]]
@@ -3743,6 +4331,13 @@ choice_group = "infinity-ui:select-number-of-quicksave-slots"
 decision = "optional"
 readiness = "ready"
 parent = "mod:infinity-ui"
+conflicts = [
+  { feature_id = "feature:infinity-ui:component-3", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-4", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-6", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-7", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-8", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+]
 components = [{ run_id = "infinity-ui-main", component = 5 }]
 
 [[features]]
@@ -3756,6 +4351,13 @@ choice_group = "infinity-ui:select-number-of-quicksave-slots"
 decision = "default"
 readiness = "ready"
 parent = "mod:infinity-ui"
+conflicts = [
+  { feature_id = "feature:infinity-ui:component-3", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-4", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-5", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-7", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-8", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+]
 components = [{ run_id = "infinity-ui-main", component = 6 }]
 
 [[features]]
@@ -3769,6 +4371,13 @@ choice_group = "infinity-ui:select-number-of-quicksave-slots"
 decision = "optional"
 readiness = "ready"
 parent = "mod:infinity-ui"
+conflicts = [
+  { feature_id = "feature:infinity-ui:component-3", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-4", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-5", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-6", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-8", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+]
 components = [{ run_id = "infinity-ui-main", component = 7 }]
 
 [[features]]
@@ -3782,6 +4391,13 @@ choice_group = "infinity-ui:select-number-of-quicksave-slots"
 decision = "optional"
 readiness = "ready"
 parent = "mod:infinity-ui"
+conflicts = [
+  { feature_id = "feature:infinity-ui:component-3", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-4", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-5", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-6", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+  { feature_id = "feature:infinity-ui:component-7", reason = "Choose at most one option for Select Number of Quicksave Slots." },
+]
 components = [{ run_id = "infinity-ui-main", component = 8 }]
 
 [[features]]
