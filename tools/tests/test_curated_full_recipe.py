@@ -281,7 +281,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
             modpack = tomllib.loads((output / "mods/chriz-bg-modpack.toml").read_text(encoding="utf-8"))
-            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
+            self.assertEqual(modpack["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.14")
             collection = tomllib.loads((output / "collection.toml").read_text(encoding="utf-8"))
             preset = tomllib.loads((output / "presets/chris-recommended.toml").read_text(encoding="utf-8"))
             mods = {path.stem for path in (output / "mods").glob("*.toml")}
@@ -384,7 +384,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # end of the Rebalance run and optional, unchecked EEex Attack Info 9 after 1
                 # in the EEex run; without both the quest-mod digest
                 # e36aa8a8b61479a3d64eb9558e2ef6117fae96f5924e092ca358ed23fac0549f returns.
-                "711cb8c56f4e7679a1b2bc361ddce03afd7d36e10087c2b9bc02976c6a4318d2",
+                # October 26, Modpack alpha.14 pin (Christopher's decisions of 2026-10-25):
+                # default 135 and 460 in the main post-EET_end Modpack run in TP2 order, and
+                # optional chapter caps 652 after 651 in the campaign XP run, the two
+                # conflicting both ways; without them the alpha.22 batch digest
+                # 711cb8c56f4e7679a1b2bc361ddce03afd7d36e10087c2b9bc02976c6a4318d2 returns.
+                "c36f30ba2623c54d723078f5ed9ecc05355724ae42bb25c4bfe32a4d1b9522c0",
             )
 
             legacy_bg1npc_groups = {

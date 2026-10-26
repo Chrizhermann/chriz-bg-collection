@@ -147,10 +147,18 @@ unchanged.
   SoD Remix, because its Siege of Dragonspear part runs through areas the remix
   restructures, so the installer offers it only with the SoD Remix unticked. (Black
   Hearts v2.05)
-- **Pending:** Modpack alpha.13 also adds a fix for Dorn's BG1 ambush, whose
-  camera lock on Senjak could crash the game; party AI that no longer enters
-  Defensive Stance with "Use special abilities" off; and chapter-by-chapter XP caps
-  (experimental). Christopher decides whether the collection offers them.
+- **Dorn's BG1 ambush no longer crashes the game** — **Default.** When Dorn catches
+  up with Senjak and Dorotea, the cutscene no longer locks the camera on Senjak. If
+  their conversation stalled, leaving the area crashed the game; a completed
+  conversation still ends in the fight. (Modpack alpha.13)
+- **Defensive Stance follows "Use special abilities"** — **Default.** With the option
+  off in the AI settings, your main character and others on the default party AI no
+  longer enter Defensive Stance on their own in BG1. (Modpack alpha.13)
+- **Chapter-by-chapter XP caps** — **Optional**, experimental, instead of the Shadows of
+  Amn cap; needs "Campaign XP caps with banked XP". Usable XP is capped per chapter, from
+  16,000 in BG1 Chapters 1-2 up to 8,900,000 in ToB's last chapter, and XP above the cap
+  is banked until a later chapter raises it. Baeloth's Larswood scene waits for Chapter 5,
+  so his starting XP fits under the cap. (Modpack alpha.13)
 
 ### Changed behavior
 
@@ -184,9 +192,19 @@ unchanged.
 - **Campaign XP caps with banked XP** (Optional, experimental, unchanged choice)
   now work, on EEex v1.3.1 too. With Modpack alpha.11 and alpha.12 no character
   got a bank account, so with the caps installed every permanent XP award was
-  refused. If the bank cannot start, XP stays uncapped and unbanked, and the
-  message log says so once per loaded game. This includes the optional SoA cap.
-  (Modpack alpha.13)
+  refused. This includes the optional SoA cap. (Modpack alpha.13)
+  - Script variables survive saving and loading with the bank again: up to alpha.13,
+    an XP change the bank could not take held up that character's other effects, and
+    variables set behind it were lost at the next save. If the bank cannot start, XP
+    stays uncapped and unbanked; the reason goes to the game's loader log, not into the
+    game. (Modpack alpha.14)
+- **Scrolls at the reader's caster level** (Default, unchanged choice) stay on for the
+  whole session. Modpack alpha.11 to alpha.13 turned them off after a load, a new game,
+  an NPC joining or opening a container, showed an EEex message box, and scrolls then
+  cast at their normal level until the game was restarted. Technical notices now go to
+  the loader log; only in one rare case, when the scroll rule cannot start cleanly and
+  cannot undo its start, does one box ask you to restart the game as it starts.
+  (Modpack alpha.14)
 - **Fade and Evandra's SoA join XP** (Default) recognise a catch-up an NPC
   already has under EET, so they no longer add a second one. (Modpack alpha.13)
 - **SoD Remix's Boareskyr Bridge finale** (Mandatory) installs alongside
@@ -249,6 +267,8 @@ unchanged.
   Disciple included. (Artisan's Kitpack fork chriz.2)
 - **Eldritch Knight and Arcane Trickster sorcerers no longer lose their kit weapons
   when they level up or join the party.** (Artisan's Kitpack fork chriz.3)
+  - Existing games keep the old sorcerer, Eldritch Knight and Arcane Trickster weapon
+    behavior until you install again.
 - **EEex Remote Console** (Optional, experimental): after you return to the main menu
   from character creation, the load screen or the options, the single-player menu no
   longer stays behind the game's screens for the rest of the session. Its installer
@@ -256,7 +276,7 @@ unchanged.
 
 ### Mod versions
 
-- Chriz BG Modpack v0.2.0-alpha.13 (was alpha.11)
+- Chriz BG Modpack v0.2.0-alpha.14 (was alpha.11)
 - BG Rebalance v0.8.5 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
@@ -281,7 +301,7 @@ unchanged.
 
 ## Release-note entry (collection alpha.21)
 
-**Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.13, BG
+**Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
 Rebalance to v0.8.5, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
 EEex to v1.3.1, BuffBot to v1.11.0, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
@@ -289,7 +309,8 @@ v4.81a-dev.85928f9-chriz.3 and The Tweaks Anthology to its current development
 version. New in Chris's Recommended: Christopher's revisions of Aid, Luck, Bless,
 Chaotic Commands, Prayer and Recitation; companion stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
-lacked it; SCS fine weapons that never break; one potion
+lacked it; a fix for the crash after Dorn's BG1 ambush; party AI that uses Defensive
+Stance only with "Use special abilities" on; SCS fine weapons that never break; one potion
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; sensible entrance points; 18 player
@@ -297,7 +318,9 @@ voicepacks from ChrizFader's voicepacks; and a choice of how Imoen continues
 into Shadows of Amn, by default as the BG2 thief/mage Imoen. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. The optional,
-experimental campaign XP caps with banked XP now work. New and optional, all
+experimental campaign XP caps with banked XP now work and keep script variables across
+saving and loading, with chapter-by-chapter caps as a new option, and scrolls at the
+reader's caster level now stay on for the whole session. New and optional, all
 experimental: two third-party quest mods in a new "Quest mods" category (Northern
 Tales of the Sword Coast and Ascalon's Questpack), Thalantyr Item Upgrade, the
 Icewind Dale Voice Pack and Portraits Portraits Everywhere, and Black Hearts for
@@ -324,10 +347,16 @@ apply to new installations; existing games and saves are unchanged.
 - **Bardic Wonders v2.9c-balance.8** has not been played in a game yet (its
   release notes). Its standalone Abettor tail 1.2.0 is for existing
   playthroughs; the collection installs component 2004 fresh and doesn't use it.
-- **Modpack `430`** (scrolls at the reader's caster level, Default) fails on EEex
-  v1.3.1 in alpha.12 and alpha.13: it shows its EEex error box and disables itself on
-  the first load, a new game or an NPC join. A fix is in progress; this release needs
-  it or Christopher's decision about the default (see `FOLLOW_UPS.md`).
+- **Modpack alpha.14** fixes `430` (scrolls at the reader's caster level, Default) on
+  EEex v1.3.1, which alpha.11 to alpha.13 turned off for the session, and the script
+  variables `650` lost ([#19](https://github.com/Chrizhermann/chriz-bg-collection/issues/19)).
+  Its owner labs ran on disposable 2.7.3.0 installs with EEex v1.3.1, the last one with the
+  release candidate's package on a copy of the Recommended install; no ongoing
+  playthrough has run with `430` yet, so the Recommended lab run checks the loader log,
+  together with BuffBot v1.11.0 (see `FOLLOW_UPS.md`).
+  `135` and `460` were checked in game for alpha.13 on a copy of the Recommended install.
+  Chapter caps `652` stay experimental: their lab set chapters and gave XP from the
+  console, not through the story (the Modpack's banking guide).
 - **SoD Remix v0.6.15** fixes the bridge finale `256` with Tweaks Anthology `3500`
   on; the owner lab reinstalled the remix tail on a copy of the Recommended stack.
   This release still needs one combined lab install of the whole Recommended
@@ -354,17 +383,21 @@ apply to new installations; existing games and saves are unchanged.
   not checked in game, and nobody checked the new PVRZ page numbers against the
   interface mods' pages.
 - **Rebalance `340`** (Chris Revisions, Default) was installed on scratch copies of
-  game resources only and has not run in a game yet (its release notes). Since v0.8.4,
+  game resources only and has not run in a game yet (its release notes). Its "ready"
+  flag, like EEex `9`'s, stays as it is until the Recommended lab run decides
+  (Christopher, 2026-10-26). Since v0.8.4,
   Rebalance components that cannot apply a change correctly stop the installation
   with the reason instead of guessing.
 - **Spell Revisions fork v4.21-chriz.7**: the Rogue Rebalancing level-5 replacements
   (v4.21-chriz.6) have not been checked in game yet (its release notes).
 - **Artisan's Kitpack fork chriz.3** (with chriz.2's sorcerer fix) reaches new
-  installations only. Existing games can append the fork's `AKCB_SORCERER_WEAPONS`
-  tail for the sorcerer fix, which the collection does not install; the kit weapon fix
-  has no tail, and there the helper creature gives the weapons back as before. Its lab
-  ran on BG2:EE 2.7.3.0, not EET, with a fresh install in the collection's Kitpack
-  order (its release notes; see `FOLLOW_UPS.md`).
+  installations only: existing installations get the weapon fixes only through a new
+  installation (Christopher, 2026-10-26), as the collection changelog says. The fork's
+  `AKCB_SORCERER_WEAPONS` tail is not part of the collection, and the kit weapon fix has
+  no tail; in existing games the helper creature gives the weapons back as before. Its
+  lab ran on BG2:EE 2.7.3.0, not EET, with a fresh install in the collection's Kitpack
+  order (its release notes; see `FOLLOW_UPS.md`). chriz.4 (approved on 2026-10-26, in
+  progress) joins this release if it is ready in time.
 - **EEex Remote Console v0.2.1** is a tag without GitHub release assets, like
   v0.2.0, so the pin is GitHub's commit archive of the tag commit. Its `START_SP` fix
   passed the README checklist on EET 2.7.3.0 with EEex v1.3.1 in the October 18 lab.

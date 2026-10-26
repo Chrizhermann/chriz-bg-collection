@@ -385,7 +385,7 @@ args = []
 run_id = "chriz-bg-modpack-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [130, 400, 410, 440, 450, 610, 611, 630, 660]
+components = [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660]
 args = []
 
 [[runs]]
@@ -406,7 +406,7 @@ args = []
 run_id = "chriz-bg-modpack-campaign-xp-bg2"
 mod_id = "chriz-bg-modpack"
 phase = "post-eet-end"
-components = [650, 651]
+components = [650, 651, 652]
 args = []
 
 [[runs]]
@@ -4705,6 +4705,17 @@ requires = ["feature:bg1npc:component-10", "feature:stratagems:mandatory-compone
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 130 }]
 
 [[features]]
+id = "feature:chriz-bg-modpack:component-135"
+title = "Stop the crash after Dorn's BG1 ambush"
+description = "When Dorn catches up with Senjak and Dorotea, the cutscene no longer locks the camera on Senjak. If their conversation stalls, leaving the area no longer crashes the game; a completed conversation still ends with Senjak and Dorotea attacking."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:eet:mandatory-components"]
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 135 }]
+
+[[features]]
 id = "feature:chriz-bg-modpack:component-140"
 title = "Correct Mazzy's Divine Champion proficiencies"
 description = "Move Mazzy's illegal fifth Short Bow pip to Short Sword after her curated Divine Champion conversion."
@@ -4917,6 +4928,16 @@ readiness = "ready"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:stratagems:mandatory-components"]
 components = [{ run_id = "chriz-bg-modpack-bg2", component = 450 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-460"
+title = "Party AI: Defensive Stance only with \"Use special abilities\" on"
+description = "The party AI scripts use Defensive Stance only while \"Use special abilities\" is on. EET's BG1 stance block in the default party AI ignored that option, so the protagonist and others kept entering the stance with it off."
+category = "fixes"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-modpack"
+components = [{ run_id = "chriz-bg-modpack-bg2", component = 460 }]
 
 [[features]]
 id = "feature:chriz-bg-modpack:component-610"
@@ -5235,7 +5256,20 @@ decision = "optional"
 readiness = "experimental"
 parent = "mod:chriz-bg-modpack"
 requires = ["feature:chriz-bg-modpack:component-650"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-652", reason = "Choose either the Shadows of Amn cap or chapter-by-chapter XP caps." }]
 components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 651 }]
+
+[[features]]
+id = "feature:chriz-bg-modpack:component-652"
+title = "Chapter-by-chapter XP caps (experimental)"
+description = "With campaign XP caps on, usable XP is capped chapter by chapter instead: in BG1 from 16,000 (Chapters 1-2) up to 161,000 (Chapter 7), in SoD up to 500,000, in SoA from 500,000 up to 3,500,000 and in ToB from 5,000,000 up to 8,900,000. XP above the current cap stays banked until a later chapter raises it. Baeloth's Larswood scene waits for Chapter 5, so his starting XP fits under the cap. Use it instead of the Shadows of Amn cap. Not yet tested in a full playthrough."
+category = "rules"
+decision = "optional"
+readiness = "experimental"
+parent = "mod:chriz-bg-modpack"
+requires = ["feature:chriz-bg-modpack:component-650"]
+conflicts = [{ feature_id = "feature:chriz-bg-modpack:component-651", reason = "Choose either chapter-by-chapter XP caps or the Shadows of Amn cap." }]
+components = [{ run_id = "chriz-bg-modpack-campaign-xp-bg2", component = 652 }]
 
 [[features]]
 id = "feature:chriz-sod-remix:component-257"

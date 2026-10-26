@@ -1,6 +1,8 @@
 """October 26 intake, the alpha.22 pin batch: BG Rebalance v0.8.5 with Chris Revisions 340,
 the Spell Revisions fork v4.21-chriz.7 with its SR/RR compatibility package, BuffBot v1.11.0,
-the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.3 and EEex Attack Info 9.
+the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.3, EEex Attack Info 9, and Chriz BG
+Modpack v0.2.0-alpha.14 with alpha.13's Dorn ambush fix 135, party AI fix 460 and
+chapter XP caps 652.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Nothing here is a game installation or gameplay acceptance.
@@ -39,13 +41,27 @@ PINS = {
                             f"ArtisansKitpack-Chriz-Balance-Patch-{KITPACK_TAG}.zip", "ARTISANSKITPACK_NPC"),
     "artisanskitpack-tweak": (KITPACK, KITPACK_PREVIOUS, KITPACK_TAG,
                               f"ArtisansKitpack-Chriz-Balance-Patch-{KITPACK_TAG}.zip", "ARTISANSKITPACK_TWEAK"),
+    "chriz-bg-modpack": ("chriz-bg-modpack-0.2.0-alpha.14", "chriz-bg-modpack-0.2.0-alpha.13", "v0.2.0-alpha.14",
+                         "chriz-bg-modpack-v0.2.0-alpha.14.zip", "CHRIZ-BG-MODPACK"),
 }
+# Catalog rows of retired Modpack numbers that no TP2 declares any more; none is offered.
+RETIRED_ROWS = {"CHRIZ-BG-MODPACK": {100, 120, 150, 180, 200, 210, 300, 310, 420, 500, 510, 511, 512, 513, 514, 600}}
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
 EEEX_RUN = "eeex-bg2"
 EEEX_CORE = "feature:eeex:mandatory-components"
 REVISIONS = "feature:chriz-bg-rebalance:component-340"
 ATTACK_INFO = "feature:eeex:component-9"
 ARTISAN_MAIN_RUN = "artisanskitpack-main-bg2"
+MODPACK = "feature:chriz-bg-modpack:component-{}"
+MODPACK_MAIN_RUN = "chriz-bg-modpack-bg2"
+CAMPAIGN_RUN = "chriz-bg-modpack-campaign-xp-bg2"
+LATE_RUN = "chriz-bg-modpack-late-companions-bg2"
+EET_CORE = "feature:eet:mandatory-components"
+DORN_AMBUSH = MODPACK.format(135)
+DEFENSIVE_STANCE = MODPACK.format(460)
+CHAPTER_CAPS = MODPACK.format(652)
+CAMPAIGN_CAPS = MODPACK.format(650)
+SOA_CAP = MODPACK.format(651)
 
 
 def _load_profile(directory: Path) -> tuple[dict, dict]:
@@ -186,10 +202,21 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             rows.setdefault(row.catalog, {})[row.component_id] = row
         for mod_id, (*_, catalog) in PINS.items():
             with self.subTest(catalog=catalog):
-                self.assertEqual(set(rows[catalog]), set(self.records[mod_id]["native_components"]))
-        # The only new component in the batch, and the only changed decision.
+                retired = RETIRED_ROWS.get(catalog, set())
+                self.assertEqual(set(rows[catalog]) - retired, set(self.records[mod_id]["native_components"]))
+                for component in retired:
+                    self.assertEqual(rows[catalog][component].decision, Decision.EXCLUDED, component)
+        # The only new component in the batch (340) and the newly offered ones: EEex 9 and
+        # Modpack alpha.13's 135, 460 and 652 (Christopher, 2026-10-25).
         self.assertEqual(rows["CHRIZ-BG-REBALANCE"][340].decision, Decision.DEFAULT)
         self.assertEqual(rows["EEEX"][9].decision, Decision.OPTIONAL)
+        self.assertEqual(rows["CHRIZ-BG-MODPACK"][135].decision, Decision.DEFAULT)
+        self.assertEqual(rows["CHRIZ-BG-MODPACK"][460].decision, Decision.DEFAULT)
+        self.assertEqual(rows["CHRIZ-BG-MODPACK"][652].decision, Decision.OPTIONAL)
+        # Unchanged by alpha.14.
+        self.assertEqual(rows["CHRIZ-BG-MODPACK"][430].decision, Decision.DEFAULT)
+        self.assertEqual(rows["CHRIZ-BG-MODPACK"][650].decision, Decision.OPTIONAL)
+        self.assertEqual(rows["CHRIZ-BG-MODPACK"][651].decision, Decision.OPTIONAL)
         self.assertEqual(rows["BUFFBOT"][1].decision, Decision.MANDATORY)
         self.assertEqual(rows["BUFFBOT"][0].decision, Decision.MANDATORY)
         self.assertEqual(rows["SRCB_RR_COMPAT"][0].decision, Decision.MANDATORY)
@@ -266,10 +293,90 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
             self.assertNotIn(ATTACK_INFO, group["members"])
 
+    def test_modpack_alpha14_offers_135_and_460_by_default(self):
+        expected = {
+            DORN_AMBUSH: ("Stop the crash after Dorn's BG1 ambush", 135, [EET_CORE]),
+            DEFENSIVE_STANCE: ("Party AI: Defensive Stance only with \"Use special abilities\" on", 460, []),
+        }
+        for name, directory, collection, preset in self._each_profile():
+            features = {feature["id"]: feature for feature in collection["features"]}
+            runs = {run["run_id"]: run for run in collection["runs"]}
+            order = [run["run_id"] for run in collection["runs"]]
+            # Alpha.13's TP2 declares 135 after 130 and 460 after 450.
+            self.assertEqual(runs[MODPACK_MAIN_RUN]["components"],
+                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660])
+            self.assertEqual(runs[MODPACK_MAIN_RUN]["phase"], "post-eet-end")
+            # 135 installs after the mods that change Dorn's ambush scripts, such as EET,
+            # and 460 after EET and the party AI writers; SCS changes neither.
+            for run_id in ("eet-end-bg2", "stratagems-bg2", "chriz-sod-remix-bg2", "chriz-bg-rebalance-bg2"):
+                self.assertLess(order.index(run_id), order.index(MODPACK_MAIN_RUN), run_id)
+            baseline = self._selected(collection, preset)
+            for feature_id, (title, component, requires) in expected.items():
+                with self.subTest(feature=feature_id):
+                    feature = features[feature_id]
+                    self.assertEqual(feature["title"], title)
+                    self.assertEqual((feature["category"], feature["decision"], feature["readiness"]),
+                                     ("fixes", "default", "ready"))
+                    self.assertEqual(feature["parent"], "mod:chriz-bg-modpack")
+                    # 135's TP2 needs CUTDN1B.BCS, which a BG2-based install gets from EET's
+                    # BG1 import; 460's TP2 needs only the game's own PARTYAI.2DA.
+                    self.assertEqual(feature.get("requires", []), requires)
+                    self.assertEqual(feature.get("conflicts", []), [])
+                    self.assertNotIn("choice_group", feature)
+                    self.assertEqual(feature["components"], [{"run_id": MODPACK_MAIN_RUN, "component": component}])
+                    self.assertEqual(preset.get(feature_id), "on")
+                    self.assertIn((MODPACK_MAIN_RUN, component), baseline)
+                    self.assertEqual(baseline - self._selected(collection, preset, **{feature_id: "off"}),
+                                     {(MODPACK_MAIN_RUN, component)})
+                    # Neither needs EEex, Spell Revisions or SCS.
+                    for mod_id in ("mod:eeex", "mod:spell-rev", "mod:stratagems"):
+                        self.assertIn((MODPACK_MAIN_RUN, component),
+                                      self._selected(collection, preset, **{mod_id: "off"}), mod_id)
+                    group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
+                    self.assertNotIn(feature_id, group["members"])
+            self.assertIn("Senjak", features[DORN_AMBUSH]["description"])
+            self.assertIn("Use special abilities", features[DEFENSIVE_STANCE]["description"])
+
+    def test_modpack_chapter_caps_652_is_offered_unchecked_instead_of_the_soa_cap(self):
+        for name, directory, collection, preset in self._each_profile():
+            features = {feature["id"]: feature for feature in collection["features"]}
+            runs = {run["run_id"]: run for run in collection["runs"]}
+            order = [run["run_id"] for run in collection["runs"]]
+            self.assertEqual(runs[CAMPAIGN_RUN]["components"], [650, 651, 652])
+            self.assertEqual(order.index(CAMPAIGN_RUN), order.index(LATE_RUN) + 1)
+            feature = features[CHAPTER_CAPS]
+            self.assertEqual((feature["category"], feature["decision"], feature["readiness"]),
+                             ("rules", "optional", "experimental"))
+            self.assertEqual(feature["parent"], "mod:chriz-bg-modpack")
+            self.assertEqual(feature["requires"], [CAMPAIGN_CAPS])
+            self.assertEqual(feature["components"], [{"run_id": CAMPAIGN_RUN, "component": 652}])
+            for phrase in ("16,000", "161,000", "500,000", "3,500,000", "8,900,000", "Baeloth", "Chapter 5"):
+                self.assertIn(phrase, feature["description"])
+            # The TP2 refuses 651 with 652 and 652 with 651; both features say so.
+            self.assertEqual([conflict["feature_id"] for conflict in feature["conflicts"]], [SOA_CAP])
+            self.assertEqual([conflict["feature_id"] for conflict in features[SOA_CAP]["conflicts"]], [CHAPTER_CAPS])
+            self.assertNotIn("choice_group", feature)
+            self.assertNotEqual(preset.get(CHAPTER_CAPS), "on")
+            self.assertNotEqual(preset.get(CAMPAIGN_CAPS), "on")
+            baseline = self._selected(collection, preset)
+            self.assertFalse(any(run == CAMPAIGN_RUN for run, _ in baseline))
+            # Without 650 it stays out; with 650 it joins after it.
+            self.assertNotIn((CAMPAIGN_RUN, 652), self._selected(collection, preset, **{CHAPTER_CAPS: "on"}))
+            chapters = self._selected(collection, preset, **{CAMPAIGN_CAPS: "on", CHAPTER_CAPS: "on"})
+            self.assertEqual(chapters - baseline, {(CAMPAIGN_RUN, 650), (CAMPAIGN_RUN, 652)})
+            soa = self._selected(collection, preset, **{CAMPAIGN_CAPS: "on", SOA_CAP: "on"})
+            self.assertEqual(soa - baseline, {(CAMPAIGN_RUN, 650), (CAMPAIGN_RUN, 651)})
+            group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
+            self.assertNotIn(CHAPTER_CAPS, group["members"])
+        self.assertEqual(NATIVE_RUN_ORDERS[CAMPAIGN_RUN], [650, 651, 652])
+        self.assertEqual(NATIVE_RUN_ORDERS[MODPACK_MAIN_RUN],
+                         [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660])
+
     def test_superseded_records_still_match_their_kept_artifacts(self):
         superseded = {
             "manifest/evidence/release-intake-20261014.toml": "chriz-bg-rebalance",
             "manifest/evidence/release-intake-20261023-buffbot-eeexremote.toml": "buffbot",
+            "manifest/evidence/release-intake-20261020.toml": "chriz-bg-modpack",
         }
         for path, mod_id in superseded.items():
             evidence = tomllib.loads((ROOT / path).read_text(encoding="utf-8"))

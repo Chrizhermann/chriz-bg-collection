@@ -97,11 +97,11 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
 
     def test_reviewed_modpack_compatibility_release_preserves_selection(self):
         mod = tomllib.loads((self.output / "mods/chriz-bg-modpack.toml").read_text())
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
-        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.13.toml").read_text())
-        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.13")
-        self.assertEqual(artifact["source"]["expected_length"], 10479090)
-        self.assertEqual(artifact["source"]["sha256"], "afbf05eec35bf65280cdab5276417f83e767ca5594de93602934d0398a68a381")
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.14")
+        artifact = tomllib.loads((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.14.toml").read_text())
+        self.assertEqual(artifact["source"]["reference"], "v0.2.0-alpha.14")
+        self.assertEqual(artifact["source"]["expected_length"], 10550312)
+        self.assertEqual(artifact["source"]["sha256"], "45c767b21342d1c7c23ded6cd52aef29b4054daf9cc949613d8f6620207a356c")
         self.assertFalse((self.output / "artifacts/chriz-bg-modpack-0.2.0-alpha.6.toml").exists())
         # Alpha.18 adds Rebalance 301/302 after alpha.17's interval-save controls;
         # Modpack also restores Evandra defaults and switches 610 to 611.
@@ -127,9 +127,10 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # The October 23 quest-mod intake makes BG1UB optional and unselected, which removes
         # its 16 former defaults and the bg1ub-bg1 run; the new quest mods are unchecked.
         # The October 26 intake adds default Chris Revisions 340 to the Rebalance run;
-        # EEex Attack Info 9 is offered unchecked.
-        self.assertEqual(len(without_controls), 466)
-        self.assertEqual(len(selected), 467)
+        # EEex Attack Info 9 is offered unchecked. Its Modpack alpha.14 pin adds default
+        # 135 and 460 to the main post-EET_end Modpack run; chapter caps 652 stay unchecked.
+        self.assertEqual(len(without_controls), 468)
+        self.assertEqual(len(selected), 469)
         self.assertEqual(len({run for run, _ in selected}), 69)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -226,7 +227,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         opted_in = self.selected({feature_id: "on"})
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
-        self.assertEqual(len(baseline), 467)
+        self.assertEqual(len(baseline), 469)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

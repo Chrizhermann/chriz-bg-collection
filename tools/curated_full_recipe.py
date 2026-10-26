@@ -61,11 +61,14 @@ NATIVE_RUN_ORDERS = {
     "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234],
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
     # Degrodel 660 is declared after 640 and before the campaign XP pair 650/651.
-    "chriz-bg-modpack-bg2": [130, 400, 410, 440, 450, 610, 611, 630, 660],
+    # Alpha.13 declares Dorn's ambush fix 135 after 130 and the party AI fix 460 after
+    # 450; the collection offers both from the alpha.14 pin (October 26).
+    "chriz-bg-modpack-bg2": [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660],
     # Modpack alpha.13 (October 20) declares EET join XP 239 right after 238; it runs
     # after the NPC mods and EET_end and before the campaign XP run, as 650 requires.
     "chriz-bg-modpack-late-companions-bg2": [189, 237, 238, 239, 620],
-    "chriz-bg-modpack-campaign-xp-bg2": [650, 651],
+    # Chapter caps 652 (offered from alpha.14) follow 651, the alternative they exclude.
+    "chriz-bg-modpack-campaign-xp-bg2": [650, 651, 652],
     # Rebalance declares Flail 302 after its Tempus family, not by numeric ID.
     # Verify new source pins with tools/check_native_component_order.py.
     # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last;

@@ -303,18 +303,25 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // ten updated runs' artifact ids (manifest 2c107ce8…, curated 76003acc…); with the previous
     // pins restored as well, all six previous digests return (manifest d98f3592…, 87b3d5fc…,
     // f1ae4719…; curated 7175787c…, 18657bda…, b8c01c67…).
+    // Re-pinned on October 26 for Modpack alpha.14 in the same batch, with alpha.13's default
+    // 135 and 460 and optional 652 (Christopher, 2026-10-25). With those three removed
+    // (features, run components, preset entries and 651's conflict edge), the collection and
+    // selection digests return in both recipes, and the plans differ only in the six selected
+    // Modpack runs' artifact ids (manifest 27ade74c…, curated 44268f93…); with alpha.13
+    // restored as well, all six previous digests return (manifest b1f25835…, c9354b83…,
+    // e9ca1fbd…; curated c9107bcb…, d63e6c3b…, 8f5ae74a…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "b1f25835104c02f867ca76e8aa6a12f30fd83db2b85e2b08cec625fae31f3269",
-            "c9354b831e85271e7267824c635ba4758671c01b5f7c68c2d8926cbd887bd3c3",
-            "e9ca1fbdd93e1acdcf3cc1235c02e752d0ddd8a013e69ab2f0b91a3194e7a7a2",
+            "ea31c07f2cd0d050fcf590cbf601b3fd1a189cf5b35856895f87ad012eb340d4",
+            "d27b9fa5ffe8046cf0f53dcf73cb2355226da536eb47504b0c54cf85968df49e",
+            "acea4e17a537e10de70bf41860eb90df1fe744a88507f5415084cc111eee638b",
         ),
         (
             "../recipes/curated-full-current",
-            "c9107bcb55ae77f74459573ecc7ec8cefd87d096bc7174d5ea4edaf9de84254f",
-            "d63e6c3b3e50032fd70679abe1a199ae06778db4e690a82dd7e932a6eadf8f8e",
-            "8f5ae74a3ce8fc290a51ad74e26732b06ea251ef7679101edd465903f3f02513",
+            "bfa199cc50d38892d273ab6f05c4e6e673fa47f6c4393fa91c08ec103ec8fc63",
+            "90d4ffb4ea605c241f2f8834e32bf20ae85b6c77e1d6b22da9e50f7240c019dd",
+            "9e88b9c524cd2e90f455ee18a705dc3162898598a6b96382fa5c486ef1e773b8",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

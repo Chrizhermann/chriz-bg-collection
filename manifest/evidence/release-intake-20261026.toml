@@ -2,7 +2,7 @@ schema = 1
 evidence_kind = "published-release-download-and-native-order-verification"
 verified_on = "2026-10-26"
 command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh downloaded ZIP>"
-scope = "The alpha.22 pin batch: BG Rebalance v0.8.5 (published 2026-10-25, replaces v0.8.3), the Spell Revisions fork v4.21-chriz.7 with its SR/RR compatibility package (2026-10-24, replace v4.21-chriz.5), BuffBot v1.11.0 (2026-10-24, replaces v1.10.1) and the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.3 (2026-10-26, replaces chriz.1 for the main, NPC and tweak installers and contains chriz.2's sorcerer weapon fix), all normal GitHub releases, in both recipe profiles. Each release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset, and the native TP2 declaration order matches both recipes except where a record says otherwise. Archive layouts and limits are unchanged from the previous pins. EEex is not re-downloaded: its v1.3.1 pin is unchanged, and component 9, which now joins the eeex-bg2 run as an option, is placed by the declaration-order audit in release-intake-20261018.toml (the order checker refuses EEex's TP2 by design). This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
+scope = "The alpha.22 pin batch: BG Rebalance v0.8.5 (published 2026-10-25, replaces v0.8.3), the Spell Revisions fork v4.21-chriz.7 with its SR/RR compatibility package (2026-10-24, replace v4.21-chriz.5), BuffBot v1.11.0 (2026-10-24, replaces v1.10.1), the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.3 (2026-10-26, replaces chriz.1 for the main, NPC and tweak installers and contains chriz.2's sorcerer weapon fix) and Chriz BG Modpack v0.2.0-alpha.14 (2026-10-26, replaces alpha.13), all normal GitHub releases, in both recipe profiles. Each release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset, and the native TP2 declaration order matches both recipes except where a record says otherwise. Archive layouts and limits are unchanged from the previous pins. EEex is not re-downloaded: its v1.3.1 pin is unchanged, and component 9, which now joins the eeex-bg2 run as an option, is placed by the declaration-order audit in release-intake-20261018.toml (the order checker refuses EEex's TP2 by design). This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance."
 
 # Against v0.8.3 the TP2 adds Chris Revisions 340, declared last after 332, and changes
 # its VERSION; v0.8.4 changed how 130, 220, 301, 310, 320 and 400-404 apply their
@@ -147,6 +147,32 @@ tp2_sha256 = "ec3b1b1460f99797a59d76b3827071779758015f1ecc7606178879b25a3fe846"
 native_components = [
   51010, 20101, 12012, 20021, 3210, 1209, 1110, 3202, 3302, 7203, 8204, 110000, 1, 2, 300010,
   1010000, 1020000, 2000001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# The annotated tag v0.2.0-alpha.14 points at commit ec39b61. Against alpha.13 the TP2
+# changes only its VERSION, and the English setup.tra only 430's install message. The
+# release changes how 430 and 650 run in the game (scroll and campaign XP runtime files;
+# chriz-bg-collection#19); it adds and removes no component and keeps the order. The
+# collection now also offers alpha.13's 135 and 460 as defaults and 652 as an option
+# (Christopher, 2026-10-25); every Modpack run of both recipes follows this order.
+[[artifacts]]
+mod_id = "chriz-bg-modpack"
+artifact_id = "chriz-bg-modpack-0.2.0-alpha.14"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.2.0-alpha.14"
+source_commit = "ec39b61ac43045c5036da4a96d1647bded1844b8"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip"
+actual_length = 10550312
+actual_sha256 = "45c767b21342d1c7c23ded6cd52aef29b4054daf9cc949613d8f6620207a356c"
+tp2_sha256 = "23431c3ff7c633b3dae3fff09f75c425999e4defc88c2a5d4efea5a871cbb5ad"
+native_components = [
+  110, 130, 135, 140, 160, 170, 188, 189, 190, 192, 193, 194, 195, 196, 197, 198, 199, 220, 221,
+  222, 223, 224, 225, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 400, 410, 430, 440, 450,
+  460, 610, 611, 620, 630, 640, 660, 650, 651, 652
 ]
 fresh_download = true
 fresh_extraction = true

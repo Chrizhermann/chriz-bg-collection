@@ -29,6 +29,8 @@ MODPACK_ALPHA11_ORDER = [
     220, 221, 222, 223, 224, 225, 235, 236, 237, 238, 400, 410, 430, 440, 450,
     610, 611, 620, 630, 640, 660, 650, 651,
 ]
+# Rows alpha.13 declared after alpha.11: 239 (October 20) and 135/460/652 (offered October 26).
+LATER_ROWS = {135, 239, 460, 652}
 SOD_V0613_RUN = [
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190,
     195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257,
@@ -77,16 +79,21 @@ class Oct13IntakeTests(unittest.TestCase):
         for _, _, collection, _ in self._each_profile():
             runs = {run["run_id"]: run for run in collection["runs"]}
             order = [run["run_id"] for run in collection["runs"]]
-            self.assertEqual(runs["chriz-bg-modpack-bg2"]["components"], [130, 400, 410, 440, 450, 610, 611, 630, 660])
+            # Alpha.13's 135 and 460, offered from the alpha.14 pin
+            # (test_oct26_alpha22_pins_recipe), join this run in TP2 order.
+            self.assertEqual(runs["chriz-bg-modpack-bg2"]["components"],
+                             [130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660])
             # Modpack alpha.13 (test_oct20_intake_recipe) adds EET join XP 239 after 238.
             self.assertEqual(runs[LATE_RUN]["components"], [189, 237, 238, 239, 620])
-            self.assertEqual(runs[CAMPAIGN_RUN]["components"], [650, 651])
+            # Alpha.13's chapter caps 652 follow 651 (alpha.14 pin).
+            self.assertEqual(runs[CAMPAIGN_RUN]["components"], [650, 651, 652])
             self.assertEqual(runs[SCROLLS_RUN]["components"], [430])
             for run_id in ("chriz-bg-modpack-bg2", LATE_RUN, CAMPAIGN_RUN, SCROLLS_RUN):
                 self.assertEqual(runs[run_id]["mod_id"], "chriz-bg-modpack")
                 self.assertEqual(runs[run_id]["phase"], "post-eet-end")
-                # Rows alpha.11 declared keep its order; test_oct20_intake_recipe checks 239.
-                components = [c for c in runs[run_id]["components"] if c != 239]
+                # Rows alpha.11 declared keep its order; test_oct20_intake_recipe checks 239
+                # and test_oct26_alpha22_pins_recipe checks 135, 460 and 652.
+                components = [c for c in runs[run_id]["components"] if c not in LATER_ROWS]
                 self.assertEqual(components, [c for c in MODPACK_ALPHA11_ORDER if c in components])
             self.assertEqual(order.index(CAMPAIGN_RUN), order.index(LATE_RUN) + 1)
             # 430 hashes every scroll and the spells they cast at install time.
@@ -103,7 +110,7 @@ class Oct13IntakeTests(unittest.TestCase):
             self.assertEqual(len(occurrences), len({c for _, c in occurrences}))
         for run_id, native in NATIVE_RUN_ORDERS.items():
             if run_id.startswith("chriz-bg-modpack-") and run_id not in {"chriz-bg-modpack-pre-continuity-bg2"}:
-                native = [c for c in native if c != 239]  # alpha.13; see test_oct20_intake_recipe
+                native = [c for c in native if c not in LATER_ROWS]  # alpha.13; see the later intakes
                 self.assertEqual(native, [c for c in MODPACK_ALPHA11_ORDER if c in native], run_id)
 
     def test_reader_level_scrolls_are_a_deselectable_eeex_default(self):
@@ -246,9 +253,9 @@ class Oct13IntakeTests(unittest.TestCase):
         self.assertEqual(names[430], "Scrolls: use the reader's active caster level, or half their active class level")
         self.assertTrue({237, 238, 650, 651, 660} <= names.keys())
         # The owners published both releases on October 13. Modpack alpha.12
-        # (test_oct14_intake_recipe) and alpha.13 (test_oct20_intake_recipe)
-        # supersede alpha.11 and keep these rows.
-        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.13")
+        # (test_oct14_intake_recipe), alpha.13 (test_oct20_intake_recipe) and alpha.14
+        # (test_oct26_alpha22_pins_recipe) supersede alpha.11 and keep these rows.
+        self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.14")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
         # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe) supersedes v0.6.13 and keeps these rows.
         self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.15")
