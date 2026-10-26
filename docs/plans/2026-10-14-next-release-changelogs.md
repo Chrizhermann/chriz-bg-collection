@@ -170,6 +170,9 @@ unchanged.
   unchecked by default in Chris's Recommended. Its Nim Furlwing and Svlast encounters
   and the versions in Northern Tales of the Sword Coast are either-or; with both mods
   ticked, BG1 Unfinished Business keeps them.
+- **Druids level like clerics** (Alter Druid Spell and Level Progression Tables) —
+  now **Optional** (was **Default**), unchecked in Chris's Recommended. Druids keep
+  their own XP table: level 15 at 3,000,000 XP instead of 1,575,000. (Tweaks Anthology)
 - **Grandmastery** (Default, unchanged choice): High Mastery now gives +5
   damage instead of +4, matching Grand Mastery. To-hit and the other levels are
   unchanged. (Tweaks Anthology)
@@ -325,8 +328,8 @@ experimental: two third-party quest mods in a new "Quest mods" category (Norther
 Tales of the Sword Coast and Ascalon's Questpack), Thalantyr Item Upgrade, the
 Icewind Dale Voice Pack and Portraits Portraits Everywhere, and Black Hearts for
 installations without the SoD Remix. Unfinished Business for BG1 and BG2 is now
-optional; High Mastery now gives +5 damage, and the NPC move now includes
-Ajantis. In Bardic Wonders, the
+optional, and druids level on their own XP table again instead of the clerics';
+High Mastery now gives +5 damage, and the NPC move now includes Ajantis. In Bardic Wonders, the
 Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
 the Gallant gets the new bard spells, and Symphony of the Dark Children ends
 with its round of Invisibility. BuffBot's combat-stop notices now appear over the

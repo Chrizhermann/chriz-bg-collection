@@ -3,7 +3,7 @@
 schema = 1
 expected_rows = 1337
 expected_choice_groups = 87
-expected_optional_none_groups = 30
+expected_optional_none_groups = 31
 expected_fixed_groups = 11
 
 parents = [
@@ -3607,7 +3607,7 @@ id = "choice:cdtweaks:alter-druid-spell-and-level-progression-tables"
 catalog = "CDTWEAKS"
 subgroup = "Alter Druid Spell and Level Progression Tables"
 options = ["CDTWEAKS:2292"]
-default = "CDTWEAKS:2292"
+default = "none"
 
 [[choice_groups]]
 id = "choice:cdtweaks:alter-mage-spell-progression-table"
