@@ -118,7 +118,7 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   const gameSections = element("div", "update-game-sections");
   const selectedCopies = selected ? [selected] : [];
   if (selected && actions.customized) {
-    gameSections.append(element("p", "manual-mod-warning", `Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. ${flavor.shortName} app updates and new installations remain available.`));
+    gameSections.append(element("p", "manual-mod-warning", flavor.text.customizedUpdatesNote));
   }
   if (selected && !actions.customized && actions.onCheckInstalledUpdate !== undefined) {
     gameSections.append(installedUpdateSection(selectedCopies, actions, installing || actions.patchBusy === true, true));

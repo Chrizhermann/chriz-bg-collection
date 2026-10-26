@@ -247,6 +247,42 @@ fn manual_dragonspear_addition_is_interleaved_and_permanently_blocks_game_update
 }
 
 #[test]
+fn manual_addition_to_a_standalone_game_needs_no_bg1_folder() {
+    // A standalone game such as IWD:EE is staged in `game` alone.
+    let fixture = Fixture::new();
+    fs::remove_dir(fixture.root().join("bg1")).unwrap();
+    fixture.begin();
+    let paused = paused_status(fixture.root(), &fixture.checkpoints[0]).unwrap();
+    assert_eq!(paused.target, GameRoot::Bg2);
+    assert_eq!(paused.target_path, fixture.root().join("game"));
+    fixture.add("game", "Other/setup-Other.tp2", 0, "Other/backup");
+    let reviewed = fixture.review().unwrap();
+    assert_eq!(reviewed.status.additions.len(), 1);
+    accept(fixture.root(), &fixture.checkpoints[0], &reviewed).unwrap();
+    verify_accepted_current(
+        fixture.root(),
+        &fixture.checkpoints[0],
+        &fixture.plan,
+        &fixture.manifest.mods,
+        &fixture.manifest.artifacts,
+    )
+    .unwrap();
+    assert!(is_customized(fixture.root()).unwrap());
+    assert!(!fixture.root().join("bg1").exists());
+
+    // A BG1 folder that appears during such a pause is a change outside the shown target.
+    let fixture = Fixture::new();
+    fs::remove_dir(fixture.root().join("bg1")).unwrap();
+    fixture.begin();
+    fs::create_dir(fixture.root().join("bg1")).unwrap();
+    assert!(fixture
+        .review()
+        .err()
+        .unwrap()
+        .contains("other game folder"));
+}
+
+#[test]
 fn manual_wrong_target_changed_prefix_and_failed_installer_are_rejected() {
     let fixture = Fixture::new();
     fixture.begin();

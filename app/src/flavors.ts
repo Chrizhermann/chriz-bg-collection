@@ -47,6 +47,18 @@ export interface FlavorText {
   readonly removalKeepsSources: string;
   readonly gameSettingsFailed: string;
   readonly copyGamesPhase: string;
+  /** What adding manual mods means, above the pauses on the setup screen. */
+  readonly manualModsWarning: string;
+  /** Manual-mod guide: which folder to change at a pause. */
+  readonly manualPauseFolderStep: string;
+  /** Manual-mod guide: what a manual addition may change. */
+  readonly manualPauseLimitsStep: string;
+  /** Shown with manual additions before the player accepts them. */
+  readonly manualAdditionsAcceptNote: string;
+  /** Launcher note on an installation with manual mods. */
+  readonly customizedLauncherNote: string;
+  /** Updates-screen note on an installation with manual mods. */
+  readonly customizedUpdatesNote: string;
 }
 
 export interface Flavor {
@@ -95,6 +107,12 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       removalKeepsSources: "Your original game sources and shared downloads stay untouched. Saves stored outside this folder are kept.",
       gameSettingsFailed: "Lefreut's interfaces need this update to offer the trilogy campaigns. Close the game, then use Play again to retry.",
       copyGamesPhase: "Copy your games",
+      manualModsWarning: "Manual mods can conflict with this setup. You choose their compatibility and install order. CEBG records your changes, but cannot guarantee them. Adding manual mods disables game hotpatches and whole-mod updates for this installation; CEBG app updates still work.",
+      manualPauseFolderStep: "At the pause, use the displayed managed BG1 or BG2 folder, never either original game. Back up that folder before making changes: CEBG does not automatically create a full checkpoint backup. Keep the game closed and retain the manual installer’s backups and diagnostics.",
+      manualPauseLimitsStep: "Only new WeiDU components are supported. Do not remove, reinstall or reorder managed components or edit WeiDU.log. BG1 changes after EET imports it will not enter the combined campaign.",
+      manualAdditionsAcceptNote: "Accepting records these additions and disables game hotpatches and whole-mod updates for this installation. Compatibility is your responsibility. App updates still work.",
+      customizedLauncherNote: "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled; CEBG app updates still work.",
+      customizedUpdatesNote: "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. CEBG app updates and new installations remain available.",
     },
   },
   iwd: {
@@ -106,13 +124,13 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       { slot: "bg2", role: "iwdee", label: "Icewind Dale: Enhanced Edition", name: "Icewind Dale: Enhanced Edition", reviewLabel: "Game source" },
     ],
     features: {
-      radar: false,
+      radar: true,
       installPatches: false,
       modUpgrades: false,
-      manualPauses: false,
+      manualPauses: true,
       appUpdates: false,
-      buffBotTip: false,
-      radarTip: false,
+      buffBotTip: true,
+      radarTip: true,
     },
     text: {
       lookingForGames: "Looking for your Icewind Dale game…",
@@ -128,6 +146,13 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       removalKeepsSources: "Your original game and shared downloads stay untouched. Saves stored outside this folder are kept.",
       gameSettingsFailed: "Close the game, then use Play again to retry.",
       copyGamesPhase: "Copy your game",
+      // Manual mods turn off the installed-mod check, the only update of a game in this app.
+      manualModsWarning: "Manual mods can conflict with this setup. You choose their compatibility and install order. Chriz Easy IWD records your changes, but cannot guarantee them. Adding manual mods turns off mod update checks for this installation.",
+      manualPauseFolderStep: "At the pause, use the displayed managed game folder, never your original game. Back up that folder before making changes: Chriz Easy IWD does not automatically create a full checkpoint backup. Keep the game closed and retain the manual installer’s backups and diagnostics.",
+      manualPauseLimitsStep: "Only new WeiDU components are supported. Do not remove, reinstall or reorder managed components or edit WeiDU.log.",
+      manualAdditionsAcceptNote: "Accepting records these additions and turns off mod update checks for this installation. Compatibility is your responsibility.",
+      customizedLauncherNote: "Customized — manual mods added. Mod update checks are off for this installation.",
+      customizedUpdatesNote: "Customized — manual mods added. Mod update checks are off for this installation. New installations remain available.",
     },
   },
 };

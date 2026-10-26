@@ -618,18 +618,24 @@ pub async fn check_updates(
         .clone();
     let mut summary =
         background(move || bridge.unconfigured_update_center(env!("CARGO_PKG_VERSION"))).await?;
+    // The overlay has its own releases, also in an app without an update feed.
+    let radar_check = crate::flavor::CURRENT.radar.then(|| {
+        let radar_bridge = state
+            .bridge
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
+        tauri::async_runtime::spawn_blocking(move || radar_bridge.radar_update())
+    });
     // An app without its own signed update feed has no updater to ask; its collection
     // arrives only with a new app download.
     if !crate::flavor::CURRENT.app_updates {
+        if let Some(radar_check) = radar_check {
+            summary.radar = radar_check.await.ok();
+        }
         crate::installation_lookup_trace::updates_returned(&summary);
         return Ok(summary);
     }
-    let radar_bridge = state
-        .bridge
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .clone();
-    let radar_check = tauri::async_runtime::spawn_blocking(move || radar_bridge.radar_update());
     let updater = app
         .updater_builder()
         .timeout(Duration::from_secs(15))
@@ -707,7 +713,9 @@ pub async fn check_updates(
                 .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
         }
     }
-    summary.radar = radar_check.await.ok();
+    if let Some(radar_check) = radar_check {
+        summary.radar = radar_check.await.ok();
+    }
     for copy in &mut summary.managed_copies {
         if copy.state != "stale" {
             copy.state = if copy.installed_recipe_version.as_deref()

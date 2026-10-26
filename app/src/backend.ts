@@ -995,6 +995,7 @@ export class FixtureBackend implements Backend {
     destination: string,
     bg1CandidateId: string,
     bg2CandidateId: string,
+    _manualBreakpoints?: readonly ManualBreakpoint[],
   ): Promise<FrozenReview> {
     const evaluation = await this.evaluateBuild(selection);
     const discovery = await this.discoverGames();

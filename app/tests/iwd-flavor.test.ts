@@ -3,17 +3,20 @@
 import { fireEvent, getByRole, queryByRole, queryByText, waitFor } from "@testing-library/dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ManagedInstallation, UpdateSummary } from "../src/contracts";
+import type { ManagedInstallation, ManualCheckpointStatus, UpdateSummary } from "../src/contracts";
 import { FLAVORS } from "../src/flavors";
 
-/** Baldur's Gate words that must never appear on a screen of the IWD build. */
-const BG_WORDS = /Baldur|BG1|BG2|CEBG|Dragonspear|EET|Radar|BuffBot/;
+/**
+ * Baldur's Gate words that must never appear on a screen of the IWD build. BG Radar Overlay keeps
+ * its own name; the pattern catches only the games and the BG app.
+ */
+const BG_WORDS = /Baldur|BG1|BG2|CEBG|Dragonspear|EET/;
 
 /** Loads the frontend as `vite --mode iwd` builds it. */
 async function iwd() {
   vi.stubEnv("MODE", "iwd");
   vi.resetModules();
-  const [app, backend, flavor, state, games, review, loading, removal] = await Promise.all([
+  const [app, backend, flavor, state, games, review, loading, removal, manualCheckpoints] = await Promise.all([
     import("../src/app"),
     import("../src/backend"),
     import("../src/flavor"),
@@ -22,9 +25,23 @@ async function iwd() {
     import("../src/screens/review"),
     import("../src/screens/loading"),
     import("../src/components/installation-removal"),
+    import("../src/components/manual-checkpoints"),
   ]);
   expect(flavor.flavor.id).toBe("iwd");
-  return { ...app, ...backend, ...flavor, ...state, ...games, ...review, ...loading, ...removal };
+  return { ...app, ...backend, ...flavor, ...state, ...games, ...review, ...loading, ...removal, ...manualCheckpoints };
+}
+
+/** A pause option as the native bridge reports it for the one IWD game, which uses slot bg2. */
+const IWD_PAUSE_OPTION = { runId: "eeex-main", component: 0, modId: "eeex", modLabel: "EEex", componentLabel: "Core", phase: "main", target: "bg2", unavailableReason: null } as const;
+
+/** A paused IWD installation as the native bridge reports it, with one manual addition to review. */
+function iwdPausedCheckpoint(): ManualCheckpointStatus {
+  return {
+    checkpointId: "manual-1", target: "bg2", targetPath: "D:\\Games\\Chriz Easy IWD\\game",
+    after: IWD_PAUSE_OPTION, next: { ...IWD_PAUSE_OPTION, runId: "scs-main", modId: "stratagems", modLabel: "SCS", componentLabel: "Smarter mages" },
+    additions: [{ tp2: "mymod/setup-mymod.tp2", component: 0, language: 0, description: "My mod" }],
+    diagnostics: [], reviewToken: "token", customized: false,
+  };
 }
 
 /** Loads the default (BG) build, regardless of earlier stubs. */
@@ -66,7 +83,6 @@ function installation(overrides: Partial<ManagedInstallation> = {}): ManagedInst
     id: "iwd-install", name: "Chriz Easy IWD", path: "D:\\Games\\Chriz Easy IWD", status: "Ready to play",
     receiptPath: "D:\\Games\\Chriz Easy IWD\\install-receipt.json", launchPath: "D:\\Games\\Chriz Easy IWD\\InfinityLoader.exe",
     completedAtMillis: 1, available: true, resumable: false, recipeVersion: "2026.10",
-    // A backend that still reports an overlay must not bring Radar into this build.
     radarVersion: "1.2.0",
     consistency: {
       state: "matches", detail: "All recorded mods are present.", componentCount: 2, modCount: 2,
@@ -79,7 +95,7 @@ function installation(overrides: Partial<ManagedInstallation> = {}): ManagedInst
   };
 }
 
-/** An update summary that offers every BG-only extra; the IWD build must show none of them. */
+/** An update summary that offers every extra; the IWD build shows only the overlay's. */
 function updatesWithBgExtras(): UpdateSummary {
   return {
     checkedAt: null,
@@ -116,7 +132,7 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(flavor.productName).toBe("Chriz Easy IWD");
     expect(flavor.sources).toEqual([{ slot: "bg2", role: "iwdee", label: "Icewind Dale: Enhanced Edition", name: "Icewind Dale: Enhanced Edition", reviewLabel: "Game source" }]);
     expect(sourceSlots).toEqual(["bg2"]);
-    expect(Object.values(flavor.features).every(enabled => !enabled)).toBe(true);
+    expect(flavor.features).toEqual({ radar: true, installPatches: false, modUpgrades: false, manualPauses: true, appUpdates: false, buffBotTip: true, radarTip: true });
   });
 
   it("shows exactly one source card and installs with an empty bg1 candidate", async () => {
@@ -172,7 +188,7 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(saved.draft?.sourcePaths).toEqual({ bg1: null, bg2: "C:\\Fixture\\IWDEE" });
   });
 
-  it("offers no Radar, game fix, BuffBot or manual-mod pause controls", async () => {
+  it("offers Radar and the BuffBot tip, but no game fixes, mod upgrades or app updates", async () => {
     const { mountApp, FixtureBackend } = await iwd();
     const backend = new FixtureBackend({ managedInstallations: [installation()] });
     vi.spyOn(backend, "getUpdates").mockResolvedValue(updatesWithBgExtras());
@@ -180,51 +196,90 @@ describe("Chriz Easy IWD build flavor", () => {
     const patches = vi.spyOn(backend, "inspectInstallPatches");
     const radar = vi.spyOn(backend, "installRadar");
     const launch = vi.spyOn(backend, "launchInstall");
-    const evaluate = backend.evaluateBuild.bind(backend);
-    vi.spyOn(backend, "evaluateBuild").mockImplementation(async (selection) => ({
-      ...(await evaluate(selection)),
-      manualCheckpointOptions: [{ runId: "eeex-main", component: 0, modId: "eeex", modLabel: "EEex", componentLabel: "Core", phase: "main", target: "bg2", unavailableReason: null }],
-    }));
     const root = rootElement();
     const app = await mountApp(root, backend);
 
-    expect(root.querySelector("#start-radar")).toBeNull();
+    const startRadar = root.querySelector<HTMLInputElement>("#start-radar");
+    expect(startRadar?.disabled).toBe(false);
+    fireEvent.click(startRadar!);
     fireEvent.click(getByRole(root, "button", { name: "Play Chriz Easy IWD" }));
-    await waitFor(() => expect(launch).toHaveBeenCalledWith("iwd-install", false));
-    const tips = root.querySelector(".first-play-guide");
-    expect(tips?.querySelectorAll("li")).toHaveLength(1);
-    expect(queryByText(root, /F11/)).toBeNull();
+    await waitFor(() => expect(launch).toHaveBeenCalledWith("iwd-install", true));
+    const tips = [...root.querySelectorAll(".first-play-guide li")].map(tip => tip.textContent);
+    expect(tips).toHaveLength(3);
+    expect(tips[1]).toBe("In game, press F11 to open BuffBot and choose the buffs you want automated.");
+    expect(tips[2]).toContain("BG Radar Overlay 1.2.0 is installed.");
 
     await app.navigate("updates");
     expect(root.querySelector(".install-patches:not(.installed-update-plan)")).toBeNull();
     expect(queryByRole(root, "button", { name: "Check this installation" })).toBeNull();
-    expect(queryByRole(root, "button", { name: /overlay/i })).toBeNull();
     expect(queryByRole(root, "button", { name: /app$/ })).toBeNull();
     fireEvent.click(getByRole(root, "button", { name: "Check installed mods" }));
     await waitFor(() => expect((getByRole(root, "button", { name: "Check installed mods" }) as HTMLButtonElement).disabled).toBe(false));
     expect(upgrade).not.toHaveBeenCalled();
     expect(patches).not.toHaveBeenCalled();
-
-    await app.navigate("home");
-    fireEvent.click(getByRole(root, "button", { name: "New installation" }));
-    await waitFor(() => expect(getByRole(root, "heading", { name: "Install Chriz Easy IWD" })).toBeTruthy());
-    await app.navigate("setup");
-    expect(queryByText(root, /Add your own mods/)).toBeNull();
-    expect(root.querySelector(".manual-breakpoints")).toBeNull();
-    expect(radar).not.toHaveBeenCalled();
+    fireEvent.click(getByRole(root, "button", { name: "Update overlay" }));
+    await waitFor(() => expect(radar).toHaveBeenCalledWith("iwd-install"));
   });
 
-  it("does not add Radar after an installation completes", async () => {
+  it("adds BG Radar Overlay after an installation completes", async () => {
     const { mountApp, FixtureBackend } = await iwd();
     const backend = new FixtureBackend();
     const radar = vi.spyOn(backend, "installRadar");
     const root = rootElement();
-    const app = await mountApp(root, backend);
+    await mountApp(root, backend);
     fireEvent.click(getByRole(root, "button", { name: "Install Chriz Easy IWD" }));
     await finishFixtureBuild(root);
-    expect(radar).not.toHaveBeenCalled();
-    expect(queryByText(root, /overlay/i)).toBeNull();
-    void app;
+    await waitFor(() => expect(radar).toHaveBeenCalledWith("fixture-install"));
+    expect(radar).toHaveBeenCalledTimes(1);
+  });
+
+  it("pauses for manual mods in the one game folder without naming BG1 or BG2", async () => {
+    const m = await iwd();
+    const backend = new m.FixtureBackend();
+    const evaluate = backend.evaluateBuild.bind(backend);
+    vi.spyOn(backend, "evaluateBuild").mockImplementation(async (selection) => ({ ...(await evaluate(selection)), manualCheckpointOptions: [IWD_PAUSE_OPTION] }));
+    const freeze = vi.spyOn(backend, "freezeReview");
+    const root = rootElement();
+    const app = await m.mountApp(root, backend);
+    await app.navigate("setup");
+    const editor = root.querySelector<HTMLDetailsElement>(".manual-breakpoints");
+    expect(editor).not.toBeNull();
+    editor!.open = true;
+    expect(getByRole(root, "searchbox", { name: "Find a selected component" }).getAttribute("placeholder")).toBe("Mod, component or phase");
+    const choice = getByRole(root, "combobox", { name: "Pause after" }) as HTMLSelectElement;
+    expect([...choice.options].map(option => option.textContent)).toEqual(["EEex: Core (0) · Install the collection"]);
+    expect(editor!.textContent).toContain("use the displayed managed game folder, never your original game");
+    expectNoBgWords(editor!, "manual pauses");
+
+    fireEvent.click(getByRole(root, "button", { name: "Add pause" }));
+    await waitFor(() => expect(root.querySelector(".manual-breakpoint-row")?.textContent).toBe("EEex: Core (0)Install the collectionRemove"));
+    await app.navigate("welcome");
+    await waitFor(() => expect((getByRole(root, "button", { name: "Install Chriz Easy IWD" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(getByRole(root, "button", { name: "Install Chriz Easy IWD" }));
+    await waitFor(() => expect(freeze).toHaveBeenCalledTimes(1));
+    expect(freeze.mock.calls[0][5]).toEqual([{ runId: "eeex-main", component: 0 }]);
+  });
+
+  it("names the managed game folder and this app at a manual-mod pause", async () => {
+    const m = await iwd();
+    const actions = { status: iwdPausedCheckpoint(), busy: false, openFolder: () => undefined, reload: () => undefined, check: () => undefined, continueUnchanged: () => undefined, accept: () => undefined };
+    const panel = m.manualCheckpointPanel(actions);
+    expect(panel.querySelector("p")?.textContent).toBe("Install your additions in this managed game folder:");
+    expect([...panel.querySelectorAll("dd")].map(value => value.textContent)).toEqual(["EEex: Core (0)", "SCS: Smarter mages (0)"]);
+    expect(panel.textContent).toContain("You can close Chriz Easy IWD while paused.");
+    expect(panel.textContent).toContain("Accepting records these additions and turns off mod update checks for this installation.");
+    expectNoBgWords(panel, "manual pause panel");
+  });
+
+  it("explains a customized installation without promising app updates", async () => {
+    const m = await iwd();
+    const backend = new m.FixtureBackend({ managedInstallations: [installation({ customized: true })] });
+    const root = rootElement();
+    const app = await m.mountApp(root, backend);
+    expect(root.querySelector(".launcher-card .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Mod update checks are off for this installation.");
+    await app.navigate("updates");
+    expect(root.querySelector(".update-game-sections .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Mod update checks are off for this installation. New installations remain available.");
+    expect(queryByRole(root, "button", { name: "Check installed mods" })).toBeNull();
   });
 
   it("shows no Baldur's Gate words on any screen it can reach", async () => {
@@ -285,6 +340,8 @@ describe("Chriz Easy IWD build flavor", () => {
     const destination = await returning.inspectDestination("D:\\Games\\Chriz Easy IWD", "", discovery.selectedBg2Id);
     snapshot("review", m.reviewScreen(evaluation, destination, discovery.bg2Candidates, () => undefined, () => undefined));
     snapshot("removal unlist", m.installationRemovalDialog({ installId: "x", displayName: "Chriz Easy IWD", managedRoot: "D:\\x", action: "unlist", reason: null, preservedSavePath: null, confirmationToken: "t" }, false, null, () => undefined, () => undefined));
+    snapshot("manual pauses", m.manualBreakpointEditor({ options: [IWD_PAUSE_OPTION], selected: [IWD_PAUSE_OPTION], phaseTitles: { main: "Install the collection" }, open: true, onOpen: () => undefined, onChange: () => undefined }));
+    snapshot("manual pause", m.manualCheckpointPanel({ status: iwdPausedCheckpoint(), busy: false, openFolder: () => undefined, reload: () => undefined, check: () => undefined, continueUnchanged: () => undefined, accept: () => undefined }));
 
     expect(screens.length).toBeGreaterThan(15);
     for (const [name, node] of screens) expectNoBgWords(node, name);
@@ -422,8 +479,27 @@ describe("Baldur's Gate flavor", () => {
         removalKeepsSources: "Your original game sources and shared downloads stay untouched. Saves stored outside this folder are kept.",
         gameSettingsFailed: "Lefreut's interfaces need this update to offer the trilogy campaigns. Close the game, then use Play again to retry.",
         copyGamesPhase: "Copy your games",
+        manualModsWarning: "Manual mods can conflict with this setup. You choose their compatibility and install order. CEBG records your changes, but cannot guarantee them. Adding manual mods disables game hotpatches and whole-mod updates for this installation; CEBG app updates still work.",
+        manualPauseFolderStep: "At the pause, use the displayed managed BG1 or BG2 folder, never either original game. Back up that folder before making changes: CEBG does not automatically create a full checkpoint backup. Keep the game closed and retain the manual installer’s backups and diagnostics.",
+        manualPauseLimitsStep: "Only new WeiDU components are supported. Do not remove, reinstall or reorder managed components or edit WeiDU.log. BG1 changes after EET imports it will not enter the combined campaign.",
+        manualAdditionsAcceptNote: "Accepting records these additions and disables game hotpatches and whole-mod updates for this installation. Compatibility is your responsibility. App updates still work.",
+        customizedLauncherNote: "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled; CEBG app updates still work.",
+        customizedUpdatesNote: "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. CEBG app updates and new installations remain available.",
       },
     });
+  });
+
+  it("keeps the BG1 and BG2 labels of its manual-mod pauses", async () => {
+    await bg();
+    const { manualBreakpointEditor, manualCheckpointPanel } = await import("../src/components/manual-checkpoints");
+    const option = { ...IWD_PAUSE_OPTION, target: "bg1" as const, phase: "bg1" };
+    const editor = manualBreakpointEditor({ options: [option], selected: [], phaseTitles: { bg1: "Prepare Baldur's Gate" }, open: true, onOpen: () => undefined, onChange: () => undefined });
+    expect(editor.querySelector("input")?.placeholder).toBe("Mod, component, phase or BG1 / BG2");
+    expect(editor.querySelector("option")?.textContent).toBe("EEex: Core (0) · BG1 · Prepare Baldur's Gate");
+    const panel = manualCheckpointPanel({ status: iwdPausedCheckpoint(), busy: false, openFolder: () => undefined, reload: () => undefined, check: () => undefined, continueUnchanged: () => undefined, accept: () => undefined });
+    expect(panel.querySelector("p")?.textContent).toBe("Install your additions in this managed BG2 folder:");
+    expect([...panel.querySelectorAll("dd")].map(value => value.textContent)).toEqual(["EEex: Core (0)", "SCS: Smarter mages (0) · BG2"]);
+    expect(panel.textContent).toContain("You can close CEBG while paused.");
   });
 
   it("keeps both BG sources and the BG fixture data set", async () => {

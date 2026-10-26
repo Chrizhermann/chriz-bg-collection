@@ -1,8 +1,16 @@
 import type { ManualBreakpoint, ManualCheckpointOption, ManualCheckpointStatus } from "../contracts";
+import { flavor } from "../flavor";
 import { actionButton, element } from "./app-shell";
 import { persistDisclosure } from "./disclosure";
 
-export const manualModsWarning = "Manual mods can conflict with this setup. You choose their compatibility and install order. CEBG records your changes, but cannot guarantee them. Adding manual mods disables game hotpatches and whole-mod updates for this installation; CEBG app updates still work.";
+/** The game folder a pause belongs to. A standalone collection has one game, so it names none. */
+function targetLabel(target: string): string | null {
+  return flavor.sources.length > 1 ? target.toUpperCase() : null;
+}
+
+function joinFacts(...facts: readonly (string | null)[]): string {
+  return facts.filter((fact): fact is string => fact !== null).join(" · ");
+}
 
 export function sameBreakpoint(a: ManualBreakpoint, b: ManualBreakpoint): boolean {
   return a.runId === b.runId && a.component === b.component;
@@ -33,16 +41,16 @@ export function manualBreakpointEditor(model: ManualBreakpointEditorModel): HTML
   persistDisclosure(details, title, model.onOpen);
   details.append(title);
   const body = element("div", "manual-breakpoint-body");
-  body.append(element("p", "manual-mod-warning", manualModsWarning));
+  body.append(element("p", "manual-mod-warning", flavor.text.manualModsWarning));
   body.append(element("p", "muted", "Add pauses after selected components finish. No pauses are added by default. Keep the game and all other installers closed before continuing."));
   const guide = element("details", "manual-mod-guide");
   guide.append(element("summary", undefined, "Manual-mod guide"));
   const steps = element("ol");
   for (const instruction of [
     "Choose a completed component after which your add-on belongs. For example, an add-on that needs EEex belongs after the appropriate EEex component. Check the add-on’s own requirements first.",
-    "At the pause, use the displayed managed BG1 or BG2 folder, never either original game. Back up that folder before making changes: CEBG does not automatically create a full checkpoint backup. Keep the game closed and retain the manual installer’s backups and diagnostics.",
-    "Close the manual installer, check changes in CEBG, then explicitly accept the displayed additions. A pause with no additions can continue unchanged.",
-    "Only new WeiDU components are supported. Do not remove, reinstall or reorder managed components or edit WeiDU.log. BG1 changes after EET imports it will not enter the combined campaign.",
+    flavor.text.manualPauseFolderStep,
+    `Close the manual installer, check changes in ${flavor.shortName}, then explicitly accept the displayed additions. A pause with no additions can continue unchanged.`,
+    flavor.text.manualPauseLimitsStep,
   ]) steps.append(element("li", undefined, instruction));
   guide.append(steps);
   body.append(guide);
@@ -55,7 +63,7 @@ export function manualBreakpointEditor(model: ManualBreakpointEditorModel): HTML
     const item = element("li", "manual-breakpoint-row");
     const copy = element("div");
     copy.append(element("strong", undefined, option ? boundaryLabel(option) : `${anchor.runId}, component ${anchor.component}`));
-    copy.append(element("p", "muted", option ? `${option.target.toUpperCase()} · ${model.phaseTitles[option.phase] ?? option.phase}` : "This component is no longer selected. Remove this pause or restore the component."));
+    copy.append(element("p", "muted", option ? joinFacts(targetLabel(option.target), model.phaseTitles[option.phase] ?? option.phase) : "This component is no longer selected. Remove this pause or restore the component."));
     if (option?.unavailableReason) copy.append(element("p", "unavailable-reason", option.unavailableReason));
     const remove = actionButton("Remove", () => model.onChange(model.selected.filter(candidate => !sameBreakpoint(candidate, anchor))), "quiet");
     remove.setAttribute("aria-label", `Remove pause after ${option ? boundaryLabel(option) : `${anchor.runId} component ${anchor.component}`}`);
@@ -73,7 +81,7 @@ export function manualBreakpointEditor(model: ManualBreakpointEditorModel): HTML
   const search = element("input");
   search.id = "manual-breakpoint-search";
   search.type = "search";
-  search.placeholder = "Mod, component, phase or BG1 / BG2";
+  search.placeholder = flavor.sources.length > 1 ? "Mod, component, phase or BG1 / BG2" : "Mod, component or phase";
   search.disabled = model.disabled ?? false;
   searchLabel.htmlFor = search.id;
   searchLabel.append(search);
@@ -100,7 +108,7 @@ export function manualBreakpointEditor(model: ManualBreakpointEditorModel): HTML
     const query = search.value.trim().toLocaleLowerCase();
     model.options.forEach((option, index) => {
       if (model.selected.some(anchor => sameBreakpoint(anchor, option))) return;
-      const label = `${boundaryLabel(option)} · ${option.target.toUpperCase()} · ${model.phaseTitles[option.phase] ?? option.phase}`;
+      const label = joinFacts(boundaryLabel(option), targetLabel(option.target), model.phaseTitles[option.phase] ?? option.phase);
       if (!`${label} ${option.runId}`.toLocaleLowerCase().includes(query)) return;
       const entry = element("option", undefined, label);
       entry.value = String(index);
@@ -135,12 +143,12 @@ export function manualCheckpointPanel(actions: ManualCheckpointActions): HTMLEle
   panel.setAttribute("aria-busy", String(actions.busy));
   const status = actions.status;
   if (status) {
-    panel.append(element("p", undefined, `Install your additions in this managed ${status.target.toUpperCase()} folder:`), element("p", "path", status.targetPath));
+    panel.append(element("p", undefined, `Install your additions in this managed ${targetLabel(status.target) ?? "game"} folder:`), element("p", "path", status.targetPath));
     const boundaries = element("dl", "review-list");
     boundaries.append(element("dt", undefined, "Completed"), element("dd", undefined, boundaryLabel(status.after)),
-      element("dt", undefined, "Next"), element("dd", undefined, status.next ? `${boundaryLabel(status.next)} · ${status.next.target.toUpperCase()}` : "Final verification"));
-    panel.append(boundaries, element("p", "muted", "Finish and close your manual installer and game before checking. Keep every WeiDU.log entry intact. You can close CEBG while paused."));
-    panel.append(element("p", "manual-mod-warning", "Before making changes, back up this managed game folder. CEBG does not automatically create a full checkpoint backup."));
+      element("dt", undefined, "Next"), element("dd", undefined, status.next ? joinFacts(boundaryLabel(status.next), targetLabel(status.next.target)) : "Final verification"));
+    panel.append(boundaries, element("p", "muted", `Finish and close your manual installer and game before checking. Keep every WeiDU.log entry intact. You can close ${flavor.shortName} while paused.`));
+    panel.append(element("p", "manual-mod-warning", `Before making changes, back up this managed game folder. ${flavor.shortName} does not automatically create a full checkpoint backup.`));
     const folder = actionButton("Open game folder", actions.openFolder, "quiet");
     folder.disabled = actions.busy;
     panel.append(folder);
@@ -157,7 +165,7 @@ export function manualCheckpointPanel(actions: ManualCheckpointActions): HTMLEle
             element("p", "path", `${addition.tp2} · Component ${addition.component} · Language ${addition.language}`));
           list.append(item);
         }
-        panel.append(list, element("p", "manual-mod-warning", "Accepting records these additions and disables game hotpatches and whole-mod updates for this installation. Compatibility is your responsibility. App updates still work."));
+        panel.append(list, element("p", "manual-mod-warning", flavor.text.manualAdditionsAcceptNote));
       } else {
         const unchanged = element("p", undefined, "No manual additions found. Continue with the remaining installation steps.");
         unchanged.id = "manual-checkpoint-review";

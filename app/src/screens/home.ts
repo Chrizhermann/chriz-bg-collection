@@ -200,7 +200,7 @@ export function homeScreen(
     metadata.append(summary);
   }
   if (metadata.childElementCount > 0) card.append(metadata);
-  if (selected.customized) card.append(element("p", "manual-mod-warning", `Customized — manual mods added. Game hotpatches and whole-mod updates are disabled; ${flavor.shortName} app updates still work.`));
+  if (selected.customized) card.append(element("p", "manual-mod-warning", flavor.text.customizedLauncherNote));
   const picker = installationPicker(installations, selected.id, actions.select);
   if (picker !== null) card.append(picker);
   if (actions.rename) card.append(installationNameEditor({ installId: selected.id, name: selected.name,

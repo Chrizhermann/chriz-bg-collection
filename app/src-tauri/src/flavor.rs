@@ -98,7 +98,8 @@ pub const IWD: AppFlavor = AppFlavor {
         source_role: GameRole::Iwdee,
         game_executable: "icewind.exe",
     }),
-    radar: false,
+    // The overlay finds Icewind Dale: Enhanced Edition by its process name as well.
+    radar: true,
     install_patches: false,
     mod_upgrades: false,
     app_updates: false,

@@ -1,6 +1,7 @@
 //! The Icewind Dale app's native bridge: one bundled collection, one source game in the `bg2`
-//! slot, its own registry folder and texts, and no Baldur's Gate-only features. The test build
-//! is the Baldur's Gate app, so these tests switch the bridge to the Icewind Dale flavor.
+//! slot, its own registry folder and texts, BG Radar Overlay and manual-mod pauses, and no game
+//! fixes or whole-mod updates. The test build is the Baldur's Gate app, so these tests switch the
+//! bridge to the Icewind Dale flavor.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -14,6 +15,8 @@ use bg_engine::digest::sha256_bytes;
 use bg_engine::games::{
     Eligibility, FindingKind, GameCandidate, GameFinding, GameRole, Storefront,
 };
+use bg_engine::manifest::GameRoot;
+use bg_engine::manual_checkpoint::ManualBreakpoint;
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::registry::{ManagedInstallRecord, ManagedInstallRegistry, REGISTRY_SCHEMA_VERSION};
 use bg_engine::session::SourceGameFingerprints;
@@ -74,9 +77,11 @@ fn candidate(role: GameRole, root: &Path) -> GameCandidate {
     }
 }
 
-/// Discovers an Icewind Dale copy beside both Baldur's Gate sources and records installs.
+/// Discovers an Icewind Dale copy beside both Baldur's Gate sources and records reviews and
+/// installs.
 struct FakeEngine {
     games: Vec<GameCandidate>,
+    reviews: Mutex<Vec<InstallCommandRequest>>,
     installs: Mutex<Vec<InstallCommandRequest>>,
     profile_repairs: Mutex<usize>,
 }
@@ -104,6 +109,7 @@ impl BridgeEngine for FakeEngine {
     }
 
     fn review(&self, request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
+        self.reviews.lock().unwrap().push(request.clone());
         Ok(InstallReviewIdentity {
             display_name: request.display_name.clone(),
             recipe_payload_sha256: "aa".repeat(32),
@@ -154,6 +160,7 @@ impl BridgeEngine for FakeEngine {
 #[derive(Default)]
 struct RecordingSystem {
     launches: Mutex<Vec<PathBuf>>,
+    radar_launches: Mutex<Vec<PathBuf>>,
 }
 
 impl BridgeSystem for RecordingSystem {
@@ -164,10 +171,14 @@ impl BridgeSystem for RecordingSystem {
 
     fn launch_radar(
         &self,
-        _executable: &Path,
+        executable: &Path,
         _working_directory: &Path,
     ) -> Result<RadarProcessOutcome, String> {
-        Err("the Icewind Dale app never starts BG Radar Overlay".to_owned())
+        self.radar_launches
+            .lock()
+            .unwrap()
+            .push(executable.to_path_buf());
+        Ok(RadarProcessOutcome::Started)
     }
 
     fn open_folder(&self, _path: &Path) -> Result<(), String> {
@@ -223,6 +234,7 @@ fn iwd_fixture() -> Fixture {
             candidate(GameRole::Bg2ee, &bg2),
             candidate(GameRole::Iwdee, &iwd),
         ],
+        reviews: Mutex::new(Vec::new()),
         installs: Mutex::new(Vec::new()),
         profile_repairs: Mutex::new(0),
     });
@@ -281,6 +293,45 @@ fn publish_install(app_data: &Path, managed: &Path, launcher: &str) -> String {
         })
         .unwrap();
     install_id
+}
+
+/// Writes a receipted BG Radar Overlay into the managed game folder, as `install_radar` leaves
+/// it. The bytes are inert; every process launch stays behind `RecordingSystem`.
+fn install_radar_overlay(managed: &Path) {
+    let directory = managed.join("game/BG Radar Overlay");
+    fs::create_dir_all(&directory).unwrap();
+    let mut files = Vec::new();
+    for (path, bytes) in [
+        ("BG Radar Overlay.exe", b"fake Radar executable".as_slice()),
+        ("resources.pak", b"fake Radar resources".as_slice()),
+    ] {
+        fs::write(directory.join(path), bytes).unwrap();
+        files.push(json!({"path": path, "length": bytes.len(), "sha256": sha256_bytes(bytes)}));
+    }
+    let receipt = managed.join(".chriz/addons/bg-radar-overlay.json");
+    fs::create_dir_all(receipt.parent().unwrap()).unwrap();
+    fs::write(
+        receipt,
+        serde_json::to_vec(&json!({
+            "schema": 1,
+            "repository": "tapahob/BG2RadarOverlay",
+            "install_directory": "BG Radar Overlay",
+            "installed_at_unix_seconds": 1,
+            "release": {
+                "release_id": 1,
+                "tag": "2.5.2.0",
+                "published_at": "2026-09-08T11:07:15Z",
+                "asset_id": 1,
+                "asset_name": "BG.Radar.Overlay.2.5.2.0.7z",
+                "asset_url": "https://github.com/tapahob/BG2RadarOverlay/releases/download/2.5.2.0/BG.Radar.Overlay.2.5.2.0.7z",
+                "asset_length": 100,
+                "sha256": "ab".repeat(32),
+            },
+            "files": files,
+        }))
+        .unwrap(),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -520,14 +571,76 @@ fn launch_accepts_the_games_own_executable_and_skips_eet_settings() {
 }
 
 #[test]
-fn baldurs_gate_only_features_are_refused_before_anything_is_read() {
+fn radar_starts_after_the_game_from_the_managed_game_folder() {
+    let fixture = iwd_fixture();
+    let managed = fixture.root.join("Games").join("Chriz Easy IWD");
+    let install_id = publish_install(&fixture.app_data, &managed, "InfinityLoader.exe");
+    install_radar_overlay(&managed);
+    let managed = managed.canonicalize().unwrap();
+
+    let cards = fixture.bridge.list_managed_installations().unwrap();
+    assert_eq!(cards[0].radar_version.as_deref(), Some("2.5.2.0"));
+    let launched = fixture
+        .bridge
+        .launch_install(&install_id, true)
+        .expect("launch the IWD installation with Radar");
+
+    assert_eq!(
+        serde_json::to_value(&launched.radar).unwrap()["state"],
+        "started"
+    );
+    assert_eq!(
+        fixture.system.launches.lock().unwrap().as_slice(),
+        [managed.join("game/InfinityLoader.exe")]
+    );
+    assert_eq!(
+        fixture.system.radar_launches.lock().unwrap().as_slice(),
+        [managed.join("game/BG Radar Overlay/BG Radar Overlay.exe")]
+    );
+}
+
+#[test]
+fn manual_pauses_stop_in_the_one_game_folder() {
+    let fixture = iwd_fixture();
+    let evaluation = fixture.bridge.evaluate_build(&recommended()).unwrap();
+    let options = &evaluation.manual_checkpoint_options;
+    assert!(!options.is_empty());
+    assert!(
+        options.iter().all(|option| option.target == GameRoot::Bg2),
+        "{options:?}"
+    );
+    let eeex = options
+        .iter()
+        .find(|option| option.run_id == "eeex-main" && option.unavailable_reason.is_none())
+        .expect("a pause after an EEex component");
+    let breakpoint = ManualBreakpoint {
+        run_id: eeex.run_id.clone(),
+        component: eeex.component,
+    };
+    let game = fixture.bridge.discover_games().unwrap().selected_bg2_id;
+
+    fixture
+        .bridge
+        .freeze_review_with_breakpoints(
+            "Chriz Easy IWD",
+            &recommended(),
+            &fixture.root.join("Games").join("Chriz Easy IWD"),
+            "",
+            &game,
+            &[breakpoint.clone()],
+        )
+        .expect("freeze an IWD review with a manual pause");
+
+    let reviews = fixture.engine.reviews.lock().unwrap();
+    assert_eq!(reviews.len(), 1);
+    assert_eq!(reviews[0].bg1, None);
+    assert_eq!(reviews[0].overrides.manual_breakpoints, [breakpoint]);
+}
+
+#[test]
+fn game_fixes_and_whole_mod_updates_are_refused_before_anything_is_read() {
     let fixture = iwd_fixture();
     let checks = [
-        fixture
-            .bridge
-            .launch_install("install-unknown", true)
-            .map(|_| ()),
-        fixture.bridge.install_radar("install-unknown").map(|_| ()),
         fixture
             .bridge
             .inspect_install_patches("install-unknown")
