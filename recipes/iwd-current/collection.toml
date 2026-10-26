@@ -6,7 +6,7 @@
 # WORKSHEET.md.
 schema = 2
 game = "iwdee"
-application_data_directory = "Chriz Easy IWD"
+application_data_directory = "Chriz IWD Collection"
 game_build = "2.7.3.0"
 
 # EE Fixpack readme: after the official patches, before other mods.
