@@ -627,7 +627,7 @@ fn manual_pauses_stop_in_the_one_game_folder() {
             &fixture.root.join("Games").join("Chriz Easy IWD"),
             "",
             &game,
-            &[breakpoint.clone()],
+            std::slice::from_ref(&breakpoint),
         )
         .expect("freeze an IWD review with a manual pause");
 
