@@ -26,6 +26,10 @@ Notes from the selection:
 - Lava's downloads use per-visit tokens; automatic fetching is untested and needed for
   eleven companions and eight quests. (Solved 2026-10-26: the installer fetches them
   unattended.)
+- BuffBot is in since 2026-10-27: version 1.12.0 supports IWD:EE, and Christopher said it
+  must be in, on by default. Its updates inside the app are not needed ("nicht updates
+  unbedingt"). The same day he also wanted BG Radar Overlay and the manual-mod pauses in
+  the IWD app, and an English interface is fine, since his community is English-speaking.
 
 ## Component selection (2026-10-26)
 
@@ -57,7 +61,7 @@ slots), the installer offers them as one choice and installs at most one. His ow
 | EE Fixpack | Include. | Verify the exact IWDEE core/text-update menu and supported game build. |
 | EEex | Carryover candidate for the agreed feature set. | Review tiers/options and matched IWDEE build. |
 | Bubb's Spell Menu | Carryover candidate for the agreed feature set. | Verify UI integration and conflicts. |
-| BuffBot | Desired; source review suggests a small enablement task. | Enable/test IWDEE in its owning repo, then curate the supported release. |
+| BuffBot | In, on by default (2026-10-27): BuffBot 1.12.0 supports IWD:EE; installed late, its LuaJIT support before the buff automation. | No updates inside the IWD app for now; a new version comes with a new collection version. |
 | SCS | Include; additional conservative enhancements are desired for investigation. | Review IWD components and optional spell changes; audit existing coverage before designing patches. |
 | Artisan's Kitpack | Desired if compatible. | Review kits, base-class changes and applicable late tweaks; omit BG companion assignments. |
 | Bardic Wonders | Desired if compatible. | Review kits/songs/spells separately from BG-only content; check chosen NPCs. |

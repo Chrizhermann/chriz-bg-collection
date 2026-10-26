@@ -28,7 +28,8 @@ user's decisions. Started 2026-09-10.
   page; until the generator is here, change a decision by hand in `collection.toml` and
   record it in the worksheet. The generator is kept in Christopher's private backup. Since
   2026-10-26 it also writes the exclusive choice groups and the "Chriz IWD Collection"
-  records folder, and it reproduces the committed recipe exactly.
+  records folder. It reproduced the committed recipe exactly until BuffBot was added by hand
+  on 2026-10-27; it still needs that entry.
 - [x] Alternatives are exclusive: the options of each of the 30 choice groups conflict
   pairwise, so the installer offers them as one choice and installs at most one
   (`claude/iwdee-app`, b4b0a2c; pinned by a static test, 17a563a).
@@ -58,24 +59,38 @@ user's decisions. Started 2026-09-10.
 - [x] Boot EEex 1.3.1 and Bubb's Spell Menu Extended 5.2 on IWD:EE 2.7.3.0 in a
   disposable lab (2026-10-25; main menu reached, both loaded).
 - [ ] Confirm supported source builds and pin the matched EEex release.
-- [ ] Complete BuffBot IWDEE enablement and focused UI/casting/persistence checks in its repo.
+- [x] BuffBot: version 1.12.0 supports IWD:EE 2.7.3.0 (tested in its own repository with
+  EEex 1.3.1 and Bubb's Spell Menu: panel, presets, casting, save/load). Christopher put it
+  into the collection on 2026-10-27, on by default (`claude/iwdee-app`, 672940d). It installs
+  late: its LuaJIT support, then the buff automation. A lab install on top of the full lab
+  of 2026-10-26 (SCS, companions, Tweaks Anthology, Hidden Gameplay Options) passed without
+  warnings; the LuaJIT support found EEex's LuaJIT active and changed nothing. Its readme
+  lists the IWD:EE interface mods, SCS and the companion mods as not yet tested together
+  with it in play.
+- [ ] BuffBot updates inside the IWD app stay off; Christopher does not need them for now
+  (2026-10-27). A new BuffBot version comes with a new collection version.
 - [ ] Verify selected Artisan/Bardic components and custom NPC interactions.
 - [x] Add explicit collection identity/game profiles to shared app/engine contracts,
   including one-source staging; preserve existing BG campaigns. `claude/iwdee-app` builds
   the app "Chriz Easy IWD" from the same source with `tauri.iwd.conf.json` (78a1370,
   e37b73d): its own name, app and records folders ("Chriz IWD Collection"), one IWD:EE
-  source, IWD texts, and none of the BG-only parts (BG Radar Overlay, game fixes, BuffBot
-  updates). Each app refuses the other's recipe. The BG app is unchanged; all tests pass
-  in both builds, and CI checks both.
+  source, IWD texts, and no game fixes or BuffBot updates. Each app refuses the other's
+  recipe. The BG app is unchanged; all tests pass in both builds, and CI checks both. The
+  interface stays English (Christopher, 2026-10-27: his community is English-speaking).
+- [x] BG Radar Overlay in the IWD app (Christopher, 2026-10-27; ae99433): the overlay finds
+  IWD:EE too. The app adds it after an installation, offers it on Updates and starts it with
+  the game, as in CEBG.
 - [ ] Per-collection updates: the IWD app has no update channel yet, so a new version is a
   new download.
-- [ ] Manual pauses (stopping an install after a chosen mod to add something by hand) stay
-  off in the IWD app until those screens name the game folder instead of BG1/BG2.
+- [x] Manual pauses (stopping an install after a chosen mod to add something by hand) in the
+  IWD app (Christopher, 2026-10-27; ae99433). Their screens name the managed game folder
+  instead of BG1/BG2 and say that manual mods turn off mod update checks for that
+  installation. An engine test covers a pause in a one-game installation.
 - [ ] The IWD app still uses the CEBG icon (Christopher's call).
 - [x] Release records: `recipes/iwd-current` passes the public-alpha check with 0 findings
-  (f9b1725). The check now counts only parts a release promises, not the parts of a mod it
-  leaves off (f413da4). Runtime acceptance stays pending until an install through the app
-  is accepted.
+  (f9b1725; with BuffBot again since 1d56286). The check now counts only parts a release
+  promises, not the parts of a mod it leaves off (f413da4). Runtime acceptance stays pending
+  until an install through the app is accepted.
 - [x] Build and verify a self-contained IWD recipe, source hashes and component order.
   Artifact pins for all 37 mods are on `claude/iwdee-recipe`; Lava's 19 packages use the
   engine's `weaselmods-download` source kind (`claude/iwdee-engine`) and were verified live.
