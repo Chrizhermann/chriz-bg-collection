@@ -1,0 +1,4 @@
+schema = 1
+release = "v0.1.0-alpha.1"
+preset = "chris-recommended"
+approved_tail_runs = []

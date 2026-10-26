@@ -1,0 +1,13 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.0-alpha.1"
+published_at = "2026-10-26T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.21"
+
+[[changes]]
+id = "initial-iwd-recipe"
+title = "First Chriz Easy IWD recipe"
+summary = "Creates a new managed Icewind Dale: Enhanced Edition 2.7.3.0 installation from the first Chriz Easy IWD recipe."
+save_applicability = "new-game-only"
+urgency = "informational"
+covers = ["release:initial"]

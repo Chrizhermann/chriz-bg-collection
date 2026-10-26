@@ -62,6 +62,22 @@ fn production_alpha_has_complete_static_release_records_without_claiming_runtime
     assert!(!acceptance.contains("live_acceptance = true"));
 }
 
+/// The Icewind Dale app validates its bundled recipe with this profile at startup.
+#[test]
+fn iwd_release_has_complete_static_release_records_without_claiming_runtime_acceptance() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/iwd-current");
+    let manifest = Manifest::load(&root).expect("IWD recipe should load");
+    let findings = bg_engine::release_validate::validate_public_alpha(&manifest)
+        .expect("IWD release records should load");
+    assert!(findings.is_empty(), "{findings:#?}");
+
+    let acceptance =
+        fs::read_to_string(root.join("releases/v0.1.0-alpha.1/acceptance.toml")).unwrap();
+    assert!(acceptance.contains("kind = \"runtime-test\""));
+    assert!(acceptance.contains("status = \"pending\""));
+    assert!(!acceptance.contains("live_acceptance = true"));
+}
+
 #[test]
 fn selected_default_with_no_artifact_is_release_blocking() {
     let mut manifest = recipe();
