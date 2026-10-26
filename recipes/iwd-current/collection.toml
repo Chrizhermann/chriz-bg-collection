@@ -1617,7 +1617,7 @@ description = "Alter Druid Spell and Level Progression Tables: Use cleric level 
 category = "rules"
 source_label = "The Tweaks Anthology"
 group_label = "Alter Druid Spell and Level Progression Tables"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 parent = "mod:cdtweaks"
 components = [{ run_id = "cdtweaks-main", component = 2292 }]

@@ -672,8 +672,8 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
         "cdtweaks-main",
         &[
             60, 110, 130, 170, 180, 2010, 1010, 1120, 1142, 1290, 2090, 2152, 2170, 2192, 2210,
-            2250, 2260, 2270, 2280, 2292, 2380, 2410, 2500, 2520, 2590, 2999, 3000, 3010, 3040,
-            3080, 3090, 3100, 3110, 3121, 3290, 3310, 3354, 3500,
+            2250, 2260, 2270, 2280, 2380, 2410, 2500, 2520, 2590, 2999, 3000, 3010, 3040, 3080,
+            3090, 3100, 3110, 3121, 3290, 3310, 3354, 3500,
         ],
     ),
     (
@@ -922,7 +922,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 97);
+    assert_eq!(components, 96);
 }
 
 #[test]
@@ -1169,6 +1169,34 @@ fn buffbot_is_on_by_default_and_installs_its_luajit_support_first() {
     selection.set_feature("mod:buffbot", false);
     let without = evaluate(&manifest, &selection).unwrap();
     assert!(without.plan.components_for("buffbot-main").is_none());
+}
+
+#[test]
+fn druids_keep_their_own_xp_table_unless_the_player_picks_the_cleric_one() {
+    // Christopher, 2026-10-27, as in Chriz Easy BG: on the cleric XP table druids reach
+    // level 15 far too early, so the option stays offered but unticked.
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let cleric_table = evaluation
+        .view
+        .control("feature:cdtweaks:component-2292")
+        .unwrap();
+    assert_eq!(cleric_table.decision, Decision::Optional);
+    assert!(!cleric_table.selected);
+    assert!(!evaluation
+        .plan
+        .components_for("cdtweaks-main")
+        .unwrap()
+        .contains(&2292));
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("feature:cdtweaks:component-2292", true);
+    let picked = evaluate(&manifest, &selection).unwrap();
+    assert!(picked
+        .plan
+        .components_for("cdtweaks-main")
+        .unwrap()
+        .contains(&2292));
 }
 
 #[test]
