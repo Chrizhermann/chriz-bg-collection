@@ -24,7 +24,9 @@ function installationSelection(copies: readonly ManagedCopyUpdate[], selected: M
   const section = element("section", "update-selection");
   section.setAttribute("aria-label", "Selected game installation");
   if (!selected) {
-    section.append(element("p", "update-selection-status", "No game installation yet. App updates are still available below."));
+    section.append(element("p", "update-selection-status", flavor.features.appUpdates
+      ? "No game installation yet. App updates are still available below."
+      : "No game installation yet."));
     return section;
   }
   const row = element("div", "update-selection-row");

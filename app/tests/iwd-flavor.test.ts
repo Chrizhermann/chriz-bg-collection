@@ -302,6 +302,16 @@ describe("Chriz Easy IWD build flavor", () => {
     expect([...review.querySelectorAll("dt")].map(term => term.textContent)).toEqual(["Game source", "Install location", "Choices"]);
     expect(review.querySelector(".ledger li strong")?.textContent).toBe("Copy your game");
   });
+
+  it("promises no app updates on the Updates screen before the first installation", async () => {
+    const m = await iwd();
+    const root = rootElement();
+    const app = await m.mountApp(root, new m.FixtureBackend());
+    await app.navigate("updates");
+    const status = root.querySelector(".update-selection-status");
+    expect(status?.textContent).toBe("No game installation yet.");
+    expect(queryByText(root, /App updates are still available/)).toBeNull();
+  });
 });
 
 describe("startup with a backend for another collection", () => {
