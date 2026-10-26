@@ -26,9 +26,10 @@ Cross-repository status. Component detail stays in the sections below and in the
      Info) optional and off, and maybe the Campaign Item Randomiser (below). Time Clocks is
      likely in the release too (see Ready to start). BG Rebalance, Spell Revisions,
      BuffBot, the Kitpack and EEex `9` are pinned in both recipes on
-     `claude/pin-alpha22`, stacked on PRs #32 and #33 (fresh-download and native-order
-     evidence in `manifest/evidence/release-intake-20261026.toml`); Modpack alpha.14
-     follows there once it is published.
+     `claude/pin-alpha22` ([PR #36](https://github.com/Chrizhermann/chriz-bg-collection/pull/36)),
+     stacked on PRs #32 and #33 (fresh-download and native-order evidence in
+     `manifest/evidence/release-intake-20261026.toml`); Modpack alpha.14 follows there
+     once it is published.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
