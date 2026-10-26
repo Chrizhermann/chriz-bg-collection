@@ -1,6 +1,6 @@
 """October 26 intake, the alpha.22 pin batch: BG Rebalance v0.8.5 with Chris Revisions 340,
 the Spell Revisions fork v4.21-chriz.7 with its SR/RR compatibility package, BuffBot v1.11.0,
-the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.2 and EEex Attack Info 9.
+the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.3 and EEex Attack Info 9.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Nothing here is a game installation or gameplay acceptance.
@@ -19,9 +19,10 @@ ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = "manifest/evidence/release-intake-20261026.toml"
 EEEX_EVIDENCE = "manifest/evidence/release-intake-20261018.toml"
 PROFILES = ["manifest", "recipes/curated-full-current"]
-KITPACK = "artisans-kitpack-4.81a-dev.85928f9-chriz.2"
+# chriz.3 replaced chriz.2 in this batch before it merged; chriz.2 was never in a recipe.
+KITPACK = "artisans-kitpack-4.81a-dev.85928f9-chriz.3"
 KITPACK_PREVIOUS = "artisans-kitpack-4.81a-dev.85928f9-chriz.1"
-KITPACK_TAG = "v4.81a-dev.85928f9-chriz.2"
+KITPACK_TAG = "v4.81a-dev.85928f9-chriz.3"
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {

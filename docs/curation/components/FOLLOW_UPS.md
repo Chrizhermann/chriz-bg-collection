@@ -22,9 +22,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 - CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order:
   1. One pin batch: Modpack alpha.14 (release candidate ready, see below), BG Rebalance
      v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
-     fork `v4.81a-dev.85928f9-chriz.2` (sorcerer weapon fix, below), EEex `9` (Attack
-     Info) optional and off, and maybe the Campaign Item Randomiser (below). Time Clocks is
-     likely in the release too (see Ready to start). BG Rebalance, Spell Revisions,
+     fork `v4.81a-dev.85928f9-chriz.3` (sorcerer and kit weapon fixes, below), EEex `9`
+     (Attack Info) optional and off, and maybe the Campaign Item Randomiser (below). Time
+     Clocks is likely in the release too (see Ready to start). BG Rebalance, Spell Revisions,
      BuffBot, the Kitpack and EEex `9` are pinned in both recipes on
      `claude/pin-alpha22` ([PR #36](https://github.com/Chrizhermann/chriz-bg-collection/pull/36)),
      stacked on PRs #32 and #33 (fresh-download and native-order evidence in
@@ -127,23 +127,31 @@ Cross-repository status. Component detail stays in the sections below and in the
     game before loading or saving. The box appears while the game starts, just before the
     main menu, not on the visible main menu; whether that placement is fine is waiting for
     Christopher.
-- Artisan's Kitpack fork `v4.81a-dev.85928f9-chriz.2`, released on 2026-10-26:
-  - The bug: sorcerer kits, the Dragon Disciple included, could not equip daggers,
-    quarterstaves or darts without a proficiency point. It was reported by stream viewers.
-    Every fork release since chriz-v1.0.0 has it, including the alpha.21 pin.
+- Artisan's Kitpack fork `v4.81a-dev.85928f9-chriz.3`, released on 2026-10-26 (fork
+  PR #14); it contains chriz.2, released the same day:
+  - The sorcerer bug, fixed in chriz.2: sorcerer kits, the Dragon Disciple included,
+    could not equip daggers, quarterstaves or darts without a proficiency point. It was
+    reported by stream viewers. Every fork release since chriz-v1.0.0 has it, including
+    the alpha.21 pin.
   - The cause: upstream commit 7464043 builds the class weapon grants from `WEAPPROF.2DA`,
     which has no sorcerer column. The fix gives sorcerers the mage column.
   - Lab-verified on 2.7.3.0 with EEex v1.3.1: sorcerer, Dragon Disciple and mage, after
     joining, after a level-up and after a reload. Saves need no change.
-  - Pinned for all three Kitpack installers on `claude/pin-alpha22` (alpha.22 pin
-    batch); components, order and decisions are unchanged. Christopher posts the
-    upstream report himself.
-  - Existing installations get the fix only from the fork's `AKCB_SORCERER_WEAPONS`
-    tail patch (in the release archive), which CEBG does not install; how they get it
-    is open.
-  - A separate, older Kitpack bug showed up in the same lab: Eldritch Knight and Arcane
-    Trickster sorcerers lose their kit's extra weapons at every level-up until the next
-    reload or area change. A fix is waiting for Christopher.
+  - The older kit weapon bug, fixed in chriz.3: Eldritch Knight and Arcane Trickster
+    sorcerers (and the Favored Soul, which the collection does not offer) lost their
+    kit's extra weapons at every level-up, and a newly created Arcane Trickster sorcerer
+    had none, until the next reload or area change. `C0PR#CL` now applies the kit weapon
+    chains again (`C0PR#KG`). Lab-verified on BG2:EE 2.7.3.0 with EEex v1.3.1, freshly
+    installed in CEBG's Kitpack order: the kit weapons stayed after joining, a level-up,
+    save/load and a new game process. Not covered there: EET and characters created
+    before the install.
+  - chriz.3 is pinned for all three Kitpack installers on `claude/pin-alpha22` (alpha.22
+    pin batch, in place of chriz.2); components, order and decisions are unchanged.
+    Christopher posts the upstream report himself.
+  - Existing installations: the sorcerer fix comes with the fork's
+    `AKCB_SORCERER_WEAPONS` tail patch (in the release archive), which CEBG does not
+    install. The kit weapon fix has no tail; in existing games the helper creature gives
+    the weapons back as before. How existing installations get the fixes is open.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -229,9 +237,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Modpack alpha.14: the OK to publish the release candidate (above).
 - Modpack `430`: whether the restart box may appear while the game starts, before the
   main menu, or must be shown on the visible main menu (a follow-up change).
-- Artisan's Kitpack fork: whether to fix the Eldritch Knight / Arcane Trickster extra
-  weapons in a next fork version, and whether the upstream report mentions them. Also
-  how existing installations get the sorcerer weapon fix (the fork's tail patch, above).
+- Artisan's Kitpack fork: whether the upstream report also mentions the Eldritch Knight /
+  Arcane Trickster kit weapons (fixed in chriz.3), and how existing installations get the
+  two weapon fixes (above).
 - EEex v1.3.1: how existing installations move from v1.2.0.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
@@ -404,7 +412,7 @@ content, evaluated component by component (keep, fix or extend).
   Keep `30001`, `300010` and `8102` unavailable until priest delivery is redesigned.
   Latent: NPC `10004` does not require main `10003` (unselectable today because SR blocks
   it).
-- [ ] Fix legacy EEex dependency checks: Artisan (`v4.81a-dev.85928f9-chriz.2`), Bardic
+- [ ] Fix legacy EEex dependency checks: Artisan (`v4.81a-dev.85928f9-chriz.3`), Bardic
   Wonders (`v2.9c-balance.8`) and Bubb's Spell Menu still test EEex component `0`, which
   is only Quick Menu Core since EEex v1.2 (unchanged in v1.3.1). Require main component `1` or use a
   version-independent capability check; the mandatory EEex `0`–`8` only masks this.

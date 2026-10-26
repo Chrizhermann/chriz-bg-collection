@@ -297,10 +297,10 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // da00f885…, curated 122fb040….
     // Re-pinned on October 26 for the alpha.22 pin batch: Rebalance v0.8.5 with default Chris
     // Revisions 340, Spell Revisions v4.21-chriz.7 with its SR/RR package, BuffBot v1.11.0 and
-    // Artisan's Kitpack chriz.2, plus EEex Attack Info 9, offered unchecked. With 340 and 9
+    // Artisan's Kitpack chriz.3, plus EEex Attack Info 9, offered unchecked. With 340 and 9
     // removed (features, run components and the preset entry), the collection and selection
     // digests return in both recipes, and the plans differ from the previous ones only in the
-    // ten updated runs' artifact ids (manifest 12cbbbb6…, curated 26fb65ca…); with the previous
+    // ten updated runs' artifact ids (manifest 2c107ce8…, curated 76003acc…); with the previous
     // pins restored as well, all six previous digests return (manifest d98f3592…, 87b3d5fc…,
     // f1ae4719…; curated 7175787c…, 18657bda…, b8c01c67…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
@@ -308,13 +308,13 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
             "../manifest",
             "b1f25835104c02f867ca76e8aa6a12f30fd83db2b85e2b08cec625fae31f3269",
             "c9354b831e85271e7267824c635ba4758671c01b5f7c68c2d8926cbd887bd3c3",
-            "240a09c51f206c2c3d24c345d927a2de702ccd68cc063d1526a293fe2bb3038c",
+            "e9ca1fbdd93e1acdcf3cc1235c02e752d0ddd8a013e69ab2f0b91a3194e7a7a2",
         ),
         (
             "../recipes/curated-full-current",
             "c9107bcb55ae77f74459573ecc7ec8cefd87d096bc7174d5ea4edaf9de84254f",
             "d63e6c3b3e50032fd70679abe1a199ae06778db4e690a82dd7e932a6eadf8f8e",
-            "fb2f26bde71ab29bffcdc3bd65f963c87694d6d3b9839b0033cf3bcac81c3742",
+            "8f5ae74a3ce8fc290a51ad74e26732b06ea251ef7679101edd465903f3f02513",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

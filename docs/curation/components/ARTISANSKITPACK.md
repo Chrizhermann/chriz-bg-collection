@@ -2,16 +2,27 @@
 
 Listed at reference version **6.0**; refreshed for the selected fork release
 **chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
-**v4.81a-dev.85928f9-chriz.2** (tag commit `d2a8d13`, pinned 2026-10-26), whose TP2
-declares the same 59 components as listed here. Against chriz.1 it only lets every
-sorcerer kit, the Dragon Disciple included, equip daggers, quarterstaves, darts and
-slings without proficiency pips again, like mages, when the EEex weapon usability is
-installed. Since upstream commit `7464043` the class weapon grants come from
-`WEAPPROF.2DA`, which has no sorcerer column; both the first-run generator and the
-"Update EEex-based Weapon Usability Changes" tweak now use the mage column for
-sorcerers. No component, order or decision changes. Still open in the fork: Eldritch
-Knight and Arcane Trickster sorcerers lose their extra kit weapons at every level-up
-until Kitpack's helper creature gives them back (after a reload or an area change).
+**v4.81a-dev.85928f9-chriz.3** (tag commit `3e8cc6e`, pinned 2026-10-26), whose TP2
+declares the same 59 components as listed here. Against chriz.1 it changes two things,
+both only when the EEex weapon usability is installed:
+
+- chriz.2: every sorcerer kit, the Dragon Disciple included, can equip daggers,
+  quarterstaves, darts and slings without proficiency pips again, like mages. Since
+  upstream commit `7464043` the class weapon grants come from `WEAPPROF.2DA`, which has
+  no sorcerer column; both the first-run generator and the "Update EEex-based Weapon
+  Usability Changes" tweak now use the mage column for sorcerers.
+- chriz.3: Eldritch Knight and Arcane Trickster sorcerers keep their extra kit weapons
+  when `C0PR#CL` runs, at a level-up and on joining, instead of losing them until
+  Kitpack's helper creature gives them back. The new `eeex/kit_weapon_grants.tpa` makes
+  "apply `C0PR#KG`" the last effect of `C0PR#CL`, and `C0PR#KG` runs again the kit
+  chains that grant or remove weapons. It runs in the weapon usability generator and
+  where Kitpack registers such a chain: in the collection, the Eldritch Knight sorcerer
+  part of `20000` and tweak `8204` (also Favored Soul `30001` and tweak `1010000`,
+  which the collection does not offer).
+
+No component, order or decision changes. Existing installations are not changed by
+chriz.3, which has no tail patch; chriz.2's sorcerer fix has one,
+`AKCB_SORCERER_WEAPONS`, which the collection does not install.
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
