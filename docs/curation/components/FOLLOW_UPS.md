@@ -13,17 +13,18 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-25
+## Work queue at a glance — 2026-10-26
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
 **In progress (separate sessions)**
 
 - CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order:
-  1. One pin batch: Modpack alpha.14 (not released yet), BG Rebalance v0.8.5, Spell
-     Revisions fork v4.21-chriz.7, BuffBot v1.11.0, EEex `9` (Attack Info) optional and
-     off, and maybe the Campaign Item Randomiser (below). Time Clocks is likely in the
-     release too (see Ready to start).
+  1. One pin batch: Modpack alpha.14 (release candidate ready, see below), BG Rebalance
+     v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
+     fork `v4.81a-dev.85928f9-chriz.2` (sorcerer weapon fix, below), EEex `9` (Attack
+     Info) optional and off, and maybe the Campaign Item Randomiser (below). Time Clocks is
+     likely in the release too (see Ready to start).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -78,6 +79,14 @@ Cross-repository status. Component detail stays in the sections below and in the
   native-order evidence in `manifest/evidence/release-intake-20261020.toml`); `650`/`651`
   stay optional, experimental and off.
 - Modpack alpha.14 (not released yet; the collection pins it in the alpha.22 batch):
+  - Release candidate ready on 2026-10-26, on the Modpack's private archive only. It
+    merges the `430` and `650` work onto the released alpha.13. The full suite passes:
+    3,050 tests, two byte-identical release builds, and the archive's own checks.
+  - A combined lab smoke with the candidate package (2.7.3.0, EEex v1.3.1) passed: a
+    normal start without a box, a scroll at the reader's level, an XP award banked, and
+    the #19 check (script variables survived a save made while the bank refused, in the
+    same and in a new game process).
+  - Publishing waits for Christopher's OK (see Waiting for Christopher).
   - Christopher, 2026-10-25: the collection offers `135` (Dorn ambush camera fix) and
     `460` (party AI Defensive Stance obeys "Use special abilities") as defaults, and
     `652` (chapter-by-chapter XP caps) as an option that starts off, because it needs
@@ -99,14 +108,28 @@ Cross-repository status. Component detail stays in the sections below and in the
     - `650` stays optional, experimental and off in the collection. A fifth review round
       follows after the release.
     - #19 is closed once `650` ships.
-  - `430` (scrolls at the reader's level): plan A is done, and a last small round is in
-    progress (see Release gates). Christopher, 2026-10-25: the collection offers `430`
-    as a default. It reaches the catalogs and recipes with the alpha.14 pin.
+  - `430` (scrolls at the reader's level): plan A and the last small round are done (see
+    Release gates). Christopher, 2026-10-25: the collection offers `430` as a default. It
+    reaches the catalogs and recipes with the alpha.14 pin.
   - No technical notices inside the game: fallback information from our mods goes to the
     log only (Christopher, 2026-10-23, confirmed 2026-10-25). `650` and `430` now do
-    this. The one exception (Christopher, 2026-10-25), being added to `430`: if it cannot
-    start cleanly and cannot fully undo its start, a short line at the main menu asks the
-    player to restart the game before loading or saving.
+    this. The one exception (Christopher, 2026-10-25) is in `430`. If it cannot start
+    cleanly and cannot fully undo its start, one short box asks the player to restart the
+    game before loading or saving. The box appears while the game starts, just before the
+    main menu, not on the visible main menu; whether that placement is fine is waiting for
+    Christopher.
+- Artisan's Kitpack fork `v4.81a-dev.85928f9-chriz.2`, released on 2026-10-26:
+  - The bug: sorcerer kits, the Dragon Disciple included, could not equip daggers,
+    quarterstaves or darts without a proficiency point. It was reported by stream viewers.
+    Every fork release since chriz-v1.0.0 has it, including the alpha.21 pin.
+  - The cause: upstream commit 7464043 builds the class weapon grants from `WEAPPROF.2DA`,
+    which has no sorcerer column. The fix gives sorcerers the mage column.
+  - Lab-verified on 2.7.3.0 with EEex v1.3.1: sorcerer, Dragon Disciple and mage, after
+    joining, after a level-up and after a reload. Saves need no change.
+  - It goes into the alpha.22 pin batch. Christopher posts the upstream report himself.
+  - A separate, older Kitpack bug showed up in the same lab: Eldritch Knight and Arcane
+    Trickster sorcerers lose their kit's extra weapons at every level-up until the next
+    reload or area change. A fix is waiting for Christopher.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -173,6 +196,11 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **Waiting for Christopher**
 
+- Modpack alpha.14: the OK to publish the release candidate (above).
+- Modpack `430`: whether the restart box may appear while the game starts, before the
+  main menu, or must be shown on the visible main menu (a follow-up change).
+- Artisan's Kitpack fork: whether to fix the Eldritch Knight / Arcane Trickster extra
+  weapons in a next fork version, and whether the upstream report mentions them.
 - EEex v1.3.1: how existing installations move from v1.2.0.
 - Entropy Shield / Dispelling Screen: Breach does not remove Entropy Shield (decided
   2026-10-17); the remaining questions are open.
@@ -292,9 +320,13 @@ content, evaluated component by component (keep, fix or extend).
     neither in the party nor in a loaded area when the effect's delayed part comes due.
     Scrolls then cast at their normal level and saves stay usable; this is documented as
     a known limitation.
-  - Still open: the restart line at the main menu (see Modpack alpha.14 above), the log
-    name and two typos. Then check the loader log in the Recommended lab run before the
-    release, because no ongoing playthrough has run with `430` yet.
+  - Done on 2026-10-26:
+    - the restart box for the one exception (see Modpack alpha.14 above);
+    - the `[CBM scroll]` tag for its loader-log lines;
+    - the typos.
+    A lab smoke showed no box in normal play.
+  - Still open: check the loader log in the Recommended lab run before the release,
+    because no ongoing playthrough has run with `430` yet.
 - [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
   `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
