@@ -210,11 +210,11 @@ Cross-repository status. Component detail stays in the sections below and in the
   Christopher, 2026-10-27: two bugs that v1.0.2 already has get fixed and tested before
   v1.0.3 is released: Adalon's egg reward never arrives, and the randomiser switches
   itself off when a recipient dies during the handover.
-- Druid level progression (Christopher, 2026-10-27): with Tweaks Anthology `2292`,
-  selected in the Recommended preset, druids level up on the cleric XP table. They reach
-  level 15 at 1,575,000 XP instead of 3,000,000 and get their high-level spells far too
-  early. A separate session works on the fix; whether the collection keeps `2292`
-  selected is open (see Waiting for Christopher).
+- Druid level progression (Christopher, 2026-10-27): Tweaks Anthology `2292` makes
+  druids level up on the cleric XP table. They reach level 15 at 1,575,000 XP instead of
+  3,000,000 and get their high-level spells far too early. Since
+  [PR #38](https://github.com/Chrizhermann/chriz-bg-collection/pull/38) (merged on
+  2026-10-27), `2292` is an unchecked option instead of a default, for alpha.22.
 - Weapon access (Christopher, 2026-10-27): classes and kits should be able to use the
   weapons they can put proficiency points into, with as little intrusion as possible.
   Druids and fighter/druids get more weapons, and cleric kits bound to a god get their
@@ -282,8 +282,6 @@ Cross-repository status. Component detail stays in the sections below and in the
   the script engine (Larger projects). Still open: whether Entropy Shield loses its
   blanket abjuration immunity, so that Dispel Magic gets its normal chance against it
   (option A of the note; Christopher, 2026-10-17: he wants to think it over).
-- Tweaks Anthology `2292` (druids on the cleric XP table, see In progress): whether the
-  collection keeps it selected in the Recommended preset (asked on 2026-10-27).
 - Installer link safety, remaining writers: staging publication, mod materialization and
   the WeiDU setup copy, then Radar and the `.chriz` state writers, still check a path and
   then write by path (inventory in PR #16). Moving them over waits for Christopher's go.
