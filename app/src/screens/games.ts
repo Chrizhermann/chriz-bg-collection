@@ -1,14 +1,16 @@
 import type { GameCandidate, GameDiscovery } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
+import { flavor, type SourceSlot } from "../flavor";
 
 function candidateSelect(
+  slot: SourceSlot,
   labelText: string,
   candidates: readonly GameCandidate[],
   selectedId: string,
   browse: () => void | Promise<void>,
 ): { wrapper: HTMLElement; select: HTMLSelectElement; finding: HTMLElement } {
   const wrapper = element("div", "source-field card");
-  const id = `source-${labelText.startsWith("Baldur's Gate II") ? "bg2" : "bg1"}`;
+  const id = `source-${slot}`;
   const label = element("label", undefined, labelText);
   label.htmlFor = id;
   const select = element("select");
@@ -51,20 +53,24 @@ export function gamesScreen(
   next: () => void | Promise<void>,
 ): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("", "Find your games", "Choose your original Baldur's Gate games. CEBG will check that they are ready to use."));
+  page.append(screenIntro("", flavor.sources.length === 1 ? "Find your game" : "Find your games", flavor.text.gamesIntro));
   const fields = element("div", "source-grid");
-  const bg1 = candidateSelect("Baldur's Gate source", discovery.bg1Candidates, selectedBg1Id, () => onBrowse("bg1"));
-  const bg2 = candidateSelect("Baldur's Gate II source", discovery.bg2Candidates, selectedBg2Id, () => onBrowse("bg2"));
+  const selectedIds: Record<SourceSlot, string> = { bg1: selectedBg1Id, bg2: selectedBg2Id };
+  const candidatesFor = (slot: SourceSlot): readonly GameCandidate[] => slot === "bg1" ? discovery.bg1Candidates : discovery.bg2Candidates;
+  const sources = flavor.sources.map(source => ({
+    slot: source.slot,
+    field: candidateSelect(source.slot, `${source.name} source`, candidatesFor(source.slot), selectedIds[source.slot], () => onBrowse(source.slot)),
+  }));
   const continueButton = actionButton("Continue", next);
   const refreshEligibility = (): void => {
-    const first = discovery.bg1Candidates.find((candidate) => candidate.id === bg1.select.value);
-    const second = discovery.bg2Candidates.find((candidate) => candidate.id === bg2.select.value);
-    continueButton.disabled = !(first?.eligible && second?.eligible);
+    continueButton.disabled = !sources.every(({ slot, field }) =>
+      candidatesFor(slot).find((candidate) => candidate.id === field.select.value)?.eligible);
   };
-  bg1.select.addEventListener("change", () => { onSelect("bg1", bg1.select.value); refreshEligibility(); });
-  bg2.select.addEventListener("change", () => { onSelect("bg2", bg2.select.value); refreshEligibility(); });
+  for (const { slot, field } of sources) {
+    field.select.addEventListener("change", () => { onSelect(slot, field.select.value); refreshEligibility(); });
+  }
   refreshEligibility();
-  fields.append(bg1.wrapper, bg2.wrapper);
+  fields.append(...sources.map(({ field }) => field.wrapper));
   page.append(fields, screenActions(back, continueButton));
   return page;
 }

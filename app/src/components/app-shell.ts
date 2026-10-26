@@ -1,4 +1,5 @@
 import type { Route } from "../contracts";
+import { flavor } from "../flavor";
 
 export function element<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -47,10 +48,10 @@ export function createAppShell(
   const mark = element("span", "brand-mark", "C");
   mark.setAttribute("aria-hidden", "true");
   const copy = element("div", "brand-copy");
-  copy.append(element("strong", undefined, "Chriz Easy BG"), element("small", undefined, version.replace(/-alpha\.?/i, " Alpha ")));
+  copy.append(element("strong", undefined, flavor.productName), element("small", undefined, version.replace(/-alpha\.?/i, " Alpha ")));
   brand.append(mark, copy);
   const nav = element("nav", "header-actions");
-  nav.setAttribute("aria-label", "CEBG");
+  nav.setAttribute("aria-label", flavor.shortName);
   for (const item of [
     { route: "home" as const, label: "My installs" },
     { route: "updates" as const, label: "Updates" },

@@ -1,6 +1,7 @@
 import type { DestinationEvaluation, GameCandidate, SelectionEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { campaignLedger } from "../components/campaign-ledger";
+import { flavor } from "../flavor";
 
 export function reviewScreen(
   evaluation: SelectionEvaluation,
@@ -10,14 +11,13 @@ export function reviewScreen(
   freeze: () => void | Promise<void>,
 ): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("", "Ready to install", "Check your games and selected setup."));
+  page.append(screenIntro("", "Ready to install", flavor.sources.length === 1 ? "Check your game and selected setup." : "Check your games and selected setup."));
   const layout = element("div", "review-layout");
   const summary = element("section", "card review-summary");
   summary.append(element("h2", undefined, "Your installation"));
   const list = element("dl", "review-list");
   const entries = [
-    ["BG1 source", games[0]?.label ?? "Not selected"],
-    ["BG2 source", games[1]?.label ?? "Not selected"],
+    ...flavor.sources.map((source, index) => [source.reviewLabel, games[index]?.label ?? "Not selected"]),
     ["Install location", destination.path],
     ["Choices", `${evaluation.selectedChoiceCount} selected`],
   ];
@@ -35,6 +35,6 @@ export function reviewScreen(
     notices.append(heading, list);
     page.append(notices);
   }
-  page.append(screenActions(back, actionButton("Install Chriz Easy BG", freeze)));
+  page.append(screenActions(back, actionButton(`Install ${flavor.productName}`, freeze)));
   return page;
 }

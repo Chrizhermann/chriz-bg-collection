@@ -3,6 +3,7 @@ import { actionButton, element, screenActions, screenIntro } from "../components
 import { errorDetails } from "../components/error-details";
 import { troubleshootingSection, type GameLogView } from "../components/game-log";
 import { installationNameEditor } from "../components/installation-name";
+import { flavor } from "../flavor";
 
 export interface HomeActions {
   readonly begin: () => void | Promise<void>;
@@ -81,7 +82,7 @@ function installationDetails(installation: ManagedInstallation): HTMLDetailsElem
   appendRow("Game launcher", installation.launchPath);
   appendRow("Installation receipt", installation.receiptPath);
   appendRow("Collection version", installation.recipeVersion ?? null);
-  appendRow("BG Radar Overlay", installation.radarVersion ?? null);
+  if (flavor.features.radar) appendRow("BG Radar Overlay", installation.radarVersion ?? null);
   appendRow("Mod check", installation.consistency?.detail ?? null);
   details.append(rows);
   return details;
@@ -115,7 +116,8 @@ function installedMods(installation: ManagedInstallation): HTMLDetailsElement | 
     const facts = [
       component.version,
       `Component ${component.component}`,
-      component.target,
+      // A standalone collection has one game, so its log target names no game.
+      flavor.sources.length > 1 ? component.target : null,
       component.status === "installed" ? "Recorded and present" : component.status === "missing" ? "Recorded but missing" : "Present but not recorded",
       component.tp2,
     ].filter((value): value is string => value !== null);
@@ -137,8 +139,8 @@ export function firstPlayGuide(installation: ManagedInstallation): HTMLDetailsEl
   const guide = element("details", "installation-details first-play-guide");
   guide.append(element("summary", undefined, "First-play tips"));
   const steps = element("ol");
-  steps.append(element("li", undefined, "Start the game with Play Chriz Easy BG, then begin or load your adventure normally."));
-  const buffBotInstalled = installation.consistency?.components?.some((component) =>
+  steps.append(element("li", undefined, `Start the game with Play ${flavor.productName}, then begin or load your adventure normally.`));
+  const buffBotInstalled = flavor.features.buffBotTip && installation.consistency?.components?.some((component) =>
     component.status === "installed"
       && component.target === "BG2"
       && component.component === 0
@@ -146,10 +148,10 @@ export function firstPlayGuide(installation: ManagedInstallation): HTMLDetailsEl
   if (buffBotInstalled) {
     steps.append(element("li", undefined, "In game, press F11 to open BuffBot and choose the buffs you want automated."));
   }
-  if (installation.radarVersion) {
-    steps.append(element("li", undefined, `BG Radar Overlay ${installation.radarVersion} is installed. Select Start Radar with the game before pressing Play if you want to use it. Windows may ask for administrator approval. Its executable is in the BG Radar Overlay folder inside the game folder.`));
-  } else {
-    steps.append(element("li", undefined, "BG Radar Overlay is optional. You can add it from Updates after setup."));
+  if (flavor.features.radarTip) {
+    steps.append(element("li", undefined, installation.radarVersion
+      ? `BG Radar Overlay ${installation.radarVersion} is installed. Select Start Radar with the game before pressing Play if you want to use it. Windows may ask for administrator approval. Its executable is in the BG Radar Overlay folder inside the game folder.`
+      : "BG Radar Overlay is optional. You can add it from Updates after setup."));
   }
   guide.append(steps);
   return guide;
@@ -166,7 +168,7 @@ export function homeScreen(
 ): HTMLElement {
   const page = element("div", "screen-stack launcher-screen");
   if (selected === null) {
-    page.append(screenIntro("", "My installs", "No installations yet. Set up Chriz Easy BG to start playing."));
+    page.append(screenIntro("", "My installs", `No installations yet. Set up ${flavor.productName} to start playing.`));
     page.append(screenActions(null, actionButton("New installation", actions.begin)));
     return page;
   }
@@ -198,7 +200,7 @@ export function homeScreen(
     metadata.append(summary);
   }
   if (metadata.childElementCount > 0) card.append(metadata);
-  if (selected.customized) card.append(element("p", "manual-mod-warning", "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled; CEBG app updates still work."));
+  if (selected.customized) card.append(element("p", "manual-mod-warning", `Customized — manual mods added. Game hotpatches and whole-mod updates are disabled; ${flavor.shortName} app updates still work.`));
   const picker = installationPicker(installations, selected.id, actions.select);
   if (picker !== null) card.append(picker);
   if (actions.rename) card.append(installationNameEditor({ installId: selected.id, name: selected.name,
@@ -211,7 +213,7 @@ export function homeScreen(
     const radar = element("input");
     radar.type = "checkbox";
     radar.id = "start-radar";
-    radar.checked = Boolean(selected.radarVersion) && launchState.startRadar;
+    radar.checked = flavor.features.radar && Boolean(selected.radarVersion) && launchState.startRadar;
     radar.disabled = !selected.radarVersion || patchRecoveryNeeded || launchState.pending;
     radar.setAttribute("aria-describedby", "radar-launch-help");
     radar.addEventListener("change", () => {
@@ -225,8 +227,8 @@ export function homeScreen(
     radarHelp.id = "radar-launch-help";
     const radarOption = element("div", "radar-launch-option");
     radarOption.append(radarLabel, radarHelp);
-    card.append(radarOption);
-    const play = actionButton(launchState.pending ? "Starting game…" : "Play Chriz Easy BG",
+    if (flavor.features.radar) card.append(radarOption);
+    const play = actionButton(launchState.pending ? "Starting game…" : `Play ${flavor.productName}`,
       () => !patchRecoveryNeeded && !launchState.pending ? actions.launch(selected.id, radar.checked) : undefined);
     play.disabled = patchRecoveryNeeded || launchState.pending;
     controls.append(
@@ -282,7 +284,7 @@ export function homeScreen(
       settings.setAttribute("role", "alert");
       settings.append(
         element("strong", undefined, "The game's settings file couldn't be updated."),
-        element("p", undefined, "Lefreut's interfaces need this update to offer the trilogy campaigns. Close the game, then use Play again to retry."),
+        element("p", undefined, flavor.text.gameSettingsFailed),
       );
       if (gameSettings.technicalDetail) settings.append(errorDetails(gameSettings.technicalDetail));
       card.append(settings);

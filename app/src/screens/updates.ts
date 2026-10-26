@@ -2,6 +2,7 @@ import type { ManagedCopyUpdate, UpdateSummary } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
 import { installPatchesSection, type InstallPatchActions } from "../components/install-patches";
 import { installedUpdateSection, type InstalledUpdateActions } from "../components/installed-update-plan";
+import { flavor } from "../flavor";
 
 export interface UpdateActions extends InstallPatchActions, InstalledUpdateActions {
   readonly customized?: boolean;
@@ -64,7 +65,7 @@ function installationSelection(copies: readonly ManagedCopyUpdate[], selected: M
 const stateLabels: Readonly<Record<string, string>> = {
   "up-to-date": "Up to date", available: "Update available",
   "local-available": "New installation available",
-  "requires-app": "Update CEBG first", offline: "Could not connect",
+  "requires-app": `Update ${flavor.shortName} first`, offline: "Could not connect",
   invalid: "Could not verify update", replayed: "Outdated update ignored",
   unavailable: "Not available yet", "not-installed": "Not installed",
 };
@@ -115,12 +116,12 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   const gameSections = element("div", "update-game-sections");
   const selectedCopies = selected ? [selected] : [];
   if (selected && actions.customized) {
-    gameSections.append(element("p", "manual-mod-warning", "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. CEBG app updates and new installations remain available."));
+    gameSections.append(element("p", "manual-mod-warning", `Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. ${flavor.shortName} app updates and new installations remain available.`));
   }
   if (selected && !actions.customized && actions.onCheckInstalledUpdate !== undefined) {
     gameSections.append(installedUpdateSection(selectedCopies, actions, installing || actions.patchBusy === true, true));
   }
-  if (selected && !actions.customized && actions.onCheckPatches !== undefined) {
+  if (selected && !actions.customized && flavor.features.installPatches && actions.onCheckPatches !== undefined) {
     gameSections.append(installPatchesSection(selectedCopies, actions, installing || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true, true));
   }
 
@@ -129,9 +130,9 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   const appNotes = element("div", "update-changelog");
   appNotes.append(element("h3", undefined, "What's new"), element("p", undefined, updates.application.releaseNotes ?? "No changelog was included with this update."));
   const appVersion = updates.application.availableVersion;
-  versions.append(versionRow("CEBG app", updates.application.currentVersion, appVersion, updates.application.state, appNotes,
-    updates.application.state === "available" && appVersion !== null
-      ? actionButton("Update CEBG app", () => actions.installApplication(appVersion), "primary compact")
+  versions.append(versionRow(`${flavor.shortName} app`, updates.application.currentVersion, appVersion, updates.application.state, appNotes,
+    flavor.features.appUpdates && updates.application.state === "available" && appVersion !== null
+      ? actionButton(`Update ${flavor.shortName} app`, () => actions.installApplication(appVersion), "primary compact")
       : undefined,
     updates.application.state === "available" ? "Updates the installer and launcher, not your game files." : undefined));
 
@@ -152,12 +153,12 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
       ? actionButton("Create updated installation", () => actions.buildUpdatedCopy(recipeVersion), "quiet compact")
       : undefined,
     updates.recipe.state === "requires-app"
-      ? "For your next playthrough. Included with the CEBG app update; your current game stays unchanged."
+      ? `For your next playthrough. Included with the ${flavor.shortName} app update; your current game stays unchanged.`
       : updates.recipe.state === "available" && updates.recipe.disposition === "deferred-for-next-playthrough"
         ? "For your next playthrough"
         : localCollectionAvailable ? "Creates a separate game. Your selected installation stays unchanged." : undefined,
-    "Included in CEBG"));
-  if (updates.radar !== undefined) {
+    `Included in ${flavor.shortName}`));
+  if (flavor.features.radar && updates.radar !== undefined) {
     const radar = updates.radar;
     const notes = element("div", "update-changelog");
     notes.append(element("h3", undefined, "What's new"), element("p", undefined, radar.releaseNotes ?? "No changelog was included with this release."));
@@ -183,7 +184,7 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
   if (updates.recipe.state === "available" && updates.recipe.disposition !== "deferred-for-next-playthrough") {
     page.append(element("p", "update-note", "Collection updates create a new installation. Open the changelog for save compatibility."));
   }
-  if (updates.radar !== undefined && actions.installRadar === undefined) {
+  if (flavor.features.radar && updates.radar !== undefined && actions.installRadar === undefined) {
     page.append(element("p", "update-note", "Select a completed, available game installation to add BG Radar Overlay."));
   }
 

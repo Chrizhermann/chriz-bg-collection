@@ -10,6 +10,7 @@ import type {
 import { actionButton, element, screenIntro } from "../components/app-shell";
 import { installationReadiness, validateInstallationName } from "../state";
 import { invalidBreakpoints } from "../components/manual-checkpoints";
+import { flavor, sourceSlots, type SourceDefinition } from "../flavor";
 
 export interface InstallScreenModel {
   readonly discovery: GameDiscovery;
@@ -63,7 +64,7 @@ function manualDownloadPanel(model: InstallScreenModel, actions: InstallScreenAc
   heading.id = "manual-download-title";
   panel.append(
     heading,
-    element("p", "manual-download-intro", "CEBG cannot redistribute this mod. Download its official file, then choose that file here so CEBG can verify it."),
+    element("p", "manual-download-intro", `${flavor.shortName} cannot redistribute this mod. Download its official file, then choose that file here so ${flavor.shortName} can verify it.`),
   );
 
   for (const requirement of model.manualDownloads) {
@@ -113,24 +114,24 @@ function selectedCandidate(candidates: readonly GameCandidate[], selectedId: str
 }
 
 function sourceCard(
-  game: "bg1" | "bg2",
-  title: string,
+  source: SourceDefinition,
   candidates: readonly GameCandidate[],
   selectedId: string,
   starting: boolean,
   actions: InstallScreenActions,
 ): HTMLElement {
+  const game = source.slot;
   const card = element("article", "source-card card");
   card.dataset.source = game;
   const candidate = selectedCandidate(candidates, selectedId);
   const copy = element("div", "source-card-heading");
-  copy.append(element("p", "source-title", title));
+  copy.append(element("p", "source-title", source.label));
   copy.append(element("h2", undefined, candidate === undefined ? "Source needed" : candidates.length === 1 ? "Found source" : "Choose source"));
   const status = element("span", `source-status ${candidate?.eligible === true ? "ok" : "warning"}`, candidate?.eligible === true ? "Ready" : "Needs attention");
   card.append(copy, status);
 
   if (candidates.length > 1 || (candidate === undefined && candidates.length > 0)) {
-    const label = element("label", "visually-hidden", game === "bg1" ? "Baldur's Gate source" : "Baldur's Gate II source");
+    const label = element("label", "visually-hidden", `${source.name} source`);
     const select = element("select");
     select.id = `source-${game}`;
     label.htmlFor = select.id;
@@ -157,14 +158,14 @@ function sourceCard(
   const details = element("details", "source-details");
   details.append(element("summary", undefined, "Details"));
   if (candidate === undefined) {
-    details.append(element("p", "finding warning", "Choose the game folder so CEBG can inspect it."));
+    details.append(element("p", "finding warning", `Choose the game folder so ${flavor.shortName} can inspect it.`));
   } else if (candidate.findings.length === 0) {
     details.append(element("p", "finding", "No additional findings."));
   } else {
     for (const finding of candidate.findings) details.append(element("p", `finding ${candidate.eligible ? "ok" : "warning"}`, finding));
   }
   const changeSource = actionButton("Change source", () => actions.browseSource(game), "quiet compact");
-  changeSource.setAttribute("aria-label", game === "bg1" ? "Change Baldur's Gate source" : "Change Baldur's Gate II source");
+  changeSource.setAttribute("aria-label", `Change ${source.name} source`);
   changeSource.disabled = starting;
   card.append(details, changeSource);
   return card;
@@ -184,14 +185,13 @@ function field(labelText: string, id: string, value: string): { wrapper: HTMLEle
 
 export function installScreen(model: InstallScreenModel, actions: InstallScreenActions): HTMLElement {
   const page = element("div", "screen-stack install-screen");
-  page.append(screenIntro("", "Install Chriz Easy BG", "Your games, with Chriz's recommended mods. Ready to install in a separate folder."));
+  page.append(screenIntro("", `Install ${flavor.productName}`, flavor.text.installIntro));
 
   const sources = element("section", "source-grid install-sources");
-  sources.setAttribute("aria-label", "Found game sources");
-  sources.append(
-    sourceCard("bg1", "Baldur's Gate + Siege of Dragonspear", model.discovery.bg1Candidates, model.selectedBg1Id, model.starting, actions),
-    sourceCard("bg2", "Baldur's Gate II", model.discovery.bg2Candidates, model.selectedBg2Id, model.starting, actions),
-  );
+  sources.setAttribute("aria-label", flavor.sources.length === 1 ? "Found game source" : "Found game sources");
+  sources.append(...flavor.sources.map(source => source.slot === "bg1"
+    ? sourceCard(source, model.discovery.bg1Candidates, model.selectedBg1Id, model.starting, actions)
+    : sourceCard(source, model.discovery.bg2Candidates, model.selectedBg2Id, model.starting, actions)));
 
   const settings = element("section", "install-settings card");
   settings.append(element("h2", undefined, "Your installation"));
@@ -201,7 +201,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   name.input.disabled = model.starting;
   location.input.disabled = model.starting;
   const nameError = model.installationNameError ?? validateInstallationName(model.installationName);
-  const nameHelp = element("p", nameError === null ? "field-help" : "field-error", nameError ?? "This name also labels your installation in CEBG.");
+  const nameHelp = element("p", nameError === null ? "field-help" : "field-error", nameError ?? `This name also labels your installation in ${flavor.shortName}.`);
   nameHelp.id = "install-name-help";
   name.input.setAttribute("aria-describedby", nameHelp.id);
   if (nameError !== null) name.input.setAttribute("aria-invalid", "true");
@@ -211,7 +211,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const changeLocation = actionButton("Browse…", actions.browseLocation, "quiet");
   changeLocation.setAttribute("aria-label", "Change install location");
   changeLocation.disabled = model.starting;
-  const locationHelp = element("p", "field-help", "Enter a new folder path or browse. CEBG creates missing folders when you install.");
+  const locationHelp = element("p", "field-help", `Enter a new folder path or browse. ${flavor.shortName} creates missing folders when you install.`);
   locationHelp.id = "install-location-help";
   location.input.setAttribute("aria-describedby", locationHelp.id);
   location.wrapper.append(locationHelp);
@@ -229,7 +229,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   locationControls.append(location.wrapper, changeLocation);
   location.input.addEventListener("change", () => void actions.changeLocation(location.input.value));
   fields.append(name.wrapper, locationControls);
-  settings.append(fields, element("p", "safety-note", "Your original games stay unchanged. CEBG installs into this separate folder."));
+  settings.append(fields, element("p", "safety-note", flavor.text.installSafetyNote));
 
   const recipe = element("section", "recommended-setup card");
   const recipeCopy = element("div");
@@ -286,6 +286,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     evaluation: model.evaluation,
     evaluationPending: model.evaluationPending,
     manualBreakpoints: model.manualBreakpoints,
+    requiredSlots: sourceSlots,
   });
   const manualDownloadPending = model.manualDownloadGateVisible
     && (model.manualDownloadCheckingArtifactId !== null || model.manualDownloads.some((requirement) => !requirement.ready));
@@ -296,7 +297,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     element("h2", undefined, model.starting ? "Starting installation" : model.evaluationPending ? "Checking your choices" : ready ? "Ready to install" : "Needs attention"),
     element("p", undefined, model.starting ? "Preparing your selected setup…" : model.evaluationPending ? "This will only take a moment." : ready ? "Everything required for this installation is ready." : "Resolve the highlighted item before installing."),
   );
-  const install = actionButton(model.starting ? "Starting installation…" : "Install Chriz Easy BG", actions.install);
+  const install = actionButton(model.starting ? "Starting installation…" : `Install ${flavor.productName}`, actions.install);
   install.disabled = !ready;
   const finishActions = element("div", "install-finish-actions");
   const shortcutChoice = element("label", "shortcut-choice");

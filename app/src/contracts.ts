@@ -17,6 +17,16 @@ export interface BackendStatus {
   readonly startupInstallId: string | null;
   readonly profiles?: readonly { readonly id: string; readonly label: string; readonly description: string }[];
   readonly selectedProfile?: string;
+  /** The standalone collection this backend serves; absent for the Baldur's Gate collection. */
+  readonly collection?: CollectionIdentity;
+}
+
+/** A standalone collection's identity, as `bootstrap` and `select_profile` report it. */
+export interface CollectionIdentity {
+  readonly flavor: string;
+  readonly game: string;
+  readonly productName: string;
+  readonly sources: readonly { readonly slot: string; readonly role: string; readonly label: string }[];
 }
 
 export interface InstallationDefaults {
@@ -31,7 +41,7 @@ export interface CommandErrorPayload {
   readonly technical_detail: string;
 }
 
-export type GameRole = "bgee_sod" | "bg2ee";
+export type GameRole = "bgee_sod" | "bg2ee" | "iwdee";
 export type Storefront = "steam" | "gog";
 
 export type Freshness =

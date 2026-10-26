@@ -1,8 +1,9 @@
 import type { BuildPhase, PhaseSummary } from "../contracts";
 import { element } from "./app-shell";
+import { flavor } from "../flavor";
 
 const phaseCopy: Readonly<Record<string, readonly [string, string]>> = {
-  preparation: ["Copy your games", "Prepare a separate game folder."],
+  preparation: [flavor.text.copyGamesPhase, "Prepare a separate game folder."],
   "bg1-preparation": ["Prepare Baldur's Gate", "Add the required BG1 fixes and content."],
   bg1: ["Prepare Baldur's Gate", "Add the required BG1 fixes and content."],
   "bg2-preparation": ["Prepare Baldur's Gate II", "Add the required BG2 fixes."],

@@ -1,6 +1,7 @@
 import type { DestinationEvaluation } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
 import { statusCard } from "../components/status-card";
+import { flavor } from "../flavor";
 
 export function destinationScreen(
   evaluation: DestinationEvaluation,
@@ -10,7 +11,7 @@ export function destinationScreen(
   next: () => void,
 ): HTMLElement {
   const page = element("div", "screen-stack");
-  page.append(screenIntro("", "Choose an install location", "Choose a new folder for Chriz Easy BG."));
+  page.append(screenIntro("", "Choose an install location", `Choose a new folder for ${flavor.productName}.`));
   const field = element("div", "card field-card");
   const label = element("label", undefined, "Install location");
   label.htmlFor = "destination-path";
@@ -23,8 +24,8 @@ export function destinationScreen(
   browseButton.setAttribute("aria-label", "Browse for install location");
   const space = evaluation.requiredSpace !== undefined && evaluation.availableSpace !== undefined
     ? element("p", "path", `Requires ${evaluation.requiredSpace}; ${evaluation.availableSpace} available.`)
-    : element("p", "path", "CEBG will check the available space before installing.");
-  const help = element("p", "field-help", "Enter a new folder path or browse. CEBG creates missing folders when you install.");
+    : element("p", "path", `${flavor.shortName} will check the available space before installing.`);
+  const help = element("p", "field-help", `Enter a new folder path or browse. ${flavor.shortName} creates missing folders when you install.`);
   help.id = "destination-path-help";
   input.setAttribute("aria-describedby", help.id);
   field.append(label, input, browseButton, help, space);
