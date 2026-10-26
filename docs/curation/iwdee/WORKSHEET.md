@@ -34,7 +34,8 @@ page: 434 installable parts, each marked mandatory, on by default, offered (off 
 or not offered. Where he made no pick, the page's suggestion applies: the BG installer's
 decision when the version and label are the same, otherwise a mod's main part on and the
 rest as the page proposed. The recipe `recipes/iwd-current` (branch `claude/iwdee-recipe`)
-holds every resulting decision. His own choices:
+holds every resulting decision. Where a menu offers alternatives (such as the quicksave
+slots), the installer offers them as one choice and installs at most one. His own choices:
 
 | Mod | Christopher's choices |
 |---|---|
