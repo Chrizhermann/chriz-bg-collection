@@ -57,18 +57,25 @@ user's decisions. Started 2026-09-10.
 - [ ] Verify selected Artisan/Bardic components and custom NPC interactions.
 - [ ] Add explicit collection identity/game profiles to shared app/engine contracts,
   including one-source staging and per-collection updates; preserve existing BG campaigns.
-- [ ] Build and verify a self-contained IWD recipe, source hashes and component order.
+- [x] Build and verify a self-contained IWD recipe, source hashes and component order.
   Artifact pins for all 37 mods are on `claude/iwdee-recipe`; Lava's 19 packages use the
   engine's `weaselmods-download` source kind (`claude/iwdee-engine`) and were verified live.
   `recipes/iwd-current` (collection, preset, game profile) followed on 2026-10-26 (6efb95b,
-  validate: 0 findings); the order follows the mods' readmes and each run says why. The
-  first full lab install is running.
+  validate: 0 findings); the order follows the mods' readmes and each run says why.
 - [x] Engine: a pre-spawn process check stopped the lab install of 2026-10-26 when another
   program's WeiDU was exiting: Windows denies the image query of an exiting process until it
   is signaled. Fixed on `claude/iwdee-engine` (9185bc1): such a process gets up to 5 s to
   finish exiting; one that keeps running still stops the install.
 - [ ] Carry that process-check fix into CEBG's engine once alpha.22 has landed; the BG app
   has the same code and the same exposure while other programs run WeiDU.
-- [ ] Complete an isolated installation with exact log/receipt reconciliation.
+- [x] Complete an isolated installation with exact log/receipt reconciliation. 2026-10-26, in a
+  disposable lab with the engine CLI: the recommended preset plus Hidden Gameplay Options,
+  123 components from 26 mods, final verification and receipt passed; the game got its own
+  profile. Only warning: SCS's "Install all spell tweaks" found nothing to change in two
+  spells (SPIN150, SPIN191).
 - [ ] Complete launch, creation/levelling, spell/kit/song, NPC and save/load smoke checks.
+  Launch done 2026-10-26: that lab booted quietly to the main menu with EEex (LuaJIT) and
+  Bubb's Spell Menu active and no error box; the rest is open.
+- [ ] Repeat the install through the IWD app itself, so its screens are tested too
+  (Christopher wants a short test run of his own).
 - [ ] Gather campaign gameplay/balance evidence separately from installation success.
