@@ -60,8 +60,10 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # The October 20 intake (Modpack alpha.13) adds default EET join XP 239.
         # The October 22 intake adds 18 default player voicepacks, one run each.
         # The October 23 intake (SoD Remix v0.6.15) adds default Imoen choice 292.
-        self.assertEqual(self.result["componentCount"], 482)
-        self.assertEqual(len(actual), 70)
+        # The October 23 quest-mod intake makes BG1UB optional and unselected (its 16
+        # former defaults and its run leave); the new quest mods are unchecked.
+        self.assertEqual(self.result["componentCount"], 466)
+        self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

@@ -1,10 +1,10 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1281
-expected_choice_groups = 77
-expected_optional_none_groups = 23
-expected_fixed_groups = 10
+expected_rows = 1336
+expected_choice_groups = 87
+expected_optional_none_groups = 30
+expected_fixed_groups = 11
 
 parents = [
   "mod:artisanskitpack",
@@ -36,6 +36,10 @@ parents = [
 [[catalogs]]
 id = "ABETTORHLAREBALANCE"
 excluded = [0]
+
+[[catalogs]]
+id = "AC_QUEST"
+excluded = []
 
 [[catalogs]]
 id = "AJANTISBG2"
@@ -92,6 +96,10 @@ excluded = [100, 101, 200, 300, 400]
 [[catalogs]]
 id = "BGGO"
 excluded = [1, 2, 4]
+
+[[catalogs]]
+id = "BLACKHEARTS"
+excluded = [20005]
 
 [[catalogs]]
 id = "BRANWEN"
@@ -258,8 +266,16 @@ id = "KLATU"
 excluded = []
 
 [[catalogs]]
+id = "NTOTSC"
+excluded = []
+
+[[catalogs]]
 id = "PAINA"
 excluded = []
+
+[[catalogs]]
+id = "PPE"
+excluded = [310, 320]
 
 [[catalogs]]
 id = "RANDOMISER"
@@ -294,6 +310,10 @@ id = "STRATAGEMS"
 excluded = [100, 1500, 1510, 1520, 1600, 1610, 2010, 2020, 2030, 2040, 2050, 2060, 2070, 2080, 2520, 2900, 3017, 3020, 3022, 3500, 3501, 3510, 3551, 3552, 4030, 4099, 4100, 4146, 4190, 5070, 5080, 6020, 6700]
 
 [[catalogs]]
+id = "THALAN"
+excluded = []
+
+[[catalogs]]
 id = "UB"
 excluded = [3]
 
@@ -303,6 +323,10 @@ excluded = [5, 6]
 
 [[catalogs]]
 id = "YESLICKNPC"
+excluded = []
+
+[[catalogs]]
+id = "ZG_IWD_VOICES"
 excluded = []
 
 [[targets]]
@@ -4120,3 +4144,343 @@ catalog = "CHRIZ-BG-REBALANCE"
 subgroup = "Hardiness physical resistance"
 options = ["CHRIZ-BG-REBALANCE:200", "CHRIZ-BG-REBALANCE:201"]
 default = "CHRIZ-BG-REBALANCE:200"
+
+# Christopher, 2026-10-23: optional third-party quest mods, off in Recommended. Main
+# components (NTotSC 0, PPE 0) and Ascalon's first variants (2, 5, 10) are the
+# provisional defaults inside each mod; PPE 310 and 320 and Black Hearts 20005 are not offered.
+[[targets]]
+id = "feature:ntotsc:component-0"
+kind = "feature"
+rows = ["NTOTSC:0"]
+
+[[targets]]
+id = "feature:ntotsc:component-1"
+kind = "feature"
+rows = ["NTOTSC:1"]
+
+[[targets]]
+id = "feature:ntotsc:component-2"
+kind = "feature"
+rows = ["NTOTSC:2"]
+
+[[targets]]
+id = "feature:ntotsc:component-3"
+kind = "feature"
+rows = ["NTOTSC:3"]
+
+[[targets]]
+id = "feature:ntotsc:component-4"
+kind = "feature"
+rows = ["NTOTSC:4"]
+
+[[targets]]
+id = "feature:ntotsc:component-5"
+kind = "feature"
+rows = ["NTOTSC:5"]
+
+[[targets]]
+id = "feature:ntotsc:component-6"
+kind = "feature"
+rows = ["NTOTSC:6"]
+
+[[targets]]
+id = "feature:ntotsc:component-7"
+kind = "feature"
+rows = ["NTOTSC:7"]
+
+[[targets]]
+id = "feature:ntotsc:component-8"
+kind = "feature"
+rows = ["NTOTSC:8"]
+
+[[targets]]
+id = "feature:ntotsc:component-9"
+kind = "feature"
+rows = ["NTOTSC:9"]
+
+[[targets]]
+id = "feature:ntotsc:component-10"
+kind = "feature"
+rows = ["NTOTSC:10"]
+
+[[targets]]
+id = "feature:ntotsc:component-11"
+kind = "feature"
+rows = ["NTOTSC:11"]
+
+[[targets]]
+id = "feature:ntotsc:component-12"
+kind = "feature"
+rows = ["NTOTSC:12"]
+
+[[targets]]
+id = "feature:ntotsc:component-13"
+kind = "feature"
+rows = ["NTOTSC:13"]
+
+[[targets]]
+id = "feature:ntotsc:component-14"
+kind = "feature"
+rows = ["NTOTSC:14"]
+
+[[targets]]
+id = "feature:ntotsc:component-15"
+kind = "feature"
+rows = ["NTOTSC:15"]
+
+[[targets]]
+id = "feature:ntotsc:component-16"
+kind = "feature"
+rows = ["NTOTSC:16"]
+
+[[targets]]
+id = "feature:ac-quest:component-0"
+kind = "feature"
+rows = ["AC_QUEST:0"]
+
+[[targets]]
+id = "feature:ac-quest:component-1"
+kind = "feature"
+rows = ["AC_QUEST:1"]
+
+[[targets]]
+id = "feature:ac-quest:component-2"
+kind = "feature"
+rows = ["AC_QUEST:2"]
+
+[[targets]]
+id = "feature:ac-quest:component-3"
+kind = "feature"
+rows = ["AC_QUEST:3"]
+
+[[targets]]
+id = "feature:ac-quest:component-4"
+kind = "feature"
+rows = ["AC_QUEST:4"]
+
+[[targets]]
+id = "feature:ac-quest:component-5"
+kind = "feature"
+rows = ["AC_QUEST:5"]
+
+[[targets]]
+id = "feature:ac-quest:component-6"
+kind = "feature"
+rows = ["AC_QUEST:6"]
+
+[[targets]]
+id = "feature:ac-quest:component-7"
+kind = "feature"
+rows = ["AC_QUEST:7"]
+
+[[targets]]
+id = "feature:ac-quest:component-8"
+kind = "feature"
+rows = ["AC_QUEST:8"]
+
+[[targets]]
+id = "feature:ac-quest:component-9"
+kind = "feature"
+rows = ["AC_QUEST:9"]
+
+[[targets]]
+id = "feature:ac-quest:component-10"
+kind = "feature"
+rows = ["AC_QUEST:10"]
+
+[[targets]]
+id = "feature:ac-quest:component-11"
+kind = "feature"
+rows = ["AC_QUEST:11"]
+
+[[targets]]
+id = "feature:ac-quest:component-12"
+kind = "feature"
+rows = ["AC_QUEST:12"]
+
+[[targets]]
+id = "feature:blackhearts:component-1"
+kind = "feature"
+rows = ["BLACKHEARTS:1"]
+
+[[targets]]
+id = "feature:thalan:component-0"
+kind = "feature"
+rows = ["THALAN:0"]
+
+[[targets]]
+id = "feature:zg-iwd-voices:component-0"
+kind = "feature"
+rows = ["ZG_IWD_VOICES:0"]
+
+[[targets]]
+id = "feature:ppe:component-0"
+kind = "feature"
+rows = ["PPE:0"]
+
+[[targets]]
+id = "feature:ppe:component-100"
+kind = "feature"
+rows = ["PPE:100"]
+
+[[targets]]
+id = "feature:ppe:component-150"
+kind = "feature"
+rows = ["PPE:150"]
+
+[[targets]]
+id = "feature:ppe:component-10"
+kind = "feature"
+rows = ["PPE:10"]
+
+[[targets]]
+id = "feature:ppe:component-20"
+kind = "feature"
+rows = ["PPE:20"]
+
+[[targets]]
+id = "feature:ppe:component-25"
+kind = "feature"
+rows = ["PPE:25"]
+
+[[targets]]
+id = "feature:ppe:component-300"
+kind = "feature"
+rows = ["PPE:300"]
+
+[[targets]]
+id = "feature:ppe:component-301"
+kind = "feature"
+rows = ["PPE:301"]
+
+[[targets]]
+id = "feature:ppe:component-302"
+kind = "feature"
+rows = ["PPE:302"]
+
+[[targets]]
+id = "feature:ppe:component-311"
+kind = "feature"
+rows = ["PPE:311"]
+
+[[targets]]
+id = "feature:ppe:component-312"
+kind = "feature"
+rows = ["PPE:312"]
+
+[[targets]]
+id = "feature:ppe:component-322"
+kind = "feature"
+rows = ["PPE:322"]
+
+[[targets]]
+id = "feature:ppe:component-330"
+kind = "feature"
+rows = ["PPE:330"]
+
+[[targets]]
+id = "feature:ppe:component-332"
+kind = "feature"
+rows = ["PPE:332"]
+
+[[targets]]
+id = "feature:ppe:component-340"
+kind = "feature"
+rows = ["PPE:340"]
+
+[[targets]]
+id = "feature:ppe:component-342"
+kind = "feature"
+rows = ["PPE:342"]
+
+[[targets]]
+id = "feature:ppe:component-350"
+kind = "feature"
+rows = ["PPE:350"]
+
+[[targets]]
+id = "feature:ppe:component-30"
+kind = "feature"
+rows = ["PPE:30"]
+
+[[targets]]
+id = "feature:ppe:component-40"
+kind = "feature"
+rows = ["PPE:40"]
+
+[[choice_groups]]
+id = "choice:ntotsc:reduce-number-of-shaman-cloaks"
+catalog = "NTOTSC"
+subgroup = "Reduce Number of Shaman Cloaks"
+options = ["NTOTSC:13", "NTOTSC:14"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ntotsc:spell-scrolls"
+catalog = "NTOTSC"
+subgroup = "Spell Scrolls"
+options = ["NTOTSC:15", "NTOTSC:16"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ac-quest:jumper"
+catalog = "AC_QUEST"
+subgroup = "Jumper"
+options = ["AC_QUEST:2", "AC_QUEST:3"]
+default = "AC_QUEST:2"
+
+[[choice_groups]]
+id = "choice:ac-quest:of-wolves-and-men"
+catalog = "AC_QUEST"
+subgroup = "Of Wolves and Men"
+options = ["AC_QUEST:5", "AC_QUEST:6"]
+default = "AC_QUEST:5"
+
+[[choice_groups]]
+id = "choice:ac-quest:the-serpents-of-abbathor"
+catalog = "AC_QUEST"
+subgroup = "The Serpents of Abbathor"
+options = ["AC_QUEST:10", "AC_QUEST:11"]
+default = "AC_QUEST:10"
+
+[[choice_groups]]
+id = "choice:ppe:category-portraits"
+catalog = "PPE"
+subgroup = "Category portraits"
+options = ["PPE:100", "PPE:150"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-imoen-portraits"
+catalog = "PPE"
+subgroup = "Change Imoen portraits"
+options = ["PPE:300", "PPE:301", "PPE:302"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-viconia-portraits"
+catalog = "PPE"
+subgroup = "Change Viconia portraits"
+options = ["PPE:311", "PPE:312"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-minsc-portraits"
+catalog = "PPE"
+subgroup = "Change Minsc portraits"
+options = ["PPE:330", "PPE:332"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-edwin-portraits"
+catalog = "PPE"
+subgroup = "Change Edwin portraits"
+options = ["PPE:340", "PPE:342"]
+default = "none"
+
+[[fixed_groups]]
+id = "fixed:ppe-jaheira-portrait"
+catalog = "PPE"
+subgroup = "Change Jaheira portraits"
+options = ["PPE:322"]
+reason = "PPE's BG1-style Jaheira option 320 is not offered because it is expected to fail on EET, so the BG2-style 322 is a single optional component rather than a choice."

@@ -9,7 +9,7 @@ use bg_engine::manifest::{
     Postcondition, Readiness, RunArg, SourceKind,
 };
 use bg_engine::recipe_view::evaluate_preset;
-use bg_engine::resolve::Selection;
+use bg_engine::resolve::{PlannedRun, Selection};
 use bg_engine::validate::validate;
 use bg_engine::Manifest;
 use serde::Deserialize;
@@ -341,7 +341,30 @@ fn recommended_defaults_resolve_the_core_spine_but_keep_bg1npc_160_visible_and_o
 
     assert_eq!(plan.components_for("dlcmerger-bg1"), Some(&[1][..]));
     assert_eq!(plan.components_for("eefixpack-bg1"), Some(&[0, 2][..]));
-    assert_eq!(plan.components_for("bg1ub-bg1"), Some(BG1UB_COMPONENTS));
+    // BG1 Unfinished Business is optional and unselected since October 23, like UB in
+    // BG2. Ticking it with every offered component plans its whole authored menu and
+    // changes no other run.
+    assert_eq!(plan.components_for("bg1ub-bg1"), None);
+    let mut bg1ub = Selection {
+        platform: "windows".to_owned(),
+        choices: manifest.presets["chris-recommended"].selections.clone(),
+    };
+    bg1ub.set_feature("mod:bg1ub", true);
+    for component in BG1UB_COMPONENTS {
+        bg1ub.set_feature(&format!("feature:bg1ub:component-{component}"), true);
+    }
+    let bg1ub = bg_engine::recipe_view::evaluate(&manifest, &bg1ub).unwrap();
+    assert_eq!(
+        bg1ub.plan.components_for("bg1ub-bg1"),
+        Some(BG1UB_COMPONENTS)
+    );
+    let other_runs = |runs: &[PlannedRun]| {
+        runs.iter()
+            .filter(|run| run.run_id != "bg1ub-bg1")
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(other_runs(&bg1ub.plan.runs), other_runs(&plan.runs));
     assert_eq!(
         plan.components_for("bg1npc-bg1"),
         Some(BG1NPC_RESOLVED_COMPONENTS)

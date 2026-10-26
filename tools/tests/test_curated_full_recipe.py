@@ -375,7 +375,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # choice group with default 292 and optional 293/294 (294 needs EEex)
                 # after 910 in the SoD run; the October 22 digest was
                 # a7e9e7bb71ee60a24c8ab5bdd85b9153511055c68f1b7d245466a8b2da85b537.
-                "6eca33a3b76bb009637b7c006cf6f36261f03fd7b567f8e419a36195f4537e25",
+                # October 23 quest-mod intake: six optional, unchecked quest-mod runs with
+                # their features and preset entries, and BG1UB with its 16 components
+                # optional and off; with BG1UB restored and the quest mods removed, the
+                # SoD Remix digest
+                # 6eca33a3b76bb009637b7c006cf6f36261f03fd7b567f8e419a36195f4537e25 returns.
+                "e36aa8a8b61479a3d64eb9558e2ef6117fae96f5924e092ca358ed23fac0549f",
             )
 
             legacy_bg1npc_groups = {
