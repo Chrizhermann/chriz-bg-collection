@@ -68,7 +68,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn(9, actual["eeex-bg2"])
         self.assertTrue({135, 460} <= set(actual["chriz-bg-modpack-bg2"]))
         self.assertNotIn("chriz-bg-modpack-campaign-xp-bg2", actual)
-        self.assertEqual(self.result["componentCount"], 469)
+        # October 27: Tweaks 2292 (druids level on the cleric XP table) leaves the defaults.
+        self.assertNotIn(2292, actual["cdtweaks-bg2"])
+        self.assertEqual(self.result["componentCount"], 468)
         self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

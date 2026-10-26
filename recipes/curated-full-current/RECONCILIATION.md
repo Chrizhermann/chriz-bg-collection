@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 482 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 467.
+Engine-equivalent resolved-selection summary: 481 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 466.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -176,7 +176,6 @@ Engine-equivalent resolved-selection summary: 482 default/mandatory rows — con
 | `CDTWEAKS:2260` | default | `feature:cdtweaks:component-2260` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 2260 |  |
 | `CDTWEAKS:2270` | default | `feature:cdtweaks:component-2270` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 2270 |  |
 | `CDTWEAKS:2280` | default | `feature:cdtweaks:component-2280` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 2280 |  |
-| `CDTWEAKS:2292` | default | `feature:cdtweaks:component-2292` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 2292 |  |
 | `CDTWEAKS:2312` | default | `feature:cdtweaks:component-2312` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 2312 |  |
 | `CDTWEAKS:2380` | default | `feature:cdtweaks:component-2380` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 2380 |  |
 | `CDTWEAKS:2391` | default | `feature:cdtweaks:component-2391` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 2391 |  |

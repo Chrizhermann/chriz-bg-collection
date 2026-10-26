@@ -310,6 +310,11 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Modpack runs' artifact ids (manifest 27ade74c…, curated 44268f93…); with alpha.13
     // restored as well, all six previous digests return (manifest b1f25835…, c9354b83…,
     // e9ca1fbd…; curated c9107bcb…, d63e6c3b…, 8f5ae74a…).
+    // Re-pinned on October 27 when Tweaks 2292 (druids level on the cleric XP table) became
+    // optional and unselected (Christopher, 2026-10-27). Only the curated recipe changes: the
+    // feature's decision, its preset entry and 2292 in the cdtweaks-bg2 run of the plan. With
+    // 2292 restored as a default, the previous curated digests return (bfa199cc…, 90d4ffb4…,
+    // 9e88b9c5…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
@@ -319,9 +324,9 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
         ),
         (
             "../recipes/curated-full-current",
-            "bfa199cc50d38892d273ab6f05c4e6e673fa47f6c4393fa91c08ec103ec8fc63",
-            "90d4ffb4ea605c241f2f8834e32bf20ae85b6c77e1d6b22da9e50f7240c019dd",
-            "9e88b9c524cd2e90f455ee18a705dc3162898598a6b96382fa5c486ef1e773b8",
+            "54993bc2ca99e2c3cce818ae966e5cbca7cc392d4e197d6e3efdff00fa6bce43",
+            "3c42bcea0398ba7ca17cf285b809d14b76003fc111a5f5bebaef9f9b2d6a83f2",
+            "2a08b21bd69486dc9778572561cac0d8f670a85372d755689942a106ac43f826",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

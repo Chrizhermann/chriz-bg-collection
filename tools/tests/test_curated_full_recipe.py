@@ -389,7 +389,10 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # optional chapter caps 652 after 651 in the campaign XP run, the two
                 # conflicting both ways; without them the alpha.22 batch digest
                 # 711cb8c56f4e7679a1b2bc361ddce03afd7d36e10087c2b9bc02976c6a4318d2 returns.
-                "c36f30ba2623c54d723078f5ed9ecc05355724ae42bb25c4bfe32a4d1b9522c0",
+                # October 27: Tweaks 2292 (druids level on the cleric XP table) becomes optional
+                # and off (Christopher, 2026-10-27); with it back on, the alpha.14 pin digest
+                # c36f30ba2623c54d723078f5ed9ecc05355724ae42bb25c4bfe32a4d1b9522c0 returns.
+                "654ae8d42a63de4d3e6f1c767df3a7bf65eabe2bb383889088986621b2958780",
             )
 
             legacy_bg1npc_groups = {

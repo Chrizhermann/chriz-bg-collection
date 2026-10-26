@@ -83,6 +83,12 @@ what changed since v18 and Christopher's decisions.
   has occurred. `3121` is the maintained happiness implementation and replaces the
   duplicate BG2EE-EET-FIXPACK component `300`; characters already below the leave-party
   threshold need a separate one-time save repair.
+- `2292` (druids level on the cleric XP table, with the normal druid spell table) is
+  **optional** (Christopher, 2026-10-27). With it a druid reaches level 15 at 1,575,000 XP
+  instead of 3,000,000 and level 20 at 2,700,000, and its high-level abilities start at
+  level 22 instead of 15. In his playthrough that came far too early and made druids too
+  strong. Unticked, druids keep the game's druid XP table, which default `2090` extends
+  to level 50. The other options of this choice stay unoffered.
 - `260` was unavailable with SCS (a known invisible-hostile/save failure path); the
   snapshot withdraws it upstream.
 - **Optional expansion screened 2026-09-11:** 44 additional choices are exposed
@@ -265,7 +271,7 @@ what changed since v18 and Christopher's decisions.
 | 2289 | No level progression changes, un-nerfed cleric spell table [Blucher] | Rule Changes | Alter Druid Spell and Level Progression Tables |  | |
 | 2290 | No level progression changes, un-nerfed druid spell table only [Blucher] | Rule Changes | Alter Druid Spell and Level Progression Tables |  | |
 | 2291 | No level progression changes, PnP druid/cleric spell table only | Rule Changes | Alter Druid Spell and Level Progression Tables |  | |
-| 2292 | Use cleric level progression changes with normal druid spell table | Rule Changes | Alter Druid Spell and Level Progression Tables | ✓ | default |
+| 2292 | Use cleric level progression changes with normal druid spell table | Rule Changes | Alter Druid Spell and Level Progression Tables | ✓ | optional |
 | 2293 | Use cleric level progression changes with un-nerfed druid spell table [Blucher] | Rule Changes | Alter Druid Spell and Level Progression Tables |  | |
 | 2294 | Use cleric level progression changes with pnp druid/cleric spell table | Rule Changes | Alter Druid Spell and Level Progression Tables |  | |
 | 2295 | Use cleric level progression changes with normal cleric spell table | Rule Changes | Alter Druid Spell and Level Progression Tables |  | |
