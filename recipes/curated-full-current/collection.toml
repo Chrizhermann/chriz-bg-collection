@@ -8151,7 +8151,7 @@ description = "Use cleric level progression changes with normal druid spell tabl
 category = "rules"
 source_label = "The Tweaks Anthology"
 group_label = "Alter Druid Spell and Level Progression Tables"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 components = [{ run_id = "cdtweaks-bg2", component = 2292 }]
 

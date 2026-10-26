@@ -158,7 +158,8 @@ class CatalogParserTests(unittest.TestCase):
                 # 55 quest-mod rows (all but their 5 defaults and 3 excluded rows).
                 # October 26: EEex Attack Info 9 is optional and off (Christopher, 2026-10-25),
                 # and so is Modpack chapter XP caps 652, which needs 650.
-                Decision.OPTIONAL: 331,
+                # October 27: Tweaks 2292 (druids level on the cleric XP table) is optional.
+                Decision.OPTIONAL: 332,
                 # Approved Rebalance 111/302 defaults; Artisan 51010 is optional.
                 # October 13: bard ceilings Rebalance 420/421 and Bardic 3010 are defaults;
                 # EET 100 (desktop shortcut) leaves the defaults.
@@ -175,7 +176,8 @@ class CatalogParserTests(unittest.TestCase):
                 # variants 2/5/10 are defaults inside their unchecked mods.
                 # October 26: Rebalance Chris Revisions 340 is a default (Christopher, 2026-10-25),
                 # and so are Modpack 135 (Dorn's ambush fix) and 460 (party AI Defensive Stance).
-                Decision.DEFAULT: 328,
+                # October 27: Tweaks 2292 leaves the defaults (Christopher, 2026-10-27).
+                Decision.DEFAULT: 327,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -414,8 +416,9 @@ default = "none"
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
         # default; NTotSC's two and PPE's five with none preselected) and PPE's
         # single Jaheira portrait option as a fixed group.
+        # October 27: the Tweaks Anthology druid level choice (2292) has none preselected.
         self.assertEqual(result.choice_groups, 87)
-        self.assertEqual(result.optional_none_groups, 30)
+        self.assertEqual(result.optional_none_groups, 31)
         self.assertEqual(result.fixed_groups, 11)
         self.assertIn("rows=1337", coverage_report(rows, result))
 

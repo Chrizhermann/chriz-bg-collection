@@ -45,7 +45,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // The October 23 quest-mod intake removes the 16 formerly default BG1UB components.
         // The October 26 intake adds default Rebalance Chris Revisions 340; EEex 9 is
         // offered unchecked. Its Modpack alpha.14 pin adds default 135 and 460.
-        469
+        // October 27: Tweaks 2292 (druids level on the cleric XP table) becomes an
+        // unchecked option.
+        468
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
