@@ -59,3 +59,32 @@ some bespoke work, not encounter-redesign breadth or parity with BG.
    [Action conditions, lines 470-508](https://github.com/Gibberlings3/SwordCoastStratagems/blob/5dc240e9ff85d3909b6436e54b56297d3b61e33b/stratagems/caster_shared/caster_definitions.ssl#L470-L508).
 
 Publish aggregate results only. No patch or recipe selection is made here.
+
+## Install-time findings (2026-10-28)
+
+Checked in a private, disposable IWD:EE 2.7.3.0 lab built from the Chriz Easy IWD
+recipe, which installs SCS 35.21 with its general AI and its smarter mages and
+priests. Counts are aggregate; encounter details stay private.
+
+- **One creature variant has no combat AI.** The priest route sets a default script
+  that does not exist, a one-letter typo of an existing SCS priest script, before
+  SCS's creature pass
+  ([line 109](https://github.com/Gibberlings3/SwordCoastStratagems/blob/5dc240e9ff85d3909b6436e54b56297d3b61e33b/stratagems/priest/priest_iwd.tpa#L109)).
+  That variant keeps its original spells and runs no combat script; its sibling
+  variant is converted normally.
+- **Two priest scripts are missed.** One entry of SCS's IWD priest list misspells an
+  IWD priest script and another IWD priest script is absent. SCS ships top-files for
+  both, but their priests keep the original AI and get no SCS precasts.
+- **Melee AI runs ahead of the caster AI on five placements.** Where an IWD caster
+  also carries a generic melee script in an earlier script slot, the general AI turns
+  that script into SCS's melee AI. It attacks every round within melee range and
+  walks to the nearest enemy when idle, so the caster AI acts only at a distance.
+  Measured at Core Rules: a caster placed next to the party attacked in 154 of 180
+  samples and cast nothing.
+- **Priest precasts are an Insane feature.** SCS priests precast their
+  self-protection only on Insane and buff during combat below that; SCS mages
+  precast from Normal.
+
+Christopher's own add-on, Chriz IWD Encounters, repairs the first three and adds
+modest priest preparation from Core Rules up. Its recipe entry waits for his
+go-ahead.
