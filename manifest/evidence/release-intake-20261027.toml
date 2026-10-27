@@ -2,7 +2,7 @@ schema = 1
 evidence_kind = "published-release-download-and-native-order-verification"
 verified_on = "2026-10-27"
 command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh downloaded ZIP>"
-scope = "The second alpha.22 pin batch: the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.4 (published 2026-10-26 22:27 UTC, a normal GitHub release, tag commit afa3316) replaces chriz.3 for the main, NPC and tweak installers in both recipe profiles. The release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset. Its 3,011 entries (118,165,857 bytes uncompressed, largest entry 6,142,193 bytes) stay within the unchanged archive limits, and the three expected TP2s match directly. The native TP2 declaration order matches both recipes except where a record says otherwise. The chriz.3 records in release-intake-20261026.toml and their artifact TOMLs stay as history. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance; the owner's lab results are in the release notes."
+scope = "The second alpha.22 pin batch: the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.4 (published 2026-10-26 22:27 UTC, a normal GitHub release, tag commit afa3316) replaces chriz.3 for the main, NPC and tweak installers in both recipe profiles. The release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset. Its 3,011 entries (118,165,857 bytes uncompressed, largest entry 6,142,193 bytes) stay within the unchanged archive limits, and the three expected TP2s match directly. The native TP2 declaration order matches both recipes except where a record says otherwise. The chriz.3 records in release-intake-20261026.toml and their artifact TOMLs stay as history. The batch also pins BG Rebalance v0.8.6 (published 2026-10-27 18:04 UTC, a normal GitHub release, annotated tag on merge commit 43b8811) in place of v0.8.5; that record was downloaded, inspected and verified on 2026-10-28 and says so in its own verified_on. The v0.8.5 record in release-intake-20261026.toml and its artifact TOMLs stay as history. The release's tail packages CBR_SR_ANTIMAGIC and CBR_SR_HARDINESS are not used by either recipe and are not pinned. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance; the owner's lab results are in the release notes."
 
 # One archive serves the main, NPC and tweak installers. Against chriz.3 all three TP2s
 # change their VERSION and include the new eeex/class_weapon_grants.tpa in ALWAYS; no
@@ -80,6 +80,37 @@ tp2_sha256 = "3abf541a2282a5580006a8cc3026359741e72d55eb2965d1a93643cb1c443425"
 native_components = [
   51010, 20101, 12012, 20021, 3210, 1209, 1110, 3202, 3302, 7203, 8204, 110000, 1, 2, 300010,
   1010000, 1020000, 2000001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# Downloaded, inspected and verified on 2026-10-28, a day after the Kitpack records. The
+# archive has 62 entries (2,696,934 bytes uncompressed, largest entry 1,364,992 bytes,
+# depth 4), within the unchanged limits of the v0.8.5 pin. Against v0.8.5 the TP2 changes
+# its VERSION, includes chriz-bg-rebalance/lib/time_stop_haste_clocks.tpa in ALWAYS and
+# declares Time Stop and Haste effect clocks 360 last, after 340; the English setup.tra
+# only adds 360's strings, and the new files are the library and the Lua files CBRTC.lua
+# and M_CBRTC.lua. No other component changes. 360 requires BG2:EE or EET, EEex installed
+# before it (M___EEex.lua), data/PATCH27.BIF, and Baldur.exe (else BaldurII.exe) with PE
+# machine 0x8664 and PE timestamp 0x6a18d73d; any other executable stops its installation.
+# The collection offers 360 as a default at the end of the Rebalance run (Christopher,
+# 2026-10-27); both recipes' Rebalance runs follow this order.
+[[artifacts]]
+mod_id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.8.6"
+verified_on = "2026-10-28"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.8.6"
+source_commit = "43b8811abe04ad71575c89d5589866919801bdff"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.6/chriz-bg-rebalance-v0.8.6-windows.zip"
+actual_length = 1817306
+actual_sha256 = "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba"
+tp2_sha256 = "36aecf988af156d31b5f120c7e845f3f7ea314fbcf74e6943b560fd6dccf3595"
+native_components = [
+  100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 402, 403, 404, 405, 406,
+  407, 409, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360
 ]
 fresh_download = true
 fresh_extraction = true

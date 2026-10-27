@@ -14,12 +14,13 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-The recipe pins **v0.8.5** (published 2026-10-25), which adds Chris Revisions `340`
-(see below). v0.8.3 added potion uniqueness `330`/`331` and the Heroism family `332`;
+The recipe pins **v0.8.6** (published 2026-10-27, tag commit `43b8811`), which adds the
+Time Stop and Haste effect clocks `360` (see below). v0.8.5 (2026-10-25) added Chris
+Revisions `340`; v0.8.3 added potion uniqueness `330`/`331` and the Heroism family `332`;
 v0.8.4 (2026-10-23) released the October 8 compatibility follow-ups for existing
 components (see below).
 
-33 curated entries, 24 recommended selections for the next release. Bard spell-level
+34 curated entries, 25 recommended selections for the next release. Bard spell-level
 ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
 2026-10-13)** (see below).
 ✓ = selected and receipt-verified in the isolated
@@ -80,6 +81,7 @@ release-candidate provenance.
 | 331 | Potion uniqueness: all temporary potion types except Potions of Genius | Cross-cutting audits | Potion uniqueness |  | default |
 | 332 | Heroism family: Heroism, Greater Heroism and the Potion of Heroism do not combine | Cross-cutting audits |  |  | default |
 | 340 | Chris Revisions: Christopher's spell balance changes (Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation) | Spell balance |  |  | default |
+| 360 | Time Stop and Haste effect clocks | Spell balance |  |  | default |
 
 ## Atomic Tempus UI behavior
 
@@ -169,6 +171,48 @@ release-candidate provenance.
   Bardic Wonders, whose copies it changes, and before Spell Revisions' NPC spellbook
   pass `60` and Modpack's scroll policy `430`.
 - Not run in a game yet; the owner's checks are automated WeiDU tests.
+
+## Time Stop and Haste effect clocks — v0.8.6 (Christopher's decision, 2026-10-27)
+
+- `360` follows Christopher's rule: in a Time Stop everything but the caster stops, and
+  Haste and Slow change only actions and movement.
+  - Time Stop: the frozen creatures' spell and item durations, delayed effects, poison,
+    disease, regeneration and repeated effects wait and continue after the stop with
+    the time they had left. The caster and creatures immune to Time Stop keep their
+    normal clocks. Clouds and other area effects already wait out a stop natively and
+    are left alone. This works with or without Spell Revisions.
+  - Haste and Slow no longer speed up or slow down regeneration, poison, disease and
+    repeated effects; actions, attacks and movement stay hasted or slowed. Spell
+    Revisions' Haste and Improved Haste do not use the engine's Haste and stay as they
+    are; engine Haste from items, potions such as Oil of Speed and other mods is
+    corrected.
+  - It installs two Lua files (`CBRTC.lua`, `M_CBRTC.lua`) and changes no resource,
+    script or saved game. At every game start it checks EEex, the executable and the
+    eight code locations it changes; if anything does not match, the game runs
+    natively and only InfinityLoader's log says why.
+- **`360` is default** in the recommended preset (Christopher, 2026-10-27) and can be
+  deselected.
+- **For players:** install it before a playthrough; adding or removing it during one is
+  not supported. Saving, dispel, cure and death during a Time Stop are not covered yet.
+- Install-time requirements in its TP2, beyond BG2:EE or EET:
+  - EEex, installed before it (`M___EEex.lua` must exist). The feature therefore
+    requires EEex's core components, and in both recipe profiles the `eeex-bg2` run
+    comes before the Rebalance run.
+  - `data/PATCH27.BIF`, EEex's own marker of a 2.7.3.0 game. CEBG's game check does not
+    fingerprint this file.
+  - A 64-bit executable (`Baldur.exe`, else `BaldurII.exe`) with PE machine `0x8664`
+    and PE timestamp `0x6a18d73d`, BG2:EE 2.7.3.0 x64; any other build stops the
+    installation of `360`. CEBG accepts exactly one BG2:EE executable, the
+    fingerprinted Steam `Baldur.exe` (SHA-256 `b51093a4…`, product version 2.7.3.0),
+    and that file has exactly this timestamp (checked by the coordinator,
+    2026-10-27). So every build CEBG accepts passes this check.
+- The TP2 declares `360` last, after `340`, so it runs at the end of the existing
+  post-EET-end Rebalance run (`..., 332, 340, 360`).
+- Owner checks: 769 automated tests (31 for `360`). In a BG2:EE 2.7.3.0 lab with EEex
+  1.3.1 it corrected a Time Stop, Haste and a save and reload; in the full CEBG stack
+  (EET, Recommended preset, Spell Revisions) it switched itself on, stayed on through
+  loading a save and corrected Spell Revisions' Time Stop and Oil of Speed. Both labs
+  used EEex's LuaJIT option. Not accepted in real gameplay yet (its release notes).
 
 ## v0.8.4 compatibility follow-ups
 

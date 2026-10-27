@@ -1,5 +1,6 @@
 """October 27 intake, the second alpha.22 pin batch: the Artisan's Kitpack fork
-v4.81a-dev.85928f9-chriz.4 for the main, NPC and tweak installers.
+v4.81a-dev.85928f9-chriz.4 for the main, NPC and tweak installers, and BG Rebalance v0.8.6
+with the Time Stop and Haste effect clocks 360 (downloaded and verified on 2026-10-28).
 
 chriz.4 grants monks quarterstaves after Monk Revisions and restricts plain shamans and
 kits that a component adds late (Sacred Fist, Enlightened Fist, Ninja) from the start,
@@ -82,7 +83,9 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
             "fallback": (ROOT / "manifest", *_load_profile(ROOT / "manifest")),
         }
         cls.evidence = tomllib.loads((ROOT / EVIDENCE).read_text(encoding="utf-8"))
-        cls.records = {record["mod_id"]: record for record in cls.evidence["artifacts"]}
+        cls.all_records = {record["mod_id"]: record for record in cls.evidence["artifacts"]}
+        # The Kitpack records; the Rebalance record of the same batch has its own tests below.
+        cls.records = {mod_id: record for mod_id, record in cls.all_records.items() if mod_id in INSTALLERS}
         previous = tomllib.loads((ROOT / PREVIOUS_EVIDENCE).read_text(encoding="utf-8"))
         cls.previous = {record["mod_id"]: record for record in previous["artifacts"] if record["mod_id"] in INSTALLERS}
 
@@ -107,8 +110,10 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
 
     def test_evidence_records_the_fresh_published_download_for_all_three_installers(self):
         self.assertEqual(self.evidence["verified_on"], "2026-10-27")
-        self.assertEqual(set(self.records), set(INSTALLERS))
-        self.assertEqual(len(self.evidence["artifacts"]), len(INSTALLERS))
+        self.assertEqual(set(self.all_records), set(INSTALLERS) | {"chriz-bg-rebalance"})
+        self.assertEqual(len(self.evidence["artifacts"]), len(INSTALLERS) + 1)
+        for record in self.records.values():
+            self.assertNotIn("verified_on", record)
         url = (f"https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/"
                f"{KITPACK_TAG}/{FILENAME}")
         for mod_id, record in self.records.items():
@@ -238,6 +243,163 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
             self.assertLess(main.index(10001), main.index(10004))
             for mod_id, component in NOT_OFFERED:
                 self.assertNotIn(f"feature:{mod_id}:component-{component}", features)
+
+
+REBALANCE = "chriz-bg-rebalance"
+REBALANCE_PIN = "chriz-bg-rebalance-0.8.6"
+REBALANCE_PREVIOUS = "chriz-bg-rebalance-0.8.5"
+REBALANCE_TAG = "v0.8.6"
+REBALANCE_FILENAME = "chriz-bg-rebalance-v0.8.6-windows.zip"
+REBALANCE_SHA256 = "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba"
+REBALANCE_LENGTH = 1_817_306
+REBALANCE_COMMIT = "43b8811abe04ad71575c89d5589866919801bdff"
+REBALANCE_RUN = "chriz-bg-rebalance-bg2"
+CLOCKS = "feature:chriz-bg-rebalance:component-360"
+# CEBG's only accepted BG2:EE executable, whose PE timestamp 360's installer requires.
+ACCEPTED_BALDUR_EXE = "b51093a49140b2b8a7c046b4652bb8e535be24ebbc12b1d735e0b94217a14d57"
+
+
+class Oct28RebalanceV086PinTests(unittest.TestCase):
+    """BG Rebalance v0.8.6: the release adds only the Time Stop and Haste effect clocks 360,
+    a default after 340 (Christopher, 2026-10-27)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory()
+        cls.output = Path(cls.temp.name) / "recipe"
+        build_recipe(ROOT, cls.output, "0" * 40)
+        cls.directories = [
+            ("manifest", ROOT / "manifest"),
+            ("recipes/curated-full-current", ROOT / "recipes/curated-full-current"),
+            ("recipes/curated-full-current", cls.output),
+        ]
+        cls.profiles = {
+            "curated": (cls.output, *_load_profile(cls.output)),
+            "fallback": (ROOT / "manifest", *_load_profile(ROOT / "manifest")),
+        }
+        evidence = tomllib.loads((ROOT / EVIDENCE).read_text(encoding="utf-8"))
+        (cls.record,) = [record for record in evidence["artifacts"] if record["mod_id"] == REBALANCE]
+        previous = tomllib.loads((ROOT / PREVIOUS_EVIDENCE).read_text(encoding="utf-8"))
+        (cls.previous,) = [record for record in previous["artifacts"] if record["mod_id"] == REBALANCE]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp.cleanup()
+
+    def _each_profile(self):
+        for name, (directory, collection, preset) in self.profiles.items():
+            with self.subTest(profile=name):
+                yield name, directory, collection, preset
+
+    _selected = staticmethod(Oct27Alpha22KitpackPinTests._selected)
+
+    def test_evidence_records_the_fresh_download_of_october_28(self):
+        record = self.record
+        self.assertEqual(record["verified_on"], "2026-10-28")
+        self.assertEqual(record["artifact_id"], REBALANCE_PIN)
+        self.assertEqual(record["recipe_profiles"], PROFILES)
+        self.assertNotIn("native_order_recipe_profiles", record)
+        self.assertEqual(record["source_reference"], REBALANCE_TAG)
+        self.assertEqual(record["source_commit"], REBALANCE_COMMIT)
+        self.assertEqual(record["immutable_source_url"],
+                         f"https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/"
+                         f"{REBALANCE_TAG}/{REBALANCE_FILENAME}")
+        self.assertEqual(record["actual_length"], REBALANCE_LENGTH)
+        self.assertEqual(record["actual_sha256"], REBALANCE_SHA256)
+        self.assertRegex(record["tp2_sha256"], r"^[0-9a-f]{64}$")
+        for flag in ("fresh_download", "fresh_extraction", "published_release_verified",
+                     "native_component_order_verified"):
+            self.assertIs(record[flag], True, flag)
+        # v0.8.6 declares 360 after 340; everything before it is v0.8.5's order.
+        self.assertEqual(self.previous["artifact_id"], REBALANCE_PREVIOUS)
+        self.assertNotEqual(record["tp2_sha256"], self.previous["tp2_sha256"])
+        self.assertEqual(record["native_components"], self.previous["native_components"] + [360])
+
+    def test_both_profiles_pin_v086_keep_v085_and_leave_the_tail_packages_out(self):
+        for profile_name, directory in self.directories:
+            with self.subTest(profile=str(directory)):
+                mod = tomllib.loads((directory / f"mods/{REBALANCE}.toml").read_text(encoding="utf-8"))
+                self.assertEqual(mod["artifact_id"], REBALANCE_PIN)
+                self.assertIn(360, {component["id"] for component in mod["components"]})
+                artifact = tomllib.loads((directory / f"artifacts/{REBALANCE_PIN}.toml").read_text(encoding="utf-8"))
+                previous = tomllib.loads((directory / f"artifacts/{REBALANCE_PREVIOUS}.toml").read_text(encoding="utf-8"))
+                self.assertEqual(artifact["version"], REBALANCE_TAG.removeprefix("v"))
+                self.assertEqual(artifact["acquisition"], "fetch-only")
+                self.assertEqual(artifact["source"]["kind"], "github-release")
+                self.assertEqual(artifact["source"]["expected_filename"], REBALANCE_FILENAME)
+                for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),
+                                      ("url", "immutable_source_url"), ("reference", "source_reference")):
+                    self.assertEqual(artifact["source"][key], self.record[measured], key)
+                    self.assertEqual(previous["source"][key], self.previous[measured], key)
+                self.assertEqual(artifact["archive"], previous["archive"])
+                self.assertEqual(artifact["source"]["redirect_hosts"], previous["source"]["redirect_hosts"])
+                # The release's standalone tails for existing games are not part of the recipe.
+                names = {path.name.casefold() for path in (directory / "artifacts").glob("*.toml")}
+                self.assertFalse(any(name.startswith("cbr_sr_") or name.startswith("cbr-sr-") for name in names))
+                self.assertIn(profile_name, self.record["recipe_profiles"])
+        for artifact_id in (REBALANCE_PIN, REBALANCE_PREVIOUS):
+            name = f"artifacts/{artifact_id}.toml"
+            self.assertEqual((ROOT / "recipes/curated-full-current" / name).read_bytes(),
+                             (ROOT / "manifest" / name).read_bytes())
+
+    def test_clocks_360_is_a_default_after_340_and_needs_eeex_first(self):
+        native = self.record["native_components"]
+        self.assertEqual([c for c in NATIVE_RUN_ORDERS[REBALANCE_RUN] if c in native], NATIVE_RUN_ORDERS[REBALANCE_RUN])
+        self.assertEqual(NATIVE_RUN_ORDERS[REBALANCE_RUN][-2:], [340, 360])
+        for name, _, collection, preset in self._each_profile():
+            features = {feature["id"]: feature for feature in collection["features"]}
+            feature = features[CLOCKS]
+            self.assertEqual((feature["category"], feature["decision"], feature["readiness"]),
+                             ("spells", "default", "ready"))
+            self.assertEqual(feature["parent"], "mod:chriz-bg-rebalance")
+            # The TP2 refuses 360 unless EEex is already installed.
+            self.assertEqual(feature["requires"], [EEEX_CORE])
+            self.assertEqual(feature.get("conflicts", []), [])
+            self.assertNotIn("choice_group", feature)
+            self.assertEqual(feature["components"], [{"run_id": REBALANCE_RUN, "component": 360}])
+            self.assertEqual(feature["title"], "Time Stop and Haste effect clocks")
+            for phrase in ("Time Stop", "everything but the caster stops", "Haste and Slow",
+                           "poison", "regeneration", "before a playthrough", "not supported",
+                           "not covered yet"):
+                self.assertIn(phrase, feature["description"])
+            self.assertEqual(preset.get(CLOCKS), "on")
+            runs = {run["run_id"]: run for run in collection["runs"]}
+            self.assertEqual(runs[REBALANCE_RUN]["components"][-2:], [340, 360])
+            self.assertEqual(runs[REBALANCE_RUN]["components"],
+                             [c for c in native if c in runs[REBALANCE_RUN]["components"]])
+            self.assertEqual(runs[REBALANCE_RUN]["phase"], "post-eet-end")
+            order = [run["run_id"] for run in collection["runs"]]
+            self.assertLess(order.index(EEEX_RUN), order.index(REBALANCE_RUN))
+            baseline = self._selected(collection, preset)
+            self.assertIn((REBALANCE_RUN, 360), baseline)
+            self.assertIn((EEEX_RUN, 0), baseline)
+            self.assertEqual(baseline - self._selected(collection, preset, **{CLOCKS: "off"}),
+                             {(REBALANCE_RUN, 360)})
+            self.assertNotIn((REBALANCE_RUN, 360), self._selected(collection, preset, **{"mod:eeex": "off"}))
+            self.assertNotIn((REBALANCE_RUN, 360),
+                             self._selected(collection, preset, **{"mod:chriz-bg-rebalance": "off"}))
+            group = next(g for g in collection["feature_groups"] if g["id"] == "challenge-mode")
+            self.assertNotIn(CLOCKS, group["members"])
+
+    def test_catalog_records_the_decision_and_the_executable_check(self):
+        rows = {row.component_id: row for row in load_catalogs(ROOT / "docs/curation/components")
+                if row.catalog == "CHRIZ-BG-REBALANCE"}
+        self.assertEqual(set(rows), set(self.record["native_components"]))
+        self.assertEqual(rows[360].decision, Decision.DEFAULT)
+        self.assertEqual(rows[340].decision, Decision.DEFAULT)
+        text = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")
+        self.assertIn(f"**{REBALANCE_TAG}**", text)
+        for phrase in ("Christopher's decision, 2026-10-27", "`data/PATCH27.BIF`", "`0x6a18d73d`", "`0x8664`",
+                       "`b51093a4…`", "adding or removing it during one is\n  not supported"):
+            self.assertIn(phrase, text)
+        # The executable the catalog names is CEBG's only accepted BG2:EE 2.7.3.0 build.
+        for directory in (ROOT / "manifest", ROOT / "recipes/curated-full-current"):
+            build = tomllib.loads((directory / "game-builds/steam-bg2ee-2.7.3-en-us.toml").read_text(encoding="utf-8"))
+            self.assertEqual(build["product_version"], "2.7.3.0")
+            self.assertEqual(build["executable"], "Baldur.exe")
+            executables = {fingerprint["sha256"] for variant in build["allowed_clean_variants"]
+                           for fingerprint in variant["fingerprints"] if fingerprint["path"] == "Baldur.exe"}
+            self.assertEqual(executables, {ACCEPTED_BALDUR_EXE})
 
 
 if __name__ == "__main__":

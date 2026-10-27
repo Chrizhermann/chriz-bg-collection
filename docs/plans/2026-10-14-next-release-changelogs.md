@@ -103,6 +103,15 @@ unchanged.
   Recitation no longer stack: Recitation's bonus or penalty replaces Prayer's while
   it lasts. Exact copies, such as Bardic Wonders' Troubadour Aid, change with them.
   (Rebalance v0.8.5)
+- **Time Stop stops everything but the caster; Haste and Slow only change actions and
+  movement** — **Default.** In a Time Stop, the frozen creatures' spells and potions no
+  longer run out while they cannot act, and their poison and regeneration wait too;
+  everything continues afterwards with the time it had left. Haste and Slow no longer
+  speed up or slow down poison, regeneration and other repeated effects; attacks,
+  actions and movement stay hasted or slowed. It applies to new installations only:
+  install it before a playthrough, because adding or removing it during one is not
+  supported. Saving, dispelling, curing or dying during a Time Stop are not covered yet.
+  (Rebalance v0.8.6)
 - **EEex attack info** — **Optional.** Shows your chance to hit when the attack
   cursor is over a target. You can also switch it on or off later in EEex's
   options; the change takes effect after a restart. (EEex v1.3.1)
@@ -286,7 +295,7 @@ unchanged.
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.14 (was alpha.11)
-- BG Rebalance v0.8.5 (was v0.8.2)
+- BG Rebalance v0.8.6 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
@@ -311,12 +320,14 @@ unchanged.
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
-Rebalance to v0.8.5, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
+Rebalance to v0.8.6, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
 EEex to v1.3.1, BuffBot to v1.11.0, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
 v4.81a-dev.85928f9-chriz.4 and The Tweaks Anthology to its current development
 version. New in Chris's Recommended: Christopher's revisions of Aid, Luck, Bless,
-Chaotic Commands, Prayer and Recitation; companion stat adjustments for Rasaad,
+Chaotic Commands, Prayer and Recitation; Time Stop that stops everything but the
+caster, and Haste and Slow that no longer change poison and regeneration; companion
+stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
 lacked it; a fix for the crash after Dorn's BG1 ambush; party AI that uses Defensive
 Stance only with "Use special abilities" on; SCS fine weapons that never break; one potion
@@ -399,6 +410,15 @@ apply to new installations; existing games and saves are unchanged.
   (Christopher, 2026-10-26). Since v0.8.4,
   Rebalance components that cannot apply a change correctly stop the installation
   with the reason instead of guessing.
+- **Rebalance `360`** (Time Stop and Haste effect clocks, Default; Christopher,
+  2026-10-27) needs EEex installed before it, `data/PATCH27.BIF` and the 64-bit
+  BG2:EE 2.7.3.0 executable (PE timestamp `0x6a18d73d`). CEBG's only accepted
+  `Baldur.exe` has that timestamp, and EEex runs before Rebalance in both recipes.
+  CEBG's game check does not fingerprint `data/PATCH27.BIF`. Its owner labs passed on
+  BG2:EE 2.7.3.0 and in the full CEBG stack (EET, Recommended, Spell Revisions), both
+  with EEex's LuaJIT option; it has not been accepted in real gameplay yet (its release
+  notes). Saving, dispel, cure and death during a stop are not covered. It is marked
+  "ready" like `340`, without a recorded readiness decision of its own.
 - **Spell Revisions fork v4.21-chriz.7**: the Rogue Rebalancing level-5 replacements
   (v4.21-chriz.6) have not been checked in game yet (its release notes).
 - **Artisan's Kitpack fork chriz.4** (with chriz.2's sorcerer fix and chriz.3's kit

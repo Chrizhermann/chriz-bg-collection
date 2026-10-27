@@ -47,7 +47,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // offered unchecked. Its Modpack alpha.14 pin adds default 135 and 460.
         // October 27: Tweaks 2292 (druids level on the cleric XP table) becomes an
         // unchecked option.
-        468
+        // The October 28 intake (Rebalance v0.8.6) adds default Time Stop and Haste
+        // effect clocks 360.
+        469
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -92,14 +94,14 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.5"
+        "chriz-bg-rebalance-0.8.6"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
                 100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420,
-                421, 310, 130, 220, 320, 331, 332, 340,
+                421, 310, 130, 220, 320, 331, 332, 340, 360,
             ][..]
         )
     );
