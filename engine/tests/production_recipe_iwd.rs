@@ -683,6 +683,13 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
             6040, 6100, 6510, 6540, 6550, 6700,
         ],
     ),
+    (
+        "hidden-gameplay-options-main",
+        &[
+            10, 11, 12, 13, 14, 16, 18, 19, 20, 22, 23, 24, 25, 27, 28, 29, 30, 32, 33, 34, 35, 36,
+            37, 38, 39, 300, 301, 103,
+        ],
+    ),
     ("cdtweaks-spell-save-penalties", &[2312]),
     ("buffbot-main", &[1, 0]),
 ];
@@ -922,7 +929,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 96);
+    assert_eq!(components, 124);
 }
 
 #[test]
@@ -1200,7 +1207,8 @@ fn druids_keep_their_own_xp_table_unless_the_player_picks_the_cleric_one() {
 }
 
 #[test]
-fn hidden_gameplay_options_is_off_by_default_and_never_offers_component_40() {
+fn hidden_gameplay_options_is_on_by_default_and_never_offers_component_40() {
+    // Christopher, 2026-10-28: the mod's extra in-game options belong to the recommended setup.
     let manifest = recipe();
     let run = &manifest.collection.runs[position(&manifest, "hidden-gameplay-options-main")];
     assert!(!run.components.contains(&40));
@@ -1218,9 +1226,44 @@ fn hidden_gameplay_options_is_off_by_default_and_never_offers_component_40() {
         .view
         .control("mod:hidden-gameplay-options")
         .unwrap();
-    assert_eq!(parent.decision, Decision::Optional);
-    assert!(!parent.selected);
+    assert_eq!(parent.decision, Decision::Default);
+    assert!(parent.selected);
     assert!(evaluation
+        .plan
+        .components_for("hidden-gameplay-options-main")
+        .is_some_and(|options| options.len() == 28));
+
+    // The mod refuses some options beside an interface overhaul; picking one drops just those
+    // options, and the overhaul stays.
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:infinity-ui", true);
+    let overhaul = evaluate(&manifest, &selection).unwrap();
+    let options = overhaul
+        .plan
+        .components_for("hidden-gameplay-options-main")
+        .unwrap();
+    for refused in [29, 30, 300, 301] {
+        assert!(!options.contains(&refused), "{refused}");
+        assert!(
+            overhaul
+                .findings
+                .iter()
+                .any(|finding| finding.rule == "default-feature-omitted"
+                    && finding.feature_id
+                        == format!("feature:hidden-gameplay-options:component-{refused}")),
+            "{refused}"
+        );
+    }
+    assert!(
+        options.contains(&28),
+        "only Lefreut's interface refuses option 28"
+    );
+    assert!(overhaul.plan.components_for("infinity-ui-main").is_some());
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:hidden-gameplay-options", false);
+    let without = evaluate(&manifest, &selection).unwrap();
+    assert!(without
         .plan
         .components_for("hidden-gameplay-options-main")
         .is_none());

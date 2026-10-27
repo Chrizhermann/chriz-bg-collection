@@ -3104,7 +3104,7 @@ title = "Hidden Gameplay Options"
 description = "Adds hidden engine settings to the in-game options."
 category = "rules"
 source_label = "Hidden Gameplay Options"
-decision = "optional"
+decision = "default"
 readiness = "ready"
 
 [[features]]
