@@ -289,6 +289,16 @@ phase = "main"
 components = [1600, 1610, 2000, 2500, 2510, 2520, 3510, 3540, 3541, 4030, 4115, 4140, 4250, 5000, 5900, 6020, 6030, 6040, 6100, 6510, 6540, 6550, 6700]
 args = []
 
+# Christopher's own mod, added 2026-10-28: directly after SCS, because it reads what SCS built
+# (its caster scripts and its record of melee scripts). It repairs SCS caster AI that misses
+# some IWD:EE casters (#100) and lets enemy priests prepare when they first see the party (#200).
+[[runs]]
+run_id = "chriz-iwd-encounters-main"
+mod_id = "chriz-iwd-encounters"
+phase = "main"
+components = [100, 200]
+args = []
+
 # HGO readme: after Tweaks Anthology and any interface mods.
 [[runs]]
 run_id = "hidden-gameplay-options-main"
@@ -835,6 +845,39 @@ readiness = "ready"
 parent = "mod:stratagems"
 components = [{ run_id = "stratagems-main", component = 6700 }]
 requires_any = ["feature:stratagems:component-5900"]
+
+[[features]]
+id = "mod:chriz-iwd-encounters"
+title = "Chriz IWD Encounters"
+description = "Enemy casters fight as Sword Coast Stratagems intends, and enemy priests are prepared when a fight starts."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-100"
+title = "Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters"
+description = "Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters"
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 100 }]
+requires_any = ["feature:stratagems:component-6030", "feature:stratagems:component-6040"]
+
+[[features]]
+id = "feature:chriz-iwd-encounters:component-200"
+title = "Enemy priests prepare when they first see the party (Core Rules and up)"
+description = "Enemy priests prepare when they first see the party: one self-protection on Core Rules (from Hard, Sword Coast Stratagems precasts its own), one group blessing on Hard (priests of level 7 and up) and Insane."
+category = "combat"
+source_label = "Chriz IWD Encounters"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-iwd-encounters"
+components = [{ run_id = "chriz-iwd-encounters-main", component = 200 }]
+requires = ["feature:stratagems:component-6040"]
 
 [[features]]
 id = "mod:cdtweaks"

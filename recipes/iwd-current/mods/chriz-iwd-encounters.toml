@@ -1,0 +1,15 @@
+id = "chriz-iwd-encounters"
+artifact_id = "chriz-iwd-encounters-0.1.0"
+name = "Chriz IWD Encounters"
+tp2 = "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 100
+name = "Repair Sword Coast Stratagems caster AI that misses some IWD:EE casters"
+
+[[components]]
+id = 200
+name = "Enemy priests prepare when they first see the party (Core Rules and up)"
