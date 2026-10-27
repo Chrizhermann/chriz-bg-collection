@@ -23,23 +23,27 @@ Cross-repository status. Component detail stays in the sections below and in the
   1. One pin batch: Modpack alpha.14 (released on 2026-10-26, see below), BG Rebalance
      v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
      fork `v4.81a-dev.85928f9-chriz.3` (sorcerer and kit weapon fixes, below), EEex `9`
-     (Attack Info) optional and off, and maybe the Campaign Item Randomiser (below). The
-     Time Stop/Haste fix, now BG Rebalance `360`, is likely in the release too (see Ready
-     to start). All of them but the Campaign
-     Item Randomiser are pinned in both recipes since
+     (Attack Info) optional and off, and maybe the Campaign Item Randomiser (below). All of
+     them but the Campaign Item Randomiser are pinned in both recipes since
      [PR #36](https://github.com/Chrizhermann/chriz-bg-collection/pull/36) (fresh-download
      and native-order evidence in `manifest/evidence/release-intake-20261026.toml`), merged
      into the next-release branch on 2026-10-26 together with #33, after #32 (Christopher's
-     approval of 2026-10-26). Kitpack chriz.4 (released on 2026-10-27, below) joins the
-     batch once Christopher approves the pin.
+     approval of 2026-10-26).
+     Christopher added three items on 2026-10-27, all in progress:
+     - Kitpack chriz.4 (below).
+     - BG Rebalance v0.8.6 with Time Stop/Haste `360` as a default (below).
+     - The engine's rename retry from PR #35 (below).
+     BuffBot v1.12.0 joins only if its EEex v1.2.0 fix is tested in time; otherwise a later
+     release takes it. Two releases close together are fine.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
   4. Acceptance, build, signing and publishing, and the website.
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
-  is not on the next-release branch yet. Bringing it over for alpha.22 needs
-  Christopher's OK.
+  is not on the next-release branch yet. Christopher approved it for alpha.22 on
+  2026-10-27. The port is in progress; it also covers the five renames that exist only on
+  the next-release branch.
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
   everywhere): pinned in both recipes since
   [PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18) (merged on
@@ -92,8 +96,11 @@ Cross-repository status. Component detail stays in the sections below and in the
     ran without Modpack `430`, so the Recommended lab run checks it together with `430`
     (see Live/runtime acceptance).
   - BuffBot v1.12.0 (released on 2026-10-27) adds Icewind Dale: Enhanced Edition
-    support, uses its own interface art and lets a preset order its casts. It is newer
-    than the alpha.22 pin; whether alpha.22 takes it is Christopher's call.
+    support, uses its own interface art and lets a preset order its casts. Its interface
+    rework had only run on EEex v1.3.1. On an EEex v1.2.0 installation its panel buttons
+    did not work, so BuffBot's session is testing and fixing it on v1.2.0. Christopher,
+    2026-10-27: alpha.22 takes it only if that is done in time; otherwise a later release
+    does.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -186,8 +193,8 @@ Cross-repository status. Component detail stays in the sections below and in the
       creature, a level-up and a reload.
     - Not covered there: EET, other kits, a new game process and characters created
       before the install.
-    - Not pinned yet: chriz.3 stays pinned until Christopher approves the chriz.4 pin for
-      the alpha.22 batch.
+    - Christopher approved the chriz.4 pin for alpha.22 on 2026-10-27; the pin is in
+      progress. chriz.3 stays pinned until it is merged.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -260,18 +267,22 @@ Cross-repository status. Component detail stays in the sections below and in the
   small own mod with SCS-style scripts for selected IWD fights, because the script
   engine (Larger projects) will not be ready in time.
 
-**Ready to start**
-
 - Time Stop and Haste effect clocks, BG Rebalance component `360`: merged on 2026-10-27
-  ([chriz-bg-rebalance#18](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/18)),
-  not released yet. Christopher chose the Rebalance component over the standalone Time
-  Clocks prototype, which is retired (2026-10-27).
+  ([chriz-bg-rebalance#18](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/18)).
+  Christopher chose the Rebalance component over the standalone Time Clocks prototype,
+  which is retired (2026-10-27).
   - It installs only Lua code for EEex v1.3.1 on BG2:EE/EET 2.7.3.0. If it cannot
     start, it writes one line to the log and nothing appears in the game.
+  - Its installer accepts only the 64-bit 2.7.3.0 executable that Steam and GOG ship.
+    That is the build CEBG's game check accepts, so CEBG always meets this requirement.
   - Lab-verified in the Time Stop lab and on a full CEBG stack with Spell Revisions.
   - Not covered yet: saving during a stop; dispel, cure or death during a stop; equipping
     during a stop.
-  - The Rebalance release and the CEBG pin need Christopher's OK.
+  - Christopher, 2026-10-27: release it as BG Rebalance v0.8.6 and pin it in alpha.22 as
+    a default. The release and the pin are in progress.
+
+**Ready to start**
+
 - Remaining compatibility follow-ups from the October 8 owner audits
   (`docs/audits/2026-10-08-*.md` in BG Rebalance): the Modpack and SoD items and the
   forks audit. The BG Rebalance and Spell Revisions items are released (above).
