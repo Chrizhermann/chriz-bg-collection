@@ -97,6 +97,44 @@ fn bundle_resources_include_application_and_decoder_notices() {
     }
 }
 
+/// Chriz Easy IWD has its own icon in the "Glacier" look (Christopher, 2026-10-28), with the
+/// same sizes as the Chriz Easy BG icon; `icon.svg` beside it is the source.
+#[test]
+fn the_iwd_app_has_its_own_icon() {
+    let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let config = |name: &str| -> serde_json::Value {
+        serde_json::from_str(&fs::read_to_string(crate_root.join(name)).unwrap()).unwrap()
+    };
+    let sizes = |path: &str| -> Vec<u32> {
+        let ico = fs::read(crate_root.join(path)).unwrap();
+        assert_eq!(ico[..4], [0, 0, 1, 0], "{path} is an icon file");
+        let count = usize::from(u16::from_le_bytes([ico[4], ico[5]]));
+        let mut sizes = (0..count)
+            .map(|index| match ico[6 + 16 * index] {
+                0 => 256,
+                size => u32::from(size),
+            })
+            .collect::<Vec<_>>();
+        sizes.sort_unstable();
+        sizes
+    };
+
+    assert_eq!(
+        config("tauri.conf.json")["bundle"]["icon"],
+        serde_json::json!(["icons/icon.ico"])
+    );
+    assert_eq!(
+        config("tauri.iwd.conf.json")["bundle"]["icon"],
+        serde_json::json!(["icons/iwd/icon.ico"])
+    );
+    assert!(crate_root.join("icons/iwd/icon.svg").is_file());
+    assert_ne!(
+        fs::read(crate_root.join("icons/iwd/icon.ico")).unwrap(),
+        fs::read(crate_root.join("icons/icon.ico")).unwrap()
+    );
+    assert_eq!(sizes("icons/iwd/icon.ico"), sizes("icons/icon.ico"));
+}
+
 #[test]
 #[ignore = "requires CEBG_SIGNED_SETUP from a freshly built local release"]
 fn built_update_signature_matches_the_bundled_public_key() {

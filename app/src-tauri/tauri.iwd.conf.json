@@ -21,6 +21,7 @@
     ]
   },
   "bundle": {
+    "icon": ["icons/iwd/icon.ico"],
     "createUpdaterArtifacts": false,
     "resources": {
       "../../manifest/collection.toml": null,
