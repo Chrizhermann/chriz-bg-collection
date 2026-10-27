@@ -8,6 +8,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mountApp } from "../src/app";
 import { FixtureBackend } from "../src/backend";
 import styles from "../src/styles.css?raw";
+import bgTheme from "../src/themes/bg.css?raw";
+import iwdTheme from "../src/themes/iwd.css?raw";
 
 const routes = [
   "home",
@@ -130,11 +132,14 @@ describe("CEBG security and accessibility", () => {
   });
 
   it("keeps compact layouts and motion preferences in the shared design contract", () => {
-    expect(styles).toMatch(/--iron:/);
-    expect(styles).toMatch(/--vellum:/);
-    expect(styles).toMatch(/--brass:/);
-    expect(styles).toMatch(/--teal:/);
-    expect(styles).toMatch(/--ember:/);
+    // Each app's theme supplies the palette; tests/themes.test.ts checks every token and its contrast.
+    for (const theme of [bgTheme, iwdTheme]) {
+      expect(theme).toMatch(/--iron:/);
+      expect(theme).toMatch(/--vellum:/);
+      expect(theme).toMatch(/--brass:/);
+      expect(theme).toMatch(/--teal:/);
+      expect(theme).toMatch(/--ember:/);
+    }
     expect(styles).toMatch(/min-(height|block-size):\s*44px/);
     expect(styles).toMatch(/@media\s*\(max-width:\s*20rem\)/);
     expect(styles).toMatch(/prefers-reduced-motion:\s*reduce/);

@@ -1,22 +1,19 @@
+/* Layout and components shared by every app. Colors, fonts and ornaments come from the app's
+   theme in `themes/`, which `index.html` loads after this file. Each theme defines:
+     --iron            page ground, inputs           --charcoal        cards, panels, quiet buttons
+     --slate           dividers                      --slate-light     control borders
+     --vellum          text                          --vellum-dim      secondary text
+     --brass           accent: primary button, marks --brass-dark      accent edges
+     --teal            success, ready                --teal-dark       success edges
+     --ember           danger, errors                --danger-surface  danger button fill
+     --focus           focus ring, highlighted text  --on-accent       text on --brass and --focus
+     --header-background, --page-background, --log-background, --log-text,
+     --font-display, --font-body, --font-mono */
 :root {
-  color-scheme: dark;
-  --iron: #151819;
-  --charcoal: #23282a;
-  --slate: #343b3e;
-  --slate-light: #4c575b;
-  --vellum: #f1e7d2;
-  --vellum-dim: #c8bfad;
-  --brass: #c59a51;
-  --brass-dark: #806436;
-  --teal: #75bab4;
-  --teal-dark: #325f5c;
-  --ember: #e47b67;
-  --ok: #98c790;
-  --focus: #f1c873;
   --radius: 0.45rem;
   color: var(--vellum);
   background: var(--iron);
-  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-body);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -66,10 +63,7 @@ body,
 body {
   min-height: 100vh;
   overflow: hidden;
-  background:
-    linear-gradient(rgba(197, 154, 81, 0.035) 1px, transparent 1px),
-    var(--iron);
-  background-size: 100% 4rem;
+  background: var(--page-background);
 }
 
 button,
@@ -118,7 +112,7 @@ h1[tabindex="-1"]:focus-visible {
 
 .startup-brand h1 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-size: 1.4rem;
 }
 
@@ -163,7 +157,7 @@ h1[tabindex="-1"]:focus-visible {
   justify-content: space-between;
   padding: 0.7rem clamp(1rem, 3vw, 2.25rem);
   border-bottom: 1px solid var(--slate);
-  background: rgba(21, 24, 25, 0.96);
+  background: var(--header-background);
 }
 
 .brand {
@@ -179,7 +173,7 @@ h1[tabindex="-1"]:focus-visible {
   place-items: center;
   border: 1px solid var(--brass);
   color: var(--brass);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-size: 1.25rem;
   transform: rotate(45deg);
 }
@@ -194,7 +188,7 @@ h1[tabindex="-1"]:focus-visible {
 }
 
 .brand-copy strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
 }
 
 .brand-copy small,
@@ -214,7 +208,7 @@ h1[tabindex="-1"]:focus-visible {
   padding: 0.65rem 1rem;
   border: 1px solid var(--brass-dark);
   border-radius: var(--radius);
-  color: var(--iron);
+  color: var(--on-accent);
   background: var(--brass);
   font-weight: 750;
   cursor: pointer;
@@ -247,7 +241,7 @@ h1[tabindex="-1"]:focus-visible {
 .button.danger {
   border-color: var(--ember);
   color: var(--vellum);
-  background: #61372f;
+  background: var(--danger-surface);
 }
 
 .dialog-overlay {
@@ -272,7 +266,7 @@ h1[tabindex="-1"]:focus-visible {
 
 .removal-dialog h2 {
   margin: 0 0 1rem;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
 }
 
 .removal-dialog p {
@@ -645,7 +639,7 @@ h1,
 h2,
 h3 {
   color: var(--vellum);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   overflow-wrap: anywhere;
 }
 
@@ -989,7 +983,7 @@ fieldset {
 
 .manual-download-file {
   color: var(--vellum) !important;
-  font-family: "Cascadia Mono", Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 .manual-download-status {
@@ -1012,13 +1006,13 @@ fieldset {
 
 .manual-download-checking {
   border-left: 3px solid var(--teal);
-  background: rgba(117, 186, 180, 0.08);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
 }
 
 .manual-download-error {
   border-left: 3px solid var(--ember);
   color: var(--ember);
-  background: rgba(228, 123, 103, 0.08);
+  background: color-mix(in srgb, var(--ember) 8%, transparent);
 }
 
 .manual-download-actions {
@@ -1042,12 +1036,12 @@ fieldset {
   padding: 0.8rem 1rem;
   border: 1px solid var(--brass-dark);
   border-radius: var(--radius);
-  background: rgba(197, 154, 81, 0.08);
+  background: color-mix(in srgb, var(--brass) 8%, transparent);
 }
 
 .install-ready.is-ready {
   border-color: var(--teal-dark);
-  background: rgba(117, 186, 180, 0.08);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
 }
 
 .install-ready p {
@@ -1097,7 +1091,7 @@ input[type="search"] {
 
 .path {
   color: var(--vellum-dim);
-  font-family: "Cascadia Mono", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.55;
 }
@@ -1205,7 +1199,7 @@ input[type="search"] {
   border: 1px solid var(--brass);
   border-left: 4px solid var(--brass);
   border-radius: 6px;
-  background: rgba(197, 154, 81, 0.06);
+  background: color-mix(in srgb, var(--brass) 6%, transparent);
 }
 
 .feature-group-header {
@@ -1463,13 +1457,13 @@ input[type="search"] {
   border-radius: var(--radius);
   color: var(--vellum);
   cursor: pointer;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-size: 1.05rem;
   font-weight: 700;
 }
 
 .category-heading:hover {
-  background: rgba(197, 154, 81, 0.07);
+  background: color-mix(in srgb, var(--brass) 7%, transparent);
 }
 
 .choice-group[open] > .category-heading {
@@ -1481,7 +1475,7 @@ input[type="search"] {
   float: right;
   margin: 0.15rem 0 0 0.5rem;
   color: var(--vellum-dim);
-  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   font-size: 0.72rem;
   font-weight: 400;
 }
@@ -1525,7 +1519,7 @@ input[type="search"] {
   padding: 0.7rem;
   border-left: 3px solid var(--ember);
   color: var(--vellum) !important;
-  background: rgba(228, 123, 103, 0.08);
+  background: color-mix(in srgb, var(--ember) 8%, transparent);
 }
 
 .badge {
@@ -1535,7 +1529,7 @@ input[type="search"] {
   border: 1px solid var(--slate-light);
   border-radius: 999px;
   color: var(--vellum-dim);
-  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -1661,7 +1655,7 @@ input[type="search"] {
 .technical-log {
   border: 1px solid var(--slate);
   border-radius: var(--radius);
-  background: #101314;
+  background: var(--log-background);
 }
 
 .technical-log summary {
@@ -1685,8 +1679,8 @@ input[type="search"] {
   padding: 1rem;
   overflow: auto;
   border-top: 1px solid var(--slate);
-  color: #d9dfd4;
-  font-family: "Cascadia Mono", Consolas, monospace;
+  color: var(--log-text);
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -1787,12 +1781,12 @@ input[type="search"] {
 .shortcut-feedback {
   padding: 0.7rem 0.85rem;
   border-left: 3px solid var(--teal-dark);
-  background: rgba(117, 186, 180, 0.08);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
 }
 
 .shortcut-feedback.warning {
   border-color: var(--brass);
-  background: rgba(194, 154, 79, 0.08);
+  background: color-mix(in srgb, var(--brass) 8%, transparent);
 }
 
 .error-details {
@@ -2115,7 +2109,7 @@ input[type="search"] {
   padding: 0.14rem 0.38rem;
   border: 1px solid var(--brass);
   border-radius: 999px;
-  color: var(--iron);
+  color: var(--on-accent);
   background: var(--focus);
   font-size: 0.68rem;
   font-weight: 750;

@@ -157,9 +157,14 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
   },
 };
 
-/** The product words that `index.html` carries for the BG app, and their IWD replacements. */
+/** The page's theme stylesheet for each app; `index.html` links the BG one. */
+export function themeStylesheet(id: FlavorId): string {
+  return `/src/themes/${id}.css`;
+}
+
+/** The product words and theme that `index.html` carries for the BG app, and their replacements. */
 export function indexHtmlReplacements(target: FlavorId): readonly (readonly [string, string])[] {
   const from = FLAVORS.bg;
   const to = FLAVORS[target];
-  return target === "bg" ? [] : [[from.productName, to.productName]];
+  return target === "bg" ? [] : [[from.productName, to.productName], [themeStylesheet("bg"), themeStylesheet(target)]];
 }

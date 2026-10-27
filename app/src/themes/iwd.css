@@ -1,0 +1,98 @@
+/* Chriz Easy IWD: "Glacier", the Spine of the World. Frost white, glacier blue, pale peaks.
+   Token roles are listed at the top of styles.css; the font and its licence are in fonts/. */
+
+@font-face {
+  font-family: "Marcellus";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/marcellus/marcellus-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Marcellus";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/marcellus/marcellus-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  color-scheme: light;
+  --iron: #e4edf3;
+  --charcoal: #f8fbfd;
+  --slate: #cbd9e3;
+  --slate-light: #6a8293;
+  --vellum: #14232e;
+  --vellum-dim: #41566a;
+  --brass: #1d5e86;
+  --brass-dark: #164a6a;
+  --teal: #1d6857;
+  --teal-dark: #5aa08c;
+  --ember: #b3261e;
+  --focus: #0a64a0;
+  --on-accent: #ffffff;
+  --danger-surface: #f6d9d6;
+  --header-background: linear-gradient(#fbfdfe, #e9f1f6);
+  /* Two pale ridges along the bottom edge, under a cold sky. */
+  --page-background:
+    url("./images/glacier-ridges.svg") bottom / 100% 190px no-repeat,
+    linear-gradient(180deg, #eef4f8, #e1eaf0);
+  --log-background: #eef3f7;
+  --log-text: #14232e;
+  --font-display: "Marcellus", Georgia, "Times New Roman", serif;
+  --font-body: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, monospace;
+}
+
+.app-header {
+  border-bottom-color: #b9cbd7;
+  box-shadow: 0 1px 0 #ffffff;
+}
+
+/* An ice crystal. */
+.brand-mark {
+  width: 2.3rem;
+  height: 2.6rem;
+  border: 0;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  color: var(--on-accent);
+  background: linear-gradient(160deg, #3b86b5, #164a6a);
+  font-weight: 700;
+  transform: none;
+}
+
+h1 {
+  letter-spacing: 0;
+}
+
+.screen-intro h1::after {
+  display: block;
+  width: 8rem;
+  height: 0.8rem;
+  margin-top: 0.45rem;
+  background: url("./images/frost-flourish.svg") left center / contain no-repeat;
+  content: "";
+}
+
+.card,
+.choice-group,
+.install-ready,
+.operation-feedback,
+.update-selection {
+  background: color-mix(in srgb, var(--charcoal) 90%, transparent);
+  box-shadow: 0 1px 2px rgba(20, 50, 80, 0.06), 0 6px 18px rgba(20, 50, 80, 0.07);
+}
+
+.card,
+.choice-group {
+  border-color: #c3d4df;
+}
+
+/* The sticky toolbar shows the page behind it, so it carries the same ground. */
+.setup-toolbar {
+  background: var(--page-background);
+  background-attachment: fixed;
+}
