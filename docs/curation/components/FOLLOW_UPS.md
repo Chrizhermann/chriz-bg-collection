@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-27
+## Work queue at a glance — 2026-10-28
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -29,21 +29,31 @@ Cross-repository status. Component detail stays in the sections below and in the
      and native-order evidence in `manifest/evidence/release-intake-20261026.toml`), merged
      into the next-release branch on 2026-10-26 together with #33, after #32 (Christopher's
      approval of 2026-10-26).
-     Christopher added three items on 2026-10-27, all in progress:
-     - Kitpack chriz.4 (below).
-     - BG Rebalance v0.8.6 with Time Stop/Haste `360` as a default (below).
-     - The engine's rename retry from PR #35 (below).
-     BuffBot v1.12.0 joins only if its EEex v1.2.0 fix is tested in time; otherwise a later
-     release takes it. Two releases close together are fine.
+     Christopher added three items on 2026-10-27; all three are on the next-release branch
+     since 2026-10-28:
+     - Kitpack chriz.4 and BG Rebalance v0.8.6 with Time Stop/Haste `360` as a default,
+       pinned in both recipes by
+       [PR #41](https://github.com/Chrizhermann/chriz-bg-collection/pull/41) (evidence in
+       `manifest/evidence/release-intake-20261027.toml`; below).
+     - The engine's rename retry from PR #35, ported by
+       [PR #40](https://github.com/Chrizhermann/chriz-bg-collection/pull/40) (below).
+     A newer BuffBot joins only if it is tested in time; otherwise a later release takes
+     it. Two releases close together are fine. v1.12.1 (below) waits for Christopher's
+     decision.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
   4. Acceptance, build, signing and publishing, and the website.
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
-  is not on the next-release branch yet. Christopher approved it for alpha.22 on
-  2026-10-27. The port is in progress; it also covers the five renames that exist only on
-  the next-release branch.
+  is on the next-release branch since
+  [PR #40](https://github.com/Chrizhermann/chriz-bg-collection/pull/40) (merged on
+  2026-10-28; Christopher approved it for alpha.22 on 2026-10-27). The port also covers
+  the renames that exist only on the next-release branch.
+  - PR #40 also fixes a regression from #35: a damaged manual archive in the download
+    cache that another program had marked read-only could no longer be replaced; the
+    repair failed after about 5 s of retries. `main` keeps that regression until the
+    next-release branch is merged back into it.
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
   everywhere): pinned in both recipes since
   [PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18) (merged on
@@ -96,11 +106,13 @@ Cross-repository status. Component detail stays in the sections below and in the
     ran without Modpack `430`, so the Recommended lab run checks it together with `430`
     (see Live/runtime acceptance).
   - BuffBot v1.12.0 (released on 2026-10-27) adds Icewind Dale: Enhanced Edition
-    support, uses its own interface art and lets a preset order its casts. Its interface
-    rework had only run on EEex v1.3.1. On an EEex v1.2.0 installation its panel buttons
-    did not work, so BuffBot's session is testing and fixing it on v1.2.0. Christopher,
-    2026-10-27: alpha.22 takes it only if that is done in time; otherwise a later release
-    does.
+    support, uses its own interface art and lets a preset order its casts. On an EEex
+    v1.2.0 installation its panel buttons did not work.
+  - BuffBot [v1.12.1](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.12.1)
+    (released on 2026-10-27) fixes that: three layout defects of v1.12.0, none of which
+    depends on the EEex version. Its panel was checked in a BG2:EE 2.7.3.0 lab with EEex
+    v1.3.1, the version alpha.22 installs. Christopher, 2026-10-27: alpha.22 takes it only
+    if it is tested in time; otherwise a later release does. Waiting for his decision.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -193,8 +205,9 @@ Cross-repository status. Component detail stays in the sections below and in the
       creature, a level-up and a reload.
     - Not covered there: EET, other kits, a new game process and characters created
       before the install.
-    - Christopher approved the chriz.4 pin for alpha.22 on 2026-10-27; the pin is in
-      progress. chriz.3 stays pinned until it is merged.
+    - Christopher approved the chriz.4 pin for alpha.22 on 2026-10-27. Since PR #41
+      (merged on 2026-10-28) chriz.4 is pinned for all three Kitpack installers in place
+      of chriz.3; components, order and decisions are unchanged.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -260,6 +273,9 @@ Cross-repository status. Component detail stays in the sections below and in the
     v0.8.5, with `340` as a default at the end of its run, and the fork's v4.21-chriz.7
     with `srcb-rr-compat` from the same release. All other components, decisions and
     their order are unchanged.
+  - Since PR #41 (merged on 2026-10-28) Rebalance v0.8.6 replaces v0.8.5. It adds `360`
+    (Time Stop/Haste, below) as a default at the end of its run. The other Rebalance
+    components, their decisions and their order are unchanged.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
   - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
@@ -287,11 +303,18 @@ Cross-repository status. Component detail stays in the sections below and in the
     start, it writes one line to the log and nothing appears in the game.
   - Its installer accepts only the 64-bit 2.7.3.0 executable that Steam and GOG ship.
     That is the build CEBG's game check accepts, so CEBG always meets this requirement.
-  - Lab-verified in the Time Stop lab and on a full CEBG stack with Spell Revisions.
+  - Lab-verified in the Time Stop lab (BG2:EE 2.7.3.0 with only EEex v1.3.1) and on a
+    full CEBG stack with Spell Revisions.
   - Not covered yet: saving during a stop; dispel, cure or death during a stop; equipping
     during a stop.
   - Christopher, 2026-10-27: release it as BG Rebalance v0.8.6 and pin it in alpha.22 as
-    a default. The release and the pin are in progress.
+    a default. Released as
+    [v0.8.6](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.6) on
+    2026-10-28 and pinned since PR #41, under "Spells" and not marked experimental
+    (Christopher, 2026-10-28: it was tested extensively).
+  - Christopher, 2026-10-28: he would like to offer it on its own too, for EEex players
+    outside CEBG. Its installer needs no other BG Rebalance component. A separate small
+    package, like the `live-patch` tail packages, is proposed and waits for his decision.
 
 **Ready to start**
 
