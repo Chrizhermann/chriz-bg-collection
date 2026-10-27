@@ -81,10 +81,14 @@ priests. Counts are aggregate; encounter details stay private.
   walks to the nearest enemy when idle, so the caster AI acts only at a distance.
   Measured at Core Rules: a caster placed next to the party attacked in 154 of 180
   samples and cast nothing.
-- **Priest precasts are an Insane feature.** SCS priests precast their
-  self-protection only on Insane and buff during combat below that; SCS mages
-  precast from Normal.
+- **Priest precasts start on Hard.** With SCS's default preparation setting, priests
+  precast their strongest self-protection only on Hard and Insane (on Insane only,
+  for priests created out of sight) and buff during combat below that; SCS mages
+  precast from Normal. In the lab, priests precast Armor of Faith on Hard and Insane,
+  not on Core Rules.
 
 Christopher's own add-on, Chriz IWD Encounters, repairs the first three and adds
-modest priest preparation from Core Rules up. Its recipe entry waits for his
-go-ahead.
+modest priest preparation from Core Rules up. It is released as
+[v0.1.0](https://github.com/Chrizhermann/chriz-iwd-encounters/releases/tag/v0.1.0);
+its recipe entry is [draft PR #42](https://github.com/Chrizhermann/chriz-bg-collection/pull/42)
+and merges after alpha.22.

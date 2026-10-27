@@ -55,11 +55,14 @@ user's decisions. Started 2026-09-10.
   confirmed SCS on IWD:EE; the full lab install of the finished recipe covers it.
 - [x] Distinguish absent coverage, delayed execution, weak choices and deliberately
   unprepared casters. Do not infer all enemies are affected from source support alone.
-  Done 2026-10-28 in a lab install: three SCS 35.21 gaps and the Insane-only priest
-  precasts, see [install-time findings](SCS-RESEARCH.md#install-time-findings-2026-10-28).
+  Done 2026-10-28 in a lab install: three SCS 35.21 gaps, and SCS priests precast only
+  from Hard; see [install-time findings](SCS-RESEARCH.md#install-time-findings-2026-10-28).
 - [ ] Add Chriz IWD Encounters (Christopher's own add-on, components 100 and 200) to the
-  recipe directly after SCS, both on by default. The recipe entry is prepared; it waits
-  for his OK to publish the add-on's repository and its v0.1.0 release.
+  recipe directly after SCS, both on by default. Released as
+  [v0.1.0](https://github.com/Chrizhermann/chriz-iwd-encounters/releases/tag/v0.1.0) on
+  2026-10-28 with his OK; the recipe entry is
+  [draft PR #42](https://github.com/Chrizhermann/chriz-bg-collection/pull/42) into
+  `claude/iwdee-app` and merges after alpha.22.
 - [ ] Optional, only with Christopher's OK: report the three SCS 35.21 gaps upstream.
 - [ ] Propose conservative caster-role recipes or targeted exceptions where justified,
   preserving identity/level, spell availability, resources and interruption behavior.
