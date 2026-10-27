@@ -91,6 +91,10 @@ user's decisions. Started 2026-09-10.
   instead of BG1/BG2 and say that manual mods turn off mod update checks for that
   installation. An engine test covers a pause in a one-game installation.
 - [ ] The IWD app still uses the CEBG icon (Christopher's call).
+- [x] Each app has its own look (Christopher, 2026-10-27): "Glacier" for Chriz Easy IWD
+  (frost white, glacier blue, Marcellus headings), "Parchment" for Chriz Easy BG; only colors,
+  fonts and ornaments change (`claude/app-themes`, 8c2af38, on top of `claude/iwdee-app`;
+  merges after alpha.22). The IWD installer built from it on 2026-10-28 has the theme.
 - [x] Release records: `recipes/iwd-current` passes the public-alpha check with 0 findings
   (f9b1725; with BuffBot again since 1d56286). The check now counts only parts a release
   promises, not the parts of a mod it leaves off (f413da4). Runtime acceptance stays pending
@@ -114,6 +118,7 @@ user's decisions. Started 2026-09-10.
 - [ ] Complete launch, creation/levelling, spell/kit/song, NPC and save/load smoke checks.
   Launch done 2026-10-26: that lab booted quietly to the main menu with EEex (LuaJIT) and
   Bubb's Spell Menu active and no error box; the rest is open.
-- [ ] Repeat the install through the IWD app itself, so its screens are tested too
-  (Christopher wants a short test run of his own).
+- [x] Repeat the install through the IWD app itself, so its screens are tested too.
+  Christopher's own run on 2026-10-27 (a build before BuffBot, 94 components) installed and
+  played fine.
 - [ ] Gather campaign gameplay/balance evidence separately from installation success.
