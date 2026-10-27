@@ -94,7 +94,8 @@ user's decisions. Started 2026-09-10.
   installation. An engine test covers a pause in a one-game installation.
 - [x] An app icon of its own in the "Glacier" look (Christopher, 2026-10-28). He picked the
   "Glacier book": the CEBG icon's book and badge in Glacier colors, with a snowflake in the
-  badge (`claude/iwdee-app`, 4bfd378; source `app/src-tauri/icons/iwd/icon.svg`).
+  badge (`claude/iwdee-app`, 4bfd378; source `app/src-tauri/icons/iwd/icon.svg`). The setup
+  file shows it too (aa28e96); the BG setup still has NSIS's default icon.
 - [x] Each app has its own look (Christopher, 2026-10-27): "Glacier" for Chriz Easy IWD
   (frost white, glacier blue, Marcellus headings), "Parchment" for Chriz Easy BG; only colors,
   fonts and ornaments change (`claude/app-themes`, 8c2af38). With Christopher's OK it was
