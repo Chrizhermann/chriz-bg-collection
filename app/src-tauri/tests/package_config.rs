@@ -98,7 +98,8 @@ fn bundle_resources_include_application_and_decoder_notices() {
 }
 
 /// Chriz Easy IWD has its own icon in the "Glacier" look (Christopher, 2026-10-28), with the
-/// same sizes as the Chriz Easy BG icon; `icon.svg` beside it is the source.
+/// same sizes as the Chriz Easy BG icon, and its setup file shows it too; `icon.svg` beside it
+/// is the source.
 #[test]
 fn the_iwd_app_has_its_own_icon() {
     let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -123,9 +124,14 @@ fn the_iwd_app_has_its_own_icon() {
         config("tauri.conf.json")["bundle"]["icon"],
         serde_json::json!(["icons/icon.ico"])
     );
+    let iwd = config("tauri.iwd.conf.json");
     assert_eq!(
-        config("tauri.iwd.conf.json")["bundle"]["icon"],
+        iwd["bundle"]["icon"],
         serde_json::json!(["icons/iwd/icon.ico"])
+    );
+    assert_eq!(
+        iwd["bundle"]["windows"]["nsis"]["installerIcon"],
+        "icons/iwd/icon.ico"
     );
     assert!(crate_root.join("icons/iwd/icon.svg").is_file());
     assert_ne!(
