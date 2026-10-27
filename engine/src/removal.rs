@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::digest::sha256_bytes;
 use crate::error::EngineError;
+use crate::fs_retry;
 use crate::held_folder::{EntryError, EntryErrorKind, HeldFolder};
 use crate::lock::TargetLock;
 use crate::preflight::{
@@ -381,9 +382,8 @@ fn persist_journal(app_data: &Path, plan: &RemovalPlan) -> Result<(), RemovalErr
     temp.as_file()
         .sync_all()
         .map_err(|e| io_at(temp.path(), e))?;
-    temp.persist_noclobber(&path)
-        .map_err(|e| io_at(&path, e.error))?;
-    Ok(())
+    // Never replaces a journal; retried while a scanner briefly holds the fresh temporary.
+    fs_retry::persist_noclobber(temp, &path).map_err(|e| io_at(&path, e))
 }
 
 fn directory_identity(path: &Path) -> Result<u64, RemovalError> {

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::events::{EngineEvent, EventSink, Stream};
+use crate::fs_retry;
 
 use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
 use super::entry_lock::lock_entry;
@@ -754,12 +755,12 @@ fn publish(
     })?;
     drop(file);
 
-    fs::rename(&paths.partial, &paths.archive).map_err(|source| AcquireError::Io {
+    fs_retry::rename(&paths.partial, &paths.archive).map_err(|source| AcquireError::Io {
         action: "publish verified archive",
         path: paths.archive.clone(),
         source,
     })?;
-    fs::rename(&metadata_temp, &paths.metadata).map_err(|source| AcquireError::Io {
+    fs_retry::rename(&metadata_temp, &paths.metadata).map_err(|source| AcquireError::Io {
         action: "publish cache metadata",
         path: paths.metadata.clone(),
         source,

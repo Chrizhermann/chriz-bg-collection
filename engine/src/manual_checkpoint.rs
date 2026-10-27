@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::digest::sha256_bytes;
+use crate::fs_retry;
 use crate::manifest::{Artifact, GameRoot, ModFile};
 use crate::receipt::LogComponentReceipt;
 use crate::resolve::InstallPlan;
@@ -262,10 +263,9 @@ fn write_once<T: Serialize>(path: &Path, value: &T) -> Result<(), String> {
         .write_all(&bytes)
         .and_then(|_| temporary.as_file().sync_all())
         .map_err(|e| e.to_string())?;
-    temporary
-        .persist_noclobber(path)
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    // Never replaces evidence; retried while a scanner briefly holds the fresh temporary.
+    fs_retry::persist_noclobber(temporary, path)
+        .map_err(|e| format!("failed to persist temporary file: {e}"))
 }
 
 pub fn read_logs(root: &Path) -> Result<(String, String), String> {

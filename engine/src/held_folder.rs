@@ -16,6 +16,8 @@ use std::fs::{self, Metadata};
 use std::io::{self, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
+use crate::fs_retry;
+
 /// A folder, or an entry in one, that could not be used.
 #[derive(Debug)]
 pub(crate) struct EntryError {
@@ -453,15 +455,20 @@ impl HeldFolder {
         }
     }
 
-    /// Only a complete file is ever published under `name`.
+    /// Only a complete file is ever published under `name`. The rename is retried while another
+    /// program briefly holds an entry it touches; every attempt keeps `replace`, so a publish
+    /// that must not replace anything never does.
     fn publish_file(&self, name: &str, content: &[u8], replace: bool) -> io::Result<()> {
         check_name(name)?;
         let temporary = self.create_temporary_file()?;
+        let wide_name = handles::wide(name);
         let published = (&temporary)
             .write_all(content)
             .and_then(|()| temporary.sync_all())
             .and_then(|()| {
-                handles::rename_into(&temporary, self.folder(), &handles::wide(name), replace)
+                fs_retry::retry_transient(|| {
+                    handles::rename_into(&temporary, self.folder(), &wide_name, replace)
+                })
             });
         match published {
             Ok(()) => Ok(()),
@@ -1212,13 +1219,10 @@ impl HeldFolder {
         temporary.as_file().sync_all()?;
         let target = self.path.join(name);
         if replace {
-            temporary.persist(target).map_err(|error| error.error)?;
+            fs_retry::persist(temporary, &target)
         } else {
-            temporary
-                .persist_noclobber(target)
-                .map_err(|error| error.error)?;
+            fs_retry::persist_noclobber(temporary, &target)
         }
-        Ok(())
     }
 }
 
@@ -1531,6 +1535,50 @@ pub(crate) mod tests {
 
         assert_eq!(entries(root.path()), ["macros.tph"]);
         assert_eq!(entries(&root.path().join("macros.tph")), ["inside"]);
+    }
+
+    /// A scanner that holds the file being replaced only delays the replacement.
+    #[cfg(windows)]
+    #[test]
+    fn replacing_outlasts_a_brief_hold_on_the_replaced_file() {
+        use crate::fs_retry::test_hook::hold_until_first_wait;
+
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("macros.tph");
+        fs::write(&path, OTHER).unwrap();
+        let folder = HeldFolder::open(root.path(), []).unwrap();
+
+        let (result, waits) =
+            hold_until_first_wait(&path, || folder.replace_file("macros.tph", CONTENT));
+        drop(folder);
+
+        result.unwrap();
+        assert!(waits >= 1, "the held file must fail the first attempt");
+        assert_eq!(fs::read(&path).unwrap(), CONTENT);
+        assert_eq!(entries(root.path()), ["macros.tph"]);
+    }
+
+    /// The retry never turns creating into replacing: an existing file fails at once, also while
+    /// it is held, and stays as it was.
+    #[cfg(windows)]
+    #[test]
+    fn creating_never_replaces_a_held_file_and_does_not_retry_the_collision() {
+        use crate::fs_retry::test_hook::hold_until_first_wait;
+
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("config.txt");
+        fs::write(&path, CONTENT).unwrap();
+        let folder = HeldFolder::open(root.path(), []).unwrap();
+
+        let (result, waits) =
+            hold_until_first_wait(&path, || folder.create_file("config.txt", OTHER));
+        drop(folder);
+
+        let error = result.unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::AlreadyExists, "{error}");
+        assert_eq!(waits, 0);
+        assert_eq!(fs::read(&path).unwrap(), CONTENT);
+        assert_eq!(entries(root.path()), ["config.txt"]);
     }
 
     /// Overwriting writes into the existing file, as a truncating write by path did: it keeps the

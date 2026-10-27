@@ -267,6 +267,42 @@ mod tests {
     }
 
     #[test]
+    fn eet_compat_publishes_a_regular_file_and_leaves_no_temporary_behind() {
+        let (original, corrected) = fixture();
+        let temp = tempfile::tempdir().unwrap();
+        let lib = temp.path().join("EET/lib");
+        std::fs::create_dir_all(&lib).unwrap();
+        std::fs::write(lib.join("macros.tph"), &original).unwrap();
+
+        patch_file(
+            temp.path(),
+            &sha256_bytes(original.as_bytes()),
+            &sha256_bytes(corrected.as_bytes()),
+        )
+        .unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(lib.join("macros.tph")).unwrap(),
+            corrected
+        );
+        let names = std::fs::read_dir(&lib)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<Vec<_>>();
+        assert_eq!(names, ["macros.tph"]);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            use windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_TEMPORARY;
+
+            let attributes = std::fs::metadata(lib.join("macros.tph"))
+                .unwrap()
+                .file_attributes();
+            assert_eq!(attributes & FILE_ATTRIBUTE_TEMPORARY, 0);
+        }
+    }
+
+    #[test]
     fn eet_compat_other_mods_components_and_artifacts_do_not_touch_files() {
         let temp = tempfile::tempdir().unwrap();
         for (mod_id, artifact_id, hash, target, tp2, components) in [

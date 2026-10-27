@@ -12,6 +12,8 @@ use zip::{CompressionMethod, ZipArchive};
 #[cfg(windows)]
 use widestring::WideCString;
 
+use crate::fs_retry;
+
 use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
 use super::entry_lock::lock_entry;
 use super::{AcquireError, StopSignal};
@@ -373,7 +375,7 @@ pub fn extract_archive_with_stop(
         path: parent.to_path_buf(),
         source,
     })?;
-    match fs::rename(&temporary, &final_root) {
+    match fs_retry::rename(&temporary, &final_root) {
         Ok(()) => {}
         // Another publisher that does not take the identity lock, such as an older CEBG
         // version sharing this cache, published first; its entry is validated, never repaired.

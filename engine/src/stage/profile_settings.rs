@@ -6,6 +6,7 @@
 //! Instead, the few settings an installed component relies on are reproduced here.
 
 use super::*;
+use crate::fs_retry::CheckedRenameError;
 use crate::weidu::log::parse_active_entries;
 
 /// How an existing value of a seeded key is treated.
@@ -315,18 +316,28 @@ fn ensure_settings(game_root: &Path, save_root: &Path) -> Result<bool> {
             path: path.clone(),
             source,
         })?;
-    // Don't clobber preferences written after inspection (e.g. a concurrent editor).
-    if read_optional_regular(&path)? != before {
-        return Err(settings_error(
-            &path,
-            PROFILE,
-            "file changed while preparing settings; retry when the game is closed",
-        ));
+    // Don't clobber preferences written after inspection (e.g. a concurrent editor). The check
+    // runs again before every attempt while a scanner briefly holds the profile.
+    let unchanged = || {
+        if read_optional_regular(&path)? != before {
+            return Err(settings_error(
+                &path,
+                PROFILE,
+                "file changed while preparing settings; retry when the game is closed",
+            ));
+        }
+        Ok(())
+    };
+    match fs_retry::persist_checked(temporary, &path, unchanged) {
+        Ok(()) => {}
+        Err(CheckedRenameError::Check(error)) => return Err(error),
+        Err(CheckedRenameError::Rename(source)) => {
+            return Err(EngineError::Io {
+                path: path.clone(),
+                source,
+            })
+        }
     }
-    temporary.persist(&path).map_err(|error| EngineError::Io {
-        path: path.clone(),
-        source: error.error,
-    })?;
     if read_optional_regular(&path)?.as_deref() != Some(after.as_slice()) {
         return Err(settings_error(
             &path,
@@ -427,4 +438,90 @@ pub fn repair_installed_profile_settings(
     let changed = ensure_settings(&game_root, save_root)?;
     verify_settings(&game_root, save_root)?;
     Ok(changed)
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use crate::fs_retry::test_hook::{
+        hold_until_first_wait, hold_without_delete_sharing, with_wait_hook,
+    };
+
+    const SEEDED: &str = "SetPrivateProfileString('Script','IntervalSaveEnabled','1')\n\
+                          SetPrivateProfileString('Script','IntervalSaveCombat','0')\n";
+
+    /// A game with CDTweaks interval saves installed and a save folder whose profile has `profile`.
+    fn interval_fixture(profile: &str) -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let temp = tempfile::tempdir().unwrap();
+        let game = temp.path().join("game");
+        let save = temp.path().join("save");
+        fs::create_dir(&game).unwrap();
+        fs::create_dir(&save).unwrap();
+        fs::write(
+            game.join("WeiDU.log"),
+            "~CDTWEAKS/SETUP-CDTWEAKS.TP2~ #0 #3354 // Interval saves\n",
+        )
+        .unwrap();
+        fs::write(save.join("Baldur.lua"), profile).unwrap();
+        (temp, game, save)
+    }
+
+    fn names(folder: &Path) -> Vec<String> {
+        let mut names = fs::read_dir(folder)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn seeding_outlasts_a_brief_hold_on_the_profile() {
+        let (_temp, game, save) = interval_fixture("");
+        let profile = save.join("Baldur.lua");
+
+        let (result, waits) = hold_until_first_wait(&profile, || ensure_settings(&game, &save));
+
+        assert!(result.unwrap());
+        assert!(waits >= 1, "the held profile must fail the first attempt");
+        assert_eq!(fs::read_to_string(&profile).unwrap(), SEEDED);
+        assert_eq!(names(&save), ["Baldur.lua"]);
+    }
+
+    #[test]
+    fn a_profile_changed_during_the_retries_is_kept_and_the_temporary_removed() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        let (_temp, game, save) = interval_fixture("");
+        let profile = save.join("Baldur.lua");
+        let edited = "SetPrivateProfileString('Script','IntervalSaveEnabled','0')\n";
+        // The game writes its own settings while the first attempt is blocked, then lets go.
+        let mut holder = Some(hold_without_delete_sharing(&profile));
+        let waits = Rc::new(Cell::new(0));
+        let counted = Rc::clone(&waits);
+        let written = profile.clone();
+
+        let result = with_wait_hook(
+            move |_| {
+                if counted.replace(counted.get() + 1) == 0 {
+                    fs::write(&written, edited).unwrap();
+                    drop(holder.take());
+                }
+            },
+            || ensure_settings(&game, &save),
+        );
+
+        let error = result.unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("file changed while preparing settings"),
+            "{error}"
+        );
+        // The change is seen right before the second attempt, which then never runs.
+        assert_eq!(waits.get(), 1);
+        assert_eq!(fs::read_to_string(&profile).unwrap(), edited);
+        assert_eq!(names(&save), ["Baldur.lua"]);
+    }
 }
