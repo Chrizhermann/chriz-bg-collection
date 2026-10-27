@@ -45,7 +45,7 @@ BG1NPC_NATIVE_ORDER = [
     240, 241, 150, 155, 160, 200,
 ]
 
-# Exact pinned Artisan v4.81a-dev.85928f9-chriz.3 (same order as chriz.1) and Randomiser v8.1.1
+# Exact pinned Artisan v4.81a-dev.85928f9-chriz.4 (same order as chriz.1) and Randomiser v8.1.1
 # TP2 order, restricted to offered choices. Re-audit a newly offered ID instead of guessing its
 # position.
 NATIVE_RUN_ORDERS = {

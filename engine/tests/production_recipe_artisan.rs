@@ -9,11 +9,13 @@ use bg_engine::Manifest;
 
 // chriz.3 (October 26 intake) restores the sorcerer class weapons (chriz.2) and keeps the
 // kit weapons of Eldritch Knight and Arcane Trickster sorcerers at a level-up; against
-// chriz.1 the three TP2s change only their VERSION, so components, order and this route
-// are unchanged.
-const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.3";
-const ARTIFACT_SHA256: &str = "2c54e942f2cb7128afa19d558582061e81f1b2db3b870468a7417bf43ea25410";
-const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.3";
+// chriz.1 the three TP2s change only their VERSION. chriz.4 (October 27 intake) grants
+// monks quarterstaves after Monk Revisions and restricts shamans and late-added kits from
+// the start; its TP2s add the shared weapon grant library and a table pass at the end of
+// components, but no component, so components, order and this route are unchanged.
+const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.4";
+const ARTIFACT_SHA256: &str = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336";
+const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.4";
 
 const MAIN_AUTHORED: &[u32] = &[
     1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005,
@@ -54,7 +56,7 @@ fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
             "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-{RELEASE_TAG}.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(89_666_231));
+    assert_eq!(artifact.source.expected_length, Some(89_682_621));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

@@ -5,7 +5,9 @@ Modpack v0.2.0-alpha.14 with alpha.13's Dorn ambush fix 135, party AI fix 460 an
 chapter XP caps 652.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. The Artisan's Kitpack fork
+chriz.4 (October 27, test_oct27_alpha22_pins_recipe) supersedes the chriz.3 pin and keeps
+its components and order; the chriz.3 records and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -25,6 +27,10 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 KITPACK = "artisans-kitpack-4.81a-dev.85928f9-chriz.3"
 KITPACK_PREVIOUS = "artisans-kitpack-4.81a-dev.85928f9-chriz.1"
 KITPACK_TAG = "v4.81a-dev.85928f9-chriz.3"
+# The October 27 intake replaces the chriz.3 pin of all three Kitpack installers.
+KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.4"
+SUCCESSORS = {mod_id: KITPACK_SUCCESSOR
+              for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {
@@ -148,7 +154,8 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
                 with self.subTest(profile=str(directory), mod=mod_id):
                     self.assertIn(profile_name, record["recipe_profiles"])
                     mod = tomllib.loads((directory / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                    self.assertEqual(mod["artifact_id"], artifact_id)
+                    # A superseded pin stays available as history, verified as recorded here.
+                    self.assertEqual(mod["artifact_id"], SUCCESSORS.get(mod_id, artifact_id))
                     artifact = tomllib.loads((directory / f"artifacts/{artifact_id}.toml").read_text(encoding="utf-8"))
                     self.assertEqual(artifact["acquisition"], "fetch-only")
                     self.assertEqual(artifact["source"]["kind"], "github-release")

@@ -2,14 +2,18 @@
 
 Refreshed for the selected Artisan fork release **v4.81a-dev.85928f9-chriz.1**
 (`0798dc4ee3d09b5d97c56b69c80d9d2ac2317911`). The recipes pin
-**v4.81a-dev.85928f9-chriz.3** (tag commit `3e8cc6e`, pinned 2026-10-26): its tweak TP2
-declares the same 18 components in the same order and changes only its version. The
-tweak installer uses the main installer's libraries, so the sorcerer and kit weapon fixes
-(see [ARTISANSKITPACK](ARTISANSKITPACK.md)) reach `8204` (Arcane Trickster sorcerer thief
+**v4.81a-dev.85928f9-chriz.4** (tag commit `afa3316`, pinned 2026-10-27): its tweak TP2
+declares the same 18 components in the same order. The tweak installer uses the main
+installer's libraries, so the sorcerer and kit weapon fixes (see
+[ARTISANSKITPACK](ARTISANSKITPACK.md)) reach `8204` (Arcane Trickster sorcerer thief
 equipment, selected in Recommended) and `1010000` (Update EEex-based Weapon Usability
 Changes, not offered by the collection). Chains that mods installed after Kitpack
 register in `C0PR#XX`, such as Bardic Wonders' Mage/Bard `2009` (excluded here), join
-`C0PR#KG` only through `1010000`; until then they behave as before.
+`C0PR#KG` only through `1010000`; until then they behave as before. Besides its version,
+chriz.4's tweak TP2 only ends `1020000` (Dual-Classes Keep Kit Names, not offered) with
+the pass that puts "apply `C0PR#CL`" back into every class and kit ability table; with
+chriz.4, `1010000` also gives that entry to ability tables that later mods added or
+replaced. No component or decision changes.
 18 entries, 7 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

@@ -1,0 +1,87 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-27"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <fresh downloaded ZIP>"
+scope = "The second alpha.22 pin batch: the Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.4 (published 2026-10-26 22:27 UTC, a normal GitHub release, tag commit afa3316) replaces chriz.3 for the main, NPC and tweak installers in both recipe profiles. The release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset. Its 3,011 entries (118,165,857 bytes uncompressed, largest entry 6,142,193 bytes) stay within the unchanged archive limits, and the three expected TP2s match directly. The native TP2 declaration order matches both recipes except where a record says otherwise. The chriz.3 records in release-intake-20261026.toml and their artifact TOMLs stay as history. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance; the owner's lab results are in the release notes."
+
+# One archive serves the main, NPC and tweak installers. Against chriz.3 all three TP2s
+# change their VERSION and include the new eeex/class_weapon_grants.tpa in ALWAYS; no
+# BEGIN, DESIGNATED, SUBCOMPONENT, GROUP, REQUIRE or FORBID line changes, so components,
+# their order and every recorded decision are unchanged. The main TP2 ends each of its 59
+# components with "LAF c0_add_c0pr_cl_to_ability_tables END": every class and kit ability
+# table, the shaman's CLABSH01 included, applies C0PR#CL at every level. Monk Revisions
+# 10001 (lib/MonkRevision.tpa) writes the class weapon grants again after it changes
+# WEAPPROF.2DA, so monks are granted quarterstaves; eeex/profs_eeex.tpa and
+# lib/profs_eeex_patch.tpa now call the shared library. Both functions do nothing without
+# C0PR#CL.SPL, that is without the EEex-based weapon usability.
+# The curated profile's main run follows this native order. The manifest profile's main
+# run keeps the authored order it has had since chriz.1 (10002 before 10001, 1100 after
+# 1009), which the order checker rejects; this intake does not change it, and
+# engine/tests/production_recipe_artisan.rs pins it. native_order_recipe_profiles names
+# the profiles whose runs were checked against this record.
+[[artifacts]]
+mod_id = "artisanskitpack"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.4"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+native_order_recipe_profiles = ["recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.4"
+source_commit = "afa3316cdcf0d9dd8c0678c5e578b2621a3373ee"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.4/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.4.zip"
+actual_length = 89682621
+actual_sha256 = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336"
+tp2_sha256 = "7b4c6c2807d5ac3ed1a8b93152c10addfc14502a53980b72b5b4da10c444e13d"
+native_components = [
+  1, 2, 3, 20000, 20001, 8001, 8101, 8102, 8002, 8003, 8004, 10001, 10002, 10003, 10004, 1100,
+  1003, 1006, 1004, 1005, 1007, 1002, 1000, 1001, 1008, 1009, 1010, 2000, 2010, 2011, 2012, 2002,
+  2003, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5300, 5100, 5110, 5111, 5200, 5001, 5002,
+  7000, 7004, 7007, 7006, 7008, 7001, 7002, 7003, 7005, 9001, 30001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# The NPC TP2 ends Rashemi Berserker Minsc 2001 and Red Wizard Edwin 5102, the two
+# components that add kits, with the same table pass; both are in the collection's
+# Recommended NPC run.
+[[artifacts]]
+mod_id = "artisanskitpack-npc"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.4"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.4"
+source_commit = "afa3316cdcf0d9dd8c0678c5e578b2621a3373ee"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.4/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.4.zip"
+actual_length = 89682621
+actual_sha256 = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336"
+tp2_sha256 = "474ac981d0d8122628267da8a456dbf6193bb551a5d212a20d2bc3475811eb30"
+native_components = [
+  1101, 1102, 1103, 1104, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004,
+  20002, 200010, 99001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# The tweak TP2 ends "Dual-Classes Keep Kit Names in Character Record" 1020000 with the
+# table pass; the collection does not offer 1020000. "Update EEex-based Weapon Usability
+# Changes" 1010000 (not offered either) now uses the shared library through
+# lib/profs_eeex_patch.tpa and also gives later mods' ability tables the entry.
+[[artifacts]]
+mod_id = "artisanskitpack-tweak"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.4"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.4"
+source_commit = "afa3316cdcf0d9dd8c0678c5e578b2621a3373ee"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.4/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.4.zip"
+actual_length = 89682621
+actual_sha256 = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336"
+tp2_sha256 = "3abf541a2282a5580006a8cc3026359741e72d55eb2965d1a93643cb1c443425"
+native_components = [
+  51010, 20101, 12012, 20021, 3210, 1209, 1110, 3202, 3302, 7203, 8204, 110000, 1, 2, 300010,
+  1010000, 1020000, 2000001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

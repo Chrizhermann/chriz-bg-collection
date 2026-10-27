@@ -315,18 +315,21 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // feature's decision, its preset entry and 2292 in the cdtweaks-bg2 run of the plan. With
     // 2292 restored as a default, the previous curated digests return (bfa199cc…, 90d4ffb4…,
     // 9e88b9c5…).
+    // Re-pinned on October 27 for Artisan's Kitpack chriz.4 (all three installers): only the
+    // plans change, in the selected Kitpack runs' artifact id. With chriz.3 restored, the
+    // previous plan digests return (manifest acea4e17…, curated 2a08b21b…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "ea31c07f2cd0d050fcf590cbf601b3fd1a189cf5b35856895f87ad012eb340d4",
             "d27b9fa5ffe8046cf0f53dcf73cb2355226da536eb47504b0c54cf85968df49e",
-            "acea4e17a537e10de70bf41860eb90df1fe744a88507f5415084cc111eee638b",
+            "3f1671d82316c3eca149812e3e655e45a727a98166d39ed72b33db8fe1b785ab",
         ),
         (
             "../recipes/curated-full-current",
             "54993bc2ca99e2c3cce818ae966e5cbca7cc392d4e197d6e3efdff00fa6bce43",
             "3c42bcea0398ba7ca17cf285b809d14b76003fc111a5f5bebaef9f9b2d6a83f2",
-            "2a08b21bd69486dc9778572561cac0d8f670a85372d755689942a106ac43f826",
+            "5ed8b9b7809b05c690657a3bea317b0f08a9ea142c3e528e22392497c3e9e108",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
