@@ -31,6 +31,11 @@ export function iwdIndexHtml(): Plugin {
 export default defineConfig(({ mode }) => ({
   clearScreen: false,
   plugins: mode === "iwd" ? [iwdIndexHtml()] : [],
+  // The app's content security policy loads images and fonts only from 'self', never from
+  // data: URLs, so the themes' SVG ornaments and fonts must stay files.
+  build: {
+    assetsInlineLimit: 0,
+  },
   test: {
     css: true,
   },

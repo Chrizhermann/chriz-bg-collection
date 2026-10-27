@@ -28,8 +28,11 @@ describe("index.html per build flavor", () => {
     expect(page).toContain('content="Install and launch Chriz Easy IWD."');
     expect(page).toContain("<h1>Chriz Easy IWD</h1>");
     expect(page).toContain("<h2>Getting Chriz Easy IWD ready…</h2>");
-    // Only the product words change.
-    expect(page.replaceAll("Chriz Easy IWD", "Chriz Easy BG")).toBe(indexHtml);
+    expect(indexHtml).toContain('<link rel="stylesheet" href="/src/themes/bg.css" />');
+    expect(page).toContain('<link rel="stylesheet" href="/src/themes/iwd.css" />');
+    expect(page).not.toContain("/src/themes/bg.css");
+    // Only the product words and the theme change.
+    expect(page.replaceAll("Chriz Easy IWD", "Chriz Easy BG").replace("/src/themes/iwd.css", "/src/themes/bg.css")).toBe(indexHtml);
   });
 
   it("leaves the BG page untouched in every other mode", () => {
@@ -40,6 +43,8 @@ describe("index.html per build flavor", () => {
 
   it("refuses a page whose BG words it cannot account for", async () => {
     await expect(transform(iwdIndexHtml(), "<title>Something else</title>")).rejects.toThrow("no longer contains");
-    await expect(transform(iwdIndexHtml(), "<title>Chriz Easy BG</title><p>CEBG</p>")).rejects.toThrow('still contains "CEBG"');
+    await expect(transform(iwdIndexHtml(), "<title>Chriz Easy BG</title>")).rejects.toThrow('no longer contains "/src/themes/bg.css"');
+    const theme = '<link rel="stylesheet" href="/src/themes/bg.css" />';
+    await expect(transform(iwdIndexHtml(), `${theme}<title>Chriz Easy BG</title><p>CEBG</p>`)).rejects.toThrow('still contains "CEBG"');
   });
 });
