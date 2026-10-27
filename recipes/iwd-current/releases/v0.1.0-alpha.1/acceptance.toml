@@ -302,6 +302,17 @@ status = "accepted"
 scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
 
 [[evidence]]
+subject_kind = "run"
+subject_id = "hidden-gameplay-options-main"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "13bdc15e2415dc42e9648b86f22c6d7ff7d5cb8e"
+test_artifact = "engine/tests/production_recipe_iwd.rs"
+date = "2026-10-28"
+status = "accepted"
+scope = "Static recipe source, component, order and recommended-plan assertions only; not live game acceptance."
+
+[[evidence]]
 subject_kind = "release"
 subject_id = "v0.1.0-alpha.1"
 kind = "runtime-test"
