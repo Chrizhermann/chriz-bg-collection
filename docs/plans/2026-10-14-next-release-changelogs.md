@@ -103,6 +103,15 @@ unchanged.
   Recitation no longer stack: Recitation's bonus or penalty replaces Prayer's while
   it lasts. Exact copies, such as Bardic Wonders' Troubadour Aid, change with them.
   (Rebalance v0.8.5)
+- **Time Stop stops everything but the caster; Haste and Slow only change actions and
+  movement** — **Default.** In a Time Stop, the frozen creatures' spells and potions no
+  longer run out while they cannot act, and their poison and regeneration wait too;
+  everything continues afterwards with the time it had left. Haste and Slow no longer
+  speed up or slow down poison, regeneration and other repeated effects; attacks,
+  actions and movement stay hasted or slowed. It applies to new installations only:
+  install it before a playthrough, because adding or removing it during one is not
+  supported. Saving, dispelling, curing or dying during a Time Stop are not covered yet.
+  (Rebalance v0.8.6)
 - **EEex attack info** — **Optional.** Shows your chance to hit when the attack
   cursor is over a target. You can also switch it on or off later in EEex's
   options; the change takes effect after a restart. (EEex v1.3.1)
@@ -270,8 +279,14 @@ unchanged.
   Disciple included. (Artisan's Kitpack fork chriz.2)
 - **Eldritch Knight and Arcane Trickster sorcerers no longer lose their kit weapons
   when they level up or join the party.** (Artisan's Kitpack fork chriz.3)
-  - Existing games keep the old sorcerer, Eldritch Knight and Arcane Trickster weapon
-    behavior until you install again.
+- **Monks can equip quarterstaves with Monk Revisions** (Default), and **shamans without
+  a kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the
+  start.** Before, a monk without quarterstaff proficiency could not equip a quarterstaff,
+  and these characters could equip any weapon after joining the party until the game
+  next loaded or entered an area; their level-ups did not apply the weapon limits either.
+  (Artisan's Kitpack fork chriz.4)
+  - Existing games keep the old sorcerer, Eldritch Knight, Arcane Trickster, monk and
+    shaman weapon behavior until you install again.
 - **EEex Remote Console** (Optional, experimental): after you return to the main menu
   from character creation, the load screen or the options, the single-player menu no
   longer stays behind the game's screens for the rest of the session. Its installer
@@ -280,7 +295,7 @@ unchanged.
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.14 (was alpha.11)
-- BG Rebalance v0.8.5 (was v0.8.2)
+- BG Rebalance v0.8.6 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
@@ -291,7 +306,7 @@ unchanged.
 - BuffBot v1.11.0 (was v1.10.0)
 - EEex Remote Console v0.2.1 (was v0.2.0)
 - Spell Revisions fork v4.21-chriz.7 (was v4.21-chriz.5)
-- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.3 (was chriz.1)
+- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.4 (was chriz.1)
 - Northern Tales of the Sword Coast: development version `f0ef953`, 35 changes after
   v5.0.0 (new). The collection pins this exact version because v5.0.0 lacks a fix
   that SCS needs and the Island of the Sirines on the worldmap.
@@ -305,12 +320,14 @@ unchanged.
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
-Rebalance to v0.8.5, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
+Rebalance to v0.8.6, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
 EEex to v1.3.1, BuffBot to v1.11.0, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
-v4.81a-dev.85928f9-chriz.3 and The Tweaks Anthology to its current development
+v4.81a-dev.85928f9-chriz.4 and The Tweaks Anthology to its current development
 version. New in Chris's Recommended: Christopher's revisions of Aid, Luck, Bless,
-Chaotic Commands, Prayer and Recitation; companion stat adjustments for Rasaad,
+Chaotic Commands, Prayer and Recitation; Time Stop that stops everything but the
+caster, and Haste and Slow that no longer change poison and regeneration; companion
+stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
 lacked it; a fix for the crash after Dorn's BG1 ambush; party AI that uses Defensive
 Stance only with "Use special abilities" on; SCS fine weapons that never break; one potion
@@ -338,7 +355,9 @@ when it puts equipped items back, and the optional EEex Remote Console no longer
 single-player menu behind the game's screens. Sorcerers, the Dragon Disciple
 included, can equip daggers, quarterstaves, darts and slings again, and Eldritch
 Knight and Arcane Trickster sorcerers keep their kit weapons when they level up or
-join the party. EEex's attack info display is offered as an option. These changes
+join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a
+kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the start.
+EEex's attack info display is offered as an option. These changes
 apply to new installations; existing games and saves are unchanged.
 
 ## Notes for the release integrator
@@ -391,16 +410,28 @@ apply to new installations; existing games and saves are unchanged.
   (Christopher, 2026-10-26). Since v0.8.4,
   Rebalance components that cannot apply a change correctly stop the installation
   with the reason instead of guessing.
+- **Rebalance `360`** (Time Stop and Haste effect clocks, Default; Christopher,
+  2026-10-27) needs EEex installed before it, `data/PATCH27.BIF` and the 64-bit
+  BG2:EE 2.7.3.0 executable (PE timestamp `0x6a18d73d`). CEBG's only accepted
+  `Baldur.exe` has that timestamp, and EEex runs before Rebalance in both recipes.
+  CEBG's game check does not fingerprint `data/PATCH27.BIF`. Its owner labs passed on
+  BG2:EE 2.7.3.0 and in the full CEBG stack (EET, Recommended, Spell Revisions), both
+  with EEex's LuaJIT option; it has not been accepted in real gameplay yet (its release
+  notes). Saving, dispel, cure and death during a stop are not covered. It is marked
+  "ready" like `340`, without a recorded readiness decision of its own.
 - **Spell Revisions fork v4.21-chriz.7**: the Rogue Rebalancing level-5 replacements
   (v4.21-chriz.6) have not been checked in game yet (its release notes).
-- **Artisan's Kitpack fork chriz.3** (with chriz.2's sorcerer fix) reaches new
-  installations only: existing installations get the weapon fixes only through a new
-  installation (Christopher, 2026-10-26), as the collection changelog says. The fork's
-  `AKCB_SORCERER_WEAPONS` tail is not part of the collection, and the kit weapon fix has
-  no tail; in existing games the helper creature gives the weapons back as before. Its
-  lab ran on BG2:EE 2.7.3.0, not EET, with a fresh install in the collection's Kitpack
-  order (its release notes; see `FOLLOW_UPS.md`). chriz.4 (approved on 2026-10-26, in
-  progress) joins this release if it is ready in time.
+- **Artisan's Kitpack fork chriz.4** (with chriz.2's sorcerer fix and chriz.3's kit
+  weapon fix) reaches new installations only: existing installations get the weapon
+  fixes only through a new installation (Christopher, 2026-10-26 and 2026-10-27), as the
+  collection changelog says. The fork's `AKCB_SORCERER_WEAPONS` tail is not part of the
+  collection, and the kit, monk and shaman weapon fixes have no tail; in existing games
+  the helper creature gives the weapons back as before. chriz.3's lab ran on BG2:EE
+  2.7.3.0, not EET, with a fresh install in the collection's Kitpack order. chriz.4's labs
+  ran on three disposable BG2:EE 2.7.3.0 games with EEex 1.3.1: chriz.3 and chriz.4 in
+  CEBG's order, and chriz.4 in another order without Spell Revisions. Not covered there:
+  EET, kits other than the Favored Soul and the Ninja, and characters created before the
+  installation (its release notes; see `FOLLOW_UPS.md`).
 - **EEex Remote Console v0.2.1** is a tag without GitHub release assets, like
   v0.2.0, so the pin is GitHub's commit archive of the tag commit. Its `START_SP` fix
   passed the README checklist on EET 2.7.3.0 with EEex v1.3.1 in the October 18 lab.

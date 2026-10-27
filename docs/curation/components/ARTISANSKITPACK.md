@@ -2,9 +2,9 @@
 
 Listed at reference version **6.0**; refreshed for the selected fork release
 **chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
-**v4.81a-dev.85928f9-chriz.3** (tag commit `3e8cc6e`, pinned 2026-10-26), whose TP2
-declares the same 59 components as listed here. Against chriz.1 it changes two things,
-both only when the EEex weapon usability is installed:
+**v4.81a-dev.85928f9-chriz.4** (tag commit `afa3316`, pinned 2026-10-27), whose TP2
+declares the same 59 components in the same order as listed here. Against chriz.1 it
+changes three things, all only when the EEex weapon usability is installed:
 
 - chriz.2: every sorcerer kit, the Dragon Disciple included, can equip daggers,
   quarterstaves, darts and slings without proficiency pips again, like mages. Since
@@ -19,10 +19,23 @@ both only when the EEex weapon usability is installed:
   where Kitpack registers such a chain: in the collection, the Eldritch Knight sorcerer
   part of `20000` and tweak `8204` (also Favored Soul `30001` and tweak `1010000`,
   which the collection does not offer).
+- chriz.4: monks can equip quarterstaves after Monk Revisions (`10001`), which gives them
+  quarterstaff pips in `WEAPPROF.2DA` after the weapon usability generator has written
+  `C0PR#CL`'s class grants; `10001` now writes them again. Plain shamans and the kits
+  that a component adds late, such as Sacred Fist and Enlightened Fist (`10003`) and the
+  Ninja (`10004`), are held to their class and kit weapons from joining the party and
+  at every level-up instead of only once Kitpack's helper creature applies `C0PR#CL`:
+  every component of this installer now ends by giving every class and kit ability
+  table, the shaman's `CLABSH01` included, "apply `C0PR#CL`" at every level, and so do
+  NPC `2001` and `5102` and tweak `1020000`. The class grants and these entries come
+  from the new `eeex/class_weapon_grants.tpa`; both do nothing without `C0PR#CL.SPL`.
+  The fork's labs passed on BG2:EE 2.7.3.0 with EEex 1.3.1, in the collection's
+  Kitpack order and in another order; EET was not covered.
 
 No component, order or decision changes. Existing installations are not changed by
-chriz.3, which has no tail patch; chriz.2's sorcerer fix has one,
-`AKCB_SORCERER_WEAPONS`, which the collection does not install.
+chriz.3 or chriz.4, which have no tail patch (Christopher, 2026-10-26 and 2026-10-27:
+new installations only); chriz.2's sorcerer fix has one, `AKCB_SORCERER_WEAPONS`,
+which the collection does not install.
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

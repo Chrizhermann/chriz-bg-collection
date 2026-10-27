@@ -135,7 +135,8 @@ class CatalogParserTests(unittest.TestCase):
         # October 23: six optional quest-mod catalogs add 55 rows (NTOTSC 17,
         # AC_QUEST 13, BLACKHEARTS 2, ZG_IWD_VOICES 1, THALAN 1, PPE 21).
         # October 26: Rebalance v0.8.5 adds Chris Revisions 340; Modpack alpha.14 adds no row.
-        self.assertEqual(len(rows), 1_337)
+        # October 28: Rebalance v0.8.6 adds the Time Stop and Haste effect clocks 360.
+        self.assertEqual(len(rows), 1_338)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -177,7 +178,8 @@ class CatalogParserTests(unittest.TestCase):
                 # October 26: Rebalance Chris Revisions 340 is a default (Christopher, 2026-10-25),
                 # and so are Modpack 135 (Dorn's ambush fix) and 460 (party AI Defensive Stance).
                 # October 27: Tweaks 2292 leaves the defaults (Christopher, 2026-10-27).
-                Decision.DEFAULT: 327,
+                # October 28: Rebalance 360 is a default (Christopher, 2026-10-27).
+                Decision.DEFAULT: 328,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -408,9 +410,10 @@ default = "none"
         # October 23: the 52 offered quest-mod rows map to one feature each.
         # October 26: EEex 9 and Rebalance 340 map to one feature each, and so do
         # Modpack 135, 460 and 652 (alpha.14 pin).
-        self.assertEqual(result.mapped_rows, 1_337)
+        # October 28: Rebalance 360 maps to one feature (v0.8.6 pin).
+        self.assertEqual(result.mapped_rows, 1_338)
         self.assertEqual(result.excluded_rows, 524)
-        self.assertEqual(result.feature_rows + result.omission_rows, 813)
+        self.assertEqual(result.feature_rows + result.omission_rows, 814)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -420,7 +423,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 87)
         self.assertEqual(result.optional_none_groups, 31)
         self.assertEqual(result.fixed_groups, 11)
-        self.assertIn("rows=1337", coverage_report(rows, result))
+        self.assertIn("rows=1338", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]

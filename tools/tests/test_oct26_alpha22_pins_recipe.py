@@ -5,7 +5,11 @@ Modpack v0.2.0-alpha.14 with alpha.13's Dorn ambush fix 135, party AI fix 460 an
 chapter XP caps 652.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. The Artisan's Kitpack fork
+chriz.4 (October 27, test_oct27_alpha22_pins_recipe) supersedes the chriz.3 pin and keeps
+its components and order, and BG Rebalance v0.8.6 (October 28, same test) supersedes the
+v0.8.5 pin, keeps its components and order and adds the Time Stop and Haste effect clocks
+360 after 340. The chriz.3 and v0.8.5 records and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -25,6 +29,16 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 KITPACK = "artisans-kitpack-4.81a-dev.85928f9-chriz.3"
 KITPACK_PREVIOUS = "artisans-kitpack-4.81a-dev.85928f9-chriz.1"
 KITPACK_TAG = "v4.81a-dev.85928f9-chriz.3"
+# The October 27 intake replaces the chriz.3 pin of all three Kitpack installers.
+KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.4"
+SUCCESSORS = {mod_id: KITPACK_SUCCESSOR
+              for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")}
+# The October 27 batch's second pin replaces Rebalance v0.8.5 with v0.8.6.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.6"
+# Components declared by a successor pin, checked against its own record; none is in a
+# record of this intake.
+LATER_COMPONENTS = {"chriz-bg-rebalance": {360}}
+LATER_ROWS = {"CHRIZ-BG-REBALANCE": {360}}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {
@@ -148,7 +162,8 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
                 with self.subTest(profile=str(directory), mod=mod_id):
                     self.assertIn(profile_name, record["recipe_profiles"])
                     mod = tomllib.loads((directory / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                    self.assertEqual(mod["artifact_id"], artifact_id)
+                    # A superseded pin stays available as history, verified as recorded here.
+                    self.assertEqual(mod["artifact_id"], SUCCESSORS.get(mod_id, artifact_id))
                     artifact = tomllib.loads((directory / f"artifacts/{artifact_id}.toml").read_text(encoding="utf-8"))
                     self.assertEqual(artifact["acquisition"], "fetch-only")
                     self.assertEqual(artifact["source"]["kind"], "github-release")
@@ -176,15 +191,17 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
             collection = tomllib.loads((directory / "collection.toml").read_text(encoding="utf-8"))
             for mod_id, record in self.records.items():
                 native = record["native_components"]
+                later = LATER_COMPONENTS.get(mod_id, set())
                 mod = tomllib.loads((directory / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                self.assertTrue({component["id"] for component in mod["components"]} <= set(native), mod_id)
+                self.assertTrue({component["id"] for component in mod["components"]} - later <= set(native), mod_id)
                 runs = [run for run in collection["runs"] if run["mod_id"] == mod_id]
                 self.assertTrue(runs, mod_id)
                 for run in runs:
                     with self.subTest(profile=str(directory), run=run["run_id"]):
-                        self.assertTrue(set(run["components"]) <= set(native))
+                        components = [c for c in run["components"] if c not in later]
+                        self.assertTrue(set(components) <= set(native))
                         if profile_name in record.get("native_order_recipe_profiles", record["recipe_profiles"]):
-                            self.assertEqual(run["components"], [c for c in native if c in run["components"]])
+                            self.assertEqual(components, [c for c in native if c in components])
         # The curated generator restores the Kitpack main run's native order; the authored
         # fallback keeps the order it has had since chriz.1 (see the evidence record).
         native_main = self.records["artisanskitpack"]["native_components"]
@@ -192,9 +209,10 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
         self.assertEqual(curated_main, [c for c in native_main if c in curated_main])
         fallback_runs = {run["run_id"]: run for run in self.profiles["fallback"][1]["runs"]}
         self.assertEqual(sorted(fallback_runs[ARTISAN_MAIN_RUN]["components"]), sorted(curated_main))
-        self.assertEqual(NATIVE_RUN_ORDERS[REBALANCE_RUN],
+        rebalance_order = [c for c in NATIVE_RUN_ORDERS[REBALANCE_RUN] if c not in LATER_COMPONENTS["chriz-bg-rebalance"]]
+        self.assertEqual(rebalance_order,
                          [c for c in self.records["chriz-bg-rebalance"]["native_components"]
-                          if c in NATIVE_RUN_ORDERS[REBALANCE_RUN]])
+                          if c in rebalance_order])
 
     def test_catalogs_list_every_declared_component_with_the_recorded_decisions(self):
         rows = {}
@@ -203,7 +221,8 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
         for mod_id, (*_, catalog) in PINS.items():
             with self.subTest(catalog=catalog):
                 retired = RETIRED_ROWS.get(catalog, set())
-                self.assertEqual(set(rows[catalog]) - retired, set(self.records[mod_id]["native_components"]))
+                later = LATER_ROWS.get(catalog, set())
+                self.assertEqual(set(rows[catalog]) - retired - later, set(self.records[mod_id]["native_components"]))
                 for component in retired:
                     self.assertEqual(rows[catalog][component].decision, Decision.EXCLUDED, component)
         # The only new component in the batch (340) and the newly offered ones: EEex 9 and
@@ -239,7 +258,8 @@ class Oct26Alpha22PinBatchTests(unittest.TestCase):
                 self.assertIn(spell, feature["title"])
             self.assertEqual(preset.get(REVISIONS), "on")
             runs = {run["run_id"]: run for run in collection["runs"]}
-            self.assertEqual(runs[REBALANCE_RUN]["components"][-4:], [330, 331, 332, 340])
+            # v0.8.6 declares 360 after 340 (test_oct27_alpha22_pins_recipe).
+            self.assertEqual(runs[REBALANCE_RUN]["components"][-5:], [330, 331, 332, 340, 360])
             self.assertEqual(runs[REBALANCE_RUN]["phase"], "post-eet-end")
             baseline = self._selected(collection, preset)
             self.assertIn((REBALANCE_RUN, 340), baseline)

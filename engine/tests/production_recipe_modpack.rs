@@ -299,7 +299,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // The October 26 intake adds default Rebalance Chris Revisions 340 to both plans;
     // EEex Attack Info 9 is offered unchecked. Its Modpack alpha.14 pin adds default
     // 135 and 460 to both plans; chapter caps 652 are offered unchecked.
-    // This 371-component base plan is distinct from the 469-component curated plan.
+    // The October 28 intake (Rebalance v0.8.6) adds default Time Stop and Haste effect
+    // clocks 360 to both plans.
+    // This 372-component base plan is distinct from the 469-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -307,7 +309,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        371
+        372
     );
 }
 

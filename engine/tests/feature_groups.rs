@@ -315,18 +315,27 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // feature's decision, its preset entry and 2292 in the cdtweaks-bg2 run of the plan. With
     // 2292 restored as a default, the previous curated digests return (bfa199cc…, 90d4ffb4…,
     // 9e88b9c5…).
+    // Re-pinned on October 27 for Artisan's Kitpack chriz.4 (all three installers): only the
+    // plans change, in the selected Kitpack runs' artifact id. With chriz.3 restored, the
+    // previous plan digests return (manifest acea4e17…, curated 2a08b21b…).
+    // Re-pinned on October 28 for BG Rebalance v0.8.6 with the default Time Stop and Haste
+    // effect clocks 360 after 340 (Christopher, 2026-10-27): its feature, run component and
+    // preset entry change all six digests. With 360 switched off, the Recommended plans differ
+    // from the chriz.4 ones only in the Rebalance run's artifact id; with v0.8.5 restored and
+    // 360 removed, the six chriz.4 digests return (manifest ea31c07f…, d27b9fa5…, 3f1671d8…;
+    // curated 54993bc2…, 3c42bcea…, 5ed8b9b7…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "ea31c07f2cd0d050fcf590cbf601b3fd1a189cf5b35856895f87ad012eb340d4",
-            "d27b9fa5ffe8046cf0f53dcf73cb2355226da536eb47504b0c54cf85968df49e",
-            "acea4e17a537e10de70bf41860eb90df1fe744a88507f5415084cc111eee638b",
+            "820fab4c5d8b6fdb7496d18214f0dd44f1f781bbef3866ae9da14dd905a9feb1",
+            "b1f467ef9288a2a0dd3138dc4fb670abc9762579309af3f2efaea03ff19bddec",
+            "f4ab1fd8277c788380bf61a59c6076cf36ca27d689a5377ef296de7c1a3110b2",
         ),
         (
             "../recipes/curated-full-current",
-            "54993bc2ca99e2c3cce818ae966e5cbca7cc392d4e197d6e3efdff00fa6bce43",
-            "3c42bcea0398ba7ca17cf285b809d14b76003fc111a5f5bebaef9f9b2d6a83f2",
-            "2a08b21bd69486dc9778572561cac0d8f670a85372d755689942a106ac43f826",
+            "9a8d8095af092adc6ed2aef455f23fe1059e393bbf4f0e3e6371b162578812d5",
+            "c2684cfef6bcfc9c2e83ab218b88390288daf7412f670fa82410dff2f1daaee9",
+            "c18baa9d53d10b9761a8e312d6eb90186254dbba4bac4f0aa94c9bdccd689766",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

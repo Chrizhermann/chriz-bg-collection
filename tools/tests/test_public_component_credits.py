@@ -70,7 +70,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn("chriz-bg-modpack-campaign-xp-bg2", actual)
         # October 27: Tweaks 2292 (druids level on the cleric XP table) leaves the defaults.
         self.assertNotIn(2292, actual["cdtweaks-bg2"])
-        self.assertEqual(self.result["componentCount"], 468)
+        # October 28: the Rebalance v0.8.6 pin adds default 360.
+        self.assertIn(360, actual["chriz-bg-rebalance-bg2"])
+        self.assertEqual(self.result["componentCount"], 469)
         self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

@@ -130,8 +130,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # EEex Attack Info 9 is offered unchecked. Its Modpack alpha.14 pin adds default
         # 135 and 460 to the main post-EET_end Modpack run; chapter caps 652 stay unchecked.
         # October 27: Tweaks 2292 (druids level on the cleric XP table) is no longer a default.
-        self.assertEqual(len(without_controls), 467)
-        self.assertEqual(len(selected), 468)
+        # October 28: the Rebalance v0.8.6 pin adds default Time Stop and Haste effect clocks 360.
+        self.assertEqual(len(without_controls), 468)
+        self.assertEqual(len(selected), 469)
         self.assertEqual(len({run for run, _ in selected}), 69)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -229,7 +230,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(opted_in - baseline, {(run_id, 301)})
         self.assertEqual(baseline - opted_in, set())
         # October 27: Tweaks 2292 is no longer selected by default.
-        self.assertEqual(len(baseline), 468)
+        # October 28: Rebalance 360 is selected by default.
+        self.assertEqual(len(baseline), 469)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -249,7 +251,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_including_default_bard_ceilings(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertIn((run_id, component), self.selected())
