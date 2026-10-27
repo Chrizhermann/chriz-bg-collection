@@ -13,6 +13,8 @@ use std::path::{Path, PathBuf};
 use fs4::fs_std::FileExt;
 use serde::{Deserialize, Serialize};
 
+use crate::fs_retry;
+
 use super::{
     create_directories, read_existing, unsafe_path, validate_identifier, CampaignCreated,
     ManagedInstallRegistry, RegistryError, SessionStore,
@@ -317,10 +319,8 @@ impl ManagedInstallRegistry {
             .as_file()
             .sync_all()
             .map_err(|source| io_error(&path, source))?;
-        temporary
-            .persist(&path)
-            .map_err(|error| io_error(&path, error.error))?;
-        Ok(())
+        // Replaces the previous record, retried while a scanner briefly holds either file.
+        fs_retry::persist(temporary, &path).map_err(|source| io_error(&path, source))
     }
 }
 

@@ -15,6 +15,8 @@ use std::io::ErrorKind;
 use std::path::{Component, Path};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::fs_retry;
+
 use super::AcquireError;
 
 /// Directory beneath a cache root that receives entries set aside for removal.
@@ -88,7 +90,8 @@ pub(super) fn set_aside(cache_root: &Path, entry: &Path, digest: &str) -> Result
         if entry_is_present(&destination)? {
             continue;
         }
-        match fs::rename(entry, &destination) {
+        // A damaged folder cannot be moved while a scanner has any file in it open.
+        match fs_retry::rename(entry, &destination) {
             Ok(()) => {
                 remove_best_effort(&destination);
                 return Ok(());
@@ -225,5 +228,26 @@ mod tests {
             ),
             None
         );
+    }
+
+    /// A damaged extraction folder is set aside even while a scanner briefly holds a file in it.
+    #[cfg(windows)]
+    #[test]
+    fn a_damaged_folder_is_set_aside_once_a_held_file_in_it_is_let_go() {
+        use crate::fs_retry::test_hook::hold_until_first_wait;
+
+        let cache = tempfile::tempdir().unwrap();
+        let entry = cache.path().join("entry");
+        std::fs::create_dir_all(entry.join("mod")).unwrap();
+        let held = entry.join("mod").join("setup.tra");
+        std::fs::write(&held, b"partly quarantined").unwrap();
+
+        let (result, waits) = hold_until_first_wait(&held, || {
+            super::set_aside(cache.path(), &entry, &"ab".repeat(32))
+        });
+
+        result.unwrap();
+        assert!(waits >= 1, "the held file must fail the first attempt");
+        assert!(!entry.exists());
     }
 }

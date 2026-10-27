@@ -1,4 +1,5 @@
 //! Constrained files and independent copies used by the first patch transaction.
+use crate::fs_retry::{self, CheckedRenameError};
 use crate::held_folder::{self, EntryError, EntryErrorKind, Existing, HeldFolder, RemovableFile};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -96,9 +97,13 @@ pub fn create(path: &Path, bytes: &[u8]) -> Result<(), String> {
 pub fn json_new(path: &Path, value: &impl Serialize) -> Result<(), String> {
     let bytes = serde_json::to_vec(value).map_err(err)?;
     let pending = path.with_extension("pending");
-    if path.exists() {
-        return Err("Patch evidence already exists.".into());
-    }
+    let absent = || {
+        if path.exists() {
+            return Err("Patch evidence already exists.".to_owned());
+        }
+        Ok(())
+    };
+    absent()?;
     if pending.exists() {
         // Preserve a torn unpublished event; recovery may safely publish a new one.
         regular(&pending)?;
@@ -106,14 +111,20 @@ pub fn json_new(path: &Path, value: &impl Serialize) -> Result<(), String> {
             .duration_since(UNIX_EPOCH)
             .map_err(err)?
             .as_nanos();
-        fs::rename(
+        fs_retry::rename(
             &pending,
-            pending.with_extension(format!("interrupted-{stamp}")),
+            &pending.with_extension(format!("interrupted-{stamp}")),
         )
         .map_err(err)?;
     }
     create(&pending, &bytes)?;
-    fs::rename(&pending, path).map_err(err)
+    // Evidence is never replaced, also not by one published while a scanner held the pending
+    // file: the check runs again before every attempt.
+    match fs_retry::rename_checked(&pending, path, absent) {
+        Ok(()) => Ok(()),
+        Err(CheckedRenameError::Check(error)) => Err(error),
+        Err(CheckedRenameError::Rename(error)) => Err(err(error)),
+    }
 }
 
 /// The game folder of a managed installation and one of its transaction records, both held from
@@ -480,6 +491,39 @@ mod tests {
         assert!(copy_tree(&src, &dst, false).is_err());
         json_new(&temp.path().join("event.json"), &1).unwrap();
         assert!(json_new(&temp.path().join("event.json"), &2).is_err());
+    }
+    /// A torn pending event that a scanner briefly holds is still preserved, and the new event
+    /// is published.
+    #[cfg(windows)]
+    #[test]
+    fn a_held_torn_event_is_set_aside_once_the_holder_lets_go() {
+        use crate::fs_retry::test_hook::hold_until_first_wait;
+
+        let temp = tempfile::tempdir().unwrap();
+        let event = temp.path().join("event.json");
+        let torn = temp.path().join("event.pending");
+        fs::write(&torn, b"{\"tor").unwrap();
+
+        let (result, waits) = hold_until_first_wait(&torn, || json_new(&event, &1));
+
+        result.unwrap();
+        assert!(
+            waits >= 1,
+            "the held pending event must fail the first attempt"
+        );
+        assert_eq!(fs::read(&event).unwrap(), b"1");
+        let preserved = fs::read_dir(temp.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path != &event)
+            .collect::<Vec<_>>();
+        assert_eq!(preserved.len(), 1, "{preserved:?}");
+        assert!(preserved[0]
+            .extension()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("interrupted-"));
+        assert_eq!(fs::read(&preserved[0]).unwrap(), b"{\"tor");
     }
     #[test]
     fn hardlinks_and_path_escapes_are_rejected() {
