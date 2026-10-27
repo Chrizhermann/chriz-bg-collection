@@ -76,3 +76,36 @@ fn verified_manual_selection_replaces_an_invalid_cache_file() {
         .collect::<Vec<_>>();
     assert_eq!(names, ["expected.zip"]);
 }
+
+/// Windows refuses to rename onto a read-only file. An invalid cache file that another program
+/// marked read-only is still replaced in one step, as removing it first used to allow.
+#[cfg(windows)]
+#[test]
+fn verified_manual_selection_replaces_a_read_only_invalid_cache_file() {
+    let temp = TempDir::new().unwrap();
+    let selected = temp.path().join("downloaded.zip");
+    let cache = temp.path().join("cache/manual");
+    let destination = cache.join("expected.zip");
+    let bytes = b"verified manual archive";
+    std::fs::write(&selected, bytes).unwrap();
+    std::fs::create_dir_all(&cache).unwrap();
+    std::fs::write(&destination, b"truncated earlier copy").unwrap();
+    let mut permissions = std::fs::metadata(&destination).unwrap().permissions();
+    permissions.set_readonly(true);
+    std::fs::set_permissions(&destination, permissions).unwrap();
+
+    let published =
+        publish_manual_archive(&selected, &destination, &sha256(bytes), bytes.len() as u64)
+            .unwrap();
+
+    assert_eq!(published.path, destination);
+    assert_eq!(published.sha256, sha256(bytes));
+    assert_eq!(published.length, bytes.len() as u64);
+    assert_eq!(std::fs::read(&destination).unwrap(), bytes);
+    let names = std::fs::read_dir(&cache)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect::<Vec<_>>();
+    assert_eq!(names, ["expected.zip"]);
+    assert_eq!(std::fs::read(&selected).unwrap(), bytes);
+}
