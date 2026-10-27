@@ -262,6 +262,18 @@ Cross-repository status. Component detail stays in the sections below and in the
     their order are unchanged.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
+  - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
+    [chriz-spell-revisions-patch#8](https://github.com/Chrizhermann/chriz-spell-revisions-patch/pull/8)
+    and on hold until alpha.22 is out or Christopher gives his OK.
+    - It adds the mini-mod `SRCB_SCS_COMPAT` (Christopher, 2026-10-28). With it, SCS
+      mages that prepare Chaos use SCS's own Chaos tactic again; SCS skips that tactic
+      whenever Spell Revisions is installed.
+    - Pin it only together with chriz.8; it refuses to install unless Chaos is a level-5
+      spell.
+    - CEBG must install it after Spell Revisions `0` and before SCS's AI components
+      (`6000` and up), for example right after `SRCB_RR_COMPAT`.
+    - Also open for that pin: CEBG's notes on `SRCB_RR_COMPAT`, which with chriz.8 only
+      changes Selina's guard, and on the new step.
 - Icewind Dale: Enhanced Edition installer on the CEBG framework, for Christopher's
   November stream (2026-10-25; urgent, in its own session): only a few mods, plus a
   small own mod with SCS-style scripts for selected IWD fights, because the script
