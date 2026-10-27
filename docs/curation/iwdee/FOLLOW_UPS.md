@@ -20,8 +20,9 @@ user's decisions. Started 2026-09-10.
   tweaks" mandatory, but on IWD:EE it also brings BG versions of nine IWD spells, against the
   2026-09-08 reason for leaving out Spell Revisions. Done 2026-10-26: his choices are in the
   worksheet, SCS gets all spell tweaks, and the recipe holds every decision.
-- [ ] Decide whether Hidden Gameplay Options is on by default (Christopher; the recipe keeps
-  it offered but off until then).
+- [x] Hidden Gameplay Options is on by default (Christopher, 2026-10-28), with its 28 default
+  options (`claude/iwdee-app`, 13bdc15; release evidence c9791b5). Next to Infinity UI++ or
+  Lefreut's interface the mod refuses four or five of them; the installer leaves those out.
 - [x] Druids keep their own XP table by default (Christopher, 2026-10-27, as in the BG
   installer): Tweaks Anthology's cleric XP table for druids is offered but off, since on it
   druids reach level 15 far too early (`claude/iwdee-app`, 0f58707; release evidence 5b2ad9b).
@@ -33,7 +34,8 @@ user's decisions. Started 2026-09-10.
   record it in the worksheet. The generator is kept in Christopher's private backup. Since
   2026-10-26 it also writes the exclusive choice groups and the "Chriz IWD Collection"
   records folder. Since 2026-10-27 it also adds BuffBot, which Christopher chose after the
-  selection page, and again reproduces the committed recipe exactly.
+  selection page, and again reproduces the committed recipe exactly. Since 2026-10-28 it also
+  turns Hidden Gameplay Options on, which the selection page had left open.
 - [x] Alternatives are exclusive: the options of each of the 30 choice groups conflict
   pairwise, so the installer offers them as one choice and installs at most one
   (`claude/iwdee-app`, b4b0a2c; pinned by a static test, 17a563a).
@@ -90,7 +92,8 @@ user's decisions. Started 2026-09-10.
   IWD app (Christopher, 2026-10-27; ae99433). Their screens name the managed game folder
   instead of BG1/BG2 and say that manual mods turn off mod update checks for that
   installation. An engine test covers a pause in a one-game installation.
-- [ ] The IWD app still uses the CEBG icon (Christopher's call).
+- [ ] An app icon of its own in the "Glacier" look (Christopher, 2026-10-28); until then the
+  IWD app uses the CEBG icon.
 - [x] Each app has its own look (Christopher, 2026-10-27): "Glacier" for Chriz Easy IWD
   (frost white, glacier blue, Marcellus headings), "Parchment" for Chriz Easy BG; only colors,
   fonts and ornaments change (`claude/app-themes`, 8c2af38, on top of `claude/iwdee-app`;
