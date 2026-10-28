@@ -707,18 +707,18 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.6")
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.7")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.6.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.7.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.6")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.6")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1817306)
+            self.assertEqual(bg_artifact["version"], "0.8.7")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.7")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1818389)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba",
+                "0f0edbf5f37fc5528f6cf3e5fbeffda126dcd0c18814c68f9da81a002793b072",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.20")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19"):

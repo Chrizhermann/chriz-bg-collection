@@ -9,7 +9,10 @@ with the EEex-based weapon usability. It reaches new installations only (Christo
 declaration order, so no decision changes.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. BG Rebalance v0.8.7 (October 29,
+test_oct29_rebalance_pin_recipe) supersedes the v0.8.6 pin, renames 360 to True Time Stop –
+fair Haste & Slow and keeps its components and order; the v0.8.6 record and artifacts stay
+as verified here.
 """
 
 from pathlib import Path
@@ -253,6 +256,9 @@ REBALANCE_FILENAME = "chriz-bg-rebalance-v0.8.6-windows.zip"
 REBALANCE_SHA256 = "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba"
 REBALANCE_LENGTH = 1_817_306
 REBALANCE_COMMIT = "43b8811abe04ad71575c89d5589866919801bdff"
+# The October 29 intake replaces v0.8.6 with v0.8.7, which renames 360.
+REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.7"
+CLOCKS_TITLE = "True Time Stop – fair Haste & Slow"
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
 CLOCKS = "feature:chriz-bg-rebalance:component-360"
 # CEBG's only accepted BG2:EE executable, whose PE timestamp 360's installer requires.
@@ -315,11 +321,11 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
         self.assertNotEqual(record["tp2_sha256"], self.previous["tp2_sha256"])
         self.assertEqual(record["native_components"], self.previous["native_components"] + [360])
 
-    def test_both_profiles_pin_v086_keep_v085_and_leave_the_tail_packages_out(self):
+    def test_both_profiles_keep_v086_and_v085_and_leave_the_tail_packages_out(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 mod = tomllib.loads((directory / f"mods/{REBALANCE}.toml").read_text(encoding="utf-8"))
-                self.assertEqual(mod["artifact_id"], REBALANCE_PIN)
+                self.assertEqual(mod["artifact_id"], REBALANCE_SUCCESSOR)
                 self.assertIn(360, {component["id"] for component in mod["components"]})
                 artifact = tomllib.loads((directory / f"artifacts/{REBALANCE_PIN}.toml").read_text(encoding="utf-8"))
                 previous = tomllib.loads((directory / f"artifacts/{REBALANCE_PREVIOUS}.toml").read_text(encoding="utf-8"))
@@ -357,7 +363,8 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
             self.assertEqual(feature.get("conflicts", []), [])
             self.assertNotIn("choice_group", feature)
             self.assertEqual(feature["components"], [{"run_id": REBALANCE_RUN, "component": 360}])
-            self.assertEqual(feature["title"], "Time Stop and Haste effect clocks")
+            # Released as "Time Stop and Haste effect clocks"; v0.8.7 renamed it.
+            self.assertEqual(feature["title"], CLOCKS_TITLE)
             for phrase in ("Time Stop", "everything but the caster stops", "Haste and Slow",
                            "poison", "regeneration", "before a playthrough", "not supported",
                            "not covered yet"):
@@ -388,7 +395,7 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
         self.assertEqual(rows[360].decision, Decision.DEFAULT)
         self.assertEqual(rows[340].decision, Decision.DEFAULT)
         text = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")
-        self.assertIn(f"**{REBALANCE_TAG}**", text)
+        self.assertIn(f"{REBALANCE_TAG} (2026-10-27, tag commit `{REBALANCE_COMMIT[:7]}`) added `360`", text)
         for phrase in ("Christopher's decision, 2026-10-27", "`data/PATCH27.BIF`", "`0x6a18d73d`", "`0x8664`",
                        "`b51093a4…`", "adding or removing it during one is\n  not supported"):
             self.assertIn(phrase, text)

@@ -29,7 +29,8 @@ const IMOEN_SOD_LEVEL_DUAL: &str = "feature:chriz-sod-remix:component-294";
 // 331 (Genius still stacks) and 332 are defaults, 330 is the optional strict variant.
 // v0.8.5 (October 26 intake) declares Chris Revisions 340 after them, a default.
 // v0.8.6 (October 28 intake) declares the Time Stop and Haste effect clocks 360 after 340,
-// a default (Christopher, 2026-10-27).
+// a default (Christopher, 2026-10-27); v0.8.7 (October 29 intake) renames 360 to True Time
+// Stop – fair Haste & Slow and keeps every component and the order.
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
     100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130,
     220, 320, 331, 332, 340, 360,
@@ -235,24 +236,24 @@ fn offers_imoen_in_shadows_of_amn_as_one_choice_with_the_vanilla_dual_by_default
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.6");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.7");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.8.6");
+    assert_eq!(artifact.version, "0.8.7");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.6/chriz-bg-rebalance-v0.8.6-windows.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.7/chriz-bg-rebalance-v0.8.7-windows.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.8.6");
+    assert_eq!(artifact.source.reference, "v0.8.7");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.8.6-windows.zip")
+        Some("chriz-bg-rebalance-v0.8.7-windows.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_817_306));
+    assert_eq!(artifact.source.expected_length, Some(1_818_389));
     assert_eq!(
         artifact.source.sha256,
-        "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba"
+        "0f0edbf5f37fc5528f6cf3e5fbeffda126dcd0c18814c68f9da81a002793b072"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -415,7 +416,8 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 Decision::Default,
                 1
             ),
-            // v0.8.6: Time Stop and Haste effect clocks 360 (Christopher, 2026-10-27).
+            // v0.8.6: Time Stop and Haste effect clocks 360 (Christopher, 2026-10-27), named
+            // True Time Stop – fair Haste & Slow since v0.8.7.
             (
                 "feature:chriz-bg-rebalance:component-360",
                 Decision::Default,
