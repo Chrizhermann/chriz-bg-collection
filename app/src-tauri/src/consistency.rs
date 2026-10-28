@@ -46,9 +46,11 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
     // and unrecorded log changes must not be called a successful consistency check.
     let upgrade = bg_engine::mod_upgrades::active_upgrade(root)?;
     // Applied hotpatches add their rows after any fix's, as the engine's baseline check expects.
+    let hotpatches = bg_engine::hotpatch::verified_log_suffix(root)?;
+    let hotpatched = !hotpatches.is_empty();
     let mut result = check_logs_with_patch_verifier(root, logs, |root| {
         let mut suffix = bg_engine::patches::verified_log_suffix(root)?;
-        suffix.extend(bg_engine::hotpatch::verified_log_suffix(root)?);
+        suffix.extend(hotpatches);
         Ok(suffix)
     })?;
     if result.state == "matches" {
@@ -57,6 +59,10 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
                 "The mod list matches the completed installation, its recorded BuffBot {} update and any verified applied fixes.",
                 upgrade.version
             );
+        } else if hotpatched {
+            result.detail =
+                "The mod list matches the completed installation and its applied hotpatches."
+                    .to_owned();
         }
     }
     Ok(result)
@@ -173,12 +179,8 @@ fn check_logs_with_patch_verifier(
                 crate::flavor::CURRENT.short_name
             )
         } else if !patch_suffix.is_empty() {
-            if crate::flavor::CURRENT.hotpatches.is_some() {
-                "The mod list matches the completed installation and its applied hotpatches."
-            } else {
-                "The mod list matches the completed installation and its verified applied fixes."
-            }
-            .to_owned()
+            "The mod list matches the completed installation and its verified applied fixes."
+                .to_owned()
         } else {
             "The mod list matches the completed installation.".to_owned()
         },

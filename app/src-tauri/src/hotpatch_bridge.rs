@@ -164,10 +164,14 @@ mod hotpatch_bridge_tests {
 
     #[test]
     fn only_the_iwd_app_offers_hotpatches_and_its_catalog_loads() {
-        let bridge = NativeBridge::new(PathBuf::from("unused"), "chris-recommended");
-        let refused = bridge.inspect_hotpatch("any").unwrap_err();
+        // Both flavors explicitly: CI also runs these tests in the IWD build.
+        let bridge = || NativeBridge::new(PathBuf::from("unused"), "chris-recommended");
+        let refused = bridge()
+            .with_flavor(&crate::flavor::BG)
+            .inspect_hotpatch("any")
+            .unwrap_err();
         assert_eq!(refused.code, "feature_unavailable");
-        let iwd = bridge.with_flavor(&crate::flavor::IWD);
+        let iwd = bridge().with_flavor(&crate::flavor::IWD);
         let catalog = iwd.hotpatch_catalog(hotpatch_error).unwrap();
         assert_eq!(catalog.game, bg_engine::manifest::CollectionGame::Iwdee);
     }
