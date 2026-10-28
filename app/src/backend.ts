@@ -18,6 +18,7 @@ import type {
   GameLogFile,
   GameLogStatus,
   GameRole,
+  HotpatchPreview,
   InstallationDefaults,
   InstallationRemovalPreview,
   LaunchInstallResult,
@@ -102,6 +103,10 @@ export interface Backend {
   applyInstallPatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
   undoInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
   restoreInstallPatch?(installId: string, onProgress?: (progress: OperationProgress) => void): Promise<PatchPreview>;
+  inspectHotpatch?(installId: string): Promise<HotpatchPreview>;
+  applyHotpatch?(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview>;
+  /** Undo the latest hotpatch (`undo`), or finish restoring one that did not finish. */
+  restoreHotpatch?(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview>;
 }
 
 export type InvokeCommand = (
@@ -783,6 +788,18 @@ export class NativeBackend implements Backend {
     return this.#commandWithProgress("restore_install_patch", { installId }, onProgress);
   }
 
+  inspectHotpatch(installId: string): Promise<HotpatchPreview> {
+    return this.#command("inspect_hotpatch", { installId });
+  }
+
+  applyHotpatch(installId: string, reviewToken: string, fullBackup: boolean, saveBackup: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview> {
+    return this.#commandWithProgress("apply_hotpatch", { installId, reviewToken, fullBackup, saveBackup }, onProgress);
+  }
+
+  restoreHotpatch(installId: string, undo: boolean, onProgress?: (progress: OperationProgress) => void): Promise<HotpatchPreview> {
+    return this.#commandWithProgress("restore_hotpatch", { installId, undo }, onProgress);
+  }
+
   async #commandWithProgress<T>(command: string, args: Record<string, unknown>, onProgress?: (progress: OperationProgress) => void): Promise<T> {
     if (!onProgress) return this.#command(command, args);
     let active = true;
@@ -862,6 +879,7 @@ function wait(milliseconds: number): Promise<void> {
 
 export class FixtureBackend implements Backend {
   readonly #patches = new Map<string, PatchPreview>();
+  readonly #hotpatches = new Map<string, HotpatchPreview>();
   readonly #modUpgrades = new Map<string, ModUpgradePreview>();
   /** Installations whose game log is on. */
   readonly #gameLogs = new Set<string>();
@@ -1261,6 +1279,45 @@ export class FixtureBackend implements Backend {
 
   async restoreInstallPatch(_installId: string): Promise<PatchPreview> {
     throw new Error("No interrupted fixture patch needs recovery.");
+  }
+
+  async inspectHotpatch(installId: string): Promise<HotpatchPreview> {
+    const current = this.#hotpatches.get(installId);
+    if (current) return current;
+    const copy = (await this.getUpdates()).managedCopies.find(entry => entry.installId === installId);
+    if (!copy) throw new Error("Unknown fixture installation.");
+    const preview: HotpatchPreview = {
+      installId, state: "available", detail: "Preview only: Belhifet fights with new tactics.",
+      baseRecipeVersion: copy.installedRecipeVersion ?? "Unknown",
+      hotpatch: {
+        id: "fixture-belhifet", title: "Belhifet fight", summary: "Preview only: Belhifet fights with new tactics.",
+        changes: [{ title: "Belhifet", summary: "New tactics and a fairer fight.", saveApplicability: "before-area-visit", conditionNote: "Games that have not reached the final fight get it." }],
+      },
+      applied: [], refusals: [], notes: ["Your own choices in Tweaks Anthology do not affect hotpatches."],
+      reviewToken: `fixture-hotpatch-${installId}`, canUndo: false, undoTitle: null, canRestore: false,
+      fullBackupBytes: "4294967296", saveBackupBytes: "52428800", availableBytes: "107374182400",
+      backupPath: "C:\Fixture\Hotpatch-Backups",
+    };
+    this.#hotpatches.set(installId, preview);
+    return preview;
+  }
+
+  async applyHotpatch(installId: string, reviewToken: string, _fullBackup: boolean, _saveBackup: boolean): Promise<HotpatchPreview> {
+    const preview = this.#hotpatches.get(installId);
+    if (!preview || preview.state !== "available" || preview.reviewToken !== reviewToken || !preview.hotpatch) throw new Error("Check this fixture installation again before applying.");
+    const applied: HotpatchPreview = {
+      ...preview, state: "up-to-date", detail: "Every hotpatch for your collection version is installed.", hotpatch: null,
+      applied: [{ id: preview.hotpatch.id, title: preview.hotpatch.title }], reviewToken: null, canUndo: true, undoTitle: preview.hotpatch.title,
+    };
+    this.#hotpatches.set(installId, applied);
+    return applied;
+  }
+
+  async restoreHotpatch(installId: string, undo: boolean): Promise<HotpatchPreview> {
+    const preview = this.#hotpatches.get(installId);
+    if (!undo || !preview?.canUndo) throw new Error("No fixture hotpatch can be undone or restored.");
+    this.#hotpatches.delete(installId);
+    return this.inspectHotpatch(installId);
   }
 
   #snapshot(): BuildSnapshot {

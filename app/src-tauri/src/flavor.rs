@@ -37,6 +37,8 @@ pub struct AppFlavor {
     pub mod_upgrades: bool,
     /// Signed application updates through the Tauri updater.
     pub app_updates: bool,
+    /// Hotpatches for completed installations: the catalog folder below the packaged resources.
+    pub hotpatches: Option<&'static str>,
 }
 
 /// The single collection a standalone app bundles and installs from one source game.
@@ -78,6 +80,7 @@ pub const BG: AppFlavor = AppFlavor {
     install_patches: true,
     mod_upgrades: true,
     app_updates: true,
+    hotpatches: None,
 };
 
 /// Chriz Easy IWD: Icewind Dale: Enhanced Edition from one source game.
@@ -103,6 +106,7 @@ pub const IWD: AppFlavor = AppFlavor {
     install_patches: false,
     mod_upgrades: false,
     app_updates: false,
+    hotpatches: Some("hotpatches/iwd"),
 };
 
 /// The flavor this binary was built as.
@@ -182,5 +186,14 @@ mod tests {
             resources[format!("../../{}/", collection.recipe)],
             format!("{}/", collection.recipe)
         );
+        // The hotpatch catalog ships where the bridge reads it, and fits this game.
+        let hotpatches = IWD.hotpatches.unwrap();
+        assert_eq!(
+            resources[format!("../../{hotpatches}/")],
+            format!("{hotpatches}/")
+        );
+        let catalog = bg_engine::hotpatch::catalog::load(&root.join(hotpatches)).unwrap();
+        assert_eq!(catalog.game, IWD.game);
+        assert!(BG.hotpatches.is_none());
     }
 }

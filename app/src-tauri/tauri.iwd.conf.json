@@ -37,7 +37,8 @@
       "../../manifest/game-builds/": null,
       "../../manifest/releases/": null,
       "../../recipes/curated-full-current/": null,
-      "../../recipes/iwd-current/": "recipes/iwd-current/"
+      "../../recipes/iwd-current/": "recipes/iwd-current/",
+      "../../hotpatches/iwd/": "hotpatches/iwd/"
     }
   },
   "plugins": {

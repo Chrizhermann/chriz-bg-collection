@@ -69,6 +69,7 @@ const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
 include!("patch_bridge.rs");
 include!("installed_update_bridge.rs");
 include!("mod_upgrade_bridge.rs");
+include!("hotpatch_bridge.rs");
 include!("install_names.rs");
 
 /// Engine services used by the native bridge. The test-only seam exercises the same stateful
@@ -1537,6 +1538,7 @@ impl NativeBridge {
         })?;
         bg_engine::patches::launch_guard(&record.managed_root).map_err(patch_error)?;
         bg_engine::mod_upgrades::launch_guard(&record.managed_root).map_err(mod_upgrade_error)?;
+        bg_engine::hotpatch::launch_guard(&record.managed_root).map_err(hotpatch_error)?;
         let launch_name = record
             .launch_path
             .file_name()
@@ -3476,7 +3478,8 @@ fn project_managed_install(
     let consistency = available.then(|| crate::consistency::inspect(&record.managed_root));
     let patch_recovery_needed = available
         && (bg_engine::patches::launch_guard(&record.managed_root).is_err()
-            || bg_engine::mod_upgrades::launch_guard(&record.managed_root).is_err());
+            || bg_engine::mod_upgrades::launch_guard(&record.managed_root).is_err()
+            || bg_engine::hotpatch::launch_guard(&record.managed_root).is_err());
     let radar_version = if available {
         bg_engine::radar::status(&record.managed_root, record.managed_root.join("game"), None)
             .ok()

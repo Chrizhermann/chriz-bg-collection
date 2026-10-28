@@ -45,8 +45,12 @@ fn check_logs(root: &Path, logs: &[FinalLogReceipt]) -> Result<ConsistencySummar
     // components or rewrite the base receipt. Pending/unrecognized update history
     // and unrecorded log changes must not be called a successful consistency check.
     let upgrade = bg_engine::mod_upgrades::active_upgrade(root)?;
-    let mut result =
-        check_logs_with_patch_verifier(root, logs, bg_engine::patches::verified_log_suffix)?;
+    // Applied hotpatches add their rows after any fix's, as the engine's baseline check expects.
+    let mut result = check_logs_with_patch_verifier(root, logs, |root| {
+        let mut suffix = bg_engine::patches::verified_log_suffix(root)?;
+        suffix.extend(bg_engine::hotpatch::verified_log_suffix(root)?);
+        Ok(suffix)
+    })?;
     if result.state == "matches" {
         if let Some(upgrade) = upgrade {
             result.detail = format!(
@@ -169,8 +173,12 @@ fn check_logs_with_patch_verifier(
                 crate::flavor::CURRENT.short_name
             )
         } else if !patch_suffix.is_empty() {
-            "The mod list matches the completed installation and its verified applied fixes."
-                .to_owned()
+            if crate::flavor::CURRENT.hotpatches.is_some() {
+                "The mod list matches the completed installation and its applied hotpatches."
+            } else {
+                "The mod list matches the completed installation and its verified applied fixes."
+            }
+            .to_owned()
         } else {
             "The mod list matches the completed installation.".to_owned()
         },

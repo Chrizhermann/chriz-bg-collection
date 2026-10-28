@@ -518,6 +518,44 @@ export interface PatchPreview {
   readonly backupPath: string;
 }
 
+/** One change of a hotpatch, as the player reads it. */
+export interface HotpatchChange {
+  readonly title: string;
+  readonly summary: string;
+  /** What games already in progress get, as in collection changelogs. */
+  readonly saveApplicability: "current-save" | "before-npc-join" | "before-area-visit" | "before-event" | "next-playthrough" | "new-game-only" | "unknown";
+  readonly conditionNote: string | null;
+}
+
+/** What Updates shows about hotpatches for one installation. Checking never changes the game. */
+export interface HotpatchPreview {
+  readonly installId: string;
+  readonly state: "available" | "refused" | "up-to-date" | "needs-recovery";
+  readonly detail: string;
+  readonly baseRecipeVersion: string;
+  /** The next hotpatch, also when it is refused. */
+  readonly hotpatch: {
+    readonly id: string;
+    readonly title: string;
+    readonly summary: string;
+    readonly changes: readonly HotpatchChange[];
+  } | null;
+  readonly applied: readonly { readonly id: string; readonly title: string }[];
+  /** Why the next hotpatch is not offered. */
+  readonly refusals: readonly string[];
+  /** Differences from the recommended setup that are allowed. */
+  readonly notes: readonly string[];
+  readonly reviewToken: string | null;
+  readonly canUndo: boolean;
+  readonly undoTitle: string | null;
+  readonly canRestore: boolean;
+  /** Decimal byte counts remain strings across the native boundary. */
+  readonly fullBackupBytes: string;
+  readonly saveBackupBytes: string;
+  readonly availableBytes: string;
+  readonly backupPath: string;
+}
+
 export interface UpdateSummary {
   readonly checkedAt: string | null;
   readonly networkState: "online" | "offline" | "unconfigured";

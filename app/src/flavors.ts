@@ -26,6 +26,8 @@ export interface FlavorFeatures {
   readonly installPatches: boolean;
   /** Whole-mod upgrades such as BuffBot. */
   readonly modUpgrades: boolean;
+  /** Hotpatches: new mod components for completed installations, running games included. */
+  readonly hotpatches: boolean;
   readonly manualPauses: boolean;
   readonly appUpdates: boolean;
   readonly buffBotTip: boolean;
@@ -88,6 +90,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       radar: true,
       installPatches: true,
       modUpgrades: true,
+      hotpatches: false,
       manualPauses: true,
       appUpdates: true,
       buffBotTip: true,
@@ -127,6 +130,7 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       radar: true,
       installPatches: false,
       modUpgrades: false,
+      hotpatches: true,
       manualPauses: true,
       appUpdates: false,
       buffBotTip: true,
@@ -146,13 +150,13 @@ export const FLAVORS: Readonly<Record<FlavorId, Flavor>> = {
       removalKeepsSources: "Your original game and shared downloads stay untouched. Saves stored outside this folder are kept.",
       gameSettingsFailed: "Close the game, then use Play again to retry.",
       copyGamesPhase: "Copy your game",
-      // Manual mods turn off the installed-mod check, the only update of a game in this app.
-      manualModsWarning: "Manual mods can conflict with this setup. You choose their compatibility and install order. Chriz Easy IWD records your changes, but cannot guarantee them. Adding manual mods turns off mod update checks for this installation.",
+      // Manual mods turn off hotpatches and the installed-mod check for that installation.
+      manualModsWarning: "Manual mods can conflict with this setup. You choose their compatibility and install order. Chriz Easy IWD records your changes, but cannot guarantee them. Adding manual mods turns off hotpatches and mod update checks for this installation.",
       manualPauseFolderStep: "At the pause, use the displayed managed game folder, never your original game. Back up that folder before making changes: Chriz Easy IWD does not automatically create a full checkpoint backup. Keep the game closed and retain the manual installer’s backups and diagnostics.",
       manualPauseLimitsStep: "Only new WeiDU components are supported. Do not remove, reinstall or reorder managed components or edit WeiDU.log.",
-      manualAdditionsAcceptNote: "Accepting records these additions and turns off mod update checks for this installation. Compatibility is your responsibility.",
-      customizedLauncherNote: "Customized — manual mods added. Mod update checks are off for this installation.",
-      customizedUpdatesNote: "Customized — manual mods added. Mod update checks are off for this installation. New installations remain available.",
+      manualAdditionsAcceptNote: "Accepting records these additions and turns off hotpatches and mod update checks for this installation. Compatibility is your responsibility.",
+      customizedLauncherNote: "Customized — manual mods added. Hotpatches and mod update checks are off for this installation.",
+      customizedUpdatesNote: "Customized — manual mods added. Hotpatches and mod update checks are off for this installation. New installations remain available.",
     },
   },
 };

@@ -45,11 +45,11 @@ const stateLabels: Readonly<Record<PatchPreview["state"], string>> = {
   "needs-recovery": "Restore this installation before playing",
 };
 
-function bytes(value: string): bigint | null {
+export function bytes(value: string): bigint | null {
   return /^\d+$/.test(value) ? BigInt(value) : null;
 }
 
-function formatBytes(value: string): string {
+export function formatBytes(value: string): string {
   const amount = bytes(value);
   if (amount === null) return "Not available";
   const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];

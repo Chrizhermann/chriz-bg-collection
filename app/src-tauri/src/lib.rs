@@ -98,6 +98,9 @@ pub fn run() -> tauri::Result<()> {
             commands::apply_install_patch,
             commands::undo_install_patch,
             commands::restore_install_patch,
+            commands::inspect_hotpatch,
+            commands::apply_hotpatch,
+            commands::restore_hotpatch,
             commands::install_app_update,
             commands::activate_recipe_update,
         ])
