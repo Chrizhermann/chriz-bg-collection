@@ -89,7 +89,7 @@ repository = "Chrizhermann/chriz-item-randomiser"
 [[holds]]
 mod = "buffbot"
 release = "v1.12.1"
-reason = "Christopher tests v1.12.1 himself first; then it goes into both installers together (Chriz Easy BG: PR #44, Chriz Easy IWD: its pin PR). Meanwhile Chriz Easy BG keeps v1.11.0 and Chriz Easy IWD keeps v1.12.0, the first release with IWD support."
+reason = "Christopher tests v1.12.1 himself first; then it goes into both installers together (Chriz Easy BG: PR #44, Chriz Easy IWD: PR #51). Meanwhile Chriz Easy BG keeps v1.11.0 and Chriz Easy IWD keeps v1.12.0, the first release with IWD support."
 decided = "2026-10-28"
 installers = { chriz-easy-bg = "v1.11.0", chriz-easy-iwd = "v1.12.0" }
 
