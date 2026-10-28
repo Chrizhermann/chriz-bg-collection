@@ -50,6 +50,12 @@ Cross-repository status. Component detail stays in the sections below and in the
      `claude/iwdee-app`; both go in together (rule below), #51 with a merge commit. Since
      #56, #44 conflicts in `engine/tests/feature_groups.rs` (keep #56's collection digests;
      the plan digests change for both pins) and in the changelog draft (keep both lines).
+     Christopher added Sirene NPC for BG:EE (BG1 and SoD) as a default on 2026-10-29,
+     after an EET lab test: pinned in both recipes on `claude/sirene-bg1-alpha22` (draft
+     PR until the full Recommended EET lab passes; evidence in
+     `manifest/evidence/release-intake-20261029-sirene-bg1.toml`). Both Sirene mods now
+     install after Artisan's Kitpack's main run, Sirene BG1 first, so the Martyr kit comes
+     from the Kitpack (see [SIRENE_BG1](SIRENE_BG1.md)).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -680,8 +686,13 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
 - [ ] [BGGO](BGGO.md) `4`: decide whether Alternate Graphics is excluded, optional, or default.
 - [ ] [Warlock](C0WARLOCK.md): choose Yes or No for the Contingency UI-based
   spell-learning prompt. The component remains a default either way.
-- [ ] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
-  already curated BG2/EET Sirene route.
+- [x] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
+  already curated BG2/EET Sirene route. Christopher, 2026-10-29: Sirene NPC for BG:EE (BG1
+  and SoD) becomes a default in alpha.22 after an EET lab test, pinned at unreleased
+  `master` commit `1c86000` rather than v3.1, which supports BG:EE only. Picks as for the
+  BG2 mod: `0`, the Sirick portrait `3` and True Paladin `6` by default, Cavalier,
+  Inquisitor and Undead Hunter `7`–`9` optional. See [SIRENE_BG1](SIRENE_BG1.md) and the
+  alpha.22 item at the top.
 - [ ] Choose one restored-Bhaalspawn-powers provider: Ascension `40` (technical
   recommendation) or UB `19`; never expose both together. Since 2026-10-17 every
   Unfinished Business component, including `19`, is optional and unselected.

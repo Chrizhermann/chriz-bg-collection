@@ -72,8 +72,10 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn(2292, actual["cdtweaks-bg2"])
         # October 28: the Rebalance v0.8.6 pin adds default 360.
         self.assertIn(360, actual["chriz-bg-rebalance-bg2"])
-        self.assertEqual(self.result["componentCount"], 469)
-        self.assertEqual(len(actual), 69)
+        # October 29: Sirene NPC for BG:EE adds its own run with default 0, 3 and 6.
+        self.assertEqual(actual["sirene-bg1-bg2"], [0, 3, 6])
+        self.assertEqual(self.result["componentCount"], 472)
+        self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

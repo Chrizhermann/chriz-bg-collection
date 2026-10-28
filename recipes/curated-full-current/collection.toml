@@ -215,13 +215,6 @@ components = [0, 1]
 args = []
 
 [[runs]]
-run_id = "sirene-bg2"
-mod_id = "sirene-bg2"
-phase = "main"
-components = [0, 2, 5, 6, 7, 8]
-args = []
-
-[[runs]]
 run_id = "branwen-bg2"
 mod_id = "branwen"
 phase = "main"
@@ -254,6 +247,20 @@ run_id = "artisanskitpack-main-bg2"
 mod_id = "artisanskitpack"
 phase = "main"
 components = [1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10001, 10002, 10003, 10004, 1100, 1003, 1006, 1004, 1005, 1007, 1000, 1001, 1008, 1009, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001]
+args = []
+
+[[runs]]
+run_id = "sirene-bg1-bg2"
+mod_id = "sirene-bg1"
+phase = "main"
+components = [0, 3, 6, 7, 8, 9]
+args = []
+
+[[runs]]
+run_id = "sirene-bg2"
+mod_id = "sirene-bg2"
+phase = "main"
+components = [0, 2, 5, 6, 7, 8]
 args = []
 
 [[runs]]
@@ -2943,6 +2950,101 @@ decision = "default"
 readiness = "ready"
 conflicts = [{ feature_id = "feature:yeslicknpc:component-0", reason = "Choose exactly one Yeslick class route when installing Yeslick." }]
 components = [{ run_id = "yeslicknpc-bg2", component = 1 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-0"
+title = "Sirene NPC for BG1 and Siege of Dragonspear"
+description = "Add Sirene to BG1 and Siege of Dragonspear. With Sirene NPC for BG2, she can travel on with you into BG2."
+category = "npcs"
+source_label = "Sirene for BG1 and SoD"
+group_label = "Npcs"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "sirene-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-3"
+title = "Sirene portrait in BG1 and SoD: Sirick, Light Armor"
+description = "Use Christopher's curated Sirene portrait, the same one as in BG2."
+category = "visuals"
+source_label = "Sirene NPC for BG1 and Siege of Dragonspear"
+group_label = "Choose an alternate portrait for Sirene?"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+components = [{ run_id = "sirene-bg1-bg2", component = 3 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-6"
+title = "Sirene as a True Paladin in BG1 and SoD"
+description = "Use the curated default class for Sirene in BG1 and Siege of Dragonspear, the same as in BG2."
+category = "npcs"
+source_label = "Sirene NPC for BG1 and Siege of Dragonspear"
+group_label = "Choose an alternate class for Sirene?"
+choice_group = "choice:sirene-bg1:choose-an-alternate-class-for-sirene"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 6 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-7"
+title = "Sirene as a Cavalier in BG1 and SoD"
+description = "Optional. Make Sirene a Cavalier in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+source_label = "Sirene NPC for BG1 and Siege of Dragonspear"
+group_label = "Choose an alternate class for Sirene?"
+choice_group = "choice:sirene-bg1:choose-an-alternate-class-for-sirene"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 7 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-8"
+title = "Sirene as an Inquisitor in BG1 and SoD"
+description = "Optional. Make Sirene an Inquisitor in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+source_label = "Sirene NPC for BG1 and Siege of Dragonspear"
+group_label = "Choose an alternate class for Sirene?"
+choice_group = "choice:sirene-bg1:choose-an-alternate-class-for-sirene"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 8 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-9"
+title = "Sirene as an Undead Hunter in BG1 and SoD"
+description = "Optional. Make Sirene an Undead Hunter in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+source_label = "Sirene NPC for BG1 and Siege of Dragonspear"
+group_label = "Choose an alternate class for Sirene?"
+choice_group = "choice:sirene-bg1:choose-an-alternate-class-for-sirene"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 9 }]
 
 [[features]]
 id = "feature:sirene-bg2:component-0"

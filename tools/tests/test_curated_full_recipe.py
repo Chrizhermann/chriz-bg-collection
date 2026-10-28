@@ -396,7 +396,13 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 360 at the end of the Rebalance run, after 340 (Christopher, 2026-10-27);
                 # with v0.8.5 restored and without 360 the October 27 digest
                 # 654ae8d42a63de4d3e6f1c767df3a7bf65eabe2bb383889088986621b2958780 returns.
-                "1df78afce7729152da614ca3877a33da03119eae6d93b7c45657c83f61840967",
+                # October 29 intake: default Sirene NPC for BG:EE 0/3/6 (Christopher,
+                # 2026-10-29) with optional classes 7/8/9 in its own run after Kitpack main,
+                # and sirene-bg2 moved there from after Yeslick; without the run, its
+                # features and preset entries and with sirene-bg2 back, the October 28
+                # digest 1df78afce7729152da614ca3877a33da03119eae6d93b7c45657c83f61840967
+                # returns.
+                "2d25f2d8d1cf19db50bd1c81671c7c84fe87b43032097a63e58bfe9919ef1eae",
             )
 
             legacy_bg1npc_groups = {

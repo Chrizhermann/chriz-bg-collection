@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 482 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 467.
+Engine-equivalent resolved-selection summary: 485 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 470.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -398,6 +398,9 @@ Engine-equivalent resolved-selection summary: 482 default/mandatory rows — con
 | `RR:999` | default | `feature:rr:component-999` | selected for installation | rr → rr-4.92 4.92 (v4.92), component 999 |  |
 | `SAFANA:0` | mandatory | `feature:safana:mandatory-components` | selected for installation | safana → safana-in-amn-v05 05 (v05), component 0 |  |
 | `SARAHTOB:1` | mandatory | `feature:sarahtob:mandatory-components` | selected for installation | sarahtob → sarahtob-8 8 (v8), component 1 |  |
+| `SIRENE_BG1:0` | default | `feature:sirene-bg1:component-0` | selected for installation | sirene-bg1 → sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e 1c8600029a9ac31395a61b5d4d03f98337dcf83e (1c8600029a9ac31395a61b5d4d03f98337dcf83e), component 0 |  |
+| `SIRENE_BG1:3` | default | `feature:sirene-bg1:component-3` | selected for installation | sirene-bg1 → sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e 1c8600029a9ac31395a61b5d4d03f98337dcf83e (1c8600029a9ac31395a61b5d4d03f98337dcf83e), component 3 |  |
+| `SIRENE_BG1:6` | default | `feature:sirene-bg1:component-6` | selected for installation | sirene-bg1 → sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e 1c8600029a9ac31395a61b5d4d03f98337dcf83e (1c8600029a9ac31395a61b5d4d03f98337dcf83e), component 6 |  |
 | `SIRENE_BG2:0` | default | `feature:sirene-bg2:component-0` | selected for installation | sirene-bg2 → sirene-bg2-00beda909a4a791a35016069b4ebb77f27279723 00beda909a4a791a35016069b4ebb77f27279723 (00beda909a4a791a35016069b4ebb77f27279723), component 0 |  |
 | `SIRENE_BG2:2` | default | `feature:sirene-bg2:component-2` | selected for installation | sirene-bg2 → sirene-bg2-00beda909a4a791a35016069b4ebb77f27279723 00beda909a4a791a35016069b4ebb77f27279723 (00beda909a4a791a35016069b4ebb77f27279723), component 2 |  |
 | `SIRENE_BG2:5` | default | `feature:sirene-bg2:component-5` | selected for installation | sirene-bg2 → sirene-bg2-00beda909a4a791a35016069b4ebb77f27279723 00beda909a4a791a35016069b4ebb77f27279723 (00beda909a4a791a35016069b4ebb77f27279723), component 5 |  |

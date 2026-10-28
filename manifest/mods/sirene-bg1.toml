@@ -1,0 +1,31 @@
+id = "sirene-bg1"
+artifact_id = "sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+name = "Sirene NPC for BG:EE"
+tp2 = "Sirene/Setup-Sirene.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Sirene NPC for Baldur's Gate: Enhanced Edition"
+
+[[components]]
+id = 3
+name = "Alternate portrait: Sirick, Light Armor"
+
+[[components]]
+id = 6
+name = "True Paladin"
+
+[[components]]
+id = 7
+name = "Cavalier"
+
+[[components]]
+id = 8
+name = "Inquisitor"
+
+[[components]]
+id = 9
+name = "Undead Hunter"

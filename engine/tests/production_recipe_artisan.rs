@@ -128,6 +128,10 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
 
     let ascension = position("ascension-bg2");
     let main = position("artisanskitpack-main-bg2");
+    // October 29: both Sirene mods install between Kitpack main and the Kitpack NPC
+    // installer, so that they skip their own Martyr kit (Kitpack 3005 provides it).
+    let sirene_bg1 = position("sirene-bg1-bg2");
+    let sirene_bg2 = position("sirene-bg2");
     let npcs = position("artisanskitpack-npc-bg2");
     let iep = position("iepbanters-bg2");
     let crossmod = position("crossmodbg2-bg2");
@@ -140,7 +144,9 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
     let eet_end = position("eet-end-bg2");
     assert!(
         ascension < main
-            && main < npcs
+            && main < sirene_bg1
+            && sirene_bg1 < sirene_bg2
+            && sirene_bg2 < npcs
             && npcs < iep
             && iep < crossmod
             && crossmod < early_tweaks

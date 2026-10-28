@@ -14,7 +14,7 @@ no installer references, such as older versions, are not listed.
 <!-- BEGIN GENERATED PINS -->
 ### Shipped recipe: `recipes/curated-full-current/`
 
-68 archives for 71 installers.
+69 archives for 72 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
@@ -58,6 +58,7 @@ no installer references, such as older versions, are not listed.
 | Rogue Rebalancing | 4.92 | `rr` | `692297f6da8f…` | [release asset](https://github.com/Spellhold-Studios/Rogue-Rebalancing/releases/download/v4.92/rr-v492.zip) |
 | Safana in Amn | 05 | `safana` | `29672c878cfb…` | [tag archive](https://github.com/RoxanneSHS/SafanaBG2/archive/refs/tags/v05.zip) |
 | Sarah NPC Romance Mod for BG2:ToB | 8 | `sarahtob` | `061b1da90d8c…` | [release asset](https://github.com/Gibberlings3/Sarah/releases/download/v8/sarah-npc-romance-mod-for-bg2-tob-v8.iemod) |
+| Sirene NPC for BG:EE | 1c8600029a9ac31395a61b5d4d03f98337dcf83e | `sirene-bg1` | `f46b035395c4…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e) |
 | Sirene NPC for BG2:EE | 00beda909a4a791a35016069b4ebb77f27279723 | `sirene-bg2` | `1a6d517b7b02…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-NPC-for-BG2-EE/zip/00beda909a4a791a35016069b4ebb77f27279723) |
 | Spell Revisions | 4.21-chriz.7 | `spell-rev` | `613fca7d637b…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/spell_rev-v4-21-chriz-7.zip) |
 | Spell Revisions / Rogue Rebalancing compatibility | 4.21-chriz.7 | `srcb-rr-compat` | `705289651b99…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/SRCB_RR_COMPAT-v4-21-chriz-7.zip) |
@@ -89,7 +90,7 @@ no installer references, such as older versions, are not listed.
 
 ### Base recipe: `manifest/`
 
-62 archives for 65 installers.
+63 archives for 66 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
@@ -127,6 +128,7 @@ no installer references, such as older versions, are not listed.
 | Rogue Rebalancing | 4.92 | `rr` | `692297f6da8f…` | [release asset](https://github.com/Spellhold-Studios/Rogue-Rebalancing/releases/download/v4.92/rr-v492.zip) |
 | Safana in Amn | 05 | `safana` | `29672c878cfb…` | [tag archive](https://github.com/RoxanneSHS/SafanaBG2/archive/refs/tags/v05.zip) |
 | Sarah NPC Romance Mod for BG2:ToB | 8 | `sarahtob` | `061b1da90d8c…` | [release asset](https://github.com/Gibberlings3/Sarah/releases/download/v8/sarah-npc-romance-mod-for-bg2-tob-v8.iemod) |
+| Sirene NPC for BG:EE | 1c8600029a9ac31395a61b5d4d03f98337dcf83e | `sirene-bg1` | `f46b035395c4…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e) |
 | Sirene NPC for BG2:EE | 00beda909a4a791a35016069b4ebb77f27279723 | `sirene-bg2` | `1a6d517b7b02…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-NPC-for-BG2-EE/zip/00beda909a4a791a35016069b4ebb77f27279723) |
 | Spell Revisions | 4.21-chriz.7 | `spell-rev` | `613fca7d637b…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/spell_rev-v4-21-chriz-7.zip) |
 | Spell Revisions / Rogue Rebalancing compatibility | 4.21-chriz.7 | `srcb-rr-compat` | `705289651b99…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/SRCB_RR_COMPAT-v4-21-chriz-7.zip) |
@@ -208,7 +210,7 @@ except AJANTISBG2 (language 1).
 | RR | v4.92 | v4.92 | unchanged (installed = latest) |
 | SAFANA | v0.5 | v05 | unchanged (tag is spelled v05); SoD-items carryover fix component still to be built |
 | SARAHTOB | v8 | v8 | Official v8 IEMOD frozen; custom portraits remain a separate blocked/manual asset decision. |
-| SIRENE_BG2 | — | commit `00beda90` | Exact official commit archive frozen; the separate BG1 package remains a curation decision. |
+| SIRENE_BG2 | — | commit `00beda90` | Exact official commit archive frozen; the separate BG1 package remains a curation decision (decided 2026-10-29: Sirene NPC for BG:EE is a default at its EET-ready commit `1c860002`; see the tables above). |
 | SPELL_REV | v4.19 | v4.21-chriz.3 | Immutable successor release pinned with the protection-refresh and hidden-subspell work; component `60` runs late. |
 | STRATAGEMS | 35.21 | v35.21 | unchanged; MUST run under WeiDU 249 (breaks on 251); unverified-by-author on 2.7, community installs work |
 | UB | v28 | v28 | Official v28 release ZIP frozen; component `19` remains omitted with Ascension `40` pending the canonical provider decision. |

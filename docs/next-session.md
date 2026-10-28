@@ -20,8 +20,10 @@ be considered final:
 - [ ] Curate Bardic Wonders `2011`, `2012`, and `2013`.
 - [ ] Decide BGGO `4` (Alternate Graphics): excluded, optional, or default.
 - [ ] Choose Yes or No for Warlock's hidden Contingency spell-learning prompt.
-- [ ] Decide whether the separate BG1 Sirene v3.1 package joins the already curated
-  BG2/EET Sirene route.
+- [x] Decide whether the separate BG1 Sirene v3.1 package joins the already curated
+  BG2/EET Sirene route. Decided 2026-10-29: Sirene NPC for BG:EE is a default in
+  alpha.22, pinned at its EET-ready `master` commit `1c86000` (see
+  [SIRENE_BG1](curation/components/SIRENE_BG1.md)).
 - [ ] Choose exactly one restored-Bhaalspawn-powers provider: Ascension `40`
   (technical recommendation) or UB `19`.
 - [ ] Finish the remaining NPC edge cases: Sarah remains an Archer; Dynaheir gets Haste

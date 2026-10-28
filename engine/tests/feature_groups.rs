@@ -329,18 +329,24 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // run's artifact id; the selections are unchanged. With the old title restored the previous
     // collection digests return (manifest 820fab4c…, curated 9a8d8095…), and with v0.8.6
     // restored the previous plan digests (manifest f4ab1fd8…, curated c18baa9d…).
+    // Re-pinned on October 29 for Sirene NPC for BG:EE as a default (Christopher, 2026-10-29):
+    // its run after Kitpack main with sirene-bg2 moved there from after Yeslick, its six
+    // features and its three preset entries change all six digests. With the run, the
+    // features and the preset entries removed and sirene-bg2 back after Yeslick, the six
+    // previous digests return (manifest b16c7f80…, b1f467ef…, 4fd9d65f…; curated a9ce4259…,
+    // c2684cfe…, 2614b16c…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "b16c7f80fcc5e48f2d61a5e50616e329b06deca13f92f29e4312f0113727c655",
-            "b1f467ef9288a2a0dd3138dc4fb670abc9762579309af3f2efaea03ff19bddec",
-            "4fd9d65f14bef85188ae3371e17638d6c9896a5dcd8e1f35cbc9b6b8ce29c762",
+            "175409ce9b47adb818ab5b23496ce029a0c56bf757242dbdda3081c79bb2f048",
+            "df00dddfe07769d7e237db9336a5d9d3a000e76473ae3213174df197fda93b01",
+            "095b54972bb50d38e8dd6d412e10e68fb163ebd721b551ca1b8d70a2b0b3aea2",
         ),
         (
             "../recipes/curated-full-current",
-            "a9ce4259cba3e2d42b3be4106ce8298f1ca0eb704626a7b3bd660af5d1cb99a8",
-            "c2684cfef6bcfc9c2e83ab218b88390288daf7412f670fa82410dff2f1daaee9",
-            "2614b16c2a45d2222735c5e65feee1e738b42bf354a4e373f4f6c4a8c76a38f5",
+            "2cdcdf4ae1711cb2f5fea59292fb873d6080a60f3dee657eb5d5ae216097d6d9",
+            "e886d88b3e28675049808d56fb5ab8e417c679e6d7fece380f304ede71ab1379",
+            "6edd675bd54cc910f962e88709ce1a87faadcde96e8dbdb5718521f855c8ecaf",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
