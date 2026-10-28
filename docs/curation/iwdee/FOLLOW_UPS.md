@@ -3,6 +3,30 @@
 This queue tracks outstanding work; it does not select components or replace the
 user's decisions. Started 2026-09-10.
 
+## First public release (0.1.1)
+
+Christopher, 2026-10-28: the hotpatch is the last app feature he needs before the first
+community release; he proposed the version 0.1.1.
+
+- [ ] Hotpatch: a separate session builds it with Christopher on `claude/iwd-hotpatch` (from
+  `claude/iwdee-app`): an Updates entry "Hotpatch" with a short changelog, offered only to
+  installations close to the recommended setup; first use is boss upgrades from Chriz IWD
+  Encounters.
+- [ ] Chriz IWD Encounters in the recipe: draft PR #42 into `claude/iwdee-app` (his call).
+- [ ] Own version line for the IWD app, independent of Chriz Easy BG (the IWD installer still
+  carries CEBG's 0.1.0-alpha.21): `version` 0.1.1 in `tauri.iwd.conf.json`, release records
+  moved from `v0.1.0-alpha.1` to `v0.1.1`. Done once the hotpatch and #42 are in, so the
+  records describe what ships.
+- [ ] Overview drafted in `docs/releases/iwd/`: `public-README.md` (README of the public
+  release repository) and `0.1.1.md` (release notes). Before release: match the hotpatch
+  paragraphs to the agreed design, add the SHA-256 and the exact source commit.
+- [ ] Public release repository `Chrizhermann/chriz-easy-iwd`, like `chriz-easy-bg` for CEBG
+  (needs his OK; it does not exist yet).
+- [ ] Website: an IWD page on bg.chrizfader.org (`bg-site` in `twitch-setup-chriz`) built from
+  the README, with download link and checksum, once the release exists and he approves.
+- [ ] Rebuild the installer from the merged branch, verify the bundle, then release only on his
+  explicit go.
+
 ## Curation and sources
 
 - [x] Record the name, same-repo architecture and existing user choices.
