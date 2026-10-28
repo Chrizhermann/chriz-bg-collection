@@ -37,9 +37,11 @@ Cross-repository status. Component detail stays in the sections below and in the
        `manifest/evidence/release-intake-20261027.toml`; below).
      - The engine's rename retry from PR #35, ported by
        [PR #40](https://github.com/Chrizhermann/chriz-bg-collection/pull/40) (below).
-     A newer BuffBot joins only if it is tested in time; otherwise a later release takes
-     it. Two releases close together are fine. v1.12.1 (below) waits for Christopher's
-     decision.
+     BuffBot v1.12.1 is pinned in both recipes in
+     [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (evidence in
+     `manifest/evidence/release-intake-20261028-buffbot.toml`). Christopher, 2026-10-28:
+     it goes into alpha.22 once it has been tested again; he tests it himself, and the PR
+     stays open until he says his test is fine.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -54,6 +56,11 @@ Cross-repository status. Component detail stays in the sections below and in the
     cache that another program had marked read-only could no longer be replaced; the
     repair failed after about 5 s of retries. `main` keeps that regression until the
     next-release branch is merged back into it.
+- Engine test isolation (found on 2026-10-28): some engine test runs write CEBG's install
+  marker `.chriz-managed-install.json` into the real Documents folder. About 30 empty
+  profile folders came from them; some markers name a temporary test folder as their
+  install. The fix runs in its own session. Christopher decides there whether removing
+  an installation should also drop a profile folder that holds only the marker.
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
   everywhere): pinned in both recipes since
   [PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18) (merged on
@@ -111,8 +118,10 @@ Cross-repository status. Component detail stays in the sections below and in the
   - BuffBot [v1.12.1](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.12.1)
     (released on 2026-10-27) fixes that: three layout defects of v1.12.0, none of which
     depends on the EEex version. Its panel was checked in a BG2:EE 2.7.3.0 lab with EEex
-    v1.3.1, the version alpha.22 installs. Christopher, 2026-10-27: alpha.22 takes it only
-    if it is tested in time; otherwise a later release does. Waiting for his decision.
+    v1.3.1, the version alpha.22 installs. Pinned in PR #44, open until Christopher's own
+    test (2026-10-28). Components `1` and `0`, their order and the run position are
+    unchanged; the TP2 also accepts IWD:EE and no longer writes TLK strings,
+    `bfbot_strrefs.txt` or `BFBOTIB.BAM`.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -237,7 +246,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   ([chriz-item-randomiser#23](https://github.com/Chrizhermann/chriz-item-randomiser/pull/23)).
   Christopher, 2026-10-27: two bugs that v1.0.2 already has get fixed and tested before
   v1.0.3 is released: Adalon's egg reward never arrives, and the randomiser switches
-  itself off when a recipient dies during the handover.
+  itself off when a recipient dies during the handover. Christopher, 2026-10-28: the
+  disruptive bugs should be fixed in v1.0.3; any further work comes after it.
 - Druid level progression (Christopher, 2026-10-27): Tweaks Anthology `2292` makes
   druids level up on the cleric XP table. They reach level 15 at 1,575,000 XP instead of
   3,000,000 and get their high-level spells far too early. Since
@@ -312,9 +322,13 @@ Cross-repository status. Component detail stays in the sections below and in the
     [v0.8.6](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.6) on
     2026-10-28 and pinned since PR #41, under "Spells" and not marked experimental
     (Christopher, 2026-10-28: it was tested extensively).
-  - Christopher, 2026-10-28: he would like to offer it on its own too, for EEex players
-    outside CEBG. Its installer needs no other BG Rebalance component. A separate small
-    package, like the `live-patch` tail packages, is proposed and waits for his decision.
+  - Christopher, 2026-10-28: offer it on its own too, for EEex players outside CEBG, as
+    long as it is proven to work standalone (with EEex). In progress: a `live-patch`
+    package with its own installer and guards against installing it together with `360`,
+    a README, and a packager, so the next BG Rebalance release carries it like the other
+    tail packages. Its lab proof runs on a plain BG2:EE 2.7.3.0 with only EEex: install,
+    behaviour, uninstall, and adding it to a running game. The release needs Christopher's
+    OK.
 
 **Ready to start**
 
@@ -474,7 +488,7 @@ content, evaluated component by component (keep, fix or extend).
     A lab smoke showed no box in normal play.
   - Still open: check the loader log in the Recommended lab run before the release,
     because no ongoing playthrough has run with `430` yet; the same run checks BuffBot
-    v1.11.0 together with `430`.
+    v1.12.1 together with `430`.
 - [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
   `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
@@ -586,18 +600,20 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
 - [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed with v1.10.0 (see
-  Done); the pinned v1.11.0 has not run in a collection lab. Open: toggle
+  Done); v1.12.1 (PR #44) has not run in a collection lab. Open: toggle
   stances with opcode 214 variants count as buffs, so a new party's Long preset enables
   Artisan's Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
   ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)). The combat-stop notice
   fix (since v1.10.1, [bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
   was checked in a lab through the engine's text object only; nobody has seen the notice
-  on screen in a real combat stop yet. v1.11.0's own EET/SR/SCS/Modpack labs ran with
-  Modpack `430` uninstalled, and its notes do not accept the configuration with `430`
-  yet, which the recommended preset installs: check BuffBot with `430` in the
-  Recommended lab run. Also check there its new column headers and control artwork, and
-  that no other mod in the stack writes its PVRZ pages `MOS88809`–`MOS88993`.
+  on screen in a real combat stop yet. v1.12.x's own labs ran on BG2:EE and IWD:EE
+  2.7.3.0 with EEex v1.3.1, not on EET, and BuffBot's README still calls the
+  configuration with `430` not accepted: check BuffBot with `430` on EET in
+  Christopher's test or the Recommended lab run. Also check there the panel and its
+  control artwork (first drawn in v1.12.0), that the F12 preset abilities are gone
+  (right-click the HUD gear instead), and that no other mod writes its PVRZ pages
+  `MOS88809`–`MOS88993`.
 - [ ] Game-log switch (see Done): no game has started with it yet. In a lab, turn it on
   in CEBG, start and quit the game twice with **Play**, and check that
   `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first
