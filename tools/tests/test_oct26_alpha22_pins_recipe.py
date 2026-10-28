@@ -39,6 +39,9 @@ SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.6"
 # record of this intake.
 LATER_COMPONENTS = {"chriz-bg-rebalance": {360}}
 LATER_ROWS = {"CHRIZ-BG-REBALANCE": {360}}
+# The October 29 intake (test_oct29_rebalance_pin_recipe) then replaces Rebalance v0.8.6
+# with v0.8.7, which keeps every component and the order.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.7"
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {

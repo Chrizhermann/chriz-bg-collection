@@ -14,10 +14,11 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-The recipe pins **v0.8.6** (published 2026-10-27, tag commit `43b8811`), which adds the
-Time Stop and Haste effect clocks `360` (see below). v0.8.5 (2026-10-25) added Chris
-Revisions `340`; v0.8.3 added potion uniqueness `330`/`331` and the Heroism family `332`;
-v0.8.4 (2026-10-23) released the October 8 compatibility follow-ups for existing
+The recipe pins **v0.8.7** (published 2026-10-28 16:03 UTC, tag commit `2c0aae4`), which
+renames `360` to True Time Stop – fair Haste & Slow and leaves its behaviour unchanged (see
+below). v0.8.6 (2026-10-27, tag commit `43b8811`) added `360`; v0.8.5 (2026-10-25) added
+Chris Revisions `340`; v0.8.3 added potion uniqueness `330`/`331` and the Heroism family
+`332`; v0.8.4 (2026-10-23) released the October 8 compatibility follow-ups for existing
 components (see below).
 
 34 curated entries, 25 recommended selections for the next release. Bard spell-level
@@ -81,7 +82,7 @@ release-candidate provenance.
 | 331 | Potion uniqueness: all temporary potion types except Potions of Genius | Cross-cutting audits | Potion uniqueness |  | default |
 | 332 | Heroism family: Heroism, Greater Heroism and the Potion of Heroism do not combine | Cross-cutting audits |  |  | default |
 | 340 | Chris Revisions: Christopher's spell balance changes (Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation) | Spell balance |  |  | default |
-| 360 | Time Stop and Haste effect clocks | Spell balance |  |  | default |
+| 360 | True Time Stop – fair Haste & Slow | Spell balance |  |  | default |
 
 ## Atomic Tempus UI behavior
 
@@ -172,7 +173,10 @@ release-candidate provenance.
   pass `60` and Modpack's scroll policy `430`.
 - Not run in a game yet; the owner's checks are automated WeiDU tests.
 
-## Time Stop and Haste effect clocks — v0.8.6 (Christopher's decision, 2026-10-27)
+## True Time Stop – fair Haste & Slow — v0.8.6 (Christopher's decision, 2026-10-27)
+
+v0.8.6 released `360` as *Time Stop and Haste effect clocks*; v0.8.7 renamed it (see the
+next section).
 
 - `360` follows Christopher's rule: in a Time Stop everything but the caster stops, and
   Haste and Slow change only actions and movement.
@@ -213,6 +217,30 @@ release-candidate provenance.
   (EET, Recommended preset, Spell Revisions) it switched itself on, stayed on through
   loading a save and corrected Spell Revisions' Time Stop and Oil of Speed. Both labs
   used EEex's LuaJIT option. Not accepted in real gameplay yet (its release notes).
+
+## v0.8.7: the new name and the standalone package
+
+- Christopher, 2026-10-28: v0.8.7 goes into alpha.22 as well.
+- v0.8.7 renames `360` from *Time Stop and Haste effect clocks* to **True Time Stop – fair
+  Haste & Slow**. WeiDU shows it with a plain hyphen (`True Time Stop - fair Haste & Slow`);
+  its description, number, label `cbr_time_stop_haste_clocks` and two Lua files stay the
+  same, and so does what it does in the game.
+- The release also offers the same correction as a standalone download for games without
+  BG Rebalance, `CBR_TRUE_TIMESTOP-v0.8.7-windows.zip`. The collection neither pins nor
+  installs it.
+- `360` has one new install check: it refuses while the standalone package is installed
+  (`@9366`), and the package refuses while `360` is installed. CEBG never installs the
+  package, so the check always passes in a CEBG installation.
+- `360`'s install steps moved from the TP2 into `lib/time_stop_haste_clocks.tpa`, which
+  both installers call. The executable check (`Baldur.exe`, else `BaldurII.exe`, PE
+  machine `0x8664`, PE timestamp `0x6a18d73d`) and the two files it copies are the same;
+  its messages now say "True Time Stop".
+- Against v0.8.6 the TP2 changes only its VERSION and `360`'s block: its comment, the new
+  check and the moved steps. `360`'s `BEGIN` line (number, `GROUP`, `LABEL`) and its other
+  three checks are unchanged, and no other component changes, so the components, their
+  order and every recorded decision stay: `360` remains a default in the spells category,
+  marked ready, at the end of the Rebalance run. Fresh-download evidence:
+  `manifest/evidence/release-intake-20261029-rebalance.toml`.
 
 ## v0.8.4 compatibility follow-ups
 

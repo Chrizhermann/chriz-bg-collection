@@ -94,7 +94,7 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.6"
+        "chriz-bg-rebalance-0.8.7"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),

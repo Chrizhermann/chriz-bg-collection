@@ -4621,7 +4621,7 @@ components = [{ run_id = "chriz-bg-rebalance-bg2", component = 340 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:component-360"
-title = "Time Stop and Haste effect clocks"
+title = "True Time Stop – fair Haste & Slow"
 description = "In a Time Stop everything but the caster stops: the frozen creatures' spell and item durations, poison, disease, regeneration and other repeated effects wait and continue afterwards with the time they had left. Haste and Slow no longer speed up or slow down poison, regeneration and other repeated effects; actions, attacks and movement stay hasted or slowed. Install it before a playthrough: adding or removing it during one is not supported. Saving, dispelling, curing or dying during a Time Stop are not covered yet."
 category = "spells"
 decision = "default"
