@@ -287,7 +287,7 @@ fn unchanged_hashes(game: &Path, hashes: &BTreeMap<String, String>) -> Result<()
     Ok(())
 }
 pub(crate) fn close_check(game: &Path, hashes: &BTreeMap<String, String>) -> Result<(), String> {
-    close_check_inner(game, hashes, false)
+    close_check_in(game, "en_US", hashes, None)
 }
 /// Only after the caller has validated restoration ownership/backups. Existing
 /// files remain exclusively probed; a missing TLK must not block its restoration.
@@ -295,22 +295,27 @@ pub(crate) fn close_restore_check(
     game: &Path,
     hashes: &BTreeMap<String, String>,
 ) -> Result<(), String> {
-    close_check_inner(game, hashes, true)
+    close_check_in(game, "en_US", hashes, Some(&writable))
 }
-fn close_check_inner(
+/// Nothing may run from `game` or hold the files named in `hashes` open; `language` is the
+/// game's language folder. While restoring, the files `restorable` accepts may be missing.
+pub(crate) fn close_check_in(
     game: &Path,
+    language: &str,
     hashes: &BTreeMap<String, String>,
-    restoring: bool,
+    restorable: Option<&dyn Fn(&str) -> bool>,
 ) -> Result<(), String> {
-    if restoring {
-        crate::preflight::recheck_staging_target_before_mutation(game, "en_US").map_err(err)?;
+    if restorable.is_some() {
+        crate::preflight::recheck_staging_target_before_mutation(game, language).map_err(err)?;
     } else {
-        crate::preflight::recheck_target_before_mutation(game, "en_US").map_err(err)?;
+        crate::preflight::recheck_target_before_mutation(game, language).map_err(err)?;
     }
     let mut paths = Vec::new();
     for name in hashes.keys() {
         let path = game.join(name);
-        if restoring && writable(&name.to_ascii_lowercase()) && !path.exists() {
+        if restorable.is_some_and(|restorable| restorable(&name.to_ascii_lowercase()))
+            && !path.exists()
+        {
             files::direct(path.parent().ok_or("Missing restore parent")?)?;
         } else {
             files::regular(&path)?;
