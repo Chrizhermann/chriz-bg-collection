@@ -14,8 +14,10 @@ use crate::error::{EngineError, Result};
 use crate::fs_retry;
 use crate::games::GameRole;
 
+mod documents;
 mod folder_diagnostics;
 mod profile_settings;
+pub use documents::{DocumentsLocator, SystemDocuments, TEST_DOCUMENTS_VARIABLE};
 use folder_diagnostics::{context as folder_context, io_failure, with_cleanup_failure};
 pub use profile_settings::{repair_installed_profile_settings, verify_profile_settings};
 
@@ -181,98 +183,6 @@ struct SaveOwner {
     install_id: String,
     managed_root: String,
     engine_name: String,
-}
-
-/// Resolves the current user's Documents directory without assuming its location.
-pub trait DocumentsLocator {
-    /// Returns the user-configured Documents known folder.
-    fn documents_dir(&self) -> io::Result<PathBuf>;
-}
-
-/// Production Documents resolver.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct SystemDocuments;
-
-#[cfg(windows)]
-impl DocumentsLocator for SystemDocuments {
-    fn documents_dir(&self) -> io::Result<PathBuf> {
-        use std::ffi::c_void;
-        use std::os::windows::ffi::OsStringExt;
-        use std::ptr;
-        use windows_sys::Win32::Foundation::RPC_E_CHANGED_MODE;
-        use windows_sys::Win32::System::Com::{
-            CoInitializeEx, CoTaskMemFree, COINIT_APARTMENTTHREADED,
-        };
-        use windows_sys::Win32::UI::Shell::{FOLDERID_Documents, SHGetKnownFolderPath};
-
-        let initialization =
-            unsafe { CoInitializeEx(ptr::null(), COINIT_APARTMENTTHREADED as u32) };
-        let _com_guard = if initialization >= 0 {
-            ComInitializationGuard { balance: true }
-        } else if initialization == RPC_E_CHANGED_MODE {
-            ComInitializationGuard { balance: false }
-        } else {
-            return Err(folder_diagnostics::windows_hresult_error(
-                "CoInitializeEx",
-                initialization,
-            ));
-        };
-
-        let mut raw = ptr::null_mut();
-        let result =
-            unsafe { SHGetKnownFolderPath(&FOLDERID_Documents, 0, ptr::null_mut(), &mut raw) };
-        if result < 0 {
-            if !raw.is_null() {
-                unsafe { CoTaskMemFree(raw.cast::<c_void>()) };
-            }
-            return Err(folder_diagnostics::windows_hresult_error(
-                "SHGetKnownFolderPath(FOLDERID_Documents)",
-                result,
-            ));
-        }
-        if raw.is_null() {
-            return Err(io::Error::other(
-                "SHGetKnownFolderPath(FOLDERID_Documents) returned a null path",
-            ));
-        }
-
-        let length = unsafe {
-            let mut length = 0_usize;
-            while *raw.add(length) != 0 {
-                length += 1;
-            }
-            length
-        };
-        let path = PathBuf::from(OsString::from_wide(unsafe {
-            std::slice::from_raw_parts(raw, length)
-        }));
-        unsafe { CoTaskMemFree(raw.cast::<c_void>()) };
-        Ok(path)
-    }
-}
-
-#[cfg(windows)]
-struct ComInitializationGuard {
-    balance: bool,
-}
-
-#[cfg(windows)]
-impl Drop for ComInitializationGuard {
-    fn drop(&mut self) {
-        if self.balance {
-            unsafe { windows_sys::Win32::System::Com::CoUninitialize() };
-        }
-    }
-}
-
-#[cfg(not(windows))]
-impl DocumentsLocator for SystemDocuments {
-    fn documents_dir(&self) -> io::Result<PathBuf> {
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "the system Documents resolver is available only on Windows",
-        ))
-    }
 }
 
 /// The reports produced while staging both pristine game copies.

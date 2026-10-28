@@ -17,6 +17,13 @@ impl ScopedEnvVar {
         std::env::set_var(name, value);
         Self { name, previous }
     }
+
+    /// Removes one variable in this test process; it is restored on drop like [`Self::set`].
+    pub fn remove(name: &'static str) -> Self {
+        let previous = std::env::var_os(name);
+        std::env::remove_var(name);
+        Self { name, previous }
+    }
 }
 
 impl Drop for ScopedEnvVar {

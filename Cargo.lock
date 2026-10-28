@@ -411,6 +411,7 @@ dependencies = [
 name = "chriz-bg-engine"
 version = "0.1.0"
 dependencies = [
+ "chriz-bg-engine",
  "clap",
  "crossbeam-channel",
  "ctrlc",

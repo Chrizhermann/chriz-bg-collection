@@ -62,6 +62,14 @@ signed setup. Do not run all ignored tests as part of a routine source build. A 
 normal suite does not establish full installation, gameplay, save/reload, or native updater
 apply/restart acceptance.
 
+Test builds never resolve the player's real Documents folder, where every installation
+reserves its saved-game folder. The engine's `test-documents` feature, which only the engine's
+and the app's dev-dependencies enable, makes every Documents lookup use the folder a test
+names in `CHRIZ_BG_COLLECTION_TEST_DOCUMENTS` and stops a test that names none, in debug and
+`--release` test runs alike. A binary from a build that also compiles tests (`cargo test`,
+`--all-targets`) carries this feature; build the installer or CLI for real use with a plain
+`cargo build` or `tauri build`.
+
 The app's development dependencies enable Tauri's mock runtime, and `build.rs` embeds
 the Common Controls v6 manifest into Windows MSVC integration-test executables. No
 external `.exe.manifest` or ad hoc linker flags are needed for a fresh checkout.
