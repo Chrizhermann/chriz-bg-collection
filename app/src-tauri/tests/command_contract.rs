@@ -17,7 +17,9 @@ use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::registry::{ManagedInstallRecord, ManagedInstallRegistry, REGISTRY_SCHEMA_VERSION};
 use bg_engine::resolve::InstallPlan;
 use bg_engine::session::{CampaignCreated, SessionEvent, SessionStore, SourceGameFingerprints};
-use bg_engine::stage::TEST_DOCUMENTS_VARIABLE;
+use bg_engine::stage::{
+    reserve_save_identity, ManagedLayout, SystemDocuments, TEST_DOCUMENTS_VARIABLE,
+};
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
 use chriz_bg_app_lib::bridge::{
     display_windows_path, installation_defaults, parse_startup_install_id, BridgeEngine,
@@ -2511,6 +2513,67 @@ fn installation_removal_size_is_advisory_and_does_not_change_confirmation_identi
     assert!(!managed.exists());
     assert!(sources.join("original").is_file());
     assert!(cache.is_dir());
+}
+
+#[test]
+fn installation_removal_names_and_deletes_a_saved_game_profile_the_game_never_used() {
+    isolated_documents();
+    let (_temp, recipe) = recipe_with_profiles();
+    let root = recipe.parent().unwrap().to_path_buf();
+    let cache = root.join("cache");
+    let app_data = root.join("app-data");
+    let managed = root.join("remove-profile-fixture");
+    let sources = [root.join("bg1-source"), root.join("bg2-source")];
+    for source in &sources {
+        fs::create_dir(source).unwrap();
+    }
+    let payload = serde_json::to_vec(&json!({
+        "bg1": { "root": sources[0].canonicalize().unwrap() },
+        "bg2": { "root": sources[1].canonicalize().unwrap() }
+    }))
+    .unwrap();
+    publish_started_campaign_with_payload(&app_data, &managed, &cache, "remove-profile", payload);
+    let layout = ManagedLayout::prepare(&managed, &sources[0], &sources[1]).unwrap();
+    let profile = reserve_save_identity(
+        &SystemDocuments,
+        &layout,
+        "Removal profile",
+        "remove-profile",
+    )
+    .unwrap();
+    fs::write(
+        managed.join("game/engine.lua"),
+        format!("engine_name = \"{}\"\n", profile.engine_name),
+    )
+    .unwrap();
+    let bridge = NativeBridge::with_engine_and_system(
+        recipe,
+        "recommended",
+        cache,
+        app_data,
+        Arc::new(FakeBridgeEngine::new(root.join("bg1"), root.join("bg2"))),
+        Arc::new(RecordingBridgeSystem::default()),
+    );
+
+    let preview = bridge
+        .preview_installation_removal("remove-profile")
+        .unwrap();
+    let shown = serde_json::to_value(&preview).unwrap();
+    assert_eq!(
+        shown["unusedSavePath"],
+        display_windows_path(&profile.save_root).unwrap()
+    );
+    assert_eq!(shown["preservedSavePath"], serde_json::Value::Null);
+    let result = bridge
+        .remove_installation("remove-profile", &preview.confirmation_token)
+        .unwrap();
+
+    assert_eq!(
+        serde_json::to_value(&result).unwrap(),
+        json!({ "unusedSavePathKept": null })
+    );
+    assert!(!managed.exists());
+    assert!(!profile.save_root.exists());
 }
 
 #[test]

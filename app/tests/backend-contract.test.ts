@@ -83,11 +83,12 @@ describe("managed patch recovery projection", () => {
 describe("explicit installation removal", () => {
   it("uses only the registry id and confirmed token on the native command boundary", async () => {
     const preview = { installId: "managed-one", displayName: "Test", managedRoot: "D:\\Test", action: "delete", approximateSizeBytes: "12884901888", preservedSavePath: null, confirmationToken: "bound-token" };
-    const invoke = vi.fn(async (command: string) => command === "preview_installation_removal" ? preview : undefined);
+    const result = { unusedSavePathKept: "C:\\Users\\Player\\Documents\\Test - 0123456789ab" };
+    const invoke = vi.fn(async (command: string) => command === "preview_installation_removal" ? preview : result);
     const backend = new NativeBackend(invoke);
     await expect(backend.previewInstallationRemoval("managed-one")).resolves.toEqual(preview);
     expect(invoke).toHaveBeenCalledTimes(1); // Closing confirmation requires no mutation call.
-    await backend.removeInstallation("managed-one", "bound-token");
+    await expect(backend.removeInstallation("managed-one", "bound-token")).resolves.toEqual(result);
     expect(invoke).toHaveBeenLastCalledWith("remove_installation", { installId: "managed-one", confirmationToken: "bound-token" });
   });
   it("fixture rejects mismatched confirmation and only removes the confirmed entry", async () => {
