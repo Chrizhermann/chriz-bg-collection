@@ -119,13 +119,33 @@ at the very end, after all other mods; it may write only `override/`, its folder
 - `chriz-bg-install hotpatch check|apply|undo|restore --catalog … --cache …` for labs.
 - App: `hotpatches` flavor switch (IWD only), bridge commands, Updates section, launch guard.
 
+## Lab check (2026-10-28)
+
+One fresh installation of the recommended setup, with Chriz IWD Encounters 0.1.0 (its two
+components) as a stand-in hotpatch, driven through `chriz-bg-install hotpatch`. The game folder
+(42,679 files, 4.5 GB) was compared byte for byte by a separate script after every step; the
+game was not started.
+
+- Right after installing, the bundled catalog said "no hotpatch yet" and named no reason, so a
+  finished installation passes the rule. The lab catalog offered the stand-in.
+- Applying (with the whole-folder backup) ran WeiDU unattended: 150 files added, 118 changed,
+  9 folders added, the two rows at the end of `WeiDU.log`, nothing outside the allowed area.
+- Undo gave the original folder back byte for byte; applying again gave exactly the first
+  result.
+- A file edited by hand after the hotpatch made Undo refuse without writing anything; with the
+  file put back, Undo worked. A file or `WeiDU.log` edited by hand before any hotpatch made
+  the check refuse and name it; once put back, the hotpatch was offered again.
+- Not covered: a deviating installation (the rule is pure comparison; a test leaves SCS out of
+  the real recipe), starting the game, and a hotpatch that writes the TLK.
+
 ## Limits and open points
 
 - Installations made before the file record existed are refused ("made before game updates
   could check them"). The first public IWD release has the record.
-- The runtime file list comes from the loader, BuffBot 1.12 and Radar sources; a lab launch
-  confirms it (see the lab note). A mod that writes other files while playing would make
-  played installations look hand-edited.
+- The runtime file list comes from the loader, BuffBot 1.12 and Radar sources. No lab has
+  started the game yet; the first real hotpatch's play test confirms the list. A mod that
+  writes other files while playing would make played installations look hand-edited; the list
+  ships in the app's catalog, so a later app can extend it.
 - Changes outside the allowed area after a failed hotpatch are left for a closer look; the
   optional whole-folder backup covers that case.
 

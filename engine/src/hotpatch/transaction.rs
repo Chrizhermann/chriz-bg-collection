@@ -346,7 +346,10 @@ pub fn verified_log_suffix(root: &Path) -> Result<Vec<LogComponentReceipt>, Stri
             .map(|identity| &identity.sha256)
             != Some(&actual)
         {
-            return Err("The mod list changed after the last hotpatch.".into());
+            // Also after an Undo, so not "after the last hotpatch".
+            return Err(
+                "The mod list changed after the installer and its hotpatches left it.".into(),
+            );
         }
     }
     Ok(suffix)
