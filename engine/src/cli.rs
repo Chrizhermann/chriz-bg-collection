@@ -2423,7 +2423,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 
     fn run_tool(&self, run: &PlannedRun) -> Result<VerifiedWeidu, StepFailure> {
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
         if std::env::var("CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL")
             .ok()
             .as_deref()
@@ -2675,7 +2675,7 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
     }
 
     fn recheck_before_mutation(&mut self, check: &MutationCheck) -> Result<(), StepFailure> {
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
         if std::env::var("CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK")
             .ok()
             .as_deref()
@@ -2999,7 +2999,7 @@ impl<S: EventSink + Sync> ProcessRunner<Invocation> for GuardedCliDependencies<'
             ensure_empty_file(&path)?;
             sync_direct_file(&path)?;
         }
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
         if std::env::var_os("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU").is_some() {
             return Err(StepFailure::new(
                 "simulated interruption after WeiDU exit and durable log synchronization",

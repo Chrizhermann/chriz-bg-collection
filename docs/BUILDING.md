@@ -66,9 +66,18 @@ Test builds never resolve the player's real Documents folder, where every instal
 reserves its saved-game folder. The engine's `test-documents` feature, which only the engine's
 and the app's dev-dependencies enable, makes every Documents lookup use the folder a test
 names in `CHRIZ_BG_COLLECTION_TEST_DOCUMENTS` and stops a test that names none, in debug and
-`--release` test runs alike. A binary from a build that also compiles tests (`cargo test`,
-`--all-targets`) carries this feature; build the installer or CLI for real use with a plain
-`cargo build` or `tauri build`.
+`--release` test runs alike.
+
+The engine's CLI tests declare which programs run and simulate failures and interruptions
+through environment variables (`CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES`,
+`CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL`, `CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK` and
+`CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU`). The engine's `test-hooks` feature, which
+only the engine's dev-dependency enables, compiles these hooks into every test build, so
+`--release` test runs check the same paths as debug runs. Other builds honor these variables
+only with debug assertions.
+
+A binary from a build that also compiles tests (`cargo test`, `--all-targets`) carries both
+features; build the installer or CLI for real use with a plain `cargo build` or `tauri build`.
 
 The app's development dependencies enable Tauri's mock runtime, and `build.rs` embeds
 the Common Controls v6 manifest into Windows MSVC integration-test executables. No
