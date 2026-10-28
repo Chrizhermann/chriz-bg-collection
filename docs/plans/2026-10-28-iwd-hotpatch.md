@@ -1,7 +1,7 @@
 # Chriz Easy IWD: Hotpatch
 
-Status: implemented on `claude/iwd-hotpatch` (draft PR into `claude/iwdee-app`), 2026-10-28.
-Open decisions for Christopher are listed at the end.
+Status: merged into `claude/iwdee-app` (PR #52) and shipped with Chriz Easy IWD 0.1.1,
+2026-10-29. Christopher confirmed the three decisions at the end on 2026-10-29.
 
 ## What it is
 
@@ -84,7 +84,7 @@ What a running game gets therefore depends on the change, and every changelog en
 For Belhifet: a save that has not reached the final fight gets it. Undo puts the game files
 back; progress saved with the hotpatch stays in those saves.
 
-## Package format (decision taken here, pending Christopher's confirmation)
+## Package format (confirmed by Christopher, 2026-10-29)
 
 Hotpatches are **WeiDU components appended at the end**, not copied override files:
 
@@ -138,19 +138,43 @@ game was not started.
 - Not covered: a deviating installation (the rule is pure comparison; a test leaves SCS out of
   the real recipe), starting the game, and a hotpatch that writes the TLK.
 
+## Release lab check (2026-10-29)
+
+A fresh installation of Chriz Easy IWD 0.1.1 (the recommended setup plus the EEex Remote
+Console), driven through `chriz-bg-install hotpatch` and played through the quiet lab runner.
+The stand-in hotpatch was a lab-only Chriz IWD Encounters 0.1.1-lab with one extra component
+that adds a string to `dialog.tlk` and a file to `override/`.
+
+- Freshly installed, the folder matched its record (42,847 files); the bundled catalog said "no
+  hotpatch yet" with no reason, the lab catalog offered the stand-in.
+- The first game start wrote files the list did not know: `InfinityLoader.db` and
+  `EEex_scripts/extra_pattern_dbs/v2.7.3.0.db` (the loader caches the addresses it found in
+  them) and the empty folder `EEex_scripts/override`. Christopher's own played installation
+  shows the same three. Every played installation would have been refused as edited by hand;
+  they are runtime files now, together with the EEex Remote Console's files. After that a
+  played and saved installation passed with no reason.
+- Applying with the whole-folder backup worked (13 minutes, mostly the 4.6 GB copy while a
+  second lab installed); `WeiDU.log` gained exactly its row. A save made before the hotpatch,
+  loaded afterwards, read the new file and the new string.
+- Undo after playing gave the installed folder back byte for byte (only the game's runtime
+  files differed, as before); applying again gave the same result.
+- A deviating installation (no SCS, three more mods left out) was refused with both reasons.
+
 ## Limits and open points
 
 - Installations made before the file record existed are refused ("made before game updates
   could check them"). The first public IWD release has the record.
-- The runtime file list comes from the loader, BuffBot 1.12 and Radar sources. No lab has
-  started the game yet; the first real hotpatch's play test confirms the list. A mod that
-  writes other files while playing would make played installations look hand-edited; the list
-  ships in the app's catalog, so a later app can extend it.
+- The runtime file list comes from the loader, BuffBot 1.12, the remote console and Radar, and
+  from what played installations wrote. A mod that writes other files while playing would make
+  played installations look hand-edited; the list ships in the app's catalog, so a later app
+  can extend it.
+- A hotpatch cannot add an EEex pattern database: those files are runtime files, and the
+  folder is outside what a hotpatch may change.
 - Changes outside the allowed area after a failed hotpatch are left for a closer look; the
   optional whole-folder backup covers that case.
 
-### Decisions for Christopher
+### Decisions (Christopher, 2026-10-29: as proposed)
 
-1. Package format: WeiDU components at the end (recommended above) or exact override files.
+1. Package format: WeiDU components at the end, not exact override files.
 2. Threshold: at most 2 other mods; free: Tweaks Anthology, interface, EEex; SCS required.
-3. Full-folder backup on by default (current) or off.
+3. Full-folder backup on by default.

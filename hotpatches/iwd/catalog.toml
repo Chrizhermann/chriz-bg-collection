@@ -16,9 +16,12 @@ runtime_files = [
     "infinityloader-previous.log",
     "infinityloader_crash/**",
     # The pattern databases: on the first start, and whenever the game changes, the loader writes
-    # the addresses it found into them (seen 2026-10-29 in a played IWD installation).
+    # the addresses it found into them. The same first start creates the empty folder
+    # EEex_scripts/override; a file put into it still counts as a change. Seen 2026-10-29 in
+    # Christopher's played installation and in the 0.1.1 release lab.
     "infinityloader.db",
     "eeex_scripts/extra_pattern_dbs/*.db",
+    "eeex_scripts/override",
     # BuffBot 1.12: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",
     "override/bfbotbg*.mos",

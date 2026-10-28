@@ -468,6 +468,7 @@ mod tests {
             "infinityloader.db",
             "infinityloader.log",
             "eeex_scripts/extra_pattern_dbs/v2.7.3.0.db",
+            "eeex_scripts/override",
             "buffbot_exec.log",
             "override/bfbtch.spl",
             "override/bfbotbg2.mos",
@@ -486,6 +487,8 @@ mod tests {
             "override/m_eeexrc.lua",
             "eeex_scripts/extra_pattern_dbs",
             "eeex_scripts/extra_pattern_dbs/readme.txt",
+            "eeex_scripts/override/eeex_main.lua",
+            "eeex_scripts/eeex_main.lua",
             "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",
             "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
         ] {
