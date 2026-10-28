@@ -34,11 +34,13 @@ use crate::receipt::LogComponentReceipt;
 use crate::weidu::invocation::{Invocation, VerifiedWeidu};
 use crate::weidu::log::{normalize_tp2_key, parse_active_entries};
 use crate::weidu::runner::{self, RunOutcome, RunnerRequest};
+use crate::weidu::verify::{reconcile, ExpectedRun, Reconciliation};
 
 const SCHEMA: u32 = 1;
 const RECORD_LIMIT: u64 = 512 * 1024 * 1024;
 const PAYLOAD_LIMIT: u64 = 64 * 1024 * 1024;
 const TOOL_LIMIT: u64 = 16 * 1024 * 1024;
+const EVIDENCE_LIMIT: u64 = 64 * 1024 * 1024;
 
 /// The pinned package and how WeiDU installs it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -810,7 +812,7 @@ fn run_weidu(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> 
         cwd: ctx.game(),
         args,
         prompts: vec![],
-        debug_path: debug,
+        debug_path: debug.clone(),
     };
     let (_sender, receiver) = crossbeam_channel::unbounded();
     let outcome = runner::run(
@@ -823,10 +825,54 @@ fn run_weidu(ctx: &Context<'_>, dir: &Path, p: &Prepared) -> Result<(), String> 
         receiver,
         ConsoleSink,
     );
-    if outcome != (RunOutcome::Exited { code: 0 }) {
-        return Err(format!("WeiDU did not finish successfully: {outcome:?}"));
+    let RunOutcome::Exited { code } = outcome else {
+        return Err(format!("WeiDU did not finish: {outcome:?}"));
+    };
+    let evidence = |path: &Path| {
+        if path.exists() {
+            files::read(path, EVIDENCE_LIMIT)
+        } else {
+            Ok(Vec::new())
+        }
+    };
+    finished_as_planned(
+        &files::read(&dir.join("affected/weidu.log"), 16 * 1024 * 1024)?,
+        &files::read(&ctx.game().join("WeiDU.log"), 16 * 1024 * 1024)?,
+        &evidence(&debug)?,
+        &evidence(&dir.join("output.log"))?,
+        &p.package,
+        code,
+    )
+}
+
+/// Judges WeiDU's run by its evidence, as a fresh installation does: exactly the hotpatch's
+/// components after the others, a result line for each, and an exit code that agrees with them
+/// (3 when a component installed with warnings).
+pub(super) fn finished_as_planned(
+    before: &[u8],
+    after: &[u8],
+    debug: &[u8],
+    stdout: &[u8],
+    package: &Package,
+    exit_code: i32,
+) -> Result<(), String> {
+    let terminal = crate::cli::select_terminal_evidence(debug, stdout);
+    match reconcile(
+        &String::from_utf8_lossy(before),
+        &String::from_utf8_lossy(after),
+        &String::from_utf8_lossy(terminal),
+        &ExpectedRun {
+            tp2: package.tp2.clone(),
+            language: package.language,
+            components: package.components.clone(),
+            exit_code,
+        },
+    ) {
+        Reconciliation::ProvenDone => Ok(()),
+        other => Err(format!(
+            "WeiDU did not install exactly the hotpatch's components ({other:?}, exit code {exit_code})."
+        )),
     }
-    Ok(())
 }
 
 /// Check what WeiDU did and publish the applied record: exactly the hotpatch's rows after the

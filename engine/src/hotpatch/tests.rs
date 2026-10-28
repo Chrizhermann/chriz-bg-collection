@@ -635,6 +635,41 @@ fn the_mod_list_must_grow_by_exactly_the_hotpatch_rows() {
 }
 
 #[test]
+fn weidu_is_judged_by_its_result_lines_as_in_a_fresh_installation() {
+    let f = Fixture::new();
+    let (_, prepared) = f.prepare();
+    let judge = |after: &[u8], debug: &[u8], stdout: &[u8], code| {
+        transaction::finished_as_planned(BASE_LOG, after, debug, stdout, &prepared.package, code)
+    };
+    let after = [BASE_LOG, ROW].concat();
+    let doubled = [BASE_LOG, ROW, ROW].concat();
+    let done = b"SUCCESSFULLY INSTALLED Belhifet\r\n";
+    let warned = b"INSTALLED WITH WARNINGS Belhifet\r\n";
+    judge(&after, done, b"", 0).unwrap();
+    // WeiDU may keep its detailed log elsewhere; its console output then carries the result.
+    judge(&after, b"WeiDU v 249\r\n", done, 0).unwrap();
+    // Warnings count as installed, exactly as in a fresh installation.
+    judge(&after, warned, b"", 3).unwrap();
+    for (after, debug, code) in [
+        (&after[..], &warned[..], 0),
+        (&after[..], &done[..], 3),
+        (&after[..], &b""[..], 0),
+        (
+            BASE_LOG,
+            &b"NOT INSTALLED DUE TO ERRORS Belhifet\r\n"[..],
+            1,
+        ),
+        (&doubled[..], &done[..], 0),
+    ] {
+        let error = judge(after, debug, b"", code).unwrap_err();
+        assert!(
+            error.contains("exactly the hotpatch's components"),
+            "{error}"
+        );
+    }
+}
+
+#[test]
 fn a_mod_list_edited_after_the_hotpatch_is_not_accepted() {
     let f = Fixture::new();
     f.apply();

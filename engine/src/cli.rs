@@ -4710,7 +4710,7 @@ fn log_component_receipt(entry: &LogEntry) -> LogComponentReceipt {
     }
 }
 
-fn select_terminal_evidence<'a>(debug: &'a [u8], stdout: &'a [u8]) -> &'a [u8] {
+pub(crate) fn select_terminal_evidence<'a>(debug: &'a [u8], stdout: &'a [u8]) -> &'a [u8] {
     // Setup-name WeiDU can redirect its detailed log to SETUP-<MOD>.DEBUG beside the
     // executable even when --log names our attempt path. In that case the requested
     // debug file contains only a header, while the runner's synchronized per-attempt

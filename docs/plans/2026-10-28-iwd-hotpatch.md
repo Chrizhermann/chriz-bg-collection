@@ -51,6 +51,8 @@ Checking only reads. It never writes the game.
 - Its own mod folder, `override/`, the game language's `dialog.tlk`/`dialogF.tlk`, and
   WeiDU's own files (`WeiDU.log`, `weidu.conf`, `weidu_external/` for this mod).
 - `WeiDU.log` must grow by exactly the hotpatch's rows, after all others, in order.
+- WeiDU's result is judged as in a fresh installation: every component needs its result line,
+  and "installed with warnings" counts as installed there too.
 - Anything else (for example `chitin.key` or new BIF files) makes the hotpatch fail; the game
   files are then put back automatically where the copies allow it.
 - Saves, the profile folder and the original installation record are never written.
