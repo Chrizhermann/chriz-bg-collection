@@ -493,7 +493,7 @@ pub async fn remove_installation(
     state: State<'_, BridgeState>,
     install_id: String,
     confirmation_token: String,
-) -> Result<(), CommandError> {
+) -> Result<crate::bridge::InstallationRemovalResult, CommandError> {
     let bridge = state
         .bridge
         .lock()

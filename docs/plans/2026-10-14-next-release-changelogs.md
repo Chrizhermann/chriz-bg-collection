@@ -56,6 +56,11 @@ published.
   Unticking Hidden Gameplay Options, for example, added one setup note per default
   component, each saying "Available when Hidden Gameplay Options is selected." A
   default that is unavailable while its mod is ticked still gets its note.
+- **Removing an installation also removes its saved-game profile if the game never
+  used it.** CEBG creates the profile folder in Documents when it installs, and until
+  the game first starts it holds only CEBG's marker file. Removing the installation
+  used to leave that folder behind; now the confirmation names it and it is deleted
+  too. A profile with settings or saves in it is kept as before.
 
 ## Collection changelog
 

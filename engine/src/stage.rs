@@ -136,7 +136,7 @@ impl ManagedLayout {
     }
 }
 
-const SAVE_OWNER_MARKER: &str = ".chriz-managed-install.json";
+pub(crate) const SAVE_OWNER_MARKER: &str = ".chriz-managed-install.json";
 const SAVE_OWNER_SCHEMA: u32 = 1;
 
 /// The isolated save identity assigned to one managed installation.
@@ -479,6 +479,23 @@ fn read_save_owner(identity: &SaveIdentity) -> Result<SaveOwner> {
     serde_json::from_slice(&payload).map_err(|source| {
         save_root_collision(identity, format!("ownership marker is invalid: {source}"))
     })
+}
+
+/// Whether `payload`, read from the ownership marker of the save root `engine_name`, records
+/// that the installation `install_id` in `managed_root` reserved it.
+pub(crate) fn save_owner_records(
+    payload: &[u8],
+    install_id: &str,
+    managed_root: &Path,
+    engine_name: &str,
+) -> bool {
+    let Ok(owner) = serde_json::from_slice::<SaveOwner>(payload) else {
+        return false;
+    };
+    owner.schema == SAVE_OWNER_SCHEMA
+        && owner.install_id == install_id
+        && owner.engine_name == engine_name
+        && identity_path(managed_root).is_ok_and(|root| root == owner.managed_root)
 }
 
 fn save_root_collision(identity: &SaveIdentity, reason: impl Into<String>) -> EngineError {
