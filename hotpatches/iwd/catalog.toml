@@ -15,12 +15,18 @@ runtime_files = [
     "infinityloader.log",
     "infinityloader-previous.log",
     "infinityloader_crash/**",
+    # The pattern databases: on the first start, and whenever the game changes, the loader writes
+    # the addresses it found into them (seen 2026-10-29 in a played IWD installation).
+    "infinityloader.db",
+    "eeex_scripts/extra_pattern_dbs/*.db",
     # BuffBot 1.12: logs, the generated panel backgrounds, its innate helpers, exported presets.
     "buffbot_*.log",
     "override/bfbotbg*.mos",
     "override/bfbtch.spl",
     "override/bfbtcr.spl",
     "override/bfbot_presets/**",
+    # EEex Remote Console, an optional developer tool: its command, result and handshake files.
+    "override/eeex_remote_*",
     # BG Radar Overlay, which the app installs and updates itself.
     "bg radar overlay/**",
 ]

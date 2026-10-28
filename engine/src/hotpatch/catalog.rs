@@ -457,6 +457,42 @@ mod tests {
         );
     }
 
+    /// What played IWD installations wrote into the game folder (Christopher's own one, and the
+    /// 0.1.1 release lab, 2026-10-29) must not make them look edited by hand; the files mods and
+    /// hotpatches install must stay checked.
+    #[test]
+    fn the_bundled_iwd_catalog_ignores_what_a_played_game_writes() {
+        let catalog = load(&repository().join("hotpatches/iwd")).unwrap();
+        for name in [
+            "infinityloader.ini",
+            "infinityloader.db",
+            "infinityloader.log",
+            "eeex_scripts/extra_pattern_dbs/v2.7.3.0.db",
+            "buffbot_exec.log",
+            "override/bfbtch.spl",
+            "override/bfbotbg2.mos",
+            "override/eeex_remote_ready.json",
+            "override/eeex_remote_result.json.tmp",
+            "override/eeex_remote_cmd.lua.run",
+        ] {
+            assert!(catalog.runtime_files.matches(name), "{name}");
+        }
+        for name in [
+            "weidu.log",
+            "chitin.key",
+            "lang/en_us/dialog.tlk",
+            "override/ui.menu",
+            "override/m___eeex.lua",
+            "override/m_eeexrc.lua",
+            "eeex_scripts/extra_pattern_dbs",
+            "eeex_scripts/extra_pattern_dbs/readme.txt",
+            "eeex/loader/v2.7.3.0/pattern_dbs/v2.7.3.0.db",
+            "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
+        ] {
+            assert!(!catalog.runtime_files.matches(name), "{name}");
+        }
+    }
+
     /// An installation keeps its recipe as JSON; read back, it has the digest it was made with.
     #[test]
     fn a_frozen_recipe_keeps_its_content_digest() {
