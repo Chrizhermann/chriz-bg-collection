@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-27
+## Work queue at a glance — 2026-10-28
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -29,21 +29,39 @@ Cross-repository status. Component detail stays in the sections below and in the
      and native-order evidence in `manifest/evidence/release-intake-20261026.toml`), merged
      into the next-release branch on 2026-10-26 together with #33, after #32 (Christopher's
      approval of 2026-10-26).
-     Christopher added three items on 2026-10-27, all in progress:
-     - Kitpack chriz.4 (below).
-     - BG Rebalance v0.8.6 with Time Stop/Haste `360` as a default (below).
-     - The engine's rename retry from PR #35 (below).
-     BuffBot v1.12.0 joins only if its EEex v1.2.0 fix is tested in time; otherwise a later
-     release takes it. Two releases close together are fine.
+     Christopher added three items on 2026-10-27; all three are on the next-release branch
+     since 2026-10-28:
+     - Kitpack chriz.4 and BG Rebalance v0.8.6 with Time Stop/Haste `360` as a default,
+       pinned in both recipes by
+       [PR #41](https://github.com/Chrizhermann/chriz-bg-collection/pull/41) (evidence in
+       `manifest/evidence/release-intake-20261027.toml`; below).
+     - The engine's rename retry from PR #35, ported by
+       [PR #40](https://github.com/Chrizhermann/chriz-bg-collection/pull/40) (below).
+     BuffBot v1.12.1 is pinned in both recipes in
+     [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (evidence in
+     `manifest/evidence/release-intake-20261028-buffbot.toml`). Christopher, 2026-10-28:
+     it goes into alpha.22 once it has been tested again; he tests it himself, and the PR
+     stays open until he says his test is fine. The IWD recipe gets the same version in a
+     matching PR on `claude/iwdee-app`; both go in together (rule below).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
   4. Acceptance, build, signing and publishing, and the website.
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
-  is not on the next-release branch yet. Christopher approved it for alpha.22 on
-  2026-10-27. The port is in progress; it also covers the five renames that exist only on
-  the next-release branch.
+  is on the next-release branch since
+  [PR #40](https://github.com/Chrizhermann/chriz-bg-collection/pull/40) (merged on
+  2026-10-28; Christopher approved it for alpha.22 on 2026-10-27). The port also covers
+  the renames that exist only on the next-release branch.
+  - PR #40 also fixes a regression from #35: a damaged manual archive in the download
+    cache that another program had marked read-only could no longer be replaced; the
+    repair failed after about 5 s of retries. `main` keeps that regression until the
+    next-release branch is merged back into it.
+- Engine test isolation (found on 2026-10-28): some engine test runs write CEBG's install
+  marker `.chriz-managed-install.json` into the real Documents folder. About 30 empty
+  profile folders came from them; some markers name a temporary test folder as their
+  install. The fix runs in its own session. Christopher decides there whether removing
+  an installation should also drop a profile folder that holds only the marker.
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
   everywhere): pinned in both recipes since
   [PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18) (merged on
@@ -96,11 +114,15 @@ Cross-repository status. Component detail stays in the sections below and in the
     ran without Modpack `430`, so the Recommended lab run checks it together with `430`
     (see Live/runtime acceptance).
   - BuffBot v1.12.0 (released on 2026-10-27) adds Icewind Dale: Enhanced Edition
-    support, uses its own interface art and lets a preset order its casts. Its interface
-    rework had only run on EEex v1.3.1. On an EEex v1.2.0 installation its panel buttons
-    did not work, so BuffBot's session is testing and fixing it on v1.2.0. Christopher,
-    2026-10-27: alpha.22 takes it only if that is done in time; otherwise a later release
-    does.
+    support, uses its own interface art and lets a preset order its casts. On an EEex
+    v1.2.0 installation its panel buttons did not work.
+  - BuffBot [v1.12.1](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.12.1)
+    (released on 2026-10-27) fixes that: three layout defects of v1.12.0, none of which
+    depends on the EEex version. Its panel was checked in a BG2:EE 2.7.3.0 lab with EEex
+    v1.3.1, the version alpha.22 installs. Pinned in PR #44, open until Christopher's own
+    test (2026-10-28). Components `1` and `0`, their order and the run position are
+    unchanged; the TP2 also accepts IWD:EE and no longer writes TLK strings,
+    `bfbot_strrefs.txt` or `BFBOTIB.BAM`.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -193,8 +215,9 @@ Cross-repository status. Component detail stays in the sections below and in the
       creature, a level-up and a reload.
     - Not covered there: EET, other kits, a new game process and characters created
       before the install.
-    - Christopher approved the chriz.4 pin for alpha.22 on 2026-10-27; the pin is in
-      progress. chriz.3 stays pinned until it is merged.
+    - Christopher approved the chriz.4 pin for alpha.22 on 2026-10-27. Since PR #41
+      (merged on 2026-10-28) chriz.4 is pinned for all three Kitpack installers in place
+      of chriz.3; components, order and decisions are unchanged.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -224,7 +247,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   ([chriz-item-randomiser#23](https://github.com/Chrizhermann/chriz-item-randomiser/pull/23)).
   Christopher, 2026-10-27: two bugs that v1.0.2 already has get fixed and tested before
   v1.0.3 is released: Adalon's egg reward never arrives, and the randomiser switches
-  itself off when a recipient dies during the handover.
+  itself off when a recipient dies during the handover. Christopher, 2026-10-28: the
+  disruptive bugs should be fixed in v1.0.3; any further work comes after it.
 - Druid level progression (Christopher, 2026-10-27): Tweaks Anthology `2292` makes
   druids level up on the cleric XP table. They reach level 15 at 1,575,000 XP instead of
   3,000,000 and get their high-level spells far too early. Since
@@ -260,8 +284,32 @@ Cross-repository status. Component detail stays in the sections below and in the
     v0.8.5, with `340` as a default at the end of its run, and the fork's v4.21-chriz.7
     with `srcb-rr-compat` from the same release. All other components, decisions and
     their order are unchanged.
+  - Since PR #41 (merged on 2026-10-28) Rebalance v0.8.6 replaces v0.8.5. It adds `360`
+    (Time Stop/Haste, below) as a default at the end of its run. The other Rebalance
+    components, their decisions and their order are unchanged.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
+  - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
+    [chriz-spell-revisions-patch#8](https://github.com/Chrizhermann/chriz-spell-revisions-patch/pull/8)
+    and on hold until alpha.22 is out or Christopher gives his OK.
+    - It adds the mini-mod `SRCB_SCS_COMPAT` (Christopher, 2026-10-28). With it, SCS
+      mages that prepare Chaos use SCS's own Chaos tactic again; SCS skips that tactic
+      whenever Spell Revisions is installed.
+    - Pin it only together with chriz.8; it refuses to install unless Chaos is a level-5
+      spell.
+    - CEBG must install it after Spell Revisions `0` and before SCS's AI components
+      (`6000` and up), for example right after `SRCB_RR_COMPAT`.
+    - Also open for that pin: CEBG's notes on `SRCB_RR_COMPAT`, which with chriz.8 only
+      changes Selina's guard, and on the new step.
+- Our own mods in every installer (Christopher, 2026-10-28): a new version of one of
+  our own mods (BuffBot, BG Rebalance, SoD Remix, Modpack, the forks, the voicepacks and
+  the like) goes into Chriz Easy BG and Chriz Easy IWD in the same step. While the IWD
+  recipe sits on `claude/iwdee-app`, every such pin needs a matching PR there.
+  - The agents follow this by hand for now. A separate session designs the automation
+    with Christopher: a marker for our own mods, a check on every PR and before every
+    release that their pins are the newest releases and the same in every recipe (holds
+    need a recorded reason), and pin PRs prepared automatically that never merge by
+    themselves.
 - Icewind Dale: Enhanced Edition installer on the CEBG framework, for Christopher's
   November stream (2026-10-25; urgent, in its own session): only a few mods, plus a
   small own mod with SCS-style scripts for selected IWD fights, because the script
@@ -275,11 +323,22 @@ Cross-repository status. Component detail stays in the sections below and in the
     start, it writes one line to the log and nothing appears in the game.
   - Its installer accepts only the 64-bit 2.7.3.0 executable that Steam and GOG ship.
     That is the build CEBG's game check accepts, so CEBG always meets this requirement.
-  - Lab-verified in the Time Stop lab and on a full CEBG stack with Spell Revisions.
+  - Lab-verified in the Time Stop lab (BG2:EE 2.7.3.0 with only EEex v1.3.1) and on a
+    full CEBG stack with Spell Revisions.
   - Not covered yet: saving during a stop; dispel, cure or death during a stop; equipping
     during a stop.
   - Christopher, 2026-10-27: release it as BG Rebalance v0.8.6 and pin it in alpha.22 as
-    a default. The release and the pin are in progress.
+    a default. Released as
+    [v0.8.6](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.6) on
+    2026-10-28 and pinned since PR #41, under "Spells" and not marked experimental
+    (Christopher, 2026-10-28: it was tested extensively).
+  - Christopher, 2026-10-28: offer it on its own too, for EEex players outside CEBG, as
+    long as it is proven to work standalone (with EEex). In progress: a `live-patch`
+    package with its own installer and guards against installing it together with `360`,
+    a README, and a packager, so the next BG Rebalance release carries it like the other
+    tail packages. Its lab proof runs on a plain BG2:EE 2.7.3.0 with only EEex: install,
+    behaviour, uninstall, and adding it to a running game. The release needs Christopher's
+    OK.
 
 **Ready to start**
 
@@ -439,7 +498,7 @@ content, evaluated component by component (keep, fix or extend).
     A lab smoke showed no box in normal play.
   - Still open: check the loader log in the Recommended lab run before the release,
     because no ongoing playthrough has run with `430` yet; the same run checks BuffBot
-    v1.11.0 together with `430`.
+    v1.12.1 together with `430`.
 - [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
   `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
@@ -551,18 +610,20 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
 - [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed with v1.10.0 (see
-  Done); the pinned v1.11.0 has not run in a collection lab. Open: toggle
+  Done); v1.12.1 (PR #44) has not run in a collection lab. Open: toggle
   stances with opcode 214 variants count as buffs, so a new party's Long preset enables
   Artisan's Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
   ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)). The combat-stop notice
   fix (since v1.10.1, [bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
   was checked in a lab through the engine's text object only; nobody has seen the notice
-  on screen in a real combat stop yet. v1.11.0's own EET/SR/SCS/Modpack labs ran with
-  Modpack `430` uninstalled, and its notes do not accept the configuration with `430`
-  yet, which the recommended preset installs: check BuffBot with `430` in the
-  Recommended lab run. Also check there its new column headers and control artwork, and
-  that no other mod in the stack writes its PVRZ pages `MOS88809`–`MOS88993`.
+  on screen in a real combat stop yet. v1.12.x's own labs ran on BG2:EE and IWD:EE
+  2.7.3.0 with EEex v1.3.1, not on EET, and BuffBot's README still calls the
+  configuration with `430` not accepted: check BuffBot with `430` on EET in
+  Christopher's test or the Recommended lab run. Also check there the panel and its
+  control artwork (first drawn in v1.12.0), that the F12 preset abilities are gone
+  (right-click the HUD gear instead), and that no other mod writes its PVRZ pages
+  `MOS88809`–`MOS88993`.
 - [ ] Game-log switch (see Done): no game has started with it yet. In a lab, turn it on
   in CEBG, start and quit the game twice with **Play**, and check that
   `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first

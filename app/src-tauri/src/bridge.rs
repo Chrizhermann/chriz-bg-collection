@@ -368,7 +368,16 @@ pub struct InstallationRemovalPreview {
     /// Advisory only: never part of the removal plan, token identity or journal.
     pub approximate_size_bytes: Option<String>,
     pub preserved_save_path: Option<String>,
+    /// The saved-game profile the game never used, which removal deletes too.
+    pub unused_save_path: Option<String>,
     pub confirmation_token: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallationRemovalResult {
+    /// The unused saved-game profile the preview named, when it stays after all.
+    pub unused_save_path_kept: Option<String>,
 }
 
 impl Drop for AppUpdateGuard {
@@ -2009,6 +2018,11 @@ impl NativeBridge {
                 .as_ref()
                 .map(|path| display_windows_path(path))
                 .transpose()?,
+            unused_save_path: plan
+                .unused_save_path
+                .as_ref()
+                .map(|path| display_windows_path(path))
+                .transpose()?,
             confirmation_token: token.clone(),
         };
         runtime
@@ -2027,7 +2041,11 @@ impl NativeBridge {
         Ok(response)
     }
 
-    pub fn remove_installation(&self, install_id: &str, token: &str) -> Result<(), CommandError> {
+    pub fn remove_installation(
+        &self,
+        install_id: &str,
+        token: &str,
+    ) -> Result<InstallationRemovalResult, CommandError> {
         let (plan, _guard) = {
             let mut runtime = self.runtime_lock();
             if !runtime.active_runs.is_empty()
@@ -2053,9 +2071,14 @@ impl NativeBridge {
             .app_data
             .as_ref()
             .ok_or_else(|| removal_error("Application data is unavailable."))?;
-        bg_engine::removal::execute(app_data, &plan).map_err(removal_error)?;
+        let outcome = bg_engine::removal::execute(app_data, &plan).map_err(removal_error)?;
         self.runtime_lock().known_installs.remove(install_id);
-        Ok(())
+        Ok(InstallationRemovalResult {
+            // The preview showed this path already, so it is text.
+            unused_save_path_kept: outcome
+                .unused_save_path_kept
+                .map(|path| display_windows_path_text(&path.to_string_lossy())),
+        })
     }
 
     fn campaign_cards(&self) -> Result<Vec<ManagedCampaignCard>, CommandError> {
