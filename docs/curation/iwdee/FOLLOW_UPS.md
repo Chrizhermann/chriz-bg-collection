@@ -20,8 +20,9 @@ community release; he proposed the version 0.1.1.
 - [ ] Overview drafted in `docs/releases/iwd/`: `public-README.md` (README of the public
   release repository) and `0.1.1.md` (release notes). Before release: match the hotpatch
   paragraphs to the agreed design, add the SHA-256 and the exact source commit.
-- [ ] Public release repository `Chrizhermann/chriz-easy-iwd`, like `chriz-easy-bg` for CEBG
-  (needs his OK; it does not exist yet).
+- [ ] Public download repository `Chrizhermann/chriz-easy-iwd`, like `chriz-easy-bg` for CEBG:
+  only the README and the release files, no code (Christopher, 2026-10-28; the source stays in
+  this repository, both apps are built from it). Create it at release time, not before.
 - [ ] Website: an IWD page on bg.chrizfader.org (`bg-site` in `twitch-setup-chriz`) built from
   the README, with download link and checksum, once the release exists and he approves.
 - [ ] Rebuild the installer from the merged branch, verify the bundle, then release only on his
