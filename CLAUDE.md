@@ -15,6 +15,9 @@ Read `docs/handover.md` first — it is the live entry point (status, guardrails
   regenerate only from the live install, never hand-edit order.
 - The chriz-layer repos (modpack, bg-rebalance, sod-rebalance, *-Balance-Patch) are
   independent; this repo only references/pins them, never absorbs their content.
+- Our own mods (`manifest/own-mods.toml`): pin a new release in every installer (Chriz
+  Easy BG and Chriz Easy IWD) in the same step, or record Christopher's hold. Follow
+  `docs/own-mod-pins.md` on every pin; `tools/own_mod_pins.py` checks it in CI.
 - `gh auth status` before any gh operation (shared CLI state across concurrent sessions);
   this repo lives on the `Chrizhermann` account.
 - Domain knowledge (WeiDU, EET quirks, install gotchas) lives in the `bg-modding` skill.
