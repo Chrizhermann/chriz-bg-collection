@@ -9,7 +9,7 @@ fn packaged_patch_catalog() -> Result<bg_engine::patches::catalog::Catalog, Comm
         include_bytes!("../../../patches/catalog.json"),
         include_str!("../../../patches/catalog.json.sig"),
         include_str!("../../../patches/public-key.txt"),
-        env!("CARGO_PKG_VERSION"),
+        crate::flavor::APP_VERSION,
     )
     .map_err(patch_error)
 }

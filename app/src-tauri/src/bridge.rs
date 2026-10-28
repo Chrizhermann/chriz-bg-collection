@@ -992,7 +992,7 @@ impl NativeBridge {
         Ok(BootstrapResponse {
             mode: "native".to_owned(),
             engine_version: bg_engine::VERSION.to_owned(),
-            application_version: env!("CARGO_PKG_VERSION").to_owned(),
+            application_version: crate::flavor::APP_VERSION.to_owned(),
             profiles: self.profiles(),
             selected_profile: self.profile_id.clone(),
             recipe_version: self.recipe_version()?,
@@ -1851,7 +1851,7 @@ impl NativeBridge {
         let selection_digest = selection_digest(normalized_selection).map_err(digest_error)?;
         let plan_digest = plan_digest(&plan_report.evaluation.plan).map_err(digest_error)?;
         let mut request = InstallCommandRequest {
-            application_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+            application_version: Some(crate::flavor::APP_VERSION.to_owned()),
             display_name: display_name.to_owned(),
             recipe: plan_report.recipe.clone(),
             preset: self.preset.clone(),

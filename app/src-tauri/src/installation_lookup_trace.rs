@@ -84,7 +84,7 @@ fn write_event(kind: &str, data: Value) {
             "trace_schema": 1,
             "time_millis": now_millis(),
             "pid": std::process::id(),
-            "app_version": env!("CARGO_PKG_VERSION"),
+            "app_version": crate::flavor::APP_VERSION,
             "executable": executable,
             "executable_sha256": executable_sha256,
             "working_directory": std::env::current_dir().ok(),

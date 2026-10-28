@@ -36,7 +36,7 @@ required_mods = ["stratagems"]
 
 # Each collection release that hotpatches are made for, by the digest of its recipe content.
 [[bases]]
-id = "iwd-0.1.0-alpha.1"
-label = "Chriz Easy IWD 0.1.0-alpha.1"
-recipe_version = "0.1.0-alpha.1"
-content_sha256 = "79710d044f996f9224cae2a20c55296beae646b97e11be3a61160497ce14ae8d"
+id = "iwd-0.1.1"
+label = "Chriz Easy IWD 0.1.1"
+recipe_version = "0.1.1"
+content_sha256 = "979066f130f3efce994ffb0b0513f4d9ece80268c37ae4c9077033576f94d8f0"

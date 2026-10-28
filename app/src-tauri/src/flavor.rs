@@ -112,6 +112,10 @@ pub const IWD: AppFlavor = AppFlavor {
 /// The flavor this binary was built as.
 pub const CURRENT: &AppFlavor = if cfg!(chriz_flavor_iwd) { &IWD } else { &BG };
 
+/// Version of this app, from the configuration it was built with: Chriz Easy IWD numbers its
+/// releases on its own, Chriz Easy BG uses the crate version.
+pub const APP_VERSION: &str = env!("CHRIZ_APP_VERSION");
+
 /// Every flavor, for checks that must cover each app.
 pub const ALL: [&AppFlavor; 2] = [&BG, &IWD];
 
@@ -137,6 +141,17 @@ mod tests {
         assert_eq!(iwd["app"]["windows"][0]["title"], IWD.product_name);
         let keys = ALL.iter().map(|flavor| flavor.key).collect::<Vec<_>>();
         assert_eq!(keys, ["bg", "iwd"]);
+    }
+
+    /// The version the app reports is the one its installer carries.
+    #[test]
+    fn the_app_reports_the_version_of_its_configuration() {
+        let name = if cfg!(chriz_flavor_iwd) {
+            "tauri.iwd.conf.json"
+        } else {
+            "tauri.conf.json"
+        };
+        assert_eq!(configuration(name)["version"], APP_VERSION);
     }
 
     /// `build.rs` turns the identifier of the configuration patch into the compiled flavor.
