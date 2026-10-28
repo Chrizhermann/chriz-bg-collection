@@ -5,8 +5,8 @@ use std::sync::Mutex;
 use bg_engine::cli::{
     diagnostics_for_managed_install, discover_games, human_plan_lines, inspect_game,
     install_campaign_controlled, install_interrupt_handler, plan_recipe, report_managed_install,
-    resume_campaign_controlled, validate_recipe, CampaignStatus, CliError, InstallCommandRequest,
-    SelectionOverrides, ValidationProfile,
+    resume_campaign_controlled, validate_recipe, CampaignStatus, CliError, HotpatchAction,
+    InstallCommandRequest, SelectionOverrides, ValidationProfile,
 };
 use bg_engine::events::{ConsoleSink, EngineEvent, EventSink};
 use bg_engine::games::GameRole;
@@ -69,6 +69,42 @@ enum Command {
         #[arg(long)]
         output: PathBuf,
     },
+    /// Check, apply, undo or restore a hotpatch of a completed installation.
+    Hotpatch(HotpatchArgs),
+}
+
+#[derive(Debug, Args)]
+struct HotpatchArgs {
+    #[command(subcommand)]
+    command: HotpatchCommand,
+    /// Hotpatch catalog folder, such as `hotpatches/iwd`.
+    #[arg(long, global = true)]
+    catalog: Option<PathBuf>,
+    /// Download cache for hotpatch packages and WeiDU.
+    #[arg(long, global = true)]
+    cache: Option<PathBuf>,
+}
+
+#[derive(Debug, Subcommand)]
+enum HotpatchCommand {
+    /// Show whether a hotpatch is offered, and why not. Never changes the game.
+    Check { managed_root: PathBuf },
+    /// Apply the hotpatch that a check offered.
+    Apply {
+        managed_root: PathBuf,
+        #[arg(long)]
+        review_token: String,
+        /// Also copy the whole game folder first.
+        #[arg(long)]
+        full_backup: bool,
+        /// Also copy the saves first.
+        #[arg(long)]
+        save_backup: bool,
+    },
+    /// Undo the latest applied hotpatch.
+    Undo { managed_root: PathBuf },
+    /// Finish restoring a hotpatch that did not finish.
+    Restore { managed_root: PathBuf },
 }
 
 #[derive(Debug, Args)]
@@ -227,6 +263,36 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
         bg_engine::cli::set_application_data_directory(directory)?;
     }
     match &cli.command {
+        Command::Hotpatch(args) => {
+            let (Some(catalog), Some(cache)) = (&args.catalog, &args.cache) else {
+                return Err(CliError::invalid_arguments(
+                    "hotpatch needs --catalog and --cache",
+                ));
+            };
+            let (managed_root, action) = match &args.command {
+                HotpatchCommand::Check { managed_root } => (managed_root, HotpatchAction::Check),
+                HotpatchCommand::Apply {
+                    managed_root,
+                    review_token,
+                    full_backup,
+                    save_backup,
+                } => (
+                    managed_root,
+                    HotpatchAction::Apply {
+                        review_token: review_token.clone(),
+                        full_backup: *full_backup,
+                        save_backup: *save_backup,
+                    },
+                ),
+                HotpatchCommand::Undo { managed_root } => (managed_root, HotpatchAction::Undo),
+                HotpatchCommand::Restore { managed_root } => {
+                    (managed_root, HotpatchAction::Restore)
+                }
+            };
+            let preview =
+                bg_engine::cli::hotpatch_managed_install(managed_root, catalog, cache, &action)?;
+            print_json(&json!({ "command": "hotpatch", "ok": true, "hotpatch": preview }));
+        }
         Command::CheckManualCheckpoint {
             managed_root,
             install_id,
@@ -488,6 +554,7 @@ fn command_name(command: &Command) -> &'static str {
         Command::AcceptManualCheckpoint { .. } => "accept-manual-checkpoint",
         Command::Report { .. } => "report",
         Command::Diagnostics { .. } => "diagnostics",
+        Command::Hotpatch(_) => "hotpatch",
     }
 }
 

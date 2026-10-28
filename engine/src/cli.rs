@@ -82,7 +82,7 @@ use crate::Manifest;
 mod installed_update;
 mod recovery;
 pub use installed_update::inspect_installed_update;
-pub(crate) use installed_update::verify_installed_baseline;
+pub(crate) use installed_update::{verify_installed_baseline, VerifiedInstalledBaseline};
 pub use recovery::{
     accept_supervised_recovery, inspect_supervised_recovery, SupervisedRecoveryRequest,
 };
@@ -1776,6 +1776,85 @@ pub fn diagnostics_for_managed_install(
         redact_roots,
     })
     .map_err(|error| CliError::new("diagnostics_failed", error.to_string()))
+}
+
+/// What the `hotpatch` command does to one registered installation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HotpatchAction {
+    /// Show what Updates shows; never writes the game.
+    Check,
+    /// Apply the next hotpatch that a check offered with `review_token`.
+    Apply {
+        review_token: String,
+        full_backup: bool,
+        save_backup: bool,
+    },
+    /// Undo the latest applied hotpatch.
+    Undo,
+    /// Finish restoring a hotpatch that did not finish.
+    Restore,
+}
+
+/// Run `action` on the registered installation at `managed_root` with the hotpatch catalog
+/// folder `catalog`, as the app's Updates screen does. The registry is the one of this
+/// process's application data folder; downloads go to `cache`.
+pub fn hotpatch_managed_install(
+    managed_root: &Path,
+    catalog: &Path,
+    cache: &Path,
+    action: &HotpatchAction,
+) -> Result<crate::hotpatch::HotpatchPreview, CliError> {
+    let failed = |error: String| CliError::new("hotpatch_failed", error);
+    let catalog = crate::hotpatch::catalog::load(catalog)
+        .map_err(|error| CliError::new("hotpatch_catalog_invalid", error))?;
+    let local = local_application_data()?;
+    let app_data = local.join(application_data_directory());
+    let root = fs::canonicalize(managed_root).map_err(|error| {
+        CliError::new(
+            "managed_install_unavailable",
+            format!("{}: {error}", managed_root.display()),
+        )
+    })?;
+    let record = ManagedInstallRegistry::open_or_create(&app_data)
+        .and_then(|registry| registry.list())
+        .map_err(|error| CliError::new("registry_unavailable", error.to_string()))?
+        .into_iter()
+        .map(|card| card.record)
+        .find(|record| record.managed_root == root)
+        .ok_or_else(|| {
+            CliError::new(
+                "managed_install_unavailable",
+                format!(
+                    "{} is not a completed installation in the {:?} registry",
+                    root.display(),
+                    application_data_directory()
+                ),
+            )
+        })?;
+    let locks = crate::lock::TargetLockNamespace::in_local_application_data(local)
+        .map_err(|error| CliError::new("application_data_unavailable", error.to_string()))?;
+    let ctx = crate::hotpatch::Context {
+        record: &record,
+        app_data: &app_data,
+        locks: &locks,
+        cache,
+    };
+    match action {
+        HotpatchAction::Check => {
+            let _lock = locks
+                .try_acquire(&record.managed_root)
+                .map_err(|error| failed(error.to_string()))?;
+            crate::hotpatch::inspect(&ctx, &catalog)
+        }
+        HotpatchAction::Apply {
+            review_token,
+            full_backup,
+            save_backup,
+        } => crate::hotpatch::apply(&ctx, &catalog, review_token, *full_backup, *save_backup),
+        HotpatchAction::Undo => crate::hotpatch::restore(&ctx, &catalog, true),
+        HotpatchAction::Restore => crate::hotpatch::restore(&ctx, &catalog, false),
+    }
+    .map_err(failed)
 }
 
 impl FrozenSource {
@@ -4105,6 +4184,10 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
                 )
             },
         };
+        // Game updates later compare the folder with what the installer finished.
+        let game_files =
+            crate::game_files::capture(layout.game_root()).map_err(StepFailure::new)?;
+        self.persist_named_evidence("final", "game-files", &game_files)?;
         self.persist_named_evidence("final", "state", &final_state)
     }
 }
@@ -4627,7 +4710,7 @@ fn log_component_receipt(entry: &LogEntry) -> LogComponentReceipt {
     }
 }
 
-fn select_terminal_evidence<'a>(debug: &'a [u8], stdout: &'a [u8]) -> &'a [u8] {
+pub(crate) fn select_terminal_evidence<'a>(debug: &'a [u8], stdout: &'a [u8]) -> &'a [u8] {
     // Setup-name WeiDU can redirect its detailed log to SETUP-<MOD>.DEBUG beside the
     // executable even when --log names our attempt path. In that case the requested
     // debug file contains only a header, while the runner's synchronized per-attempt

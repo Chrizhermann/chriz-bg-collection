@@ -175,6 +175,7 @@ pub fn set_with(
         .map_err(|error| format!("This installation is in use: {error}"))?;
     crate::patches::launch_guard(managed_root)?;
     crate::mod_upgrades::launch_guard(managed_root)?;
+    crate::hotpatch::launch_guard(managed_root)?;
     // The loader's crash handler reads the setting when the game crashes: changing it while the
     // game runs would leave that crash without its log, or copy an old log as if it were its own.
     // CEBG's own Play waits for the lock held here; a game started another way in the moment

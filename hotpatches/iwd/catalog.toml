@@ -1,0 +1,42 @@
+# Hotpatches of Chriz Easy IWD: new WeiDU components of one pinned mod release, installed after
+# everything else into completed installations, so running games get them too. The app bundles
+# this folder; each hotpatch's package is pinned below `artifacts/` and `mods/` in the recipe's
+# own formats. Design: docs/plans/2026-10-28-iwd-hotpatch.md.
+schema = 1
+game = "iwdee"
+
+# What the game, its loader, installed mods and the app's own add-ons write into the game folder
+# after installation. These never block a hotpatch, and a hotpatch neither writes nor restores
+# them. Lowercase names; `folder/**` is a folder and everything in it, `*` matches within a name.
+runtime_files = [
+    # InfinityLoader: its settings (it writes cached addresses on every start, the app writes
+    # the game log switch), its logs and crash dumps.
+    "infinityloader.ini",
+    "infinityloader.log",
+    "infinityloader-previous.log",
+    "infinityloader_crash/**",
+    # BuffBot 1.12: logs, the generated panel backgrounds, its innate helpers, exported presets.
+    "buffbot_*.log",
+    "override/bfbotbg*.mos",
+    "override/bfbtch.spl",
+    "override/bfbtcr.spl",
+    "override/bfbot_presets/**",
+    # BG Radar Overlay, which the app installs and updates itself.
+    "bg radar overlay/**",
+]
+
+# Christopher's rule (2026-10-28): hotpatches only for installations close to the recommended
+# setup. At most `max_changed_mods` other mods may be added, left out or set differently;
+# choices in `free_mods` never count, and `required_mods` must stay installed.
+[gate]
+recommended_preset = "chris-recommended"
+max_changed_mods = 2
+free_mods = ["cdtweaks", "infinity-ui", "leui-iwdee", "eeex"]
+required_mods = ["stratagems"]
+
+# Each collection release that hotpatches are made for, by the digest of its recipe content.
+[[bases]]
+id = "iwd-0.1.0-alpha.1"
+label = "Chriz Easy IWD 0.1.0-alpha.1"
+recipe_version = "0.1.0-alpha.1"
+content_sha256 = "79710d044f996f9224cae2a20c55296beae646b97e11be3a61160497ce14ae8d"

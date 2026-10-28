@@ -787,7 +787,7 @@ pub fn restore_with_progress(
 }
 fn restore_inner(ctx: &Context<'_>, dir: &Path, undo: bool) -> Result<(), String> {
     let p = load_prepared(ctx, dir)?;
-    close_check_inner(&ctx.game(), &p.plan.hashes, true)?;
+    close_restore_check(&ctx.game(), &p.plan.hashes)?;
     if undo {
         verify_post(ctx, dir)?;
     } else {

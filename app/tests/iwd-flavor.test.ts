@@ -132,7 +132,7 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(flavor.productName).toBe("Chriz Easy IWD");
     expect(flavor.sources).toEqual([{ slot: "bg2", role: "iwdee", label: "Icewind Dale: Enhanced Edition", name: "Icewind Dale: Enhanced Edition", reviewLabel: "Game source" }]);
     expect(sourceSlots).toEqual(["bg2"]);
-    expect(flavor.features).toEqual({ radar: true, installPatches: false, modUpgrades: false, manualPauses: true, appUpdates: false, buffBotTip: true, radarTip: true });
+    expect(flavor.features).toEqual({ radar: true, installPatches: false, modUpgrades: false, hotpatches: true, manualPauses: true, appUpdates: false, buffBotTip: true, radarTip: true });
   });
 
   it("shows exactly one source card and installs with an empty bg1 candidate", async () => {
@@ -221,6 +221,29 @@ describe("Chriz Easy IWD build flavor", () => {
     await waitFor(() => expect(radar).toHaveBeenCalledWith("iwd-install"));
   });
 
+  it("offers a hotpatch under Updates, applies it and undoes it", async () => {
+    const { mountApp, FixtureBackend } = await iwd();
+    const backend = new FixtureBackend({ managedInstallations: [installation()] });
+    vi.spyOn(backend, "getUpdates").mockResolvedValue(updatesWithBgExtras());
+    const apply = vi.spyOn(backend, "applyHotpatch");
+    const restore = vi.spyOn(backend, "restoreHotpatch");
+    const root = rootElement();
+    const app = await mountApp(root, backend);
+    await app.navigate("updates");
+    expect(root.querySelector(".hotpatch-section")?.textContent).toContain("Not checked yet");
+    fireEvent.click(getByRole(root, "button", { name: "Check for a hotpatch" }));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Apply hotpatch" })).toBeTruthy());
+    expect(root.querySelector(".hotpatch-changelog")?.textContent).toContain("Belhifet");
+    fireEvent.click(getByRole(root, "button", { name: "Apply hotpatch" }));
+    await waitFor(() => expect(apply).toHaveBeenCalledWith("iwd-install", "fixture-hotpatch-iwd-install", true, false, expect.any(Function)));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Undo Belhifet fight" })).toBeTruthy());
+    expect(root.querySelector(".hotpatch-history")?.textContent).toBe("Applied hotpatches: Belhifet fight");
+    fireEvent.click(getByRole(root, "button", { name: "Undo Belhifet fight" }));
+    await waitFor(() => expect(restore).toHaveBeenCalledWith("iwd-install", true, expect.any(Function)));
+    await waitFor(() => expect(getByRole(root, "button", { name: "Apply hotpatch" })).toBeTruthy());
+    expectNoBgWords(root, "hotpatch updates");
+  });
+
   it("adds BG Radar Overlay after an installation completes", async () => {
     const { mountApp, FixtureBackend } = await iwd();
     const backend = new FixtureBackend();
@@ -267,7 +290,7 @@ describe("Chriz Easy IWD build flavor", () => {
     expect(panel.querySelector("p")?.textContent).toBe("Install your additions in this managed game folder:");
     expect([...panel.querySelectorAll("dd")].map(value => value.textContent)).toEqual(["EEex: Core (0)", "SCS: Smarter mages (0)"]);
     expect(panel.textContent).toContain("You can close Chriz Easy IWD while paused.");
-    expect(panel.textContent).toContain("Accepting records these additions and turns off mod update checks for this installation.");
+    expect(panel.textContent).toContain("Accepting records these additions and turns off hotpatches and mod update checks for this installation.");
     expectNoBgWords(panel, "manual pause panel");
   });
 
@@ -276,9 +299,9 @@ describe("Chriz Easy IWD build flavor", () => {
     const backend = new m.FixtureBackend({ managedInstallations: [installation({ customized: true })] });
     const root = rootElement();
     const app = await m.mountApp(root, backend);
-    expect(root.querySelector(".launcher-card .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Mod update checks are off for this installation.");
+    expect(root.querySelector(".launcher-card .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Hotpatches and mod update checks are off for this installation.");
     await app.navigate("updates");
-    expect(root.querySelector(".update-game-sections .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Mod update checks are off for this installation. New installations remain available.");
+    expect(root.querySelector(".update-game-sections .manual-mod-warning")?.textContent).toBe("Customized — manual mods added. Hotpatches and mod update checks are off for this installation. New installations remain available.");
     expect(queryByRole(root, "button", { name: "Check installed mods" })).toBeNull();
   });
 
@@ -464,7 +487,7 @@ describe("Baldur's Gate flavor", () => {
         { slot: "bg1", role: "bgee_sod", label: "Baldur's Gate + Siege of Dragonspear", name: "Baldur's Gate", reviewLabel: "BG1 source" },
         { slot: "bg2", role: "bg2ee", label: "Baldur's Gate II", name: "Baldur's Gate II", reviewLabel: "BG2 source" },
       ],
-      features: { radar: true, installPatches: true, modUpgrades: true, manualPauses: true, appUpdates: true, buffBotTip: true, radarTip: true },
+      features: { radar: true, installPatches: true, modUpgrades: true, hotpatches: false, manualPauses: true, appUpdates: true, buffBotTip: true, radarTip: true },
       text: {
         lookingForGames: "Looking for your Baldur's Gate games…",
         preparingSetupDetail: "Checking your game folders and mod choices. Your original games stay unchanged.",

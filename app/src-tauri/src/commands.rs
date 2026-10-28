@@ -230,6 +230,70 @@ pub async fn restore_install_patch(
     .await
 }
 
+#[tauri::command]
+pub async fn inspect_hotpatch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<bg_engine::hotpatch::HotpatchPreview, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.inspect_hotpatch(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn apply_hotpatch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    review_token: String,
+    full_backup: bool,
+    save_backup: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::hotpatch::HotpatchPreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.apply_hotpatch_with_progress(
+            &install_id,
+            &review_token,
+            full_backup,
+            save_backup,
+            &|progress| report_progress(&on_progress, progress),
+        )
+    })
+    .await
+}
+
+/// Undo the latest hotpatch (`undo`), or finish restoring one that did not finish.
+#[tauri::command]
+pub async fn restore_hotpatch(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    undo: bool,
+    webview: tauri::Webview,
+    on_progress: Option<JavaScriptChannelId>,
+) -> Result<bg_engine::hotpatch::HotpatchPreview, CommandError> {
+    let on_progress = on_progress.map(|id| id.channel_on(webview));
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || {
+        bridge.restore_hotpatch_with_progress(&install_id, undo, &|progress| {
+            report_progress(&on_progress, progress)
+        })
+    })
+    .await
+}
+
 fn local_path(selected: Option<FilePath>) -> Result<Option<PathBuf>, CommandError> {
     selected
         .map(|path| {
