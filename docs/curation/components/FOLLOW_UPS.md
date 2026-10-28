@@ -37,12 +37,19 @@ Cross-repository status. Component detail stays in the sections below and in the
        `manifest/evidence/release-intake-20261027.toml`; below).
      - The engine's rename retry from PR #35, ported by
        [PR #40](https://github.com/Chrizhermann/chriz-bg-collection/pull/40) (below).
+     BG Rebalance v0.8.7 replaces v0.8.6 since
+     [PR #56](https://github.com/Chrizhermann/chriz-bg-collection/pull/56) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance.toml`).
+     Only `360`'s name changes, to True Time Stop – fair Haste & Slow (below).
      BuffBot v1.12.1 is pinned in both recipes in
      [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (evidence in
      `manifest/evidence/release-intake-20261028-buffbot.toml`). Christopher, 2026-10-28:
      it goes into alpha.22 once it has been tested again; he tests it himself, and the PR
-     stays open until he says his test is fine. The IWD recipe gets the same version in a
-     matching PR on `claude/iwdee-app`; both go in together (rule below).
+     stays open until he says his test is fine. The IWD recipe gets the same version in
+     [PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51) against
+     `claude/iwdee-app`; both go in together (rule below), #51 with a merge commit. Since
+     #56, #44 conflicts in `engine/tests/feature_groups.rs` (keep #56's collection digests;
+     the plan digests change for both pins) and in the changelog draft (keep both lines).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -287,6 +294,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   - Since PR #41 (merged on 2026-10-28) Rebalance v0.8.6 replaces v0.8.5. It adds `360`
     (Time Stop/Haste, below) as a default at the end of its run. The other Rebalance
     components, their decisions and their order are unchanged.
+  - Since PR #56 (merged on 2026-10-29) v0.8.7 replaces v0.8.6. Only `360` changes: its
+    new name and its guard against the standalone package, which CEBG never installs.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
   - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
@@ -315,7 +324,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   small own mod with SCS-style scripts for selected IWD fights, because the script
   engine (Larger projects) will not be ready in time.
 
-- Time Stop and Haste effect clocks, BG Rebalance component `360`: merged on 2026-10-27
+- True Time Stop – fair Haste & Slow (was Time Stop and Haste effect clocks), BG Rebalance
+  component `360`: merged on 2026-10-27
   ([chriz-bg-rebalance#18](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/18)).
   Christopher chose the Rebalance component over the standalone Time Clocks prototype,
   which is retired (2026-10-27).
@@ -333,12 +343,19 @@ Cross-repository status. Component detail stays in the sections below and in the
     2026-10-28 and pinned since PR #41, under "Spells" and not marked experimental
     (Christopher, 2026-10-28: it was tested extensively).
   - Christopher, 2026-10-28: offer it on its own too, for EEex players outside CEBG, as
-    long as it is proven to work standalone (with EEex). In progress: a `live-patch`
-    package with its own installer and guards against installing it together with `360`,
-    a README, and a packager, so the next BG Rebalance release carries it like the other
-    tail packages. Its lab proof runs on a plain BG2:EE 2.7.3.0 with only EEex: install,
-    behaviour, uninstall, and adding it to a running game. The release needs Christopher's
-    OK.
+    long as it is proven to work standalone (with EEex). He chose the name on 2026-10-28.
+    Released with
+    [v0.8.7](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.7) on
+    2026-10-29
+    ([chriz-bg-rebalance#20](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/20),
+    [#21](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/21)) as the extra
+    download `CBR_TRUE_TIMESTOP-v0.8.7-windows.zip`. The package and `360` each refuse
+    while the other is installed.
+    - Lab-proven on a plain BG2:EE 2.7.3.0 with only EEex v1.3.1: install from the
+      archive, behaviour, uninstall, and saves across the install and the uninstall. EET
+      was not run with the package; the same two files ran as `360` on EET.
+    - Adding or removing it during a playthrough stays unsupported (Christopher's rule).
+    - Pinned for alpha.22 in PR #56.
 
 **Ready to start**
 
