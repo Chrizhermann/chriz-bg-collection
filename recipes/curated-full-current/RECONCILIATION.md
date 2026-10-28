@@ -123,8 +123,8 @@ Engine-equivalent resolved-selection summary: 482 default/mandatory rows — con
 | `BG1NPC:240` | default | `feature:bg1npc:component-240` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 240 |  |
 | `BGGO:0` | default | `feature:bggo:component-0` | selected for installation | bggo → bggo-3.6 3.6 (v3.6), component 0 |  |
 | `BUBB_SPELL_MENU_EXTENDED:0` | default | `feature:bubb-spell-menu-extended:component-0` | selected for installation | bubb-spell-menu → bubb-spell-menu-5.2 5.2 (v5.2), component 0 |  |
-| `BUFFBOT:1` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.11.0 1.11.0 (v1.11.0), component 1 |  |
-| `BUFFBOT:0` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.11.0 1.11.0 (v1.11.0), component 0 |  |
+| `BUFFBOT:1` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.12.1 1.12.1 (v1.12.1), component 1 |  |
+| `BUFFBOT:0` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.12.1 1.12.1 (v1.12.1), component 0 |  |
 | `C0WARLOCK:0` | default | `omission:warlock-unattended-answer` | deferred | No executable source selected | The hidden Contingency UI spell-learning prompt still needs Christopher's explicit Yes or No choice and an unattended script before this default can be installed. |
 | `CD_AERIE:0` | default | `feature:voicepack-aerie:component-0` | selected for installation | voicepack-aerie → voicepack-aerie-1.0.1 1.0.1 (v1.1.0), component 0 |  |
 | `CD_AJANTI:0` | default | `feature:voicepack-ajantis:component-0` | selected for installation | voicepack-ajantis → voicepack-ajantis-2.0.0 2.0.0 (v1.1.0), component 0 |  |
