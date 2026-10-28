@@ -1,9 +1,11 @@
 //! The uninstaller's removal of application data, through the real app executable and, when
 //! Tauri's NSIS compiler is available, through the real uninstaller hook.
 //!
-//! Only development builds of the app are run: they remove nothing but the folders a test
-//! declares. A release build would remove the real application data of whoever runs the tests.
-#![cfg(all(windows, debug_assertions))]
+//! Every test build of the app, debug or `--release`, removes nothing but the folders a test
+//! declares: the app's own dev-dependency enables its `test-application-data` feature. A build
+//! for players would remove the real application data of whoever runs the tests, so the tests
+//! run only a copy of the app that honors the test's folders.
+#![cfg(windows)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,7 +22,7 @@ const TEST_PARENTS: &str = "CHRIZ_BG_COLLECTION_TEST_APPLICATION_DATA_PARENTS";
 /// Disposable stand-ins for the user's roaming and local application data folders, and a game
 /// folder outside them that a junction in the download cache points to.
 struct Profile {
-    _temp: tempfile::TempDir,
+    temp: tempfile::TempDir,
     roaming: PathBuf,
     local: PathBuf,
     game_save: PathBuf,
@@ -66,7 +68,7 @@ impl Profile {
             fs::write(neighbour, b"keep").unwrap();
         }
         Self {
-            _temp: temp,
+            temp,
             roaming,
             local,
             game_save,
@@ -76,6 +78,13 @@ impl Profile {
 
     fn parents(&self) -> std::ffi::OsString {
         std::env::join_paths([&self.roaming, &self.local]).unwrap()
+    }
+
+    /// Installs the app under test outside the application data folders.
+    fn install_app(&self) -> PathBuf {
+        let installed = self.temp.path().join("installed");
+        fs::create_dir(&installed).unwrap();
+        install_app(&installed)
     }
 
     fn held_file(&self) -> PathBuf {
@@ -121,6 +130,24 @@ impl Profile {
     }
 }
 
+/// Copies the app under test into `folder` and returns the copy. `CARGO_BIN_EXE_chriz-bg-app`
+/// names the app of Cargo's latest build, and a release build for players, such as one made
+/// while these tests run, would remove the real application data. So the tests run only a copy,
+/// which no later build replaces, and only one that honors the test's folders: the variable's
+/// name is in the app exactly when the hook is (see docs/BUILDING.md).
+fn install_app(folder: &Path) -> PathBuf {
+    let app = folder.join("chriz-bg-app.exe");
+    fs::copy(APP, &app).unwrap();
+    let binary = fs::read(&app).unwrap();
+    assert!(
+        binary
+            .windows(TEST_PARENTS.len())
+            .any(|bytes| bytes == TEST_PARENTS.as_bytes()),
+        "{APP} ignores {TEST_PARENTS} and would remove the real application data"
+    );
+    app
+}
+
 fn junction(link: &Path, target: &Path) {
     let output = Command::new("cmd.exe")
         .args(["/c", "mklink", "/J"])
@@ -162,8 +189,8 @@ fn finish(command: &mut Command) -> Output {
     child.wait_with_output().unwrap()
 }
 
-fn run_app(arguments: &[&str], parents: Option<&std::ffi::OsStr>) -> Output {
-    let mut command = Command::new(APP);
+fn run_app(app: &Path, arguments: &[&str], parents: Option<&std::ffi::OsStr>) -> Output {
+    let mut command = Command::new(app);
     command.args(arguments).env_remove(TEST_PARENTS);
     if let Some(parents) = parents {
         command.env(TEST_PARENTS, parents);
@@ -174,8 +201,10 @@ fn run_app(arguments: &[&str], parents: Option<&std::ffi::OsStr>) -> Output {
 #[test]
 fn the_uninstaller_request_removes_both_folders_without_following_junctions() {
     let profile = Profile::new();
+    let app = profile.install_app();
 
     let output = run_app(
+        &app,
         &[REMOVE_APPLICATION_DATA, IDENTIFIER],
         Some(&profile.parents()),
     );
@@ -187,12 +216,13 @@ fn the_uninstaller_request_removes_both_folders_without_following_junctions() {
 #[test]
 fn any_other_request_touches_nothing() {
     let profile = Profile::new();
+    let app = profile.install_app();
     for arguments in [
         vec![REMOVE_APPLICATION_DATA],
         vec![REMOVE_APPLICATION_DATA, "dev.example.other"],
         vec![REMOVE_APPLICATION_DATA, IDENTIFIER, "--force"],
     ] {
-        let output = run_app(&arguments, Some(&profile.parents()));
+        let output = run_app(&app, &arguments, Some(&profile.parents()));
         assert_eq!(
             output.status.code(),
             Some(REFUSED),
@@ -200,8 +230,8 @@ fn any_other_request_touches_nothing() {
         );
         profile.assert_kept();
     }
-    // A development build never removes the real application data folders.
-    let output = run_app(&[REMOVE_APPLICATION_DATA, IDENTIFIER], None);
+    // A test build never removes the real application data folders.
+    let output = run_app(&app, &[REMOVE_APPLICATION_DATA, IDENTIFIER], None);
     assert_eq!(output.status.code(), Some(REFUSED), "{output:?}");
     profile.assert_kept();
 }
@@ -209,10 +239,12 @@ fn any_other_request_touches_nothing() {
 #[test]
 fn data_that_stays_in_use_is_reported() {
     let profile = Profile::new();
+    let app = profile.install_app();
     let held_file = profile.held_file();
     let held = hold(&held_file);
 
     let output = run_app(
+        &app,
         &[REMOVE_APPLICATION_DATA, IDENTIFIER],
         Some(&profile.parents()),
     );
@@ -368,7 +400,7 @@ fn the_uninstaller_hook_removes_application_data_through_the_app_and_never_follo
         };
     let installed = temp.path().join("installed");
     fs::create_dir(&installed).unwrap();
-    fs::copy(APP, installed.join("chriz-bg-app.exe")).unwrap();
+    install_app(&installed);
     let asked = Some("chriz-bg-app.exe|Chriz Easy BG\r\n".to_owned());
 
     let profile = Profile::new();
