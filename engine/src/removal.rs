@@ -17,7 +17,7 @@ use crate::preflight::{
 };
 use crate::registry::ManagedInstallRegistry;
 use crate::session::SessionStore;
-use crate::stage::DocumentsLocator;
+use crate::stage::{DocumentsLocator, SystemDocuments};
 
 /// A freshly validated removal description. The desktop keeps it server-side behind a token.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,6 +59,15 @@ fn io_at(path: &Path, error: io::Error) -> RemovalError {
 
 /// Does not remove files or registry entries. Unknown ids never confer path authority.
 pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, RemovalError> {
+    preview_with(app_data, install_id, &SystemDocuments)
+}
+
+/// `locator` finds the Documents folder that holds an incomplete installation's saves.
+fn preview_with(
+    app_data: &Path,
+    install_id: &str,
+    locator: &dyn DocumentsLocator,
+) -> Result<RemovalPlan, RemovalError> {
     let registry = ManagedInstallRegistry::open_or_create(app_data).map_err(failure)?;
     let installs = registry.list().map_err(failure)?;
     let campaigns = registry.list_campaigns().map_err(failure)?;
@@ -204,7 +213,7 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
             }
         }
         if plan.preserved_save_path.is_none() {
-            if let Ok(documents) = crate::stage::SystemDocuments.documents_dir() {
+            if let Ok(documents) = locator.documents_dir() {
                 if prospective_path(&documents)?.starts_with(root) {
                     return Err(failure("Refusing the Documents folder or its parent."));
                 }
@@ -243,18 +252,25 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
 
 /// Revalidates the preview under the same cross-process lock used by installation.
 pub fn execute(app_data: &Path, expected: &RemovalPlan) -> Result<(), RemovalError> {
-    execute_with(app_data, expected, &SystemPreflight, &mut |_| Ok(()))
+    execute_with(
+        app_data,
+        expected,
+        &SystemDocuments,
+        &SystemPreflight,
+        &mut |_| Ok(()),
+    )
 }
 
 fn execute_with(
     app_data: &Path,
     expected: &RemovalPlan,
+    locator: &dyn DocumentsLocator,
     host: &dyn PreflightHost,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
 ) -> Result<(), RemovalError> {
     let _lock =
         TargetLock::try_acquire(app_data.join("locks"), &expected.managed_root).map_err(failure)?;
-    let current = preview(app_data, &expected.install_id)?;
+    let current = preview_with(app_data, &expected.install_id, locator)?;
     if current != *expected {
         return Err(failure(
             "Installation changed since confirmation. Review removal again.",
@@ -603,7 +619,7 @@ mod tests {
         let cache = base.join("cache");
         let source = base.join("source");
         let app = base.join("app-data");
-        for path in [&root, &cache, &source] {
+        for path in [&root, &cache, &source, &documents(&app).0] {
             fs::create_dir(path).unwrap();
         }
         fs::write(source.join("original.txt"), "source game").unwrap();
@@ -650,8 +666,28 @@ mod tests {
             source,
         }
     }
+    /// Each fixture's stand-in for the Documents folder, beside its app data.
+    struct FixtureDocuments(PathBuf);
+    impl DocumentsLocator for FixtureDocuments {
+        fn documents_dir(&self) -> io::Result<PathBuf> {
+            Ok(self.0.clone())
+        }
+    }
+    fn documents(app: &Path) -> FixtureDocuments {
+        FixtureDocuments(app.with_file_name("Documents"))
+    }
+    /// The app's preview, with the fixture's Documents folder instead of the player's.
+    fn preview(app: &Path, install_id: &str) -> Result<RemovalPlan, RemovalError> {
+        preview_with(app, install_id, &documents(app))
+    }
     fn run(f: &Fixture, plan: &RemovalPlan) -> Result<(), RemovalError> {
-        execute_with(&f.app, plan, &Host::default(), &mut |_| Ok(()))
+        execute_with(
+            &f.app,
+            plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |_| Ok(()),
+        )
     }
     #[test]
     fn preview_and_cancel_do_not_remove_anything() {
@@ -708,6 +744,35 @@ mod tests {
         assert!(registry.list().unwrap().is_empty());
     }
     #[test]
+    fn an_incomplete_installation_keeps_its_profile_folder_in_documents() {
+        let f = fixture();
+        let name = "Removal fixture - 0123456789ab";
+        fs::write(
+            f.root.join("game/engine.lua"),
+            format!("engine_name = \"{name}\"\n"),
+        )
+        .unwrap();
+        let profile = documents(&f.app).0.join(name);
+        fs::create_dir(&profile).unwrap();
+        fs::write(profile.join(".chriz-managed-install.json"), "{}").unwrap();
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Delete);
+        assert_eq!(plan.preserved_save_path, Some(profile.clone()));
+        run(&f, &plan).unwrap();
+
+        assert!(!f.root.exists());
+        assert!(profile.join(".chriz-managed-install.json").is_file());
+    }
+    #[test]
+    fn a_documents_folder_inside_the_installation_is_refused() {
+        let f = fixture();
+        let inside = FixtureDocuments(f.root.join("game/Documents"));
+        let error = preview_with(&f.app, "fixture-removal", &inside).unwrap_err();
+        assert!(error.to_string().contains("Documents folder"), "{error}");
+        assert!(f.root.join("game/game.exe").exists());
+    }
+    #[test]
     fn unknown_and_forged_identity_are_refused() {
         let f = fixture();
         assert!(preview(&f.app, "../source").is_err());
@@ -749,23 +814,29 @@ mod tests {
         let host = Host {
             running: vec![f.root.join("game/game.exe")],
         };
-        assert!(execute_with(&f.app, &plan, &host, &mut |_| Ok(())).is_err());
+        assert!(execute_with(&f.app, &plan, &documents(&f.app), &host, &mut |_| Ok(())).is_err());
         assert!(f.root.join("game/game.exe").exists());
     }
     #[test]
     fn interrupted_final_metadata_cleanup_is_retryable_without_losing_registry_identity() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        let error = execute_with(&f.app, &plan, &Host::default(), &mut |path| {
-            if path == f.root {
-                Err(io::Error::new(
-                    io::ErrorKind::PermissionDenied,
-                    "fixture locked folder",
-                ))
-            } else {
-                Ok(())
-            }
-        })
+        let error = execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |path| {
+                if path == f.root {
+                    Err(io::Error::new(
+                        io::ErrorKind::PermissionDenied,
+                        "fixture locked folder",
+                    ))
+                } else {
+                    Ok(())
+                }
+            },
+        )
         .unwrap_err();
         assert!(error.to_string().contains("fixture locked folder"));
         assert!(!f.root.join(".chriz").exists());
@@ -781,9 +852,13 @@ mod tests {
     fn partial_deletion_journal_cannot_authorize_replacement_folder() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        execute_with(&f.app, &plan, &Host::default(), &mut |_| {
-            Err(io::Error::other("stop"))
-        })
+        execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |_| Err(io::Error::other("stop")),
+        )
         .unwrap_err();
         fs::rename(&f.root, f._temp.path().join("moved")).unwrap();
         fs::create_dir(&f.root).unwrap();
@@ -1067,13 +1142,19 @@ mod tests {
     fn delete_with_last_step(f: &Fixture, last_step: &mut dyn FnMut()) -> Result<(), RemovalError> {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert_eq!(plan.action, RemovalAction::Delete);
-        execute_with(&f.app, &plan, &Host::default(), &mut |path| {
-            if path == f.root {
-                assert!(journal_path(&f.app, "fixture-removal").is_file());
-                last_step();
-            }
-            Ok(())
-        })
+        execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |path| {
+                if path == f.root {
+                    assert!(journal_path(&f.app, "fixture-removal").is_file());
+                    last_step();
+                }
+                Ok(())
+            },
+        )
     }
     /// The installation is gone and no longer listed, so the removal succeeded even when its
     /// journal cannot be cleaned up afterwards; the item that took its place is left alone.
@@ -1239,20 +1320,26 @@ mod tests {
         let mut swapped = false;
 
         let game = f.root.join("game");
-        let error = execute_with(&f.app, &plan, &Host::default(), &mut |path| {
-            // Neither while its contents are removed nor once it is empty.
-            if path == game.join("game.exe") || path == game {
-                let moved = fs::rename(&game, f._temp.path().join("moved"));
-                assert!(moved.is_err(), "{} could be moved", path.display());
-            }
-            if path == game {
-                // Ownership records are removed last, so they are not reached yet.
-                fs::rename(f.root.join(".chriz"), f._temp.path().join("moved-records"))?;
-                link_directory(&f.root.join(".chriz"), &outside);
-                swapped = true;
-            }
-            Ok(())
-        })
+        let error = execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |path| {
+                // Neither while its contents are removed nor once it is empty.
+                if path == game.join("game.exe") || path == game {
+                    let moved = fs::rename(&game, f._temp.path().join("moved"));
+                    assert!(moved.is_err(), "{} could be moved", path.display());
+                }
+                if path == game {
+                    // Ownership records are removed last, so they are not reached yet.
+                    fs::rename(f.root.join(".chriz"), f._temp.path().join("moved-records"))?;
+                    link_directory(&f.root.join(".chriz"), &outside);
+                    swapped = true;
+                }
+                Ok(())
+            },
+        )
         .unwrap_err();
 
         assert!(swapped);

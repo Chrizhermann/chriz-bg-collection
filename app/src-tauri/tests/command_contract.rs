@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{mpsc, Arc, Condvar, Mutex};
+use std::sync::{mpsc, Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use bg_engine::cli::{
@@ -17,6 +17,7 @@ use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::registry::{ManagedInstallRecord, ManagedInstallRegistry, REGISTRY_SCHEMA_VERSION};
 use bg_engine::resolve::InstallPlan;
 use bg_engine::session::{CampaignCreated, SessionEvent, SessionStore, SourceGameFingerprints};
+use bg_engine::stage::TEST_DOCUMENTS_VARIABLE;
 use bg_engine::weidu::runner::{RunnerControl, RunnerControlHandle};
 use chriz_bg_app_lib::bridge::{
     display_windows_path, installation_defaults, parse_startup_install_id, BridgeEngine,
@@ -57,6 +58,19 @@ fn copy_tree(source: &Path, destination: &Path) {
             fs::copy(entry.path(), target).expect("copy fixture file");
         }
     }
+}
+
+/// Previewing the removal of an incomplete installation looks up the Documents folder. Test
+/// builds of the engine refuse the player's real one, so such tests share this stand-in; it is
+/// set once and stays for the whole test process, whose tests run in parallel.
+fn isolated_documents() {
+    static DOCUMENTS: OnceLock<TempDir> = OnceLock::new();
+    DOCUMENTS.get_or_init(|| {
+        let documents = tempfile::tempdir_in(env!("CARGO_TARGET_TMPDIR"))
+            .expect("create isolated Documents folder");
+        std::env::set_var(TEST_DOCUMENTS_VARIABLE, documents.path());
+        documents
+    });
 }
 
 fn recipe_with_profiles() -> (TempDir, PathBuf) {
@@ -2443,6 +2457,7 @@ fn installation_removal_requires_native_confirmation_and_refuses_busy_or_changed
 
 #[test]
 fn installation_removal_size_is_advisory_and_does_not_change_confirmation_identity() {
+    isolated_documents();
     let (_temp, recipe) = recipe_with_profiles();
     let root = recipe.parent().unwrap().to_path_buf();
     let cache = root.join("cache");

@@ -61,7 +61,7 @@ use crate::session::{
 };
 use crate::stage::{
     finalize_game_identity, read_engine_name, reserve_save_identity, stage_bgee_sod,
-    stage_game_copy, DocumentsLocator, ManagedLayout, ReservedSaveIdentity, SystemDocuments,
+    stage_game_copy, ManagedLayout, ReservedSaveIdentity, SystemDocuments,
 };
 use crate::validate::{self, Severity};
 use crate::weidu::invocation::{
@@ -2119,26 +2119,6 @@ struct ReconciledAttemptEvidence<'a> {
     prompts: Vec<PromptReceipt>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-struct CliDocumentsLocator;
-
-impl DocumentsLocator for CliDocumentsLocator {
-    fn documents_dir(&self) -> std::io::Result<PathBuf> {
-        #[cfg(debug_assertions)]
-        if let Some(path) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS") {
-            let path = PathBuf::from(path);
-            if !path.is_absolute() {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "CHRIZ_BG_COLLECTION_TEST_DOCUMENTS is not absolute",
-                ));
-            }
-            return Ok(path);
-        }
-        SystemDocuments.documents_dir()
-    }
-}
-
 impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     fn reviewed_ui_correction(&self, run: &PlannedRun) -> bool {
         let (Some(mod_file), Some(artifact), Some(tool)) = (
@@ -2236,7 +2216,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn save_identity(&self, layout: &ManagedLayout) -> Result<ReservedSaveIdentity, StepFailure> {
         reserve_save_identity(
-            &CliDocumentsLocator,
+            &SystemDocuments,
             layout,
             self.frozen.effective_display_name(),
             &self.created.install_id,

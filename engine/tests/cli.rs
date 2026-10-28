@@ -23,6 +23,7 @@ use bg_engine::receipt::{
 };
 use bg_engine::registry::{CampaignAvailability, ManagedInstallRegistry};
 use bg_engine::session::SessionStore;
+use bg_engine::stage::TEST_DOCUMENTS_VARIABLE;
 use bg_engine::weidu::runner::RunnerControlHandle;
 use serde_json::Value;
 use tempfile::TempDir;
@@ -639,9 +640,39 @@ fn executable_command(fixture: &ExecutableFixture) -> Command {
     let mut command = cli();
     command
         .env("LOCALAPPDATA", &fixture.app_data)
-        .env("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS", &fixture.documents)
+        .env(TEST_DOCUMENTS_VARIABLE, &fixture.documents)
         .env("CHRIZ_TEST_MOCK_WEIDU_TP2", "EE_Fixpack/EE_Fixpack.tp2");
     command
+}
+
+/// A test build of the installer never falls back to the player's real Documents folder: an
+/// install that reaches its save folder without an isolated one stops there.
+#[cfg(windows)]
+#[test]
+fn install_without_an_isolated_documents_folder_stops_before_reserving_saves() {
+    let fixture = executable_fixture();
+    let mut install = executable_command(&fixture);
+    install
+        .env_remove(TEST_DOCUMENTS_VARIABLE)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ));
+
+    let output = install
+        .output()
+        .expect("run install without isolated Documents");
+
+    assert!(!output.status.success(), "{}", stdout(&output));
+    assert!(
+        stderr(&output).contains("never use the real Documents folder"),
+        "{}",
+        stderr(&output)
+    );
+    assert!(!fixture.managed.join("bg1/engine.lua").exists());
 }
 
 /// A real program named like WeiDU, running outside the fixture's game folders until dropped.
