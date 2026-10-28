@@ -36,11 +36,21 @@ Its old pins stay as they are.
    URL, size and SHA-256 from a fresh download (Christopher, 2026-10-28). Only add-ons
    outside the install order, such as the Radar overlay, take Latest at install time.
 2. **Pin it in every installer that ships the mod, in the same step.**
+   `tools/prepare_own_mod_pin.py` does the mechanical part (see "Preparing a pin" below).
    - Chriz Easy BG: `manifest/artifacts` and `manifest/mods`, then regenerate
-     `recipes/curated-full-current` with `tools/curated_full_recipe.py`.
-   - Chriz Easy IWD: `recipes/iwd-current`. While it lives on `claude/iwdee-app`, open a
-     matching PR against that branch. Each PR links the other, and they merge together:
-     first the IWD PR, then the BG PR, which ends the hold (step 3).
+     `recipes/curated-full-current` with `tools/curated_full_recipe.py`. Superseded
+     artifact TOMLs and evidence records stay as history; the tests that freeze a pin move
+     to the new one.
+   - Chriz Easy IWD: `recipes/iwd-current`. Its static test
+     (`engine/tests/production_recipe_iwd.rs`) lists every artifact file, so the new
+     artifact TOML replaces the superseded one (`superseded_artifacts = "remove"` in the
+     registry). The static-test record of the mod's run in
+     `recipes/iwd-current/releases/v0.1.0-alpha.1/acceptance.toml` names a commit of the
+     pin PR; merge that PR with a merge commit, so that the commit stays on the branch
+     ([PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51)).
+   - While Chriz Easy IWD lives on `claude/iwdee-app`, open a matching PR against that
+     branch. Each PR links the other, and they merge together: first the IWD PR, then the
+     BG PR, which ends the hold (step 3).
    - A mod only one installer ships today stays there. Adding it to the other installer
      is a curation choice, and curation is Christopher's.
 3. **If the newest release cannot go in yet, record a hold** in `manifest/own-mods.toml`.
@@ -59,8 +69,9 @@ Its old pins stay as they are.
    The PR that ends a hold removes it; a hold that no longer matches the pins fails the
    check. A hold covers only the release it names: the next release needs a new decision.
    A commit-pinned mod such as EEex Remote Console names full commits in `installers`.
-4. **Keep the evidence and tests as before.** The worked example is
-   [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44):
+4. **Keep the evidence and tests as before.** The worked examples are
+   [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (Chriz Easy BG) and
+   [PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51) (Chriz Easy IWD):
    - a fresh anonymous download, with `chriz-bg-author artifact inspect` and
      `artifact verify` for each recipe's artifact TOML;
    - `tools/check_native_component_order.py` on the fresh archive;
@@ -109,10 +120,40 @@ CI runs the release check by itself on every change of the app version or a reci
 `release.json` version. Each of our mods must be on its newest release in every installer
 that ships it, or held with Christopher's reason.
 
-## Next: prepared pin PRs
+## Preparing a pin
+
+`tools/prepare_own_mod_pin.py` does steps 1, 2 and the mechanical part of step 4 in one
+working tree. It needs the engine's author CLI (`cargo build --locked -p chriz-bg-engine
+--bin chriz-bg-author`, or `--author <path>`):
+
+```powershell
+$env:GH_TOKEN = (gh auth token --user Chrizhermann); python -I tools/prepare_own_mod_pin.py buffbot
+```
+
+- It pins the mod's newest release (or `--release <tag>`) in every installer whose
+  recipes are in the working tree; `--installer <id>` narrows that. For Chriz Easy IWD on
+  `claude/iwdee-app`, run it in a checkout of that branch with
+  `--registry <next-release checkout>/manifest/own-mods.toml --installer chriz-easy-iwd`.
+- It downloads the release fresh, checks its length and SHA-256 against the digest GitHub
+  publishes, writes the new artifact TOML from the old one (only the release fields
+  change), switches the mods, regenerates the curated recipe, runs `artifact verify` and
+  the native order check for each recipe, compares the TP2 components and VERSION, and
+  writes the evidence record.
+- Its summary lists the checks, the files it changed and what is left for the agent: the
+  catalog, the changelog draft, the tests that freeze the old pin, an intake test, the
+  plan digests, the static-test records, the pin list and the hold, each named by the
+  files in that tree.
+- It never commits, pushes or merges, and it never chooses a component. New or renamed
+  components are listed for Christopher's decision.
+- Exit code 3 means the release needs an agent, with the reason: for example an asset
+  name it cannot carry over (each voicepack has its own version), a digest that does not
+  match, or an order that no longer fits. It stops before its first edit, or undoes its
+  edits, so the tree is as it was. Exit code 1 is an error, 2 a wrong argument.
+
+## Next: the daily pin job
 
 Christopher chose on 2026-10-28: a GitHub Actions job looks for new releases of our mods
-once a day, and on demand. It downloads and verifies a new release, pins it in every
-installer, runs the checks and opens a draft PR for his test. It never merges by itself.
-An agent still writes the changelog and catalog text and updates the tests that freeze the
-pin. This job is not built yet.
+once a day, and on demand. It runs `tools/prepare_own_mod_pin.py` for each installer and
+opens a draft PR for his test. It never merges by itself. An agent still writes the
+changelog and catalog text and updates the tests that freeze the pin. This job is not
+built yet.

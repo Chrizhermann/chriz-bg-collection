@@ -70,6 +70,8 @@ class Installer:
     name: str
     recipes: tuple[str, ...]
     branch: str | None = None
+    # "keep": a new pin leaves the superseded artifact TOML as history; "remove": it goes.
+    superseded_artifacts: str = "keep"
 
 
 @dataclass(frozen=True)
@@ -146,9 +148,13 @@ def parse_registry(data: dict) -> Registry:
         where = f"installers[{index}]"
         if not isinstance(table, dict):
             raise RegistryError(f"{where} must be a table")
-        unknown = sorted(set(table) - {"id", "name", "recipes", "branch"})
+        unknown = sorted(set(table) - {"id", "name", "recipes", "branch",
+                                       "superseded_artifacts"})
         if unknown:
             raise RegistryError(f"{where}: unknown keys {unknown}")
+        superseded = table.get("superseded_artifacts", "keep")
+        if superseded not in ("keep", "remove"):
+            raise RegistryError(f"{where}: `superseded_artifacts` must be \"keep\" or \"remove\"")
         installer_id = _text(table, "id", where)
         if not INSTALLER_ID.match(installer_id):
             raise RegistryError(f"{where}: id `{installer_id}` must be lowercase words joined by -")
@@ -165,7 +171,8 @@ def parse_registry(data: dict) -> Registry:
                 )
             recipe_owner[path] = installer_id
         branch = _text(table, "branch", where, required=False)
-        installers.append(Installer(installer_id, _text(table, "name", where), paths, branch))
+        installers.append(Installer(installer_id, _text(table, "name", where), paths, branch,
+                                    superseded))
     if not installers:
         raise RegistryError("own-mods registry: list at least one installer")
 
@@ -520,6 +527,12 @@ class GitHub:
         if not isinstance(tag, str) or not tag:
             raise GitHubError(f"{repository}: the Latest release has no tag")
         return tag
+
+    def release_by_tag(self, repository: str, tag: str) -> dict:
+        data = self._get(f"/repos/{repository}/releases/tags/{urllib.parse.quote(tag)}")
+        if not isinstance(data, dict):
+            raise GitHubError(f"{repository}: unexpected release {tag}")
+        return data
 
     def tags(self, repository: str) -> list[tuple[str, str]]:
         if repository not in self._tags:

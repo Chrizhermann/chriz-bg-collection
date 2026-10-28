@@ -550,6 +550,11 @@ class RegistryTests(unittest.TestCase):
             {"chriz-easy-bg": ("manifest", "recipes/curated-full-current"),
              "chriz-easy-iwd": ("recipes/iwd-current",)},
         )
+        # Chriz Easy IWD's static test pins every artifact file; Chriz Easy BG keeps history.
+        self.assertEqual(
+            {installer.id: installer.superseded_artifacts for installer in registry.installers},
+            {"chriz-easy-bg": "keep", "chriz-easy-iwd": "remove"},
+        )
         repositories = {own_mod.repository for own_mod in registry.mods}
         # Christopher, 2026-10-28: every mod released from his account, forks included.
         self.assertTrue({
@@ -600,6 +605,10 @@ class RegistryTests(unittest.TestCase):
         self.assertRejected("already belongs to `bg`", installers=[
             {"id": "bg", "name": "BG", "recipes": ["manifest"]},
             {"id": "iwd", "name": "IWD", "recipes": ["manifest"]},
+        ])
+        self.assertEqual(self.registry().installers[0].superseded_artifacts, "keep")
+        self.assertRejected('`superseded_artifacts` must be "keep" or "remove"', installers=[
+            {"id": "bg", "name": "BG", "recipes": ["manifest"], "superseded_artifacts": "delete"},
         ])
         hold = {"mod": "buffbot", "release": "v1", "reason": "Test.", "decided": "2026-10-28"}
         self.assertRejected("is not one of the listed mods", holds=[{**hold, "mod": "other"}])
