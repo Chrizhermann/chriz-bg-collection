@@ -122,6 +122,12 @@ const RUNS: &[(&str, &str, Phase, &[u32])] = &[
         ],
     ),
     (
+        "chriz-iwd-encounters-main",
+        "chriz-iwd-encounters",
+        Phase::Main,
+        &[100, 200],
+    ),
+    (
         "hidden-gameplay-options-main",
         "hidden-gameplay-options",
         Phase::Main,
@@ -168,6 +174,11 @@ const INSTALLERS: &[(&str, &str, &str)] = &[
         "cdtweaks",
         "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729",
         "cdtweaks/setup-cdtweaks.tp2",
+    ),
+    (
+        "chriz-iwd-encounters",
+        "chriz-iwd-encounters-0.1.0",
+        "chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2",
     ),
     ("dendjelion", "dendjelion-2.1", "dendjelion/Dendjelion.tp2"),
     ("dusky", "dusky-2.5", "Dusky/Dusky.tp2"),
@@ -309,6 +320,16 @@ const ARTIFACTS: &[Pin] = &[
         filename: "Tweaks-Anthology-7649ced6cd25865874d787ec1a9abbc67b068729.zip",
         length: 23_871_463,
         sha256: "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7",
+    },
+    Pin {
+        id: "chriz-iwd-encounters-0.1.0",
+        version: "0.1.0",
+        kind: SourceKind::GithubRelease,
+        url: "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.1.0/chriz-iwd-encounters-v0.1.0.zip",
+        reference: "v0.1.0",
+        filename: "chriz-iwd-encounters-v0.1.0.zip",
+        length: 41_681,
+        sha256: "29cb1c757503baf34c5f2880c63c8564fd02bacfa58316fdac87141cc7edd2e2",
     },
     Pin {
         id: "dendjelion-2.1",
@@ -683,6 +704,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
             6040, 6100, 6510, 6540, 6550, 6700,
         ],
     ),
+    ("chriz-iwd-encounters-main", &[100, 200]),
     (
         "hidden-gameplay-options-main",
         &[
@@ -711,7 +733,7 @@ fn declares_a_standalone_iwdee_collection_with_its_own_data_folder() {
             .collect::<Vec<_>>(),
         [PRESET]
     );
-    assert_eq!(manifest.collection.features.len(), 301);
+    assert_eq!(manifest.collection.features.len(), 304);
     assert!(
         validate(&manifest).is_empty(),
         "authoring validation findings: {:?}",
@@ -787,6 +809,11 @@ fn pins_the_exact_ordered_runs_and_component_lists() {
     );
     assert!(
         position(&manifest, "cdtweaks-main") < position(&manifest, "hidden-gameplay-options-main")
+    );
+    // Chriz IWD Encounters reads what SCS built, so it runs directly after SCS.
+    assert_eq!(
+        position(&manifest, "stratagems-main") + 1,
+        position(&manifest, "chriz-iwd-encounters-main")
     );
     // BuffBot after EEex, late as in the BG installer.
     assert!(position(&manifest, "eeex-main") < position(&manifest, "buffbot-main"));
@@ -929,7 +956,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 124);
+    assert_eq!(components, 126);
 }
 
 #[test]
@@ -1176,6 +1203,65 @@ fn buffbot_is_on_by_default_and_installs_its_luajit_support_first() {
     selection.set_feature("mod:buffbot", false);
     let without = evaluate(&manifest, &selection).unwrap();
     assert!(without.plan.components_for("buffbot-main").is_none());
+}
+
+#[test]
+fn chriz_iwd_encounters_is_on_by_default_and_each_part_needs_its_scs_ai() {
+    // Christopher, 2026-10-28: his own mod, directly after SCS, both parts on by default.
+    let manifest = recipe();
+    let evaluation = recommended(&manifest);
+    let parent = evaluation.view.control("mod:chriz-iwd-encounters").unwrap();
+    assert_eq!(parent.decision, Decision::Default);
+    assert!(parent.selected);
+    let repairs = evaluation
+        .view
+        .control("feature:chriz-iwd-encounters:component-100")
+        .unwrap();
+    let priests = evaluation
+        .view
+        .control("feature:chriz-iwd-encounters:component-200")
+        .unwrap();
+    for control in [repairs, priests] {
+        assert_eq!(control.decision, Decision::Default, "{}", control.id);
+        assert_eq!(
+            control.parent.as_deref(),
+            Some("mod:chriz-iwd-encounters"),
+            "{}",
+            control.id
+        );
+        assert!(control.selected, "{}", control.id);
+    }
+    // The repairs fix SCS mage and priest scripts; the preparation extends SCS priest scripts.
+    assert_eq!(
+        repairs.requires_any,
+        [
+            "feature:stratagems:component-6030",
+            "feature:stratagems:component-6040"
+        ]
+    );
+    assert_eq!(priests.requires, ["feature:stratagems:component-6040"]);
+    assert_eq!(
+        evaluation.plan.components_for("chriz-iwd-encounters-main"),
+        Some(&[100, 200][..])
+    );
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("feature:chriz-iwd-encounters:component-200", false);
+    let repairs_only = evaluate(&manifest, &selection).unwrap();
+    assert_eq!(
+        repairs_only
+            .plan
+            .components_for("chriz-iwd-encounters-main"),
+        Some(&[100][..])
+    );
+
+    let mut selection = Selection::defaults("windows");
+    selection.set_feature("mod:stratagems", false);
+    let without_scs = evaluate(&manifest, &selection).unwrap();
+    assert!(without_scs
+        .plan
+        .components_for("chriz-iwd-encounters-main")
+        .is_none());
 }
 
 #[test]

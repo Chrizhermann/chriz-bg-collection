@@ -1,0 +1,32 @@
+id = "chriz-iwd-encounters-0.1.0"
+name = "Chriz IWD Encounters"
+version = "0.1.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/download/v0.1.0/chriz-iwd-encounters-v0.1.0.zip"
+reference = "v0.1.0"
+expected_filename = "chriz-iwd-encounters-v0.1.0.zip"
+expected_length = 41681
+sha256 = "29cb1c757503baf34c5f2880c63c8564fd02bacfa58316fdac87141cc7edd2e2"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["chriz-iwd-encounters"]
+tp2_paths = ["chriz-iwd-encounters/setup-chriz-iwd-encounters.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 64
+max_entry_uncompressed_bytes = 1048576
+max_total_uncompressed_bytes = 4194304
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-iwd-encounters"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-iwd-encounters/releases/tag/v0.1.0"
+reviewed_on = "2026-10-28"
