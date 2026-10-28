@@ -8,25 +8,33 @@ user's decisions. Started 2026-09-10.
 Christopher, 2026-10-28: the hotpatch is the last app feature he needs before the first
 community release; he proposed the version 0.1.1.
 
-- [ ] Hotpatch: a separate session builds it with Christopher on `claude/iwd-hotpatch` (from
-  `claude/iwdee-app`): an Updates entry "Hotpatch" with a short changelog, offered only to
+Christopher, 2026-10-29: finish the installer with the hotpatch for the community, publish the
+download repository and an English IWD page on the website as discussed. His message is the
+go for merging #42 and #52, the three hotpatch defaults, the release and the website.
+
+- [x] Hotpatch: built with Christopher on `claude/iwd-hotpatch`, merged into `claude/iwdee-app`
+  as PR #52 (2026-10-29). Updates → Hotpatch with a changelog per entry, offered only to
   installations close to the recommended setup; first use is boss upgrades from Chriz IWD
   Encounters.
-- [ ] Chriz IWD Encounters in the recipe: draft PR #42 into `claude/iwdee-app` (his call).
-- [ ] Own version line for the IWD app, independent of Chriz Easy BG (the IWD installer still
-  carries CEBG's 0.1.0-alpha.21): `version` 0.1.1 in `tauri.iwd.conf.json`, release records
-  moved from `v0.1.0-alpha.1` to `v0.1.1`. Done once the hotpatch and #42 are in, so the
-  records describe what ships.
-- [ ] Overview drafted in `docs/releases/iwd/`: `public-README.md` (README of the public
-  release repository) and `0.1.1.md` (release notes). Before release: match the hotpatch
-  paragraphs to the agreed design, add the SHA-256 and the exact source commit.
+- [x] Chriz IWD Encounters 0.1.0 in the recipe: PR #42, merged 2026-10-29.
+- [x] Own version line for the IWD app, independent of Chriz Easy BG (f97631d): `version` 0.1.1
+  in `tauri.iwd.conf.json`, which the app now reports everywhere (receipts, Updates, traces).
+  The `v0.1.0-alpha.1` records stay, since the public-alpha profile reads its acceptance and
+  limitations there; the new ledger `releases/v0.1.1/ledger.toml` describes what 0.1.1 adds.
+  The hotpatch catalog's base is the 0.1.1 recipe digest.
+- [ ] Overview in `docs/releases/iwd/`: `public-README.md` (README of the public release
+  repository) and `0.1.1.md` (release notes). At release: add the SHA-256 and the exact source
+  commit.
 - [ ] Public download repository `Chrizhermann/chriz-easy-iwd`, like `chriz-easy-bg` for CEBG:
   only the README and the release files, no code (Christopher, 2026-10-28; the source stays in
   this repository, both apps are built from it). Create it at release time, not before.
-- [ ] Website: an IWD page on bg.chrizfader.org (`bg-site` in `twitch-setup-chriz`) built from
-  the README, with download link and checksum, once the release exists and he approves.
-- [ ] Rebuild the installer from the merged branch, verify the bundle, then release only on his
-  explicit go.
+- [ ] Website: English IWD page `/iwd` on bg.chrizfader.org (`bg-site` in `twitch-setup-chriz`,
+  branch `claude/iwd-collection-page`), same layout as the BG page; pending until the release
+  exists, then the download link and checksum.
+- [ ] Installer rebuilt from f97631d (2026-10-29) and the bundle verified: version 0.1.1, the
+  bundled recipe and hotpatch catalog identical to the branch. Before release: a lab installs
+  the release, a played and saved lab passes the hotpatch check, and a test hotpatch applies
+  and undoes cleanly.
 
 ## Curation and sources
 

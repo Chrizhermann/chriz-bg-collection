@@ -1,7 +1,8 @@
 # Chriz Easy IWD
 
-**Early Windows release. Expect rough edges.** A few-click installer for ChrizFader's curated
-Icewind Dale: Enhanced Edition setup, the one played on stream.
+**Early Windows release. Expect bugs.** A few-click installer for ChrizFader's curated
+Icewind Dale: Enhanced Edition setup, the one played on stream. Player guide:
+[bg.chrizfader.org/iwd](https://bg.chrizfader.org/iwd).
 
 Chriz Easy IWD copies your own clean Icewind Dale: Enhanced Edition into a new folder and
 installs the recommended mods there: 28 mods with 126 components, each downloaded from its
@@ -48,10 +49,10 @@ This describes the recommended setup. Optional choices are listed separately bel
 - **Characters.** Maximum hit points at level 1 and on every level-up; un-nerfed spell
   progression for mages, sorcerers, bards and clerics; true grandmastery; kits without racial
   restrictions; mages may use bucklers and thieves small shields; dual- and multi-class thieves
-  backstab with more weapons; armor plus one protection item; scrolls cast at the reader's level; no experience cap. Thieves
-  assign skill points in steps of five; shapeshifting is improved; spell sequencers and
-  contingencies become innate abilities. Druids keep their own experience table and use 3rd
-  edition alignment rules.
+  backstab with more weapons; armor plus one protection item; scrolls cast at the reader's
+  level; no experience cap. Thieves assign skill points in steps of five; shapeshifting is
+  improved; spell sequencers and contingencies become innate abilities. Druids keep their own
+  experience table and use 3rd edition alignment rules.
 - **Spells and magic items.** All of SCS's spell changes, including Baldur's Gate-style Insect
   Plague and Creeping Doom and Mordenkainen's Sword in both versions. Wizard scrolls are easier to
   find; potions need identifying, and shopkeepers identify only some items.
@@ -108,6 +109,15 @@ This describes the recommended setup. Optional choices are listed separately bel
 - Mods are installed as their authors released them. Please report problems with your Chriz
   Easy IWD version and its logs; check the logs for personal paths or other information you do
   not want to share first.
+
+## Help and links
+
+- Player guide, troubleshooting and download: [bg.chrizfader.org/iwd](https://bg.chrizfader.org/iwd)
+- Questions and bug reports: [ChrizFader's Discord](https://discord.gg/RtXjRzy68k) or the
+  [issues](https://github.com/Chrizhermann/chriz-easy-iwd/issues) of this repository. In the
+  app, **Export diagnostics** collects the logs of a failed installation.
+- Source code: [chriz-bg-collection](https://github.com/Chrizhermann/chriz-bg-collection), the
+  same source as Chriz Easy BG.
 
 ## Mods and credits
 
