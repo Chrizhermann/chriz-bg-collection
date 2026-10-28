@@ -41,7 +41,8 @@ Cross-repository status. Component detail stays in the sections below and in the
      [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (evidence in
      `manifest/evidence/release-intake-20261028-buffbot.toml`). Christopher, 2026-10-28:
      it goes into alpha.22 once it has been tested again; he tests it himself, and the PR
-     stays open until he says his test is fine.
+     stays open until he says his test is fine. The IWD recipe gets the same version in a
+     matching PR on `claude/iwdee-app`; both go in together (rule below).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -300,6 +301,15 @@ Cross-repository status. Component detail stays in the sections below and in the
       (`6000` and up), for example right after `SRCB_RR_COMPAT`.
     - Also open for that pin: CEBG's notes on `SRCB_RR_COMPAT`, which with chriz.8 only
       changes Selina's guard, and on the new step.
+- Our own mods in every installer (Christopher, 2026-10-28): a new version of one of
+  our own mods (BuffBot, BG Rebalance, SoD Remix, Modpack, the forks, the voicepacks and
+  the like) goes into Chriz Easy BG and Chriz Easy IWD in the same step. While the IWD
+  recipe sits on `claude/iwdee-app`, every such pin needs a matching PR there.
+  - The agents follow this by hand for now. A separate session designs the automation
+    with Christopher: a marker for our own mods, a check on every PR and before every
+    release that their pins are the newest releases and the same in every recipe (holds
+    need a recorded reason), and pin PRs prepared automatically that never merge by
+    themselves.
 - Icewind Dale: Enhanced Edition installer on the CEBG framework, for Christopher's
   November stream (2026-10-25; urgent, in its own session): only a few mods, plus a
   small own mod with SCS-style scripts for selected IWD fights, because the script
