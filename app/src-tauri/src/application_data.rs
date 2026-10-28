@@ -95,14 +95,14 @@ fn parse(arguments: &[OsString]) -> Request {
 /// The folders the uninstaller deletes: `<identifier>` in the roaming and local application
 /// data folders.
 fn application_data_folders() -> Result<Vec<PathBuf>, String> {
-    // A development build removes only folders that a test declares, never real app data.
-    #[cfg(debug_assertions)]
+    // Development and test builds remove only folders that a test declares, never real app data.
+    #[cfg(any(debug_assertions, feature = "test-application-data"))]
     let parents = std::env::split_paths(
         &std::env::var_os("CHRIZ_BG_COLLECTION_TEST_APPLICATION_DATA_PARENTS")
-            .ok_or("a development build removes only test folders")?,
+            .ok_or("development and test builds remove only test folders")?,
     )
     .collect::<Vec<_>>();
-    #[cfg(not(debug_assertions))]
+    #[cfg(not(any(debug_assertions, feature = "test-application-data")))]
     let parents = known_application_data_parents()?;
     parents
         .into_iter()
@@ -123,7 +123,10 @@ fn application_data_folders() -> Result<Vec<PathBuf>, String> {
 /// The roaming and local application data folders, which NSIS calls `$APPDATA` and
 /// `$LOCALAPPDATA` for the current user.
 #[cfg(windows)]
-#[cfg_attr(debug_assertions, allow(dead_code))]
+#[cfg_attr(
+    any(debug_assertions, feature = "test-application-data"),
+    allow(dead_code)
+)]
 fn known_application_data_parents() -> Result<Vec<PathBuf>, String> {
     use windows::Win32::UI::Shell::{FOLDERID_LocalAppData, FOLDERID_RoamingAppData};
 
@@ -134,13 +137,19 @@ fn known_application_data_parents() -> Result<Vec<PathBuf>, String> {
 }
 
 #[cfg(not(windows))]
-#[cfg_attr(debug_assertions, allow(dead_code))]
+#[cfg_attr(
+    any(debug_assertions, feature = "test-application-data"),
+    allow(dead_code)
+)]
 fn known_application_data_parents() -> Result<Vec<PathBuf>, String> {
     Err("only the Windows uninstaller removes application data".to_owned())
 }
 
 #[cfg(windows)]
-#[cfg_attr(debug_assertions, allow(dead_code))]
+#[cfg_attr(
+    any(debug_assertions, feature = "test-application-data"),
+    allow(dead_code)
+)]
 fn known_folder(id: &windows::core::GUID, label: &str) -> Result<PathBuf, String> {
     use std::os::windows::ffi::OsStringExt;
     use windows::Win32::System::Com::CoTaskMemFree;
@@ -240,7 +249,7 @@ mod tests {
         assert_eq!(config["identifier"], IDENTIFIER);
     }
 
-    /// Release builds remove `<identifier>` in the folders NSIS calls `$APPDATA` and
+    /// Release builds for players remove `<identifier>` in the folders NSIS calls `$APPDATA` and
     /// `$LOCALAPPDATA`. Reading them touches nothing.
     #[cfg(windows)]
     #[test]

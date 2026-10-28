@@ -391,6 +391,7 @@ name = "chriz-bg-app"
 version = "0.1.0-alpha.21"
 dependencies = [
  "base64 0.22.1",
+ "chriz-bg-app",
  "chriz-bg-engine",
  "minisign",
  "semver",

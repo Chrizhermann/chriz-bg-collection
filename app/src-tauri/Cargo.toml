@@ -11,6 +11,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [features]
 # Local diagnostic builds only; normal release builds do not write lookup traces.
 installation-lookup-diagnostics = []
+# Test builds only, through the dev-dependency below: the uninstaller's request removes only the
+# application data folders a test names and never reaches the real ones.
+test-application-data = []
 
 [build-dependencies]
 tauri-build = { version = "=2.6.3", features = [] }
@@ -34,6 +37,8 @@ windows = { version = "=0.61.3", features = ["Win32_Foundation", "Win32_Storage_
 base64 = "0.22"
 # Test builds never resolve the player's real Documents folder.
 bg_engine = { package = "chriz-bg-engine", path = "../../engine", features = ["test-documents"] }
+# Every test build of this crate, its app executable included, runs with `test-application-data`.
+chriz-bg-app = { path = ".", features = ["test-application-data"] }
 minisign = "0.9.1"
 # The opt-in updater acceptance test uses Tauri's mock runtime.
 tauri = { version = "=2.11.5", features = ["test"] }
