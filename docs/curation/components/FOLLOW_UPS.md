@@ -74,7 +74,7 @@ Cross-repository status. Component detail stays in the sections below and in the
      with Druid weapons `410` and Alaghor of Clangeddin weapons `411` as defaults
      (Christopher, 2026-10-29; see Weapon access below).
      The Artisan's Kitpack fork chriz.5 replaces chriz.4 in both recipes since
-     [PR #FPR](https://github.com/Chrizhermann/chriz-bg-collection/pull/FPR) (merged on
+     [PR #66](https://github.com/Chrizhermann/chriz-bg-collection/pull/66) (merged on
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
      with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
      see Weapon access below).
@@ -85,7 +85,7 @@ Cross-repository status. Component detail stays in the sections below and in the
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
-     v0.8.8 (#64) and Kitpack chriz.5 with `7205` (#FPR) came after it.
+     v0.8.8 (#64) and Kitpack chriz.5 with `7205` (#66) came after it.
   4. Acceptance, build, signing and publishing, and the website.
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
@@ -282,7 +282,7 @@ Cross-repository status. Component detail stays in the sections below and in the
     - Not covered there: EET, the NPC installer, installations without EEex and casting
       from the freed scrolls.
     - Christopher took chriz.5 and its new tweak `7205` into alpha.22 on 2026-10-29,
-      `7205` as a default. Since PR #FPR (merged on 2026-10-29) chriz.5 is pinned for all
+      `7205` as a default. Since PR #66 (merged on 2026-10-29) chriz.5 is pinned for all
       three Kitpack installers in place of chriz.4, and `7205` joins the late tweak run
       before `8204`; no other component, order or decision changes.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
@@ -345,7 +345,7 @@ Cross-repository status. Component detail stays in the sections below and in the
     Shapeshifter bit (the Invisible Blade and the Dancer) in
     [PR #16](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/16),
     released as chriz.5 on 2026-10-29 (above). Pinned in both recipes since
-    [PR #FPR](https://github.com/Chrizhermann/chriz-bg-collection/pull/FPR) (merged on
+    [PR #66](https://github.com/Chrizhermann/chriz-bg-collection/pull/66) (merged on
     2026-10-29), with its new tweak `7205` (the same fix for items and kits from later
     mods) as a default (Christopher, 2026-10-29). `7205` runs in the late tweak run before
     `8204` and `1010000`, and `1010000` ends with the same pass
