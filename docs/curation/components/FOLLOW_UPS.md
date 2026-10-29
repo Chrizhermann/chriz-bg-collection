@@ -51,9 +51,11 @@ Cross-repository status. Component detail stays in the sections below and in the
      #56, #44 conflicts in `engine/tests/feature_groups.rs` (keep #56's collection digests;
      the plan digests change for both pins) and in the changelog draft (keep both lines).
      Artisan's Kitpack tweak `1010000` (kit weapon rules for weapons from later mods;
-     Christopher, 2026-10-26) is a default in both recipes on
-     `claude/kitpack-weapon-sweep-alpha22` (draft PR until his merge OK). Its examples
-     come from the October 29 EET lab data (below).
+     Christopher, 2026-10-26) is a default in both recipes since
+     [PR #60](https://github.com/Chrizhermann/chriz-bg-collection/pull/60) (merged on
+     2026-10-29). Its examples come from the October 29 EET lab data (below).
+     SoD Remix v0.6.16 replaces v0.6.15 in both recipes since
+     [PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63) (below).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -95,20 +97,35 @@ Cross-repository status. Component detail stays in the sections below and in the
     existing installation would mean reinstalling everything after it. The changelog
     draft (`docs/plans/2026-10-14-next-release-changelogs.md`) still calls this open; the
     alpha.22 release notes take the decision.
-- SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes since
+- SoD Remix v0.6.16, released on 2026-10-29 (Christopher's OK of the same day), pinned in
+  both recipes since [PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63)
+  (fresh-download and native-order evidence in
+  `manifest/evidence/release-intake-20261029-sodremix.toml`). It replaces v0.6.15 with the
+  same components, order and decisions:
+  - `290` accepts every victory remark in the vanilla shape, whoever added it, so Sirene
+    NPC for BG:EE's remark no longer stops the Recommended installation
+    ([chriz-sod-rebalance#35](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/35)).
+  - `265` and six other components read timer names from the game's own `GTIMES.IDS`
+    ([chriz-sod-rebalance#34](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/34)).
+  - Its mod files are identical to those of the candidate that installed in the
+    October 29 Recommended lab. Open on the owner's side: the ending verifier's frozen
+    expectations ([chriz-sod-rebalance#36](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/36))
+    and `290` skipping `bdcut61`
+    ([chriz-sod-rebalance#37](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/37)).
+- SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes from
   [PR #27](https://github.com/Chrizhermann/chriz-bg-collection/pull/27) (merged on 2026-10-23; fresh-download evidence in
-  `manifest/evidence/release-intake-20261023.toml`):
+  `manifest/evidence/release-intake-20261023.toml`) until v0.6.16:
   - Imoen's handover from BG1/SoD into SoA (`292`/`293`/`294`, since v0.6.14): one
     choice group with the vanilla Thief→Mage dual `292` as the default and `293`/`294`
     selectable (Christopher, 2026-10-16: three choices, each working for every thief
     kit). The owner lab covered `C0TRICKS` and no kit, with Spell Revisions only.
   - `256` × Tweaks Anthology `3500` ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)):
     fixed in v0.6.15 (option 1, Christopher's choice of 2026-10-18); the combined
-    Recommended lab install with `3500` on is still a release gate (see Release gates).
+    Recommended lab install with `3500` on passed on 2026-10-29 (see Release gates).
   - [chriz-sod-rebalance#34](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/34),
     merged on 2026-10-23: `265` and six other components read timer names from the
     game's own `GTIMES.IDS`, so a mod that gives a timer value another name no longer
-    stops them. It ships with the next SoD Remix release.
+    stops them. It ships with v0.6.16.
 - BuffBot v1.10.1 (released on 2026-10-20) and EEex Remote Console v0.2.1 (tagged on
   2026-10-23), pinned in both recipes since
   [PR #28](https://github.com/Chrizhermann/chriz-bg-collection/pull/28) (merged on 2026-10-23; fresh-download
@@ -499,16 +516,19 @@ content, evaluated component by component (keep, fix or extend).
 
 ## Release gates — installer and static integration
 
-- [ ] SoD Remix `256` × Tweaks Anthology `3500`: fixed in v0.6.15, pinned; needs the
-  combined Recommended lab install with `3500` on. v0.6.13's `256` refused the
+- [x] SoD Remix `256` × Tweaks Anthology `3500`: fixed in v0.6.15; the combined
+  Recommended lab install with `3500` on passed on 2026-10-29. v0.6.13's `256` refused the
   fire-elemental donor `BDELFIRM`, because `3500` (a default since the October 14
   intake) gives every summon a `CDTFOW` cast-spell effect
   ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
   v0.6.15's `256` accepts exactly that effect and leaves it out of its hostile clones.
   The October 14 and 18 labs installed with `3500` off; with the fixed library, the
   owner reinstalled `256` and the rest of the remix tail in the disposable October 18
-  lab with `3500` on (chriz-sod-rebalance PR #32). The combined install now also
-  includes the default Imoen choice `292`.
+  lab with `3500` on (chriz-sod-rebalance PR #32). The October 29 EET 2.7.3.0 lab of the
+  Recommended plan (with PRs #58 and #60 and the SoD Remix v0.6.16 candidate, whose mod
+  files v0.6.16 ships unchanged) installed `3500`, `256`, the default Imoen choice `292`
+  and the rest of the remix run without errors. Data only for `256`: the bridge fight
+  was not played.
 - [ ] Modpack `430` (scrolls at the reader's caster level) failed on 2.7.3.0 with EEex
   v1.3.1 in alpha.11 to alpha.13: on the first load, a new game or an NPC join it showed
   its EEex error box ("copied action construction overlaps an existing lifetime") and

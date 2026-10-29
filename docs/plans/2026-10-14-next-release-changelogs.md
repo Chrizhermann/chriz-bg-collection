@@ -232,6 +232,10 @@ unchanged.
   "Summoned creatures clear the fog of war" (Default). Chris's Recommended used to
   stop there; the hostile bridge elementals now leave that ally-only effect out.
   (SoD Remix v0.6.15)
+- **SoD Remix's victory ending** (Mandatory) installs alongside mods that add their own
+  victory remark after the battle of Avernus, such as Sirene NPC for BG:EE, and keeps the
+  pause after every remark short. Other SoD Remix parts no longer stop when a mod gives
+  one of the game's timer lengths another name. (SoD Remix v0.6.16)
 - **Bardic Wonders fixes** (Default components; Bardic Wonders v2.9c-balance.8):
   - The Troubadour, Deathsinger and New Bard Spells copies of priest spells are
     now found by the spell's name, so they follow Spell Revisions. Recasting one
@@ -311,7 +315,7 @@ unchanged.
   (was v18). There is no newer release yet; the collection pins this exact
   version, as it does for EET.
 - ChrizFader's voicepacks v1.1.0 (new)
-- SoD Remix v0.6.15 (was v0.6.13)
+- SoD Remix v0.6.16 (was v0.6.13)
 - BuffBot v1.11.0 (was v1.10.0)
 - EEex Remote Console v0.2.1 (was v0.2.0)
 - Spell Revisions fork v4.21-chriz.7 (was v4.21-chriz.5)
@@ -329,7 +333,7 @@ unchanged.
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
-Rebalance to v0.8.7, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
+Rebalance to v0.8.7, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
 EEex to v1.3.1, BuffBot to v1.11.0, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
 v4.81a-dev.85928f9-chriz.4 and The Tweaks Anthology to its current development
@@ -392,10 +396,19 @@ apply to new installations; existing games and saves are unchanged.
   console, not through the story (the Modpack's banking guide).
 - **SoD Remix v0.6.15** fixes the bridge finale `256` with Tweaks Anthology `3500`
   on; the owner lab reinstalled the remix tail on a copy of the Recommended stack.
-  This release still needs one combined lab install of the whole Recommended
-  selection with `3500` on (see `FOLLOW_UPS.md`). The Imoen choice (v0.6.14) passed
-  the owner lab for all three options; thief kits other than `C0TRICKS` and games
-  without Spell Revisions were not covered there.
+  The combined lab install of the whole Recommended selection with `3500` on passed on
+  2026-10-29, from the v0.6.16 candidate (see `FOLLOW_UPS.md`). The Imoen choice
+  (v0.6.14) passed the owner lab for all three options; thief kits other than
+  `C0TRICKS` and games without Spell Revisions were not covered there.
+- **SoD Remix v0.6.16** (pinned on 2026-10-29) lets `290` accept other mods' victory
+  remarks in the vanilla shape and lets `265` and six more components read timer names
+  from the game's own `GTIMES.IDS`. Its mod files equal those of the candidate in the
+  October 29 Recommended lab with Sirene NPC for BG:EE, where the ending ran from the
+  victory remarks into SoA's opening; only part of the way there was played natively. The
+  owner tracks two frozen expectations of the ending verifier
+  ([chriz-sod-rebalance#36](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/36))
+  and `290` skipping SoD's `bdcut61`
+  ([chriz-sod-rebalance#37](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/37)).
 - **Voicepacks** (18 defaults, release v1.1.0) passed per-pack fixture installs
   with the pinned WeiDU only; this release needs one combined lab install with the
   full Recommended selection first (see `FOLLOW_UPS.md`).

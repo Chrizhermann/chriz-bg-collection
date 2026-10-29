@@ -1,0 +1,35 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-29"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 chriz-sod-remix/setup-chriz-sod-remix.tp2 --expected-tp2 setup-chriz-sod-remix.tp2; chriz-bg-author artifact verify <artifact.toml> --cache-root <same cache>, for each profile; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id chriz-sod-remix --archive <downloaded ZIP from that cache>"
+scope = "SoD Remix v0.6.16 (published 2026-10-29 as a normal GitHub release, marked Latest; annotated tag on merge commit f0d6c5a) replaces v0.6.15 in both recipe profiles. The release ZIP was downloaded anonymously into one fresh cache for the inspection; the manifest artifact TOML's verify fetched it once more into that cache's production namespace, and the curated profile's byte-identical copy verified as a cache hit. Both passed the production acquisition and extraction contracts; length and SHA-256 match the digest GitHub publishes for the asset, and the final host is release-assets.githubusercontent.com. Its 294 entries (6,482,549 bytes uncompressed, largest entry 1,364,992 bytes for the unpublished setup executable, depth 5, highest compression ratio 15.2) stay within the unchanged archive limits of the v0.6.15 pin, and both expected TP2 paths match directly with VERSION ~v0.6.16~ on line 3. All 175 published files (the chriz-sod-remix folder and the root setup-chriz-sod-remix.tp2, a copy of the mod folder's TP2) match the tag commit's tree: 6 byte for byte and 169 apart from their CRLF line endings. The native TP2 declaration order is unchanged from v0.6.15 and matches both recipes. The v0.6.15 record in release-intake-20261023.toml and its artifact TOMLs stay as history. This is automated source/package verification, not a combined WeiDU install or gameplay acceptance; the owner's lab results are in the release notes."
+
+# Against v0.6.15 the release changes components 290 (chriz-sod-rebalance#35: every victory
+# remark in BD4300 that has the vanilla shape is accepted and shortened, whoever added it, so
+# Sirene NPC for BG:EE's remark no longer stops the install) and 265, 135, 140, 200, 245, 256
+# and 266 (chriz-sod-rebalance#34: decompiled timer names are read from the game's own
+# GTIMES.IDS). The TP2 changes its VERSION and loads two new libraries, comp290_barks.tpa and
+# gtimes_compat.tpa; no component is added, removed or reordered, so every recorded decision
+# stays. The release's mod files are identical to those of the v0.6.16 candidate built from
+# f6f69ad, which installed in the October 29 EET 2.7.3.0 lab of the Recommended plan with
+# Sirene NPC for BG:EE; only documentation and the release metadata differ. Christopher
+# approved the release and this pin on 2026-10-29.
+[[artifacts]]
+mod_id = "chriz-sod-remix"
+artifact_id = "chriz-sod-remix-0.6.16"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.6.16"
+source_commit = "f0d6c5a1d659a5e9c96abd9d5d26c97f383b0637"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip"
+actual_length = 3055655
+actual_sha256 = "7da50d206e4f0d50dd94d5e60fd985290a245d2dc3bed32068e1eaad0219c2e6"
+tp2_sha256 = "4bf744945b40a880ddef4169156d20a9f7c9b130e2e54f5a52909fe884f8c98f"
+native_components = [
+  100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 176, 177, 185, 190, 195,
+  210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 235, 240, 250, 255, 256, 257, 258, 260,
+  265, 266, 270, 280, 285, 290, 291, 900, 901, 910, 292, 293, 294
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
