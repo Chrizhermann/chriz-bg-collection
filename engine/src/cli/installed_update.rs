@@ -137,6 +137,32 @@ pub(crate) fn verify_installed_baseline(
         receipt
     };
     validate_report_receipt(&base, &base.attempt_id, created, &frozen, &replay).map_err(problem)?;
+    // Game updates compare and change the recorded mod list run by run. Without some of its
+    // mods that list is not the recipe's, so no update route has been checked for it.
+    if !base.left_out.is_empty() {
+        return Err(problem("Some mods were left out of this installation because their downloads could not be used. Automatic game updates are unavailable for this copy; app updates still work."));
+    }
+    // A mod installed from a changed download is installed with that file, not the pin.
+    for artifact in &base.artifacts {
+        if artifact.served_difference.is_none() {
+            continue;
+        }
+        for run in base
+            .plan
+            .runs
+            .iter()
+            .filter(|run| run.artifact_id == artifact.id)
+        {
+            replacements.entry(run.run_id.clone()).or_insert_with(|| {
+                crate::session::FrozenIdentity {
+                    id: artifact.id.clone(),
+                    version: artifact.version.clone(),
+                    sha256: artifact.sha256.clone(),
+                    length: artifact.length,
+                }
+            });
+        }
+    }
     let completed = crate::recovery_receipt::read_completed_state(&root).map_err(problem)?;
     if completed.bg2_engine_name != record.engine_name
         || completed.managed_save_root != record.managed_save_root

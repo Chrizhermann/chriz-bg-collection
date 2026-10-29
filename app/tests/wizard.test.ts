@@ -84,6 +84,57 @@ describe("Chriz Easy BG application flow", () => {
     window.localStorage.clear();
   });
 
+  it("names a left-out mod in the technical log and in the completion message", async () => {
+    class LeftOutBackend extends ShortcutCompletionBackend {
+      listener: ((event: RunEventEnvelope) => void) | null = null;
+      summaryCalls: string[] = [];
+      override startBuild(_reviewToken: string, onEvent: (event: RunEventEnvelope) => void) {
+        this.listener = onEvent;
+        return Promise.resolve({ runId: "left-out-run" });
+      }
+      installationSummary(installId: string): Promise<readonly string[]> {
+        this.summaryCalls.push(installId);
+        return Promise.resolve([
+          "Left out: Snowytoes. Its download changed and could not be used.",
+          "If something does not work as expected, please report it so the collection can be fixed.",
+        ]);
+      }
+    }
+    const backend = new LeftOutBackend();
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+    const emit = backend.listener as (event: RunEventEnvelope) => void;
+    emit({ runId: "left-out-run", sequenceAsString: "1", event: { type: "campaign_started", install_id: "completed", resumed: false } });
+    emit({ runId: "left-out-run", sequenceAsString: "2", event: { type: "artifact_left_out", artifact_id: "snowytoes", reason: "its official link now serves a different archive", runs: ["snowytoes-bg2"], changed_runs: ["tweaks-bg2"] } });
+    await user.click(getByText(root, "Technical log"));
+    expect(root.querySelector("pre")?.textContent).toContain(
+      "Leaving out snowytoes: its download cannot be used (its official link now serves a different archive). Not installed: snowytoes-bg2. Installed with fewer parts: tweaks-bg2.",
+    );
+
+    emit({ runId: "left-out-run", sequenceAsString: "3", event: { type: "campaign_finished", install_id: "completed" } });
+    await waitFor(() => expect(getByText(root, "Chriz Easy BG is ready to play. Left out: Snowytoes. Its download changed and could not be used. If something does not work as expected, please report it so the collection can be fixed.")).toBeTruthy());
+    expect(backend.summaryCalls).toEqual(["completed"]);
+  });
+
+  it("keeps the completion message when the end summary cannot be read", async () => {
+    class UnreadableSummaryBackend extends ShortcutCompletionBackend {
+      installationSummary(): Promise<readonly string[]> {
+        return Promise.reject(new Error("receipt is unreadable"));
+      }
+    }
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, new UnreadableSummaryBackend());
+    await user.click(getByRole(root, "button", { name: "Install Chriz Easy BG" }));
+
+    await waitFor(() => expect(getByText(root, "Chriz Easy BG is ready to play. Its summary of left-out mods and changed downloads could not be read; export diagnostics from My installs to see it.")).toBeTruthy());
+    expect((getByRole(root, "button", { name: "Play Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it("customizes the recommended setup and completes the fixture installation", async () => {
     const root = document.createElement("div");
     document.body.append(root);

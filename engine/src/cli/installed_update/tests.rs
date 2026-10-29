@@ -266,6 +266,7 @@ impl Fixture {
                     length: identity.length,
                     sha256: identity.sha256.clone(),
                     cache_outcome: ArtifactCacheOutcome::Hit,
+                    served_difference: None,
                 })
                 .collect(),
             weidu_tools: created
@@ -276,6 +277,7 @@ impl Fixture {
                     version: identity.version.clone(),
                     length: identity.length,
                     sha256: identity.sha256.clone(),
+                    reviewed: None,
                 })
                 .collect(),
             runs: frozen
@@ -310,6 +312,8 @@ impl Fixture {
                 })
                 .collect(),
             final_state: Some(final_state.clone()),
+            left_out: Vec::new(),
+            installed_plan: None,
         };
         let receipt_bytes = serde_json::to_vec_pretty(&receipt).unwrap();
         fs::write(root.join(".chriz/install-receipt.json"), &receipt_bytes).unwrap();

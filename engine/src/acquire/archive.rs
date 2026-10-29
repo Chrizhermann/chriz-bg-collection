@@ -51,6 +51,41 @@ impl Default for ArchiveLimits {
     }
 }
 
+/// How much a changed archive's entry count and sizes may grow over the reviewed limits.
+const SERVED_LIMIT_GROWTH: usize = 16;
+
+impl ArchiveLimits {
+    /// Limits for an archive whose download differs from the reviewed one.
+    ///
+    /// Reviewed limits are tight bounds around the reviewed archive, so a normal update that
+    /// adds files would fail them. A changed archive may have sixteen times the reviewed entry
+    /// count and sizes, and always at least the general limits (100,000 entries, 2 GiB per file,
+    /// 8 GiB in total). Depth and compression ratio keep the larger of the reviewed and the
+    /// general limit (32 levels, 1,000:1), so the guard against archive bombs still holds.
+    pub fn for_served_archive(&self) -> Self {
+        let general = Self::default();
+        let growth = SERVED_LIMIT_GROWTH as u64;
+        Self {
+            max_depth: self.max_depth.max(general.max_depth),
+            max_entries: self
+                .max_entries
+                .saturating_mul(SERVED_LIMIT_GROWTH)
+                .max(general.max_entries),
+            max_entry_uncompressed_bytes: self
+                .max_entry_uncompressed_bytes
+                .saturating_mul(growth)
+                .max(general.max_entry_uncompressed_bytes),
+            max_total_uncompressed_bytes: self
+                .max_total_uncompressed_bytes
+                .saturating_mul(growth)
+                .max(general.max_total_uncompressed_bytes),
+            max_compression_ratio: self
+                .max_compression_ratio
+                .max(general.max_compression_ratio),
+        }
+    }
+}
+
 /// Extraction policy selected by the recipe source.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -142,6 +177,22 @@ struct ExtractionContract<'a> {
     expected_roots: &'a [String],
     expected_tp2_paths: &'a [String],
     limits: &'a ArchiveLimits,
+    /// Present only for a changed download, so that reviewed extractions keep their identity.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    layout: Option<&'static str>,
+}
+
+/// Layout rule recorded in the contract of a changed download's extraction.
+const SERVED_LAYOUT_RULE: &str = "served-v1";
+
+/// Which payload layout an extraction accepts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LayoutRule {
+    /// Exactly the reviewed layout: the payload at the root or below one folder holding
+    /// every file, and every TP2 inside the publish roots declared.
+    Reviewed,
+    /// A changed download: see [`extract_served_archive`].
+    Served,
 }
 
 struct ExtractionIdentity<'a> {
@@ -189,6 +240,51 @@ pub fn extract_archive_with_stop(
     extraction_cache: &Path,
     requirements: &ArchiveRequirements,
     stop: &StopSignal,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
+    extract_with_rule(
+        archive_path,
+        extraction_cache,
+        requirements,
+        stop,
+        LayoutRule::Reviewed,
+    )
+}
+
+/// [`extract_archive_with_stop`] for an archive whose download differs from the reviewed one;
+/// `requirements` name the served archive's own digest and usually
+/// [`ArchiveLimits::for_served_archive`].
+///
+/// Every guard that protects this computer holds as before: entry names must be portable
+/// relative paths (no traversal, absolute or drive paths, reserved device names or
+/// case-insensitive duplicates), links and other special entries are refused, and the entry
+/// count, sizes, depth and compression ratio are bounded before anything is written. What may
+/// differ is where the reviewed payload sits. The reviewed rule is tried first; when it finds no
+/// single place, the payload may sit below any chain of folders, also beside other files, as
+/// long as exactly one place holds every reviewed TP2 path and publish root. Files outside that
+/// place are not extracted. A TP2 inside the publish roots that the recipe does not declare is
+/// accepted only when its installer name differs from every declared one, so WeiDU cannot pick
+/// it instead of the reviewed installer.
+pub fn extract_served_archive(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+    stop: &StopSignal,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
+    extract_with_rule(
+        archive_path,
+        extraction_cache,
+        requirements,
+        stop,
+        LayoutRule::Served,
+    )
+}
+
+fn extract_with_rule(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+    stop: &StopSignal,
+    rule: LayoutRule,
 ) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
     validate_limits(&requirements.limits)?;
     let expected_roots = normalize_expected_paths(&requirements.expected_roots, "root")?;
@@ -272,7 +368,7 @@ pub fn extract_archive_with_stop(
     // safety policies. A stricter policy must validate the archive anew, not reuse a tree
     // accepted under broader limits. Legacy digest-only namespaces remain untouched.
     let contract_sha256 =
-        extraction_contract_sha256(requirements, &expected_roots, &expected_tp2_paths)?;
+        extraction_contract_sha256(requirements, &expected_roots, &expected_tp2_paths, rule)?;
     let identity = ExtractionIdentity {
         digest: &digest,
         contract_sha256: &contract_sha256,
@@ -329,6 +425,7 @@ pub fn extract_archive_with_stop(
                 &expected_roots,
                 &expected_tp2_paths,
                 &requirements.limits,
+                rule,
             )?
         }
         ArchiveFormat::SelfExtractingRar => validate_rar_entries(
@@ -336,6 +433,7 @@ pub fn extract_archive_with_stop(
             &expected_roots,
             &expected_tp2_paths,
             &requirements.limits,
+            rule,
         )?,
     };
 
@@ -411,6 +509,7 @@ fn extraction_contract_sha256(
     requirements: &ArchiveRequirements,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
+    rule: LayoutRule,
 ) -> Result<String, AcquireError> {
     // Named, fixed-order fields and JSON string/array framing avoid ambiguous concatenation.
     // Paths have already been validated, case-folded, separator-normalized, and sorted.
@@ -421,6 +520,7 @@ fn extraction_contract_sha256(
         expected_roots,
         expected_tp2_paths,
         limits: &requirements.limits,
+        layout: (rule == LayoutRule::Served).then_some(SERVED_LAYOUT_RULE),
     };
     let bytes = serde_json::to_vec(&contract).map_err(|error| {
         AcquireError::InvalidRequest(format!("could not encode extraction contract: {error}"))
@@ -543,6 +643,7 @@ fn validate_central_directory<R: Read + std::io::Seek>(
     expected_roots: &[String],
     expected_tp2_paths: &[String],
     limits: &ArchiveLimits,
+    rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
     if archive.len() > limits.max_entries {
         return Err(AcquireError::ArchiveLimitExceeded(format!(
@@ -638,64 +739,13 @@ fn validate_central_directory<R: Read + std::io::Seek>(
         });
     }
 
-    let keys: Vec<_> = destination_kinds.keys().cloned().collect();
-    for key in &keys {
-        if destination_kinds.get(key) == Some(&false) {
-            let prefix = format!("{key}/");
-            if keys.iter().any(|other| other.starts_with(&prefix)) {
-                return Err(AcquireError::UnsafeArchiveEntry {
-                    entry: key.clone(),
-                    message: "file/directory prefix collision".to_owned(),
-                });
-            }
-        }
-    }
-
-    let wrapper = select_wrapper(&entries, expected_roots, expected_tp2_paths)?;
-    let wrapper_key = wrapper.as_ref().map(|value| casefold(value));
-    if let Some(wrapper_key) = wrapper_key.as_deref() {
-        entries.retain(|entry| casefold(&entry.archive_path) != wrapper_key);
-    }
-    for entry in &mut entries {
-        if let Some(wrapper_key) = wrapper_key.as_deref() {
-            let archive_key = casefold(&entry.archive_path);
-            let prefix = format!("{wrapper_key}/");
-            if !archive_key.starts_with(&prefix) {
-                return Err(AcquireError::ArchiveLayout(format!(
-                    "entry `{}` is outside wrapper `{}`",
-                    entry.archive_path,
-                    wrapper.as_deref().unwrap_or_default()
-                )));
-            }
-            let first_separator = entry.archive_path.find('/').ok_or_else(|| {
-                AcquireError::ArchiveLayout("wrapper directory contains no payload".to_owned())
-            })?;
-            entry.relative_path = entry.archive_path[first_separator + 1..].to_owned();
-        }
-    }
-
-    let expected_tp2_keys: BTreeSet<_> = expected_tp2_paths
-        .iter()
-        .map(|path| casefold(path))
-        .collect();
-    for entry in entries.iter().filter(|entry| !entry.is_directory) {
-        let key = casefold(&entry.relative_path);
-        let inside_publish_root = expected_roots
-            .iter()
-            .any(|root| path_is_within_root(root, &entry.relative_path));
-        if inside_publish_root && key.ends_with(".tp2") && !expected_tp2_keys.contains(&key) {
-            return Err(AcquireError::ArchiveLayout(format!(
-                "undeclared TP2 `{}`",
-                entry.relative_path
-            )));
-        }
-    }
-    entries.retain(|entry| {
-        expected_roots
-            .iter()
-            .any(|root| path_is_within_root(root, &entry.relative_path))
-    });
-    Ok((entries, wrapper))
+    finalize_entry_inventory(
+        entries,
+        destination_kinds,
+        expected_roots,
+        expected_tp2_paths,
+        rule,
+    )
 }
 
 #[cfg(not(windows))]
@@ -704,6 +754,7 @@ fn validate_rar_entries(
     _expected_roots: &[String],
     _expected_tp2_paths: &[String],
     _limits: &ArchiveLimits,
+    _rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
     Err(AcquireError::ArchiveFormat {
         path: archive_path.to_path_buf(),
@@ -718,6 +769,7 @@ fn validate_rar_entries(
     expected_roots: &[String],
     expected_tp2_paths: &[String],
     limits: &ArchiveLimits,
+    rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
     let path = WideCString::from_os_str(archive_path).map_err(|_| {
         AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
@@ -894,6 +946,7 @@ fn validate_rar_entries(
         destination_kinds,
         expected_roots,
         expected_tp2_paths,
+        rule,
     )
 }
 
@@ -902,6 +955,7 @@ fn finalize_entry_inventory(
     destination_kinds: BTreeMap<String, bool>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
+    rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
     let keys: Vec<_> = destination_kinds.keys().cloned().collect();
     for key in &keys {
@@ -915,30 +969,56 @@ fn finalize_entry_inventory(
             }
         }
     }
-    let wrapper = select_wrapper(&entries, expected_roots, expected_tp2_paths)?;
+    let wrapper = match rule {
+        LayoutRule::Reviewed => select_wrapper(&entries, expected_roots, expected_tp2_paths)?,
+        LayoutRule::Served => select_served_prefix(&entries, expected_roots, expected_tp2_paths)?,
+    };
     let wrapper_key = wrapper.as_ref().map(|value| casefold(value));
-    if let Some(wrapper_key) = wrapper_key.as_deref() {
-        entries.retain(|entry| casefold(&entry.archive_path) != wrapper_key);
-    }
-    for entry in &mut entries {
-        if let Some(wrapper_key) = wrapper_key.as_deref() {
-            let prefix = format!("{wrapper_key}/");
-            if !casefold(&entry.archive_path).starts_with(&prefix) {
-                return Err(AcquireError::ArchiveLayout(format!(
-                    "entry `{}` is outside wrapper `{}`",
-                    entry.archive_path,
-                    wrapper.as_deref().unwrap_or_default()
-                )));
+    match (rule, wrapper_key.as_deref()) {
+        (_, None) => {}
+        (LayoutRule::Reviewed, Some(wrapper_key)) => {
+            entries.retain(|entry| casefold(&entry.archive_path) != wrapper_key);
+            for entry in &mut entries {
+                let prefix = format!("{wrapper_key}/");
+                if !casefold(&entry.archive_path).starts_with(&prefix) {
+                    return Err(AcquireError::ArchiveLayout(format!(
+                        "entry `{}` is outside wrapper `{}`",
+                        entry.archive_path,
+                        wrapper.as_deref().unwrap_or_default()
+                    )));
+                }
+                let separator = entry.archive_path.find('/').ok_or_else(|| {
+                    AcquireError::ArchiveLayout("wrapper directory contains no payload".to_owned())
+                })?;
+                entry.relative_path = entry.archive_path[separator + 1..].to_owned();
             }
-            let separator = entry.archive_path.find('/').ok_or_else(|| {
-                AcquireError::ArchiveLayout("wrapper directory contains no payload".to_owned())
-            })?;
-            entry.relative_path = entry.archive_path[separator + 1..].to_owned();
+        }
+        (LayoutRule::Served, Some(prefix_key)) => {
+            // Only what lies below the payload folder is extracted: the folders leading to it
+            // and anything beside them stay in the archive.
+            let depth = prefix_key.split('/').count();
+            let prefix = format!("{prefix_key}/");
+            entries.retain_mut(|entry| {
+                if !casefold(&entry.archive_path).starts_with(&prefix) {
+                    return false;
+                }
+                match entry.archive_path.splitn(depth + 1, '/').nth(depth) {
+                    Some(relative) => {
+                        entry.relative_path = relative.to_owned();
+                        true
+                    }
+                    None => false,
+                }
+            });
         }
     }
     let expected_tp2_keys: BTreeSet<_> = expected_tp2_paths
         .iter()
         .map(|path| casefold(path))
+        .collect();
+    let declared_installers: BTreeSet<_> = expected_tp2_keys
+        .iter()
+        .map(|path| installer_name(path))
         .collect();
     for entry in entries.iter().filter(|entry| !entry.is_directory) {
         let key = casefold(&entry.relative_path);
@@ -946,6 +1026,11 @@ fn finalize_entry_inventory(
             .iter()
             .any(|root| path_is_within_root(root, &entry.relative_path));
         if inside && key.ends_with(".tp2") && !expected_tp2_keys.contains(&key) {
+            // A changed archive may bring another installer, but never one that WeiDU could
+            // find under the name of a reviewed installer.
+            if rule == LayoutRule::Served && !declared_installers.contains(installer_name(&key)) {
+                continue;
+            }
             return Err(AcquireError::ArchiveLayout(format!(
                 "undeclared TP2 `{}`",
                 entry.relative_path
@@ -1033,6 +1118,119 @@ fn layout_matches(
                 .iter()
                 .any(|path| path == &root || path.starts_with(&prefix))
         })
+}
+
+/// The folder chain in front of the reviewed payload inside a changed archive.
+///
+/// The reviewed rule comes first. When it finds no single place, every place where the first
+/// reviewed TP2 path ends (or, for an archive without TP2 files, where the first publish root
+/// occurs) is a candidate, and exactly one candidate must hold every reviewed TP2 path and
+/// publish root. No candidate, or more than one, fails instead of guessing.
+fn select_served_prefix(
+    entries: &[ValidatedEntry],
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> Result<Option<String>, AcquireError> {
+    if let Ok(prefix) = select_wrapper(entries, expected_roots, expected_tp2_paths) {
+        return Ok(prefix);
+    }
+    let files: Vec<&str> = entries
+        .iter()
+        .filter(|entry| !entry.is_directory)
+        .map(|entry| entry.archive_path.as_str())
+        .collect();
+    let (anchor, anchor_ends_path) = match expected_tp2_paths.first() {
+        Some(tp2) => (tp2, true),
+        None => (
+            expected_roots.first().ok_or_else(|| {
+                AcquireError::ArchiveLayout("no reviewed payload path to look for".to_owned())
+            })?,
+            false,
+        ),
+    };
+    let anchor: Vec<String> = anchor.split('/').map(casefold).collect();
+    let mut candidates = BTreeMap::<String, Option<String>>::new();
+    for path in &files {
+        let components: Vec<&str> = path.split('/').collect();
+        let keys: Vec<String> = components.iter().map(|part| casefold(part)).collect();
+        if keys.len() < anchor.len() {
+            continue;
+        }
+        let last_start = keys.len() - anchor.len();
+        let starts = if anchor_ends_path {
+            last_start..=last_start
+        } else {
+            0..=last_start
+        };
+        for start in starts {
+            if keys[start..start + anchor.len()] == anchor[..] {
+                let prefix = (start > 0).then(|| components[..start].join("/"));
+                candidates
+                    .entry(prefix.as_deref().map(casefold).unwrap_or_default())
+                    .or_insert(prefix);
+            }
+        }
+    }
+    let mut matching: Vec<Option<String>> = candidates
+        .into_values()
+        .filter(|prefix| {
+            layout_matches_below(
+                &files,
+                prefix.as_deref(),
+                expected_roots,
+                expected_tp2_paths,
+            )
+        })
+        .collect();
+    match matching.len() {
+        1 => Ok(matching.pop().expect("one candidate")),
+        0 => Err(AcquireError::ArchiveLayout(format!(
+            "the reviewed `{}` was not found together with every reviewed payload path",
+            anchor.join("/")
+        ))),
+        _ => Err(AcquireError::ArchiveLayout(
+            "the reviewed payload was found in more than one place".to_owned(),
+        )),
+    }
+}
+
+/// Whether every reviewed TP2 path and publish root exists below `prefix`; other files may lie
+/// beside it.
+fn layout_matches_below(
+    files: &[&str],
+    prefix: Option<&str>,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> bool {
+    let prefix = prefix.map(|value| format!("{}/", casefold(value)));
+    let stripped: Vec<String> = files
+        .iter()
+        .filter_map(|path| {
+            let key = casefold(path);
+            match prefix.as_deref() {
+                Some(prefix) => key.strip_prefix(prefix).map(str::to_owned),
+                None => Some(key),
+            }
+        })
+        .collect();
+    expected_tp2_paths
+        .iter()
+        .all(|expected| stripped.iter().any(|path| path == &casefold(expected)))
+        && expected_roots.iter().all(|root| {
+            let root = casefold(root);
+            let prefix = format!("{root}/");
+            stripped
+                .iter()
+                .any(|path| path == &root || path.starts_with(&prefix))
+        })
+}
+
+/// The installer name WeiDU derives from a TP2 file: its file name without a `setup-` prefix
+/// and the `.tp2` extension. `key` is already case-folded.
+fn installer_name(key: &str) -> &str {
+    let file = key.rsplit('/').next().unwrap_or(key);
+    let stem = file.strip_suffix(".tp2").unwrap_or(file);
+    stem.strip_prefix("setup-").unwrap_or(stem)
 }
 
 fn path_is_within_root(root: &str, path: &str) -> bool {

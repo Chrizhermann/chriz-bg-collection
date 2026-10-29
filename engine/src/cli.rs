@@ -16,10 +16,10 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::acquire::{
-    extract_archive_with_stop, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
-    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
-    DownloadRequest, ExtractedArtifact, MaterializationRequest, StopSignal,
-    DEFAULT_DOWNLOAD_ATTEMPTS,
+    extract_archive_with_stop, extract_served_archive, materialize, provide_manual_archive,
+    AcceptedContent, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache,
+    CacheDisposition, CacheRepair, DownloadRequest, ExtractedArtifact, MaterializationRequest,
+    StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
@@ -34,21 +34,23 @@ use crate::manifest::{
     GameRoot, InvocationMode, ModFile, PresetFile,
 };
 use crate::orchestrator::{
-    run_campaign_controlled, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation,
-    CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest,
-    InstallLogVerifier, InstallReconciliation, InvocationBuilder, MaterializationOutcome,
-    MaterializationTask, MutationCheck, MutationKind, ProcessResult, ProcessRunner, ReceiptDraft,
-    ReceiptWriter, StagingService, StepAttempt, StepFailure,
+    run_campaign_controlled, AcquisitionOutcome, ArtifactAcquirer, ArtifactKind,
+    ArtifactMaterializer, BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight,
+    CampaignRecorder, CampaignRequest, InstallLogVerifier, InstallReconciliation,
+    InvocationBuilder, MaterializationOutcome, MaterializationTask, MutationCheck, MutationKind,
+    ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter, StagingService, StepAttempt,
+    StepFailure,
 };
 use crate::preflight::{
     initial_preflight, recheck_staging_target_before_mutation, recheck_target_before_mutation,
     InitialPreflight, RequiredInput, SpaceRequirement,
 };
 use crate::receipt::{
-    ArtifactCacheOutcome, ArtifactReceipt, FinalLogReceipt, FinalReceiptState, InstallReceipt,
-    LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter, PromptReceipt, ReceiptEvidence,
-    ReceiptOutcome, ReceiptStore, ReceiptVersions, RunAttemptReceipt, RunReceipt, RunTiming,
-    SourceGameReceipt, WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
+    ArtifactCacheOutcome, ArtifactReceipt, DownloadIdentity, FinalLogReceipt, FinalReceiptState,
+    InstallReceipt, LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter, PromptReceipt,
+    ReceiptEvidence, ReceiptOutcome, ReceiptStore, ReceiptVersions, ReviewedTool,
+    RunAttemptReceipt, RunReceipt, RunTiming, ServedDifference, SourceGameReceipt,
+    WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
 };
 use crate::recipe_view::{
     evaluate, feature_group_changes, FeatureGroupState, FeatureGroupTarget, SelectionEvaluation,
@@ -65,8 +67,8 @@ use crate::stage::{
 };
 use crate::validate::{self, Severity};
 use crate::weidu::invocation::{
-    build as build_invocation, verify_tool_contract, Invocation, InvocationInput, ResolvedPrompt,
-    StagedRoots, VerifiedWeidu,
+    build as build_invocation, verify_served_tool, verify_tool_contract, Invocation,
+    InvocationInput, ResolvedPrompt, StagedRoots, VerifiedWeidu,
 };
 use crate::weidu::log::{
     has_new_uninstall_comment, normalize_tp2_key, parse_active_entries, parse_terminal_statuses,
@@ -252,6 +254,10 @@ pub struct ManagedReport {
     /// terminal receipt above retains its actual failed outcome.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub recovery: Option<crate::recovery_receipt::RecoveryReceipt>,
+    /// Player-facing end-summary lines: mods left out because their downloads could not be
+    /// used, and downloads that differed from their reviewed versions. Empty normally.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
 }
 
 /// Inputs for one new CLI-owned managed installation.
@@ -1110,7 +1116,8 @@ fn manual_error(error: impl std::fmt::Display) -> CliError {
 
 fn verify_manual_prefix(
     root: &Path,
-    plan: &InstallPlan,
+    frozen_prefix: &InstallPlan,
+    installed_prefix: &InstallPlan,
     frozen: &FrozenCliRecipe,
 ) -> Result<(), String> {
     let (bg1, bg2) = crate::manual_checkpoint::read_logs(root)?;
@@ -1118,7 +1125,8 @@ fn verify_manual_prefix(
         let entries = parse_active_entries(&log).map_err(|e| e.to_string())?;
         let expected = crate::manual_checkpoint::expected_components(
             root,
-            plan,
+            frozen_prefix,
+            installed_prefix,
             &frozen.mods,
             &frozen.manual_checkpoints,
             target,
@@ -1323,11 +1331,103 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
         )
     })?;
     let recovery = recovery::report_recovery(&managed_root, &receipt, &frozen)?;
+    let notes = receipt_notes(&receipt, &frozen.mods, &frozen.artifacts);
     Ok(ManagedReport {
         managed_root,
         receipt,
         recovery,
+        notes,
     })
+}
+
+/// End-summary lines, in English, for what a receipt records about changed downloads.
+fn receipt_notes(
+    receipt: &InstallReceipt,
+    mods: &BTreeMap<String, ModFile>,
+    artifacts: &BTreeMap<String, Artifact>,
+) -> Vec<String> {
+    let artifact_name = |id: &str| {
+        artifacts
+            .get(id)
+            .map_or_else(|| id.to_owned(), |artifact| artifact.name.clone())
+    };
+    let mod_names = |run_ids: &[String], skip_artifact: Option<&str>| {
+        let mut names = Vec::<String>::new();
+        for run in receipt
+            .plan
+            .runs
+            .iter()
+            .filter(|run| run_ids.contains(&run.run_id))
+            .filter(|run| Some(run.artifact_id.as_str()) != skip_artifact)
+        {
+            let name = mods
+                .get(&run.mod_id)
+                .map_or_else(|| run.mod_id.clone(), |installer| installer.name.clone());
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
+        names
+    };
+    let mut notes = Vec::new();
+    for left_out in &receipt.left_out {
+        let mut note = format!(
+            "Left out: {}. Its download changed and could not be used.",
+            artifact_name(&left_out.artifact_id)
+        );
+        let dependents = mod_names(&left_out.runs, Some(&left_out.artifact_id));
+        if !dependents.is_empty() {
+            note.push_str(&format!(
+                " Also left out because they need it: {}.",
+                dependents.join(", ")
+            ));
+        }
+        let changed = mod_names(&left_out.changed_runs, None);
+        if !changed.is_empty() {
+            note.push_str(&format!(
+                " Installed without the parts that need it: {}.",
+                changed.join(", ")
+            ));
+        }
+        notes.push(note);
+    }
+    let changed_downloads = receipt
+        .artifacts
+        .iter()
+        .filter(|artifact| artifact.served_difference.is_some())
+        .filter(|artifact| {
+            !receipt
+                .left_out
+                .iter()
+                .any(|left_out| left_out.artifact_id == artifact.id)
+        })
+        .map(|artifact| artifact_name(&artifact.id))
+        .collect::<Vec<_>>();
+    if !changed_downloads.is_empty() {
+        notes.push(format!(
+            "Installed a newer or different download than the reviewed version: {}.",
+            changed_downloads.join(", ")
+        ));
+    }
+    let changed_tools = receipt
+        .weidu_tools
+        .iter()
+        .filter(|tool| tool.reviewed.is_some())
+        .map(|tool| format!("{} (WeiDU {})", artifact_name(&tool.id), tool.version))
+        .collect::<Vec<_>>();
+    if !changed_tools.is_empty() {
+        notes.push(format!(
+            "Used a newer or different installer tool than the reviewed version: {}.",
+            changed_tools.join(", ")
+        ));
+    }
+    if !notes.is_empty() {
+        notes.push(
+            "If something does not work as expected, please report it so the collection can be fixed."
+                .to_owned(),
+        );
+    }
+    notes
 }
 
 fn validate_report_receipt(
@@ -1412,28 +1512,56 @@ fn validate_report_receipt(
     }
 
     let succeeded = matches!(receipt.outcome, ReceiptOutcome::Succeeded);
+    validate_receipt_left_out(receipt, replay, succeeded)?;
+    let installed = receipt.effective_plan();
+    for artifact in &receipt.artifacts {
+        if let Some(difference) = &artifact.served_difference {
+            if difference.served.length != artifact.length
+                || !difference
+                    .served
+                    .sha256
+                    .eq_ignore_ascii_case(&artifact.sha256)
+            {
+                return Err(format!(
+                    "artifact evidence for {:?} contradicts its recorded served file",
+                    artifact.id
+                ));
+            }
+        }
+    }
     validate_receipt_identities(
         "artifact",
-        receipt
-            .artifacts
-            .iter()
-            .map(|item| (&item.id, &item.version, item.length, &item.sha256)),
+        receipt.artifacts.iter().map(|item| {
+            let (length, sha256) = item.reviewed_identity();
+            (item.id.as_str(), item.version.as_str(), length, sha256)
+        }),
         &created.artifact_identities,
+        &crate::receipt::needed_identities(
+            &created.artifact_identities,
+            installed,
+            !receipt.left_out.is_empty(),
+            |run, id| run.artifact_id == id || run.weidu_artifact_id == id,
+        ),
         succeeded,
     )?;
     validate_receipt_identities(
         "WeiDU tool",
-        receipt
-            .weidu_tools
-            .iter()
-            .map(|item| (&item.id, &item.version, item.length, &item.sha256)),
+        receipt.weidu_tools.iter().map(|item| {
+            let (version, length, sha256) = item.reviewed_identity();
+            (item.id.as_str(), version, length, sha256)
+        }),
         &created.tool_identities,
+        &crate::receipt::needed_identities(
+            &created.tool_identities,
+            installed,
+            !receipt.left_out.is_empty(),
+            |run, id| run.weidu_artifact_id == id,
+        ),
         succeeded,
     )?;
     let mut seen_runs = BTreeSet::new();
     for run in &receipt.runs {
-        let planned = receipt
-            .plan
+        let planned = installed
             .runs
             .iter()
             .find(|planned| planned.run_id == run.run_id);
@@ -1453,10 +1581,59 @@ fn validate_report_receipt(
             succeeded,
         )?;
     }
-    if receipt.runs.len() != receipt.plan.runs.len() {
+    if receipt.runs.len() != installed.runs.len() {
         return Err("receipt does not have exactly one logical row per planned run".to_owned());
     }
     Ok(())
+}
+
+/// The mods a receipt says were left out must be the ones the ledger left out, in order, and
+/// its installed plan the one recorded with the last of them. A successful receipt names all
+/// of them; a failed one, written earlier, may name only those recorded before it.
+fn validate_receipt_left_out(
+    receipt: &InstallReceipt,
+    replay: &SessionReplay,
+    succeeded: bool,
+) -> Result<(), String> {
+    let recorded = replay
+        .records
+        .iter()
+        .filter_map(|record| match &record.event {
+            SessionEvent::ArtifactLeftOut {
+                artifact_id,
+                detail,
+                plan_sha256,
+                ..
+            } => Some((artifact_id, detail, plan_sha256)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if receipt.left_out.len() > recorded.len()
+        || (succeeded && receipt.left_out.len() != recorded.len())
+        || receipt
+            .left_out
+            .iter()
+            .zip(&recorded)
+            .any(|(left_out, (artifact_id, detail, _))| {
+                &left_out.artifact_id != *artifact_id || &left_out.reason != *detail
+            })
+    {
+        return Err("left-out mods differ from the campaign ledger".to_owned());
+    }
+    match (&receipt.installed_plan, receipt.left_out.len()) {
+        (None, 0) => Ok(()),
+        (Some(plan), count) if count > 0 => {
+            let (_, _, plan_sha256) = recorded[count - 1];
+            if plan_digest(plan).map_err(|error| error.to_string())? != *plan_sha256 {
+                return Err(
+                    "installed plan differs from the one recorded when mods were left out"
+                        .to_owned(),
+                );
+            }
+            Ok(())
+        }
+        _ => Err("an installed plan must be recorded exactly when mods were left out".to_owned()),
+    }
 }
 
 fn validate_cli_identifier(value: &str, label: &str) -> Result<(), String> {
@@ -1558,23 +1735,21 @@ fn validate_terminal_receipt_link(
     Ok(())
 }
 
+/// Each item, by the identity it was reviewed with, must match exactly one frozen identity,
+/// at most once; a successful receipt covers every identity its installed plan needs, which
+/// without left-out mods is every frozen identity.
 fn validate_receipt_identities<'a>(
     label: &str,
-    evidence: impl Iterator<Item = (&'a String, &'a String, u64, &'a String)>,
+    evidence: impl Iterator<Item = (&'a str, &'a str, u64, &'a str)>,
     frozen: &[FrozenIdentity],
+    needed: &BTreeSet<&str>,
     require_complete: bool,
 ) -> Result<(), String> {
-    let evidence = evidence.collect::<Vec<_>>();
-    if require_complete && evidence.len() != frozen.len() {
-        return Err(format!(
-            "successful receipt has incomplete {label} evidence"
-        ));
-    }
     let mut seen = BTreeSet::new();
     for (id, version, length, sha256) in evidence {
         let matches = frozen.iter().filter(|identity| {
-            id == &identity.id
-                && version == &identity.version
+            id == identity.id
+                && version == identity.version
                 && length == identity.length
                 && sha256.eq_ignore_ascii_case(&identity.sha256)
         });
@@ -1583,6 +1758,11 @@ fn validate_receipt_identities<'a>(
                 "{label} evidence for {id:?} differs from the frozen identity or is duplicated"
             ));
         }
+    }
+    if require_complete && needed.iter().any(|id| !seen.contains(id)) {
+        return Err(format!(
+            "successful receipt has incomplete {label} evidence"
+        ));
     }
     Ok(())
 }
@@ -2248,100 +2428,131 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 artifact.id
             ))
         })?;
-        let (archive_path, original_url, final_url, length, sha256, cache_outcome) = match artifact
-            .acquisition
-        {
-            AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
-                let acquired = ArtifactCache::open(&self.created.cache_root)
-                    .and_then(|cache| {
-                        cache.acquire_with_stop(
-                            &DownloadRequest {
-                                request_id: artifact.id.clone(),
-                                url: artifact.source.url.clone(),
-                                expected_length,
-                                expected_sha256: artifact.source.sha256.clone(),
-                                redirect_hosts: artifact.source.redirect_hosts.clone(),
-                                max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
-                            },
-                            self.sink,
-                            &self.stop_signal(),
-                        )
-                    })
-                    .map_err(step_error)?;
-                if let Some(repair) = &acquired.repaired {
-                    self.record_cache_repair(
-                        CacheRepairKind::Download,
-                        &artifact.id,
-                        &acquired.metadata.sha256,
-                        repair,
-                    )?;
-                }
-                let outcome = match acquired.disposition {
-                    CacheDisposition::Hit => ArtifactCacheOutcome::Hit,
-                    CacheDisposition::Downloaded => ArtifactCacheOutcome::Downloaded,
-                };
-                (
-                    acquired.archive_path,
-                    acquired.metadata.original_url,
-                    acquired.metadata.final_url,
-                    acquired.metadata.length,
-                    acquired.metadata.sha256,
-                    outcome,
-                )
-            }
-            AcquisitionPolicy::ManualUserSupplied => {
-                let filename = artifact
-                    .source
-                    .expected_filename
-                    .as_deref()
-                    .ok_or_else(|| {
-                        StepFailure::new(format!(
-                            "manual artifact {:?} has no exact expected filename",
-                            artifact.id
-                        ))
-                    })?;
-                if Path::new(filename).components().count() != 1 {
-                    return Err(StepFailure::new(format!(
-                        "manual artifact {:?} has an unsafe expected filename",
-                        artifact.id
-                    )));
-                }
-                let drop_dir = self.created.cache_root.join("manual");
-                ensure_directories(&drop_dir)?;
-                let path = drop_dir.join(filename);
-                if !path.is_file() {
-                    self.sink.emit(EngineEvent::ManualDownloadNeeded {
-                        mod_id: artifact.id.clone(),
-                        page: artifact.source.url.clone(),
+        let first = self.load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?;
+        let mut unreviewed_hosts = Vec::new();
+        let (archive_path, original_url, final_url, length, sha256, cache_outcome, difference) =
+            match artifact.acquisition {
+                AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
+                    let request = DownloadRequest {
+                        request_id: artifact.id.clone(),
+                        url: download_url(&artifact.source.url),
+                        expected_length,
                         expected_sha256: artifact.source.sha256.clone(),
-                        drop_dir: drop_dir.display().to_string(),
+                        redirect_hosts: artifact.source.redirect_hosts.clone(),
+                        max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
+                    };
+                    // Once this campaign accepted a changed download, every later step uses
+                    // exactly that file again, even if the link has changed once more.
+                    let accepted = first
+                        .as_ref()
+                        .filter(|first| first.served_difference.is_some())
+                        .map(|first| AcceptedContent {
+                            length: first.length,
+                            sha256: first.sha256.clone(),
+                        });
+                    let served = ArtifactCache::open(&self.created.cache_root)
+                        .and_then(|cache| {
+                            cache.acquire_as_served(
+                                &request,
+                                accepted.as_ref(),
+                                self.sink,
+                                &self.stop_signal(),
+                            )
+                        })
+                        .map_err(step_error)?;
+                    let matches_pin = served.matches_pin(&request);
+                    let acquired = served.artifact;
+                    if let Some(repair) = &acquired.repaired {
+                        self.record_cache_repair(
+                            CacheRepairKind::Download,
+                            &artifact.id,
+                            &acquired.metadata.sha256,
+                            repair,
+                        )?;
+                    }
+                    let outcome = match acquired.disposition {
+                        CacheDisposition::Hit => ArtifactCacheOutcome::Hit,
+                        CacheDisposition::Downloaded => ArtifactCacheOutcome::Downloaded,
+                    };
+                    unreviewed_hosts = served.unreviewed_hosts;
+                    let difference = (!matches_pin).then(|| ServedDifference {
+                        reviewed: DownloadIdentity {
+                            filename: artifact.source.expected_filename.clone(),
+                            length: expected_length,
+                            sha256: artifact.source.sha256.to_ascii_lowercase(),
+                        },
+                        served: DownloadIdentity {
+                            filename: served.served_filename,
+                            length: acquired.metadata.length,
+                            sha256: acquired.metadata.sha256.clone(),
+                        },
+                        unreviewed_hosts: unreviewed_hosts.clone(),
                     });
+                    (
+                        acquired.archive_path,
+                        acquired.metadata.original_url,
+                        acquired.metadata.final_url,
+                        acquired.metadata.length,
+                        acquired.metadata.sha256,
+                        outcome,
+                        difference,
+                    )
                 }
-                let verified =
-                    provide_manual_archive(&path, &artifact.source.sha256).map_err(step_error)?;
-                if verified.length != expected_length {
-                    return Err(StepFailure::new(format!(
+                AcquisitionPolicy::ManualUserSupplied => {
+                    let filename =
+                        artifact
+                            .source
+                            .expected_filename
+                            .as_deref()
+                            .ok_or_else(|| {
+                                StepFailure::new(format!(
+                                    "manual artifact {:?} has no exact expected filename",
+                                    artifact.id
+                                ))
+                            })?;
+                    if Path::new(filename).components().count() != 1 {
+                        return Err(StepFailure::new(format!(
+                            "manual artifact {:?} has an unsafe expected filename",
+                            artifact.id
+                        )));
+                    }
+                    let drop_dir = self.created.cache_root.join("manual");
+                    ensure_directories(&drop_dir)?;
+                    let path = drop_dir.join(filename);
+                    if !path.is_file() {
+                        self.sink.emit(EngineEvent::ManualDownloadNeeded {
+                            mod_id: artifact.id.clone(),
+                            page: artifact.source.url.clone(),
+                            expected_sha256: artifact.source.sha256.clone(),
+                            drop_dir: drop_dir.display().to_string(),
+                        });
+                    }
+                    let verified = provide_manual_archive(&path, &artifact.source.sha256)
+                        .map_err(step_error)?;
+                    if verified.length != expected_length {
+                        return Err(StepFailure::new(format!(
                         "manual artifact {:?} length mismatch: expected {expected_length}, got {}",
                         artifact.id, verified.length
                     )));
+                    }
+                    (
+                        verified.path,
+                        artifact.source.url.clone(),
+                        artifact.source.url.clone(),
+                        verified.length,
+                        verified.sha256,
+                        ArtifactCacheOutcome::Manual,
+                        None,
+                    )
                 }
-                (
-                    verified.path,
-                    artifact.source.url.clone(),
-                    artifact.source.url.clone(),
-                    verified.length,
-                    verified.sha256,
-                    ArtifactCacheOutcome::Manual,
-                )
-            }
-            AcquisitionPolicy::Blocked => {
-                return Err(StepFailure::new(format!(
-                    "frozen artifact {:?} is blocked and cannot be acquired",
-                    artifact.id
-                )))
-            }
-        };
-        let observed_receipt = ArtifactReceipt {
+                AcquisitionPolicy::Blocked => {
+                    return Err(StepFailure::new(format!(
+                        "frozen artifact {:?} is blocked and cannot be acquired",
+                        artifact.id
+                    )))
+                }
+            };
+        let mut observed_receipt = ArtifactReceipt {
             id: artifact.id.clone(),
             version: artifact.version.clone(),
             original_url,
@@ -2349,9 +2560,21 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             length,
             sha256,
             cache_outcome,
+            served_difference: difference,
         };
-        let receipt = match self.load_named_evidence("artifacts", &artifact.id)? {
+        let receipt = match first {
             Some(first) => {
+                // Only a transfer sees the served file name and redirects, so a later cache
+                // hit of the same changed file keeps the first record's description of it.
+                if observed_receipt.served_difference.is_some()
+                    && first.served_difference.is_some()
+                    && observed_receipt.length == first.length
+                    && observed_receipt.sha256 == first.sha256
+                {
+                    observed_receipt
+                        .served_difference
+                        .clone_from(&first.served_difference);
+                }
                 match retain_first_acquisition_receipt(&first, &observed_receipt)? {
                     LaterAcquisition::Identical => {}
                     LaterAcquisition::Reacquired => {
@@ -2362,44 +2585,113 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             }
             None => {
                 self.persist_named_evidence("artifacts", &artifact.id, &observed_receipt)?;
+                self.report_served_download(artifact, &observed_receipt, &unreviewed_hosts);
                 observed_receipt
             }
         };
         Ok((archive_path, receipt))
     }
 
+    /// Tells the player, in the installation log, that a download differed from its reviewed
+    /// pin or came from a host the recipe did not review. The receipt records the same.
+    fn report_served_download(
+        &self,
+        artifact: &Artifact,
+        receipt: &ArtifactReceipt,
+        unreviewed_hosts: &[String],
+    ) {
+        let host = final_host(&receipt.final_url);
+        let mut line = match &receipt.served_difference {
+            Some(difference) => format!(
+                "The download of {} {} is newer or different than the reviewed version. \
+                 Reviewed: {}. Installing what its official link serves: {}, from {host}.",
+                artifact.name,
+                artifact.version,
+                describe_download(&difference.reviewed),
+                describe_download(&difference.served),
+            ),
+            None if !unreviewed_hosts.is_empty() => format!(
+                "The download of {} {} came from {host}, a host the recipe did not review; \
+                 the file is the reviewed version.",
+                artifact.name, artifact.version
+            ),
+            None => return,
+        };
+        if !unreviewed_hosts.is_empty() {
+            line.push_str(&format!(
+                " Its link redirected to hosts the recipe did not review: {}.",
+                unreviewed_hosts.join(", ")
+            ));
+        }
+        self.sink.emit(EngineEvent::ConsoleLine {
+            step_id: format!("acquire:{}", artifact.id),
+            stream: crate::events::Stream::Stdout,
+            line,
+        });
+    }
+
+    /// Unpacks an acquired archive. A changed download is unpacked with the rules for served
+    /// archives: generous limits and a payload that may sit in a different folder.
     fn extract(&self, artifact: &Artifact) -> Result<ExtractedArtifact, StepFailure> {
-        let (archive, _) = self.acquire_archive(artifact)?;
-        let (extracted, repair) = extract_archive_with_stop(
-            &archive,
-            &self.created.cache_root.join("extracted"),
-            &ArchiveRequirements {
-                artifact_sha256: artifact.source.sha256.clone(),
-                format: match artifact.archive.kind {
-                    ManifestArchiveKind::Zip => ArchiveFormat::Zip,
-                    ManifestArchiveKind::Iemod => ArchiveFormat::Iemod,
-                    ManifestArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
-                },
-                expected_roots: artifact.archive.publish_roots.clone(),
-                expected_tp2_paths: artifact.archive.tp2_paths.clone(),
-                limits: ArchiveLimits {
-                    max_depth: artifact.archive.limits.max_depth,
-                    max_entries: artifact.archive.limits.max_entries,
-                    max_entry_uncompressed_bytes: artifact
-                        .archive
-                        .limits
-                        .max_entry_uncompressed_bytes,
-                    max_total_uncompressed_bytes: artifact
-                        .archive
-                        .limits
-                        .max_total_uncompressed_bytes,
-                    max_compression_ratio: artifact.archive.limits.max_compression_ratio,
-                },
-                mode: ArchiveMode::Public,
+        self.extract_checked(artifact).map_err(|error| match error {
+            ExtractionFailure::Step(failure) => failure,
+            ExtractionFailure::Unusable(error) => step_error(error),
+        })
+    }
+
+    fn extract_checked(&self, artifact: &Artifact) -> Result<ExtractedArtifact, ExtractionFailure> {
+        let (archive, receipt) = self.acquire_archive(artifact)?;
+        let reviewed_limits = ArchiveLimits {
+            max_depth: artifact.archive.limits.max_depth,
+            max_entries: artifact.archive.limits.max_entries,
+            max_entry_uncompressed_bytes: artifact.archive.limits.max_entry_uncompressed_bytes,
+            max_total_uncompressed_bytes: artifact.archive.limits.max_total_uncompressed_bytes,
+            max_compression_ratio: artifact.archive.limits.max_compression_ratio,
+        };
+        let served = receipt.served_difference.is_some();
+        let requirements = ArchiveRequirements {
+            artifact_sha256: if served {
+                receipt.sha256.clone()
+            } else {
+                artifact.source.sha256.clone()
             },
-            &self.stop_signal(),
-        )
-        .map_err(step_error)?;
+            format: match artifact.archive.kind {
+                ManifestArchiveKind::Zip => ArchiveFormat::Zip,
+                ManifestArchiveKind::Iemod => ArchiveFormat::Iemod,
+                ManifestArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
+            },
+            expected_roots: artifact.archive.publish_roots.clone(),
+            expected_tp2_paths: artifact.archive.tp2_paths.clone(),
+            limits: if served {
+                reviewed_limits.for_served_archive()
+            } else {
+                reviewed_limits
+            },
+            mode: ArchiveMode::Public,
+        };
+        let extraction_cache = self.created.cache_root.join("extracted");
+        let extracted = if served {
+            extract_served_archive(
+                &archive,
+                &extraction_cache,
+                &requirements,
+                &self.stop_signal(),
+            )
+        } else {
+            extract_archive_with_stop(
+                &archive,
+                &extraction_cache,
+                &requirements,
+                &self.stop_signal(),
+            )
+        };
+        let (extracted, repair) = extracted.map_err(|error| {
+            if served && archive_content_error(&error) {
+                ExtractionFailure::Unusable(error)
+            } else {
+                ExtractionFailure::Step(step_error(error))
+            }
+        })?;
         if let Some(repair) = &repair {
             self.record_cache_repair(
                 CacheRepairKind::Extraction,
@@ -2408,16 +2700,20 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 repair,
             )?;
         }
-        let wrapper_ok = match artifact.archive.root_rule {
-            ArchiveRootRule::Direct => extracted.wrapper_directory.is_none(),
-            ArchiveRootRule::SingleWrapper => extracted.wrapper_directory.is_some(),
-            ArchiveRootRule::DirectOrSingleWrapper => true,
-        };
+        // The root rule describes the reviewed archive; a served archive may have gained or
+        // lost a wrapper folder, which its own layout rule already resolved unambiguously.
+        let wrapper_ok = served
+            || match artifact.archive.root_rule {
+                ArchiveRootRule::Direct => extracted.wrapper_directory.is_none(),
+                ArchiveRootRule::SingleWrapper => extracted.wrapper_directory.is_some(),
+                ArchiveRootRule::DirectOrSingleWrapper => true,
+            };
         if !wrapper_ok {
             return Err(StepFailure::new(format!(
                 "artifact {:?} archive root differs from its frozen root rule",
                 artifact.id
-            )));
+            ))
+            .into());
         }
         Ok(extracted)
     }
@@ -2443,13 +2739,38 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         })?;
         let extracted = self.extract(artifact)?;
         let executable = extracted.root.join(&contract.executable);
-        let (verified, observed) =
-            verify_tool_contract(&executable, contract).map_err(step_error)?;
+        let served = self
+            .load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?
+            .is_some_and(|receipt| receipt.served_difference.is_some());
+        let (verified, observed) = if served {
+            verify_served_tool(&executable, contract)
+        } else {
+            verify_tool_contract(&executable, contract)
+        }
+        .map_err(|error| {
+            if served {
+                StepFailure::new(format!(
+                    "The download of the installer tool {id} is newer or different than the reviewed version, and its WeiDU program cannot be used: {error}"
+                ))
+            } else {
+                step_error(error)
+            }
+        })?;
+        let reviewed = (served
+            && (observed.weidu_version != contract.weidu_version
+                || observed.length != contract.expected_length
+                || !observed.sha256.eq_ignore_ascii_case(&contract.sha256)))
+        .then(|| ReviewedTool {
+            version: contract.weidu_version.clone(),
+            length: contract.expected_length,
+            sha256: contract.sha256.to_ascii_lowercase(),
+        });
         let receipt = WeiDuToolReceipt {
             id: artifact.id.clone(),
             version: observed.weidu_version,
             length: observed.length,
             sha256: observed.sha256,
+            reviewed,
         };
         self.persist_named_evidence("tools", &artifact.id, &receipt)?;
         Ok(verified)
@@ -2707,7 +3028,7 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
         &mut self,
         identity: &FrozenIdentity,
         kind: ArtifactKind,
-    ) -> Result<(), StepFailure> {
+    ) -> Result<AcquisitionOutcome, StepFailure> {
         let artifact = self.artifact(&identity.id)?;
         if artifact.source.expected_length != Some(identity.length)
             || !artifact
@@ -2726,7 +3047,116 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
                 identity.id
             )));
         }
-        self.acquire_archive(artifact).map(|_| ())
+        let (_, receipt) = self.acquire_archive(artifact)?;
+        if receipt.served_difference.is_none() {
+            return Ok(AcquisitionOutcome::Ready);
+        }
+        // A changed download is checked now, before anything is staged, so that a mod whose
+        // new archive cannot be used is left out instead of stopping the installation later.
+        // The archive is unpacked once into the shared extraction cache either way.
+        if artifact.tool.is_some() {
+            return self
+                .verified_tool(&identity.id)
+                .map(|_| AcquisitionOutcome::Ready);
+        }
+        match self.extract_checked(artifact) {
+            Ok(_) => Ok(AcquisitionOutcome::Ready),
+            Err(ExtractionFailure::Unusable(error)) => Ok(AcquisitionOutcome::LeaveOut {
+                reason: format!(
+                    "its official link now serves a different archive ({}), which cannot be installed: {error}",
+                    describe_download(
+                        &receipt
+                            .served_difference
+                            .as_ref()
+                            .expect("a changed download was established above")
+                            .served
+                    )
+                ),
+            }),
+            Err(ExtractionFailure::Step(failure)) => Err(failure),
+        }
+    }
+
+    fn plan_without(
+        &mut self,
+        plan: &InstallPlan,
+        left_out: &[String],
+    ) -> Result<InstallPlan, StepFailure> {
+        let manifest = Manifest {
+            root: self
+                .created
+                .managed_root
+                .join(STATE_DIRECTORY)
+                .join("recipe"),
+            collection: self.frozen.collection.clone(),
+            artifacts: self.frozen.artifacts.clone(),
+            mods: self.frozen.mods.clone(),
+            presets: self.frozen.presets.clone(),
+        };
+        crate::recipe_view::plan_without_artifacts(
+            &manifest,
+            &self.frozen.normalized_selection,
+            plan,
+            &left_out.iter().cloned().collect(),
+        )
+        .map_err(step_error)
+    }
+}
+
+/// Why unpacking a served archive failed: it cannot be used at all, or a retryable step
+/// problem such as a full disk or a stop.
+enum ExtractionFailure {
+    Step(StepFailure),
+    Unusable(crate::acquire::AcquireError),
+}
+
+impl From<StepFailure> for ExtractionFailure {
+    fn from(failure: StepFailure) -> Self {
+        Self::Step(failure)
+    }
+}
+
+/// Archive problems that retrying cannot fix: the file's own content or layout.
+fn archive_content_error(error: &crate::acquire::AcquireError) -> bool {
+    matches!(
+        error,
+        crate::acquire::AcquireError::ArchiveFormat { .. }
+            | crate::acquire::AcquireError::UnsafeArchiveEntry { .. }
+            | crate::acquire::AcquireError::ArchiveLimitExceeded(_)
+            | crate::acquire::AcquireError::ArchiveLayout(_)
+            | crate::acquire::AcquireError::PublicArchiveRejected(_)
+    )
+}
+
+/// The address an artifact is downloaded from: its recipe URL. Test builds may serve the
+/// `https://example.invalid/` links of test recipes from a local server named by
+/// `CHRIZ_BG_COLLECTION_TEST_DOWNLOAD_ORIGIN`; that reserved domain never resolves.
+fn download_url(recipe_url: &str) -> String {
+    #[cfg(any(debug_assertions, feature = "test-hooks"))]
+    if let Ok(origin) = std::env::var("CHRIZ_BG_COLLECTION_TEST_DOWNLOAD_ORIGIN") {
+        if let Some(path) = recipe_url.strip_prefix("https://example.invalid/") {
+            return format!("{}/{path}", origin.trim_end_matches('/'));
+        }
+    }
+    recipe_url.to_owned()
+}
+
+/// Lowercase host of a download URL, for the installation log.
+fn final_host(url: &str) -> String {
+    url::Url::parse(url)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_ascii_lowercase))
+        .unwrap_or_else(|| "an unknown host".to_owned())
+}
+
+/// "name, N bytes, SHA-256 x" for the installation log.
+fn describe_download(identity: &DownloadIdentity) -> String {
+    match &identity.filename {
+        Some(filename) => format!(
+            "{filename}, {} bytes, SHA-256 {}",
+            identity.length, identity.sha256
+        ),
+        None => format!("{} bytes, SHA-256 {}", identity.length, identity.sha256),
     }
 }
 
@@ -2901,11 +3331,21 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
         // Run here, not only during materialization, so retrying an older frozen EET
         // attempt receives the same narrowly hash-guarded Windows compatibility fix.
         let artifact = self.artifact(&run.artifact_id)?;
+        // The staged files come from the archive this campaign acquired, which is the
+        // reviewed one unless its official link served a different file.
+        let acquired = self
+            .load_named_evidence::<ArtifactReceipt>("artifacts", &run.artifact_id)?
+            .filter(|receipt| receipt.served_difference.is_some());
         if let Some(compatibility) =
             crate::weidu::eet_compat::prepare(crate::weidu::eet_compat::EetCompatibilityInput {
                 mod_id: &run.mod_id,
                 artifact_id: &run.artifact_id,
-                artifact_sha256: &artifact.source.sha256,
+                artifact_sha256: acquired
+                    .as_ref()
+                    .map_or(artifact.source.sha256.as_str(), |receipt| {
+                        receipt.sha256.as_str()
+                    }),
+                archive_drifted: acquired.is_some(),
                 target: run.target,
                 tp2: &mod_file.tp2,
                 components,
@@ -3418,6 +3858,7 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
     fn manual_checkpoint(
         &mut self,
         checkpoint: &crate::manual_checkpoint::FrozenCheckpoint,
+        plan: &InstallPlan,
     ) -> Result<bool, StepFailure> {
         let root = &self.created.managed_root;
         if crate::manual_checkpoint::acceptance(root, checkpoint)
@@ -3447,11 +3888,26 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
                 .iter()
                 .position(|run| run.run_id == checkpoint.after_run_id)
                 .ok_or_else(|| StepFailure::new("Frozen checkpoint run is absent."))?;
-            let prefix = InstallPlan {
+            let frozen_prefix = InstallPlan {
                 runs: self.frozen.plan.runs[..=through].to_vec(),
             };
+            // Runs of left-out mods are absent from `plan`; the rest keep their frozen order.
+            let installed_prefix = InstallPlan {
+                runs: plan
+                    .runs
+                    .iter()
+                    .filter(|run| {
+                        frozen_prefix
+                            .runs
+                            .iter()
+                            .any(|frozen| frozen.run_id == run.run_id)
+                    })
+                    .cloned()
+                    .collect(),
+            };
             if !crate::manual_checkpoint::has_baseline(root, checkpoint).map_err(step_error)? {
-                verify_manual_prefix(root, &prefix, self.frozen).map_err(step_error)?;
+                verify_manual_prefix(root, &frozen_prefix, &installed_prefix, self.frozen)
+                    .map_err(step_error)?;
             }
             crate::manual_checkpoint::begin(
                 root,
@@ -3562,6 +4018,7 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
                 parse_active_entries(&String::from_utf8_lossy(&bytes)).map_err(step_error)?;
             let expected = crate::manual_checkpoint::expected_components(
                 &self.created.managed_root,
+                &self.frozen.plan,
                 plan,
                 &self.frozen.mods,
                 &self.frozen.manual_checkpoints,
@@ -3635,7 +4092,7 @@ impl<S: EventSink> ReceiptWriter for GuardedCliDependencies<'_, S> {
             .flatten()
             .collect();
         let runs = draft
-            .plan
+            .effective_plan()
             .runs
             .iter()
             .map(|run| self.load_run_receipt(run))
@@ -4195,10 +4652,40 @@ fn retain_first_acquisition_receipt(
     if same_archive && same_policy {
         return Ok(LaterAcquisition::Reacquired);
     }
+    // The download cache lost the file this installation started with, and the official link
+    // now serves another one. Mixing the two releases in one installation is not safe.
+    let same_source = first.id == observed.id
+        && first.version == observed.version
+        && first.original_url == observed.original_url;
+    if same_source
+        && same_policy
+        && (first.served_difference.is_some() || observed.served_difference.is_some())
+    {
+        return Err(StepFailure::new(format!(
+            "The download of {} changed while this installation was running: it started with \
+             {}, and its official link now serves {}. The download folder no longer holds the \
+             file this installation started with, so it cannot continue. Start a new \
+             installation to install the current version.",
+            first.id,
+            acquired_file(first),
+            acquired_file(observed)
+        )));
+    }
     Err(StepFailure::new(format!(
         "artifact {:?} differs from its first acquisition evidence",
         first.id
     )))
+}
+
+/// The acquired file of `receipt`, for messages.
+fn acquired_file(receipt: &ArtifactReceipt) -> String {
+    match &receipt.served_difference {
+        Some(difference) => describe_download(&difference.served),
+        None => format!(
+            "the reviewed version ({} bytes, SHA-256 {})",
+            receipt.length, receipt.sha256
+        ),
+    }
 }
 
 fn sanitize_prompt_answer(answer: &str, bg1: &Path, bg2: &Path) -> String {
@@ -4530,6 +5017,7 @@ mod tests {
             length: 42,
             sha256: "ab".repeat(32),
             cache_outcome: ArtifactCacheOutcome::Downloaded,
+            served_difference: None,
         }
     }
 
@@ -5029,6 +5517,82 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_changed_download_is_kept_across_acquisitions_and_a_second_change_is_explained() {
+        use crate::receipt::{DownloadIdentity, ServedDifference};
+        let reviewed = downloaded_artifact_receipt();
+        let changed = |sha256: &str, filename: Option<&str>| ArtifactReceipt {
+            length: 50,
+            sha256: sha256.to_owned(),
+            served_difference: Some(ServedDifference {
+                reviewed: DownloadIdentity {
+                    filename: Some("test-mod-1.0.zip".to_owned()),
+                    length: reviewed.length,
+                    sha256: reviewed.sha256.clone(),
+                },
+                served: DownloadIdentity {
+                    filename: filename.map(str::to_owned),
+                    length: 50,
+                    sha256: sha256.to_owned(),
+                },
+                unreviewed_hosts: Vec::new(),
+            }),
+            ..downloaded_artifact_receipt()
+        };
+        let first = changed(&"cd".repeat(32), Some("test-mod-1.1.zip"));
+
+        // The same changed file again, also after the cache lost it, is the same acquisition.
+        let reused = ArtifactReceipt {
+            cache_outcome: ArtifactCacheOutcome::Hit,
+            ..first.clone()
+        };
+        assert_eq!(
+            retain_first_acquisition_receipt(&first, &reused).unwrap(),
+            LaterAcquisition::Identical
+        );
+        let refetched = ArtifactReceipt {
+            final_url: "https://mirror.example.invalid/test-mod-1.1.zip".to_owned(),
+            ..first.clone()
+        };
+        assert_eq!(
+            retain_first_acquisition_receipt(&first, &refetched).unwrap(),
+            LaterAcquisition::Reacquired
+        );
+
+        // A link that changed once more, or went back to the reviewed file, is explained.
+        for (later, now) in [
+            (
+                changed(&"ef".repeat(32), Some("test-mod-1.2.zip")),
+                format!("test-mod-1.2.zip, 50 bytes, SHA-256 {}", "ef".repeat(32)),
+            ),
+            (
+                reviewed.clone(),
+                format!(
+                    "the reviewed version (42 bytes, SHA-256 {})",
+                    "ab".repeat(32)
+                ),
+            ),
+        ] {
+            let error = retain_first_acquisition_receipt(&first, &later).unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "The download of test-mod changed while this installation was running: it \
+                     started with test-mod-1.1.zip, 50 bytes, SHA-256 {}, and its official link \
+                     now serves {now}. The download folder no longer holds the file this \
+                     installation started with, so it cannot continue. Start a new installation \
+                     to install the current version.",
+                    "cd".repeat(32)
+                )
+            );
+        }
+        let error = retain_first_acquisition_receipt(&reviewed, &first).unwrap_err();
+        assert!(error.to_string().contains(&format!(
+            "it started with the reviewed version (42 bytes, SHA-256 {}), and its official link now serves test-mod-1.1.zip",
+            "ab".repeat(32)
+        )));
     }
 
     #[test]

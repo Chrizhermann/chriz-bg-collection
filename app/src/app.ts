@@ -1166,6 +1166,12 @@ class AppController implements AppHandle {
       case "manual_download_needed":
         next = { ...current, state: "waiting-manual", headline: "Manual archive needed", detail: `Download ${event.mod_id} from ${event.page}. Then choose the downloaded archive; the installer will verify it before resuming.`, manualArchiveName: event.mod_id, logTail: log(`Expected SHA-256: ${event.expected_sha256}`) };
         break;
+      case "artifact_left_out": {
+        const notInstalled = event.runs.length > 0 ? ` Not installed: ${event.runs.join(", ")}.` : "";
+        const fewerParts = event.changed_runs.length > 0 ? ` Installed with fewer parts: ${event.changed_runs.join(", ")}.` : "";
+        next = { ...current, logTail: log(`Leaving out ${event.artifact_id}: its download cannot be used (${event.reason}).${notInstalled}${fewerParts}`) };
+        break;
+      }
       case "error":
         if (event.step_id === null) {
           next = current.manualArchiveName !== null
@@ -1225,10 +1231,11 @@ class AppController implements AppHandle {
       if (completed?.available === true) {
         const progress = this.#beginOperation("Finishing installation", completed.id);
         progress({ stage: "finishing" });
+        const summary = await this.#installationSummary(completed.id);
         await this.#installCompletionRadar(completed);
         if (this.#createDesktopShortcutAfterInstall) await this.#createDesktopShortcut(completed.id);
         const extrasFailed = this.#addonFeedback?.state === "failed" || this.#shortcutFeedback?.state === "failed";
-        this.#finishOperation("Installation complete", `${completed.name} is ready to play.${extrasFailed ? " An optional finishing step needs attention below." : ""}`, true, completed.id);
+        this.#finishOperation("Installation complete", `${completed.name} is ready to play.${summary}${extrasFailed ? " An optional finishing step needs attention below." : ""}`, true, completed.id);
       }
     } catch (error: unknown) {
       ++this.#operationRevision;
@@ -1243,6 +1250,21 @@ class AppController implements AppHandle {
         });
     }
     this.#render();
+  }
+
+  /**
+   * The end summary of a completed installation, as sentences to append to its completion
+   * message: mods left out because their downloads could not be used, and downloads that
+   * differed from their reviewed versions. Empty when there is nothing to report.
+   */
+  async #installationSummary(installId: string): Promise<string> {
+    if (!this.backend.installationSummary) return "";
+    try {
+      const notes = await this.backend.installationSummary(installId);
+      return notes.map((note) => ` ${note}`).join("");
+    } catch {
+      return " Its summary of left-out mods and changed downloads could not be read; export diagnostics from My installs to see it.";
+    }
   }
 
   async #installCompletionRadar(installation: ManagedInstallation): Promise<void> {
