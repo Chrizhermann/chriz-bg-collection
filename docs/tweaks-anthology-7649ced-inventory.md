@@ -74,8 +74,8 @@ grandmastery itself (vanilla opcode 233 or the EE Fixpack's opcode 272). Spell R
 installs before Tweaks Anthology and replaces the item with one that has neither. So with
 Spell Revisions, `2210` gives SR's Black Blade +3/2 attacks per round and raises its melee
 header from +5/+5 to +8 to-hit / +10 damage. v18 never touched this item. Without Spell
-Revisions, the vanilla or Fixpack item is left alone. Christopher (2026-10-30): no
-preference, so the stronger blade stays.
+Revisions, the vanilla or Fixpack item is left alone. Still open for Christopher (see
+below).
 
 ## New components
 
@@ -136,11 +136,12 @@ It still says going from 4 to 5 pips adds +1 damage.
 - Not added: `2670`, `2212`, `2213`, `3520`, `4240`, `6360`, `3530`/`3531`, `2780`, `2770`,
   `2750`.
 
-## Questions, decided
+## Open questions
 
-Both answered by Christopher on 2026-10-30 with no preference, so the current state stays:
+Christopher skipped both on 2026-10-30, while the IWD download fix came first. alpha.22
+ships the current state; ask him again at a calmer moment.
 
-1. **Black Blade with Spell Revisions** (above): the stronger blade stays; no other
-   grandmastery option.
-2. **Ajantis**: `1257` keeps moving him by default; `1251`–`1256` plus `1258` are not offered
-   instead. Staying on v18 would not have moved him at all.
+1. **Black Blade with Spell Revisions** (above): accept the stronger blade, or ask for a
+   different grandmastery option.
+2. **Ajantis**: `1257` moves him by default now. Keep it (current state), or offer `1251`–`1256`
+   plus `1258` so he gets his own toggle. Staying on v18 would not move him at all.
