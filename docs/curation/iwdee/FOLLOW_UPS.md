@@ -38,7 +38,11 @@ go for merging #42 and #52, the three hotpatch defaults, the release and the web
   `chriz-easy-bg`: only the README and the release files, no code. Release v0.1.1 with the
   setup, `SHA256SUMS`, `LICENSE` and `THIRD_PARTY_NOTICES.md`; the downloaded asset matched.
 - [x] Website: English IWD page `/iwd` on bg.chrizfader.org (`bg-site` in `twitch-setup-chriz`),
-  same layout as the BG page, with download link and checksum.
+  same layout as the BG page, with download link and checksum. Rebuilt 2026-10-29 together
+  with the BG page as short offer pages in the apps' themes (Glacier here, Parchment for BG):
+  site PR 39, verified live.
+- [x] "17 new companions" reads "17 companions" on the page, in the release notes, the download
+  README and the Discord draft (Christopher, 2026-10-29: nobody had them before installing).
 - [ ] Discord announcement: text drafted (English and German); Christopher posts it.
 - [ ] A later release that changes the recipe needs a new `[[bases]]` entry with its digest;
   hotpatches for 0.1.1 installations keep naming base `iwd-0.1.1`.
