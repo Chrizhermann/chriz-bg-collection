@@ -957,21 +957,28 @@ fn finalize_entry_inventory(
     expected_tp2_paths: &[String],
     rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
-    let keys: Vec<_> = destination_kinds.keys().cloned().collect();
-    for key in &keys {
-        if destination_kinds.get(key) == Some(&false) {
-            let prefix = format!("{key}/");
-            if keys.iter().any(|other| other.starts_with(&prefix)) {
-                return Err(AcquireError::UnsafeArchiveEntry {
-                    entry: key.clone(),
-                    message: "file/directory prefix collision".to_owned(),
-                });
-            }
+    for (key, _) in destination_kinds
+        .iter()
+        .filter(|(_, is_directory)| !**is_directory)
+    {
+        // Keys that start with `key/` sort right at or after `key/`, so the first key from
+        // there on is one of them whenever any exists.
+        let prefix = format!("{key}/");
+        if destination_kinds
+            .range(prefix.clone()..)
+            .next()
+            .is_some_and(|(other, _)| other.starts_with(&prefix))
+        {
+            return Err(AcquireError::UnsafeArchiveEntry {
+                entry: key.clone(),
+                message: "file/directory prefix collision".to_owned(),
+            });
         }
     }
+    let files = FileIndex::new(&entries);
     let wrapper = match rule {
-        LayoutRule::Reviewed => select_wrapper(&entries, expected_roots, expected_tp2_paths)?,
-        LayoutRule::Served => select_served_prefix(&entries, expected_roots, expected_tp2_paths)?,
+        LayoutRule::Reviewed => select_wrapper(&files, expected_roots, expected_tp2_paths)?,
+        LayoutRule::Served => select_served_prefix(&files, expected_roots, expected_tp2_paths)?,
     };
     let wrapper_key = wrapper.as_ref().map(|value| casefold(value));
     match (rule, wrapper_key.as_deref()) {
@@ -1045,31 +1052,80 @@ fn finalize_entry_inventory(
     Ok((entries, wrapper))
 }
 
+/// An archive's regular files: their paths as spelled in the archive, in entry order, and
+/// their case-folded paths sorted, so that layout checks are lookups instead of scans.
+struct FileIndex<'a> {
+    paths: Vec<&'a str>,
+    keys: BTreeSet<String>,
+}
+
+impl<'a> FileIndex<'a> {
+    fn new(entries: &'a [ValidatedEntry]) -> Self {
+        let paths: Vec<&str> = entries
+            .iter()
+            .filter(|entry| !entry.is_directory)
+            .map(|entry| entry.archive_path.as_str())
+            .collect();
+        let keys = paths.iter().map(|path| casefold(path)).collect();
+        Self { paths, keys }
+    }
+
+    /// Whether a case-folded file path equals `key`.
+    fn contains(&self, key: &str) -> bool {
+        self.keys.contains(key)
+    }
+
+    /// Whether a case-folded file path starts with `prefix`. Such paths sort right at or after
+    /// `prefix`, so the first path from there on is one of them whenever any exists.
+    fn any_starts_with(&self, prefix: &str) -> bool {
+        self.keys
+            .range::<str, _>((
+                std::ops::Bound::Included(prefix),
+                std::ops::Bound::Unbounded,
+            ))
+            .next()
+            .is_some_and(|key| key.starts_with(prefix))
+    }
+
+    /// Whether every case-folded file path starts with `prefix`. Those paths form one run in
+    /// sorted order, so the first and the last path decide.
+    fn all_start_with(&self, prefix: &str) -> bool {
+        match (self.keys.first(), self.keys.last()) {
+            (Some(first), Some(last)) => first.starts_with(prefix) && last.starts_with(prefix),
+            _ => true,
+        }
+    }
+}
+
 fn select_wrapper(
-    entries: &[ValidatedEntry],
+    files: &FileIndex<'_>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
 ) -> Result<Option<String>, AcquireError> {
-    let files: Vec<_> = entries
-        .iter()
-        .filter(|entry| !entry.is_directory)
-        .map(|entry| entry.archive_path.as_str())
-        .collect();
     let mut candidates = Vec::<Option<String>>::new();
-    if layout_matches(&files, None, expected_roots, expected_tp2_paths) {
+    if layout_matches(files, None, expected_roots, expected_tp2_paths) {
         candidates.push(None);
     }
     let mut wrappers = BTreeMap::<String, String>::new();
-    for path in &files {
+    for path in &files.paths {
         if let Some((first, _)) = path.split_once('/') {
             wrappers
                 .entry(casefold(first))
                 .or_insert_with(|| first.to_owned());
         }
     }
-    for wrapper in wrappers.into_values() {
+    // A wrapper must hold every file, so only a folder that the first file lies below can
+    // pass; checking that first keeps this linear in the number of top-level folders.
+    let first_file = files.paths.first().map(|path| casefold(path));
+    for (key, wrapper) in wrappers {
+        if first_file
+            .as_deref()
+            .is_some_and(|first| !first.starts_with(&format!("{key}/")))
+        {
+            continue;
+        }
         if layout_matches(
-            &files,
+            files,
             Some(wrapper.as_str()),
             expected_roots,
             expected_tp2_paths,
@@ -1089,35 +1145,17 @@ fn select_wrapper(
 }
 
 fn layout_matches(
-    files: &[&str],
+    files: &FileIndex<'_>,
     wrapper: Option<&str>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
 ) -> bool {
-    let prefix = wrapper.map(|value| format!("{}/", casefold(value)));
-    let stripped: Vec<String> = files
-        .iter()
-        .filter_map(|path| {
-            let key = casefold(path);
-            match prefix.as_deref() {
-                Some(prefix) => key.strip_prefix(prefix).map(str::to_owned),
-                None => Some(key),
-            }
-        })
-        .collect();
-    if wrapper.is_some() && stripped.len() != files.len() {
-        return false;
+    if let Some(wrapper) = wrapper {
+        if !files.all_start_with(&format!("{}/", casefold(wrapper))) {
+            return false;
+        }
     }
-    expected_tp2_paths
-        .iter()
-        .all(|expected| stripped.iter().any(|path| path == &casefold(expected)))
-        && expected_roots.iter().all(|root| {
-            let root = casefold(root);
-            let prefix = format!("{root}/");
-            stripped
-                .iter()
-                .any(|path| path == &root || path.starts_with(&prefix))
-        })
+    layout_matches_below(files, wrapper, expected_roots, expected_tp2_paths)
 }
 
 /// The folder chain in front of the reviewed payload inside a changed archive.
@@ -1127,18 +1165,13 @@ fn layout_matches(
 /// occurs) is a candidate, and exactly one candidate must hold every reviewed TP2 path and
 /// publish root. No candidate, or more than one, fails instead of guessing.
 fn select_served_prefix(
-    entries: &[ValidatedEntry],
+    files: &FileIndex<'_>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
 ) -> Result<Option<String>, AcquireError> {
-    if let Ok(prefix) = select_wrapper(entries, expected_roots, expected_tp2_paths) {
+    if let Ok(prefix) = select_wrapper(files, expected_roots, expected_tp2_paths) {
         return Ok(prefix);
     }
-    let files: Vec<&str> = entries
-        .iter()
-        .filter(|entry| !entry.is_directory)
-        .map(|entry| entry.archive_path.as_str())
-        .collect();
     let (anchor, anchor_ends_path) = match expected_tp2_paths.first() {
         Some(tp2) => (tp2, true),
         None => (
@@ -1150,7 +1183,7 @@ fn select_served_prefix(
     };
     let anchor: Vec<String> = anchor.split('/').map(casefold).collect();
     let mut candidates = BTreeMap::<String, Option<String>>::new();
-    for path in &files {
+    for path in &files.paths {
         let components: Vec<&str> = path.split('/').collect();
         let keys: Vec<String> = components.iter().map(|part| casefold(part)).collect();
         if keys.len() < anchor.len() {
@@ -1174,12 +1207,7 @@ fn select_served_prefix(
     let mut matching: Vec<Option<String>> = candidates
         .into_values()
         .filter(|prefix| {
-            layout_matches_below(
-                &files,
-                prefix.as_deref(),
-                expected_roots,
-                expected_tp2_paths,
-            )
+            layout_matches_below(files, prefix.as_deref(), expected_roots, expected_tp2_paths)
         })
         .collect();
     match matching.len() {
@@ -1197,31 +1225,22 @@ fn select_served_prefix(
 /// Whether every reviewed TP2 path and publish root exists below `prefix`; other files may lie
 /// beside it.
 fn layout_matches_below(
-    files: &[&str],
+    files: &FileIndex<'_>,
     prefix: Option<&str>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
 ) -> bool {
-    let prefix = prefix.map(|value| format!("{}/", casefold(value)));
-    let stripped: Vec<String> = files
-        .iter()
-        .filter_map(|path| {
-            let key = casefold(path);
-            match prefix.as_deref() {
-                Some(prefix) => key.strip_prefix(prefix).map(str::to_owned),
-                None => Some(key),
-            }
-        })
-        .collect();
+    // A file's path with `prefix/` removed equals `path` exactly when its whole case-folded
+    // path equals the case-folded prefix, `/` and the case-folded `path`.
+    let prefix = prefix
+        .map(|value| format!("{}/", casefold(value)))
+        .unwrap_or_default();
     expected_tp2_paths
         .iter()
-        .all(|expected| stripped.iter().any(|path| path == &casefold(expected)))
+        .all(|expected| files.contains(&format!("{prefix}{}", casefold(expected))))
         && expected_roots.iter().all(|root| {
-            let root = casefold(root);
-            let prefix = format!("{root}/");
-            stripped
-                .iter()
-                .any(|path| path == &root || path.starts_with(&prefix))
+            let root = format!("{prefix}{}", casefold(root));
+            files.contains(&root) || files.any_starts_with(&format!("{root}/"))
         })
 }
 
@@ -2054,6 +2073,508 @@ pub(super) fn join_relative(root: &Path, relative: &str) -> PathBuf {
 
 pub(super) fn casefold(value: &str) -> String {
     value.to_lowercase()
+}
+
+#[cfg(test)]
+mod layout_scale_tests {
+    use super::*;
+
+    /// Entries in archive order; a path ending in `/` is a directory entry.
+    fn entries(paths: &[String]) -> (Vec<ValidatedEntry>, BTreeMap<String, bool>) {
+        let mut entries = Vec::with_capacity(paths.len());
+        let mut kinds = BTreeMap::new();
+        for (index, path) in paths.iter().enumerate() {
+            let (path, is_directory) = match path.strip_suffix('/') {
+                Some(directory) => (directory, true),
+                None => (path.as_str(), false),
+            };
+            assert!(
+                kinds.insert(casefold(path), is_directory).is_none(),
+                "duplicate test entry {path}"
+            );
+            entries.push(ValidatedEntry {
+                index,
+                archive_path: path.to_owned(),
+                relative_path: path.to_owned(),
+                size: 1,
+                is_directory,
+            });
+        }
+        (entries, kinds)
+    }
+
+    fn strings(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| (*value).to_owned()).collect()
+    }
+
+    fn inventory(
+        paths: &[String],
+        roots: &[&str],
+        tp2s: &[&str],
+        rule: LayoutRule,
+    ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
+        let (entries, kinds) = entries(paths);
+        finalize_entry_inventory(entries, kinds, &strings(roots), &strings(tp2s), rule)
+    }
+
+    /// A mod payload of `count` files below `prefix` (empty for the archive root), spread over
+    /// a few hundred folders, with its installer.
+    fn payload(prefix: &str, count: usize) -> Vec<String> {
+        let mut paths = vec![format!("{prefix}mymod/setup-mymod.tp2")];
+        paths.extend((1..count).map(|n| format!("{prefix}mymod/data{}/file{n}.bin", n % 300)));
+        paths
+    }
+
+    fn layout_message(
+        result: Result<(Vec<ValidatedEntry>, Option<String>), AcquireError>,
+    ) -> String {
+        match result {
+            Err(AcquireError::ArchiveLayout(message)) => message,
+            other => panic!("expected a layout error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn reviewed_wrapper_is_found_among_150000_entries() {
+        let mut paths = vec!["Mod-V2/".to_owned()];
+        paths.extend(payload("Mod-V2/", 150_000));
+        // A differently spelled folder name later on keeps the first spelling.
+        paths.push("MOD-v2/mymod/readme.txt".to_owned());
+
+        let (entries, wrapper) = inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        )
+        .unwrap();
+
+        assert_eq!(wrapper.as_deref(), Some("Mod-V2"));
+        assert_eq!(entries.len(), 150_001);
+        assert!(entries
+            .iter()
+            .any(|entry| entry.relative_path == "mymod/setup-mymod.tp2"));
+    }
+
+    #[test]
+    fn reviewed_root_payload_beside_many_top_level_folders() {
+        let mut paths = payload("", 100_000);
+        paths.extend((0..50_000).map(|n| format!("extra{n}/notes.txt")));
+
+        let (entries, wrapper) = inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        )
+        .unwrap();
+
+        assert_eq!(wrapper, None);
+        assert_eq!(entries.len(), 100_000);
+    }
+
+    #[test]
+    fn reviewed_payload_both_at_the_root_and_below_a_wrapper_stays_refused() {
+        // Everything lies below `mymod/`, and `mymod/setup-mymod.tp2` exists both with and
+        // without that folder stripped.
+        let mut paths = payload("mymod/", 150_000);
+        paths.push("mymod/setup-mymod.tp2".to_owned());
+
+        let message = layout_message(inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        ));
+
+        assert_eq!(message, "more than one possible TP2 payload root was found");
+    }
+
+    #[test]
+    fn reviewed_payload_beside_many_top_level_folders_without_a_root_payload_is_refused() {
+        let mut paths: Vec<String> = (0..50_000).map(|n| format!("extra{n}/notes.txt")).collect();
+        paths.extend(payload("Wrapped/", 100_000));
+
+        let message = layout_message(inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        ));
+
+        assert_eq!(
+            message,
+            "expected TP2 paths were not found under an exact payload root"
+        );
+    }
+
+    /// 25,000 places that end in the first reviewed TP2 path, each a candidate prefix (50,000
+    /// files), and 50,000 payload files in each place that also holds the second installer.
+    fn served_archive(complete_places: &[&str]) -> Vec<String> {
+        let mut paths = Vec::new();
+        for n in 0..25_000 {
+            paths.push(format!("copies/{n}/mymod/setup-mymod.tp2"));
+            paths.push(format!("copies/{n}/mymod/readme.txt"));
+        }
+        for place in complete_places {
+            paths.extend(payload(&format!("{place}/"), 50_000));
+            paths.push(format!("{place}/other/setup-other.tp2"));
+        }
+        paths
+    }
+
+    const SERVED_ROOTS: &[&str] = &["mymod", "other"];
+    const SERVED_TP2S: &[&str] = &["mymod/setup-mymod.tp2", "other/setup-other.tp2"];
+
+    #[test]
+    fn served_prefix_is_found_among_many_candidates() {
+        let paths = served_archive(&["Release/Final Build"]);
+        assert!(paths.len() > 100_000);
+
+        let (entries, prefix) =
+            inventory(&paths, SERVED_ROOTS, SERVED_TP2S, LayoutRule::Served).unwrap();
+
+        assert_eq!(prefix.as_deref(), Some("Release/Final Build"));
+        assert_eq!(entries.len(), 50_001);
+        assert!(entries
+            .iter()
+            .any(|entry| entry.relative_path == "other/setup-other.tp2"));
+    }
+
+    #[test]
+    fn served_payload_in_two_places_among_many_candidates_stays_refused() {
+        let paths = served_archive(&["Release/Final Build", "Release/Old Build"]);
+
+        let message = layout_message(inventory(
+            &paths,
+            SERVED_ROOTS,
+            SERVED_TP2S,
+            LayoutRule::Served,
+        ));
+
+        assert_eq!(
+            message,
+            "the reviewed payload was found in more than one place"
+        );
+    }
+
+    #[test]
+    fn prefix_collision_is_found_among_150000_entries() {
+        let mut paths = payload("", 150_000);
+        // Siblings that sort between `mymod/data7` and `mymod/data7/` must not hide the clash.
+        paths.push("mymod/data7-old/file.bin".to_owned());
+        paths.push("mymod/data7".to_owned());
+
+        let result = inventory(
+            &paths,
+            &["mymod"],
+            &["mymod/setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        );
+
+        match result {
+            Err(AcquireError::UnsafeArchiveEntry { entry, message }) => {
+                assert_eq!(entry, "mymod/data7");
+                assert_eq!(message, "file/directory prefix collision");
+            }
+            other => panic!("expected a prefix collision, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn root_lookups_ignore_folders_that_only_share_the_name_start() {
+        let paths = strings(&["mymod-old/a.txt", "mymod0/b.txt", "setup-mymod.tp2"]);
+
+        let message = layout_message(inventory(
+            &paths,
+            &["mymod"],
+            &["setup-mymod.tp2"],
+            LayoutRule::Reviewed,
+        ));
+
+        assert_eq!(
+            message,
+            "expected TP2 paths were not found under an exact payload root"
+        );
+    }
+
+    /// The scanning implementation these lookups replaced, kept as the reference.
+    mod reference {
+        use super::super::*;
+
+        pub(super) fn prefix_collision(kinds: &BTreeMap<String, bool>) -> Option<String> {
+            let keys: Vec<_> = kinds.keys().cloned().collect();
+            keys.iter()
+                .find(|key| {
+                    kinds.get(*key) == Some(&false) && {
+                        let prefix = format!("{key}/");
+                        keys.iter().any(|other| other.starts_with(&prefix))
+                    }
+                })
+                .cloned()
+        }
+
+        fn files(entries: &[ValidatedEntry]) -> Vec<&str> {
+            entries
+                .iter()
+                .filter(|entry| !entry.is_directory)
+                .map(|entry| entry.archive_path.as_str())
+                .collect()
+        }
+
+        pub(super) fn select_wrapper(
+            entries: &[ValidatedEntry],
+            roots: &[String],
+            tp2s: &[String],
+        ) -> Result<Option<String>, AcquireError> {
+            let files = files(entries);
+            let mut candidates = Vec::<Option<String>>::new();
+            if layout_matches(&files, None, roots, tp2s, true) {
+                candidates.push(None);
+            }
+            let mut wrappers = BTreeMap::<String, String>::new();
+            for path in &files {
+                if let Some((first, _)) = path.split_once('/') {
+                    wrappers
+                        .entry(casefold(first))
+                        .or_insert_with(|| first.to_owned());
+                }
+            }
+            for wrapper in wrappers.into_values() {
+                if layout_matches(&files, Some(wrapper.as_str()), roots, tp2s, true) {
+                    candidates.push(Some(wrapper));
+                }
+            }
+            match candidates.len() {
+                1 => Ok(candidates.pop().unwrap()),
+                0 => Err(AcquireError::ArchiveLayout(
+                    "expected TP2 paths were not found under an exact payload root".to_owned(),
+                )),
+                _ => Err(AcquireError::ArchiveLayout(
+                    "more than one possible TP2 payload root was found".to_owned(),
+                )),
+            }
+        }
+
+        /// `layout_matches` with `whole`, `layout_matches_below` without.
+        fn layout_matches(
+            files: &[&str],
+            wrapper: Option<&str>,
+            roots: &[String],
+            tp2s: &[String],
+            whole: bool,
+        ) -> bool {
+            let prefix = wrapper.map(|value| format!("{}/", casefold(value)));
+            let stripped: Vec<String> = files
+                .iter()
+                .filter_map(|path| {
+                    let key = casefold(path);
+                    match prefix.as_deref() {
+                        Some(prefix) => key.strip_prefix(prefix).map(str::to_owned),
+                        None => Some(key),
+                    }
+                })
+                .collect();
+            if whole && wrapper.is_some() && stripped.len() != files.len() {
+                return false;
+            }
+            tp2s.iter()
+                .all(|expected| stripped.iter().any(|path| path == &casefold(expected)))
+                && roots.iter().all(|root| {
+                    let root = casefold(root);
+                    let prefix = format!("{root}/");
+                    stripped
+                        .iter()
+                        .any(|path| path == &root || path.starts_with(&prefix))
+                })
+        }
+
+        pub(super) fn select_served_prefix(
+            entries: &[ValidatedEntry],
+            roots: &[String],
+            tp2s: &[String],
+        ) -> Result<Option<String>, AcquireError> {
+            if let Ok(prefix) = select_wrapper(entries, roots, tp2s) {
+                return Ok(prefix);
+            }
+            let files = files(entries);
+            let (anchor, anchor_ends_path) = match tp2s.first() {
+                Some(tp2) => (tp2, true),
+                None => (
+                    roots.first().ok_or_else(|| {
+                        AcquireError::ArchiveLayout(
+                            "no reviewed payload path to look for".to_owned(),
+                        )
+                    })?,
+                    false,
+                ),
+            };
+            let anchor: Vec<String> = anchor.split('/').map(casefold).collect();
+            let mut candidates = BTreeMap::<String, Option<String>>::new();
+            for path in &files {
+                let components: Vec<&str> = path.split('/').collect();
+                let keys: Vec<String> = components.iter().map(|part| casefold(part)).collect();
+                if keys.len() < anchor.len() {
+                    continue;
+                }
+                let last_start = keys.len() - anchor.len();
+                let starts = if anchor_ends_path {
+                    last_start..=last_start
+                } else {
+                    0..=last_start
+                };
+                for start in starts {
+                    if keys[start..start + anchor.len()] == anchor[..] {
+                        let prefix = (start > 0).then(|| components[..start].join("/"));
+                        candidates
+                            .entry(prefix.as_deref().map(casefold).unwrap_or_default())
+                            .or_insert(prefix);
+                    }
+                }
+            }
+            let mut matching: Vec<Option<String>> = candidates
+                .into_values()
+                .filter(|prefix| layout_matches(&files, prefix.as_deref(), roots, tp2s, false))
+                .collect();
+            match matching.len() {
+                1 => Ok(matching.pop().unwrap()),
+                0 => Err(AcquireError::ArchiveLayout(format!(
+                    "the reviewed `{}` was not found together with every reviewed payload path",
+                    anchor.join("/")
+                ))),
+                _ => Err(AcquireError::ArchiveLayout(
+                    "the reviewed payload was found in more than one place".to_owned(),
+                )),
+            }
+        }
+    }
+
+    /// Deterministic pseudo-random numbers, enough to vary small synthetic archives.
+    struct Lcg(u64);
+
+    impl Lcg {
+        fn below(&mut self, bound: usize) -> usize {
+            self.0 = self
+                .0
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            ((self.0 >> 33) % bound as u64) as usize
+        }
+    }
+
+    #[test]
+    fn lookups_decide_exactly_like_the_scans_they_replace() {
+        // Folder names that differ only in case, sort right beside one another (`-`, `.` and
+        // `0` around `/`), or change under whole-string lowercasing (final sigma).
+        const PARTS: &[&str] = &[
+            "a", "A", "a-b", "a.b", "a0", "mymod", "MyMod", "other", "ΑΣ", "ας", "wrap", "Wrap",
+        ];
+        const FILES: &[&str] = &[
+            "setup-mymod.tp2",
+            "setup-other.tp2",
+            "x.txt",
+            "Σ",
+            "a",
+            "mymod",
+        ];
+        const ROOT_SETS: &[&[&str]] = &[&["mymod"], &["mymod", "other"], &["a"], &["ΑΣ"], &[]];
+        const TP2_SETS: &[&[&str]] = &[
+            &["mymod/setup-mymod.tp2"],
+            &["mymod/setup-mymod.tp2", "other/setup-other.tp2"],
+            &["setup-mymod.tp2"],
+            &["ΑΣ/Σ"],
+            &[],
+        ];
+        let mut random = Lcg(0x5eed);
+        let mut outcomes = BTreeMap::<&str, usize>::new();
+        for _ in 0..10_000 {
+            let mut paths = Vec::new();
+            let mut seen = BTreeSet::new();
+            for _ in 0..1 + random.below(12) {
+                let depth = random.below(4);
+                let mut path: Vec<&str> = (0..depth)
+                    .map(|_| PARTS[random.below(PARTS.len())])
+                    .collect();
+                let is_directory = depth > 0 && random.below(6) == 0;
+                if !is_directory {
+                    path.push(FILES[random.below(FILES.len())]);
+                }
+                let path = path.join("/");
+                if seen.insert(casefold(&path)) {
+                    paths.push(if is_directory {
+                        format!("{path}/")
+                    } else {
+                        path
+                    });
+                }
+            }
+            let roots = strings(ROOT_SETS[random.below(ROOT_SETS.len())]);
+            let tp2s = strings(TP2_SETS[random.below(TP2_SETS.len())]);
+            let (entries, kinds) = entries(&paths);
+            let context = format!("{paths:?} roots {roots:?} tp2s {tp2s:?}");
+
+            let expected_collision = reference::prefix_collision(&kinds);
+            for rule in [LayoutRule::Reviewed, LayoutRule::Served] {
+                let collision = match finalize_entry_inventory(
+                    entries.clone(),
+                    kinds.clone(),
+                    &roots,
+                    &tp2s,
+                    rule,
+                ) {
+                    Err(AcquireError::UnsafeArchiveEntry { entry, message }) => {
+                        assert_eq!(message, "file/directory prefix collision", "{context}");
+                        Some(entry)
+                    }
+                    _ => None,
+                };
+                assert_eq!(collision, expected_collision, "{context}");
+            }
+
+            let files = FileIndex::new(&entries);
+            let wrapper = format!("{:?}", select_wrapper(&files, &roots, &tp2s));
+            assert_eq!(
+                wrapper,
+                format!("{:?}", reference::select_wrapper(&entries, &roots, &tp2s)),
+                "{context}"
+            );
+            let served = format!("{:?}", select_served_prefix(&files, &roots, &tp2s));
+            assert_eq!(
+                served,
+                format!(
+                    "{:?}",
+                    reference::select_served_prefix(&entries, &roots, &tp2s)
+                ),
+                "{context}"
+            );
+            if expected_collision.is_some() {
+                *outcomes.entry("collision").or_default() += 1;
+            }
+            let wrapper_outcome = if wrapper == "Ok(None)" {
+                "root payload"
+            } else if wrapper.starts_with("Ok(Some") {
+                "wrapper"
+            } else if wrapper.contains("more than one") {
+                "ambiguous wrapper"
+            } else {
+                "no wrapper"
+            };
+            *outcomes.entry(wrapper_outcome).or_default() += 1;
+            if wrapper.starts_with("Err") {
+                let served_outcome = if served.starts_with("Ok(Some") {
+                    "served prefix"
+                } else if served.contains("more than one place") {
+                    "ambiguous served prefix"
+                } else {
+                    "no served prefix"
+                };
+                *outcomes.entry(served_outcome).or_default() += 1;
+            }
+        }
+        // Every decision occurs, so the comparison covers each branch.
+        assert_eq!(outcomes.len(), 8, "{outcomes:?}");
+        assert!(outcomes.values().all(|count| *count >= 10), "{outcomes:?}");
+    }
 }
 
 #[cfg(all(test, windows))]
