@@ -22,19 +22,26 @@ go for merging #42 and #52, the three hotpatch defaults, the release and the web
   The `v0.1.0-alpha.1` records stay, since the public-alpha profile reads its acceptance and
   limitations there; the new ledger `releases/v0.1.1/ledger.toml` describes what 0.1.1 adds.
   The hotpatch catalog's base is the 0.1.1 recipe digest.
-- [ ] Overview in `docs/releases/iwd/`: `public-README.md` (README of the public release
-  repository) and `0.1.1.md` (release notes). At release: add the SHA-256 and the exact source
-  commit.
-- [ ] Public download repository `Chrizhermann/chriz-easy-iwd`, like `chriz-easy-bg` for CEBG:
-  only the README and the release files, no code (Christopher, 2026-10-28; the source stays in
-  this repository, both apps are built from it). Create it at release time, not before.
-- [ ] Website: English IWD page `/iwd` on bg.chrizfader.org (`bg-site` in `twitch-setup-chriz`,
-  branch `claude/iwd-collection-page`), same layout as the BG page; pending until the release
-  exists, then the download link and checksum.
-- [ ] Installer rebuilt from f97631d (2026-10-29) and the bundle verified: version 0.1.1, the
-  bundled recipe and hotpatch catalog identical to the branch. Before release: a lab installs
-  the release, a played and saved lab passes the hotpatch check, and a test hotpatch applies
-  and undoes cleanly.
+- [x] Release lab (2026-10-29, design doc "Release lab check"): the first game start writes
+  `InfinityLoader.db`, `EEex_scripts/extra_pattern_dbs/v2.7.3.0.db` and the empty folder
+  `EEex_scripts/override`, so every played installation would have been refused as edited by
+  hand. Fixed in 9818633 and bf9f763 (runtime files, also the remote console's). Then a played
+  and saved installation passed; a stand-in hotpatch writing `dialog.tlk` and `override`
+  applied, reached a save made before it, undid byte for byte and applied again; a deviating
+  installation was refused with both reasons.
+- [x] Installer built from bf9f763 (CI green) and verified: version 0.1.1, the bundled recipe and
+  hotpatch catalog identical to the branch. SHA-256
+  `3c07a3913f99181124511192653dfc6b87bd706743473ef9b382072c698b22a1`.
+- [x] Overview in `docs/releases/iwd/`: `public-README.md` (README of the download repository)
+  and `0.1.1.md` (release notes with checksum and source commit).
+- [x] Public download repository `Chrizhermann/chriz-easy-iwd` (2026-10-29), like
+  `chriz-easy-bg`: only the README and the release files, no code. Release v0.1.1 with the
+  setup, `SHA256SUMS`, `LICENSE` and `THIRD_PARTY_NOTICES.md`; the downloaded asset matched.
+- [x] Website: English IWD page `/iwd` on bg.chrizfader.org (`bg-site` in `twitch-setup-chriz`),
+  same layout as the BG page, with download link and checksum.
+- [ ] Discord announcement: text drafted (English and German); Christopher posts it.
+- [ ] A later release that changes the recipe needs a new `[[bases]]` entry with its digest;
+  hotpatches for 0.1.1 installations keep naming base `iwd-0.1.1`.
 
 ## Curation and sources
 
