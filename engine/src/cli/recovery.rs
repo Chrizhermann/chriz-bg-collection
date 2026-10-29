@@ -139,6 +139,13 @@ fn inspect(request: &SupervisedRecoveryRequest) -> Result<Inspected, CliError> {
     // Reporting validates the original failure against the immutable ledger. It never
     // upgrades that outcome, even when a separate recovery completion already exists.
     let base = report_managed_install(&root)?.receipt;
+    // Acceptance reasons about the tail of the frozen plan; with left-out mods the installed
+    // tail differs from it.
+    if !base.left_out.is_empty() {
+        return Err(error(
+            "supervised acceptance does not support installations that left out a mod",
+        ));
+    }
     let index = frozen
         .plan
         .runs

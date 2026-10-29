@@ -99,12 +99,14 @@ fn success_receipt(root: &Path) -> InstallReceipt {
             length: 1_024,
             sha256: "77".repeat(32),
             cache_outcome: ArtifactCacheOutcome::Downloaded,
+            served_difference: None,
         }],
         weidu_tools: vec![WeiDuToolReceipt {
             id: "weidu".to_owned(),
             version: "24900".to_owned(),
             length: 2_048,
             sha256: "88".repeat(32),
+            reviewed: None,
         }],
         runs: vec![RunReceipt {
             run_id: "eet-core".to_owned(),
@@ -148,6 +150,8 @@ fn success_receipt(root: &Path) -> InstallReceipt {
             launch_path: root.join("game/InfinityLoader.exe"),
             verification_summary: "exact final WeiDU.log matched".to_owned(),
         }),
+        left_out: Vec::new(),
+        installed_plan: None,
     }
 }
 
@@ -392,6 +396,8 @@ fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
         outcome: ReceiptDraftOutcome::Succeeded,
         created,
         plan: frozen_plan,
+        left_out: Vec::new(),
+        installed_plan: None,
     };
     let mut writer = ManagedReceiptWriter::new(
         store,
@@ -483,6 +489,8 @@ fn real_writer_publishes_failure_attempt_without_claiming_or_registering_success
         },
         created,
         plan: frozen_plan,
+        left_out: Vec::new(),
+        installed_plan: None,
     };
     let mut writer = ManagedReceiptWriter::new(
         store,

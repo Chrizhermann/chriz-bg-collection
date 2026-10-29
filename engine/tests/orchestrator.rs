@@ -3,17 +3,17 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
-use bg_engine::events::{EngineEvent, EventSink};
+use bg_engine::events::{EngineEvent, EventSink, StepOutcome};
 use bg_engine::games::GameRole;
 use bg_engine::lock::{LockError, TargetLock};
 use bg_engine::manifest::{GameRoot, Phase, Postcondition, RunArg};
 use bg_engine::orchestrator::{
-    run_campaign, run_campaign_controlled, ArtifactAcquirer, ArtifactKind, ArtifactMaterializer,
-    BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight, CampaignRecorder,
-    CampaignRequest, InstallLogVerifier, InstallReconciliation, InvocationBuilder,
-    MaterializationOutcome, MaterializationTask, MutationCheck, MutationKind, ProcessResult,
-    ProcessRunner, ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt,
-    StepFailure,
+    run_campaign, run_campaign_controlled, AcquisitionOutcome, ArtifactAcquirer, ArtifactKind,
+    ArtifactMaterializer, BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight,
+    CampaignRecorder, CampaignRequest, InstallLogVerifier, InstallReconciliation,
+    InvocationBuilder, LeftOutArtifact, MaterializationOutcome, MaterializationTask, MutationCheck,
+    MutationKind, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter,
+    StagingService, StepAttempt, StepFailure,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -196,6 +196,24 @@ struct FakeDeps {
     staged_files: Vec<(GameRole, PathBuf, Vec<u8>)>,
     pause_after_operation: Option<String>,
     controls: Option<RunnerControlHandle>,
+    /// Payloads whose acquisition reports an unusable download.
+    leave_out: BTreeMap<String, String>,
+    /// Placing steps that report a download whose files cannot be placed, by step id.
+    unplaceable: BTreeMap<String, String>,
+    /// Further runs that need a left-out payload, by payload id.
+    dependents: BTreeMap<String, Vec<String>>,
+    /// Runs that lose components when a payload is left out, by payload id.
+    reduced: BTreeMap<String, Vec<(String, Vec<u32>)>>,
+    /// Payloads the fake recipe cannot do without.
+    essential: Vec<String>,
+    /// Every `plan_without` request, to see replays recompute it.
+    plan_without_calls: Vec<Vec<String>>,
+    /// Manual pauses of the fake campaign; each continues at once.
+    checkpoints: Vec<bg_engine::manual_checkpoint::FrozenCheckpoint>,
+    /// Checkpoint plans handed over, to see that they lack left-out runs.
+    checkpoint_plans: Vec<InstallPlan>,
+    /// The plan final verification received.
+    verified_plans: Vec<InstallPlan>,
 }
 
 impl CampaignRecorder for FakeDeps {
@@ -243,7 +261,7 @@ impl ArtifactAcquirer for FakeDeps {
         &mut self,
         identity: &FrozenIdentity,
         kind: ArtifactKind,
-    ) -> Result<(), StepFailure> {
+    ) -> Result<AcquisitionOutcome, StepFailure> {
         let operation = format!("acquire:{}", identity.id);
         self.trace.push(operation.clone());
         *self.acquisitions.entry(identity.id.clone()).or_default() += 1;
@@ -252,7 +270,50 @@ impl ArtifactAcquirer for FakeDeps {
         if self.pause_after_operation.as_deref() == Some(&operation) {
             self.controls.as_ref().unwrap().pause_after_boundary();
         }
-        self.maybe_fail(&operation)
+        self.maybe_fail(&operation)?;
+        Ok(match self.leave_out.get(&identity.id) {
+            Some(reason) => AcquisitionOutcome::LeaveOut {
+                reason: reason.clone(),
+            },
+            None => AcquisitionOutcome::Ready,
+        })
+    }
+
+    fn plan_without(
+        &mut self,
+        plan: &InstallPlan,
+        left_out: &[String],
+    ) -> Result<InstallPlan, StepFailure> {
+        self.plan_without_calls.push(left_out.to_vec());
+        if let Some(essential) = left_out.iter().find(|id| self.essential.contains(id)) {
+            return Err(StepFailure::new(format!(
+                "{essential} is a fixed part of this collection"
+            )));
+        }
+        let mut runs = Vec::new();
+        for run in &plan.runs {
+            if left_out.contains(&run.artifact_id)
+                || left_out.iter().any(|id| {
+                    self.dependents
+                        .get(id)
+                        .is_some_and(|runs| runs.contains(&run.run_id))
+                })
+            {
+                continue;
+            }
+            let mut run = run.clone();
+            for (run_id, components) in left_out
+                .iter()
+                .filter_map(|id| self.reduced.get(id))
+                .flatten()
+            {
+                if *run_id == run.run_id {
+                    run.components = components.clone();
+                }
+            }
+            runs.push(run);
+        }
+        Ok(InstallPlan { runs })
     }
 }
 
@@ -292,7 +353,15 @@ impl ArtifactMaterializer for FakeDeps {
     ) -> Result<MaterializationOutcome, StepFailure> {
         let operation = task.step_id();
         self.trace.push(operation.clone());
+        if self.pause_after_operation.as_deref() == Some(&operation) {
+            self.controls.as_ref().unwrap().pause_after_boundary();
+        }
         self.maybe_fail(&operation)?;
+        if let Some(reason) = self.unplaceable.get(&operation) {
+            return Ok(MaterializationOutcome::LeaveOut {
+                reason: reason.clone(),
+            });
+        }
         Ok(self
             .materialization_results
             .pop_front()
@@ -338,6 +407,21 @@ impl ProcessRunner<String> for FakeDeps {
 }
 
 impl InstallLogVerifier for FakeDeps {
+    fn manual_checkpoints(&self) -> Vec<bg_engine::manual_checkpoint::FrozenCheckpoint> {
+        self.checkpoints.clone()
+    }
+
+    fn manual_checkpoint(
+        &mut self,
+        checkpoint: &bg_engine::manual_checkpoint::FrozenCheckpoint,
+        plan: &InstallPlan,
+    ) -> Result<bool, StepFailure> {
+        self.trace
+            .push(format!("checkpoint:{}", checkpoint.checkpoint_id));
+        self.checkpoint_plans.push(plan.clone());
+        Ok(true)
+    }
+
     fn recover(
         &mut self,
         run: &PlannedRun,
@@ -401,8 +485,9 @@ impl InstallLogVerifier for FakeDeps {
             .unwrap_or(InstallReconciliation::ProvenDone))
     }
 
-    fn verify_final(&mut self, _plan: &InstallPlan) -> Result<(), StepFailure> {
+    fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure> {
         self.trace.push("verify:final".to_owned());
+        self.verified_plans.push(plan.clone());
         self.maybe_fail("verify:final")
     }
 }
@@ -603,6 +688,10 @@ fn complete_build_uses_stable_order_one_acquisition_per_identity_and_holds_targe
         "the enclosing WeiDU archive must be acquired once as a tool"
     );
     assert!(deps.lock_was_held_at_receipt);
+    let receipt = deps.receipts.last().unwrap();
+    assert!(receipt.left_out.is_empty() && receipt.installed_plan.is_none());
+    assert_eq!(deps.verified_plans, vec![fixture.request.plan.clone()]);
+    assert!(deps.plan_without_calls.is_empty());
     assert!(deps.trace.iter().any(|entry| entry == "stage:bg1"));
     assert!(deps.trace.iter().any(|entry| entry == "stage:bg2"));
     assert!(deps
@@ -1419,4 +1508,485 @@ fn selected_pipeline_steps_never_emit_skipped() {
             ..
         }
     )));
+}
+
+impl Fixture {
+    /// The default campaign plus a run that needs `eefix` and one that loses a component
+    /// without it, for leaving `eefix` out.
+    fn with_dependents() -> Self {
+        let mut fixture = Self::new();
+        let request = &mut fixture.request;
+        request.plan.runs.push(executable_run(
+            "tweaks-bg2",
+            "tweaks",
+            GameRoot::Bg2,
+            Phase::Main,
+            &[1, 2],
+            vec![],
+        ));
+        request.plan.runs.push(executable_run(
+            "needs-eefix",
+            "needs-eefix",
+            GameRoot::Bg2,
+            Phase::Main,
+            &[0],
+            vec![],
+        ));
+        request.created.plan_sha256 = plan_digest(&request.plan).unwrap();
+        request
+            .created
+            .artifact_identities
+            .extend([frozen("tweaks", "77", 50), frozen("needs-eefix", "88", 60)]);
+        request
+            .created
+            .artifact_identities
+            .sort_by(|left, right| left.id.cmp(&right.id));
+        fixture
+    }
+
+    /// The plan that remains without `eefix`: EET core and the reduced tweaks run.
+    fn plan_without_eefix(&self) -> InstallPlan {
+        let mut tweaks = self.request.plan.runs[3].clone();
+        tweaks.components = vec![1];
+        InstallPlan {
+            runs: vec![self.request.plan.runs[2].clone(), tweaks],
+        }
+    }
+}
+
+const LAYOUT_CHANGED: &str = "its archive layout changed";
+
+/// Dependencies of a recipe in which `needs-eefix` needs `eefix` and `tweaks-bg2` has one
+/// component that needs it.
+fn eefix_recipe_deps() -> FakeDeps {
+    FakeDeps {
+        dependents: BTreeMap::from([("eefix".to_owned(), vec!["needs-eefix".to_owned()])]),
+        reduced: BTreeMap::from([("eefix".to_owned(), vec![("tweaks-bg2".to_owned(), vec![1])])]),
+        ..FakeDeps::default()
+    }
+}
+
+fn eefix_unusable_deps() -> FakeDeps {
+    FakeDeps {
+        leave_out: BTreeMap::from([("eefix".to_owned(), LAYOUT_CHANGED.to_owned())]),
+        ..eefix_recipe_deps()
+    }
+}
+
+fn left_out_records(root: &Path) -> Vec<(String, String, String, String)> {
+    SessionStore::open(root)
+        .unwrap()
+        .replay()
+        .unwrap()
+        .records
+        .into_iter()
+        .filter_map(|record| match record.event {
+            SessionEvent::ArtifactLeftOut {
+                step_id,
+                artifact_id,
+                detail,
+                plan_sha256,
+                ..
+            } => Some((step_id, artifact_id, detail, plan_sha256)),
+            _ => None,
+        })
+        .collect()
+}
+
+#[test]
+fn an_unusable_download_leaves_out_its_mod_and_everything_that_needs_it() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = eefix_unusable_deps();
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    assert_eq!(outcome, CampaignOutcome::Complete);
+    let root = &fixture.request.created.managed_root;
+    assert_eq!(
+        completed_step_ids(root),
+        vec![
+            "preflight",
+            "acquire:weidu",
+            "acquire:eet",
+            "acquire:tweaks",
+            "stage:bg1",
+            "stage:bg2",
+            "materialize:eet:bg2",
+            "materialize:tweaks:bg2",
+            "install:eet-core",
+            "install:tweaks-bg2",
+            "identity:final",
+            "verify:final",
+            "receipt",
+        ]
+    );
+    let remaining = fixture.plan_without_eefix();
+    assert_eq!(
+        left_out_records(root),
+        vec![(
+            "acquire:eefix".to_owned(),
+            "eefix".to_owned(),
+            LAYOUT_CHANGED.to_owned(),
+            plan_digest(&remaining).unwrap(),
+        )]
+    );
+    assert!(
+        !deps.trace.iter().any(|entry| entry == "acquire:needs-eefix"
+            || entry.starts_with("materialize:eefix")
+            || entry.starts_with("materialize:needs-eefix")
+            || entry.starts_with("build:eefix")
+            || entry.starts_with("build:needs-eefix"))
+    );
+    assert!(deps
+        .trace
+        .iter()
+        .any(|entry| entry == "build:tweaks-bg2:[1]"));
+    assert_eq!(deps.verified_plans, vec![remaining.clone()]);
+    let receipt = deps.receipts.last().unwrap();
+    assert_eq!(receipt.plan, fixture.request.plan);
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(receipt.effective_plan(), &remaining);
+    assert_eq!(
+        receipt.left_out,
+        vec![LeftOutArtifact {
+            artifact_id: "eefix".to_owned(),
+            reason: LAYOUT_CHANGED.to_owned(),
+            runs: vec![
+                "eefix-bg1".to_owned(),
+                "eefix-bg2".to_owned(),
+                "needs-eefix".to_owned(),
+            ],
+            changed_runs: vec!["tweaks-bg2".to_owned()],
+        }]
+    );
+    let events = sink.events();
+    assert!(events.contains(&EngineEvent::ArtifactLeftOut {
+        artifact_id: "eefix".to_owned(),
+        reason: LAYOUT_CHANGED.to_owned(),
+        runs: vec![
+            "eefix-bg1".to_owned(),
+            "eefix-bg2".to_owned(),
+            "needs-eefix".to_owned(),
+        ],
+        changed_runs: vec!["tweaks-bg2".to_owned()],
+    }));
+    assert!(events.contains(&EngineEvent::StepFinished {
+        id: "acquire:eefix".to_owned(),
+        outcome: StepOutcome::Skipped,
+    }));
+}
+
+#[test]
+fn resume_after_a_left_out_mod_rebuilds_the_recorded_plan_without_deciding_again() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let controls = RunnerControlHandle::new();
+    let mut deps = FakeDeps {
+        pause_after_operation: Some("acquire:weidu".to_owned()),
+        controls: Some(controls.clone()),
+        ..eefix_unusable_deps()
+    };
+    assert_eq!(
+        run_campaign_controlled(&fixture.request, &mut deps, &sink, &controls).unwrap(),
+        CampaignOutcome::Paused {
+            after_step_id: "acquire:weidu".to_owned(),
+        }
+    );
+
+    // The download may be usable now; the recorded decision still stands, and nothing that
+    // the remaining plan does not need is acquired, staged or installed.
+    let mut resumed = eefix_recipe_deps();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    // The ledger says what remains; nothing derives it again.
+    assert!(resumed.plan_without_calls.is_empty());
+    assert_eq!(resumed.acquisitions.get("eefix"), None);
+    assert_eq!(resumed.acquisitions.get("needs-eefix"), None);
+    assert_eq!(resumed.acquisitions.get("eet"), Some(&1));
+    assert!(resumed
+        .trace
+        .iter()
+        .any(|entry| entry == "build:tweaks-bg2:[1]"));
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.left_out.len(), 1);
+    assert_eq!(receipt.installed_plan, Some(fixture.plan_without_eefix()));
+
+    // Once complete, resuming again does not repeat any work.
+    let mut again = eefix_recipe_deps();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut again, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(again.acquisitions.is_empty());
+}
+
+/// An app update may derive the plan without a mod differently, or not at all. A campaign that
+/// left the mod out before still resumes with exactly the plan it recorded then.
+#[test]
+fn resume_keeps_the_recorded_plan_when_the_app_now_derives_it_differently() {
+    for changed in [
+        // No longer drops `needs-eefix`, and keeps all of `tweaks-bg2`.
+        FakeDeps::default(),
+        // Cannot leave `eefix` out at all.
+        FakeDeps {
+            essential: vec!["eefix".to_owned()],
+            ..eefix_recipe_deps()
+        },
+    ] {
+        let fixture = Fixture::with_dependents();
+        let sink = RecordingSink::default();
+        let controls = RunnerControlHandle::new();
+        let mut deps = FakeDeps {
+            pause_after_operation: Some("acquire:weidu".to_owned()),
+            controls: Some(controls.clone()),
+            ..eefix_unusable_deps()
+        };
+        run_campaign_controlled(&fixture.request, &mut deps, &sink, &controls).unwrap();
+
+        let mut resumed = changed;
+        assert_eq!(
+            run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+            CampaignOutcome::Complete
+        );
+        assert!(resumed.plan_without_calls.is_empty());
+        assert!(!resumed
+            .trace
+            .iter()
+            .any(|entry| entry == "acquire:needs-eefix" || entry.starts_with("build:eefix")));
+        assert!(resumed
+            .trace
+            .iter()
+            .any(|entry| entry == "build:tweaks-bg2:[1]"));
+        let receipt = resumed.receipts.last().unwrap();
+        assert_eq!(receipt.installed_plan, Some(fixture.plan_without_eefix()));
+        assert_eq!(resumed.verified_plans, vec![fixture.plan_without_eefix()]);
+    }
+}
+
+const UNPLACEABLE: &str = "a file of its changed archive would overwrite another one";
+
+#[test]
+fn a_changed_archive_that_cannot_be_placed_is_left_out_while_none_of_its_files_are() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let controls = RunnerControlHandle::new();
+    let mut deps = FakeDeps {
+        unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
+        pause_after_operation: Some("materialize:eefix:bg1".to_owned()),
+        controls: Some(controls.clone()),
+        ..eefix_recipe_deps()
+    };
+
+    assert_eq!(
+        run_campaign_controlled(&fixture.request, &mut deps, &sink, &controls).unwrap(),
+        CampaignOutcome::Paused {
+            after_step_id: "materialize:eefix:bg1".to_owned(),
+        }
+    );
+    let root = &fixture.request.created.managed_root;
+    let remaining = fixture.plan_without_eefix();
+    assert_eq!(
+        left_out_records(root),
+        vec![(
+            "materialize:eefix:bg1".to_owned(),
+            "eefix".to_owned(),
+            UNPLACEABLE.to_owned(),
+            plan_digest(&remaining).unwrap(),
+        )]
+    );
+    let record = SessionStore::open(root)
+        .unwrap()
+        .replay()
+        .unwrap()
+        .records
+        .into_iter()
+        .find_map(|record| match record.event {
+            SessionEvent::ArtifactLeftOut {
+                removed_runs,
+                changed_runs,
+                ..
+            } => Some((removed_runs, changed_runs)),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(record.0, ["eefix-bg1", "eefix-bg2", "needs-eefix"]);
+    assert_eq!(record.1, vec![remaining.runs[1].clone()]);
+    assert!(sink.events().contains(&EngineEvent::StepFinished {
+        id: "materialize:eefix:bg1".to_owned(),
+        outcome: StepOutcome::Skipped,
+    }));
+
+    // The resume continues without the mod, even with a derivation that would keep it.
+    let mut resumed = FakeDeps::default();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(resumed.plan_without_calls.is_empty());
+    assert_eq!(
+        completed_step_ids(root)
+            .into_iter()
+            .filter(|step| step.starts_with("materialize:") || step.starts_with("install:"))
+            .collect::<Vec<_>>(),
+        [
+            "materialize:eet:bg2",
+            "materialize:tweaks:bg2",
+            "install:eet-core",
+            "install:tweaks-bg2",
+        ]
+    );
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(
+        receipt.left_out,
+        vec![LeftOutArtifact {
+            artifact_id: "eefix".to_owned(),
+            reason: UNPLACEABLE.to_owned(),
+            runs: vec![
+                "eefix-bg1".to_owned(),
+                "eefix-bg2".to_owned(),
+                "needs-eefix".to_owned(),
+            ],
+            changed_runs: vec!["tweaks-bg2".to_owned()],
+        }]
+    );
+}
+
+/// A mod that is not installed must not leave files behind, because other mods detect mods by
+/// their files. So once files of the mod, or of a mod leaving with it, are placed, the copy
+/// needs a fresh start as before.
+#[test]
+fn a_changed_archive_cannot_be_left_out_once_files_of_it_or_its_dependents_are_placed() {
+    for (step, dependents, placed) in [
+        // Its files for BG1 are placed already.
+        ("materialize:eefix:bg2", BTreeMap::new(), "eefix"),
+        // EET core, placed already, needs the tweaks.
+        (
+            "materialize:tweaks:bg2",
+            BTreeMap::from([("tweaks".to_owned(), vec!["eet-core".to_owned()])]),
+            "eet",
+        ),
+    ] {
+        let fixture = Fixture::with_dependents();
+        let sink = RecordingSink::default();
+        let mut deps = FakeDeps {
+            unplaceable: BTreeMap::from([(step.to_owned(), UNPLACEABLE.to_owned())]),
+            dependents,
+            ..FakeDeps::default()
+        };
+
+        let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+        let CampaignOutcome::FreshCopyRequired { step_id, reason } = outcome else {
+            panic!("expected a sealed copy, got {outcome:?}");
+        };
+        assert_eq!(step_id, step);
+        assert!(reason.starts_with(UNPLACEABLE), "{reason}");
+        assert!(
+            reason.ends_with(&format!(
+                "The installation cannot leave it out at this point, because files of {placed} are already in this game copy."
+            )),
+            "{reason}"
+        );
+        assert!(left_out_records(&fixture.request.created.managed_root).is_empty());
+        assert!(deps.receipts.last().unwrap().left_out.is_empty());
+    }
+}
+
+#[test]
+fn a_part_the_recipe_cannot_do_without_seals_the_copy_when_it_cannot_be_placed() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
+        essential: vec!["eefix".to_owned()],
+        ..eefix_recipe_deps()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let CampaignOutcome::FreshCopyRequired { step_id, reason } = outcome else {
+        panic!("expected a sealed copy, got {outcome:?}");
+    };
+    assert_eq!(step_id, "materialize:eefix:bg1");
+    assert!(reason.contains(UNPLACEABLE), "{reason}");
+    assert!(reason.contains("fixed part of this collection"), "{reason}");
+    assert!(left_out_records(&fixture.request.created.managed_root).is_empty());
+}
+
+#[test]
+fn a_mod_the_recipe_cannot_do_without_fails_its_step_instead_of_being_left_out() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        essential: vec!["eefix".to_owned()],
+        ..eefix_unusable_deps()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let CampaignOutcome::Failed { step_id, reason } = outcome else {
+        panic!("expected a failed acquisition, got {outcome:?}");
+    };
+    assert_eq!(step_id, "acquire:eefix");
+    assert!(reason.contains(LAYOUT_CHANGED), "{reason}");
+    assert!(reason.contains("fixed part of this collection"), "{reason}");
+    assert!(left_out_records(&fixture.request.created.managed_root).is_empty());
+    assert!(deps.receipts.last().unwrap().left_out.is_empty());
+}
+
+#[test]
+fn a_tool_whose_download_cannot_be_used_is_never_left_out() {
+    let fixture = Fixture::new();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        leave_out: BTreeMap::from([("weidu".to_owned(), "its program does not run".to_owned())]),
+        ..FakeDeps::default()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let CampaignOutcome::Failed { step_id, reason } = outcome else {
+        panic!("expected a failed acquisition, got {outcome:?}");
+    };
+    assert_eq!(step_id, "acquire:weidu");
+    assert!(
+        reason.contains("cannot continue without this tool"),
+        "{reason}"
+    );
+    assert!(deps.plan_without_calls.is_empty());
+}
+
+#[test]
+fn a_manual_pause_after_a_left_out_run_keeps_its_place_and_sees_the_remaining_plan() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let options = bg_engine::manual_checkpoint::options(&fixture.request.plan);
+    let after = options
+        .iter()
+        .find(|option| option.run_id == "eefix-bg2" && option.component == 2)
+        .unwrap()
+        .clone();
+    let mut deps = FakeDeps {
+        checkpoints: vec![bg_engine::manual_checkpoint::FrozenCheckpoint {
+            checkpoint_id: "manual-1".to_owned(),
+            after_run_id: "eefix-bg2".to_owned(),
+            after,
+            next: None,
+        }],
+        ..eefix_unusable_deps()
+    };
+
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    let steps = completed_step_ids(&fixture.request.created.managed_root);
+    let position = |id: &str| steps.iter().position(|step| step == id).unwrap();
+    assert!(position("materialize:tweaks:bg2") < position("checkpoint:manual-1"));
+    assert!(position("checkpoint:manual-1") < position("install:eet-core"));
+    assert_eq!(deps.checkpoint_plans, vec![fixture.plan_without_eefix()]);
 }

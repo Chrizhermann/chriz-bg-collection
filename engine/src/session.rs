@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::digest::{selection_digest, sha256_bytes};
 use crate::error::{EngineError, Result};
 use crate::recipe_view::NormalizedSelection;
+use crate::resolve::PlannedRun;
 
 const STATE_DIRECTORY: &str = ".chriz";
 const RECIPE_DIRECTORY: &str = "recipe";
@@ -123,6 +124,29 @@ pub enum SessionEvent {
         attempt: u32,
         /// Durable diagnostic summary.
         detail: String,
+    },
+    /// An acquisition or placing step ended because the mod's current download cannot be
+    /// used. The campaign continues without that mod and without everything that depends on
+    /// it.
+    ///
+    /// Like [`SessionEvent::StepCompleted`], this ends the step and advances the campaign.
+    ArtifactLeftOut {
+        /// Stable acquisition or placing step id of the payload.
+        step_id: String,
+        /// Attempt that found the download unusable.
+        attempt: u32,
+        /// Payload artifact that is left out.
+        artifact_id: String,
+        /// Why its download cannot be used.
+        detail: String,
+        /// Digest of the plan that remains to be installed, rechecked on every resume.
+        plan_sha256: String,
+        /// Runs of the plan before this record that are no longer installed, in plan order.
+        removed_runs: Vec<String>,
+        /// Runs still installed in another form, as they are installed now: with fewer
+        /// components, other prompt answers or without their recipe checks. Together with
+        /// `removed_runs` this rebuilds the remaining plan on a resume.
+        changed_runs: Vec<PlannedRun>,
     },
 }
 
@@ -802,6 +826,54 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
             }
             Ok(())
         }
+        SessionEvent::ArtifactLeftOut {
+            step_id,
+            attempt,
+            artifact_id,
+            detail,
+            plan_sha256,
+            removed_runs,
+            changed_runs,
+        } => {
+            validate_step(step_id, *attempt, path)?;
+            validate_artifact_identifier(artifact_id, "left-out artifact", path)?;
+            let own_step = step_id.strip_prefix("acquire:") == Some(artifact_id.as_str())
+                || step_id
+                    .strip_prefix("materialize:")
+                    .and_then(|rest| rest.strip_prefix(artifact_id.as_str()))
+                    .is_some_and(|root| matches!(root, ":bg1" | ":bg2"));
+            if !own_step {
+                return Err(ledger_error(
+                    path,
+                    "a left-out artifact must end its own acquisition or placing step",
+                ));
+            }
+            let mut runs = BTreeSet::new();
+            if removed_runs
+                .iter()
+                .chain(changed_runs.iter().map(|run| &run.run_id))
+                .any(|run_id| run_id.is_empty() || !runs.insert(run_id.as_str()))
+            {
+                return Err(ledger_error(
+                    path,
+                    "a left-out record must name each removed or changed run once",
+                ));
+            }
+            if detail.trim().is_empty() {
+                return Err(ledger_error(path, "terminal step detail may not be empty"));
+            }
+            if plan_sha256.len() != 64
+                || !plan_sha256
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            {
+                return Err(ledger_error(
+                    path,
+                    "the remaining plan digest must be 64 lowercase hexadecimal characters",
+                ));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -858,6 +930,9 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             }
             | SessionEvent::FreshCopyRequired {
                 step_id, attempt, ..
+            }
+            | SessionEvent::ArtifactLeftOut {
+                step_id, attempt, ..
             },
         ) if current_step == step_id && current_attempt == attempt => Ok(()),
         (Some(_), SessionEvent::StepStarted { .. }) => Err(ledger_error(
@@ -868,7 +943,8 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             None,
             SessionEvent::StepCompleted { .. }
             | SessionEvent::StepFailed { .. }
-            | SessionEvent::FreshCopyRequired { .. },
+            | SessionEvent::FreshCopyRequired { .. }
+            | SessionEvent::ArtifactLeftOut { .. },
         ) => Err(ledger_error(
             path,
             "terminal step event has no matching StepStarted",
@@ -877,7 +953,8 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             Some(_),
             SessionEvent::StepCompleted { .. }
             | SessionEvent::StepFailed { .. }
-            | SessionEvent::FreshCopyRequired { .. },
+            | SessionEvent::FreshCopyRequired { .. }
+            | SessionEvent::ArtifactLeftOut { .. },
         ) => Err(ledger_error(
             path,
             "terminal step event does not match the unresolved step",
@@ -914,7 +991,10 @@ fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<ReplayProgre
                 unresolved = Some((step_id.clone(), *attempt));
                 last_failed = None;
             }
-            SessionEvent::StepCompleted { step_id, attempt } => match unresolved.as_ref() {
+            SessionEvent::StepCompleted { step_id, attempt }
+            | SessionEvent::ArtifactLeftOut {
+                step_id, attempt, ..
+            } => match unresolved.as_ref() {
                 Some((current_step, current_attempt))
                     if current_step == step_id && current_attempt == attempt =>
                 {

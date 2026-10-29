@@ -395,6 +395,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     "managed_root": report.managed_root,
                     "receipt": report.receipt,
                     "recovery": report.recovery,
+                    "notes": report.notes,
                 }));
             } else {
                 println!(
@@ -404,6 +405,9 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     report.receipt.outcome
                 );
                 println!("Plan SHA-256: {}", report.receipt.plan_sha256);
+                for note in &report.notes {
+                    println!("{note}");
+                }
                 if let Some(recovery) = report.recovery {
                     println!(
                         "Current installation: {} — verified supervised recovery",
@@ -517,6 +521,16 @@ fn finish_human_campaign(report: bg_engine::cli::CampaignReport) -> Result<(), C
             "Managed installation ready at {}",
             report.managed_root.display()
         );
+        // The end summary names mods left out and downloads that changed; the installation
+        // is complete either way, so a summary that cannot be read is only reported.
+        match bg_engine::cli::report_managed_install(&report.managed_root) {
+            Ok(managed) => {
+                for note in managed.notes {
+                    println!("{note}");
+                }
+            }
+            Err(error) => eprintln!("The end summary could not be read: {error}"),
+        }
         Ok(())
     } else {
         Err(CliError::from_campaign(report))

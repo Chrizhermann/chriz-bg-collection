@@ -116,6 +116,48 @@ pub struct ArtifactReceipt {
     pub sha256: String,
     /// Whether acquisition downloaded, imported, or reused the archive.
     pub cache_outcome: ArtifactCacheOutcome,
+    /// Present only when the official link served a different file than the reviewed pin.
+    /// CEBG installs what the link serves; `length` and `sha256` above then describe that
+    /// served file, and this records both identities for reports and diagnostics.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub served_difference: Option<ServedDifference>,
+}
+
+impl ArtifactReceipt {
+    /// The identity the recipe was reviewed with: the served file itself unless it differed.
+    pub fn reviewed_identity(&self) -> (u64, &str) {
+        match &self.served_difference {
+            Some(difference) => (difference.reviewed.length, &difference.reviewed.sha256),
+            None => (self.length, &self.sha256),
+        }
+    }
+}
+
+/// One file identity of a download: what the recipe was reviewed with, or what was served.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DownloadIdentity {
+    /// File name, when known: the recipe's name for the reviewed file, the server's for the
+    /// served one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filename: Option<String>,
+    /// Byte length.
+    pub length: u64,
+    /// Lowercase SHA-256.
+    pub sha256: String,
+}
+
+/// How a download differed from its reviewed pin.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ServedDifference {
+    /// The file the recipe was reviewed with.
+    pub reviewed: DownloadIdentity,
+    /// The file the official link served, which this installation uses.
+    pub served: DownloadIdentity,
+    /// Lowercase hosts the download was redirected to that the recipe did not review.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unreviewed_hosts: Vec<String>,
 }
 
 /// Exact executable identity for a WeiDU tool used by one or more runs.
@@ -130,6 +172,47 @@ pub struct WeiDuToolReceipt {
     pub length: u64,
     /// Verified executable SHA-256.
     pub sha256: String,
+    /// Present only when the tool's download differed from the reviewed pin: the executable
+    /// identity the recipe was reviewed with. The fields above describe the executable used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reviewed: Option<ReviewedTool>,
+}
+
+impl WeiDuToolReceipt {
+    /// The identity the recipe was reviewed with: the executable itself unless it differed.
+    pub fn reviewed_identity(&self) -> (&str, u64, &str) {
+        match &self.reviewed {
+            Some(reviewed) => (&reviewed.version, reviewed.length, &reviewed.sha256),
+            None => (&self.version, self.length, &self.sha256),
+        }
+    }
+}
+
+/// The reviewed executable identity of a WeiDU tool whose download changed.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReviewedTool {
+    /// Reviewed WeiDU version.
+    pub version: String,
+    /// Reviewed executable byte length.
+    pub length: u64,
+    /// Reviewed executable SHA-256.
+    pub sha256: String,
+}
+
+/// A mod whose download could not be used, so the installation continued without it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LeftOutReceipt {
+    /// Payload artifact whose download could not be used.
+    pub artifact_id: String,
+    /// Why its download could not be used.
+    pub reason: String,
+    /// Planned runs not installed because of it, including runs of mods that need it.
+    pub runs: Vec<String>,
+    /// Planned runs installed with fewer components or other prompt answers because of it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub changed_runs: Vec<String>,
 }
 
 /// One output-gated prompt observed during a WeiDU run.
@@ -300,6 +383,19 @@ pub struct InstallReceipt {
     pub runs: Vec<RunReceipt>,
     /// Final log, identity, save-root, and launch evidence on success.
     pub final_state: Option<FinalReceiptState>,
+    /// Mods left out because their downloads could not be used, in installation order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub left_out: Vec<LeftOutReceipt>,
+    /// The plan actually installed when mods were left out. Absent means [`Self::plan`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub installed_plan: Option<InstallPlan>,
+}
+
+impl InstallReceipt {
+    /// The plan this installation actually runs: the frozen plan minus left-out mods.
+    pub fn effective_plan(&self) -> &InstallPlan {
+        self.installed_plan.as_ref().unwrap_or(&self.plan)
+    }
 }
 
 /// Paths durably published for an attempt.
@@ -490,6 +586,17 @@ impl ManagedReceiptWriter {
             weidu_tools: self.evidence.weidu_tools.clone(),
             runs: self.evidence.runs.clone(),
             final_state: final_state.clone(),
+            left_out: draft
+                .left_out
+                .iter()
+                .map(|left_out| LeftOutReceipt {
+                    artifact_id: left_out.artifact_id.clone(),
+                    reason: left_out.reason.clone(),
+                    runs: left_out.runs.clone(),
+                    changed_runs: left_out.changed_runs.clone(),
+                })
+                .collect(),
+            installed_plan: draft.installed_plan.clone(),
         };
         let published = self.store.publish(&receipt)?;
         let Some(final_state) = final_state else {
@@ -563,39 +670,79 @@ impl ManagedReceiptWriter {
                 "exact plan does not match its frozen digest".to_owned(),
             ));
         }
+        if draft.left_out.is_empty() != draft.installed_plan.is_none() {
+            return Err(ManagedReceiptError::Evidence(
+                "an installed plan must be recorded exactly when mods were left out".to_owned(),
+            ));
+        }
+        let installed = draft.effective_plan();
         validate_source_evidence(&self.evidence.source_games, draft, require_complete)?;
+        let needed_artifacts = needed_identities(
+            &draft.created.artifact_identities,
+            installed,
+            !draft.left_out.is_empty(),
+            |run, id| run.artifact_id == id || run.weidu_artifact_id == id,
+        );
         validate_identity_evidence(
             "artifact",
             &self.evidence.artifacts,
             &draft.created.artifact_identities,
+            &needed_artifacts,
             |artifact| {
-                (
-                    &artifact.id,
-                    &artifact.version,
-                    artifact.length,
-                    &artifact.sha256,
-                )
+                if let Some(difference) = &artifact.served_difference {
+                    if difference.served.length != artifact.length
+                        || !difference
+                            .served
+                            .sha256
+                            .eq_ignore_ascii_case(&artifact.sha256)
+                        || difference
+                            .served
+                            .sha256
+                            .eq_ignore_ascii_case(&difference.reviewed.sha256)
+                    {
+                        return Err(format!(
+                            "artifact {:?} records a served file that contradicts its own identity",
+                            artifact.id
+                        ));
+                    }
+                }
+                let (length, sha256) = artifact.reviewed_identity();
+                Ok((
+                    artifact.id.as_str(),
+                    artifact.version.as_str(),
+                    length,
+                    sha256,
+                ))
             },
             require_complete,
         )?;
+        let needed_tools = needed_identities(
+            &draft.created.tool_identities,
+            installed,
+            !draft.left_out.is_empty(),
+            |run, id| run.weidu_artifact_id == id,
+        );
         validate_identity_evidence(
             "WeiDU tool",
             &self.evidence.weidu_tools,
             &draft.created.tool_identities,
-            |tool| (&tool.id, &tool.version, tool.length, &tool.sha256),
+            &needed_tools,
+            |tool| {
+                let (version, length, sha256) = tool.reviewed_identity();
+                Ok((tool.id.as_str(), version, length, sha256))
+            },
             require_complete,
         )?;
-        if self.evidence.runs.len() != draft.plan.runs.len() {
+        if self.evidence.runs.len() != installed.runs.len() {
             return Err(ManagedReceiptError::Evidence(format!(
                 "run evidence count {} differs from plan count {}",
                 self.evidence.runs.len(),
-                draft.plan.runs.len()
+                installed.runs.len()
             )));
         }
         let mut seen_runs = BTreeSet::new();
         for evidence in &self.evidence.runs {
-            let planned = draft
-                .plan
+            let planned = installed
                 .runs
                 .iter()
                 .find(|planned| planned.run_id == evidence.run_id);
@@ -723,29 +870,40 @@ fn validate_source_evidence(
     Ok(())
 }
 
+/// The frozen identities a complete receipt must cover: all of them, unless mods were left
+/// out; then only those the installed plan still uses.
+pub(crate) fn needed_identities<'a>(
+    frozen: &'a [FrozenIdentity],
+    installed: &InstallPlan,
+    mods_left_out: bool,
+    uses: impl Fn(&crate::resolve::PlannedRun, &str) -> bool,
+) -> BTreeSet<&'a str> {
+    frozen
+        .iter()
+        .map(|identity| identity.id.as_str())
+        .filter(|id| !mods_left_out || installed.runs.iter().any(|run| uses(run, id)))
+        .collect()
+}
+
+/// Every evidence item must match exactly one frozen identity by the identity it was reviewed
+/// with, at most once. A complete receipt covers every identity in `needed`.
 fn validate_identity_evidence<'a, T, F>(
     label: &str,
     evidence: &'a [T],
     frozen: &[FrozenIdentity],
+    needed: &BTreeSet<&str>,
     fields: F,
     require_complete: bool,
 ) -> Result<(), ManagedReceiptError>
 where
-    F: Fn(&'a T) -> (&'a String, &'a String, u64, &'a String),
+    F: Fn(&'a T) -> Result<(&'a str, &'a str, u64, &'a str), String>,
 {
-    if require_complete && evidence.len() != frozen.len() {
-        return Err(ManagedReceiptError::Evidence(format!(
-            "{label} evidence count {} differs from frozen count {}",
-            evidence.len(),
-            frozen.len()
-        )));
-    }
     let mut seen = BTreeSet::new();
     for item in evidence {
-        let (id, version, length, sha256) = fields(item);
+        let (id, version, length, sha256) = fields(item).map_err(ManagedReceiptError::Evidence)?;
         let matches = frozen.iter().filter(|identity| {
-            id == &identity.id
-                && version == &identity.version
+            id == identity.id
+                && version == identity.version
                 && length == identity.length
                 && sha256.eq_ignore_ascii_case(&identity.sha256)
         });
@@ -755,6 +913,13 @@ where
                 id
             )));
         }
+    }
+    if require_complete && needed.iter().any(|id| !seen.contains(id)) {
+        return Err(ManagedReceiptError::Evidence(format!(
+            "{label} evidence count {} does not cover the {} identities the installed plan needs",
+            evidence.len(),
+            needed.len()
+        )));
     }
     Ok(())
 }
@@ -848,11 +1013,16 @@ impl ReceiptStore {
                     .to_owned(),
             ));
         }
+        if receipt.left_out.is_empty() != receipt.installed_plan.is_none() {
+            return Err(ReceiptError::InvalidReceipt(
+                "an installed plan must be recorded exactly when mods were left out".to_owned(),
+            ));
+        }
+        let installed = receipt.effective_plan();
         let require_complete = receipt.outcome.is_success();
         let mut seen_runs = BTreeSet::new();
         for evidence in &receipt.runs {
-            let planned = receipt
-                .plan
+            let planned = installed
                 .runs
                 .iter()
                 .find(|planned| planned.run_id == evidence.run_id);
@@ -873,7 +1043,7 @@ impl ReceiptStore {
             )
             .map_err(ReceiptError::InvalidReceipt)?;
         }
-        if receipt.runs.len() != receipt.plan.runs.len() {
+        if receipt.runs.len() != installed.runs.len() {
             return Err(ReceiptError::InvalidReceipt(
                 "receipt does not have exactly one logical row per planned run".to_owned(),
             ));

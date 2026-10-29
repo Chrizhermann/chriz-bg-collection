@@ -1,11 +1,16 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use bg_engine::manifest::{
-    Component, ComponentRef, Conflict, Decision, Feature, FeatureInputRef, InputOption, InputSpec,
-    InputValue, InvocationMode, ModFile, Phase, PromptAnswer, PromptStep, Readiness, Run,
+    Component, ComponentRef, Conflict, Decision, Feature, FeatureGroup, FeatureGroupVariant,
+    FeatureInputRef, InputOption, InputSpec, InputValue, InvocationMode, ModFile, Phase,
+    Postcondition, PromptAnswer, PromptStep, Readiness, Run,
 };
-use bg_engine::recipe_view::{evaluate, evaluate_preset, render_prompt_script};
+use bg_engine::manual_checkpoint::{split_plan, ManualBreakpoint};
+use bg_engine::recipe_view::{
+    evaluate, evaluate_preset, feature_group_changes, plan_without_artifacts, render_prompt_script,
+    FeatureGroupTarget, LeaveOutError,
+};
 use bg_engine::resolve::Selection;
 use bg_engine::validate::check;
 use bg_engine::Manifest;
@@ -1026,4 +1031,775 @@ fn conditional_prompt_uses_effective_state_when_selected_child_has_disabled_pare
         .unwrap());
     assert!(!evaluation.view.control("condition-a").unwrap().selected);
     assert!(run.prompt_scripts.is_empty());
+}
+
+/// Adds a run whose installer comes from its own download, `{run_id}-archive`.
+fn add_run_with_own_download(manifest: &mut Manifest, run_id: &str, components: &[u32]) {
+    add_run(manifest, run_id, components);
+    let tp2 = format!("{run_id}/{run_id}.tp2");
+    let shared = manifest.artifacts.get_mut("eefixpack").unwrap();
+    shared.archive.publish_roots.retain(|root| root != run_id);
+    shared.archive.tp2_paths.retain(|path| *path != tp2);
+    let artifact_id = format!("{run_id}-archive");
+    let mut artifact = manifest.artifacts["eefixpack"].clone();
+    artifact.id = artifact_id.clone();
+    artifact.name = format!("{run_id} download");
+    artifact.source.url = format!("https://example.invalid/{run_id}.zip");
+    artifact.source.expected_filename = Some(format!("{run_id}.zip"));
+    artifact.archive.publish_roots = vec![run_id.to_owned()];
+    artifact.archive.tp2_paths = vec![tp2];
+    manifest.artifacts.insert(artifact_id.clone(), artifact);
+    manifest.mods.get_mut(run_id).unwrap().artifact_id = artifact_id;
+}
+
+fn literal_prompt(expected_output: &str, when_any_features: &[&str]) -> PromptStep {
+    PromptStep {
+        expected_output: expected_output.to_owned(),
+        answer: PromptAnswer::Literal(InputValue::Boolean(true)),
+        when_any_features: when_any_features
+            .iter()
+            .map(|feature| (*feature).to_owned())
+            .collect(),
+    }
+}
+
+fn marker_check() -> Postcondition {
+    Postcondition::TextFileMarkers {
+        path: "weidu.conf".to_owned(),
+        required: vec!["lang_dir = en_US".to_owned()],
+        forbidden: Vec::new(),
+        max_bytes: 4096,
+    }
+}
+
+/// A collection around one mod, `snowy`, whose download may become unusable: a fixed core,
+/// mods and tweaks that need `snowy` through each kind of relation, and unrelated parts.
+fn leave_out_manifest() -> Manifest {
+    let mut manifest = fixture();
+    manifest.collection.runs.clear();
+    for (run_id, components) in [
+        ("core", &[0][..]),
+        ("snowy", &[0, 1][..]),
+        ("needs-snowy", &[0][..]),
+        ("either", &[0][..]),
+        ("other", &[0][..]),
+        ("alt", &[0][..]),
+        ("snowy-patch", &[0][..]),
+        ("tweaks", &[1, 2, 3, 4][..]),
+    ] {
+        add_run_with_own_download(&mut manifest, run_id, components);
+    }
+    for run in manifest
+        .collection
+        .runs
+        .iter_mut()
+        .filter(|run| run.run_id == "tweaks" || run.run_id == "other")
+    {
+        run.postconditions.push(marker_check());
+    }
+    let tweaks = manifest.mods.get_mut("tweaks").unwrap();
+    tweaks.components[0].prompts = vec![literal_prompt("Always asked", &[])];
+    tweaks.components[2].prompts = vec![
+        literal_prompt("Patch the snowy areas?", &["snowy"]),
+        literal_prompt("Confirm", &[]),
+    ];
+
+    let mut snowy_extra = feature(
+        "snowy-extra",
+        Decision::Mandatory,
+        component_refs("snowy", &[1]),
+    );
+    snowy_extra.parent = Some("snowy".to_owned());
+    let mut snowy_patch = feature(
+        "snowy-patch",
+        Decision::Mandatory,
+        component_refs("snowy-patch", &[0]),
+    );
+    snowy_patch.parent = Some("snowy".to_owned());
+    let mut needs_snowy = feature(
+        "needs-snowy",
+        Decision::Default,
+        component_refs("needs-snowy", &[0]),
+    );
+    needs_snowy.requires.push("snowy".to_owned());
+    let mut either = feature("either", Decision::Default, component_refs("either", &[0]));
+    either.requires_any = vec!["snowy".to_owned(), "other".to_owned()];
+    let mut alt = feature("alt", Decision::Optional, component_refs("alt", &[0]));
+    alt.conflicts.push(Conflict {
+        feature_id: "snowy".to_owned(),
+        reason: "Choose either snowy or its alternative.".to_owned(),
+    });
+    let mut tweak_snowy = feature(
+        "tweak-snowy",
+        Decision::Default,
+        component_refs("tweaks", &[2]),
+    );
+    tweak_snowy.requires.push("snowy".to_owned());
+    let mut tweak_under_snowy = feature(
+        "tweak-under-snowy",
+        Decision::Default,
+        component_refs("tweaks", &[4]),
+    );
+    tweak_under_snowy.parent = Some("snowy".to_owned());
+    manifest.collection.features = vec![
+        feature("core", Decision::Mandatory, component_refs("core", &[0])),
+        feature("snowy", Decision::Default, component_refs("snowy", &[0])),
+        snowy_extra,
+        snowy_patch,
+        needs_snowy,
+        either,
+        feature("other", Decision::Default, component_refs("other", &[0])),
+        alt,
+        feature(
+            "tweak-plain",
+            Decision::Default,
+            component_refs("tweaks", &[1]),
+        ),
+        tweak_snowy,
+        feature(
+            "tweak-prompted",
+            Decision::Default,
+            component_refs("tweaks", &[3]),
+        ),
+        tweak_under_snowy,
+    ];
+    manifest
+}
+
+fn unusable(artifact_ids: &[&str]) -> BTreeSet<String> {
+    artifact_ids.iter().map(|id| (*id).to_owned()).collect()
+}
+
+fn run_ids(plan: &bg_engine::resolve::InstallPlan) -> Vec<&str> {
+    plan.runs.iter().map(|run| run.run_id.as_str()).collect()
+}
+
+fn planned_run<'a>(
+    plan: &'a bg_engine::resolve::InstallPlan,
+    run_id: &str,
+) -> &'a bg_engine::resolve::PlannedRun {
+    plan.runs
+        .iter()
+        .find(|run| run.run_id == run_id)
+        .unwrap_or_else(|| panic!("run {run_id} is not planned"))
+}
+
+fn prompt_outputs(run: &bg_engine::resolve::PlannedRun) -> Vec<(u32, Vec<&str>)> {
+    run.prompt_scripts
+        .iter()
+        .map(|script| {
+            (
+                script.component.component,
+                script
+                    .steps
+                    .iter()
+                    .map(|step| step.expected_output.as_str())
+                    .collect(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn leaving_out_a_mod_drops_its_runs_and_everything_that_needs_it() {
+    let manifest = leave_out_manifest();
+    check(&manifest).unwrap();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let plan = &evaluation.plan;
+    assert_eq!(
+        run_ids(plan),
+        [
+            "core",
+            "snowy",
+            "needs-snowy",
+            "either",
+            "other",
+            "snowy-patch",
+            "tweaks"
+        ]
+    );
+    assert_eq!(planned_run(plan, "tweaks").components, [1, 2, 3, 4]);
+    assert_eq!(
+        prompt_outputs(planned_run(plan, "tweaks")),
+        [
+            (1, vec!["Always asked"]),
+            (3, vec!["Patch the snowy areas?", "Confirm"])
+        ]
+    );
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // `needs-snowy` (requires), `snowy-patch` (mandatory child) and the tweaks that need
+    // snowy (requires, parent) go; `either` keeps `other`, which it may use instead.
+    assert_eq!(run_ids(&remaining), ["core", "either", "other", "tweaks"]);
+    assert_eq!(planned_run(&remaining, "core"), planned_run(plan, "core"));
+    assert_eq!(
+        planned_run(&remaining, "either"),
+        planned_run(plan, "either")
+    );
+    assert_eq!(planned_run(&remaining, "other"), planned_run(plan, "other"));
+    assert_eq!(
+        planned_run(&remaining, "other").postconditions,
+        [marker_check()]
+    );
+    let tweaks = planned_run(&remaining, "tweaks");
+    assert_eq!(tweaks.components, [1, 3]);
+    // The recipe checks describe the complete run, so a run with fewer parts drops them.
+    assert!(tweaks.postconditions.is_empty());
+    // The answer that only applies with snowy is no longer given.
+    assert_eq!(
+        prompt_outputs(tweaks),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+}
+
+#[test]
+fn leaving_out_a_mod_never_adds_a_part_the_player_did_not_get() {
+    let manifest = leave_out_manifest();
+    let mut selection = Selection::defaults("windows");
+    // `alt` is ticked but loses to snowy; `either` then only works through snowy.
+    selection.set_feature("alt", true);
+    selection.set_feature("other", false);
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+    assert!(!run_ids(&evaluation.plan).contains(&"alt"));
+    assert!(run_ids(&evaluation.plan).contains(&"either"));
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    assert_eq!(run_ids(&remaining), ["core", "tweaks"]);
+    assert_eq!(planned_run(&remaining, "tweaks").components, [1, 3]);
+}
+
+#[test]
+fn a_required_part_of_a_selectable_mod_leaves_out_that_whole_mod() {
+    let manifest = leave_out_manifest();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let without_snowy = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // `snowy-patch` is always installed with snowy, so losing its own download means
+    // leaving out snowy and everything that needs it.
+    let without_patch = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &unusable(&["snowy-patch-archive"]),
+    )
+    .unwrap();
+
+    assert_eq!(without_patch, without_snowy);
+}
+
+#[test]
+fn a_fixed_part_of_the_collection_is_never_left_out() {
+    let manifest = leave_out_manifest();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+
+    for artifacts in [
+        &["core-archive"][..],
+        &["snowy-archive", "core-archive"][..],
+    ] {
+        let error = plan_without_artifacts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &unusable(artifacts),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error,
+            LeaveOutError::Required {
+                feature_id: "core".to_owned(),
+                title: "core".to_owned(),
+            }
+        );
+        assert_eq!(
+            error.to_string(),
+            "core is a fixed part of this collection, so the installation cannot continue without it"
+        );
+    }
+}
+
+#[test]
+fn an_unused_or_empty_leave_out_keeps_the_plan_exactly() {
+    let manifest = leave_out_manifest();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+
+    for artifacts in [&[][..], &["alt-archive"][..]] {
+        let remaining = plan_without_artifacts(
+            &manifest,
+            &evaluation.normalized_selection,
+            &evaluation.plan,
+            &unusable(artifacts),
+        )
+        .unwrap();
+        assert_eq!(remaining, evaluation.plan);
+    }
+}
+
+#[test]
+fn manual_pause_segments_keep_their_identity_when_mods_are_left_out() {
+    let manifest = leave_out_manifest();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let (split, _checkpoints) = split_plan(
+        &evaluation.plan,
+        &[
+            ManualBreakpoint {
+                run_id: "tweaks".to_owned(),
+                component: 1,
+            },
+            ManualBreakpoint {
+                run_id: "snowy".to_owned(),
+                component: 0,
+            },
+        ],
+    )
+    .unwrap();
+    assert_eq!(
+        run_ids(&split),
+        [
+            "core",
+            "snowy--manual-0",
+            "snowy",
+            "needs-snowy",
+            "either",
+            "other",
+            "snowy-patch",
+            "tweaks--manual-1",
+            "tweaks"
+        ]
+    );
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &split,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks--manual-1", "tweaks"]
+    );
+    assert_eq!(
+        planned_run(&remaining, "tweaks--manual-1"),
+        planned_run(&split, "tweaks--manual-1")
+    );
+    let tail = planned_run(&remaining, "tweaks");
+    assert_eq!(tail.components, [3]);
+    assert!(tail.postconditions.is_empty());
+    assert_eq!(prompt_outputs(tail), [(3, vec!["Confirm"])]);
+}
+
+#[test]
+fn a_planned_run_outside_the_recipe_is_refused() {
+    let manifest = leave_out_manifest();
+    let evaluation = evaluate(&manifest, &Selection::defaults("windows")).unwrap();
+    let mut plan = evaluation.plan.clone();
+    plan.runs[0].run_id = "core-renamed".to_owned();
+
+    let error = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap_err();
+
+    assert!(matches!(error, LeaveOutError::Invalid(_)), "{error:?}");
+}
+
+/// Turns `options` into one choice group the way the recipe authors them: shared labels and
+/// choice group, and each option conflicting with every other one.
+fn choice_options(mut options: Vec<Feature>, choice_group: &str, label: &str) -> Vec<Feature> {
+    let ids = options
+        .iter()
+        .map(|option| option.id.clone())
+        .collect::<Vec<_>>();
+    for option in &mut options {
+        option.source_label = Some("Choice mod".to_owned());
+        option.group_label = Some(label.to_owned());
+        option.choice_group = Some(choice_group.to_owned());
+        option.conflicts.extend(
+            ids.iter()
+                .filter(|id| **id != option.id)
+                .map(|id| Conflict {
+                    feature_id: id.clone(),
+                    reason: format!("Choose one {label}."),
+                }),
+        );
+    }
+    options
+}
+
+/// `leave_out_manifest()` with three choice groups:
+/// - `frost`: the default `frost-plain` works alone, the alternative `frost-snowy` requires
+///   snowy;
+/// - `drift`: both options are parts of the snowy mod itself, under the snowy feature;
+/// - `stack`: unrelated to snowy, in a run with a recipe check and a prompt.
+///
+/// A `winter` feature group picks `frost-snowy` and `drift-heavy`, and the tweak run asks a
+/// question for each frost option.
+fn leave_out_choice_manifest() -> Manifest {
+    let mut manifest = leave_out_manifest();
+    let snowy = manifest.mods.get_mut("snowy").unwrap();
+    snowy.components.extend([component(2), component(3)]);
+    manifest
+        .collection
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == "snowy")
+        .unwrap()
+        .components
+        .extend([2, 3]);
+    add_run_with_own_download(&mut manifest, "frost", &[0, 1]);
+    add_run_with_own_download(&mut manifest, "stacking", &[0, 1]);
+    manifest
+        .collection
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == "stacking")
+        .unwrap()
+        .postconditions
+        .push(marker_check());
+    manifest.mods.get_mut("stacking").unwrap().components[1].prompts =
+        vec![literal_prompt("How many per stack?", &[])];
+    manifest.mods.get_mut("tweaks").unwrap().components[0]
+        .prompts
+        .extend([
+            literal_prompt("Snowy frost?", &["frost-snowy"]),
+            literal_prompt("Plain frost?", &["frost-plain"]),
+        ]);
+
+    let mut frost_snowy = feature(
+        "frost-snowy",
+        Decision::Optional,
+        component_refs("frost", &[1]),
+    );
+    frost_snowy.requires.push("snowy".to_owned());
+    let frost = choice_options(
+        vec![
+            feature(
+                "frost-plain",
+                Decision::Default,
+                component_refs("frost", &[0]),
+            ),
+            frost_snowy,
+        ],
+        "frost",
+        "frost",
+    );
+    let mut drift = choice_options(
+        vec![
+            feature(
+                "drift-light",
+                Decision::Default,
+                component_refs("snowy", &[2]),
+            ),
+            feature(
+                "drift-heavy",
+                Decision::Optional,
+                component_refs("snowy", &[3]),
+            ),
+        ],
+        "drift",
+        "snow drift",
+    );
+    for option in &mut drift {
+        option.parent = Some("snowy".to_owned());
+    }
+    let stack = choice_options(
+        vec![
+            feature(
+                "stack-small",
+                Decision::Default,
+                component_refs("stacking", &[0]),
+            ),
+            feature(
+                "stack-big",
+                Decision::Optional,
+                component_refs("stacking", &[1]),
+            ),
+        ],
+        "stack",
+        "stack size",
+    );
+    manifest
+        .collection
+        .features
+        .extend(frost.into_iter().chain(drift).chain(stack));
+    manifest.collection.feature_groups.push(FeatureGroup {
+        id: "winter".to_owned(),
+        title: "Winter".to_owned(),
+        description: "Pick the snowy options.".to_owned(),
+        members: Vec::new(),
+        variants: vec![
+            FeatureGroupVariant {
+                choice_group: "frost".to_owned(),
+                option: "frost-snowy".to_owned(),
+                label: None,
+            },
+            FeatureGroupVariant {
+                choice_group: "drift".to_owned(),
+                option: "drift-heavy".to_owned(),
+                label: None,
+            },
+        ],
+    });
+    manifest
+}
+
+fn choice_selection(choices: &[(&str, bool)]) -> Selection {
+    let mut selection = Selection::defaults("windows");
+    for (feature_id, selected) in choices {
+        selection.set_feature(feature_id, *selected);
+    }
+    selection
+}
+
+#[test]
+fn leaving_out_a_mod_drops_the_choice_that_needs_it_and_never_picks_the_alternative() {
+    let manifest = leave_out_choice_manifest();
+    check(&manifest).unwrap();
+    let evaluation = evaluate(
+        &manifest,
+        &choice_selection(&[("frost-plain", false), ("frost-snowy", true)]),
+    )
+    .unwrap();
+    let plan = &evaluation.plan;
+    assert_eq!(
+        run_ids(plan),
+        [
+            "core",
+            "snowy",
+            "needs-snowy",
+            "either",
+            "other",
+            "snowy-patch",
+            "tweaks",
+            "frost",
+            "stacking"
+        ]
+    );
+    assert_eq!(planned_run(plan, "frost").components, [1]);
+    assert_eq!(
+        prompt_outputs(planned_run(plan, "tweaks")),
+        [
+            (1, vec!["Always asked", "Snowy frost?"]),
+            (3, vec!["Patch the snowy areas?", "Confirm"])
+        ]
+    );
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // `frost-snowy` goes with snowy. `frost-plain`, the recipe default of the same choice,
+    // stays off: the player switched it off, and leaving out never adds a part, so the
+    // frost run goes completely.
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks", "stacking"]
+    );
+    let tweaks = planned_run(&remaining, "tweaks");
+    assert_eq!(tweaks.components, [1, 3]);
+    // Neither frost question is asked now: the snowy one lost its option, and the plain one
+    // was never selected.
+    assert_eq!(
+        prompt_outputs(tweaks),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+    assert_eq!(
+        planned_run(&remaining, "stacking"),
+        planned_run(plan, "stacking")
+    );
+}
+
+#[test]
+fn leaving_out_a_mod_never_lets_a_held_off_alternative_win_its_choice() {
+    let manifest = leave_out_choice_manifest();
+    // Both frost options are ticked, so they cancel each other and neither is installed.
+    let evaluation = evaluate(
+        &manifest,
+        &choice_selection(&[("frost-plain", true), ("frost-snowy", true)]),
+    )
+    .unwrap();
+    assert!(evaluation.normalized_selection.features["frost-plain"]);
+    assert!(!evaluation.view.control("frost-plain").unwrap().selected);
+    assert!(!run_ids(&evaluation.plan).contains(&"frost"));
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // Without snowy, `frost-snowy` would no longer hold `frost-plain` off, but the player did
+    // not get `frost-plain`, so leaving snowy out does not add it.
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks", "stacking"]
+    );
+    assert_eq!(
+        prompt_outputs(planned_run(&remaining, "tweaks")),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+}
+
+#[test]
+fn leaving_out_a_mod_undoes_a_feature_group_variant_without_restoring_the_default() {
+    let manifest = leave_out_choice_manifest();
+    let mut selection = Selection::defaults("windows");
+    for (feature_id, selected) in
+        feature_group_changes(&manifest, &selection, "winter", FeatureGroupTarget::On).unwrap()
+    {
+        selection.set_feature(&feature_id, selected);
+    }
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+    let plan = &evaluation.plan;
+    assert!(evaluation.view.control("frost-snowy").unwrap().selected);
+    assert!(evaluation.view.control("drift-heavy").unwrap().selected);
+    assert_eq!(planned_run(plan, "snowy").components, [0, 1, 3]);
+    assert_eq!(planned_run(plan, "frost").components, [1]);
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // Switching the group off would restore `frost-plain` and `drift-light`; leaving snowy out
+    // only removes, so neither comes back.
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks", "stacking"]
+    );
+    assert_eq!(planned_run(&remaining, "tweaks").components, [1, 3]);
+    assert_eq!(
+        prompt_outputs(planned_run(&remaining, "tweaks")),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+    assert_eq!(
+        planned_run(&remaining, "stacking"),
+        planned_run(plan, "stacking")
+    );
+}
+
+#[test]
+fn a_choice_made_of_the_left_out_mods_parts_goes_with_it() {
+    let manifest = leave_out_choice_manifest();
+    for (choices, snowy_components) in [
+        (&[][..], &[0, 1, 2][..]),
+        (
+            &[("drift-light", false), ("drift-heavy", true)][..],
+            &[0, 1, 3][..],
+        ),
+    ] {
+        let evaluation = evaluate(&manifest, &choice_selection(choices)).unwrap();
+        let plan = &evaluation.plan;
+        assert_eq!(planned_run(plan, "snowy").components, snowy_components);
+        assert_eq!(planned_run(plan, "frost").components, [0]);
+        assert_eq!(
+            prompt_outputs(planned_run(plan, "tweaks")),
+            [
+                (1, vec!["Always asked", "Plain frost?"]),
+                (3, vec!["Patch the snowy areas?", "Confirm"])
+            ]
+        );
+
+        let remaining = plan_without_artifacts(
+            &manifest,
+            &evaluation.normalized_selection,
+            plan,
+            &unusable(&["snowy-archive"]),
+        )
+        .unwrap();
+
+        // Whichever drift option was picked goes with snowy, and so does the other one; the
+        // frost default, which does not need snowy, stays exactly as planned.
+        assert_eq!(
+            run_ids(&remaining),
+            ["core", "either", "other", "tweaks", "frost", "stacking"]
+        );
+        assert_eq!(planned_run(&remaining, "frost"), planned_run(plan, "frost"));
+        let tweaks = planned_run(&remaining, "tweaks");
+        assert_eq!(tweaks.components, [1, 3]);
+        assert_eq!(
+            prompt_outputs(tweaks),
+            [
+                (1, vec!["Always asked", "Plain frost?"]),
+                (3, vec!["Confirm"])
+            ]
+        );
+    }
+}
+
+#[test]
+fn a_choice_unrelated_to_the_left_out_mod_stays_exactly_as_planned() {
+    let manifest = leave_out_choice_manifest();
+    // The default, the alternative with its prompt, and both ticked, where the options cancel
+    // each other and neither is installed.
+    for (choices, planned) in [
+        (&[][..], Some((&[0][..], Vec::new()))),
+        (
+            &[("stack-small", false), ("stack-big", true)][..],
+            Some((&[1][..], vec![(1, vec!["How many per stack?"])])),
+        ),
+        (&[("stack-small", true), ("stack-big", true)][..], None),
+    ] {
+        let evaluation = evaluate(&manifest, &choice_selection(choices)).unwrap();
+        let plan = &evaluation.plan;
+        assert_eq!(
+            plan.runs
+                .iter()
+                .find(|run| run.run_id == "stacking")
+                .map(|run| (run.components.as_slice(), prompt_outputs(run))),
+            planned
+        );
+
+        let remaining = plan_without_artifacts(
+            &manifest,
+            &evaluation.normalized_selection,
+            plan,
+            &unusable(&["snowy-archive"]),
+        )
+        .unwrap();
+
+        assert_eq!(
+            remaining.runs.iter().find(|run| run.run_id == "stacking"),
+            plan.runs.iter().find(|run| run.run_id == "stacking")
+        );
+        if planned.is_some() {
+            assert_eq!(
+                planned_run(&remaining, "stacking").postconditions,
+                [marker_check()]
+            );
+        }
+    }
 }

@@ -9,15 +9,113 @@ use sha2::{Digest, Sha256};
 use crate::events::{EngineEvent, EventSink, Stream};
 use crate::fs_retry;
 
+use super::archive::served_container_problem;
 use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
 use super::entry_lock::lock_entry;
-use super::http::{validate_download_url, HttpClient, HttpResponse};
+use super::http::{served_filename, validate_download_url, HttpClient, HttpResponse};
 use super::{
-    AcquireError, AcquiredArtifact, ArtifactMetadata, CacheDisposition, DownloadRequest, StopSignal,
+    AcquireError, AcquiredArtifact, ArchiveFormat, ArtifactMetadata, CacheDisposition,
+    DownloadRequest, StopSignal,
 };
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const MAX_PROGRESS_INTEGER: u64 = (1_u64 << 53) - 1;
+/// A download that differs from its pin may be this many times its reviewed length...
+const SERVED_GROWTH_FACTOR: u64 = 16;
+/// ...and always at least this long, so that small archives can grow as well.
+const SERVED_MINIMUM_LIMIT: u64 = 1024 * 1024 * 1024;
+
+/// Content that a campaign already accepted for a request whose download differed from its
+/// reviewed pin, so that later steps reuse exactly that archive.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AcceptedContent {
+    /// Accepted archive length in bytes.
+    pub length: u64,
+    /// Accepted archive SHA-256.
+    pub sha256: String,
+}
+
+/// What an official download link served: the reviewed archive, or a different file that was
+/// accepted and cached under its own digest.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ServedArtifact {
+    /// The cached archive and its provenance.
+    pub artifact: AcquiredArtifact,
+    /// File name the server gave the download; `None` when no transfer took place.
+    pub served_filename: Option<String>,
+    /// Redirect hosts that neither the link nor its reviewed redirect hosts name.
+    pub unreviewed_hosts: Vec<String>,
+}
+
+impl ServedArtifact {
+    fn cached(artifact: AcquiredArtifact) -> Self {
+        Self {
+            artifact,
+            served_filename: None,
+            unreviewed_hosts: Vec::new(),
+        }
+    }
+
+    /// Whether the cached bytes are exactly the archive that `request` pins.
+    pub fn matches_pin(&self, request: &DownloadRequest) -> bool {
+        self.artifact.metadata.length == request.expected_length
+            && self
+                .artifact
+                .metadata
+                .sha256
+                .eq_ignore_ascii_case(&request.expected_sha256)
+    }
+}
+
+/// What a download that may differ from its pin must still be.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ServedRules {
+    /// The archive kind the recipe declares. A changed download that is clearly not one, such
+    /// as an error page or a transfer that ended early, is asked for again instead of accepted.
+    pub format: ArchiveFormat,
+    /// Which hosts a changed download may come from.
+    pub redirects: ServedRedirects,
+}
+
+/// Which hosts a download that may differ from its pin may come from. Its HTTPS redirects are
+/// followed to any host either way, and the hosts outside the link's own and its reviewed ones
+/// are reported; a plain-HTTP downgrade is always refused.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ServedRedirects {
+    /// Any HTTPS host.
+    AnyHttpsHost,
+    /// Any HTTPS host for the reviewed file, which its digest proves; a changed file only from
+    /// the link's own host and its reviewed redirect hosts. For installer tools: the program
+    /// that runs every mod comes only from where it was reviewed, while a moved download host
+    /// does not stop an installation that gets exactly the reviewed program.
+    ReviewedHostsForChanges,
+}
+
+/// How long a download may be.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LengthPolicy {
+    /// Exactly the reviewed length, through reviewed redirect hosts only.
+    Reviewed,
+    /// Whatever the link serves up to `limit` bytes, through any HTTPS redirect, as `rules`
+    /// allow it.
+    Served {
+        /// Largest accepted download.
+        limit: u64,
+        /// What a changed download must still be.
+        rules: ServedRules,
+    },
+}
+
+/// The largest download accepted in place of an archive pinned at `reviewed_length` bytes.
+///
+/// A grown update must not fail the installation, but a wrong or runaway download must not fill
+/// the disk either: sixteen times the reviewed size, and never less than 1 GiB, leaves room for
+/// any realistic new version.
+pub fn served_length_limit(reviewed_length: u64) -> u64 {
+    reviewed_length
+        .saturating_mul(SERVED_GROWTH_FACTOR)
+        .clamp(SERVED_MINIMUM_LIMIT, MAX_PROGRESS_INTEGER)
+}
 
 /// A filesystem-backed cache of immutable, SHA-256-addressed archives.
 #[derive(Clone)]
@@ -29,6 +127,8 @@ pub struct ArtifactCache {
 #[derive(Debug, Deserialize, Serialize)]
 struct PartialState {
     original_url: String,
+    /// Total length of the entity being downloaded: the reviewed length, or for a changed
+    /// download the length its server announced.
     expected_length: u64,
     etag: String,
 }
@@ -36,16 +136,28 @@ struct PartialState {
 struct ResumeCandidate {
     start: u64,
     etag: String,
+    /// Total length of the entity the partial belongs to.
+    total: u64,
 }
 
 struct TransferResult {
     final_url: String,
     etag: Option<String>,
     last_modified: Option<String>,
+    served_filename: Option<String>,
+    unreviewed_hosts: Vec<String>,
+    /// Length and SHA-256 of the complete download, when the transfer already hashed it.
+    content: Option<(u64, String)>,
 }
 
 enum AttemptFailure {
+    /// A transport problem that a later attempt may not have.
     Retryable(AcquireError),
+    /// The server answered with nothing this download can use, such as a missing file or an
+    /// error page. A later attempt may still get the file, so it is asked again like a
+    /// transport problem; when no attempt is left, this answer itself is the result.
+    Unusable(AcquireError),
+    /// Asking again cannot help.
     Fatal(AcquireError),
 }
 
@@ -103,7 +215,9 @@ impl ArtifactCache {
         let mut repaired = None;
         {
             let _guard = lock_entry(&paths.lock, stop)?;
-            if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
+            if let Some(hit) =
+                self.usable_cache_entry(&paths, &digest, request.expected_length, &mut repaired)?
+            {
                 sink.emit(EngineEvent::StepProgress {
                     id: request.request_id.clone(),
                     done: request.expected_length,
@@ -113,7 +227,7 @@ impl ArtifactCache {
             }
         }
 
-        let transfer = self.transfer(request, &paths, sink)?;
+        let transfer = self.transfer(request, &paths, sink, LengthPolicy::Reviewed)?;
         let (actual_length, actual_digest) = hash_file(&paths.partial)?;
         if actual_length != request.expected_length {
             remove_if_exists(&paths.partial)?;
@@ -147,7 +261,9 @@ impl ArtifactCache {
         };
 
         let _guard = lock_entry(&paths.lock, stop)?;
-        if let Some(hit) = self.usable_cache_entry(&paths, &digest, request, &mut repaired)? {
+        if let Some(hit) =
+            self.usable_cache_entry(&paths, &digest, request.expected_length, &mut repaired)?
+        {
             remove_if_exists(&paths.partial)?;
             remove_if_exists(&paths.partial_state)?;
             return Ok(AcquiredArtifact { repaired, ..hit });
@@ -162,6 +278,125 @@ impl ArtifactCache {
         })
     }
 
+    /// Acquire what the official link serves, for an installation that must not fail because a
+    /// download changed after it was reviewed.
+    ///
+    /// The cache is asked first: for `accepted`, the changed content this campaign accepted
+    /// earlier, so that a resumed campaign keeps exactly the archive it started with; otherwise
+    /// for the reviewed archive. Only then is the link asked, and whatever it serves is
+    /// accepted: HTTPS redirects may lead to any host (the hosts outside the reviewed ones are
+    /// reported), a partial download resumes when the server proves the same entity, and the
+    /// file is cached under its own digest. A plain-HTTP downgrade is still refused, the
+    /// download may be at most [`served_length_limit`] bytes long, and a changed file comes
+    /// only from the hosts `rules.redirects` allows ([`AcquireError::UnreviewedRedirect`]).
+    ///
+    /// A server answer that a later attempt may not repeat is asked for again with the usual
+    /// waits, and returned only when no attempt is left: a file that is clearly not an archive
+    /// of `rules.format` ([`AcquireError::ServedNotArchive`]), or status 404 or 410.
+    pub fn acquire_as_served(
+        &self,
+        request: &DownloadRequest,
+        accepted: Option<&AcceptedContent>,
+        rules: ServedRules,
+        sink: &dyn EventSink,
+        stop: &StopSignal,
+    ) -> Result<ServedArtifact, AcquireError> {
+        let digest = validate_request(request)?;
+        validate_download_url(&request.url)?;
+        let reviewed = self.paths(request, &digest);
+
+        // A campaign that accepted a changed file never switches to the reviewed one, even when
+        // another installation put that one into the shared cache.
+        let (cached_digest, cached_length) = match accepted {
+            Some(accepted) => (
+                validate_sha256(&accepted.sha256, "accepted sha256")?,
+                accepted.length,
+            ),
+            None => (digest.clone(), request.expected_length),
+        };
+        let mut repaired = None;
+        {
+            let paths = self.paths(request, &cached_digest);
+            let _guard = lock_entry(&paths.lock, stop)?;
+            if let Some(hit) =
+                self.usable_cache_entry(&paths, &cached_digest, cached_length, &mut repaired)?
+            {
+                sink.emit(EngineEvent::StepProgress {
+                    id: request.request_id.clone(),
+                    done: cached_length,
+                    total: cached_length,
+                });
+                return Ok(ServedArtifact::cached(hit));
+            }
+        }
+
+        let policy = LengthPolicy::Served {
+            limit: served_length_limit(request.expected_length),
+            rules,
+        };
+        let mut transfer = self.transfer(request, &reviewed, sink, policy)?;
+        let (actual_length, actual_digest) = match transfer.content.take() {
+            Some(content) => content,
+            None => hash_file(&reviewed.partial)?,
+        };
+        sync_file(&reviewed.partial)?;
+        // The partial is named by the request, so the paths below share it with `reviewed`.
+        let paths = self.paths(request, &actual_digest);
+        let metadata = ArtifactMetadata {
+            original_url: request.url.clone(),
+            final_url: transfer.final_url,
+            etag: transfer.etag,
+            last_modified: transfer.last_modified,
+            length: actual_length,
+            sha256: actual_digest.clone(),
+            completed_at_unix_seconds: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|_| AcquireError::InvalidClock)?
+                .as_secs(),
+        };
+
+        let _guard = lock_entry(&paths.lock, stop)?;
+        if let Some(hit) =
+            self.usable_cache_entry(&paths, &actual_digest, actual_length, &mut repaired)?
+        {
+            remove_if_exists(&paths.partial)?;
+            remove_if_exists(&paths.partial_state)?;
+            return Ok(ServedArtifact {
+                artifact: AcquiredArtifact { repaired, ..hit },
+                served_filename: transfer.served_filename,
+                unreviewed_hosts: transfer.unreviewed_hosts,
+            });
+        }
+        publish(&paths, request, &metadata)?;
+        Ok(ServedArtifact {
+            artifact: AcquiredArtifact {
+                archive_path: paths.archive,
+                metadata_path: paths.metadata,
+                metadata,
+                disposition: CacheDisposition::Downloaded,
+                repaired,
+            },
+            served_filename: transfer.served_filename,
+            unreviewed_hosts: transfer.unreviewed_hosts,
+        })
+    }
+
+    /// The reviewed archive of `request` when the cache already holds it, verified like every
+    /// cache hit; `None` without asking its link.
+    pub fn cached(
+        &self,
+        request: &DownloadRequest,
+        stop: &StopSignal,
+    ) -> Result<Option<AcquiredArtifact>, AcquireError> {
+        let digest = validate_request(request)?;
+        let paths = self.paths(request, &digest);
+        let _guard = lock_entry(&paths.lock, stop)?;
+        let mut repaired = None;
+        Ok(self
+            .usable_cache_entry(&paths, &digest, request.expected_length, &mut repaired)?
+            .map(|hit| AcquiredArtifact { repaired, ..hit }))
+    }
+
     /// A verified cache hit, or `None` when the object must be downloaded. Called with the
     /// digest lock held. A damaged entry is set aside so the download can replace it; the
     /// first repair of this call is reported.
@@ -169,10 +404,10 @@ impl ArtifactCache {
         &self,
         paths: &CachePaths,
         digest: &str,
-        request: &DownloadRequest,
+        expected_length: u64,
         repaired: &mut Option<CacheRepair>,
     ) -> Result<Option<AcquiredArtifact>, AcquireError> {
-        match verified_cache_entry(paths, digest, request.expected_length) {
+        match verified_cache_entry(paths, digest, expected_length) {
             Ok(hit) => Ok(hit),
             Err(error) => {
                 let owned = [paths.archive.as_path(), paths.metadata.as_path()];
@@ -210,37 +445,109 @@ impl ArtifactCache {
         request: &DownloadRequest,
         paths: &CachePaths,
         sink: &dyn EventSink,
+        policy: LengthPolicy,
     ) -> Result<TransferResult, AcquireError> {
         retry_transfer(
             request,
             sink,
-            || self.transfer_once(request, paths, sink),
-            std::thread::sleep,
+            || self.transfer_once(request, paths, sink, policy),
+            wait_before_retry,
         )
     }
 
+    fn request(
+        &self,
+        request: &DownloadRequest,
+        range: Option<(u64, &str)>,
+        policy: LengthPolicy,
+    ) -> Result<HttpResponse, AttemptFailure> {
+        match policy {
+            LengthPolicy::Reviewed => self.client.get_with_reviewed_redirects(
+                &request.url,
+                range,
+                &request.redirect_hosts,
+            ),
+            LengthPolicy::Served { .. } => self.client.get_following_https_redirects(
+                &request.url,
+                range,
+                &request.redirect_hosts,
+            ),
+        }
+        .map_err(classify_transport_error)
+    }
+
+    /// One attempt. A changed download must also come from a host `rules` allows and be framed
+    /// like the declared archive. One from another host is refused; one that is not framed like
+    /// the archive, such as an error page, is asked for again. Neither is kept.
     fn transfer_once(
         &self,
         request: &DownloadRequest,
         paths: &CachePaths,
         sink: &dyn EventSink,
+        policy: LengthPolicy,
     ) -> Result<TransferResult, AttemptFailure> {
-        let resume = load_resume_candidate(request, paths).map_err(AttemptFailure::Fatal)?;
+        let mut transfer = self.transfer_body(request, paths, sink, policy)?;
+        if let LengthPolicy::Served { rules, .. } = policy {
+            let (length, sha256) = hash_file(&paths.partial).map_err(AttemptFailure::Fatal)?;
+            let pinned = length == request.expected_length
+                && sha256.eq_ignore_ascii_case(&request.expected_sha256);
+            if !pinned {
+                let refusal = if rules.redirects == ServedRedirects::ReviewedHostsForChanges
+                    && !transfer.unreviewed_hosts.is_empty()
+                {
+                    Some(AttemptFailure::Fatal(AcquireError::UnreviewedRedirect {
+                        from: request.url.clone(),
+                        to: transfer.final_url.clone(),
+                    }))
+                } else {
+                    served_container_problem(&paths.partial, rules.format)
+                        .map_err(AttemptFailure::Fatal)?
+                        .map(|problem| {
+                            AttemptFailure::Unusable(AcquireError::ServedNotArchive {
+                                url: transfer.final_url.clone(),
+                                problem,
+                            })
+                        })
+                };
+                if let Some(refusal) = refusal {
+                    remove_if_exists(&paths.partial).map_err(AttemptFailure::Fatal)?;
+                    remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?;
+                    return Err(refusal);
+                }
+            }
+            transfer.content = Some((length, sha256));
+        }
+        Ok(transfer)
+    }
+
+    fn transfer_body(
+        &self,
+        request: &DownloadRequest,
+        paths: &CachePaths,
+        sink: &dyn EventSink,
+        policy: LengthPolicy,
+    ) -> Result<TransferResult, AttemptFailure> {
+        let resume =
+            load_resume_candidate(request, paths, policy).map_err(AttemptFailure::Fatal)?;
         let range = resume
             .as_ref()
             .map(|candidate| (candidate.start, candidate.etag.as_str()));
-        let response = self
-            .client
-            .get_with_reviewed_redirects(&request.url, range, &request.redirect_hosts)
-            .map_err(classify_transport_error)?;
+        let response = self.request(request, range, policy)?;
 
         if let Some(candidate) = resume {
             match response.response.status().as_u16() {
-                206 if exact_resume_response(&response, request, &candidate) => {
-                    return stream_response(response, request, paths, sink, candidate.start, false);
+                206 if exact_resume_response(&response, &candidate) => {
+                    return stream_response(
+                        response,
+                        request,
+                        paths,
+                        sink,
+                        Some(&candidate),
+                        policy,
+                    );
                 }
                 200 => {
-                    return stream_response(response, request, paths, sink, 0, true);
+                    return stream_response(response, request, paths, sink, None, policy);
                 }
                 status if is_transient_status(status) => {
                     return Err(AttemptFailure::Retryable(AcquireError::HttpStatus {
@@ -250,20 +557,28 @@ impl ArtifactCache {
                 }
                 _ => {
                     remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?;
-                    let fresh = self
-                        .client
-                        .get_with_reviewed_redirects(&request.url, None, &request.redirect_hosts)
-                        .map_err(classify_transport_error)?;
-                    return handle_fresh_response(fresh, request, paths, sink);
+                    let fresh = self.request(request, None, policy)?;
+                    return handle_fresh_response(fresh, request, paths, sink, policy);
                 }
             }
         }
-        handle_fresh_response(response, request, paths, sink)
+        handle_fresh_response(response, request, paths, sink, policy)
     }
 }
 
+/// Waits between download attempts. Test builds can skip the waits, so that installer tests of
+/// repeated attempts take no time.
+fn wait_before_retry(duration: Duration) {
+    #[cfg(any(debug_assertions, feature = "test-hooks"))]
+    if std::env::var_os("CHRIZ_BG_COLLECTION_TEST_NO_RETRY_WAIT").is_some() {
+        return;
+    }
+    std::thread::sleep(duration);
+}
+
 // Inject the wait operation so schedule/termination tests do not sleep or download.
-// Success and fatal failures leave immediately; only transient failures use the budget.
+// Success and fatal failures leave immediately; only transient failures and unusable answers
+// use the budget. An unusable answer on the last attempt is returned as itself.
 fn retry_transfer<T>(
     request: &DownloadRequest,
     sink: &dyn EventSink,
@@ -272,11 +587,21 @@ fn retry_transfer<T>(
 ) -> Result<T, AcquireError> {
     let mut last_error = String::new();
     for attempt in 1..=request.max_attempts {
-        match transfer() {
+        let unusable = match transfer() {
             Ok(result) => return Ok(result),
             Err(AttemptFailure::Fatal(error)) => return Err(error),
-            Err(AttemptFailure::Retryable(error)) => last_error = error.to_string(),
-        }
+            Err(AttemptFailure::Unusable(error)) if attempt == request.max_attempts => {
+                return Err(error)
+            }
+            Err(AttemptFailure::Unusable(error)) => {
+                last_error = error.to_string();
+                true
+            }
+            Err(AttemptFailure::Retryable(error)) => {
+                last_error = error.to_string();
+                false
+            }
+        };
         if attempt == request.max_attempts {
             break;
         }
@@ -292,15 +617,25 @@ fn retry_transfer<T>(
         } else {
             format!("in {seconds} seconds")
         };
-        sink.emit(EngineEvent::ConsoleLine {
-            step_id: format!("acquire:{}", request.request_id),
-            stream: Stream::Stdout,
-            line: format!(
+        let line = if unusable {
+            format!(
+                "The download of {} gave no usable file: {last_error}. Asking again {when} (attempt {}/{}).",
+                request.request_id,
+                attempt + 1,
+                request.max_attempts,
+            )
+        } else {
+            format!(
                 "Download interrupted for {}. Retrying {when} (attempt {}/{}).",
                 request.request_id,
                 attempt + 1,
                 request.max_attempts,
-            ),
+            )
+        };
+        sink.emit(EngineEvent::ConsoleLine {
+            step_id: format!("acquire:{}", request.request_id),
+            stream: Stream::Stdout,
+            line,
         });
         if seconds != 0 {
             wait(Duration::from_secs(seconds));
@@ -356,15 +691,25 @@ fn validate_request(request: &DownloadRequest) -> Result<String, AcquireError> {
     Ok(request.expected_sha256.to_ascii_lowercase())
 }
 
+fn validate_sha256(value: &str, label: &str) -> Result<String, AcquireError> {
+    if value.len() != 64 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(AcquireError::InvalidRequest(format!(
+            "{label} must be exactly 64 hexadecimal characters"
+        )));
+    }
+    Ok(value.to_ascii_lowercase())
+}
+
 fn handle_fresh_response(
     response: HttpResponse,
     request: &DownloadRequest,
     paths: &CachePaths,
     sink: &dyn EventSink,
+    policy: LengthPolicy,
 ) -> Result<TransferResult, AttemptFailure> {
     let status = response.response.status().as_u16();
     if status == 200 {
-        return stream_response(response, request, paths, sink, 0, true);
+        return stream_response(response, request, paths, sink, None, policy);
     }
     if is_transient_status(status) {
         return Err(AttemptFailure::Retryable(AcquireError::HttpStatus {
@@ -378,32 +723,67 @@ fn handle_fresh_response(
             message: "server returned 206 without a resumable partial".to_owned(),
         }));
     }
-    Err(AttemptFailure::Fatal(AcquireError::HttpStatus {
+    let error = AcquireError::HttpStatus {
         url: response.final_url,
         status,
-    }))
+    };
+    // An official link may lack its file only for a moment, as while a release is replaced.
+    if matches!(policy, LengthPolicy::Served { .. }) && matches!(status, 404 | 410) {
+        return Err(AttemptFailure::Unusable(error));
+    }
+    Err(AttemptFailure::Fatal(error))
 }
 
+/// Streams `response` into the partial file: from byte zero, or after the bytes of `resume`.
 fn stream_response(
     response: HttpResponse,
     request: &DownloadRequest,
     paths: &CachePaths,
     sink: &dyn EventSink,
-    start: u64,
-    truncate: bool,
+    resume: Option<&ResumeCandidate>,
+    policy: LengthPolicy,
 ) -> Result<TransferResult, AttemptFailure> {
+    let start = resume.map_or(0, |candidate| candidate.start);
+    let truncate = resume.is_none();
     let response_length = header_u64(&response.response, "content-length");
-    let expected_response_length = request.expected_length - start;
-    if let Some(actual) = response_length {
-        if actual != expected_response_length {
-            return Err(AttemptFailure::Fatal(AcquireError::LengthMismatch {
-                expected: expected_response_length,
-                actual,
-            }));
+    // Total length of the entity, when known; a changed download may announce none.
+    let total = match policy {
+        LengthPolicy::Reviewed => {
+            let expected_response_length = request.expected_length - start;
+            if let Some(actual) = response_length {
+                if actual != expected_response_length {
+                    return Err(AttemptFailure::Fatal(AcquireError::LengthMismatch {
+                        expected: expected_response_length,
+                        actual,
+                    }));
+                }
+            }
+            Some(request.expected_length)
         }
-    }
+        LengthPolicy::Served { limit, .. } => {
+            let total = match resume {
+                Some(candidate) => {
+                    if response_length.is_some_and(|length| length != candidate.total - start) {
+                        return Err(AttemptFailure::Fatal(AcquireError::InvalidRange {
+                            url: response.final_url,
+                            message: "partial response length differs from its content range"
+                                .to_owned(),
+                        }));
+                    }
+                    Some(candidate.total)
+                }
+                None => response_length,
+            };
+            if let Some(total) = total.filter(|total| *total > limit) {
+                return Err(too_large(paths, total, limit));
+            }
+            total
+        }
+    };
     let etag = header_string(&response.response, "etag");
     let last_modified = header_string(&response.response, "last-modified");
+    let filename = served_filename(&response);
+    let unreviewed_hosts = response.unreviewed_hosts.clone();
 
     if truncate {
         remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?;
@@ -432,18 +812,18 @@ fn stream_response(
         })?;
     }
 
-    if let Some(strong) = etag.as_deref().filter(|value| is_strong_etag(value)) {
-        write_partial_state(
+    // Only an entity of known length can be resumed: the partial response must name it.
+    match (etag.as_deref().filter(|value| is_strong_etag(value)), total) {
+        (Some(strong), Some(total)) => write_partial_state(
             &paths.partial_state,
             &PartialState {
                 original_url: request.url.clone(),
-                expected_length: request.expected_length,
+                expected_length: total,
                 etag: strong.to_owned(),
             },
         )
-        .map_err(AttemptFailure::Fatal)?;
-    } else {
-        remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?;
+        .map_err(AttemptFailure::Fatal)?,
+        _ => remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?,
     }
 
     let final_url = response.final_url;
@@ -465,11 +845,17 @@ fn stream_response(
             break;
         }
         done = done.saturating_add(read as u64);
-        if done > request.expected_length {
+        if let Some(total) = total.filter(|total| done > *total) {
             return Err(AttemptFailure::Fatal(AcquireError::LengthMismatch {
-                expected: request.expected_length,
+                expected: total,
                 actual: done,
             }));
+        }
+        if let LengthPolicy::Served { limit, .. } = policy {
+            if done > limit {
+                drop(file);
+                return Err(too_large(paths, done, limit));
+            }
         }
         file.write_all(&buffer[..read]).map_err(|source| {
             AttemptFailure::Fatal(AcquireError::Io {
@@ -481,13 +867,13 @@ fn stream_response(
         sink.emit(EngineEvent::StepProgress {
             id: request.request_id.clone(),
             done,
-            total: request.expected_length,
+            total: total.unwrap_or_else(|| done.max(request.expected_length)),
         });
     }
-    if done != request.expected_length {
+    if let Some(total) = total.filter(|total| done != *total) {
         let _ = file.sync_all();
         return Err(AttemptFailure::Retryable(AcquireError::LengthMismatch {
-            expected: request.expected_length,
+            expected: total,
             actual: done,
         }));
     }
@@ -502,25 +888,34 @@ fn stream_response(
         final_url,
         etag,
         last_modified,
+        served_filename: filename,
+        unreviewed_hosts,
+        content: None,
     })
 }
 
-fn exact_resume_response(
-    response: &HttpResponse,
-    request: &DownloadRequest,
-    candidate: &ResumeCandidate,
-) -> bool {
+/// Refuses a changed download that grew past `limit`, and removes what was received of it: it
+/// can never be accepted, so nothing of it may stay on the disk.
+fn too_large(paths: &CachePaths, length: u64, limit: u64) -> AttemptFailure {
+    let error = AcquireError::ServedDownloadTooLarge { length, limit };
+    match remove_if_exists(&paths.partial).and_then(|()| remove_if_exists(&paths.partial_state)) {
+        Ok(()) => AttemptFailure::Fatal(error),
+        Err(cleanup) => AttemptFailure::Fatal(cleanup),
+    }
+}
+
+fn exact_resume_response(response: &HttpResponse, candidate: &ResumeCandidate) -> bool {
     let Some(etag) = header_string(&response.response, "etag") else {
         return false;
     };
-    if etag != candidate.etag || !is_strong_etag(&etag) || request.expected_length == 0 {
+    if etag != candidate.etag || !is_strong_etag(&etag) || candidate.total == 0 {
         return false;
     }
     let expected = format!(
         "bytes {}-{}/{}",
         candidate.start,
-        request.expected_length - 1,
-        request.expected_length
+        candidate.total - 1,
+        candidate.total
     );
     header_string(&response.response, "content-range").as_deref() == Some(expected.as_str())
 }
@@ -555,6 +950,7 @@ fn classify_transport_error(error: AcquireError) -> AttemptFailure {
 fn load_resume_candidate(
     request: &DownloadRequest,
     paths: &CachePaths,
+    policy: LengthPolicy,
 ) -> Result<Option<ResumeCandidate>, AcquireError> {
     let length = match fs::metadata(&paths.partial) {
         Ok(metadata) => metadata.len(),
@@ -567,7 +963,7 @@ fn load_resume_candidate(
             });
         }
     };
-    if length == 0 || length >= request.expected_length {
+    if length == 0 || (policy == LengthPolicy::Reviewed && length >= request.expected_length) {
         return Ok(None);
     }
     let state_file = match File::open(&paths.partial_state) {
@@ -585,8 +981,15 @@ fn load_resume_candidate(
         Ok(state) => state,
         Err(_) => return Ok(None),
     };
+    let total_acceptable = match policy {
+        LengthPolicy::Reviewed => state.expected_length == request.expected_length,
+        // A changed download resumes only toward the same entity, which the server must still
+        // confirm by its strong entity tag and exact content range.
+        LengthPolicy::Served { limit, .. } => state.expected_length <= limit,
+    };
     if state.original_url != request.url
-        || state.expected_length != request.expected_length
+        || !total_acceptable
+        || length >= state.expected_length
         || !is_strong_etag(&state.etag)
     {
         return Ok(None);
@@ -594,6 +997,7 @@ fn load_resume_candidate(
     Ok(Some(ResumeCandidate {
         start: length,
         etag: state.etag,
+        total: state.expected_length,
     }))
 }
 
@@ -792,9 +1196,12 @@ mod tests {
     use sha2::{Digest, Sha256};
     use tempfile::TempDir;
 
-    use super::{retry_transfer, validate_request, ArtifactCache, AttemptFailure};
+    use super::{
+        retry_transfer, validate_request, ArtifactCache, AttemptFailure, LengthPolicy,
+        ServedRedirects, ServedRules,
+    };
     use crate::acquire::http::{HttpClient, HttpTimeouts};
-    use crate::acquire::{AcquireError, CacheDisposition, DownloadRequest};
+    use crate::acquire::{AcquireError, ArchiveFormat, CacheDisposition, DownloadRequest};
     use crate::events::{ChannelSink, EngineEvent, Stream};
 
     fn retry_request(max_attempts: u32) -> DownloadRequest {
@@ -908,6 +1315,49 @@ mod tests {
             Err(AcquireError::HttpStatus { status: 404, .. })
         ));
         assert!(events.try_iter().next().is_none());
+    }
+
+    #[test]
+    fn progressive_retries_ask_an_unusable_answer_again_and_return_it_last() {
+        let (sink, events) = ChannelSink::unbounded();
+        let mut calls = 0;
+        let mut waits = Vec::new();
+        let result: Result<(), _> = retry_transfer(
+            &retry_request(3),
+            &sink,
+            || {
+                calls += 1;
+                Err(AttemptFailure::Unusable(AcquireError::HttpStatus {
+                    url: "https://example.invalid/archive.zip".to_owned(),
+                    status: 404,
+                }))
+            },
+            |delay| waits.push(delay.as_secs()),
+        );
+
+        assert_eq!(calls, 3);
+        assert_eq!(waits, [2]);
+        assert!(matches!(
+            result,
+            Err(AcquireError::HttpStatus { status: 404, .. })
+        ));
+        let lines = events
+            .try_iter()
+            .filter_map(|event| match event {
+                EngineEvent::ConsoleLine { line, .. } => Some(line),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(lines.len(), 2, "{lines:#?}");
+        assert!(
+            lines[0].starts_with("The download of xan-19 gave no usable file: ")
+                && lines[0].ends_with("Asking again immediately (attempt 2/3)."),
+            "{lines:#?}"
+        );
+        assert!(
+            lines[1].ends_with("Asking again in 2 seconds (attempt 3/3)."),
+            "{lines:#?}"
+        );
     }
 
     #[test]
@@ -1191,6 +1641,51 @@ mod tests {
         assert!(!seen[0].contains_key("range"));
         assert_eq!(seen[1]["range"], format!("bytes={prefix_len}-"));
         assert_eq!(seen[1]["if-range"], "\"stall-v1\"");
+    }
+
+    /// A changed download that announces no length is refused as soon as it grows past its
+    /// limit, and what was received of it is removed. The real limit is at least 1 GiB, so the
+    /// transfer runs here with a small one.
+    #[test]
+    fn a_changed_download_that_streams_past_its_limit_is_refused_and_removed() {
+        let limit = 64 * 1024;
+        let (url, server) = serve(vec![Box::new(move |connection: &mut Connection| {
+            connection.send(b"HTTP/1.1 200 OK\r\nETag: \"endless\"\r\nConnection: close\r\n\r\n");
+            let chunk = vec![0x50_u8; 16 * 1024];
+            for _ in 0..16 {
+                // The client stops reading once the limit is passed.
+                if connection.stream.write_all(&chunk).is_err() {
+                    return;
+                }
+            }
+        })]);
+        let temp = TempDir::new().unwrap();
+        let cache = test_cache(&temp);
+        let (sink, _) = ChannelSink::unbounded();
+        let request = download("endless", url, b"the reviewed archive");
+        let digest = validate_request(&request).unwrap();
+        let paths = cache.paths(&request, &digest);
+        let policy = LengthPolicy::Served {
+            limit,
+            rules: ServedRules {
+                format: ArchiveFormat::Zip,
+                redirects: ServedRedirects::AnyHttpsHost,
+            },
+        };
+
+        let error = cache
+            .transfer(&request, &paths, &sink, policy)
+            .err()
+            .expect("a download past its limit is refused");
+
+        assert!(
+            matches!(error, AcquireError::ServedDownloadTooLarge { length, limit: refused }
+                if length > limit && length <= limit + super::BUFFER_SIZE as u64 && refused == limit),
+            "{error}"
+        );
+        assert!(!paths.partial.exists());
+        assert!(!paths.partial_state.exists());
+        server.join().unwrap();
     }
 
     #[test]

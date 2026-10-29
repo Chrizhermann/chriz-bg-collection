@@ -1185,6 +1185,176 @@ fn build_plan(
     Ok(InstallPlan { runs })
 }
 
+/// Why an installation cannot continue without some mods.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum LeaveOutError {
+    /// The recipe always installs a part of a mod that would have to be left out.
+    #[error(
+        "{title} is a fixed part of this collection, so the installation cannot continue without it"
+    )]
+    Required {
+        /// Feature that the recipe always installs.
+        feature_id: String,
+        /// Its display title.
+        title: String,
+    },
+    /// The frozen recipe, selection and plan do not fit together.
+    #[error("the remaining plan cannot be built: {0}")]
+    Invalid(String),
+}
+
+/// The part of `plan` that remains when the mods installed from the `unusable` artifacts are
+/// left out, together with every selected feature that depends on them through a parent,
+/// `requires` or `requires_any` relation.
+///
+/// `plan` is the frozen execution plan, possibly split at manual pauses. The result only
+/// removes runs, components and the prompt answers that go with them: a feature the selection
+/// did not install is never added, even when it was off only because it conflicted with a
+/// removed feature. Prompt answers are rendered again because they may depend on removed
+/// features, and a run that lost components drops its recipe checks, which describe the
+/// complete run. A mandatory part of an optional feature removes that whole feature; a
+/// feature the recipe always installs (mandatory, with only mandatory parents) cannot be
+/// removed, so then this fails.
+pub fn plan_without_artifacts(
+    manifest: &Manifest,
+    selection: &NormalizedSelection,
+    plan: &InstallPlan,
+    unusable: &BTreeSet<String>,
+) -> std::result::Result<InstallPlan, LeaveOutError> {
+    let features = manifest
+        .collection
+        .features
+        .iter()
+        .map(|feature| (feature.id.as_str(), feature))
+        .collect::<BTreeMap<_, _>>();
+    let effective = effective_features(
+        manifest,
+        &base_effective_features(manifest, &selection.features),
+    );
+    let blocked_runs = manifest
+        .collection
+        .runs
+        .iter()
+        .filter(|run| {
+            manifest
+                .mods
+                .get(&run.mod_id)
+                .is_some_and(|installer| unusable.contains(&installer.artifact_id))
+        })
+        .map(|run| run.run_id.as_str())
+        .collect::<BTreeSet<_>>();
+    let uses_blocked = |feature: &Feature| {
+        feature
+            .components
+            .iter()
+            .any(|component| blocked_runs.contains(component.run_id.as_str()))
+    };
+    let is_on = |map: &BTreeMap<String, bool>, id: &str| map.get(id).copied().unwrap_or(false);
+
+    let mut desired = selection.features.clone();
+    for feature in manifest
+        .collection
+        .features
+        .iter()
+        .filter(|feature| is_on(&effective, &feature.id) && uses_blocked(feature))
+    {
+        // Switch off the feature itself, or its nearest ancestor the selection can switch off.
+        let mut current = feature;
+        let mut depth = 0_usize;
+        while current.decision == Decision::Mandatory {
+            match current.parent.as_deref().and_then(|id| features.get(id)) {
+                Some(parent) if depth <= features.len() => {
+                    current = parent;
+                    depth += 1;
+                }
+                _ => {
+                    return Err(LeaveOutError::Required {
+                        feature_id: feature.id.clone(),
+                        title: feature.title.clone(),
+                    })
+                }
+            }
+        }
+        desired.insert(current.id.clone(), false);
+    }
+    let reduced = effective_features(manifest, &base_effective_features(manifest, &desired));
+    let kept = effective
+        .iter()
+        .map(|(id, selected)| (id.clone(), *selected && is_on(&reduced, id)))
+        .collect::<BTreeMap<_, _>>();
+    if let Some(feature) = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| is_on(&kept, &feature.id) && uses_blocked(feature))
+    {
+        return Err(LeaveOutError::Invalid(format!(
+            "feature {:?} still installs a left-out mod",
+            feature.id
+        )));
+    }
+    let selected_components = manifest
+        .collection
+        .features
+        .iter()
+        .filter(|feature| is_on(&kept, &feature.id))
+        .flat_map(|feature| feature.components.iter().cloned())
+        .collect::<BTreeSet<_>>();
+
+    let mut runs = Vec::new();
+    for run in &plan.runs {
+        let base = manifest
+            .collection
+            .runs
+            .iter()
+            .find(|candidate| candidate.run_id == run.run_id)
+            .or_else(|| {
+                manifest.collection.runs.iter().find(|candidate| {
+                    run.run_id
+                        .strip_prefix(candidate.run_id.as_str())
+                        .is_some_and(|rest| rest.starts_with("--manual-"))
+                })
+            })
+            .ok_or_else(|| {
+                LeaveOutError::Invalid(format!("planned run {:?} is not in the recipe", run.run_id))
+            })?;
+        let component_ref = |component: u32| ComponentRef {
+            run_id: base.run_id.clone(),
+            component,
+        };
+        let components = run
+            .components
+            .iter()
+            .copied()
+            .filter(|component| selected_components.contains(&component_ref(*component)))
+            .collect::<Vec<_>>();
+        if components.is_empty() {
+            continue;
+        }
+        let mut prompt_scripts = Vec::new();
+        for component in &components {
+            let script = render_prompt_script_for_effective(
+                manifest,
+                &component_ref(*component),
+                selection,
+                &kept,
+            )
+            .map_err(|error| LeaveOutError::Invalid(error.to_string()))?;
+            if !script.steps.is_empty() {
+                prompt_scripts.push(script);
+            }
+        }
+        let mut remaining = run.clone();
+        if components != run.components {
+            remaining.postconditions.clear();
+        }
+        remaining.components = components;
+        remaining.prompt_scripts = prompt_scripts;
+        runs.push(remaining);
+    }
+    Ok(InstallPlan { runs })
+}
+
 fn render_literal(value: &InputValue) -> String {
     match value {
         InputValue::Boolean(value) => value.to_string(),
