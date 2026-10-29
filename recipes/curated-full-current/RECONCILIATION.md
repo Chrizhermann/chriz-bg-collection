@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 485 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 470.
+Engine-equivalent resolved-selection summary: 486 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 471.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -74,6 +74,7 @@ Engine-equivalent resolved-selection summary: 485 default/mandatory rows — con
 | `ARTISANSKITPACK_TWEAK:3302` | default | `feature:artisanskitpack-tweak:component-3302` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 3302 |  |
 | `ARTISANSKITPACK_TWEAK:7203` | default | `feature:artisanskitpack-tweak:component-7203` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 7203 |  |
 | `ARTISANSKITPACK_TWEAK:8204` | default | `feature:artisanskitpack-tweak:component-8204` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 8204 |  |
+| `ARTISANSKITPACK_TWEAK:1010000` | default | `feature:artisanskitpack-tweak:component-1010000` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 1010000 |  |
 | `ASCENSION:0` | default | `feature:ascension:component-0` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 0 |  |
 | `ASCENSION:10` | default | `feature:ascension:component-10` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 10 |  |
 | `ASCENSION:20` | default | `feature:ascension:component-20` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 20 |  |
@@ -270,47 +271,47 @@ Engine-equivalent resolved-selection summary: 485 default/mandatory rows — con
 | `CHRIZ-BG-REBALANCE:332` | default | `feature:chriz-bg-rebalance:component-332` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.7 0.8.7 (v0.8.7), component 332 |  |
 | `CHRIZ-BG-REBALANCE:340` | default | `feature:chriz-bg-rebalance:component-340` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.7 0.8.7 (v0.8.7), component 340 |  |
 | `CHRIZ-BG-REBALANCE:360` | default | `feature:chriz-bg-rebalance:component-360` | selected for installation | chriz-bg-rebalance → chriz-bg-rebalance-0.8.7 0.8.7 (v0.8.7), component 360 |  |
-| `CHRIZ-SOD-REMIX:100` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 100 |  |
-| `CHRIZ-SOD-REMIX:110` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 110 |  |
-| `CHRIZ-SOD-REMIX:115` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 115 |  |
-| `CHRIZ-SOD-REMIX:120` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 120 |  |
-| `CHRIZ-SOD-REMIX:130` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 130 |  |
-| `CHRIZ-SOD-REMIX:135` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 135 |  |
-| `CHRIZ-SOD-REMIX:140` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 140 |  |
-| `CHRIZ-SOD-REMIX:150` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 150 |  |
-| `CHRIZ-SOD-REMIX:145` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 145 |  |
-| `CHRIZ-SOD-REMIX:160` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 160 |  |
-| `CHRIZ-SOD-REMIX:170` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 170 |  |
-| `CHRIZ-SOD-REMIX:180` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 180 |  |
-| `CHRIZ-SOD-REMIX:175` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 175 |  |
-| `CHRIZ-SOD-REMIX:177` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 177 |  |
-| `CHRIZ-SOD-REMIX:185` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 185 |  |
-| `CHRIZ-SOD-REMIX:190` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 190 |  |
-| `CHRIZ-SOD-REMIX:195` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 195 |  |
-| `CHRIZ-SOD-REMIX:210` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 210 |  |
-| `CHRIZ-SOD-REMIX:197` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 197 |  |
-| `CHRIZ-SOD-REMIX:198` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 198 |  |
-| `CHRIZ-SOD-REMIX:187` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 187 |  |
-| `CHRIZ-SOD-REMIX:200` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 200 |  |
-| `CHRIZ-SOD-REMIX:215` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 215 |  |
-| `CHRIZ-SOD-REMIX:220` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 220 |  |
-| `CHRIZ-SOD-REMIX:225` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 225 |  |
-| `CHRIZ-SOD-REMIX:245` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 245 |  |
-| `CHRIZ-SOD-REMIX:230` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 230 |  |
-| `CHRIZ-SOD-REMIX:240` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 240 |  |
-| `CHRIZ-SOD-REMIX:250` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 250 |  |
-| `CHRIZ-SOD-REMIX:255` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 255 |  |
-| `CHRIZ-SOD-REMIX:256` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 256 |  |
-| `CHRIZ-SOD-REMIX:260` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 260 |  |
-| `CHRIZ-SOD-REMIX:265` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 265 |  |
-| `CHRIZ-SOD-REMIX:266` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 266 |  |
-| `CHRIZ-SOD-REMIX:270` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 270 |  |
-| `CHRIZ-SOD-REMIX:280` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 280 |  |
-| `CHRIZ-SOD-REMIX:285` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 285 |  |
-| `CHRIZ-SOD-REMIX:290` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 290 |  |
-| `CHRIZ-SOD-REMIX:900` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 900 |  |
-| `CHRIZ-SOD-REMIX:910` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 910 |  |
-| `CHRIZ-SOD-REMIX:292` | default | `feature:chriz-sod-remix:component-292` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.15 0.6.15 (v0.6.15), component 292 |  |
+| `CHRIZ-SOD-REMIX:100` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 100 |  |
+| `CHRIZ-SOD-REMIX:110` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 110 |  |
+| `CHRIZ-SOD-REMIX:115` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 115 |  |
+| `CHRIZ-SOD-REMIX:120` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 120 |  |
+| `CHRIZ-SOD-REMIX:130` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 130 |  |
+| `CHRIZ-SOD-REMIX:135` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 135 |  |
+| `CHRIZ-SOD-REMIX:140` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 140 |  |
+| `CHRIZ-SOD-REMIX:150` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 150 |  |
+| `CHRIZ-SOD-REMIX:145` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 145 |  |
+| `CHRIZ-SOD-REMIX:160` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 160 |  |
+| `CHRIZ-SOD-REMIX:170` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 170 |  |
+| `CHRIZ-SOD-REMIX:180` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 180 |  |
+| `CHRIZ-SOD-REMIX:175` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 175 |  |
+| `CHRIZ-SOD-REMIX:177` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 177 |  |
+| `CHRIZ-SOD-REMIX:185` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 185 |  |
+| `CHRIZ-SOD-REMIX:190` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 190 |  |
+| `CHRIZ-SOD-REMIX:195` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 195 |  |
+| `CHRIZ-SOD-REMIX:210` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 210 |  |
+| `CHRIZ-SOD-REMIX:197` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 197 |  |
+| `CHRIZ-SOD-REMIX:198` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 198 |  |
+| `CHRIZ-SOD-REMIX:187` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 187 |  |
+| `CHRIZ-SOD-REMIX:200` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 200 |  |
+| `CHRIZ-SOD-REMIX:215` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 215 |  |
+| `CHRIZ-SOD-REMIX:220` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 220 |  |
+| `CHRIZ-SOD-REMIX:225` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 225 |  |
+| `CHRIZ-SOD-REMIX:245` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 245 |  |
+| `CHRIZ-SOD-REMIX:230` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 230 |  |
+| `CHRIZ-SOD-REMIX:240` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 240 |  |
+| `CHRIZ-SOD-REMIX:250` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 250 |  |
+| `CHRIZ-SOD-REMIX:255` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 255 |  |
+| `CHRIZ-SOD-REMIX:256` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 256 |  |
+| `CHRIZ-SOD-REMIX:260` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 260 |  |
+| `CHRIZ-SOD-REMIX:265` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 265 |  |
+| `CHRIZ-SOD-REMIX:266` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 266 |  |
+| `CHRIZ-SOD-REMIX:270` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 270 |  |
+| `CHRIZ-SOD-REMIX:280` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 280 |  |
+| `CHRIZ-SOD-REMIX:285` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 285 |  |
+| `CHRIZ-SOD-REMIX:290` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 290 |  |
+| `CHRIZ-SOD-REMIX:900` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 900 |  |
+| `CHRIZ-SOD-REMIX:910` | mandatory | `feature:chriz-sod-remix:mandatory-components` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 910 |  |
+| `CHRIZ-SOD-REMIX:292` | default | `feature:chriz-sod-remix:component-292` | selected for installation | chriz-sod-remix → chriz-sod-remix-0.6.16 0.6.16 (v0.6.16), component 292 |  |
 | `CROSSMODBG2:0` | default | `feature:crossmodbg2:component-0` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 0 |  |
 | `CROSSMODBG2:1` | default | `feature:crossmodbg2:component-1` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 1 |  |
 | `CROSSMODBG2:2` | default | `feature:crossmodbg2:component-2` | selected for installation | crossmodbg2 → crossmodbg2-30 30 (v30), component 2 |  |

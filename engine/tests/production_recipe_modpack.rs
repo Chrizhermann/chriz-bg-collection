@@ -301,8 +301,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // 135 and 460 to both plans; chapter caps 652 are offered unchecked.
     // The October 28 intake (Rebalance v0.8.6) adds default Time Stop and Haste effect
     // clocks 360 to both plans.
-    // The October 29 intake adds Sirene NPC for BG:EE 0, 3 and 6 to both plans.
-    // This 375-component base plan is distinct from the 472-component curated plan.
+    // The October 29 intake adds the Kitpack's weapon-usability sweep 1010000 to the late
+    // tweak run in both plans, and Sirene NPC for BG:EE 0, 3 and 6 to both plans.
+    // This 376-component base plan is distinct from the 473-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -310,7 +311,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        375
+        376
     );
 }
 

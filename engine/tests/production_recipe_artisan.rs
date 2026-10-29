@@ -32,7 +32,10 @@ const NPC_EARLY_AUTHORED: &[u32] = &[
 ];
 const NPC_RECOMMENDED: &[u32] = &[1101, 2001, 3101, 3102, 5102, 7102, 21001, 9101, 20002];
 const TWEAK_EARLY: &[u32] = &[20101, 1209, 7203];
-const TWEAK_LATE: &[u32] = &[12012, 3202, 3302, 8204];
+// October 29: the weapon-usability sweep 1010000 (Christopher, 2026-10-26) is the last
+// component of the late run, in its TP2 position after 8204.
+const TWEAK_LATE: &[u32] = &[12012, 3202, 3302, 8204, 1010000];
+const SWEEP: &str = "feature:artisanskitpack-tweak:component-1010000";
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -171,7 +174,7 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
     assert_eq!(runs[early_tweaks].components, TWEAK_EARLY);
     assert_eq!(
         runs[late_tweaks].components,
-        [51010, 12012, 3202, 3302, 8204]
+        [51010, 12012, 3202, 3302, 8204, 1010000]
     );
     assert_eq!(runs[late_npc].components, [200010]);
 
@@ -239,6 +242,110 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
             .runs
             .iter()
             .all(|run| { !run.components.contains(&excluded) }));
+    }
+}
+
+#[test]
+fn the_weapon_usability_sweep_runs_last_after_item_mods_when_c0pr_cl_exists() {
+    // Tweak 1010000 installs only when C0PR#CL.SPL exists. In the pinned chriz.4 source the
+    // generator that creates it (eeex/profs_eeex.tpa) is included by Eldritch Knight 20000
+    // with EEex, by Arcane Trickster sorcerer thief equipment 8204 (which requires EEex),
+    // and by Samurai 1010 and Favored Soul 30001, which the collection does not offer.
+    for directory in ["manifest", "recipes/curated-full-current"] {
+        let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
+        let component = manifest.mods["artisanskitpack-tweak"]
+            .components
+            .iter()
+            .find(|component| component.id == 1010000)
+            .unwrap_or_else(|| panic!("{directory}: 1010000 must be authored"));
+        assert_eq!(component.name, "Update EEex-based Weapon Usability Changes");
+        let feature = manifest
+            .collection
+            .features
+            .iter()
+            .find(|feature| feature.id == SWEEP)
+            .unwrap_or_else(|| panic!("{directory}: missing {SWEEP}"));
+        assert_eq!(feature.decision, Decision::Default, "{directory}");
+        assert_eq!(feature.readiness, Readiness::Ready, "{directory}");
+        assert_eq!(
+            feature.parent.as_deref(),
+            Some("mod:artisanskitpack-tweak"),
+            "{directory}"
+        );
+        assert_eq!(feature.requires, ["feature:eeex:mandatory-components"]);
+        assert_eq!(
+            feature.requires_any,
+            [
+                "feature:artisanskitpack:component-20000",
+                "feature:artisanskitpack-tweak:component-8204",
+            ],
+            "{directory}"
+        );
+        assert!(feature.conflicts.is_empty(), "{directory}");
+
+        // It sweeps weapons that runs before it added, so it follows every item mod the
+        // lab examples come from (IWDification's two-handed axes in the curated recipe,
+        // the SCS Drow Katana in both) and the Sirene mod.
+        let runs = &manifest.collection.runs;
+        let position = |id: &str| runs.iter().position(|run| run.run_id == id);
+        let late = position("artisanskitpack-tweak-late-bg2").unwrap();
+        assert_eq!(runs[late].components.last(), Some(&1010000), "{directory}");
+        for earlier in [
+            "artisanskitpack-main-bg2",
+            "sirene-bg2",
+            "artisanskitpack-npc-bg2",
+            "iepbanters-bg2",
+            "crossmodbg2-bg2",
+            "stratagems-bg2",
+        ] {
+            assert!(position(earlier).unwrap() < late, "{directory}: {earlier}");
+        }
+        if directory != "manifest" {
+            for earlier in ["cdtweaks-bg2", "iwdification-bg2", "bardicwonders-bg2"] {
+                assert!(position(earlier).unwrap() < late, "{directory}: {earlier}");
+            }
+        }
+
+        let baseline = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
+        assert_eq!(
+            manifest.presets["chris-recommended"]
+                .selections
+                .get(SWEEP)
+                .map(String::as_str),
+            Some("on"),
+            "{directory}"
+        );
+        let sweeps = |result: &bg_engine::recipe_view::SelectionEvaluation| {
+            result
+                .plan
+                .components_for("artisanskitpack-tweak-late-bg2")
+                .is_some_and(|components| components.contains(&1010000))
+        };
+        assert!(sweeps(&baseline), "{directory}");
+        for (eldritch_knight, arcane_trickster, expected) in [
+            (true, false, true),
+            (false, true, true),
+            (false, false, false),
+        ] {
+            let mut selection = baseline.normalized_selection.to_selection();
+            selection.set_feature("feature:artisanskitpack:component-20000", eldritch_knight);
+            selection.set_feature(
+                "feature:artisanskitpack-tweak:component-8204",
+                arcane_trickster,
+            );
+            let result = evaluate(&manifest, &selection).unwrap();
+            assert_eq!(
+                sweeps(&result),
+                expected,
+                "{directory}: 20000={eldritch_knight} 8204={arcane_trickster}"
+            );
+        }
+        let mut without_eeex = baseline.normalized_selection.to_selection();
+        without_eeex.set_feature("mod:eeex", false);
+        assert!(
+            !sweeps(&evaluate(&manifest, &without_eeex).unwrap()),
+            "{directory}"
+        );
     }
 }
 

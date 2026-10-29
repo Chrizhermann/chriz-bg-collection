@@ -372,7 +372,7 @@ args = []
 run_id = "artisanskitpack-tweak-late-bg2"
 mod_id = "artisanskitpack-tweak"
 phase = "main"
-components = [51010, 12012, 3202, 3302, 8204]
+components = [51010, 12012, 3202, 3302, 8204, 1010000]
 args = []
 
 [[runs]]
@@ -4397,6 +4397,20 @@ readiness = "ready"
 parent = "mod:artisanskitpack-tweak"
 requires = ["feature:artisanskitpack:component-8004", "feature:eeex:mandatory-components"]
 components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 8204 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-1010000"
+title = "Kit weapon rules for weapons from later mods"
+description = "Extend the Artisan kits' weapon rules to weapons that mods installed after the Kitpack add, such as the SCS Drow Katana for the Arcane Trickster sorcerer."
+category = "kits"
+source_label = "Artisan kit compatibility tweaks"
+group_label = "Kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:eeex:mandatory-components"]
+requires_any = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-tweak:component-8204"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 1010000 }]
 
 [[features]]
 id = "feature:artisanskitpack-tweak:component-51010"

@@ -32,7 +32,7 @@ no installer references, such as older versions, are not listed.
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
 | chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.7 | `chriz-bg-rebalance` | `0f0edbf5f37f…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.7/chriz-bg-rebalance-v0.8.7-windows.zip) |
-| CHRIZ-SOD-REMIX | 0.6.15 | `chriz-sod-remix` | `3a295832f9af…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip) |
+| CHRIZ-SOD-REMIX | 0.6.16 | `chriz-sod-remix` | `7da50d206e4f…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
@@ -105,7 +105,7 @@ no installer references, such as older versions, are not listed.
 | BuffBot | 1.11.0 | `buffbot` | `c147919db1e6…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.11.0/buffbot-v1.11.0.zip) |
 | chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.7 | `chriz-bg-rebalance` | `0f0edbf5f37f…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.7/chriz-bg-rebalance-v0.8.7-windows.zip) |
-| CHRIZ-SOD-REMIX | 0.6.15 | `chriz-sod-remix` | `3a295832f9af…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip) |
+| CHRIZ-SOD-REMIX | 0.6.16 | `chriz-sod-remix` | `7da50d206e4f…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |

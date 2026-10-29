@@ -329,24 +329,33 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // run's artifact id; the selections are unchanged. With the old title restored the previous
     // collection digests return (manifest 820fab4c…, curated 9a8d8095…), and with v0.8.6
     // restored the previous plan digests (manifest f4ab1fd8…, curated c18baa9d…).
+    // Re-pinned on October 29 for Artisan's Kitpack tweak 1010000 (weapon-usability sweep,
+    // Christopher, 2026-10-26) as a default at the end of the late tweak run: its feature,
+    // run component and preset entry change all six digests. Without them the six previous
+    // digests return (manifest b16c7f80…, b1f467ef…, 4fd9d65f…; curated a9ce4259…,
+    // c2684cfe…, 2614b16c…).
+    // Re-pinned on October 29 for SoD Remix v0.6.16: in both recipes only the Recommended
+    // plan changes, in the chriz-sod-remix-bg2 run's artifact id; its components and the
+    // selection stay. With v0.6.15 restored, the previous plan digests return (manifest
+    // 29a3cb46…, curated e59b795b…).
     // Re-pinned on October 29 for Sirene NPC for BG:EE as a default (Christopher, 2026-10-29):
     // its run after Kitpack main with sirene-bg2 moved there from after Yeslick, its six
     // features and its three preset entries change all six digests. With the run, the
     // features and the preset entries removed and sirene-bg2 back after Yeslick, the six
-    // previous digests return (manifest b16c7f80…, b1f467ef…, 4fd9d65f…; curated a9ce4259…,
-    // c2684cfe…, 2614b16c…).
+    // previous digests return (manifest f0fd7718…, 1cb14fad…, 7c78ecb2…; curated b633893e…,
+    // cb328676…, 87f1ab67…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "175409ce9b47adb818ab5b23496ce029a0c56bf757242dbdda3081c79bb2f048",
-            "df00dddfe07769d7e237db9336a5d9d3a000e76473ae3213174df197fda93b01",
-            "095b54972bb50d38e8dd6d412e10e68fb163ebd721b551ca1b8d70a2b0b3aea2",
+            "2b77e6d25b7a8aa778330d7e95363117cc17b6f44585c19e93d6c0aba389792b",
+            "90703460a01f06c3cdcb8cc8c4fec67538a105bb1bb292818af48a6e7803ec59",
+            "616da1fb686aa5767cda50349f5a6c18a42331160ecbf51116f115f779cc950d",
         ),
         (
             "../recipes/curated-full-current",
-            "2cdcdf4ae1711cb2f5fea59292fb873d6080a60f3dee657eb5d5ae216097d6d9",
-            "e886d88b3e28675049808d56fb5ab8e417c679e6d7fece380f304ede71ab1379",
-            "6edd675bd54cc910f962e88709ce1a87faadcde96e8dbdb5718521f855c8ecaf",
+            "d4413a740b3a5eee66bfef2cf2dfcedb721d26afb447ac6cc696643dfeb60fe6",
+            "e99943302b228205cd657de0b87ed60f4d86f948b4d35ed6ca618f7f9baf9156",
+            "b9e1d11853e49855a8c09ded5c5529f4f65734bac3a8cdc233e564b6f57d2d58",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

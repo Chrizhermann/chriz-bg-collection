@@ -257,8 +257,9 @@ class Oct13IntakeTests(unittest.TestCase):
         # (test_oct26_alpha22_pins_recipe) supersede alpha.11 and keep these rows.
         self.assertEqual(mod["artifact_id"], "chriz-bg-modpack-0.2.0-alpha.14")
         sod = tomllib.loads((self.output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-        # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe) supersedes v0.6.13 and keeps these rows.
-        self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.15")
+        # SoD Remix v0.6.15 (test_oct23_sod_remix_recipe) and v0.6.16
+        # (test_oct29_sod_remix_pin_recipe) supersede v0.6.13 and keep these rows.
+        self.assertEqual(sod["artifact_id"], "chriz-sod-remix-0.6.16")
         self.assertTrue({177, 198, 285} <= {component["id"] for component in sod["components"]})
 
     def test_alpha20_ledger_covers_the_intake_for_new_installations(self):

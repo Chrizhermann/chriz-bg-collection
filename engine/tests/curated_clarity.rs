@@ -50,8 +50,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // unchecked option.
         // The October 28 intake (Rebalance v0.8.6) adds default Time Stop and Haste
         // effect clocks 360.
-        // The October 29 intake adds Sirene NPC for BG:EE 0, 3 and 6.
-        472
+        // The October 29 intake adds the Kitpack's weapon-usability sweep 1010000 at the
+        // end of the late tweak run, and Sirene NPC for BG:EE 0, 3 and 6.
+        473
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
