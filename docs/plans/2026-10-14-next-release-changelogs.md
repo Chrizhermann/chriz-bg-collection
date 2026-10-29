@@ -478,9 +478,9 @@ apply to new installations; existing games and saves are unchanged.
   PVRZ pages are unchanged. Its owner labs ran on BG2:EE 2.7.3.0 and IWD:EE 2.7.3.0 with
   EEex v1.3.1, with the panel and its artwork seen on screen in all six themes; BG:EE and
   EET were not checked in game, and its README still calls the configuration with Modpack
-  `430` not accepted. Christopher takes it into this release once it has been tested
-  again, and he tests it himself (2026-10-28). The PVRZ page check above still applies,
-  now with the artwork on screen.
+  `430` not accepted. Christopher takes it into this release and tests it in the release
+  candidate (2026-10-29). The PVRZ page check above still applies, now with the artwork on
+  screen.
 - **Rebalance `340`** (Chris Revisions, Default) was installed on scratch copies of
   game resources only and has not run in a game yet (its release notes). Its "ready"
   flag, like EEex `9`'s, stays as it is until the Recommended lab run decides

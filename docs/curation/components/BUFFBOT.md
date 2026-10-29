@@ -82,5 +82,6 @@ candidate.
   in game: BG:EE, EET, the six dialogs, and six long character names on a narrow panel.
   BuffBot's README still calls the configuration with `430` not accepted.
 - Christopher, 2026-10-28: v1.12.1 goes into alpha.22 once it has been tested again; he
-  tests it himself.
+  tests it himself. Christopher, 2026-10-29: it goes into the alpha.22 release candidate,
+  and he tests it there instead of separately.
 
