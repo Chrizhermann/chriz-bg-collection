@@ -114,11 +114,12 @@ class Oct14IntakeTests(unittest.TestCase):
             features = {feature["id"]: feature for feature in collection["features"]}
             components = runs[REBALANCE_RUN]["components"]
             # v0.8.5 (test_oct26_alpha22_pins_recipe) declares Chris Revisions 340 after
-            # them and v0.8.6 (test_oct27_alpha22_pins_recipe) the Time Stop and Haste
-            # effect clocks 360 after 340, each checked against its own evidence; the v0.8.3
-            # rows keep their order.
+            # them, v0.8.6 (test_oct27_alpha22_pins_recipe) the Time Stop and Haste
+            # effect clocks 360 after 340 and v0.8.8 (test_oct29_rebalance_088_pin_recipe)
+            # Druid weapons 410 and Alaghor of Clangeddin weapons 411 after 302, each checked
+            # against its own evidence; the v0.8.3 rows keep their order.
             self.assertEqual(components[-5:], [330, 331, 332, 340, 360])
-            v083_rows = [component for component in components if component not in (340, 360)]
+            v083_rows = [component for component in components if component not in (340, 360, 410, 411)]
             self.assertEqual(v083_rows, self._native("chriz-bg-rebalance", v083_rows))
             self.assertEqual((features[strict]["decision"], features[genius]["decision"], features[heroism]["decision"]),
                              ("optional", "default", "default"))

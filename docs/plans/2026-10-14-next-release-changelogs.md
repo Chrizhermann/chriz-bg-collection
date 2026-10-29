@@ -121,6 +121,13 @@ unchanged.
   kit weapon rules now also cover weapons that mods installed after the Kitpack add. For
   example, the Priest of Tempus and the Eldritch Knight can use IWDification's two-handed
   axes, and the Arcane Trickster sorcerer the SCS Drow Katana. (Artisan's Kitpack)
+- **Druid weapons** — **Default.** Druids and every druid kit can use axes and short bows
+  and put one point into them; fighter/druids can also use long bows, with up to two
+  points in all three. (Rebalance v0.8.8)
+- **Alaghor of Clangeddin weapons** — **Default.** Yeslick's kit trains and uses the
+  cleric weapons plus axes, Clangeddin's weapon, with up to two points; the thief weapons
+  its weapon list allowed drop out, and points already spent stay. Needs EEex and
+  Artisan's Kitpack's weapon rules. (Rebalance v0.8.8)
 - **Sirene in BG1 and Siege of Dragonspear** — **Default.** Sirene, a paladin, can join
   the party in BG1 and in Siege of Dragonspear, and with Sirene NPC for BG2 (Default) she
   carries on into Shadows of Amn. As in BG2, she is a True Paladin with the Sirick
@@ -316,7 +323,7 @@ unchanged.
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.14 (was alpha.11)
-- BG Rebalance v0.8.7 (was v0.8.2)
+- BG Rebalance v0.8.8 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
@@ -343,7 +350,7 @@ unchanged.
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
-Rebalance to v0.8.7, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
+Rebalance to v0.8.8, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
 EEex to v1.3.1, BuffBot to v1.11.0, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
 v4.81a-dev.85928f9-chriz.4 and The Tweaks Anthology to its current development
@@ -359,7 +366,9 @@ dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; sensible entrance points; 18 player
 voicepacks from ChrizFader's voicepacks; Artisan's Kitpack weapon rules that also cover
-weapons from later mods; Sirene in BG1 and Siege of Dragonspear, who carries on into BG2;
+weapons from later mods; axes and short bows for druids, and long bows as well for
+fighter/druids; the cleric weapons plus axes for Yeslick's Alaghor of Clangeddin kit;
+Sirene in BG1 and Siege of Dragonspear, who carries on into BG2;
 and a choice of how Imoen continues
 into Shadows of Amn, by default as the BG2 thief/mage Imoen. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
@@ -458,6 +467,14 @@ apply to new installations; existing games and saves are unchanged.
   release on 2026-10-28) and added a check against its new standalone package
   `CBR_TRUE_TIMESTOP`, which the collection does not install; its other checks, its two
   files and what it does in the game are unchanged.
+- **Rebalance `410` and `411`** (Druid weapons and Alaghor of Clangeddin weapons, Default;
+  Christopher, 2026-10-29) run in the Rebalance run after every Artisan's Kitpack run, the
+  late tweak run with `1010000` included, as their release notes ask: `1010000` rebuilds
+  the Kitpack's class weapon grants before `410` adds the druid grants, and no later run
+  rebuilds them. `411` needs EEex, Yeslick's Fighter-Alaghor and the Kitpack's EEex weapon
+  rules, and it refuses an executable in which its hook site does not occur exactly once.
+  Their owner labs ran on BG2:EE 2.7.3.0 with EEex v1.3.1, not on EET and not in the full
+  Recommended stack (`CHRIZ-BG-REBALANCE.md`).
 - **Spell Revisions fork v4.21-chriz.7**: the Rogue Rebalancing level-5 replacements
   (v4.21-chriz.6) have not been checked in game yet (its release notes).
 - **Artisan's Kitpack fork chriz.4** (with chriz.2's sorcerer fix and chriz.3's kit

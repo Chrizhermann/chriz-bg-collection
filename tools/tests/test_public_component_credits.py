@@ -76,7 +76,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         # and Sirene NPC for BG:EE adds its own run with default 0, 3 and 6.
         self.assertEqual(actual["artisanskitpack-tweak-late-bg2"][-1], 1010000)
         self.assertEqual(actual["sirene-bg1-bg2"], [0, 3, 6])
-        self.assertEqual(self.result["componentCount"], 473)
+        # October 29: the Rebalance v0.8.8 pin adds default 410 and 411 after 302.
+        self.assertEqual(actual["chriz-bg-rebalance-bg2"][actual["chriz-bg-rebalance-bg2"].index(302) + 1:][:2], [410, 411])
+        self.assertEqual(self.result["componentCount"], 475)
         self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

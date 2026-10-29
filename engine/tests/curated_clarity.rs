@@ -52,7 +52,9 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // effect clocks 360.
         // The October 29 intake adds the Kitpack's weapon-usability sweep 1010000 at the
         // end of the late tweak run, and Sirene NPC for BG:EE 0, 3 and 6.
-        473
+        // The October 29 Rebalance v0.8.8 pin adds default Druid weapons 410 and Alaghor of
+        // Clangeddin weapons 411.
+        475
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();
@@ -97,14 +99,14 @@ fn emotion_exclusivity_is_a_ready_optional_choice_with_an_independent_opt_in() {
     assert_eq!(feature.parent.as_deref(), Some("mod:chriz-bg-rebalance"));
     assert_eq!(
         manifest.mods["chriz-bg-rebalance"].artifact_id,
-        "chriz-bg-rebalance-0.8.7"
+        "chriz-bg-rebalance-0.8.8"
     );
     assert_eq!(
         baseline.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
-                100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420,
-                421, 310, 130, 220, 320, 331, 332, 340, 360,
+                100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410,
+                411, 420, 421, 310, 130, 220, 320, 331, 332, 340, 360,
             ][..]
         )
     );
@@ -496,7 +498,8 @@ fn bard_spell_ceilings_are_default_and_gate_the_bardic_kit_adapter() {
         Some("Requires Bard spell-level ceilings.")
     );
 
-    // The base choice alone adds exactly 420 then 421 after Flail 302.
+    // The base choice alone adds exactly 420 then 421 after Flail 302 and, since v0.8.8,
+    // the druid and Alaghor weapons 410 and 411.
     let mut base_only = neither.normalized_selection.to_selection();
     base_only.set_feature(BASE, true);
     let base_only = evaluate(&manifest, &base_only).unwrap();
@@ -508,7 +511,9 @@ fn bard_spell_ceilings_are_default_and_gate_the_bardic_kit_adapter() {
         .unwrap()
         .components;
     let after_flail = rebalance.iter().position(|c| *c == 302).unwrap() + 1;
-    rebalance.splice(after_flail..after_flail, [420, 421]);
+    assert_eq!(rebalance[after_flail..after_flail + 2], [410, 411]);
+    let after_weapons = after_flail + 2;
+    rebalance.splice(after_weapons..after_weapons, [420, 421]);
     assert_eq!(base_only.plan, expected);
     assert!(base_only.view.control(ADAPTER).unwrap().interactive);
 

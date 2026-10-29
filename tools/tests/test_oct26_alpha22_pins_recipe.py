@@ -42,6 +42,11 @@ LATER_ROWS = {"CHRIZ-BG-REBALANCE": {360}}
 # The October 29 intake (test_oct29_rebalance_pin_recipe) then replaces Rebalance v0.8.6
 # with v0.8.7, which keeps every component and the order.
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.7"
+# The October 29 v0.8.8 intake (test_oct29_rebalance_088_pin_recipe) replaces v0.8.7 and
+# declares Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.8"
+LATER_COMPONENTS["chriz-bg-rebalance"] = {360, 410, 411}
+LATER_ROWS["CHRIZ-BG-REBALANCE"] = {360, 410, 411}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {

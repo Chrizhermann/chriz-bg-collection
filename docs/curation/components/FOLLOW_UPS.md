@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-28
+## Work queue at a glance — 2026-10-29
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -68,6 +68,14 @@ Cross-repository status. Component detail stays in the sections below and in the
        installation on Sirene's victory remark.
      - Both questions from the lab are closed (see his review queue): the second Brimstone
        stays in EET's invisible import container, and the camp copy stays as it is.
+     BG Rebalance v0.8.8 replaces v0.8.7 in both recipes since
+     [PR #64](https://github.com/Chrizhermann/chriz-bg-collection/pull/64) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance-088.toml`),
+     with Druid weapons `410` and Alaghor of Clangeddin weapons `411` as defaults
+     (Christopher, 2026-10-29; see Weapon access below).
+     Still open in this step: BuffBot v1.12.1 (#44 and #51, waiting for Christopher's own
+     test, above) and the Artisan's Kitpack fork chriz.5 with tweak `7205` (Weapon access,
+     below).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
@@ -310,8 +318,12 @@ Cross-repository status. Component detail stays in the sections below and in the
     (2026-10-29, Christopher's OK of that day), lab-verified on BG2:EE 2.7.3.0 with EEex
     v1.3.1. `411` needs Artisan's Kitpack and EEex: the engine reads a kit's own weapon
     column only when the kit's class is the character's class, and Yeslick is a
-    fighter/cleric. Not pinned yet: the coordinator pins v0.8.8, and Christopher decides
-    whether CEBG offers 410 and 411 as defaults or as options. v0.8.8 changes nothing else.
+    fighter/cleric. v0.8.8 changes nothing else. Pinned in both recipes since
+    [PR #64](https://github.com/Chrizhermann/chriz-bg-collection/pull/64) (merged on
+    2026-10-29), both as defaults (Christopher, 2026-10-29). The Rebalance run comes after
+    the Kitpack's late tweak run, so `1010000` rebuilds the class weapon grants before
+    `410` adds the druid ones, and no later run rebuilds them
+    ([CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md)).
   - The Artisan's Kitpack fork frees katanas and rogue items for kits that borrow the
     Shapeshifter bit (the Invisible Blade and the Dancer) in
     [PR #16](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/16).
@@ -347,6 +359,8 @@ Cross-repository status. Component detail stays in the sections below and in the
     components, their decisions and their order are unchanged.
   - Since PR #56 (merged on 2026-10-29) v0.8.7 replaces v0.8.6. Only `360` changes: its
     new name and its guard against the standalone package, which CEBG never installs.
+  - Since PR #64 (merged on 2026-10-29) v0.8.8 replaces v0.8.7. It adds `410` and `411`
+    (Weapon access, above) as defaults between `302` and `420`; nothing else changes.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
   - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
