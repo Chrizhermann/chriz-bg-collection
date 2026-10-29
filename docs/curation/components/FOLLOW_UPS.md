@@ -521,9 +521,9 @@ Cross-repository status. Component detail stays in the sections below and in the
   5. The disk estimate, the `steamapps` folder-name test, a non-empty target folder (a
      subfolder is used instead) and name sanitizing warn instead of stopping, and
      creator-only folder names come out of the player build.
-  Also: manual downloads (Evandra) accept a newer version, as #69 does for links. Waiting
-  for Christopher: whether GOG, other game versions and non-English games install with a
-  warning.
+  Also: manual downloads (Evandra) accept a newer version, as #69 does for links. GOG,
+  other game versions and non-English games install with a warning instead of stopping
+  (Christopher, 2026-10-30).
 - Balance, close to vanilla (Christopher, 2026-10-30), collected as "Chris Revisions" (the
   name BG Rebalance `340` already carries). His line: characters, items, encounters and
   spells may be a little unbalanced, but neither too strong nor too weak: no must-haves or
