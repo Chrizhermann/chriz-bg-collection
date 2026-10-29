@@ -121,6 +121,11 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
 /// newly selected features merely because unrelated parts of the recipe changed.
 fn selected_version(ctx: &Context<'_>) -> Result<Option<String>, String> {
     let b = crate::cli::verify_installed_baseline(ctx.record).map_err(err)?;
+    // The route below reasons about the frozen plan's BuffBot run; without the mods that were
+    // left out, the installed mod list is not that plan.
+    if !b.receipt.left_out.is_empty() {
+        return Err("Some mods were left out of this installation because their downloads could not be used. Whole-mod updates are unavailable for this copy.".into());
+    }
     let Some(run) = b
         .receipt
         .plan

@@ -20,6 +20,11 @@ pub fn inspect_installed_update(
     target_recipe: &Path,
 ) -> Result<InstalledUpdatePlan, CliError> {
     let baseline = verify_installed_baseline(record)?;
+    // Game updates compare and change the recorded mod list run by run. Without some of its
+    // mods that list is not the recipe's, so no update route has been checked for it.
+    if !baseline.receipt.left_out.is_empty() {
+        return Err(problem("Some mods were left out of this installation because their downloads could not be used. Automatic game updates are unavailable for this copy; app updates still work."));
+    }
     let target = load_recipe(target_recipe)?;
     let target_version = recipe_release_version(target_recipe)?
         .ok_or_else(|| problem("The target collection has no recorded release version."))?;
@@ -137,11 +142,8 @@ pub(crate) fn verify_installed_baseline(
         receipt
     };
     validate_report_receipt(&base, &base.attempt_id, created, &frozen, &replay).map_err(problem)?;
-    // Game updates compare and change the recorded mod list run by run. Without some of its
-    // mods that list is not the recipe's, so no update route has been checked for it.
-    if !base.left_out.is_empty() {
-        return Err(problem("Some mods were left out of this installation because their downloads could not be used. Automatic game updates are unavailable for this copy; app updates still work."));
-    }
+    // Mods left out because their downloads could not be used are verified like every other
+    // record; each caller decides whether its work can follow such an installation.
     // A mod installed from a changed download is installed with that file, not the pin.
     for artifact in &base.artifacts {
         if artifact.served_difference.is_none() {

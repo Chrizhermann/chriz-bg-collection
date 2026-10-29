@@ -240,7 +240,9 @@ fn content_disposition_filename(header: &str) -> Option<String> {
                 extended = percent_decode(encoded).and_then(|name| clean_filename(&name));
             }
         } else if name == "filename" {
-            plain = clean_filename(&unquote(value));
+            // Browsers also decode percent escapes here, which some download managers send.
+            let value = unquote(value);
+            plain = clean_filename(&percent_decode(&value).unwrap_or(value));
         }
     }
     extended.or(plain)
@@ -465,6 +467,15 @@ mod tests {
         assert_eq!(
             named(r#"ATTACHMENT; FileName = "spaced name.zip" ; size=12"#).as_deref(),
             Some("spaced name.zip")
+        );
+        // Weasel Mods percent-encodes plain names; a lone percent sign stays as it is.
+        assert_eq!(
+            named(r#"attachment;filename="Lanna%20v1.8.zip""#).as_deref(),
+            Some("Lanna v1.8.zip")
+        );
+        assert_eq!(
+            named("attachment; filename=100%.zip").as_deref(),
+            Some("100%.zip")
         );
     }
 
