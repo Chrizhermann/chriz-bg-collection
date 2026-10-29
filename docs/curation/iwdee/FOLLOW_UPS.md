@@ -43,9 +43,13 @@ go for merging #42 and #52, the three hotpatch defaults, the release and the web
   site PR 39, verified live.
 - [x] "17 new companions" reads "17 companions" on the page, in the release notes, the download
   README and the Discord draft (Christopher, 2026-10-29: nobody had them before installing).
-- [ ] Discord announcement: text drafted (English and German); Christopher posts it.
+- [x] Discord announcement: posted by Christopher on 2026-10-29.
+- [ ] 0.1.2: Marketh's Ring (Unfinished Business) is offered but off, since a player reports that
+  Marketh can vanish with his signet and the quest cannot be finished (Christopher, 2026-10-29).
+  PR #65 on `claude/iwdee-app` also numbers recipe and app 0.1.2 and adds base `iwd-0.1.2`. It
+  awaits his merge OK; building and publishing the 0.1.2 installer waits for his OK too.
 - [ ] A later release that changes the recipe needs a new `[[bases]]` entry with its digest;
-  hotpatches for 0.1.1 installations keep naming base `iwd-0.1.1`.
+  hotpatches name every base they fit (`iwd-0.1.1`, `iwd-0.1.2`).
 
 ## Curation and sources
 

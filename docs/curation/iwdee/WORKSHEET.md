@@ -49,7 +49,7 @@ slots), the installer offers them as one choice and installs at most one. His ow
 | Hidden Gameplay Options | Offered: improved "Quit Game" options. Its option for Tweaks Anthology's restored loading hints is left out, since that tweak is not chosen. On by default since 2026-10-28, with its 28 default options; next to Infinity UI++ or Lefreut's interface the mod refuses four or five of them, and the installer leaves those out. |
 | Infinity UI++ | Four quicksave slots on by default; one, two, three, five or six slots offered instead (chat, 2026-10-26). Offered: transparent tooltip background, its Dialog.tlk string updates. |
 | IWD Crossmod Banter Pack | Banter timer of 30 minutes on by default, 15 minutes (the mod's recommendation) offered; crossmod romance conflicts on. |
-| IWD Unfinished Business | On: Marketh's Ring, actual shadows in the Vale of Shadows, the wardstone for Lower Dorn's Deep. |
+| IWD Unfinished Business | On: actual shadows in the Vale of Shadows, the wardstone for Lower Dorn's Deep. Offered: Marketh's Ring (off since 2026-10-29: a player reports that Marketh can vanish with his signet, so the quest cannot be finished). |
 | Will of the Wisps | On: new items for shamans and undead NPCs. Offered: the Witchlight Shaman and Town Medium kits, the optional new enemies. |
 | Athanasios | Fighter/Cleric. |
 | Cassia | The grey default portrait; the installer answers the mod's question. |
