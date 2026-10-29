@@ -66,7 +66,7 @@ listed below; everything else ran natively.
   - `AR0903.bcs` has Sirene BG2's EET block.
   - No creature in the Recommended set gets the Martyr kit.
 - **BG1.** Sirene stood at the Song of the Morning (`BG3400`).
-  - She was a True Paladin (kit `0x4000`) with the Sirick portrait, chain mail and her
+  - She was a True Paladin (kit `0x4000`) with the Sirick portrait, splint mail and her
     sword Brimstone +1.
   - She joined a chaotic good character through her own dialogue.
 - **End of BG1.** Simulated: Sarevok's death marker and chapter 7. The temple's own script
