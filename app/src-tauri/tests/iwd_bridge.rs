@@ -345,7 +345,7 @@ fn bootstrap_reports_the_bundled_iwd_collection_and_its_one_source() {
         .expect("the bundled IWD recipe passes its startup checks");
 
     assert_eq!(status.selected_profile, "iwd-current");
-    assert_eq!(status.recipe_version.as_deref(), Some("0.1.2"));
+    assert_eq!(status.recipe_version.as_deref(), Some("0.1.3"));
     assert_eq!(status.profiles.len(), 1);
     assert_eq!(status.profiles[0].id, "iwd-current");
     let wire = serde_json::to_value(&status).unwrap();
