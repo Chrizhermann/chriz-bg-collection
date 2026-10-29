@@ -13,7 +13,10 @@ Nothing here is a game installation or gameplay acceptance. BG Rebalance v0.8.7 
 test_oct29_rebalance_pin_recipe) supersedes the v0.8.6 pin, renames 360 to True Time Stop –
 fair Haste & Slow and keeps its components and order; the v0.8.6 record and artifacts stay
 as verified here. v0.8.8 (October 29, test_oct29_rebalance_088_pin_recipe) then adds 410 and
-411, which are checked against its own record.
+411, which are checked against its own record. The Kitpack fork chriz.5 (October 29,
+test_oct29_kitpack_chriz5_pin_recipe) supersedes the chriz.4 pin of all three installers,
+keeps their components and order and adds tweak 7205, which is checked against its own
+record; the chriz.4 records and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -36,6 +39,12 @@ FILENAME = f"ArtisansKitpack-Chriz-Balance-Patch-{KITPACK_TAG}.zip"
 SHA256 = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336"
 LENGTH = 89_682_621
 TAG_COMMIT = "afa3316cdcf0d9dd8c0678c5e578b2621a3373ee"
+# The October 29 Kitpack intake replaces chriz.4 with chriz.5 for all three installers; its
+# tweak TP2 declares 7205 between 7203 and 8204 (checked against its own record).
+KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
+KITPACK_SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.5"
+KITPACK_LATER = {"artisanskitpack-tweak": {7205}}
+KITPACK_LATER_ROWS = {"ARTISANSKITPACK_TWEAK": {7205}}
 # Mod id, its TP2 and the catalog that lists its components.
 INSTALLERS = {
     "artisanskitpack": ("ArtisansKitpack/ArtisansKitpack.TP2", "ARTISANSKITPACK"),
@@ -147,7 +156,7 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
                          ["recipes/curated-full-current"])
         self.assertEqual(len({record["tp2_sha256"] for record in self.records.values()}), 3)
 
-    def test_both_profiles_pin_chriz4_and_keep_chriz3(self):
+    def test_both_profiles_keep_the_chriz4_and_chriz3_artifacts(self):
         for profile_name, directory in self.directories:
             artifact = tomllib.loads((directory / f"artifacts/{KITPACK}.toml").read_text(encoding="utf-8"))
             previous = tomllib.loads((directory / f"artifacts/{KITPACK_PREVIOUS}.toml").read_text(encoding="utf-8"))
@@ -170,7 +179,8 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
                                           ("url", "immutable_source_url"), ("reference", "source_reference")):
                         self.assertEqual(artifact["source"][key], record[measured], key)
                     mod = tomllib.loads((directory / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                    self.assertEqual(mod["artifact_id"], KITPACK, mod_id)
+                    # chriz.4 stays available as history, verified as recorded here.
+                    self.assertEqual(mod["artifact_id"], KITPACK_SUCCESSOR, mod_id)
                     self.assertEqual(mod["tp2"], tp2)
                     self.assertIn(tp2, artifact["archive"]["tp2_paths"])
                 # The chriz.3 records still describe the kept chriz.3 artifact.
@@ -188,15 +198,17 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
             collection = tomllib.loads((directory / "collection.toml").read_text(encoding="utf-8"))
             for mod_id, record in self.records.items():
                 native = record["native_components"]
+                later = KITPACK_LATER.get(mod_id, set())
                 mod = tomllib.loads((directory / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                self.assertTrue({component["id"] for component in mod["components"]} <= set(native), mod_id)
+                self.assertTrue({component["id"] for component in mod["components"]} - later <= set(native), mod_id)
                 runs = [run for run in collection["runs"] if run["mod_id"] == mod_id]
                 self.assertTrue(runs, mod_id)
                 for run in runs:
                     with self.subTest(profile=str(directory), run=run["run_id"]):
-                        self.assertTrue(set(run["components"]) <= set(native))
+                        components = [c for c in run["components"] if c not in later]
+                        self.assertTrue(set(components) <= set(native))
                         if profile_name in record.get("native_order_recipe_profiles", record["recipe_profiles"]):
-                            self.assertEqual(run["components"], [c for c in native if c in run["components"]])
+                            self.assertEqual(components, [c for c in native if c in components])
                         for not_offered in NOT_OFFERED:
                             if not_offered[0] == mod_id:
                                 self.assertNotIn(not_offered[1], run["components"])
@@ -214,13 +226,15 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
             rows.setdefault(row.catalog, {})[row.component_id] = row
         for mod_id, (_, catalog) in INSTALLERS.items():
             with self.subTest(catalog=catalog):
-                self.assertEqual(set(rows[catalog]), set(self.records[mod_id]["native_components"]))
+                later = KITPACK_LATER_ROWS.get(catalog, set())
+                self.assertEqual(set(rows[catalog]) - later, set(self.records[mod_id]["native_components"]))
         for (catalog, component), (_, decision) in CONCERNED.items():
             self.assertEqual(rows[catalog][component].decision, decision, (catalog, component))
-        # The catalogs name the new pin.
+        # The catalogs name the current pin and still describe chriz.4.
         for _, catalog in INSTALLERS.values():
             text = (ROOT / f"docs/curation/components/{catalog}.md").read_text(encoding="utf-8")
-            self.assertIn(f"**{KITPACK_TAG}**", text, catalog)
+            self.assertIn(f"**{KITPACK_SUCCESSOR_TAG}**", text, catalog)
+            self.assertIn("chriz.4", text, catalog)
 
     def test_the_fixed_characters_stay_in_recommended_after_eeex(self):
         for name, _, collection, preset in self._each_profile():

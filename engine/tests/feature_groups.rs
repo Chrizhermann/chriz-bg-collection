@@ -350,18 +350,23 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // run's artifact id. With both removed and v0.8.7 restored, the six previous digests
     // return (manifest 2b77e6d2…, 90703460…, 616da1fb…; curated d4413a74…, e9994330…,
     // b9e1d118…).
+    // Re-pinned on October 29 for Artisan's Kitpack chriz.5 with the katana fix for later mods
+    // 7205 as a default (Christopher, 2026-10-29): its feature, run component and preset entry
+    // change all six digests, and the plans also the selected Kitpack runs' artifact id. With
+    // 7205 removed and chriz.4 restored, the six previous digests return (manifest ece76967…,
+    // f6ad7fd6…, 55b18383…; curated 455b2e6b…, fa83cc45…, 5e6ff963…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "ece76967f4fad233404d67080a2bca023e631d0950e070990a433c972f3ea9b6",
-            "f6ad7fd6ac3c8e8197a4083e14d65d188ba3aefe5777ceb805f881a8b3514036",
-            "55b18383573dde9e13b205d1eb997e0c32df14ba613a2021616c29dead2004db",
+            "f338fc118fe8a2264b2ae95ef2baf1b634b3f236de82d73757296d693878efd0",
+            "2447350d05c9e316570f961b1b2efda6f89882c596b393a8ebb0f94662ae171f",
+            "59f7b6fc7d1f57937dd428e907c38cf15d58651cec34372d59b9a6d6dd29b602",
         ),
         (
             "../recipes/curated-full-current",
-            "455b2e6b530144950f000b83143f350d312741e1826e8e24f9a745a804993c9e",
-            "fa83cc45f445cafbd7e0f25ddbdc9be3e54c2a7aaee5cd6922442f4b8a7920b6",
-            "5e6ff963927e775dc67dd516bb5078ef64ad9f2ded2124b4f0a58fbf2aef85c8",
+            "bb95f4581529cfb6dadd14cb382c996b6c9b91dfaca70a2c4e59a9da286999b2",
+            "7cf6a3b5aa6a6ac274186247768145a5e66522bb3dd9d35df2dd04678d045f02",
+            "5dd76d845dc10d47309b99e6b4f2596db4ac8d79d2b61fa0539d46d73e412d01",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

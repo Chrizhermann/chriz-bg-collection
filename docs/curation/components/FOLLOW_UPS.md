@@ -73,14 +73,19 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance-088.toml`),
      with Druid weapons `410` and Alaghor of Clangeddin weapons `411` as defaults
      (Christopher, 2026-10-29; see Weapon access below).
+     The Artisan's Kitpack fork chriz.5 replaces chriz.4 in both recipes since
+     [PR #66](https://github.com/Chrizhermann/chriz-bg-collection/pull/66) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
+     with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
+     see Weapon access below).
      Still open in this step: BuffBot v1.12.1 (#44 and #51, waiting for Christopher's own
-     test, above) and the Artisan's Kitpack fork chriz.5 with tweak `7205` (Weapon access,
-     below).
+     test, above).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
-     install was clean and the lab is kept; it ran Sirene's checks only.
+     install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
+     v0.8.8 (#64) and Kitpack chriz.5 with `7205` (#66) came after it.
   4. Acceptance, build, signing and publishing, and the website.
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
@@ -268,6 +273,18 @@ Cross-repository status. Component detail stays in the sections below and in the
     - Christopher approved the chriz.4 pin for alpha.22 on 2026-10-27. Since PR #41
       (merged on 2026-10-28) chriz.4 is pinned for all three Kitpack installers in place
       of chriz.3; components, order and decisions are unchanged.
+  - [chriz.5](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.5),
+    released on 2026-10-29 (fork PR #16, for new installations): the Invisible Blade and
+    Bardic Wonders' Dancer can use the katanas and the rogue and bard items that the
+    Shapeshifter's usability bit closed to them (Weapon access, below).
+    - Lab-verified on three disposable BG2:EE 2.7.3.0 games with EEex v1.3.1: with and
+      without Spell Revisions, and in another layout with `1010000` instead of `7205`.
+    - Not covered there: EET, the NPC installer, installations without EEex and casting
+      from the freed scrolls.
+    - Christopher took chriz.5 and its new tweak `7205` into alpha.22 on 2026-10-29,
+      `7205` as a default. Since PR #66 (merged on 2026-10-29) chriz.5 is pinned for all
+      three Kitpack installers in place of chriz.4, and `7205` joins the late tweak run
+      before `8204`; no other component, order or decision changes.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -326,8 +343,13 @@ Cross-repository status. Component detail stays in the sections below and in the
     ([CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md)).
   - The Artisan's Kitpack fork frees katanas and rogue items for kits that borrow the
     Shapeshifter bit (the Invisible Blade and the Dancer) in
-    [PR #16](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/16).
-    Its release as chriz.5 waits for Christopher's OK.
+    [PR #16](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/16),
+    released as chriz.5 on 2026-10-29 (above). Pinned in both recipes since
+    [PR #66](https://github.com/Chrizhermann/chriz-bg-collection/pull/66) (merged on
+    2026-10-29), with its new tweak `7205` (the same fix for items and kits from later
+    mods) as a default (Christopher, 2026-10-29). `7205` runs in the late tweak run before
+    `8204` and `1010000`, and `1010000` ends with the same pass
+    ([ARTISANSKITPACK_TWEAK](ARTISANSKITPACK_TWEAK.md)).
 - InfinityLoader crash analysis: causes found; follow-up decisions are Christopher's.
 - BG Rebalance and the Spell Revisions fork:
   - The seven compatibility follow-ups from the October 8 audit

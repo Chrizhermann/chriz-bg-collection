@@ -13,9 +13,13 @@ use bg_engine::Manifest;
 // monks quarterstaves after Monk Revisions and restricts shamans and late-added kits from
 // the start; its TP2s add the shared weapon grant library and a table pass at the end of
 // components, but no component, so components, order and this route are unchanged.
-const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.4";
-const ARTIFACT_SHA256: &str = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336";
-const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.4";
+// chriz.5 (October 29 intake) frees katanas and rogue and bard items for the Invisible Blade
+// and Bardic Wonders' Dancer: the Elementalist and the Invisible Blade call a new pass after
+// adding their kit, and the tweak TP2 adds 7205, the same pass for items and kits that later
+// mods add, between 7203 and 8204 (a default in the late run, Christopher, 2026-10-29).
+const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.5";
+const ARTIFACT_SHA256: &str = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6";
+const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.5";
 
 const MAIN_AUTHORED: &[u32] = &[
     1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005,
@@ -33,8 +37,9 @@ const NPC_EARLY_AUTHORED: &[u32] = &[
 const NPC_RECOMMENDED: &[u32] = &[1101, 2001, 3101, 3102, 5102, 7102, 21001, 9101, 20002];
 const TWEAK_EARLY: &[u32] = &[20101, 1209, 7203];
 // October 29: the weapon-usability sweep 1010000 (Christopher, 2026-10-26) is the last
-// component of the late run, in its TP2 position after 8204.
-const TWEAK_LATE: &[u32] = &[12012, 3202, 3302, 8204, 1010000];
+// component of the late run, in its TP2 position after 8204; chriz.5's 7205 comes before 8204.
+const TWEAK_LATE: &[u32] = &[12012, 3202, 3302, 7205, 8204, 1010000];
+const KATANA_FIX: &str = "feature:artisanskitpack-tweak:component-7205";
 const SWEEP: &str = "feature:artisanskitpack-tweak:component-1010000";
 
 fn recipe_root() -> PathBuf {
@@ -59,7 +64,7 @@ fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
             "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-{RELEASE_TAG}.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(89_682_621));
+    assert_eq!(artifact.source.expected_length, Some(89_698_447));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -174,7 +179,7 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
     assert_eq!(runs[early_tweaks].components, TWEAK_EARLY);
     assert_eq!(
         runs[late_tweaks].components,
-        [51010, 12012, 3202, 3302, 8204, 1010000]
+        [51010, 12012, 3202, 3302, 7205, 8204, 1010000]
     );
     assert_eq!(runs[late_npc].components, [200010]);
 
@@ -243,14 +248,40 @@ fn keeps_the_reviewed_split_positions_and_dependency_safe_recommended_route() {
             .iter()
             .all(|run| { !run.components.contains(&excluded) }));
     }
+
+    // 7205 requires nothing; switching it off removes only 7205 from the late run.
+    let katana_fix = manifest
+        .collection
+        .features
+        .iter()
+        .find(|feature| feature.id == KATANA_FIX)
+        .expect("katana fix feature");
+    assert_eq!(katana_fix.decision, Decision::Default);
+    assert_eq!(katana_fix.readiness, Readiness::Ready);
+    assert_eq!(
+        katana_fix.parent.as_deref(),
+        Some("mod:artisanskitpack-tweak")
+    );
+    assert!(katana_fix.requires.is_empty() && katana_fix.requires_any.is_empty());
+    assert!(katana_fix.conflicts.is_empty());
+    let mut without_fix = evaluation.normalized_selection.to_selection();
+    without_fix.set_feature(KATANA_FIX, false);
+    let without_fix = evaluate(&manifest, &without_fix).unwrap();
+    assert_eq!(
+        without_fix
+            .plan
+            .components_for("artisanskitpack-tweak-late-bg2"),
+        Some(&[12012, 3202, 3302, 8204, 1010000][..])
+    );
 }
 
 #[test]
 fn the_weapon_usability_sweep_runs_last_after_item_mods_when_c0pr_cl_exists() {
-    // Tweak 1010000 installs only when C0PR#CL.SPL exists. In the pinned chriz.4 source the
-    // generator that creates it (eeex/profs_eeex.tpa) is included by Eldritch Knight 20000
-    // with EEex, by Arcane Trickster sorcerer thief equipment 8204 (which requires EEex),
-    // and by Samurai 1010 and Favored Soul 30001, which the collection does not offer.
+    // Tweak 1010000 installs only when C0PR#CL.SPL exists. In the pinned chriz.5 source, as
+    // in chriz.4, the generator that creates it (eeex/profs_eeex.tpa) is included by Eldritch
+    // Knight 20000 with EEex, by Arcane Trickster sorcerer thief equipment 8204 (which
+    // requires EEex), and by Samurai 1010 and Favored Soul 30001, which the collection does
+    // not offer.
     for directory in ["manifest", "recipes/curated-full-current"] {
         let manifest = Manifest::load(&recipe_root().join("..").join(directory)).unwrap();
         let component = manifest.mods["artisanskitpack-tweak"]

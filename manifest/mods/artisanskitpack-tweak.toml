@@ -1,5 +1,5 @@
 id = "artisanskitpack-tweak"
-artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.4"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
 name = "The Artisan's Kitpack — Late Tweaks"
 tp2 = "ArtisansKitpack_tweak/ArtisansKitpack_tweak.TP2"
 language = 0
@@ -33,6 +33,10 @@ name = "Mystic Fire: Add HLA spells directly to spellbook"
 [[components]]
 id = 7203
 name = "Trickster: Mimic Mod Kit Abilities"
+
+[[components]]
+id = 7205
+name = "Invisible Blade: Apply the Katana Fix to Items and Kits Added Later"
 
 [[components]]
 id = 8204

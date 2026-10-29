@@ -138,8 +138,8 @@ class CatalogParserTests(unittest.TestCase):
         # October 28: Rebalance v0.8.6 adds the Time Stop and Haste effect clocks 360.
         # October 29: the SIRENE_BG1 catalog (Sirene NPC for BG:EE) adds 10 rows.
         # October 29: Rebalance v0.8.8 adds Druid weapons 410 and Alaghor of Clangeddin
-        # weapons 411.
-        self.assertEqual(len(rows), 1_350)
+        # weapons 411, and Artisan's Kitpack chriz.5 adds tweak 7205.
+        self.assertEqual(len(rows), 1_351)
         self.assertEqual(
             decision_totals(rows),
             {
@@ -187,8 +187,9 @@ class CatalogParserTests(unittest.TestCase):
                 # October 28: Rebalance 360 is a default (Christopher, 2026-10-27).
                 # October 29: Artisan tweak 1010000 is a default (Christopher, 2026-10-26),
                 # and so are Sirene BG1 0, 3 and 6 (Christopher, 2026-10-29).
-                # October 29: Rebalance 410 and 411 are defaults (Christopher, 2026-10-29).
-                Decision.DEFAULT: 334,
+                # October 29: Rebalance 410 and 411 are defaults (Christopher, 2026-10-29),
+                # and so is Artisan tweak 7205 (Christopher, 2026-10-29).
+                Decision.DEFAULT: 335,
                 # October 13 intake: SoD 177/198/285 join the mandatory bundle (430 left it).
                 Decision.MANDATORY: 154,
             },
@@ -422,10 +423,11 @@ default = "none"
         # October 28: Rebalance 360 maps to one feature (v0.8.6 pin).
         # October 29: Artisan tweak 1010000 moves from the excluded rows to its feature,
         # and the six offered SIRENE_BG1 rows map to one feature each.
-        # October 29: Rebalance 410 and 411 map to one feature each (v0.8.8 pin).
-        self.assertEqual(result.mapped_rows, 1_350)
+        # October 29: Rebalance 410 and 411 map to one feature each (v0.8.8 pin), and so
+        # does Artisan tweak 7205 (chriz.5 pin).
+        self.assertEqual(result.mapped_rows, 1_351)
         self.assertEqual(result.excluded_rows, 527)
-        self.assertEqual(result.feature_rows + result.omission_rows, 823)
+        self.assertEqual(result.feature_rows + result.omission_rows, 824)
         # October 14: Rebalance potion uniqueness and SCS fine weapons choices.
         # October 23: the SoD Remix Imoen in Shadows of Amn choice.
         # October 23: ten quest-mod choices (Ascalon's three with their first variant as
@@ -437,7 +439,7 @@ default = "none"
         self.assertEqual(result.choice_groups, 88)
         self.assertEqual(result.optional_none_groups, 31)
         self.assertEqual(result.fixed_groups, 12)
-        self.assertIn("rows=1350", coverage_report(rows, result))
+        self.assertIn("rows=1351", coverage_report(rows, result))
 
     def test_september16_intake_rows_match_the_approved_recipe_features(self) -> None:
         root = Path(__file__).resolve().parents[2]
