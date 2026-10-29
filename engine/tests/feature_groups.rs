@@ -334,18 +334,22 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // run component and preset entry change all six digests. Without them the six previous
     // digests return (manifest b16c7f80…, b1f467ef…, 4fd9d65f…; curated a9ce4259…,
     // c2684cfe…, 2614b16c…).
+    // Re-pinned on October 29 for SoD Remix v0.6.16: in both recipes only the Recommended
+    // plan changes, in the chriz-sod-remix-bg2 run's artifact id; its components and the
+    // selection stay. With v0.6.15 restored, the previous plan digests return (manifest
+    // 29a3cb46…, curated e59b795b…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "f0fd7718d0e8a1a7e0844cc55e1226c3f08837d84453d918878283203cc01c6c",
             "1cb14fad984623fba94375b29b920ffd43617622a8bcbc1ae890a1c0bbf6ee21",
-            "29a3cb468284d6332682eac8ac8d28db8f2130d02942c3925b657720fe9c6c9d",
+            "7c78ecb22962fe482faed75d1a93f89c7f6a394f1afdafee423d14b509b8afd9",
         ),
         (
             "../recipes/curated-full-current",
             "b633893e96bfbe5054f96322c83ea5404d13046638842e8ab27da373d251fbf8",
             "cb32867668e1eabea927189e4eb4862033988a464e0b175e4ba691226b9df30e",
-            "e59b795ba91c4a6e7a6915226e487fe0de7cd3901b8bc2e8092446293334ccc6",
+            "87f1ab67e434ae7daa5e990dc5181b3062bc97d653ccb1ab785076a832c50cb6",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

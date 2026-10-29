@@ -9,7 +9,8 @@ use bg_engine::Manifest;
 
 /// The October 13 intake adds the mandatory v0.6.13 rows 177, 198 and 285 in TP2 order.
 /// The October 23 intake (v0.6.15) adds the Imoen in Shadows of Amn choice after 910;
-/// Recommended installs its default 292.
+/// Recommended installs its default 292. v0.6.16 (October 29 intake) changes 290 and the
+/// timer-name reads of 265 and six more components; components and order stay the same.
 const SOD_REMIX_COMPONENTS: &[u32] = &[
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197,
     198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 260, 265, 266, 270, 280, 285, 290,
@@ -54,25 +55,25 @@ fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
     assert_eq!(
         manifest.mods["chriz-sod-remix"].artifact_id,
-        "chriz-sod-remix-0.6.15"
+        "chriz-sod-remix-0.6.16"
     );
-    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.15"];
-    assert_eq!(artifact.version, "0.6.15");
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.16"];
+    assert_eq!(artifact.version, "0.6.16");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.15");
+    assert_eq!(artifact.source.reference, "v0.6.16");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-sod-remix-v0.6.15.zip")
+        Some("chriz-sod-remix-v0.6.16.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(3_045_799));
+    assert_eq!(artifact.source.expected_length, Some(3_055_655));
     assert_eq!(
         artifact.source.sha256,
-        "3a295832f9af3540bf079ba437676b70b019ce8db506ef89fde28addd0b4feaf"
+        "7da50d206e4f0d50dd94d5e60fd985290a245d2dc3bed32068e1eaad0219c2e6"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

@@ -514,31 +514,32 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.15")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.16")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.15.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.16.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.7.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.11.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.15")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.15")
+            self.assertEqual(sod_artifact["version"], "0.6.16")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.16")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.15.zip",
+                "chriz-sod-remix-v0.6.16.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 3045799)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 3055655)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "3a295832f9af3540bf079ba437676b70b019ce8db506ef89fde28addd0b4feaf",
+                "7da50d206e4f0d50dd94d5e60fd985290a245d2dc3bed32068e1eaad0219c2e6",
             )
             # October 13 adds mandatory v0.6.13 rows 177, 198 and 285 in native TP2 order;
-            # October 23 (v0.6.15) adds the Imoen choice 292/293/294 after 910.
+            # October 23 (v0.6.15) adds the Imoen choice 292/293/294 after 910; October 29
+            # (v0.6.16) keeps the components and their order.
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910, 292, 293, 294])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
