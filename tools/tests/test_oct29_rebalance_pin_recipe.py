@@ -7,7 +7,9 @@ in the game. Against v0.8.6 the TP2 adds no component and keeps the declaration 
 decision changes (Christopher took v0.8.7 into alpha.22 on 2026-10-28).
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. BG Rebalance v0.8.8 (October 29,
+test_oct29_rebalance_088_pin_recipe) supersedes this pin and adds 410 and 411; the v0.8.7
+record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -42,6 +44,11 @@ OLD_NAME = "Time Stop and Haste effect clocks"
 # Chris's Recommended selection of the Rebalance run, unchanged by v0.8.7.
 RECOMMENDED = {100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421,
                310, 130, 220, 320, 331, 332, 340, 360}
+# The v0.8.8 intake (test_oct29_rebalance_088_pin_recipe) replaces this pin and declares
+# Druid weapons 410 and Alaghor of Clangeddin weapons 411, both defaults, which are checked
+# against its own record.
+SUCCESSOR = "chriz-bg-rebalance-0.8.8"
+LATER = {410, 411}
 
 
 def _load(path: Path) -> dict:
@@ -121,12 +128,12 @@ class Oct29RebalanceV087PinTests(unittest.TestCase):
         self.assertEqual(record["native_components"], self.previous["native_components"])
         self.assertEqual(record["native_components"][-2:], [340, 360])
 
-    def test_both_profiles_pin_v087_keep_v086_and_leave_the_standalone_packages_out(self):
+    def test_both_profiles_keep_v087_and_v086_and_leave_the_standalone_packages_out(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 artifact = _load(directory / f"artifacts/{PIN}.toml")
                 previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
                 self.assertEqual(artifact["id"], PIN)
@@ -181,7 +188,7 @@ class Oct29RebalanceV087PinTests(unittest.TestCase):
                 self.assertIn(phrase, feature["description"])
             self.assertEqual(preset.get(CLOCKS), "on")
             baseline = self._selected(collection, preset)
-            self.assertEqual({component for run_id, component in baseline if run_id == RUN}, RECOMMENDED)
+            self.assertEqual({component for run_id, component in baseline if run_id == RUN} - LATER, RECOMMENDED)
             self.assertEqual(baseline - self._selected(collection, preset, **{CLOCKS: "off"}), {(RUN, 360)})
             self.assertNotIn((RUN, 360), self._selected(collection, preset, **{"mod:eeex": "off"}))
 
@@ -189,21 +196,23 @@ class Oct29RebalanceV087PinTests(unittest.TestCase):
         native = self.record["native_components"]
         rows = {row.component_id: row for row in load_catalogs(ROOT / "docs/curation/components")
                 if row.catalog == "CHRIZ-BG-REBALANCE"}
-        self.assertEqual(set(rows), set(native))
+        self.assertEqual(set(rows) - LATER, set(native))
         self.assertEqual(rows[360].component, NAME)
         self.assertEqual(rows[360].decision, Decision.DEFAULT)
-        self.assertEqual(NATIVE_RUN_ORDERS[RUN], [c for c in native if c in NATIVE_RUN_ORDERS[RUN]])
+        order = [c for c in NATIVE_RUN_ORDERS[RUN] if c not in LATER]
+        self.assertEqual(order, [c for c in native if c in order])
         for _, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertTrue({component["id"] for component in mod["components"]} <= set(native))
+                self.assertTrue({component["id"] for component in mod["components"]} - LATER <= set(native))
                 self.assertEqual((mod["tp2"], mod["language"], mod["weidu_artifact_id"], mod["invocation_mode"]),
                                  ("setup-chriz-bg-rebalance.tp2", 0, "weidu-249-amd64", "setup-name"))
                 collection = _load(directory / "collection.toml")
                 runs = [run for run in collection["runs"] if run["mod_id"] == MOD]
                 self.assertEqual([run["run_id"] for run in runs], [RUN])
                 (run,) = runs
-                self.assertEqual(run["components"], [c for c in native if c in run["components"]])
+                components = [c for c in run["components"] if c not in LATER]
+                self.assertEqual(components, [c for c in native if c in components])
                 self.assertEqual(run["components"][-2:], [340, 360])
                 self.assertEqual(run["phase"], "post-eet-end")
                 order = [entry["run_id"] for entry in collection["runs"]]
@@ -211,7 +220,7 @@ class Oct29RebalanceV087PinTests(unittest.TestCase):
 
     def test_catalog_and_changelog_name_the_pin_the_rename_and_the_new_check(self):
         text = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")
-        self.assertIn(f"**{TAG}**", text)
+        self.assertIn(f"## {TAG}: the new name and the standalone package", text)
         self.assertIn(f"`{TAG_COMMIT[:7]}`", text)
         self.assertNotIn(f"| 360 | {OLD_NAME} |", text)
         for phrase in (NAME, f"`{WEIDU_NAME}`", "`@9366`", "`CBR_TRUE_TIMESTOP-v0.8.7-windows.zip`",
@@ -219,8 +228,9 @@ class Oct29RebalanceV087PinTests(unittest.TestCase):
                        "Christopher, 2026-10-28"):
             self.assertIn(phrase, text)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
-        for phrase in (f"**{NAME}** — **Default.**", "BG Rebalance v0.8.7 (was v0.8.2)", "Rebalance to v0.8.7",
-                       "`CBR_TRUE_TIMESTOP`"):
+        # v0.8.8 replaced v0.8.7 in the version list and the release-note entry.
+        for phrase in (f"**{NAME}** — **Default.**", "BG Rebalance v0.8.8 (was v0.8.2)", "Rebalance to v0.8.8",
+                       "`CBR_TRUE_TIMESTOP`", "(Rebalance v0.8.6; named in v0.8.7)"):
             self.assertIn(phrase, changelog)
 
 

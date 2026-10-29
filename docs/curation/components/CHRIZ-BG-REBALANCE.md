@@ -14,14 +14,15 @@ The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-The recipe pins **v0.8.7** (published 2026-10-28 16:03 UTC, tag commit `2c0aae4`), which
-renames `360` to True Time Stop – fair Haste & Slow and leaves its behaviour unchanged (see
-below). v0.8.6 (2026-10-27, tag commit `43b8811`) added `360`; v0.8.5 (2026-10-25) added
+The recipe pins **v0.8.8** (published 2026-10-29 10:00 UTC, tag commit `92479d1`), which
+adds Druid weapons `410` and Alaghor of Clangeddin weapons `411`, both defaults (see below).
+v0.8.7 (2026-10-28, tag commit `2c0aae4`) renamed `360` to True Time Stop – fair Haste &
+Slow and left its behaviour unchanged. v0.8.6 (2026-10-27, tag commit `43b8811`) added `360`; v0.8.5 (2026-10-25) added
 Chris Revisions `340`; v0.8.3 added potion uniqueness `330`/`331` and the Heroism family
 `332`; v0.8.4 (2026-10-23) released the October 8 compatibility follow-ups for existing
 components (see below).
 
-34 curated entries, 25 recommended selections for the next release. Bard spell-level
+36 curated entries, 27 recommended selections for the next release. Bard spell-level
 ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
 2026-10-13)** (see below).
 ✓ = selected and receipt-verified in the isolated
@@ -76,6 +77,8 @@ release-candidate provenance.
 | 407 | EEex variant: exactly +1/2 attack while wielding a specialized weapon (recommended) | Class and kit revisions | Cleric of Tempus: weapon specialization grants extra attacks | ✓ | default |
 | 409 | Cleric of Tempus: EEex specialization APR — re-ship the listener (migration repair for the v0.1.0 runaway-APR build) | Class and kit revisions |  |  | |
 | 408 | Cleric of Tempus: updated kit and ability descriptions | Class and kit revisions |  | ✓ | default |
+| 410 | Druids may use axes and short bows; fighter/druids also long bows | Class and kit revisions |  |  | default |
+| 411 | Alaghor of Clangeddin (Yeslick): the cleric weapons plus axes, with fighter/cleric weapon limits (EEex) | Class and kit revisions |  |  | default |
 | 420 | EEex: independent kit spell-progression provider | Class and kit revisions |  |  | default |
 | 421 | Bard progression: IWD through level 7; Blade and Skald use original progression through level 6 | Class and kit revisions |  |  | default |
 | 330 | Potion uniqueness: all temporary potion types | Cross-cutting audits | Potion uniqueness |  | optional |
@@ -241,6 +244,55 @@ next section).
   order and every recorded decision stay: `360` remains a default in the spells category,
   marked ready, at the end of the Rebalance run. Fresh-download evidence:
   `manifest/evidence/release-intake-20261029-rebalance.toml`.
+
+## Druid weapons and Alaghor of Clangeddin weapons — v0.8.8 (Christopher's decision, 2026-10-29)
+
+- Christopher, 2026-10-29: both go into alpha.22, and both are defaults in the recommended
+  preset; each can be deselected.
+- **`410` Druid weapons:** druids and every druid kit train axes and short bows to one
+  pip and can use them; fighter/druids and their kits also long bows, with up to two pips
+  in all three. A higher limit another mod set stays. With Artisan's Kitpack it adds the
+  druid and fighter/druid grants to the Kitpack's class weapon grants (`C0PR#CL.SPL`);
+  without the Kitpack it removes the druid and fighter/druid restrictions from those
+  weapons. The English druid and fighter/druid descriptions name the new weapons.
+- **`411` Alaghor of Clangeddin weapons:** Yeslick's kit trains and uses the cleric
+  weapons plus axes, with fighter/cleric limits up to two pips; the thief weapons its
+  weapon list allowed drop out, and pips already spent stay. An EEex hook makes the
+  engine read the kit's own weapon column for fighter/clerics with this kit. The English
+  kit description names the axes.
+- Existing party members get the new weapons at their next level-up at the latest: the
+  Kitpack's `C0PR#CL` applies its grants when a creature is created and at each level-up.
+- Install-time requirements in the TP2: `410` needs BG2:EE or EET, `WEAPPROF.2DA`,
+  `KITLIST.2DA` and the DRUID and FIGHTER_DRUID classes, so its feature requires nothing
+  else. `411` also needs the kit `LK_ALAGHOR` (Yeslick NPC's Fighter-Alaghor, `1`), the
+  Kitpack's EEex weapon usability (`C0PR#CL.SPL`, `C0PR#92.SPL`, `SPLPROT.2DA`; within the
+  collection Eldritch Knight `20000` with EEex or Arcane Trickster sorcerer equipment
+  `8204` creates it) and EEex with its extra-pattern loader; before it writes anything, it
+  checks that its hook site occurs exactly once in `Baldur.exe` (else `BaldurII.exe`). Its
+  feature therefore requires EEex's core components and Yeslick's Fighter-Alaghor, and
+  `20000` or `8204`.
+- **Order:** the TP2 declares `410` and `411` between `302` and `420`, so the post-EET-end
+  Rebalance run reads `..., 408, 302, 410, 411, 420, 421, ...`. In both recipe profiles
+  that run comes after every Artisan's Kitpack run, the late tweak run with `1010000`
+  included, after Yeslick NPC and after EEex, as the release notes ask.
+  - `1010000` rebuilds the class weapon grants in `C0PR#CL.SPL` from `WEAPPROF.2DA` as it
+    is then. `410` runs afterwards: it raises the druid and fighter/druid columns and adds
+    its grants after the Kitpack's own, with the Kitpack's marker, so a later rebuild would
+    recreate them from the raised columns. No run after the Rebalance run rebuilds those
+    grants or changes `WEAPPROF.2DA`, so the druids keep the axes and bows that carry the
+    Kitpack's weapon check.
+  - In the October 29 EET lab install (before `410`), no axe or bow in `override` that
+    fighters may use carried the druid usability bit or the bits of the Totemic Druid, the Shapeshifter or
+    the Avenger; 83 of the 88 axes, 37 of the 42 short bows and 22 of the 25 long bows
+    carried the Kitpack's weapon check. So every druid kit gets them through `410`'s
+    class grants.
+  - Weapons that later runs add keep their own restrictions, as with `1010000`.
+- Owner checks: 11 automated checks for `410` and 22 for `411` run WeiDU or the hook's Lua
+  on synthetic games. `410` was installed in BG2:EE 2.7.3.0 labs with EEex 1.3.1, with and
+  without the Kitpack; `411` and `410` on 2026-10-29 in CEBG's order (Yeslick NPC, Spell
+  Revisions, the Kitpack chriz.4 with `1010000`, then `410` and `411`). Not EET, and not in
+  the collection's full stack (its release notes). Fresh-download evidence:
+  `manifest/evidence/release-intake-20261029-rebalance-088.toml`.
 
 ## v0.8.4 compatibility follow-ups
 

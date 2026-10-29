@@ -58,7 +58,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         run_id = "chriz-bg-rebalance-bg2"
         runs = tomllib.loads(collection)["runs"]
         run = next(run for run in runs if run["run_id"] == run_id)
-        self.assertEqual(run["components"][-13:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
         # Regression: sorting numerical IDs recreated the September 30 failure.
         sorted_source = collection.replace(
             f"components = {run['components']}",
@@ -406,7 +406,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # and sirene-bg2 moved there from after Yeslick; without the run, its
                 # features and preset entries and with sirene-bg2 back, the 1010000 digest
                 # 5ec32478457d3d9f535687dde5469d0c34341b7a8ebb4152ec077a3f10aa17a4 returns.
-                "042dc03d9670386688578abb9933e2bd12ce4f6d1305ef736fc881c9cdfbdc7b",
+                # October 29, Rebalance v0.8.8 pin: default Druid weapons 410 and Alaghor of
+                # Clangeddin weapons 411 between 302 and 420 (Christopher, 2026-10-29), 411
+                # requiring EEex, Yeslick's Fighter-Alaghor and Eldritch Knight 20000 or
+                # Arcane Trickster 8204; without them the Sirene digest
+                # 042dc03d9670386688578abb9933e2bd12ce4f6d1305ef736fc881c9cdfbdc7b returns.
+                "014a25b8005ccd293859c4659f88d60b373cec0eb007e0097e2e717eeb07ece7",
             )
 
             legacy_bg1npc_groups = {
@@ -718,18 +723,18 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.7")
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.8")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.7.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.8.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.7")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.7")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1818389)
+            self.assertEqual(bg_artifact["version"], "0.8.8")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.8")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1839187)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "0f0edbf5f37fc5528f6cf3e5fbeffda126dcd0c18814c68f9da81a002793b072",
+                "dec0544b3cc0f2197b5791e89cf0eb73d2cdb563d3ae35c254d0da719d89a2e3",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.20")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19"):
@@ -1080,7 +1085,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertTrue(all(f"feature:chriz-bg-rebalance:component-{id_}" not in features for id_ in (420, 421)))
         run = next(run for run in collection["runs"] if run["run_id"] == "chriz-bg-rebalance-bg2")
         self.assertEqual(run["phase"], "post-eet-end")
-        self.assertEqual(run["components"][-13:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
 
     def test_shifted_dialogue_is_optional_and_requires_either_kit_without_eeex(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))

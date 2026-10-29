@@ -12,7 +12,8 @@ Static pin, evidence, component, selection and order checks for both recipe prof
 Nothing here is a game installation or gameplay acceptance. BG Rebalance v0.8.7 (October 29,
 test_oct29_rebalance_pin_recipe) supersedes the v0.8.6 pin, renames 360 to True Time Stop –
 fair Haste & Slow and keeps its components and order; the v0.8.6 record and artifacts stay
-as verified here.
+as verified here. v0.8.8 (October 29, test_oct29_rebalance_088_pin_recipe) then adds 410 and
+411, which are checked against its own record.
 """
 
 from pathlib import Path
@@ -257,8 +258,10 @@ REBALANCE_FILENAME = "chriz-bg-rebalance-v0.8.6-windows.zip"
 REBALANCE_SHA256 = "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba"
 REBALANCE_LENGTH = 1_817_306
 REBALANCE_COMMIT = "43b8811abe04ad71575c89d5589866919801bdff"
-# The October 29 intake replaces v0.8.6 with v0.8.7, which renames 360.
-REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.7"
+# The October 29 intakes replace v0.8.6 with v0.8.7, which renames 360, and v0.8.7 with
+# v0.8.8, which declares 410 and 411 (checked against its own record).
+REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.8"
+REBALANCE_LATER = {410, 411}
 CLOCKS_TITLE = "True Time Stop – fair Haste & Slow"
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
 CLOCKS = "feature:chriz-bg-rebalance:component-360"
@@ -351,7 +354,8 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
 
     def test_clocks_360_is_a_default_after_340_and_needs_eeex_first(self):
         native = self.record["native_components"]
-        self.assertEqual([c for c in NATIVE_RUN_ORDERS[REBALANCE_RUN] if c in native], NATIVE_RUN_ORDERS[REBALANCE_RUN])
+        order = [c for c in NATIVE_RUN_ORDERS[REBALANCE_RUN] if c not in REBALANCE_LATER]
+        self.assertEqual([c for c in order if c in native], order)
         self.assertEqual(NATIVE_RUN_ORDERS[REBALANCE_RUN][-2:], [340, 360])
         for name, _, collection, preset in self._each_profile():
             features = {feature["id"]: feature for feature in collection["features"]}
@@ -373,8 +377,8 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
             self.assertEqual(preset.get(CLOCKS), "on")
             runs = {run["run_id"]: run for run in collection["runs"]}
             self.assertEqual(runs[REBALANCE_RUN]["components"][-2:], [340, 360])
-            self.assertEqual(runs[REBALANCE_RUN]["components"],
-                             [c for c in native if c in runs[REBALANCE_RUN]["components"]])
+            components = [c for c in runs[REBALANCE_RUN]["components"] if c not in REBALANCE_LATER]
+            self.assertEqual(components, [c for c in native if c in components])
             self.assertEqual(runs[REBALANCE_RUN]["phase"], "post-eet-end")
             order = [run["run_id"] for run in collection["runs"]]
             self.assertLess(order.index(EEEX_RUN), order.index(REBALANCE_RUN))
@@ -392,7 +396,7 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
     def test_catalog_records_the_decision_and_the_executable_check(self):
         rows = {row.component_id: row for row in load_catalogs(ROOT / "docs/curation/components")
                 if row.catalog == "CHRIZ-BG-REBALANCE"}
-        self.assertEqual(set(rows), set(self.record["native_components"]))
+        self.assertEqual(set(rows) - REBALANCE_LATER, set(self.record["native_components"]))
         self.assertEqual(rows[360].decision, Decision.DEFAULT)
         self.assertEqual(rows[340].decision, Decision.DEFAULT)
         text = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")

@@ -75,8 +75,9 @@ NATIVE_RUN_ORDERS = {
     # Verify new source pins with tools/check_native_component_order.py.
     # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last;
     # v0.8.5 (October 25) declares Chris Revisions 340 after them, and v0.8.6 (October 27)
-    # the Time Stop and Haste effect clocks 360 after 340.
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360],
+    # the Time Stop and Haste effect clocks 360 after 340. v0.8.8 (October 29) declares
+    # Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],

@@ -344,18 +344,24 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // features and the preset entries removed and sirene-bg2 back after Yeslick, the six
     // previous digests return (manifest f0fd7718…, 1cb14fad…, 7c78ecb2…; curated b633893e…,
     // cb328676…, 87f1ab67…).
+    // Re-pinned on October 29 for BG Rebalance v0.8.8 with Druid weapons 410 and Alaghor of
+    // Clangeddin weapons 411 as defaults (Christopher, 2026-10-29): their features, run
+    // components and preset entries change all six digests, and the plans also the Rebalance
+    // run's artifact id. With both removed and v0.8.7 restored, the six previous digests
+    // return (manifest 2b77e6d2…, 90703460…, 616da1fb…; curated d4413a74…, e9994330…,
+    // b9e1d118…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "2b77e6d25b7a8aa778330d7e95363117cc17b6f44585c19e93d6c0aba389792b",
-            "90703460a01f06c3cdcb8cc8c4fec67538a105bb1bb292818af48a6e7803ec59",
-            "616da1fb686aa5767cda50349f5a6c18a42331160ecbf51116f115f779cc950d",
+            "ece76967f4fad233404d67080a2bca023e631d0950e070990a433c972f3ea9b6",
+            "f6ad7fd6ac3c8e8197a4083e14d65d188ba3aefe5777ceb805f881a8b3514036",
+            "55b18383573dde9e13b205d1eb997e0c32df14ba613a2021616c29dead2004db",
         ),
         (
             "../recipes/curated-full-current",
-            "d4413a740b3a5eee66bfef2cf2dfcedb721d26afb447ac6cc696643dfeb60fe6",
-            "e99943302b228205cd657de0b87ed60f4d86f948b4d35ed6ca618f7f9baf9156",
-            "b9e1d11853e49855a8c09ded5c5529f4f65734bac3a8cdc233e564b6f57d2d58",
+            "455b2e6b530144950f000b83143f350d312741e1826e8e24f9a745a804993c9e",
+            "fa83cc45f445cafbd7e0f25ddbdc9be3e54c2a7aaee5cd6922442f4b8a7920b6",
+            "5e6ff963927e775dc67dd516bb5078ef64ad9f2ded2124b4f0a58fbf2aef85c8",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
