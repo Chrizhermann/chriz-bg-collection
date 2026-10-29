@@ -87,7 +87,7 @@ Cross-repository status. Component detail stays in the sections below and in the
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
      update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
-     waiting for Christopher's merge OK. The ledger supersedes alpha.20 (alpha.21 shipped
+     merged on 2026-10-30. The ledger supersedes alpha.20 (alpha.21 shipped
      the alpha.20 recipe), covers all 230 recorded differences, BuffBot v1.12.1 from #44
      included, and needs app alpha.22, so the app release that ships it must carry that
      version. Its publication date is a placeholder that the release step sets. If the
@@ -99,6 +99,15 @@ Cross-repository status. Component detail stays in the sections below and in the
      v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44) came
      after it.
   4. Acceptance, build, signing and publishing, and the website.
+- Installers keep going when a mod's official link serves a newer file (Christopher,
+  2026-10-30: as few blockers as possible; a newer version under the same link is
+  installed and logged, and players report problems afterwards).
+  [PR #69](https://github.com/Chrizhermann/chriz-bg-collection/pull/69) changes the engine
+  and [PR #70](https://github.com/Chrizhermann/chriz-bg-collection/pull/70) ports it to the
+  IWD app: the changed file is installed and recorded under its actual checksum. If its
+  layout no longer fits, that mod and the mods that need it are left out, and the
+  installation record says so. Review fixes are in progress; then Christopher's merge OK
+  (#70 together with or after #69).
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
   is on the next-release branch since
@@ -501,6 +510,30 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Christopher's own Elementalist Druid mod: the design continues right after alpha.22
   (Christopher, 2026-10-25). A design record from May/June 2026 exists; which sprites
   the forms use is still open.
+- Fewer installer stops in both installers, as quick patches after the release (blocker
+  audit of 2026-10-30; Christopher: as few blockers as possible, only PC and source-game
+  safety stays strict):
+  1. A failed optional run is skipped with a warning, together with the runs that need it.
+  2. Leftover files in the source game no longer mark it as modified; the copy leaves them
+     out and warns.
+  3. Game discovery checks each candidate folder on its own.
+  4. Downloads, staging and the dialog.tlk probe retry before they fail.
+  5. The disk estimate, the `steamapps` folder-name test, a non-empty target folder (a
+     subfolder is used instead) and name sanitizing warn instead of stopping, and
+     creator-only folder names come out of the player build.
+  Also: manual downloads (Evandra) accept a newer version, as #69 does for links. Waiting
+  for Christopher: whether GOG, other game versions and non-English games install with a
+  warning.
+- Balance, close to vanilla (Christopher, 2026-10-30), collected as "Chris Revisions" (the
+  name BG Rebalance `340` already carries). His line: characters, items, encounters and
+  spells may be a little unbalanced, but neither too strong nor too weak: no must-haves or
+  one-click wins, and no picks too weak to take. Fix what is clearly broken in vanilla
+  (Spell Revisions' Sleep is his example) and skip big overcorrections (Spell Revisions'
+  old Pierce Magic, which removed Magic Resistance entirely). Open items:
+  - Black Blade of Disaster with Spell Revisions and Tweaks Anthology `2210`: alpha.22
+    keeps +3/2 attacks per round and +8 to hit / +10 damage ([CDTWEAKS](CDTWEAKS.md)); how
+    strong it should be is decided later.
+  - Edwin: whether he is too strong; a later discussion.
 
 **Ideas for later (community, recorded 2026-10-20)**
 
