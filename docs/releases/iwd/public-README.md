@@ -40,7 +40,7 @@ This describes the recommended setup. Optional choices are listed separately bel
   intended, and enemy priests prepare when they first see your party (Core Rules difficulty and
   up). All creatures have maximum hit points, and spells from high-level casters are harder to
   save against.
-- **17 new companions** by The Artisan, Arvendor and Lava, with banter between them from the
+- **17 companions** by The Artisan, Arvendor and Lava, with banter between them from the
   Icewind Dale Crossmod Banter Pack (at most one every 30 minutes). Companions react more
   often, answer your main character instead of whoever talks to them, and may grumble about
   reputation but never leave over it.
