@@ -95,7 +95,7 @@ describe("Chriz Easy BG application flow", () => {
       installationSummary(installId: string): Promise<readonly string[]> {
         this.summaryCalls.push(installId);
         return Promise.resolve([
-          "Left out: Snowytoes. Its download changed and could not be used.",
+          "Left out: Snowytoes. Its download could not be used.",
           "If something does not work as expected, please report it so the collection can be fixed.",
         ]);
       }
@@ -115,7 +115,7 @@ describe("Chriz Easy BG application flow", () => {
     );
 
     emit({ runId: "left-out-run", sequenceAsString: "3", event: { type: "campaign_finished", install_id: "completed" } });
-    await waitFor(() => expect(getByText(root, "Chriz Easy BG is ready to play. Left out: Snowytoes. Its download changed and could not be used. If something does not work as expected, please report it so the collection can be fixed.")).toBeTruthy());
+    await waitFor(() => expect(getByText(root, "Chriz Easy BG is ready to play. Left out: Snowytoes. Its download could not be used. If something does not work as expected, please report it so the collection can be fixed.")).toBeTruthy());
     expect(backend.summaryCalls).toEqual(["completed"]);
   });
 

@@ -198,6 +198,8 @@ struct FakeDeps {
     controls: Option<RunnerControlHandle>,
     /// Payloads whose acquisition reports an unusable download.
     leave_out: BTreeMap<String, String>,
+    /// Placing steps that report a download whose files cannot be placed, by step id.
+    unplaceable: BTreeMap<String, String>,
     /// Further runs that need a left-out payload, by payload id.
     dependents: BTreeMap<String, Vec<String>>,
     /// Runs that lose components when a payload is left out, by payload id.
@@ -351,7 +353,15 @@ impl ArtifactMaterializer for FakeDeps {
     ) -> Result<MaterializationOutcome, StepFailure> {
         let operation = task.step_id();
         self.trace.push(operation.clone());
+        if self.pause_after_operation.as_deref() == Some(&operation) {
+            self.controls.as_ref().unwrap().pause_after_boundary();
+        }
         self.maybe_fail(&operation)?;
+        if let Some(reason) = self.unplaceable.get(&operation) {
+            return Ok(MaterializationOutcome::LeaveOut {
+                reason: reason.clone(),
+            });
+        }
         Ok(self
             .materialization_results
             .pop_front()
@@ -1691,7 +1701,8 @@ fn resume_after_a_left_out_mod_rebuilds_the_recorded_plan_without_deciding_again
         run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
         CampaignOutcome::Complete
     );
-    assert_eq!(resumed.plan_without_calls, vec![vec!["eefix".to_owned()]]);
+    // The ledger says what remains; nothing derives it again.
+    assert!(resumed.plan_without_calls.is_empty());
     assert_eq!(resumed.acquisitions.get("eefix"), None);
     assert_eq!(resumed.acquisitions.get("needs-eefix"), None);
     assert_eq!(resumed.acquisitions.get("eet"), Some(&1));
@@ -1712,28 +1723,198 @@ fn resume_after_a_left_out_mod_rebuilds_the_recorded_plan_without_deciding_again
     assert!(again.acquisitions.is_empty());
 }
 
+/// An app update may derive the plan without a mod differently, or not at all. A campaign that
+/// left the mod out before still resumes with exactly the plan it recorded then.
 #[test]
-fn resume_refuses_when_the_plan_without_a_left_out_mod_comes_out_differently() {
+fn resume_keeps_the_recorded_plan_when_the_app_now_derives_it_differently() {
+    for changed in [
+        // No longer drops `needs-eefix`, and keeps all of `tweaks-bg2`.
+        FakeDeps::default(),
+        // Cannot leave `eefix` out at all.
+        FakeDeps {
+            essential: vec!["eefix".to_owned()],
+            ..eefix_recipe_deps()
+        },
+    ] {
+        let fixture = Fixture::with_dependents();
+        let sink = RecordingSink::default();
+        let controls = RunnerControlHandle::new();
+        let mut deps = FakeDeps {
+            pause_after_operation: Some("acquire:weidu".to_owned()),
+            controls: Some(controls.clone()),
+            ..eefix_unusable_deps()
+        };
+        run_campaign_controlled(&fixture.request, &mut deps, &sink, &controls).unwrap();
+
+        let mut resumed = changed;
+        assert_eq!(
+            run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+            CampaignOutcome::Complete
+        );
+        assert!(resumed.plan_without_calls.is_empty());
+        assert!(!resumed
+            .trace
+            .iter()
+            .any(|entry| entry == "acquire:needs-eefix" || entry.starts_with("build:eefix")));
+        assert!(resumed
+            .trace
+            .iter()
+            .any(|entry| entry == "build:tweaks-bg2:[1]"));
+        let receipt = resumed.receipts.last().unwrap();
+        assert_eq!(receipt.installed_plan, Some(fixture.plan_without_eefix()));
+        assert_eq!(resumed.verified_plans, vec![fixture.plan_without_eefix()]);
+    }
+}
+
+const UNPLACEABLE: &str = "a file of its changed archive would overwrite another one";
+
+#[test]
+fn a_changed_archive_that_cannot_be_placed_is_left_out_while_none_of_its_files_are() {
     let fixture = Fixture::with_dependents();
     let sink = RecordingSink::default();
     let controls = RunnerControlHandle::new();
     let mut deps = FakeDeps {
-        pause_after_operation: Some("acquire:weidu".to_owned()),
+        unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
+        pause_after_operation: Some("materialize:eefix:bg1".to_owned()),
         controls: Some(controls.clone()),
-        ..eefix_unusable_deps()
+        ..eefix_recipe_deps()
     };
-    run_campaign_controlled(&fixture.request, &mut deps, &sink, &controls).unwrap();
 
-    // A backend that no longer drops `needs-eefix` would install a different plan.
-    let mut changed = FakeDeps::default();
-    let error = run_campaign(&fixture.request, &mut changed, &sink).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("differs from the one recorded when it was left out"),
-        "{error}"
+    assert_eq!(
+        run_campaign_controlled(&fixture.request, &mut deps, &sink, &controls).unwrap(),
+        CampaignOutcome::Paused {
+            after_step_id: "materialize:eefix:bg1".to_owned(),
+        }
     );
-    assert!(changed.acquisitions.is_empty());
+    let root = &fixture.request.created.managed_root;
+    let remaining = fixture.plan_without_eefix();
+    assert_eq!(
+        left_out_records(root),
+        vec![(
+            "materialize:eefix:bg1".to_owned(),
+            "eefix".to_owned(),
+            UNPLACEABLE.to_owned(),
+            plan_digest(&remaining).unwrap(),
+        )]
+    );
+    let record = SessionStore::open(root)
+        .unwrap()
+        .replay()
+        .unwrap()
+        .records
+        .into_iter()
+        .find_map(|record| match record.event {
+            SessionEvent::ArtifactLeftOut {
+                removed_runs,
+                changed_runs,
+                ..
+            } => Some((removed_runs, changed_runs)),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(record.0, ["eefix-bg1", "eefix-bg2", "needs-eefix"]);
+    assert_eq!(record.1, vec![remaining.runs[1].clone()]);
+    assert!(sink.events().contains(&EngineEvent::StepFinished {
+        id: "materialize:eefix:bg1".to_owned(),
+        outcome: StepOutcome::Skipped,
+    }));
+
+    // The resume continues without the mod, even with a derivation that would keep it.
+    let mut resumed = FakeDeps::default();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(resumed.plan_without_calls.is_empty());
+    assert_eq!(
+        completed_step_ids(root)
+            .into_iter()
+            .filter(|step| step.starts_with("materialize:") || step.starts_with("install:"))
+            .collect::<Vec<_>>(),
+        [
+            "materialize:eet:bg2",
+            "materialize:tweaks:bg2",
+            "install:eet-core",
+            "install:tweaks-bg2",
+        ]
+    );
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(
+        receipt.left_out,
+        vec![LeftOutArtifact {
+            artifact_id: "eefix".to_owned(),
+            reason: UNPLACEABLE.to_owned(),
+            runs: vec![
+                "eefix-bg1".to_owned(),
+                "eefix-bg2".to_owned(),
+                "needs-eefix".to_owned(),
+            ],
+            changed_runs: vec!["tweaks-bg2".to_owned()],
+        }]
+    );
+}
+
+/// A mod that is not installed must not leave files behind, because other mods detect mods by
+/// their files. So once files of the mod, or of a mod leaving with it, are placed, the copy
+/// needs a fresh start as before.
+#[test]
+fn a_changed_archive_cannot_be_left_out_once_files_of_it_or_its_dependents_are_placed() {
+    for (step, dependents, placed) in [
+        // Its files for BG1 are placed already.
+        ("materialize:eefix:bg2", BTreeMap::new(), "eefix"),
+        // EET core, placed already, needs the tweaks.
+        (
+            "materialize:tweaks:bg2",
+            BTreeMap::from([("tweaks".to_owned(), vec!["eet-core".to_owned()])]),
+            "eet",
+        ),
+    ] {
+        let fixture = Fixture::with_dependents();
+        let sink = RecordingSink::default();
+        let mut deps = FakeDeps {
+            unplaceable: BTreeMap::from([(step.to_owned(), UNPLACEABLE.to_owned())]),
+            dependents,
+            ..FakeDeps::default()
+        };
+
+        let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+        let CampaignOutcome::FreshCopyRequired { step_id, reason } = outcome else {
+            panic!("expected a sealed copy, got {outcome:?}");
+        };
+        assert_eq!(step_id, step);
+        assert!(reason.starts_with(UNPLACEABLE), "{reason}");
+        assert!(
+            reason.ends_with(&format!(
+                "The installation cannot leave it out at this point, because files of {placed} are already in this game copy."
+            )),
+            "{reason}"
+        );
+        assert!(left_out_records(&fixture.request.created.managed_root).is_empty());
+        assert!(deps.receipts.last().unwrap().left_out.is_empty());
+    }
+}
+
+#[test]
+fn a_part_the_recipe_cannot_do_without_seals_the_copy_when_it_cannot_be_placed() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
+        essential: vec!["eefix".to_owned()],
+        ..eefix_recipe_deps()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let CampaignOutcome::FreshCopyRequired { step_id, reason } = outcome else {
+        panic!("expected a sealed copy, got {outcome:?}");
+    };
+    assert_eq!(step_id, "materialize:eefix:bg1");
+    assert!(reason.contains(UNPLACEABLE), "{reason}");
+    assert!(reason.contains("fixed part of this collection"), "{reason}");
+    assert!(left_out_records(&fixture.request.created.managed_root).is_empty());
 }
 
 #[test]

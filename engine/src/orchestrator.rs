@@ -95,6 +95,15 @@ pub enum MaterializationOutcome {
         /// Evidence summary suitable for diagnostics and the UI.
         reason: String,
     },
+    /// The payload's current download cannot be placed, for example because a file of its
+    /// changed archive would overwrite another one, and no attempt of this step has written
+    /// anything. The campaign continues without this mod and without everything that depends
+    /// on it, when the recipe allows that and none of their files are placed yet; otherwise
+    /// this copy needs a fresh start, as for [`MaterializationOutcome::FreshCopyRequired`].
+    LeaveOut {
+        /// Display-safe reason recorded in the ledger and the receipt.
+        reason: String,
+    },
 }
 
 /// A durable attempt location. Callers must create evidence files only inside this root.
@@ -367,8 +376,9 @@ pub trait ArtifactAcquirer {
     /// together with everything that depends on them. Fails when the installation cannot
     /// continue without them, for example because the recipe always installs one of them.
     ///
-    /// Must be deterministic: every resume recomputes the plan and compares its digest with
-    /// the one recorded when the payload was left out.
+    /// Called only when a payload is left out. The ledger records which runs that removed or
+    /// changed, so a resume rebuilds the remaining plan from that record, even after an app
+    /// update that derives remaining plans differently.
     fn plan_without(
         &mut self,
         plan: &InstallPlan,
@@ -569,7 +579,7 @@ where
         resumed,
     });
 
-    let progress = Progress::from_replay(&replay, &mut schedule, &request.plan, dependencies)?;
+    let progress = Progress::from_replay(&replay, &mut schedule, &request.plan)?;
     dependencies
         .record_campaign(replay.created())
         .map_err(|failure| OrchestratorError::CampaignIndex(failure.into_message()))?;
@@ -859,18 +869,15 @@ struct Progress {
 }
 
 impl Progress {
-    /// Replays the ledger against the schedule. A recorded leave-out recomputes the remaining
-    /// plan through `acquirer`, checks it against the recorded digest, and removes the steps
-    /// that are no longer needed from the rest of `schedule`, exactly as when it happened.
-    fn from_replay<A>(
+    /// Replays the ledger against the schedule. A recorded leave-out rebuilds the remaining
+    /// plan from the runs it records, checks it against the recorded digest, and removes the
+    /// steps that are no longer needed from the rest of `schedule`, exactly as when it
+    /// happened.
+    fn from_replay(
         replay: &SessionReplay,
         schedule: &mut Vec<PipelineStep>,
         frozen_plan: &InstallPlan,
-        acquirer: &mut A,
-    ) -> Result<Self, OrchestratorError>
-    where
-        A: ArtifactAcquirer + ?Sized,
-    {
+    ) -> Result<Self, OrchestratorError> {
         let mut progress = Self {
             completed_prefix: 0,
             attempts: BTreeMap::new(),
@@ -922,6 +929,8 @@ impl Progress {
                     artifact_id,
                     detail,
                     plan_sha256,
+                    removed_runs,
+                    changed_runs,
                 } => {
                     if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
                         return Err(OrchestratorError::InvalidCampaign(format!(
@@ -929,20 +938,31 @@ impl Progress {
                         )));
                     }
                     let step = &schedule[progress.completed_prefix];
-                    if !matches!(
-                        &step.kind,
+                    let at_materialization = match &step.kind {
                         PipelineKind::Acquire(identity, ArtifactKind::Payload)
-                            if &identity.id == artifact_id
-                    ) {
-                        return Err(OrchestratorError::InvalidCampaign(format!(
-                            "ledger leaves out {artifact_id:?} at step {step_id:?}, which does not acquire that payload"
-                        )));
-                    }
+                            if &identity.id == artifact_id =>
+                        {
+                            false
+                        }
+                        PipelineKind::Materialize(task) if &task.artifact_id == artifact_id => true,
+                        _ => {
+                            return Err(OrchestratorError::InvalidCampaign(format!(
+                                "ledger leaves out {artifact_id:?} at step {step_id:?}, which neither acquires nor places that payload"
+                            )))
+                        }
+                    };
                     let mut ids = progress.left_out_ids();
                     ids.push(artifact_id.clone());
-                    let plan = acquirer.plan_without(frozen_plan, &ids).map_err(|failure| {
+                    // The record, not a new derivation, says what remains: a resume after an
+                    // app update installs exactly what the campaign chose when it happened.
+                    let plan = apply_plan_change(
+                        &progress.effective_plan,
+                        removed_runs,
+                        changed_runs,
+                    )
+                    .map_err(|detail| {
                         OrchestratorError::InvalidCampaign(format!(
-                            "the installation recorded that it continues without {artifact_id:?}, but the remaining plan cannot be rebuilt: {failure}"
+                            "the record that the installation continues without {artifact_id:?} does not fit the plan before it: {detail}"
                         ))
                     })?;
                     validate_reduced_plan(&progress.effective_plan, &plan, &ids)?;
@@ -950,6 +970,19 @@ impl Progress {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "the plan without {artifact_id:?} differs from the one recorded when it was left out"
                         )));
+                    }
+                    if at_materialization {
+                        let placed = placed_payloads_left_behind(
+                            &schedule[..progress.completed_prefix],
+                            &progress.left_out_ids(),
+                            artifact_id,
+                            &plan,
+                        );
+                        if !placed.is_empty() {
+                            return Err(OrchestratorError::InvalidCampaign(format!(
+                                "ledger leaves out {artifact_id:?} although files of {placed:?} were already placed"
+                            )));
+                        }
                     }
                     progress.record_left_out(schedule, artifact_id, detail, plan);
                     progress.completed_prefix += 1;
@@ -1075,6 +1108,101 @@ impl Progress {
                 ))
             })
     }
+}
+
+/// What leaving a payload out changes in `previous`: the runs `reduced` no longer has, in plan
+/// order, and the runs it keeps in another form, as `reduced` has them.
+fn plan_change(previous: &InstallPlan, reduced: &InstallPlan) -> (Vec<String>, Vec<PlannedRun>) {
+    let kept = reduced
+        .runs
+        .iter()
+        .map(|run| (run.run_id.as_str(), run))
+        .collect::<BTreeMap<_, _>>();
+    let mut removed = Vec::new();
+    let mut changed = Vec::new();
+    for run in &previous.runs {
+        match kept.get(run.run_id.as_str()) {
+            None => removed.push(run.run_id.clone()),
+            Some(kept) if *kept != run => changed.push((*kept).clone()),
+            Some(_) => {}
+        }
+    }
+    (removed, changed)
+}
+
+/// Applies a recorded [`plan_change`] to `previous`. Fails when the record names runs that
+/// `previous` does not have, or names one run twice.
+fn apply_plan_change(
+    previous: &InstallPlan,
+    removed: &[String],
+    changed: &[PlannedRun],
+) -> Result<InstallPlan, String> {
+    let planned = previous
+        .runs
+        .iter()
+        .map(|run| run.run_id.as_str())
+        .collect::<BTreeSet<_>>();
+    let mut removed_ids = BTreeSet::new();
+    for run_id in removed {
+        if !planned.contains(run_id.as_str()) {
+            return Err(format!("removed run {run_id:?} is not planned"));
+        }
+        if !removed_ids.insert(run_id.as_str()) {
+            return Err(format!("run {run_id:?} is removed twice"));
+        }
+    }
+    let mut changed_by_id = BTreeMap::new();
+    for run in changed {
+        if !planned.contains(run.run_id.as_str()) {
+            return Err(format!("changed run {:?} is not planned", run.run_id));
+        }
+        if removed_ids.contains(run.run_id.as_str())
+            || changed_by_id.insert(run.run_id.as_str(), run).is_some()
+        {
+            return Err(format!("run {:?} is recorded twice", run.run_id));
+        }
+    }
+    Ok(InstallPlan {
+        runs: previous
+            .runs
+            .iter()
+            .filter(|run| !removed_ids.contains(run.run_id.as_str()))
+            .map(|run| {
+                changed_by_id
+                    .get(run.run_id.as_str())
+                    .map_or_else(|| run.clone(), |changed| (*changed).clone())
+            })
+            .collect(),
+    })
+}
+
+/// The payloads whose files a completed step already placed on a game although `plan` no
+/// longer installs them there: the payload being left out, or a mod leaving with it. Payloads
+/// left out before (`left_out`) never had files placed, since a leave-out requires that.
+fn placed_payloads_left_behind(
+    completed: &[PipelineStep],
+    left_out: &[String],
+    artifact_id: &str,
+    plan: &InstallPlan,
+) -> Vec<String> {
+    let mut placed = Vec::<String>::new();
+    for step in completed {
+        let PipelineKind::Materialize(task) = &step.kind else {
+            continue;
+        };
+        let still_installed = task.artifact_id != artifact_id
+            && plan
+                .runs
+                .iter()
+                .any(|run| run.artifact_id == task.artifact_id && run.target == task.target);
+        if !still_installed
+            && !left_out.contains(&task.artifact_id)
+            && !placed.contains(&task.artifact_id)
+        {
+            placed.push(task.artifact_id.clone());
+        }
+    }
+    placed
 }
 
 /// Fails closed when a backend's remaining plan is not exactly a part of the plan before it:
@@ -1319,15 +1447,19 @@ where
                     .and_then(|()| self.dependencies.stage(*role))
                     .map(|()| SimpleExecution::Complete)
             }
-            PipelineKind::Materialize(task) => self
+            PipelineKind::Materialize(task) => match self
                 .recheck(step, task.target, MutationKind::Materialize)
                 .and_then(|()| self.dependencies.materialize(task))
-                .map(|outcome| match outcome {
-                    MaterializationOutcome::Complete => SimpleExecution::Complete,
-                    MaterializationOutcome::FreshCopyRequired { reason } => {
-                        SimpleExecution::FreshCopyRequired(reason)
-                    }
-                }),
+            {
+                Ok(MaterializationOutcome::Complete) => Ok(SimpleExecution::Complete),
+                Ok(MaterializationOutcome::FreshCopyRequired { reason }) => {
+                    Ok(SimpleExecution::FreshCopyRequired(reason))
+                }
+                Ok(MaterializationOutcome::LeaveOut { reason }) => {
+                    Ok(self.leave_out_at_materialization(task, &reason))
+                }
+                Err(failure) => Err(failure),
+            },
             PipelineKind::FinalIdentity => self
                 .recheck(step, GameRoot::Bg2, MutationKind::FinalIdentity)
                 .and_then(|()| self.dependencies.finalize_identity())
@@ -1361,10 +1493,12 @@ where
                 Ok(None)
             }
             Ok(SimpleExecution::LeftOut { reason, plan }) => {
-                let PipelineKind::Acquire(identity, _) = &step.kind else {
-                    unreachable!("only acquisition steps leave a payload out");
+                let artifact_id = match &step.kind {
+                    PipelineKind::Acquire(identity, _) => identity.id.clone(),
+                    PipelineKind::Materialize(task) => task.artifact_id.clone(),
+                    _ => unreachable!("only acquisition and placing steps leave a payload out"),
                 };
-                self.leave_out(step, &attempt, &identity.id, &reason, *plan)?;
+                self.leave_out(step, &attempt, &artifact_id, &reason, *plan)?;
                 Ok(None)
             }
             Ok(SimpleExecution::FreshCopyRequired(reason)) => {
@@ -1407,8 +1541,45 @@ where
         })
     }
 
-    /// Durably ends an acquisition step by leaving its payload out, then continues with the
-    /// remaining plan. Resume recomputes that plan from the ledger record.
+    /// The plan without the payload of `task` and the payloads left out before it, when none of
+    /// their files are placed yet. Otherwise this copy needs a fresh start, because a mod that
+    /// is not installed must not leave files behind: other mods detect mods by their files.
+    fn leave_out_at_materialization(
+        &mut self,
+        task: &MaterializationTask,
+        reason: &str,
+    ) -> SimpleExecution {
+        let reason = nonempty_detail(reason);
+        let earlier = self.progress.left_out_ids();
+        let mut ids = earlier.clone();
+        ids.push(task.artifact_id.clone());
+        let plan = match self.dependencies.plan_without(&self.request.plan, &ids) {
+            Ok(plan) => plan,
+            Err(failure) => {
+                return SimpleExecution::FreshCopyRequired(format!("{reason}\n{failure}"));
+            }
+        };
+        let placed = placed_payloads_left_behind(
+            &self.schedule[..self.progress.completed_prefix],
+            &earlier,
+            &task.artifact_id,
+            &plan,
+        );
+        if !placed.is_empty() {
+            return SimpleExecution::FreshCopyRequired(format!(
+                "{reason}\nThe installation cannot leave it out at this point, because files of {} are already in this game copy.",
+                placed.join(", ")
+            ));
+        }
+        SimpleExecution::LeftOut {
+            reason,
+            plan: Box::new(plan),
+        }
+    }
+
+    /// Durably ends an acquisition or placing step by leaving its payload out, then continues
+    /// with the remaining plan. The ledger records which runs that removed or changed, and a
+    /// resume rebuilds the plan from that record.
     fn leave_out(
         &mut self,
         step: &PipelineStep,
@@ -1420,12 +1591,15 @@ where
         let mut ids = self.progress.left_out_ids();
         ids.push(artifact_id.to_owned());
         validate_reduced_plan(&self.progress.effective_plan, &plan, &ids)?;
+        let (removed_runs, changed_runs) = plan_change(&self.progress.effective_plan, &plan);
         self.store.append(SessionEvent::ArtifactLeftOut {
             step_id: step.id.clone(),
             attempt: attempt.attempt,
             artifact_id: artifact_id.to_owned(),
             detail: reason.to_owned(),
             plan_sha256: plan_digest(&plan)?,
+            removed_runs,
+            changed_runs,
         })?;
         let left_out = self
             .progress

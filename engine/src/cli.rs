@@ -16,9 +16,10 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::acquire::{
-    extract_archive_with_stop, extract_served_archive, materialize, provide_manual_archive,
-    AcceptedContent, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache,
-    CacheDisposition, CacheRepair, DownloadRequest, ExtractedArtifact, MaterializationRequest,
+    extract_archive_with_stop, extract_served_archive, plan_materialization,
+    provide_manual_archive, AcceptedContent, AcquireError, ArchiveFormat, ArchiveLimits,
+    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
+    DownloadRequest, ExtractedArtifact, MaterializationRequest, ServedRedirects, ServedRules,
     StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
@@ -1372,7 +1373,7 @@ fn receipt_notes(
     let mut notes = Vec::new();
     for left_out in &receipt.left_out {
         let mut note = format!(
-            "Left out: {}. Its download changed and could not be used.",
+            "Left out: {}. Its download could not be used.",
             artifact_name(&left_out.artifact_id)
         );
         let dependents = mod_names(&left_out.runs, Some(&left_out.artifact_id));
@@ -1400,6 +1401,13 @@ fn receipt_notes(
                 .left_out
                 .iter()
                 .any(|left_out| left_out.artifact_id == artifact.id)
+        })
+        // A changed installer tool has its own line below.
+        .filter(|artifact| {
+            !receipt
+                .weidu_tools
+                .iter()
+                .any(|tool| tool.id == artifact.id && tool.reviewed.is_some())
         })
         .map(|artifact| artifact_name(&artifact.id))
         .collect::<Vec<_>>();
@@ -2418,48 +2426,88 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             .ok_or_else(|| StepFailure::new(format!("frozen artifact {id:?} is missing")))
     }
 
-    fn acquire_archive(
-        &self,
-        artifact: &Artifact,
-    ) -> Result<(PathBuf, ArtifactReceipt), StepFailure> {
+    /// The download request of a fetched artifact.
+    fn download_request(&self, artifact: &Artifact) -> Result<DownloadRequest, StepFailure> {
         let expected_length = artifact.source.expected_length.ok_or_else(|| {
             StepFailure::new(format!(
                 "frozen artifact {:?} has no expected archive length",
                 artifact.id
             ))
         })?;
+        Ok(DownloadRequest {
+            request_id: artifact.id.clone(),
+            url: download_url(&artifact.source.url),
+            expected_length,
+            expected_sha256: artifact.source.sha256.clone(),
+            redirect_hosts: artifact.source.redirect_hosts.clone(),
+            max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
+        })
+    }
+
+    /// Acquires an artifact and records its first acquisition, or checks a later one against
+    /// that record.
+    fn acquire_archive(
+        &self,
+        artifact: &Artifact,
+    ) -> Result<(PathBuf, ArtifactReceipt), AcquisitionFailure> {
         let first = self.load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?;
+        let fetched = self.fetch_archive(artifact, first.as_ref())?;
+        Ok(self.record_acquisition(artifact, first, fetched)?)
+    }
+
+    /// Gets an artifact's archive into the download folder, without recording anything.
+    fn fetch_archive(
+        &self,
+        artifact: &Artifact,
+        first: Option<&ArtifactReceipt>,
+    ) -> Result<FetchedArchive, AcquisitionFailure> {
+        let expected_length = artifact.source.expected_length.ok_or_else(|| {
+            StepFailure::new(format!(
+                "frozen artifact {:?} has no expected archive length",
+                artifact.id
+            ))
+        })?;
         let mut unreviewed_hosts = Vec::new();
         let (archive_path, original_url, final_url, length, sha256, cache_outcome, difference) =
             match artifact.acquisition {
                 AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
-                    let request = DownloadRequest {
-                        request_id: artifact.id.clone(),
-                        url: download_url(&artifact.source.url),
-                        expected_length,
-                        expected_sha256: artifact.source.sha256.clone(),
-                        redirect_hosts: artifact.source.redirect_hosts.clone(),
-                        max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
-                    };
+                    let request = self.download_request(artifact)?;
                     // Once this campaign accepted a changed download, every later step uses
                     // exactly that file again, even if the link has changed once more.
-                    let accepted = first
-                        .as_ref()
-                        .filter(|first| first.served_difference.is_some())
-                        .map(|first| AcceptedContent {
-                            length: first.length,
-                            sha256: first.sha256.clone(),
-                        });
+                    let accepted =
+                        first
+                            .filter(|first| first.served_difference.is_some())
+                            .map(|first| AcceptedContent {
+                                length: first.length,
+                                sha256: first.sha256.clone(),
+                            });
+                    let rules = ServedRules {
+                        format: archive_format(artifact),
+                        // A changed program that runs every mod comes only from where it was
+                        // reviewed.
+                        redirects: if artifact.tool.is_some() {
+                            ServedRedirects::ReviewedHostsForChanges
+                        } else {
+                            ServedRedirects::AnyHttpsHost
+                        },
+                    };
                     let served = ArtifactCache::open(&self.created.cache_root)
                         .and_then(|cache| {
                             cache.acquire_as_served(
                                 &request,
                                 accepted.as_ref(),
+                                rules,
                                 self.sink,
                                 &self.stop_signal(),
                             )
                         })
-                        .map_err(step_error)?;
+                        .map_err(|error| {
+                            if download_unavailable(&error) {
+                                AcquisitionFailure::Unavailable(error)
+                            } else {
+                                AcquisitionFailure::Step(step_error(error))
+                            }
+                        })?;
                     let matches_pin = served.matches_pin(&request);
                     let acquired = served.artifact;
                     if let Some(repair) = &acquired.repaired {
@@ -2514,7 +2562,8 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                         return Err(StepFailure::new(format!(
                             "manual artifact {:?} has an unsafe expected filename",
                             artifact.id
-                        )));
+                        ))
+                        .into());
                     }
                     let drop_dir = self.created.cache_root.join("manual");
                     ensure_directories(&drop_dir)?;
@@ -2533,7 +2582,8 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                         return Err(StepFailure::new(format!(
                         "manual artifact {:?} length mismatch: expected {expected_length}, got {}",
                         artifact.id, verified.length
-                    )));
+                    ))
+                        .into());
                     }
                     (
                         verified.path,
@@ -2549,19 +2599,39 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                     return Err(StepFailure::new(format!(
                         "frozen artifact {:?} is blocked and cannot be acquired",
                         artifact.id
-                    )))
+                    ))
+                    .into())
                 }
             };
-        let mut observed_receipt = ArtifactReceipt {
-            id: artifact.id.clone(),
-            version: artifact.version.clone(),
-            original_url,
-            final_url,
-            length,
-            sha256,
-            cache_outcome,
-            served_difference: difference,
-        };
+        Ok(FetchedArchive {
+            path: archive_path,
+            receipt: ArtifactReceipt {
+                id: artifact.id.clone(),
+                version: artifact.version.clone(),
+                original_url,
+                final_url,
+                length,
+                sha256,
+                cache_outcome,
+                served_difference: difference,
+            },
+            unreviewed_hosts,
+        })
+    }
+
+    /// Records the first acquisition of an artifact and reports a changed download, or checks
+    /// a later acquisition against the first one, which stays the record.
+    fn record_acquisition(
+        &self,
+        artifact: &Artifact,
+        first: Option<ArtifactReceipt>,
+        fetched: FetchedArchive,
+    ) -> Result<(PathBuf, ArtifactReceipt), StepFailure> {
+        let FetchedArchive {
+            path: archive_path,
+            receipt: mut observed_receipt,
+            unreviewed_hosts,
+        } = fetched;
         let receipt = match first {
             Some(first) => {
                 // Only a transfer sees the served file name and redirects, so a later cache
@@ -2640,7 +2710,26 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 
     fn extract_checked(&self, artifact: &Artifact) -> Result<ExtractedArtifact, ExtractionFailure> {
-        let (archive, receipt) = self.acquire_archive(artifact)?;
+        let (archive, receipt) =
+            self.acquire_archive(artifact)
+                .map_err(|failure| match failure {
+                    AcquisitionFailure::Step(failure) => ExtractionFailure::Step(failure),
+                    // Unpacking follows the artifact's acquisition step, so a link that now serves
+                    // nothing usable can no longer leave the mod out; it stops this step.
+                    AcquisitionFailure::Unavailable(error) => {
+                        ExtractionFailure::Step(step_error(error))
+                    }
+                })?;
+        self.extract_from(artifact, &archive, &receipt)
+    }
+
+    /// Unpacks `archive`, acquired for `artifact` as `receipt` describes.
+    fn extract_from(
+        &self,
+        artifact: &Artifact,
+        archive: &Path,
+        receipt: &ArtifactReceipt,
+    ) -> Result<ExtractedArtifact, ExtractionFailure> {
         let reviewed_limits = ArchiveLimits {
             max_depth: artifact.archive.limits.max_depth,
             max_entries: artifact.archive.limits.max_entries,
@@ -2655,11 +2744,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             } else {
                 artifact.source.sha256.clone()
             },
-            format: match artifact.archive.kind {
-                ManifestArchiveKind::Zip => ArchiveFormat::Zip,
-                ManifestArchiveKind::Iemod => ArchiveFormat::Iemod,
-                ManifestArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
-            },
+            format: archive_format(artifact),
             expected_roots: artifact.archive.publish_roots.clone(),
             expected_tp2_paths: artifact.archive.tp2_paths.clone(),
             limits: if served {
@@ -2672,14 +2757,14 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         let extraction_cache = self.created.cache_root.join("extracted");
         let extracted = if served {
             extract_served_archive(
-                &archive,
+                archive,
                 &extraction_cache,
                 &requirements,
                 &self.stop_signal(),
             )
         } else {
             extract_archive_with_stop(
-                &archive,
+                archive,
                 &extraction_cache,
                 &requirements,
                 &self.stop_signal(),
@@ -2734,46 +2819,160 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn verified_tool(&self, id: &str) -> Result<VerifiedWeidu, StepFailure> {
         let artifact = self.artifact(id)?;
-        let contract = artifact.tool.as_ref().ok_or_else(|| {
-            StepFailure::new(format!("artifact {id:?} has no WeiDU executable contract"))
-        })?;
+        let contract = tool_contract(artifact)?;
         let extracted = self.extract(artifact)?;
-        let executable = extracted.root.join(&contract.executable);
         let served = self
             .load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?
             .is_some_and(|receipt| receipt.served_difference.is_some());
-        let (verified, observed) = if served {
-            verify_served_tool(&executable, contract)
-        } else {
-            verify_tool_contract(&executable, contract)
-        }
-        .map_err(|error| {
-            if served {
-                StepFailure::new(format!(
-                    "The download of the installer tool {id} is newer or different than the reviewed version, and its WeiDU program cannot be used: {error}"
-                ))
-            } else {
-                step_error(error)
-            }
-        })?;
-        let reviewed = (served
-            && (observed.weidu_version != contract.weidu_version
-                || observed.length != contract.expected_length
-                || !observed.sha256.eq_ignore_ascii_case(&contract.sha256)))
-        .then(|| ReviewedTool {
-            version: contract.weidu_version.clone(),
-            length: contract.expected_length,
-            sha256: contract.sha256.to_ascii_lowercase(),
-        });
-        let receipt = WeiDuToolReceipt {
-            id: artifact.id.clone(),
-            version: observed.weidu_version,
-            length: observed.length,
-            sha256: observed.sha256,
-            reviewed,
-        };
+        let (verified, receipt) =
+            check_tool(artifact, contract, &extracted, served).map_err(|error| {
+                if served {
+                    unusable_changed_tool(id, &error)
+                } else {
+                    step_error(error)
+                }
+            })?;
         self.persist_named_evidence("tools", &artifact.id, &receipt)?;
         Ok(verified)
+    }
+
+    /// Acquires a mod's archive. A changed download is unpacked now, before anything is
+    /// staged, so that a mod whose new archive cannot be used is left out instead of stopping
+    /// the installation later. The archive is unpacked once into the shared extraction cache
+    /// either way.
+    fn acquire_payload(
+        &self,
+        artifact: &Artifact,
+    ) -> Result<AcquisitionOutcome, AcquisitionFailure> {
+        let (archive, receipt) = self.acquire_archive(artifact)?;
+        let Some(difference) = &receipt.served_difference else {
+            return Ok(AcquisitionOutcome::Ready);
+        };
+        match self.extract_from(artifact, &archive, &receipt) {
+            Ok(_) => Ok(AcquisitionOutcome::Ready),
+            Err(ExtractionFailure::Unusable(error)) => Ok(AcquisitionOutcome::LeaveOut {
+                reason: format!(
+                    "its official link now serves a different archive ({}), which cannot be installed: {error}",
+                    describe_download(&difference.served)
+                ),
+            }),
+            Err(ExtractionFailure::Step(failure)) => Err(failure.into()),
+        }
+    }
+
+    /// Acquires an installer tool. A changed download is recorded only once its WeiDU program
+    /// passed the checks for a changed tool, so that a resumed campaign asks its link again
+    /// instead of keeping a program it cannot use. When a changed download cannot be used but
+    /// the download folder holds the reviewed archive by now, as when another installation
+    /// finished downloading it meanwhile, the reviewed tool is used.
+    fn acquire_tool(&self, artifact: &Artifact) -> Result<AcquisitionOutcome, AcquisitionFailure> {
+        let contract = tool_contract(artifact)?;
+        let first = self.load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?;
+        if first.is_some() {
+            let (_, receipt) = self.acquire_archive(artifact)?;
+            if receipt.served_difference.is_some() {
+                self.verified_tool(&artifact.id)?;
+            }
+            return Ok(AcquisitionOutcome::Ready);
+        }
+        let fetched = match self.fetch_archive(artifact, None) {
+            Ok(fetched) => fetched,
+            Err(AcquisitionFailure::Unavailable(error)) => {
+                return if self.use_cached_reviewed_tool(artifact, &unavailable_reason(&error))? {
+                    Ok(AcquisitionOutcome::Ready)
+                } else {
+                    Err(AcquisitionFailure::Unavailable(error))
+                };
+            }
+            Err(failure) => return Err(failure),
+        };
+        if fetched.receipt.served_difference.is_none() {
+            self.record_acquisition(artifact, None, fetched)?;
+            return Ok(AcquisitionOutcome::Ready);
+        }
+        let checked = match self.extract_from(artifact, &fetched.path, &fetched.receipt) {
+            Ok(extracted) => check_tool(artifact, contract, &extracted, true)
+                .map(|(_, receipt)| receipt)
+                .map_err(|error| error.to_string()),
+            Err(ExtractionFailure::Unusable(error)) => Err(error.to_string()),
+            Err(ExtractionFailure::Step(failure)) => return Err(failure.into()),
+        };
+        match checked {
+            Ok(tool) => {
+                self.record_acquisition(artifact, None, fetched)?;
+                self.persist_named_evidence("tools", &artifact.id, &tool)?;
+            }
+            Err(problem) => {
+                let reason = format!(
+                    "it is newer or different than the reviewed version, and its WeiDU program does not work: {problem}"
+                );
+                if !self.use_cached_reviewed_tool(artifact, &reason)? {
+                    return Err(unusable_changed_tool(&artifact.id, &problem).into());
+                }
+            }
+        }
+        Ok(AcquisitionOutcome::Ready)
+    }
+
+    /// Records the reviewed archive of `artifact` from the download folder instead of a changed
+    /// download that cannot be used for `reason`, and says so. `false` when the folder does not
+    /// hold it.
+    fn use_cached_reviewed_tool(
+        &self,
+        artifact: &Artifact,
+        reason: &str,
+    ) -> Result<bool, StepFailure> {
+        let Some(reviewed) = self.cached_reviewed_archive(artifact)? else {
+            return Ok(false);
+        };
+        self.sink.emit(EngineEvent::ConsoleLine {
+            step_id: format!("acquire:{}", artifact.id),
+            stream: crate::events::Stream::Stdout,
+            line: format!(
+                "The download of {} {} cannot be used: {reason}. Using the reviewed {} from the \
+                 download folder instead.",
+                artifact.name, artifact.version, artifact.name
+            ),
+        });
+        self.record_acquisition(artifact, None, reviewed)?;
+        Ok(true)
+    }
+
+    /// The reviewed archive of a fetched artifact when the download folder holds it, without
+    /// asking its link.
+    fn cached_reviewed_archive(
+        &self,
+        artifact: &Artifact,
+    ) -> Result<Option<FetchedArchive>, StepFailure> {
+        let request = self.download_request(artifact)?;
+        let Some(acquired) = ArtifactCache::open(&self.created.cache_root)
+            .and_then(|cache| cache.cached(&request, &self.stop_signal()))
+            .map_err(step_error)?
+        else {
+            return Ok(None);
+        };
+        if let Some(repair) = &acquired.repaired {
+            self.record_cache_repair(
+                CacheRepairKind::Download,
+                &artifact.id,
+                &acquired.metadata.sha256,
+                repair,
+            )?;
+        }
+        Ok(Some(FetchedArchive {
+            path: acquired.archive_path,
+            receipt: ArtifactReceipt {
+                id: artifact.id.clone(),
+                version: artifact.version.clone(),
+                original_url: acquired.metadata.original_url,
+                final_url: acquired.metadata.final_url,
+                length: acquired.metadata.length,
+                sha256: acquired.metadata.sha256,
+                cache_outcome: ArtifactCacheOutcome::Hit,
+                served_difference: None,
+            },
+            unreviewed_hosts: Vec::new(),
+        }))
     }
 
     fn target_root(&self, target: GameRoot) -> &Path {
@@ -3047,33 +3246,18 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
                 identity.id
             )));
         }
-        let (_, receipt) = self.acquire_archive(artifact)?;
-        if receipt.served_difference.is_none() {
-            return Ok(AcquisitionOutcome::Ready);
-        }
-        // A changed download is checked now, before anything is staged, so that a mod whose
-        // new archive cannot be used is left out instead of stopping the installation later.
-        // The archive is unpacked once into the shared extraction cache either way.
-        if artifact.tool.is_some() {
-            return self
-                .verified_tool(&identity.id)
-                .map(|_| AcquisitionOutcome::Ready);
-        }
-        match self.extract_checked(artifact) {
-            Ok(_) => Ok(AcquisitionOutcome::Ready),
-            Err(ExtractionFailure::Unusable(error)) => Ok(AcquisitionOutcome::LeaveOut {
-                reason: format!(
-                    "its official link now serves a different archive ({}), which cannot be installed: {error}",
-                    describe_download(
-                        &receipt
-                            .served_difference
-                            .as_ref()
-                            .expect("a changed download was established above")
-                            .served
-                    )
-                ),
+        let acquired = if artifact.tool.is_some() {
+            self.acquire_tool(artifact)
+        } else {
+            self.acquire_payload(artifact)
+        };
+        match acquired {
+            Ok(outcome) => Ok(outcome),
+            // The campaign then stops for a tool, or for a part it cannot do without.
+            Err(AcquisitionFailure::Unavailable(error)) => Ok(AcquisitionOutcome::LeaveOut {
+                reason: unavailable_reason(&error),
             }),
-            Err(ExtractionFailure::Step(failure)) => Err(failure),
+            Err(AcquisitionFailure::Step(failure)) => Err(failure),
         }
     }
 
@@ -3128,6 +3312,127 @@ fn archive_content_error(error: &crate::acquire::AcquireError) -> bool {
     )
 }
 
+/// Why getting an artifact's archive failed: a step problem, such as a full disk, a stop or a
+/// lost connection, after which a resume tries again; or an answer of its official link that
+/// every attempt of this step got and that the installer cannot use.
+enum AcquisitionFailure {
+    Step(StepFailure),
+    Unavailable(AcquireError),
+}
+
+impl From<StepFailure> for AcquisitionFailure {
+    fn from(failure: StepFailure) -> Self {
+        Self::Step(failure)
+    }
+}
+
+/// An archive in the download folder, and what the campaign records about it once accepted.
+struct FetchedArchive {
+    path: PathBuf,
+    receipt: ArtifactReceipt,
+    unreviewed_hosts: Vec<String>,
+}
+
+fn archive_format(artifact: &Artifact) -> ArchiveFormat {
+    match artifact.archive.kind {
+        ManifestArchiveKind::Zip => ArchiveFormat::Zip,
+        ManifestArchiveKind::Iemod => ArchiveFormat::Iemod,
+        ManifestArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
+    }
+}
+
+fn tool_contract(artifact: &Artifact) -> Result<&crate::manifest::ToolSpec, StepFailure> {
+    artifact.tool.as_ref().ok_or_else(|| {
+        StepFailure::new(format!(
+            "artifact {:?} has no WeiDU executable contract",
+            artifact.id
+        ))
+    })
+}
+
+/// Checks the WeiDU program of an unpacked tool archive: against its reviewed contract, or, for
+/// a changed download, with the checks for a changed tool. Returns what the receipt records.
+fn check_tool(
+    artifact: &Artifact,
+    contract: &crate::manifest::ToolSpec,
+    extracted: &ExtractedArtifact,
+    served: bool,
+) -> Result<(VerifiedWeidu, WeiDuToolReceipt), crate::weidu::invocation::InvocationError> {
+    let executable = extracted.root.join(&contract.executable);
+    let (verified, observed) = if served {
+        verify_served_tool(&executable, contract)
+    } else {
+        verify_tool_contract(&executable, contract)
+    }?;
+    let reviewed = (served
+        && (observed.weidu_version != contract.weidu_version
+            || observed.length != contract.expected_length
+            || !observed.sha256.eq_ignore_ascii_case(&contract.sha256)))
+    .then(|| ReviewedTool {
+        version: contract.weidu_version.clone(),
+        length: contract.expected_length,
+        sha256: contract.sha256.to_ascii_lowercase(),
+    });
+    let receipt = WeiDuToolReceipt {
+        id: artifact.id.clone(),
+        version: observed.weidu_version,
+        length: observed.length,
+        sha256: observed.sha256,
+        reviewed,
+    };
+    Ok((verified, receipt))
+}
+
+fn unusable_changed_tool(id: &str, problem: &dyn std::fmt::Display) -> StepFailure {
+    StepFailure::new(format!(
+        "The download of the installer tool {id} is newer or different than the reviewed version, and its WeiDU program cannot be used: {problem}"
+    ))
+}
+
+/// Answers of an official link that every attempt of a step got and that the installer cannot
+/// use: a download it refuses, or no file at all. A mod is then left out. Transport problems,
+/// other statuses, a full disk or a stop stop the step instead, so that a resume tries again:
+/// they may be the player's connection, a rate limit or a passing server problem.
+fn download_unavailable(error: &AcquireError) -> bool {
+    matches!(
+        error,
+        AcquireError::ServedDownloadTooLarge { .. }
+            | AcquireError::ServedNotArchive { .. }
+            | AcquireError::RedirectDowngrade { .. }
+            | AcquireError::UnreviewedRedirect { .. }
+            | AcquireError::HttpStatus {
+                status: 404 | 410,
+                ..
+            }
+    )
+}
+
+/// The ledger and receipt reason for an official link whose answer cannot be used.
+fn unavailable_reason(error: &AcquireError) -> String {
+    match error {
+        AcquireError::ServedDownloadTooLarge { length, limit } => format!(
+            "its official link now serves a download of at least {length} bytes, more than the {limit} bytes the installer accepts for a changed download"
+        ),
+        AcquireError::ServedNotArchive { url, problem } => format!(
+            "its official link does not serve the archive ({problem}), and still did not on the last of {DEFAULT_DOWNLOAD_ATTEMPTS} attempts; the last answer came from {}",
+            final_host(url)
+        ),
+        AcquireError::HttpStatus { url, status } => format!(
+            "its official link answers HTTP {status} (no such file) from {}, and still did on the last of {DEFAULT_DOWNLOAD_ATTEMPTS} attempts",
+            final_host(url)
+        ),
+        AcquireError::RedirectDowngrade { to, .. } => format!(
+            "its official link redirects to plain HTTP ({}), which the installer never follows",
+            final_host(to)
+        ),
+        AcquireError::UnreviewedRedirect { to, .. } => format!(
+            "its official link now serves a different file from {}, a host the recipe did not review for it",
+            final_host(to)
+        ),
+        other => format!("its official link cannot be used: {other}"),
+    }
+}
+
 /// The address an artifact is downloaded from: its recipe URL. Test builds may serve the
 /// `https://example.invalid/` links of test recipes from a local server named by
 /// `CHRIZ_BG_COLLECTION_TEST_DOWNLOAD_ORIGIN`; that reserved domain never resolves.
@@ -3147,6 +3452,16 @@ fn final_host(url: &str) -> String {
         .ok()
         .and_then(|url| url.host_str().map(str::to_ascii_lowercase))
         .unwrap_or_else(|| "an unknown host".to_owned())
+}
+
+/// Why the files of a changed archive cannot be placed, for the ledger and the receipt.
+fn describe_collision(error: &AcquireError) -> String {
+    match error {
+        AcquireError::UndeclaredOverwrite { path } => format!(
+            "its file `{path}` would overwrite different content that the game or an earlier mod already placed"
+        ),
+        other => other.to_string(),
+    }
 }
 
 /// "name, N bytes, SHA-256 x" for the installation log.
@@ -3190,30 +3505,59 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
     ) -> Result<MaterializationOutcome, StepFailure> {
         let artifact = self.artifact(&task.artifact_id)?;
         let extracted = self.extract(artifact)?;
-        let result = materialize(
+        let request = MaterializationRequest {
+            materialization_id: format!(
+                "materialize-{}",
+                &sha256_bytes(task.step_id().as_bytes())[..16]
+            ),
+            owner: artifact.id.clone(),
+            roots: artifact.archive.publish_roots.clone(),
+            tp2_paths: artifact.archive.tp2_paths.clone(),
+            collision_rules: Vec::new(),
+        };
+        let fresh_copy = |error: AcquireError| match error {
+            AcquireError::UndeclaredOverwrite { .. }
+            | AcquireError::CollisionRuleRejected { .. }
+            | AcquireError::PublicationMismatch { .. } => {
+                Ok(MaterializationOutcome::FreshCopyRequired {
+                    reason: error.to_string(),
+                })
+            }
+            error => Err(step_error(error)),
+        };
+        let planned = match plan_materialization(
             &extracted,
             self.target_root(task.target),
-            &MaterializationRequest {
-                materialization_id: format!(
-                    "materialize-{}",
-                    &sha256_bytes(task.step_id().as_bytes())[..16]
-                ),
-                owner: artifact.id.clone(),
-                roots: artifact.archive.publish_roots.clone(),
-                tp2_paths: artifact.archive.tp2_paths.clone(),
-                collision_rules: Vec::new(),
-            },
-        );
-        match result {
-            Ok(_) => Ok(MaterializationOutcome::Complete),
+            &request,
+        ) {
+            Ok(planned) => planned,
+            // A collision found while planning proves that no attempt of this step wrote
+            // anything: an earlier attempt that got past planning saw the same files, and the
+            // files it placed would read as identical now. So a changed archive whose files
+            // would overwrite others can be left out, as when it cannot be unpacked.
             Err(
-                error @ (crate::acquire::AcquireError::UndeclaredOverwrite { .. }
-                | crate::acquire::AcquireError::CollisionRuleRejected { .. }
-                | crate::acquire::AcquireError::PublicationMismatch { .. }),
-            ) => Ok(MaterializationOutcome::FreshCopyRequired {
-                reason: error.to_string(),
-            }),
-            Err(error) => Err(step_error(error)),
+                error @ (AcquireError::UndeclaredOverwrite { .. }
+                | AcquireError::CollisionRuleRejected { .. }),
+            ) => {
+                let served = self
+                    .load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?
+                    .and_then(|receipt| receipt.served_difference);
+                return match served {
+                    Some(difference) => Ok(MaterializationOutcome::LeaveOut {
+                        reason: format!(
+                            "its official link now serves a different archive ({}), which cannot be installed: {}",
+                            describe_download(&difference.served),
+                            describe_collision(&error)
+                        ),
+                    }),
+                    None => fresh_copy(error),
+                };
+            }
+            Err(error) => return fresh_copy(error),
+        };
+        match planned.publish() {
+            Ok(_) => Ok(MaterializationOutcome::Complete),
+            Err(error) => fresh_copy(error),
         }
     }
 }

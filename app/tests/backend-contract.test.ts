@@ -83,7 +83,7 @@ describe("managed patch recovery projection", () => {
 describe("installation end summary", () => {
   it("reads the summary of one installation by its registry id", async () => {
     const notes = [
-      "Left out: Snowytoes. Its download changed and could not be used.",
+      "Left out: Snowytoes. Its download could not be used.",
       "If something does not work as expected, please report it so the collection can be fixed.",
     ];
     const invoke = vi.fn(async () => notes);
