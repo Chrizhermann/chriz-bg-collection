@@ -72,7 +72,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn(2292, actual["cdtweaks-bg2"])
         # October 28: the Rebalance v0.8.6 pin adds default 360.
         self.assertIn(360, actual["chriz-bg-rebalance-bg2"])
-        self.assertEqual(self.result["componentCount"], 469)
+        # October 29: the Kitpack's weapon-usability sweep 1010000 ends the late tweak run.
+        self.assertEqual(actual["artisanskitpack-tweak-late-bg2"][-1], 1010000)
+        self.assertEqual(self.result["componentCount"], 470)
         self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:

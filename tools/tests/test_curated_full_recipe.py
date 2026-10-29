@@ -396,7 +396,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 360 at the end of the Rebalance run, after 340 (Christopher, 2026-10-27);
                 # with v0.8.5 restored and without 360 the October 27 digest
                 # 654ae8d42a63de4d3e6f1c767df3a7bf65eabe2bb383889088986621b2958780 returns.
-                "1df78afce7729152da614ca3877a33da03119eae6d93b7c45657c83f61840967",
+                # October 29: Artisan tweak 1010000, the weapon-usability sweep (Christopher,
+                # 2026-10-26), is a default at the end of the late tweak run, requiring EEex
+                # and Eldritch Knight 20000 or Arcane Trickster 8204; without it the October
+                # 28 digest 1df78afce7729152da614ca3877a33da03119eae6d93b7c45657c83f61840967
+                # returns.
+                "5ec32478457d3d9f535687dde5469d0c34341b7a8ebb4152ec077a3f10aa17a4",
             )
 
             legacy_bg1npc_groups = {

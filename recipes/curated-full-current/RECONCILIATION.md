@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 482 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 467.
+Engine-equivalent resolved-selection summary: 483 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 468.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -74,6 +74,7 @@ Engine-equivalent resolved-selection summary: 482 default/mandatory rows — con
 | `ARTISANSKITPACK_TWEAK:3302` | default | `feature:artisanskitpack-tweak:component-3302` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 3302 |  |
 | `ARTISANSKITPACK_TWEAK:7203` | default | `feature:artisanskitpack-tweak:component-7203` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 7203 |  |
 | `ARTISANSKITPACK_TWEAK:8204` | default | `feature:artisanskitpack-tweak:component-8204` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 8204 |  |
+| `ARTISANSKITPACK_TWEAK:1010000` | default | `feature:artisanskitpack-tweak:component-1010000` | selected for installation | artisanskitpack-tweak → artisans-kitpack-4.81a-dev.85928f9-chriz.4 4.81a-dev.85928f9-chriz.4 (v4.81a-dev.85928f9-chriz.4), component 1010000 |  |
 | `ASCENSION:0` | default | `feature:ascension:component-0` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 0 |  |
 | `ASCENSION:10` | default | `feature:ascension:component-10` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 10 |  |
 | `ASCENSION:20` | default | `feature:ascension:component-20` | selected for installation | ascension → ascension-2.1.0 2.1.0 (2.1.0), component 20 |  |

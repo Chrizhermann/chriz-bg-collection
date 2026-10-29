@@ -56,7 +56,9 @@ NATIVE_RUN_ORDERS = {
         3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110,
         5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001,
     ],
-    "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 8204],
+    # The tweak TP2 declares the weapon-usability sweep 1010000 after 8204 (offered from
+    # 2026-10-29); it must stay last so that it also covers 8204's thief equipment.
+    "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 8204, 1010000],
     # Modpack alpha.12 (October 14) declares companion stats 230-234 right after 225.
     "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234],
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
