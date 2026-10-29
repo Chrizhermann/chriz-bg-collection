@@ -41,15 +41,17 @@ Cross-repository status. Component detail stays in the sections below and in the
      [PR #56](https://github.com/Chrizhermann/chriz-bg-collection/pull/56) (merged on
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance.toml`).
      Only `360`'s name changes, to True Time Stop – fair Haste & Slow (below).
-     BuffBot v1.12.1 is pinned in both recipes in
-     [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (evidence in
-     `manifest/evidence/release-intake-20261028-buffbot.toml`). Christopher, 2026-10-28:
-     it goes into alpha.22 once it has been tested again; he tests it himself, and the PR
-     stays open until he says his test is fine. The IWD recipe gets the same version in
+     BuffBot v1.12.1 replaces v1.11.0 in both recipes since
+     [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261028-buffbot.toml`).
+     Christopher, 2026-10-29: it goes into the alpha.22 release candidate, and he tests it
+     there instead of separately. The IWD recipe gets the same version in
      [PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51) against
-     `claude/iwdee-app`; both go in together (rule below), #51 with a merge commit. Since
-     #56, #44 conflicts in `engine/tests/feature_groups.rs` (keep #56's collection digests;
-     the plan digests change for both pins) and in the changelog draft (keep both lines).
+     `claude/iwdee-app`. #51 is held, and this is the reason the rule below asks for: any
+     change to the IWD recipe after a release needs a version bump, because the catalog
+     test ties `release.json`'s version to a `[[bases]]` digest. So #51 goes in, with a
+     merge commit, as part of IWD 0.1.3, which is released in the same step as CEBG
+     alpha.22; both installers then ship BuffBot v1.12.1 together.
      Artisan's Kitpack tweak `1010000` (kit weapon rules for weapons from later mods;
      Christopher, 2026-10-26) is a default in both recipes since
      [PR #60](https://github.com/Chrizhermann/chriz-bg-collection/pull/60) (merged on
@@ -78,14 +80,15 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
      with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
      see Weapon access below).
-     Still open in this step: BuffBot v1.12.1 (#44 and #51, waiting for Christopher's own
-     test, above).
+     Still open in this step: #51, BuffBot v1.12.1 for the IWD recipe, held for IWD 0.1.3
+     (above).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
-     v0.8.8 (#64) and Kitpack chriz.5 with `7205` (#66) came after it.
+     v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44) came
+     after it.
   4. Acceptance, build, signing and publishing, and the website.
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
@@ -174,10 +177,10 @@ Cross-repository status. Component detail stays in the sections below and in the
   - BuffBot [v1.12.1](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.12.1)
     (released on 2026-10-27) fixes that: three layout defects of v1.12.0, none of which
     depends on the EEex version. Its panel was checked in a BG2:EE 2.7.3.0 lab with EEex
-    v1.3.1, the version alpha.22 installs. Pinned in PR #44, open until Christopher's own
-    test (2026-10-28). Components `1` and `0`, their order and the run position are
-    unchanged; the TP2 also accepts IWD:EE and no longer writes TLK strings,
-    `bfbot_strrefs.txt` or `BFBOTIB.BAM`.
+    v1.3.1, the version alpha.22 installs. Pinned since PR #44 (merged on 2026-10-29);
+    Christopher tests it in the alpha.22 release candidate (2026-10-29). Components `1`
+    and `0`, their order and the run position are unchanged; the TP2 also accepts IWD:EE
+    and no longer writes TLK strings, `bfbot_strrefs.txt` or `BFBOTIB.BAM`.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
