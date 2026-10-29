@@ -267,8 +267,22 @@ Cross-repository status. Component detail stays in the sections below and in the
   2026-10-27), `2292` is an unchecked option instead of a default, for alpha.22.
 - Weapon access (Christopher, 2026-10-27): classes and kits should be able to use the
   weapons they can put proficiency points into, with as little intrusion as possible.
-  Druids and fighter/druids get more weapons, and cleric kits bound to a god get their
-  deity's weapons, mainly for flavour. The design runs in a separate session.
+  His decisions of 2026-10-27: druids and every druid kit get axes and short bows, and
+  fighter/druids also long bows; cleric kits bound to a god stay as they are; Yeslick's
+  Alaghor of Clangeddin kit gets the cleric weapons plus axes instead of the thief
+  weapons.
+  - BG Rebalance `410` Druid weapons
+    ([PR #22](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/22)) and `411`
+    Alaghor of Clangeddin weapons
+    ([PR #23](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/23)) are merged
+    since 2026-10-29 and lab-verified on BG2:EE 2.7.3.0 with EEex v1.3.1, but not
+    released. `411` needs Artisan's Kitpack and EEex: the engine reads a kit's own weapon
+    column only when the kit's class is the character's class, and Yeslick is a
+    fighter/cleric. Releasing both and offering them in CEBG wait for Christopher's OK.
+  - The Artisan's Kitpack fork frees katanas and rogue items for kits that borrow the
+    Shapeshifter bit (the Invisible Blade and the Dancer) in
+    [PR #16](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/16).
+    Its release as chriz.5 waits for Christopher's OK.
 - InfinityLoader crash analysis: causes found; follow-up decisions are Christopher's.
 - BG Rebalance and the Spell Revisions fork:
   - The seven compatibility follow-ups from the October 8 audit
