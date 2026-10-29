@@ -270,11 +270,13 @@ Cross-repository status. Component detail stays in the sections below and in the
   - BG Rebalance `410` Druid weapons
     ([PR #22](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/22)) and `411`
     Alaghor of Clangeddin weapons
-    ([PR #23](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/23)) are merged
-    since 2026-10-29 and lab-verified on BG2:EE 2.7.3.0 with EEex v1.3.1, but not
-    released. `411` needs Artisan's Kitpack and EEex: the engine reads a kit's own weapon
+    ([PR #23](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/23)) are released
+    in [BG Rebalance v0.8.8](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.8)
+    (2026-10-29, Christopher's OK of that day), lab-verified on BG2:EE 2.7.3.0 with EEex
+    v1.3.1. `411` needs Artisan's Kitpack and EEex: the engine reads a kit's own weapon
     column only when the kit's class is the character's class, and Yeslick is a
-    fighter/cleric. Releasing both and offering them in CEBG wait for Christopher's OK.
+    fighter/cleric. Not pinned yet: the coordinator pins v0.8.8, and Christopher decides
+    whether CEBG offers 410 and 411 as defaults or as options. v0.8.8 changes nothing else.
   - The Artisan's Kitpack fork frees katanas and rogue items for kits that borrow the
     Shapeshifter bit (the Invisible Blade and the Dancer) in
     [PR #16](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/16).
