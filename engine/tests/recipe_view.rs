@@ -2,13 +2,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use bg_engine::manifest::{
-    Component, ComponentRef, Conflict, Decision, Feature, FeatureInputRef, InputOption, InputSpec,
-    InputValue, InvocationMode, ModFile, Phase, Postcondition, PromptAnswer, PromptStep, Readiness,
-    Run,
+    Component, ComponentRef, Conflict, Decision, Feature, FeatureGroup, FeatureGroupVariant,
+    FeatureInputRef, InputOption, InputSpec, InputValue, InvocationMode, ModFile, Phase,
+    Postcondition, PromptAnswer, PromptStep, Readiness, Run,
 };
 use bg_engine::manual_checkpoint::{split_plan, ManualBreakpoint};
 use bg_engine::recipe_view::{
-    evaluate, evaluate_preset, plan_without_artifacts, render_prompt_script, LeaveOutError,
+    evaluate, evaluate_preset, feature_group_changes, plan_without_artifacts, render_prompt_script,
+    FeatureGroupTarget, LeaveOutError,
 };
 use bg_engine::resolve::Selection;
 use bg_engine::validate::check;
@@ -1424,4 +1425,381 @@ fn a_planned_run_outside_the_recipe_is_refused() {
     .unwrap_err();
 
     assert!(matches!(error, LeaveOutError::Invalid(_)), "{error:?}");
+}
+
+/// Turns `options` into one choice group the way the recipe authors them: shared labels and
+/// choice group, and each option conflicting with every other one.
+fn choice_options(mut options: Vec<Feature>, choice_group: &str, label: &str) -> Vec<Feature> {
+    let ids = options
+        .iter()
+        .map(|option| option.id.clone())
+        .collect::<Vec<_>>();
+    for option in &mut options {
+        option.source_label = Some("Choice mod".to_owned());
+        option.group_label = Some(label.to_owned());
+        option.choice_group = Some(choice_group.to_owned());
+        option.conflicts.extend(
+            ids.iter()
+                .filter(|id| **id != option.id)
+                .map(|id| Conflict {
+                    feature_id: id.clone(),
+                    reason: format!("Choose one {label}."),
+                }),
+        );
+    }
+    options
+}
+
+/// `leave_out_manifest()` with three choice groups:
+/// - `frost`: the default `frost-plain` works alone, the alternative `frost-snowy` requires
+///   snowy;
+/// - `drift`: both options are parts of the snowy mod itself, under the snowy feature;
+/// - `stack`: unrelated to snowy, in a run with a recipe check and a prompt.
+///
+/// A `winter` feature group picks `frost-snowy` and `drift-heavy`, and the tweak run asks a
+/// question for each frost option.
+fn leave_out_choice_manifest() -> Manifest {
+    let mut manifest = leave_out_manifest();
+    let snowy = manifest.mods.get_mut("snowy").unwrap();
+    snowy.components.extend([component(2), component(3)]);
+    manifest
+        .collection
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == "snowy")
+        .unwrap()
+        .components
+        .extend([2, 3]);
+    add_run_with_own_download(&mut manifest, "frost", &[0, 1]);
+    add_run_with_own_download(&mut manifest, "stacking", &[0, 1]);
+    manifest
+        .collection
+        .runs
+        .iter_mut()
+        .find(|run| run.run_id == "stacking")
+        .unwrap()
+        .postconditions
+        .push(marker_check());
+    manifest.mods.get_mut("stacking").unwrap().components[1].prompts =
+        vec![literal_prompt("How many per stack?", &[])];
+    manifest.mods.get_mut("tweaks").unwrap().components[0]
+        .prompts
+        .extend([
+            literal_prompt("Snowy frost?", &["frost-snowy"]),
+            literal_prompt("Plain frost?", &["frost-plain"]),
+        ]);
+
+    let mut frost_snowy = feature(
+        "frost-snowy",
+        Decision::Optional,
+        component_refs("frost", &[1]),
+    );
+    frost_snowy.requires.push("snowy".to_owned());
+    let frost = choice_options(
+        vec![
+            feature(
+                "frost-plain",
+                Decision::Default,
+                component_refs("frost", &[0]),
+            ),
+            frost_snowy,
+        ],
+        "frost",
+        "frost",
+    );
+    let mut drift = choice_options(
+        vec![
+            feature(
+                "drift-light",
+                Decision::Default,
+                component_refs("snowy", &[2]),
+            ),
+            feature(
+                "drift-heavy",
+                Decision::Optional,
+                component_refs("snowy", &[3]),
+            ),
+        ],
+        "drift",
+        "snow drift",
+    );
+    for option in &mut drift {
+        option.parent = Some("snowy".to_owned());
+    }
+    let stack = choice_options(
+        vec![
+            feature(
+                "stack-small",
+                Decision::Default,
+                component_refs("stacking", &[0]),
+            ),
+            feature(
+                "stack-big",
+                Decision::Optional,
+                component_refs("stacking", &[1]),
+            ),
+        ],
+        "stack",
+        "stack size",
+    );
+    manifest
+        .collection
+        .features
+        .extend(frost.into_iter().chain(drift).chain(stack));
+    manifest.collection.feature_groups.push(FeatureGroup {
+        id: "winter".to_owned(),
+        title: "Winter".to_owned(),
+        description: "Pick the snowy options.".to_owned(),
+        members: Vec::new(),
+        variants: vec![
+            FeatureGroupVariant {
+                choice_group: "frost".to_owned(),
+                option: "frost-snowy".to_owned(),
+                label: None,
+            },
+            FeatureGroupVariant {
+                choice_group: "drift".to_owned(),
+                option: "drift-heavy".to_owned(),
+                label: None,
+            },
+        ],
+    });
+    manifest
+}
+
+fn choice_selection(choices: &[(&str, bool)]) -> Selection {
+    let mut selection = Selection::defaults("windows");
+    for (feature_id, selected) in choices {
+        selection.set_feature(feature_id, *selected);
+    }
+    selection
+}
+
+#[test]
+fn leaving_out_a_mod_drops_the_choice_that_needs_it_and_never_picks_the_alternative() {
+    let manifest = leave_out_choice_manifest();
+    check(&manifest).unwrap();
+    let evaluation = evaluate(
+        &manifest,
+        &choice_selection(&[("frost-plain", false), ("frost-snowy", true)]),
+    )
+    .unwrap();
+    let plan = &evaluation.plan;
+    assert_eq!(
+        run_ids(plan),
+        [
+            "core",
+            "snowy",
+            "needs-snowy",
+            "either",
+            "other",
+            "snowy-patch",
+            "tweaks",
+            "frost",
+            "stacking"
+        ]
+    );
+    assert_eq!(planned_run(plan, "frost").components, [1]);
+    assert_eq!(
+        prompt_outputs(planned_run(plan, "tweaks")),
+        [
+            (1, vec!["Always asked", "Snowy frost?"]),
+            (3, vec!["Patch the snowy areas?", "Confirm"])
+        ]
+    );
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // `frost-snowy` goes with snowy. `frost-plain`, the recipe default of the same choice,
+    // stays off: the player switched it off, and leaving out never adds a part, so the
+    // frost run goes completely.
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks", "stacking"]
+    );
+    let tweaks = planned_run(&remaining, "tweaks");
+    assert_eq!(tweaks.components, [1, 3]);
+    // Neither frost question is asked now: the snowy one lost its option, and the plain one
+    // was never selected.
+    assert_eq!(
+        prompt_outputs(tweaks),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+    assert_eq!(
+        planned_run(&remaining, "stacking"),
+        planned_run(plan, "stacking")
+    );
+}
+
+#[test]
+fn leaving_out_a_mod_never_lets_a_held_off_alternative_win_its_choice() {
+    let manifest = leave_out_choice_manifest();
+    // Both frost options are ticked, so they cancel each other and neither is installed.
+    let evaluation = evaluate(
+        &manifest,
+        &choice_selection(&[("frost-plain", true), ("frost-snowy", true)]),
+    )
+    .unwrap();
+    assert!(evaluation.normalized_selection.features["frost-plain"]);
+    assert!(!evaluation.view.control("frost-plain").unwrap().selected);
+    assert!(!run_ids(&evaluation.plan).contains(&"frost"));
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // Without snowy, `frost-snowy` would no longer hold `frost-plain` off, but the player did
+    // not get `frost-plain`, so leaving snowy out does not add it.
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks", "stacking"]
+    );
+    assert_eq!(
+        prompt_outputs(planned_run(&remaining, "tweaks")),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+}
+
+#[test]
+fn leaving_out_a_mod_undoes_a_feature_group_variant_without_restoring_the_default() {
+    let manifest = leave_out_choice_manifest();
+    let mut selection = Selection::defaults("windows");
+    for (feature_id, selected) in
+        feature_group_changes(&manifest, &selection, "winter", FeatureGroupTarget::On).unwrap()
+    {
+        selection.set_feature(&feature_id, selected);
+    }
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+    let plan = &evaluation.plan;
+    assert!(evaluation.view.control("frost-snowy").unwrap().selected);
+    assert!(evaluation.view.control("drift-heavy").unwrap().selected);
+    assert_eq!(planned_run(plan, "snowy").components, [0, 1, 3]);
+    assert_eq!(planned_run(plan, "frost").components, [1]);
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    // Switching the group off would restore `frost-plain` and `drift-light`; leaving snowy out
+    // only removes, so neither comes back.
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks", "stacking"]
+    );
+    assert_eq!(planned_run(&remaining, "tweaks").components, [1, 3]);
+    assert_eq!(
+        prompt_outputs(planned_run(&remaining, "tweaks")),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+    assert_eq!(
+        planned_run(&remaining, "stacking"),
+        planned_run(plan, "stacking")
+    );
+}
+
+#[test]
+fn a_choice_made_of_the_left_out_mods_parts_goes_with_it() {
+    let manifest = leave_out_choice_manifest();
+    for (choices, snowy_components) in [
+        (&[][..], &[0, 1, 2][..]),
+        (
+            &[("drift-light", false), ("drift-heavy", true)][..],
+            &[0, 1, 3][..],
+        ),
+    ] {
+        let evaluation = evaluate(&manifest, &choice_selection(choices)).unwrap();
+        let plan = &evaluation.plan;
+        assert_eq!(planned_run(plan, "snowy").components, snowy_components);
+        assert_eq!(planned_run(plan, "frost").components, [0]);
+        assert_eq!(
+            prompt_outputs(planned_run(plan, "tweaks")),
+            [
+                (1, vec!["Always asked", "Plain frost?"]),
+                (3, vec!["Patch the snowy areas?", "Confirm"])
+            ]
+        );
+
+        let remaining = plan_without_artifacts(
+            &manifest,
+            &evaluation.normalized_selection,
+            plan,
+            &unusable(&["snowy-archive"]),
+        )
+        .unwrap();
+
+        // Whichever drift option was picked goes with snowy, and so does the other one; the
+        // frost default, which does not need snowy, stays exactly as planned.
+        assert_eq!(
+            run_ids(&remaining),
+            ["core", "either", "other", "tweaks", "frost", "stacking"]
+        );
+        assert_eq!(planned_run(&remaining, "frost"), planned_run(plan, "frost"));
+        let tweaks = planned_run(&remaining, "tweaks");
+        assert_eq!(tweaks.components, [1, 3]);
+        assert_eq!(
+            prompt_outputs(tweaks),
+            [
+                (1, vec!["Always asked", "Plain frost?"]),
+                (3, vec!["Confirm"])
+            ]
+        );
+    }
+}
+
+#[test]
+fn a_choice_unrelated_to_the_left_out_mod_stays_exactly_as_planned() {
+    let manifest = leave_out_choice_manifest();
+    // The default, the alternative with its prompt, and both ticked, where the options cancel
+    // each other and neither is installed.
+    for (choices, planned) in [
+        (&[][..], Some((&[0][..], Vec::new()))),
+        (
+            &[("stack-small", false), ("stack-big", true)][..],
+            Some((&[1][..], vec![(1, vec!["How many per stack?"])])),
+        ),
+        (&[("stack-small", true), ("stack-big", true)][..], None),
+    ] {
+        let evaluation = evaluate(&manifest, &choice_selection(choices)).unwrap();
+        let plan = &evaluation.plan;
+        assert_eq!(
+            plan.runs
+                .iter()
+                .find(|run| run.run_id == "stacking")
+                .map(|run| (run.components.as_slice(), prompt_outputs(run))),
+            planned
+        );
+
+        let remaining = plan_without_artifacts(
+            &manifest,
+            &evaluation.normalized_selection,
+            plan,
+            &unusable(&["snowy-archive"]),
+        )
+        .unwrap();
+
+        assert_eq!(
+            remaining.runs.iter().find(|run| run.run_id == "stacking"),
+            plan.runs.iter().find(|run| run.run_id == "stacking")
+        );
+        if planned.is_some() {
+            assert_eq!(
+                planned_run(&remaining, "stacking").postconditions,
+                [marker_check()]
+            );
+        }
+    }
 }
