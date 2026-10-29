@@ -60,8 +60,8 @@ Cross-repository status. Component detail stays in the sections below and in the
        handover with SoD Remix `290` ([SIRENE_BG1](SIRENE_BG1.md), lab test).
      - **#58 merges only after the SoD Remix v0.6.16 pin.** With v0.6.15, `290` stops the
        installation on Sirene's victory remark (see Release gates).
-     - One question for Christopher came out of the lab (see his review queue); the
-       second Brimstone turned out to stay in EET's invisible import container.
+     - Both questions from the lab are closed (see his review queue): the second Brimstone
+       stays in EET's invisible import container, and the camp copy stays as it is.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
@@ -726,9 +726,13 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   - No change to `290` (2026-10-29). Christopher: between SoD and SoA, leave things out
     rather than add mechanics, checks or placed items. Remember when reworking the SoD
     ending: `290` does not play `bdcut61`, so other mods' additions to it never run.
-- [ ] Sirene NPC for BG:EE, as-is (lab, 2026-10-29): a Sirene the party never recruited
+- [x] Sirene NPC for BG:EE, as-is (lab, 2026-10-29): a Sirene the party never recruited
   appears in the Iron Throne building and again at the first SoD camp. The first copy
-  stays behind in the Iron Throne building. Report it upstream?
+  stays behind in the Iron Throne building. Christopher, 2026-10-29: no upstream report,
+  and a fix only if it were quick and cheap to maintain. It is not: it would need our own
+  copy of her camp set-up in `bd1000`, `bd3000` and `bd7100` plus a lab run, and it would
+  have to follow every Sirene re-pin. So it stays as it is; in play the city copy stays
+  behind when the army leaves the city.
 - [ ] Choose one restored-Bhaalspawn-powers provider: Ascension `40` (technical
   recommendation) or UB `19`; never expose both together. Since 2026-10-17 every
   Unfinished Business component, including `19`, is optional and unselected.
