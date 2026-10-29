@@ -528,7 +528,7 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
         .expect("the alpha.22 differences are recorded");
     assert_eq!(snapshot["from_commit"], "e0b5116");
     let differences = snapshot_differences(&snapshot);
-    assert_eq!(differences.len(), 229);
+    assert_eq!(differences.len(), 230);
     ensure_change_coverage(&differences, &ledger).unwrap();
     assert_eq!(
         ledger

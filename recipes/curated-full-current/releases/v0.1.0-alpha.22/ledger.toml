@@ -497,14 +497,26 @@ covers = [
 ]
 
 [[changes]]
-id = "buffbot-1-11-0"
-title = "BuffBot 1.11.0"
-summary = "New installations use BuffBot v1.11.0 (was v1.10.0). The \"Combat detected - casting stopped\" and \"casting timed out\" notices now appear over the party leader's head; before, both were always lost, although stopping the buff run worked. New: an optional 2x or 4x speed while a buff run lasts (Normal stays the default), a search by buff name, a named preset picker when you right-click the HUD gear, item powers that work through a spell found automatically, and the enable and lock cells drawn as artwork. Fixed: a configured spell variant no longer skips its casting time and aura, wearable items are no longer refused to characters without a kit, and restoring temporarily equipped items no longer risks overwriting the first backpack slot on BG2:EE 2.7.3.0, which could corrupt the character's name and crash the game."
+id = "buffbot-1-12-1"
+title = "BuffBot 1.12.1"
+summary = "New installations use BuffBot v1.12.1 (was v1.10.0). The \"Combat detected - casting stopped\" and \"casting timed out\" notices now appear over the party leader's head; before, both were always lost, although stopping the buff run worked. New: an optional 2x or 4x speed while a buff run lasts (Normal stays the default), presets that cast their longest-lasting buffs first (Order: Duration; your own order stays the default), and casting buffs that are nearly over again, through the EEex options (off by default) or the panel's Active toggle. Also new: a search by buff name and item powers that work through a spell found automatically. The panel wears the theme's artwork and colours, so its columns are readable on dark themes. The F12 preset abilities are gone: right-click the HUD gear to pick a named preset. BuffBot no longer adds text to the game's dialog.tlk."
 save_applicability = "next-playthrough"
 urgency = "recommended"
 covers = [
   "artifact:buffbot-1.10.1",
   "artifact:buffbot-1.11.0",
+  "artifact:buffbot-1.12.1",
+]
+
+[[changes]]
+id = "buffbot-fixes-to-1-12-1"
+title = "BuffBot fixes"
+summary = "Fixed in BuffBot v1.11.0 to v1.12.1: a configured spell variant no longer skips its casting time and aura, wearable items are no longer refused to characters without a kit, and restoring temporarily equipped items no longer risks overwriting the first backpack slot on BG2:EE 2.7.3.0, which could corrupt the character's name and crash the game. On a small panel, button captions no longer spill onto the neighbouring buttons, so a click lands on the button you see; spare tab slots stay inside the panel; and the quick-preset menu's captions move with the menu."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.11.0",
+  "artifact:buffbot-1.12.1",
 ]
 
 [[changes]]
