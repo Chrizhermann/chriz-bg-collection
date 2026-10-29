@@ -50,8 +50,10 @@ Cross-repository status. Component detail stays in the sections below and in the
      `claude/iwdee-app`. #51 is held, and this is the reason the rule below asks for: any
      change to the IWD recipe after a release needs a version bump, because the catalog
      test ties `release.json`'s version to a `[[bases]]` digest. So #51 goes in, with a
-     merge commit, as part of IWD 0.1.3, which is released in the same step as CEBG
-     alpha.22; both installers then ship BuffBot v1.12.1 together.
+     merge commit, as part of the IWD version released in the same step as CEBG alpha.22;
+     both installers then ship BuffBot v1.12.1 together. IWD 0.1.3 itself is the
+     Snowytoes v1.7 fix (2026-10-30; Weasel Mods' fixed download link started serving
+     v1.7, so new IWD installations stopped at the reviewed v1.6) and leaves BuffBot out.
      Artisan's Kitpack tweak `1010000` (kit weapon rules for weapons from later mods;
      Christopher, 2026-10-26) is a default in both recipes since
      [PR #60](https://github.com/Chrizhermann/chriz-bg-collection/pull/60) (merged on
@@ -80,10 +82,17 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
      with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
      see Weapon access below).
-     Still open in this step: #51, BuffBot v1.12.1 for the IWD recipe, held for IWD 0.1.3
-     (above).
+     Still open in this step: #51, BuffBot v1.12.1 for the IWD recipe, held for the IWD
+     version released together with alpha.22 (above).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
-     [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
+     [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
+     update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
+     waiting for Christopher's merge OK. The ledger supersedes alpha.20 (alpha.21 shipped
+     the alpha.20 recipe), covers all 230 recorded differences, BuffBot v1.12.1 from #44
+     included, and needs app alpha.22, so the app release that ships it must carry that
+     version. Its publication date is a placeholder that the release step sets. If the
+     recipe changes again before the release, the recorded differences and the ledger need
+     the new subjects (steps in #67).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance

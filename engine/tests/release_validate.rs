@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use bg_engine::cli::{validate_recipe, ValidationProfile};
 use bg_engine::manifest::{Decision, InvocationMode, Readiness};
 use bg_engine::release_validate::{
     validate_public_alpha_at, RULE_RELEASE_FAIL_STUB, RULE_RELEASE_OMISSION,
@@ -60,6 +61,25 @@ fn production_alpha_has_complete_static_release_records_without_claiming_runtime
     assert!(acceptance.contains("kind = \"runtime-test\""));
     assert!(acceptance.contains("status = \"pending\""));
     assert!(!acceptance.contains("live_acceptance = true"));
+}
+
+#[test]
+fn both_bundled_profiles_pass_the_public_alpha_gate_the_app_runs() {
+    // The app validates whichever bundled profile it uses with the public-alpha profile
+    // before it plans an installation, and that gate blocks on warnings as well as errors.
+    // The release records judge the chris-recommended selection only.
+    for profile in ["manifest", "recipes/curated-full-current"] {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join(profile);
+        let report = validate_recipe(&root, ValidationProfile::PublicAlpha)
+            .unwrap_or_else(|error| panic!("{profile}: {error:?}"));
+        assert!(
+            report.findings.is_empty(),
+            "{profile}: {:#?}",
+            report.findings
+        );
+    }
 }
 
 #[test]

@@ -15,21 +15,23 @@ what changed since v18 and Christopher's decisions.
   optional and part of Challenge Mode.
 - `2210` stays the grandmastery default. The snapshot's shared grandmastery table gives High
   Mastery +5 damage instead of +4; to-hit and the other levels are unchanged.
-  **Pending Christopher:** with Spell Revisions, the snapshot's `2210` also gives SR's Black
-  Blade of Disaster +3/2 attacks per round and a +8/+10 melee header (SR's item is +5/+5 and
-  v18 left it alone). Without Spell Revisions the item is unchanged.
+  With Spell Revisions, the snapshot's `2210` also gives SR's Black Blade of Disaster +3/2
+  attacks per round and a +8/+10 melee header (SR's item is +5/+5 and v18 left it alone).
+  Without Spell Revisions the item is unchanged. Still open for Christopher: he skipped the
+  question on 2026-10-30 while the IWD download fix came first, so alpha.22 ships the
+  snapshot's behavior.
 - `3220` now runs on EET. Besides five unused BG1 entrances, it adds a southern entrance to
   the Bridge District and routes 34 of its 39 world-map links there.
 - Not offered: `2670`, `2212`, `2213`, `3520`, `4240`, `6360`, `3530`/`3531`, `2780`, `2770`,
   `2750`. `2670` is not new: it was already in v18 and excluded. `2212`/`2213` are new
   alternatives in the grandmastery choice (EE-style and IWD numbers; `2213` reproduces v18's
   `2210` tables).
-- `1258` (Ajantis only) is **not offered**, pending Christopher: in the snapshot the default
-  `1257` already moves Ajantis to the Friendly Arm Inn (it includes `1258`'s code, and its
-  title now lists Ajantis), and `1258` refuses to install after `1257`, which the installer
-  treats as a failed run. No conflict with BG1NPC v32, Artisan's `3101` or BG1UB was found.
-  Alternatives for him: keep `1257` as is (current state), or offer `1251`–`1256` plus `1258`
-  instead of `1257`.
+- `1258` (Ajantis only) is **not offered**: in the snapshot the default `1257` already moves
+  Ajantis to the Friendly Arm Inn (it includes `1258`'s code, and its title now lists
+  Ajantis), and `1258` refuses to install after `1257`, which the installer treats as a
+  failed run. No conflict with BG1NPC v32, Artisan's `3101` or BG1UB was found. The
+  alternative is to offer `1251`–`1256` plus `1258` instead of `1257`. Still open for
+  Christopher (skipped on 2026-10-30), so alpha.22 ships `1257` as is.
 - Withdrawn upstream: `260` is commented out and `3470` is deprecated in the snapshot; both
   were already excluded and their rows are gone.
 
