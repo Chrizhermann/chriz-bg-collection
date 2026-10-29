@@ -206,11 +206,10 @@ unchanged.
 - **Grandmastery** (Default, unchanged choice): High Mastery now gives +5
   damage instead of +4, matching Grand Mastery. To-hit and the other levels are
   unchanged. (Tweaks Anthology)
-  - **Pending:** with Spell Revisions, the Black Blade of Disaster now also gets
-    +3/2 attacks per round and +8 to hit / +10 damage (it was +5/+5).
-    Christopher decides whether that stays. (Upstream's fix for Black Blade
-    attacks stacking with grandmastery changes nothing here: v18 never had that
-    bug.)
+  - With Spell Revisions, the Black Blade of Disaster now also gets +3/2 attacks
+    per round and +8 to hit / +10 damage (it was +5/+5); Christopher, 2026-10-30:
+    it stays. (Upstream's fix for Black Blade attacks stacking with grandmastery
+    changes nothing here: v18 never had that bug.)
 - **The Martyr paladin kit** (Default, unchanged choice) now comes from Artisan's Kitpack
   alone. Both Sirene mods install after the Kitpack and leave their own copy out, so the
   Martyr stays available at character creation, unchanged.
