@@ -21,7 +21,8 @@ use super::catalog::{Catalog, Hotpatch};
 use super::{gate, Context, HotpatchPreview};
 use crate::acquire::{
     extract_archive, extract_served_archive, AcceptedContent, ArchiveFormat, ArchiveLimits,
-    ArchiveMode, ArchiveRequirements, ArtifactCache, DownloadRequest, DownloadRoute, StopSignal,
+    ArchiveMode, ArchiveRequirements, ArtifactCache, DownloadRequest, DownloadRoute,
+    ServedRedirects, ServedRules, StopSignal,
 };
 use crate::digest::sha256_bytes;
 use crate::events::ConsoleSink;
@@ -441,7 +442,7 @@ fn unpack(ctx: &Context<'_>, artifact: &Artifact) -> Result<PathBuf, String> {
 
 /// The WeiDU an installation was made with.
 #[derive(Debug, PartialEq, Eq)]
-pub(super) struct InstalledTool {
+pub struct InstalledTool {
     /// The archive the installer accepted instead of the pinned one, when the tool's official
     /// link served a different file; `None` for the reviewed archive.
     pub served: Option<AcceptedContent>,
@@ -451,7 +452,7 @@ pub(super) struct InstalledTool {
 
 /// Which WeiDU `receipt`'s installation used for the tool `artifact`: the reviewed one, or the
 /// changed download its installer accepted and the program it verified and recorded from it.
-pub(super) fn installed_tool(
+pub fn installed_tool(
     receipt: &InstallReceipt,
     artifact: &Artifact,
     spec: &ToolSpec,
@@ -504,6 +505,11 @@ pub(super) fn unpack_served(
                 route: DownloadRoute::for_source(&artifact.source).map_err(files::err)?,
             },
             Some(accepted),
+            // The installer accepted a changed WeiDU only from its reviewed hosts.
+            ServedRules {
+                format: ArchiveFormat::Zip,
+                redirects: ServedRedirects::ReviewedHostsForChanges,
+            },
             &ConsoleSink,
             &StopSignal::never(),
         )

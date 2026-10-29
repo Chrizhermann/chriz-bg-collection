@@ -1,5 +1,5 @@
 //! Leaving out a mod whose download cannot be used, on the real curated recipe, both with and
-//! without Spell Revisions.
+//! without Spell Revisions, and on the Icewind Dale recipe.
 //!
 //! Each case checks the result three ways: it only removes (every remaining run is a run of
 //! the original plan, in the same order, with a subset of its components); it removes exactly
@@ -23,12 +23,19 @@ const SPELL_REVISIONS: &str = "mod:spell-rev";
 /// default that conflicts with the SCS core, so leaving SCS out must not bring it back. SCS
 /// itself contains several choice groups, which have to go with it.
 const STRATAGEMS: &str = "mod:stratagems";
+/// Christopher's fight mod for Icewind Dale: both of its parts need SCS's caster AI.
+const IWD_ENCOUNTERS: &str = "mod:chriz-iwd-encounters";
 
 fn curated() -> Manifest {
     Manifest::load(
         &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/curated-full-current"),
     )
     .expect("curated recipe should load")
+}
+
+fn icewind_dale() -> Manifest {
+    Manifest::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/iwd-current"))
+        .expect("Icewind Dale recipe should load")
 }
 
 /// The recommended preset, with Spell Revisions switched on or off. The plain recipe defaults
@@ -348,4 +355,42 @@ fn leaving_out_scs(spell_revisions: bool) {
             evaluation.plan.runs.iter().find(|run| run.run_id == run_id)
         );
     }
+}
+
+/// On the Icewind Dale recipe, leaving out Sword Coast Stratagems takes the encounters mod with
+/// it, and adds nothing: its first part needs one of SCS's caster AI components, its second
+/// one exactly.
+#[test]
+fn leaving_out_scs_on_the_iwd_recipe_takes_the_encounters_mod_with_it_and_adds_nothing() {
+    let manifest = icewind_dale();
+    let selection = Selection {
+        platform: "windows".to_owned(),
+        choices: manifest.presets["chris-recommended"].selections.clone(),
+    };
+    let evaluation = evaluate(&manifest, &selection).unwrap();
+    let mut unticked_selection = selection;
+    unticked_selection.set_feature(STRATAGEMS, false);
+    let unticked = evaluate(&manifest, &unticked_selection).unwrap();
+    let artifact = artifact_of(&manifest, STRATAGEMS);
+    let encounters = artifact_of(&manifest, IWD_ENCOUNTERS);
+    assert_eq!(runs_from(&evaluation.plan, &artifact), ["stratagems-main"]);
+    assert_eq!(
+        runs_from(&evaluation.plan, &encounters),
+        ["chriz-iwd-encounters-main"]
+    );
+    let parts = [
+        "feature:chriz-iwd-encounters:component-100",
+        "feature:chriz-iwd-encounters:component-200",
+    ];
+    assert_eq!(
+        installed_components(&manifest, &evaluation.plan, &parts).len(),
+        2
+    );
+    assert!(direct_dependents(&manifest, &evaluation, STRATAGEMS).contains(&parts[1]));
+
+    let remaining = leave_out(&manifest, &evaluation, &artifact);
+
+    assert_matches_unticking(&evaluation.plan, &remaining, &unticked.plan);
+    assert!(installed_components(&manifest, &remaining, &parts).is_empty());
+    assert!(runs_from(&remaining, &encounters).is_empty());
 }

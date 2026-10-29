@@ -22,14 +22,17 @@ pub use archive::{
     extract_served_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
     ExtractedArtifact,
 };
-pub use cache::{served_length_limit, AcceptedContent, ArtifactCache, ServedArtifact};
+pub use cache::{
+    served_length_limit, AcceptedContent, ArtifactCache, ServedArtifact, ServedRedirects,
+    ServedRules,
+};
 pub use damaged::CacheRepair;
 pub use http::validate_redirect_target;
 pub use inspect::{download_for_inspection, QuarantinedDownload};
 pub use manual::{provide_manual_archive, publish_manual_archive, VerifiedManualArchive};
 pub use materialize::{
-    materialize, MaterializationRequest, MaterializationResult, PublicationManifest, PublishedPath,
-    SignedCollisionRule,
+    materialize, plan_materialization, MaterializationRequest, MaterializationResult,
+    PlannedMaterialization, PublicationManifest, PublishedPath, SignedCollisionRule,
 };
 pub use route::{
     check_saved_filename, check_weaselmods_download_url, DownloadRoute, WEASELMODS_DOWNLOAD_HOST,
@@ -273,6 +276,15 @@ pub enum AcquireError {
         length: u64,
         /// Largest accepted changed download.
         limit: u64,
+    },
+    /// A download that differs from its pin is clearly not the archive the recipe declares,
+    /// for example an error page or a transfer that ended early, on the last attempt too.
+    #[error("`{url}` did not serve the archive: {problem}")]
+    ServedNotArchive {
+        /// Final response URL.
+        url: String,
+        /// What the served file is instead.
+        problem: String,
     },
     /// A destination file exists with bytes that no signed rule permits replacing.
     #[error("undeclared overwrite of `{path}`")]

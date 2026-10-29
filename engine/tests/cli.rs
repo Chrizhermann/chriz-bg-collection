@@ -20,7 +20,7 @@ use bg_engine::games::{FileSystemProvider, SystemFileSystem};
 use bg_engine::lock::TargetLock;
 use bg_engine::receipt::{
     ArtifactCacheOutcome, ArtifactReceipt, DownloadIdentity, InstallReceipt, ReceiptOutcome,
-    RECEIPT_SCHEMA_VERSION,
+    ReviewedTool, RECEIPT_SCHEMA_VERSION,
 };
 use bg_engine::registry::{CampaignAvailability, ManagedInstallRegistry};
 use bg_engine::session::SessionStore;
@@ -43,6 +43,15 @@ struct ArtifactServer {
 
 impl ArtifactServer {
     fn start(artifacts: BTreeMap<String, Vec<u8>>) -> Self {
+        Self::start_with(artifacts, |_| {})
+    }
+
+    /// Like [`ArtifactServer::start`], calling `on_request` with each request path before
+    /// answering it.
+    fn start_with(
+        artifacts: BTreeMap<String, Vec<u8>>,
+        on_request: impl Fn(&str) + Send + 'static,
+    ) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind artifact server");
         let address = listener.local_addr().expect("artifact server address");
         listener
@@ -55,7 +64,9 @@ impl ArtifactServer {
             while !thread_stop.load(Ordering::Acquire) {
                 match listener.accept() {
                     Ok((_stream, _)) if thread_stop.load(Ordering::Acquire) => break,
-                    Ok((stream, _)) => serve_artifact(stream, &artifacts, &signatures),
+                    Ok((stream, _)) => {
+                        serve_artifact(stream, &artifacts, &signatures, &on_request);
+                    }
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                         thread::sleep(Duration::from_millis(5));
                     }
@@ -89,6 +100,7 @@ fn serve_artifact(
     mut stream: TcpStream,
     artifacts: &BTreeMap<String, Vec<u8>>,
     signatures: &AtomicU64,
+    on_request: &dyn Fn(&str),
 ) {
     stream
         .set_nonblocking(false)
@@ -110,6 +122,7 @@ fn serve_artifact(
             break;
         }
     }
+    on_request(path);
     if let Some(signed) = path.strip_prefix("/signed") {
         let signature = signatures.fetch_add(1, Ordering::AcqRel) + 1;
         write!(
@@ -2873,6 +2886,12 @@ fn a_changed_download_is_installed_recorded_and_kept_when_the_installation_resum
 /// Adds Snowytoes, a second mod from its own download, to the executable fixture's recipe.
 #[cfg(windows)]
 fn add_snowytoes(fixture: &ExecutableFixture, reviewed: &[u8]) {
+    add_snowytoes_publishing(fixture, reviewed, &["Snowytoes"]);
+}
+
+/// [`add_snowytoes`], with the folders its archive places in the game.
+#[cfg(windows)]
+fn add_snowytoes_publishing(fixture: &ExecutableFixture, reviewed: &[u8], roots: &[&str]) {
     fs::write(
         fixture.recipe.join("artifacts/snowytoes.toml"),
         artifact_toml(
@@ -2882,7 +2901,7 @@ fn add_snowytoes(fixture: &ExecutableFixture, reviewed: &[u8]) {
             "https://example.invalid/snowytoes.zip",
             "Snowytoes-v1.6.zip",
             reviewed,
-            &["Snowytoes"],
+            roots,
             &["Snowytoes/setup-snowytoes.tp2"],
             None,
         ),
@@ -2997,7 +3016,7 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     assert_eq!(
         summary,
         [
-            "Left out: Snowytoes. Its download changed and could not be used.",
+            "Left out: Snowytoes. Its download could not be used.",
             "If something does not work as expected, please report it so the collection can be fixed."
         ],
         "{printed}"
@@ -3043,8 +3062,369 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     let report = report_json(&fixture);
     assert_eq!(
         report["notes"][0],
-        "Left out: Snowytoes. Its download changed and could not be used."
+        "Left out: Snowytoes. Its download could not be used."
     );
+}
+
+/// Test builds of the installer skip the waits between download attempts when this is set.
+#[cfg(windows)]
+const NO_RETRY_WAIT: &str = "CHRIZ_BG_COLLECTION_TEST_NO_RETRY_WAIT";
+
+/// The official link of a mod serves an error page instead of its archive, or no file at all,
+/// on every attempt. The installer asks again with the usual waits, then leaves the mod out and
+/// installs the rest.
+#[cfg(windows)]
+#[test]
+fn a_mod_whose_link_serves_no_archive_is_left_out_after_every_attempt() {
+    let page =
+        b"<!DOCTYPE html>\n<html><body>This download is not available right now.</body></html>\n";
+    for (served, reason) in [
+        (
+            Some(page.to_vec()),
+            "its official link does not serve the archive (it does not begin like a ZIP archive but with the text \"<!DOCTYPE html> <html><body>This\"), and still did not on the last of 5 attempts; the last answer came from 127.0.0.1",
+        ),
+        (
+            None,
+            "its official link answers HTTP 404 (no such file) from 127.0.0.1, and still did on the last of 5 attempts",
+        ),
+    ] {
+        let fixture = executable_fixture();
+        let reviewed = zip_bytes(&[(
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+        )]);
+        add_snowytoes(&fixture, &reviewed);
+        let link = ArtifactServer::start(
+            served
+                .map(|body| ("/snowytoes.zip".to_owned(), body))
+                .into_iter()
+                .collect(),
+        );
+
+        let output = executable_command(&fixture)
+            .env(DOWNLOAD_ORIGIN, &link.base_url)
+            .env(NO_RETRY_WAIT, "1")
+            .args(install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ))
+            .output()
+            .expect("run the installation");
+        assert!(
+            output.status.success(),
+            "stdout:\n{}\nstderr:\n{}",
+            stdout(&output),
+            stderr(&output)
+        );
+        let response = json_stdout(&output);
+        let lines = console_lines(&response);
+        assert_eq!(
+            lines
+                .iter()
+                .filter(|line| line.starts_with("The download of snowytoes gave no usable file: "))
+                .count(),
+            4,
+            "{lines:#?}"
+        );
+
+        let receipt = read_install_receipt(&fixture);
+        assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+        assert_eq!(receipt.left_out.len(), 1);
+        assert_eq!(receipt.left_out[0].artifact_id, "snowytoes");
+        assert_eq!(receipt.left_out[0].reason, reason);
+        assert_eq!(receipt.left_out[0].runs, ["snowytoes-bg2"]);
+        // Nothing of the answer was accepted, cached or placed.
+        assert!(!receipt
+            .artifacts
+            .iter()
+            .any(|artifact| artifact.id == "snowytoes"));
+        assert!(!fixture.cache.join("partial/snowytoes.part").exists());
+        assert!(!fixture.managed.join("game/Snowytoes").exists());
+        assert_eq!(
+            report_json(&fixture)["notes"],
+            serde_json::json!([
+                "Left out: Snowytoes. Its download could not be used.",
+                "If something does not work as expected, please report it so the collection can be fixed."
+            ])
+        );
+    }
+}
+
+/// The changed archive of a mod would overwrite a file that an earlier mod placed. Nothing of
+/// it is placed yet, so the installer leaves the mod out instead of requiring a fresh copy, and
+/// a resume keeps that decision.
+#[cfg(windows)]
+#[test]
+fn a_changed_archive_that_would_overwrite_another_mods_file_is_left_out() {
+    let fixture = executable_fixture();
+    let fixpack_tp2: &[u8] = b"BEGIN ~Synthetic EE Fixpack~\nDESIGNATED 0\n";
+    // The reviewed release carries an identical copy of an EE Fixpack file.
+    let reviewed = zip_bytes(&[
+        (
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+        ),
+        ("EE_Fixpack/EE_Fixpack.tp2", fixpack_tp2),
+    ]);
+    add_snowytoes_publishing(&fixture, &reviewed, &["Snowytoes", "EE_Fixpack"]);
+    let changed = zip_bytes(&[
+        (
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+        ),
+        ("EE_Fixpack/EE_Fixpack.tp2", b"BEGIN ~Its own edit~\n"),
+    ]);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/snowytoes.zip".to_owned(),
+        changed.clone(),
+    )]));
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+
+    let failed = executable_command(&fixture)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("start the installation");
+    assert_eq!(failed.status.code(), Some(1), "{}", stdout(&failed));
+    let failed = json_stdout(&failed);
+    assert_eq!(failed["status"]["step_id"], "install:eefixpack-bg1");
+    let left_out = failed["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|event| event["type"] == "artifact_left_out")
+        .collect::<Vec<_>>();
+    assert_eq!(left_out.len(), 1, "{:#?}", failed["events"]);
+    assert_eq!(left_out[0]["runs"], serde_json::json!(["snowytoes-bg2"]));
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert!(replay.records.iter().any(|record| matches!(
+        &record.event,
+        bg_engine::session::SessionEvent::ArtifactLeftOut { step_id, artifact_id, .. }
+            if step_id == "materialize:snowytoes:bg2" && artifact_id == "snowytoes"
+    )));
+
+    drop(link);
+    let resumed = executable_command(&fixture)
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(["resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume the installation");
+    assert!(
+        resumed.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&resumed),
+        stderr(&resumed)
+    );
+
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert_eq!(receipt.left_out.len(), 1);
+    assert_eq!(
+        receipt.left_out[0].reason,
+        format!(
+            "its official link now serves a different archive (snowytoes.zip, {} bytes, SHA-256 {}), which cannot be installed: its file `EE_Fixpack/EE_Fixpack.tp2` would overwrite different content that the game or an earlier mod already placed",
+            changed.len(),
+            sha256_bytes(&changed)
+        )
+    );
+    assert_eq!(
+        fs::read(fixture.managed.join("game/EE_Fixpack/EE_Fixpack.tp2")).unwrap(),
+        fixpack_tp2
+    );
+    assert!(!fixture.managed.join("game/Snowytoes").exists());
+    let installed_runs = receipt
+        .installed_plan
+        .as_ref()
+        .expect("the installed plan is recorded")
+        .runs
+        .iter()
+        .map(|run| run.run_id.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(installed_runs, ["eefixpack-bg1", "eefixpack-bg2"]);
+}
+
+/// The official link of the installer tool serves a newer WeiDU build than the reviewed one.
+/// The installer checks it as a changed tool, installs every mod with it, says so, and records
+/// both builds; the report and the hotpatches read that record.
+#[cfg(windows)]
+#[test]
+fn a_changed_weidu_download_is_checked_used_and_recorded() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.tool_archive);
+    let reviewed_tool = fs::read(MOCK_CHILD).expect("read the synthetic WeiDU");
+    // Bytes after a Windows program's image do not change what it does.
+    let mut newer = reviewed_tool.clone();
+    newer.extend_from_slice(b"\0a newer build of the same program");
+    let newer_archive = zip_bytes(&[("weidu.exe", &newer)]);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/weidu.zip".to_owned(),
+        newer_archive.clone(),
+    )]));
+
+    let output = executable_command(&fixture)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("run the installation");
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    let lines = console_lines(&json_stdout(&output));
+    assert!(
+        lines.iter().any(|line| line.starts_with(
+            "The download of WeiDU 249.00 is newer or different than the reviewed version."
+        )),
+        "{lines:#?}"
+    );
+
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    let archive = receipt
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.id == "weidu")
+        .expect("the tool archive is recorded");
+    assert_eq!(archive.sha256, sha256_bytes(&newer_archive));
+    assert!(archive.served_difference.is_some());
+    let tool = receipt
+        .weidu_tools
+        .iter()
+        .find(|tool| tool.id == "weidu")
+        .expect("the tool is recorded");
+    assert_eq!(tool.version, "24900");
+    assert_eq!(tool.length, newer.len() as u64);
+    assert_eq!(tool.sha256, sha256_bytes(&newer));
+    assert_eq!(
+        tool.reviewed,
+        Some(ReviewedTool {
+            version: "24900".to_owned(),
+            length: reviewed_tool.len() as u64,
+            sha256: sha256_bytes(&reviewed_tool),
+        })
+    );
+    // A hotpatch reads the same record: it runs with exactly this download and program.
+    let manifest = bg_engine::Manifest::load(&fixture.recipe).expect("load the fixture recipe");
+    let artifact = &manifest.artifacts["weidu"];
+    assert_eq!(
+        bg_engine::hotpatch::installed_tool(&receipt, artifact, artifact.tool.as_ref().unwrap()),
+        Ok(bg_engine::hotpatch::InstalledTool {
+            served: Some(bg_engine::acquire::AcceptedContent {
+                length: newer_archive.len() as u64,
+                sha256: sha256_bytes(&newer_archive),
+            }),
+            executable_sha256: sha256_bytes(&newer),
+        })
+    );
+    assert_eq!(receipt.runs.len(), 2);
+    assert_eq!(
+        report_json(&fixture)["notes"],
+        serde_json::json!([
+            "Used a newer or different installer tool than the reviewed version: WeiDU (WeiDU 24900).",
+            "If something does not work as expected, please report it so the collection can be fixed."
+        ])
+    );
+}
+
+/// The installer tool's link serves a changed build that cannot be used, while the reviewed
+/// one reaches the download folder, as when another installation finishes downloading it at
+/// the same time. The installer uses the reviewed tool and says so; nothing records the
+/// changed one.
+#[cfg(windows)]
+#[test]
+fn an_unusable_changed_weidu_gives_way_to_the_reviewed_one_in_the_download_folder() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.tool_archive);
+    let unusable = zip_bytes(&[("weidu.exe", b"MZ, but no program at all")]);
+    let cache = fixture.cache.clone();
+    let reviewed_url = format!("{}/weidu.zip", fixture._server.base_url);
+    let reviewed = fixture.tool_archive.clone();
+    let link = ArtifactServer::start_with(
+        BTreeMap::from([("/weidu.zip".to_owned(), unusable.clone())]),
+        move |path| {
+            if path == "/weidu.zip" {
+                let (sink, _events) = ChannelSink::unbounded();
+                ArtifactCache::open(&cache)
+                    .expect("open the download folder")
+                    .acquire(
+                        &DownloadRequest {
+                            request_id: "another-installation".to_owned(),
+                            url: reviewed_url.clone(),
+                            expected_length: reviewed.len() as u64,
+                            expected_sha256: sha256_bytes(&reviewed),
+                            redirect_hosts: Vec::new(),
+                            max_attempts: 1,
+                            route: DownloadRoute::Generic,
+                        },
+                        &sink,
+                    )
+                    .expect("another installation downloads the reviewed tool");
+            }
+        },
+    );
+
+    let output = executable_command(&fixture)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("run the installation");
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    let lines = console_lines(&json_stdout(&output));
+    assert!(
+        lines.iter().any(|line| line.starts_with(
+            "The download of WeiDU 249.00 cannot be used: it is newer or different than the reviewed version, and its WeiDU program does not work: "
+        ) && line.ends_with("Using the reviewed WeiDU from the download folder instead.")),
+        "{lines:#?}"
+    );
+
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    let archive = receipt
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.id == "weidu")
+        .expect("the tool archive is recorded");
+    assert_eq!(archive.sha256, sha256_bytes(&fixture.tool_archive));
+    assert_eq!(archive.served_difference, None);
+    assert_eq!(archive.cache_outcome, ArtifactCacheOutcome::Hit);
+    assert!(receipt
+        .weidu_tools
+        .iter()
+        .all(|tool| tool.reviewed.is_none()));
+    // The installation used only reviewed files, so its end summary has nothing to add.
+    assert_eq!(report_json(&fixture)["notes"], serde_json::json!([]));
 }
 
 /// The published extraction of `bytes` beneath the fixture's extraction cache.

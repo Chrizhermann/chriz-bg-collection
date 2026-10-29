@@ -277,6 +277,273 @@ pub fn extract_served_archive(
     )
 }
 
+/// Why a downloaded file that differs from its pin is clearly not an archive of `format`: it
+/// does not begin like one, as an error page served in its place does not, or its framing is
+/// incomplete, as after a transfer that ended early without announcing its length. `None` when
+/// it is framed like a complete archive; unpacking still checks everything else.
+///
+/// Both checks are the ones unpacking would fail first, so a file refused here could never be
+/// installed, while asking the link again may still give the real archive.
+pub(super) fn served_container_problem(
+    path: &Path,
+    format: ArchiveFormat,
+) -> Result<Option<String>, AcquireError> {
+    let mut start = [0_u8; 32];
+    let mut length = 0;
+    let mut file = File::open(path).map_err(|source| AcquireError::Io {
+        action: "open downloaded file",
+        path: path.to_path_buf(),
+        source,
+    })?;
+    while length < start.len() {
+        let read = file
+            .read(&mut start[length..])
+            .map_err(|source| AcquireError::Io {
+                action: "read downloaded file",
+                path: path.to_path_buf(),
+                source,
+            })?;
+        if read == 0 {
+            break;
+        }
+        length += read;
+    }
+    let start = &start[..length];
+    match format {
+        ArchiveFormat::Zip | ArchiveFormat::Iemod => {
+            if !start.starts_with(b"PK\x03\x04") {
+                return Ok(Some(format!(
+                    "it does not begin like a ZIP archive but with {}",
+                    describe_start(start)
+                )));
+            }
+            match ZipArchive::new(file) {
+                Ok(_) => Ok(None),
+                // Reading past the end or seeking to a place the file does not have is what a
+                // directory that the cut-off end describes wrongly leads to; any other failure
+                // is this computer's.
+                Err(zip::result::ZipError::Io(source))
+                    if !matches!(
+                        source.kind(),
+                        std::io::ErrorKind::UnexpectedEof
+                            | std::io::ErrorKind::InvalidInput
+                            | std::io::ErrorKind::InvalidData
+                    ) =>
+                {
+                    Err(AcquireError::Io {
+                        action: "read downloaded ZIP archive",
+                        path: path.to_path_buf(),
+                        source,
+                    })
+                }
+                Err(error) => Ok(Some(format!("it is not a complete ZIP archive ({error})"))),
+            }
+        }
+        ArchiveFormat::SelfExtractingRar => {
+            if !start.starts_with(b"MZ") {
+                return Ok(Some(format!(
+                    "it does not begin like a self-extracting RAR archive but with {}",
+                    describe_start(start)
+                )));
+            }
+            drop(file);
+            Ok(rar_container_problem(path))
+        }
+    }
+}
+
+/// The first bytes of a file, for a message: as text when they are text, else in hex.
+fn describe_start(start: &[u8]) -> String {
+    if start.is_empty() {
+        return "no bytes at all".to_owned();
+    }
+    if start
+        .iter()
+        .all(|byte| byte.is_ascii_graphic() || byte.is_ascii_whitespace())
+    {
+        let text = start
+            .iter()
+            .map(|byte| {
+                if byte.is_ascii_whitespace() {
+                    ' '
+                } else {
+                    char::from(*byte)
+                }
+            })
+            .collect::<String>();
+        return format!("the text \"{}\"", text.trim());
+    }
+    let bytes = start
+        .iter()
+        .take(8)
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>();
+    format!("the bytes {}", bytes.join(" "))
+}
+
+/// Entries tested before the check of a RAR archive gives up and leaves the rest to
+/// unpacking, which bounds the entry count itself.
+#[cfg(windows)]
+const MAX_RAR_FRAMING_HEADERS: usize = 10_000_000;
+
+/// Whether UnRAR finds every file of a self-extracting RAR archive complete and intact, as
+/// `unrar t` tests an archive. Its headers alone do not show a transfer that ended early: the
+/// last file is merely cut short, which only reading its data reveals. An archive that
+/// unpacking refuses whatever its state, such as a solid or a split one, is left to unpacking,
+/// which says why; asking its link again could not help.
+#[cfg(windows)]
+fn rar_container_problem(path: &Path) -> Option<String> {
+    let path = WideCString::from_os_str(path).ok()?;
+    let mut open =
+        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_EXTRACT);
+    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
+    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
+        return Some(format!(
+            "UnRAR cannot open it as an archive (code {})",
+            open.open_result
+        ));
+    }
+    struct Guard(*const unrar_sys::Handle);
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            unsafe { unrar_sys::RARCloseArchive(self.0) };
+        }
+    }
+    let _guard = Guard(handle);
+    if open.flags
+        & (unrar_sys::ROADF_VOLUME
+            | unrar_sys::ROADF_FIRSTVOLUME
+            | unrar_sys::ROADF_ENCHEADERS
+            | unrar_sys::ROADF_SOLID)
+        != 0
+    {
+        return None;
+    }
+    for _ in 0..MAX_RAR_FRAMING_HEADERS {
+        let mut header = unrar_sys::HeaderDataEx::default();
+        let code = unsafe {
+            unrar_sys::RARReadHeaderEx(handle, std::ptr::from_mut(&mut header).cast_const())
+        };
+        if code == unrar_sys::ERAR_END_ARCHIVE {
+            return None;
+        }
+        if code != unrar_sys::ERAR_SUCCESS {
+            return Some(format!(
+                "its archive is damaged or ends early (UnRAR code {code})"
+            ));
+        }
+        if header.flags
+            & (unrar_sys::RHDF_SPLITBEFORE
+                | unrar_sys::RHDF_SPLITAFTER
+                | unrar_sys::RHDF_ENCRYPTED
+                | unrar_sys::RHDF_SOLID)
+            != 0
+            || header.redir_type != 0
+        {
+            return None;
+        }
+        let announced = if header.flags & unrar_sys::RHDF_DIRECTORY != 0 {
+            0
+        } else {
+            (u64::from(header.unp_size_high) << 32) | u64::from(header.unp_size)
+        };
+        let mut tested = RarTestState {
+            length: 0,
+            announced,
+            refused: false,
+        };
+        unsafe {
+            unrar_sys::RARSetCallback(
+                handle,
+                Some(rar_test_callback),
+                std::ptr::from_mut(&mut tested) as unrar_sys::LPARAM,
+            )
+        };
+        let process = unsafe {
+            unrar_sys::RARProcessFileW(
+                handle,
+                unrar_sys::RAR_TEST,
+                std::ptr::null(),
+                std::ptr::null(),
+            )
+        };
+        unsafe { unrar_sys::RARSetCallback(handle, None, 0) };
+        if process != unrar_sys::ERAR_SUCCESS || tested.refused || tested.length != announced {
+            let name = unsafe {
+                WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
+            }
+            .to_string_lossy()
+            .replace('\\', "/");
+            let entry = if name.is_empty() {
+                "an entry".to_owned()
+            } else {
+                format!("`{name}`")
+            };
+            let detail = if tested.length < announced {
+                format!(
+                    "{entry} ends after {} of its {announced} bytes",
+                    tested.length
+                )
+            } else if process == unrar_sys::ERAR_BAD_DATA {
+                format!("{entry} fails its checksum")
+            } else {
+                format!("UnRAR stops at {entry}")
+            };
+            return Some(format!(
+                "its archive is damaged or ends early: {detail} (UnRAR code {process})"
+            ));
+        }
+    }
+    None
+}
+
+/// What testing one RAR entry produced: its length, and whether it gave more than announced
+/// or asked for something a test cannot answer.
+#[cfg(windows)]
+struct RarTestState {
+    length: u64,
+    announced: u64,
+    refused: bool,
+}
+
+/// Counts the data UnRAR tests without keeping it; a password or volume request is refused.
+#[cfg(windows)]
+extern "C" fn rar_test_callback(
+    message: unrar_sys::UINT,
+    user_data: unrar_sys::LPARAM,
+    _data: unrar_sys::LPARAM,
+    length: unrar_sys::LPARAM,
+) -> std::os::raw::c_int {
+    if user_data == 0 {
+        return -1;
+    }
+    let state = unsafe { &mut *(user_data as *mut RarTestState) };
+    let next = if message == unrar_sys::UCM_PROCESSDATA {
+        u64::try_from(length)
+            .ok()
+            .and_then(|chunk| state.length.checked_add(chunk))
+            .filter(|next| *next <= state.announced)
+    } else {
+        None
+    };
+    match next {
+        Some(next) => {
+            state.length = next;
+            0
+        }
+        None => {
+            state.refused = true;
+            -1
+        }
+    }
+}
+
+/// Self-extracting RAR archives are unpacked only by the Windows installer, which checks them.
+#[cfg(not(windows))]
+fn rar_container_problem(_path: &Path) -> Option<String> {
+    None
+}
+
 fn extract_with_rule(
     archive_path: &Path,
     extraction_cache: &Path,
@@ -2614,5 +2881,187 @@ mod rar_safety_tests {
 
         assert_eq!(fs::read(snapshot.path()).unwrap(), b"MZoriginal");
         assert_eq!(digest, hex::encode(Sha256::digest(b"MZoriginal")));
+    }
+}
+
+#[cfg(test)]
+mod served_container_tests {
+    use std::io::Write;
+
+    use super::*;
+
+    fn problem(bytes: &[u8], format: ArchiveFormat) -> Option<String> {
+        let temporary = tempfile::NamedTempFile::new().unwrap();
+        fs::write(temporary.path(), bytes).unwrap();
+        served_container_problem(temporary.path(), format).unwrap()
+    }
+
+    fn zip(text: &[u8]) -> Vec<u8> {
+        let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        writer
+            .start_file("Mod/readme.txt", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(text).unwrap();
+        writer.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn a_complete_zip_or_iemod_is_framed_like_one() {
+        let archive = zip(b"a release");
+        assert_eq!(problem(&archive, ArchiveFormat::Zip), None);
+        assert_eq!(problem(&archive, ArchiveFormat::Iemod), None);
+    }
+
+    #[test]
+    fn a_page_empty_file_or_program_is_no_zip() {
+        assert_eq!(
+            problem(b"<!DOCTYPE html>\r\n<html>\t<body>", ArchiveFormat::Zip).as_deref(),
+            Some("it does not begin like a ZIP archive but with the text \"<!DOCTYPE html>  <html> <body>\"")
+        );
+        assert_eq!(
+            problem(b"", ArchiveFormat::Iemod).as_deref(),
+            Some("it does not begin like a ZIP archive but with no bytes at all")
+        );
+        assert_eq!(
+            problem(b"MZ\x90\x00\x03\x00\x00\x00\x04\x00", ArchiveFormat::Zip).as_deref(),
+            Some("it does not begin like a ZIP archive but with the bytes 4d 5a 90 00 03 00 00 00")
+        );
+    }
+
+    #[test]
+    fn a_zip_that_ends_early_is_not_complete() {
+        let archive = zip(b"a release whose transfer ended early");
+        let found = problem(&archive[..archive.len() - 30], ArchiveFormat::Zip).unwrap();
+        assert!(
+            found.starts_with("it is not a complete ZIP archive ("),
+            "{found}"
+        );
+    }
+
+    #[test]
+    fn a_self_extractor_must_begin_like_a_program() {
+        assert_eq!(
+            problem(b"PK\x03\x04", ArchiveFormat::SelfExtractingRar).as_deref(),
+            Some("it does not begin like a self-extracting RAR archive but with the bytes 50 4b 03 04")
+        );
+    }
+
+    #[cfg(windows)]
+    fn crc32(bytes: &[u8]) -> u32 {
+        let mut crc = !0_u32;
+        for byte in bytes {
+            crc ^= u32::from(*byte);
+            for _ in 0..8 {
+                crc = (crc >> 1) ^ (0xedb8_8320 & 0_u32.wrapping_sub(crc & 1));
+            }
+        }
+        !crc
+    }
+
+    #[cfg(windows)]
+    fn rar4_header(kind: u8, flags: u16, body: &[u8]) -> Vec<u8> {
+        let size = u16::try_from(7 + body.len()).unwrap();
+        let mut protected = vec![kind];
+        protected.extend_from_slice(&flags.to_le_bytes());
+        protected.extend_from_slice(&size.to_le_bytes());
+        protected.extend_from_slice(body);
+        let mut header = (crc32(&protected) as u16).to_le_bytes().to_vec();
+        header.extend(protected);
+        header
+    }
+
+    /// A stored RAR4 self-extractor with one file, as `tests/rar_archive.rs` builds them.
+    #[cfg(windows)]
+    fn rar4_sfx(name: &str, payload: &[u8]) -> Vec<u8> {
+        let mut bytes = vec![b'M', b'Z'];
+        bytes.resize(128, 0);
+        bytes.extend_from_slice(b"Rar!\x1a\x07\x00");
+        bytes.extend(rar4_header(0x73, 0, &[0; 6]));
+        let mut body = Vec::new();
+        body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        body.push(2);
+        body.extend_from_slice(&crc32(payload).to_le_bytes());
+        body.extend_from_slice(&0_u32.to_le_bytes());
+        body.push(20);
+        body.push(0x30);
+        body.extend_from_slice(&(name.len() as u16).to_le_bytes());
+        body.extend_from_slice(&0x20_u32.to_le_bytes());
+        body.extend_from_slice(name.as_bytes());
+        bytes.extend(rar4_header(0x74, 0x8000, &body));
+        bytes.extend_from_slice(payload);
+        bytes.extend(rar4_header(0x7b, 0, &[]));
+        bytes
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_self_extractor_is_framed_like_one_only_when_complete() {
+        let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
+        assert_eq!(problem(&archive, ArchiveFormat::SelfExtractingRar), None);
+
+        // A program without an archive, and an archive whose file ends early.
+        let program = problem(
+            b"MZ\x90\x00 just a program",
+            ArchiveFormat::SelfExtractingRar,
+        );
+        assert!(
+            program
+                .as_deref()
+                .is_some_and(|found| found.starts_with("UnRAR cannot open it as an archive")),
+            "{program:?}"
+        );
+        let cut = problem(
+            &archive[..archive.len() - 14],
+            ArchiveFormat::SelfExtractingRar,
+        );
+        assert_eq!(
+            cut.as_deref(),
+            Some(
+                "its archive is damaged or ends early: `evandra/setup-evandra.tp2` ends after \
+                 16 of its 23 bytes (UnRAR code 12)"
+            )
+        );
+
+        // A file whose bytes changed on the way fails its checksum.
+        let mut damaged = archive.clone();
+        let payload_start = archive.len() - 7 - 23;
+        damaged[payload_start + 3] ^= 0x20;
+        assert_eq!(
+            problem(&damaged, ArchiveFormat::SelfExtractingRar).as_deref(),
+            Some(
+                "its archive is damaged or ends early: `evandra/setup-evandra.tp2` fails its \
+                 checksum (UnRAR code 12)"
+            )
+        );
+    }
+
+    /// The fixture above stores its file; real packages compress theirs. Run with
+    /// `CHRIZ_TEST_RAR_SFX` naming a published self-extracting RAR mod package.
+    #[cfg(windows)]
+    #[test]
+    fn a_real_self_extractor_is_complete_and_cut_copies_are_not_when_explicitly_supplied() {
+        let Some(path) = std::env::var_os("CHRIZ_TEST_RAR_SFX") else {
+            return;
+        };
+        let path = PathBuf::from(path);
+        assert_eq!(
+            served_container_problem(&path, ArchiveFormat::SelfExtractingRar).unwrap(),
+            None
+        );
+        let bytes = fs::read(&path).unwrap();
+        let half = problem(&bytes[..bytes.len() / 2], ArchiveFormat::SelfExtractingRar);
+        let mut flipped = bytes.clone();
+        flipped[bytes.len() * 3 / 4] ^= 0x5a;
+        let flipped = problem(&flipped, ArchiveFormat::SelfExtractingRar);
+        for found in [&half, &flipped] {
+            assert!(
+                found
+                    .as_deref()
+                    .is_some_and(|found| found.starts_with("its archive is damaged or ends early")),
+                "{found:?}"
+            );
+        }
+        println!("half: {half:?}; one byte changed: {flipped:?}");
     }
 }

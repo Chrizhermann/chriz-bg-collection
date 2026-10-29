@@ -28,7 +28,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub use transaction::{
-    apply, apply_with_progress, launch_guard, restore, restore_with_progress, verified_log_suffix,
+    apply, apply_with_progress, installed_tool, launch_guard, restore, restore_with_progress,
+    verified_log_suffix, InstalledTool,
 };
 
 /// Where transaction records live, below the managed root.

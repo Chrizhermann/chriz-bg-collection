@@ -13,6 +13,7 @@ use crate::digest::{selection_digest, sha256_bytes};
 use crate::error::{EngineError, Result};
 use crate::games::GameRole;
 use crate::recipe_view::NormalizedSelection;
+use crate::resolve::PlannedRun;
 
 const STATE_DIRECTORY: &str = ".chriz";
 const RECIPE_DIRECTORY: &str = "recipe";
@@ -148,12 +149,13 @@ pub enum SessionEvent {
         /// Durable diagnostic summary.
         detail: String,
     },
-    /// An acquisition step ended because the mod's current download cannot be used. The
-    /// campaign continues without that mod and without everything that depends on it.
+    /// An acquisition or placing step ended because the mod's current download cannot be
+    /// used. The campaign continues without that mod and without everything that depends on
+    /// it.
     ///
     /// Like [`SessionEvent::StepCompleted`], this ends the step and advances the campaign.
     ArtifactLeftOut {
-        /// Stable acquisition step id.
+        /// Stable acquisition or placing step id of the payload.
         step_id: String,
         /// Attempt that found the download unusable.
         attempt: u32,
@@ -163,6 +165,12 @@ pub enum SessionEvent {
         detail: String,
         /// Digest of the plan that remains to be installed, rechecked on every resume.
         plan_sha256: String,
+        /// Runs of the plan before this record that are no longer installed, in plan order.
+        removed_runs: Vec<String>,
+        /// Runs still installed in another form, as they are installed now: with fewer
+        /// components, other prompt answers or without their recipe checks. Together with
+        /// `removed_runs` this rebuilds the remaining plan on a resume.
+        changed_runs: Vec<PlannedRun>,
     },
 }
 
@@ -886,13 +894,31 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
             artifact_id,
             detail,
             plan_sha256,
+            removed_runs,
+            changed_runs,
         } => {
             validate_step(step_id, *attempt, path)?;
             validate_artifact_identifier(artifact_id, "left-out artifact", path)?;
-            if step_id.strip_prefix("acquire:") != Some(artifact_id.as_str()) {
+            let own_step = step_id.strip_prefix("acquire:") == Some(artifact_id.as_str())
+                || step_id
+                    .strip_prefix("materialize:")
+                    .and_then(|rest| rest.strip_prefix(artifact_id.as_str()))
+                    .is_some_and(|root| matches!(root, ":bg1" | ":bg2"));
+            if !own_step {
                 return Err(ledger_error(
                     path,
-                    "a left-out artifact must end its own acquisition step",
+                    "a left-out artifact must end its own acquisition or placing step",
+                ));
+            }
+            let mut runs = BTreeSet::new();
+            if removed_runs
+                .iter()
+                .chain(changed_runs.iter().map(|run| &run.run_id))
+                .any(|run_id| run_id.is_empty() || !runs.insert(run_id.as_str()))
+            {
+                return Err(ledger_error(
+                    path,
+                    "a left-out record must name each removed or changed run once",
                 ));
             }
             if detail.trim().is_empty() {
