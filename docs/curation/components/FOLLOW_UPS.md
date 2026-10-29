@@ -81,7 +81,14 @@ Cross-repository status. Component detail stays in the sections below and in the
      Still open in this step: BuffBot v1.12.1 (#44 and #51, waiting for Christopher's own
      test, above).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
-     [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
+     [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
+     update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
+     waiting for Christopher's merge OK. The ledger supersedes alpha.20 (alpha.21 shipped
+     the alpha.20 recipe), covers all 229 recorded differences and needs app alpha.22, so
+     the app release that ships it must carry that version. Its publication date is a
+     placeholder that the release step sets. If the recipe changes before the release,
+     BuffBot v1.12.1 (#44) for example, the recorded differences and the ledger need the
+     new subjects (steps in #67).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
