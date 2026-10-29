@@ -18,10 +18,11 @@ mod materialize;
 mod route;
 
 pub use archive::{
-    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop, ArchiveFormat,
-    ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact,
+    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop,
+    extract_served_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
+    ExtractedArtifact,
 };
-pub use cache::ArtifactCache;
+pub use cache::{served_length_limit, AcceptedContent, ArtifactCache, ServedArtifact};
 pub use damaged::CacheRepair;
 pub use http::validate_redirect_target;
 pub use inspect::{download_for_inspection, QuarantinedDownload};
@@ -262,6 +263,16 @@ pub enum AcquireError {
         expected: String,
         /// Observed lowercase digest.
         actual: String,
+    },
+    /// A download that differs from its pin grew past the size that protects the disk.
+    #[error(
+        "the download is at least {length} bytes, more than the {limit} bytes allowed for a changed download"
+    )]
+    ServedDownloadTooLarge {
+        /// Announced or received length so far.
+        length: u64,
+        /// Largest accepted changed download.
+        limit: u64,
     },
     /// A destination file exists with bytes that no signed rule permits replacing.
     #[error("undeclared overwrite of `{path}`")]

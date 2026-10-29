@@ -58,6 +58,33 @@ impl MaterializationTask {
     }
 }
 
+/// What acquiring one frozen artifact found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AcquisitionOutcome {
+    /// The artifact is in the cache and can be used.
+    Ready,
+    /// The payload's current download cannot be used, for example because its archive layout
+    /// changed beyond the safe fallback. The campaign continues without this mod and without
+    /// everything that depends on it, when the recipe allows that.
+    LeaveOut {
+        /// Display-safe reason recorded in the ledger and the receipt.
+        reason: String,
+    },
+}
+
+/// A payload whose download could not be used, so the campaign continued without it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LeftOutArtifact {
+    /// Frozen payload identity that is left out.
+    pub artifact_id: String,
+    /// Why its download could not be used.
+    pub reason: String,
+    /// Planned runs no longer installed because of it, including runs of mods that need it.
+    pub runs: Vec<String>,
+    /// Planned runs still installed, but with fewer components or other prompt answers.
+    pub changed_runs: Vec<String>,
+}
+
 /// A materialization either reconciled to completion or proved this copy unsafe to resume.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MaterializationOutcome {
@@ -241,6 +268,17 @@ pub struct ReceiptDraft {
     pub created: CampaignCreated,
     /// Exact plan whose digest was frozen in [`Self::created`].
     pub plan: InstallPlan,
+    /// Payloads left out because their downloads could not be used, in ledger order.
+    pub left_out: Vec<LeftOutArtifact>,
+    /// The plan actually installed when payloads were left out; `None` means [`Self::plan`].
+    pub installed_plan: Option<InstallPlan>,
+}
+
+impl ReceiptDraft {
+    /// The plan this campaign installs: the frozen plan minus everything left out.
+    pub fn effective_plan(&self) -> &InstallPlan {
+        self.installed_plan.as_ref().unwrap_or(&self.plan)
+    }
 }
 
 /// Terminal state of one orchestration call.
@@ -330,8 +368,28 @@ pub trait CampaignPreflight {
 /// Acquires one frozen payload/tool into the shared content-addressed cache.
 pub trait ArtifactAcquirer {
     /// Acquire and reverify one identity. Implementations rely on the cache's own digest lock.
-    fn acquire(&mut self, identity: &FrozenIdentity, kind: ArtifactKind)
-        -> Result<(), StepFailure>;
+    fn acquire(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+    ) -> Result<AcquisitionOutcome, StepFailure>;
+
+    /// The part of `plan` that remains when the `left_out` payloads are not installed,
+    /// together with everything that depends on them. Fails when the installation cannot
+    /// continue without them, for example because the recipe always installs one of them.
+    ///
+    /// Must be deterministic: every resume recomputes the plan and compares its digest with
+    /// the one recorded when the payload was left out.
+    fn plan_without(
+        &mut self,
+        plan: &InstallPlan,
+        left_out: &[String],
+    ) -> Result<InstallPlan, StepFailure> {
+        let _ = (plan, left_out);
+        Err(StepFailure::new(
+            "This installer cannot continue without a mod whose download cannot be used.",
+        ))
+    }
 }
 
 /// Stages independent game copies and applies the deterministic save identity boundary.
@@ -380,9 +438,11 @@ pub trait InstallLogVerifier {
     }
 
     /// Persist a durable baseline or verify explicit acceptance. False means remain paused.
+    /// `plan` is the plan being installed, which lacks runs of left-out payloads.
     fn manual_checkpoint(
         &mut self,
         _checkpoint: &crate::manual_checkpoint::FrozenCheckpoint,
+        _plan: &InstallPlan,
     ) -> Result<bool, StepFailure> {
         Err(StepFailure::new(
             "Manual checkpoints are not supported by this backend.",
@@ -429,7 +489,8 @@ pub trait InstallLogVerifier {
         result: ProcessResult,
     ) -> Result<InstallReconciliation, StepFailure>;
 
-    /// Verify the complete final active stack against the exact frozen run plan.
+    /// Verify the complete final active stack against the plan being installed: the exact
+    /// frozen run plan, minus the runs of left-out payloads.
     fn verify_final(&mut self, plan: &InstallPlan) -> Result<(), StepFailure>;
 }
 
@@ -502,7 +563,7 @@ where
     D: CampaignDependencies,
     S: EventSink,
 {
-    let schedule = build_schedule(request, &dependencies.manual_checkpoints())?;
+    let mut schedule = build_schedule(request, &dependencies.manual_checkpoints())?;
     reject_protected_or_relative_target(&request.created.managed_root)?;
     reject_lock_registry_overlap(request)?;
 
@@ -522,7 +583,7 @@ where
         resumed,
     });
 
-    let progress = Progress::from_replay(&replay, &schedule)?;
+    let progress = Progress::from_replay(&replay, &mut schedule, &request.plan, dependencies)?;
     dependencies
         .record_campaign(replay.created())
         .map_err(|failure| OrchestratorError::CampaignIndex(failure.into_message()))?;
@@ -539,7 +600,7 @@ where
             ),
         });
         emit_finished(sink, &step_id, StepOutcome::Failed);
-        write_terminal_receipt(dependencies, request, &replay, &outcome)?;
+        write_terminal_receipt(dependencies, request, &replay, &progress, &outcome)?;
         drop(target_lock);
         return Ok(outcome);
     }
@@ -556,7 +617,7 @@ where
                 step_id: "preflight".to_owned(),
                 reason,
             };
-            write_terminal_receipt(dependencies, request, &store.replay()?, &outcome)?;
+            write_terminal_receipt(dependencies, request, &store.replay()?, &progress, &outcome)?;
             return Ok(outcome);
         }
         emit_finished(sink, "preflight", StepOutcome::Succeeded);
@@ -599,7 +660,8 @@ enum PipelineKind {
     Acquire(FrozenIdentity, ArtifactKind),
     Stage(GameRole),
     Materialize(MaterializationTask),
-    Install(usize),
+    /// One run of the plan being installed (fewer components when a dependency was left out).
+    Install(Box<PlannedRun>),
     ManualCheckpoint(Box<crate::manual_checkpoint::FrozenCheckpoint>),
     FinalIdentity,
     FinalVerify,
@@ -728,11 +790,11 @@ fn build_schedule(
             kind: PipelineKind::Materialize(task),
         });
     }
-    for (index, run) in request.plan.runs.iter().enumerate() {
+    for run in &request.plan.runs {
         schedule.push(PipelineStep {
             id: format!("install:{}", run.run_id),
             label: format!("Install {}", run.mod_id),
-            kind: PipelineKind::Install(index),
+            kind: PipelineKind::Install(Box::new(run.clone())),
         });
         for checkpoint in checkpoints
             .iter()
@@ -823,92 +885,137 @@ struct Progress {
     unresolved: Option<(String, u32)>,
     last_failed: BTreeMap<String, u32>,
     fresh_copy_required: Option<(String, String)>,
+    /// Payloads left out so far, in ledger order.
+    left_out: Vec<LeftOutArtifact>,
+    /// The frozen plan minus everything left out so far.
+    effective_plan: InstallPlan,
 }
 
 impl Progress {
-    fn from_replay(
+    /// Replays the ledger against the schedule. A recorded leave-out recomputes the remaining
+    /// plan through `acquirer`, checks it against the recorded digest, and removes the steps
+    /// that are no longer needed from the rest of `schedule`, exactly as when it happened.
+    fn from_replay<A>(
         replay: &SessionReplay,
-        schedule: &[PipelineStep],
-    ) -> Result<Self, OrchestratorError> {
-        let positions = schedule
-            .iter()
-            .enumerate()
-            .map(|(index, step)| (step.id.as_str(), index))
-            .collect::<BTreeMap<_, _>>();
-        let mut completed_prefix = 0_usize;
-        let mut attempts = BTreeMap::<String, u32>::new();
-        let mut unresolved = None;
-        let mut last_failed = BTreeMap::new();
-        let mut fresh_copy_required = None;
+        schedule: &mut Vec<PipelineStep>,
+        frozen_plan: &InstallPlan,
+        acquirer: &mut A,
+    ) -> Result<Self, OrchestratorError>
+    where
+        A: ArtifactAcquirer + ?Sized,
+    {
+        let mut progress = Self {
+            completed_prefix: 0,
+            attempts: BTreeMap::new(),
+            unresolved: None,
+            last_failed: BTreeMap::new(),
+            fresh_copy_required: None,
+            left_out: Vec::new(),
+            effective_plan: frozen_plan.clone(),
+        };
 
         for record in replay.records.iter().skip(1) {
             match &record.event {
                 SessionEvent::StepStarted { step_id, attempt } => {
-                    let position = positions.get(step_id.as_str()).ok_or_else(|| {
-                        OrchestratorError::InvalidCampaign(format!(
-                            "ledger contains unknown step {step_id:?}"
-                        ))
-                    })?;
-                    if *position != completed_prefix {
-                        return Err(OrchestratorError::InvalidCampaign(format!(
-                            "ledger started {step_id:?} out of order; expected {:?}",
-                            schedule.get(completed_prefix).map(|step| &step.id)
-                        )));
+                    if schedule.get(progress.completed_prefix).map(|step| &step.id) != Some(step_id)
+                    {
+                        return Err(OrchestratorError::InvalidCampaign(
+                            if schedule.iter().any(|step| &step.id == step_id) {
+                                format!(
+                                    "ledger started {step_id:?} out of order; expected {:?}",
+                                    schedule.get(progress.completed_prefix).map(|step| &step.id)
+                                )
+                            } else {
+                                format!("ledger contains unknown step {step_id:?}")
+                            },
+                        ));
                     }
-                    let expected_attempt = attempts
-                        .get(step_id)
-                        .copied()
-                        .unwrap_or(0)
-                        .checked_add(1)
-                        .ok_or_else(|| {
-                            OrchestratorError::InvalidCampaign(format!(
-                                "attempt counter overflow for {step_id:?}"
-                            ))
-                        })?;
+                    let expected_attempt = progress.next_attempt(step_id)?;
                     if *attempt != expected_attempt {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "step {step_id:?} attempt {attempt} is not monotonic; expected {expected_attempt}"
                         )));
                     }
-                    attempts.insert(step_id.clone(), *attempt);
-                    unresolved = Some((step_id.clone(), *attempt));
+                    progress.attempts.insert(step_id.clone(), *attempt);
+                    progress.unresolved = Some((step_id.clone(), *attempt));
                 }
                 SessionEvent::StepCompleted { step_id, attempt } => {
-                    if unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
+                    if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "completion for {step_id:?} has no matching intent"
                         )));
                     }
-                    completed_prefix += 1;
-                    unresolved = None;
-                    last_failed.remove(step_id);
+                    progress.completed_prefix += 1;
+                    progress.unresolved = None;
+                    progress.last_failed.remove(step_id);
+                }
+                SessionEvent::ArtifactLeftOut {
+                    step_id,
+                    attempt,
+                    artifact_id,
+                    detail,
+                    plan_sha256,
+                } => {
+                    if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "left-out record for {step_id:?} has no matching intent"
+                        )));
+                    }
+                    let step = &schedule[progress.completed_prefix];
+                    if !matches!(
+                        &step.kind,
+                        PipelineKind::Acquire(identity, ArtifactKind::Payload)
+                            if &identity.id == artifact_id
+                    ) {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "ledger leaves out {artifact_id:?} at step {step_id:?}, which does not acquire that payload"
+                        )));
+                    }
+                    let mut ids = progress.left_out_ids();
+                    ids.push(artifact_id.clone());
+                    let plan = acquirer.plan_without(frozen_plan, &ids).map_err(|failure| {
+                        OrchestratorError::InvalidCampaign(format!(
+                            "the installation recorded that it continues without {artifact_id:?}, but the remaining plan cannot be rebuilt: {failure}"
+                        ))
+                    })?;
+                    validate_reduced_plan(&progress.effective_plan, &plan, &ids)?;
+                    if plan_digest(&plan)? != *plan_sha256 {
+                        return Err(OrchestratorError::InvalidCampaign(format!(
+                            "the plan without {artifact_id:?} differs from the one recorded when it was left out"
+                        )));
+                    }
+                    progress.record_left_out(schedule, artifact_id, detail, plan);
+                    progress.completed_prefix += 1;
+                    progress.unresolved = None;
+                    progress.last_failed.remove(step_id);
                 }
                 SessionEvent::StepFailed {
                     step_id, attempt, ..
                 } => {
-                    if unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
+                    if progress.unresolved.as_ref() != Some(&(step_id.clone(), *attempt)) {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "failure for {step_id:?} has no matching intent"
                         )));
                     }
-                    unresolved = None;
-                    last_failed.insert(step_id.clone(), *attempt);
+                    progress.unresolved = None;
+                    progress.last_failed.insert(step_id.clone(), *attempt);
                 }
                 SessionEvent::FreshCopyRequired {
                     step_id,
                     attempt,
                     detail,
                 } => {
-                    let matches_active = unresolved.as_ref() == Some(&(step_id.clone(), *attempt));
-                    let upgrades_failure = last_failed.get(step_id) == Some(attempt);
+                    let matches_active =
+                        progress.unresolved.as_ref() == Some(&(step_id.clone(), *attempt));
+                    let upgrades_failure = progress.last_failed.get(step_id) == Some(attempt);
                     if !matches_active && !upgrades_failure {
                         return Err(OrchestratorError::InvalidCampaign(format!(
                             "fresh-copy seal for {step_id:?} has no matching intent"
                         )));
                     }
-                    unresolved = None;
-                    last_failed.remove(step_id);
-                    fresh_copy_required = Some((step_id.clone(), detail.clone()));
+                    progress.unresolved = None;
+                    progress.last_failed.remove(step_id);
+                    progress.fresh_copy_required = Some((step_id.clone(), detail.clone()));
                 }
                 SessionEvent::Created(_) => {
                     return Err(OrchestratorError::InvalidCampaign(
@@ -918,13 +1025,75 @@ impl Progress {
             }
         }
 
-        Ok(Self {
-            completed_prefix,
-            attempts,
-            unresolved,
-            last_failed,
-            fresh_copy_required,
-        })
+        Ok(progress)
+    }
+
+    fn left_out_ids(&self) -> Vec<String> {
+        self.left_out
+            .iter()
+            .map(|left_out| left_out.artifact_id.clone())
+            .collect()
+    }
+
+    /// Records one left-out payload whose acquisition step is at `completed_prefix`, and
+    /// drops the later steps that `plan` no longer needs. Earlier steps stay as they ran.
+    fn record_left_out(
+        &mut self,
+        schedule: &mut Vec<PipelineStep>,
+        artifact_id: &str,
+        reason: &str,
+        plan: InstallPlan,
+    ) -> &LeftOutArtifact {
+        let remaining = plan
+            .runs
+            .iter()
+            .map(|run| (run.run_id.as_str(), run))
+            .collect::<BTreeMap<_, _>>();
+        let mut runs = Vec::new();
+        let mut changed_runs = Vec::new();
+        for run in &self.effective_plan.runs {
+            match remaining.get(run.run_id.as_str()) {
+                None => runs.push(run.run_id.clone()),
+                Some(kept) if *kept != run => changed_runs.push(run.run_id.clone()),
+                Some(_) => {}
+            }
+        }
+        let tail = schedule.split_off(self.completed_prefix + 1);
+        schedule.extend(tail.into_iter().filter_map(|mut step| {
+            let keep = match &mut step.kind {
+                PipelineKind::Acquire(identity, _) => plan.runs.iter().any(|run| {
+                    run.artifact_id == identity.id || run.weidu_artifact_id == identity.id
+                }),
+                PipelineKind::Materialize(task) => plan
+                    .runs
+                    .iter()
+                    .any(|run| run.artifact_id == task.artifact_id && run.target == task.target),
+                PipelineKind::Install(run) => match remaining.get(run.run_id.as_str()) {
+                    Some(kept) => {
+                        **run = (*kept).clone();
+                        true
+                    }
+                    None => false,
+                },
+                PipelineKind::Preflight
+                | PipelineKind::Stage(_)
+                | PipelineKind::ManualCheckpoint(_)
+                | PipelineKind::FinalIdentity
+                | PipelineKind::FinalVerify
+                | PipelineKind::Receipt => true,
+            };
+            keep.then_some(step)
+        }));
+        self.effective_plan = plan;
+        self.left_out.push(LeftOutArtifact {
+            artifact_id: artifact_id.to_owned(),
+            reason: reason.to_owned(),
+            runs,
+            changed_runs,
+        });
+        self.left_out
+            .last()
+            .expect("left-out payload was just recorded")
     }
 
     fn next_attempt(&self, step_id: &str) -> Result<u32, OrchestratorError> {
@@ -941,9 +1110,81 @@ impl Progress {
     }
 }
 
+/// Fails closed when a backend's remaining plan is not exactly a part of the plan before it:
+/// leaving a payload out may only remove runs, components and the prompts that went with
+/// them, never add, reorder or retarget anything.
+fn validate_reduced_plan(
+    previous: &InstallPlan,
+    reduced: &InstallPlan,
+    left_out: &[String],
+) -> Result<(), OrchestratorError> {
+    let invalid = |detail: String| {
+        OrchestratorError::InvalidCampaign(format!(
+            "the plan without {left_out:?} is not part of the plan before it: {detail}"
+        ))
+    };
+    let mut previous_runs = previous.runs.iter();
+    for run in &reduced.runs {
+        let Some(before) = previous_runs.find(|before| before.run_id == run.run_id) else {
+            return Err(invalid(format!(
+                "run {:?} is new or out of order",
+                run.run_id
+            )));
+        };
+        if run.mod_id != before.mod_id
+            || run.target != before.target
+            || run.phase != before.phase
+            || run.args != before.args
+            || run.artifact_id != before.artifact_id
+            || run.weidu_artifact_id != before.weidu_artifact_id
+        {
+            return Err(invalid(format!(
+                "run {:?} changed its identity",
+                run.run_id
+            )));
+        }
+        if left_out.contains(&run.artifact_id) {
+            return Err(invalid(format!(
+                "run {:?} still installs a left-out payload",
+                run.run_id
+            )));
+        }
+        let mut before_components = before.components.iter();
+        if run.components.is_empty()
+            || !run
+                .components
+                .iter()
+                .all(|component| before_components.any(|before| before == component))
+        {
+            return Err(invalid(format!(
+                "run {:?} has components that were not planned in this order",
+                run.run_id
+            )));
+        }
+        if run
+            .prompt_scripts
+            .iter()
+            .any(|script| !run.components.contains(&script.component.component))
+        {
+            return Err(invalid(format!(
+                "run {:?} answers prompts of components it does not install",
+                run.run_id
+            )));
+        }
+        if !run.postconditions.is_empty() && run.postconditions != before.postconditions {
+            return Err(invalid(format!(
+                "run {:?} has checks that were not planned",
+                run.run_id
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn build_receipt_draft(
     request: &CampaignRequest,
     replay: &SessionReplay,
+    progress: &Progress,
     outcome: ReceiptDraftOutcome,
 ) -> Result<ReceiptDraft, OrchestratorError> {
     let first = replay.records.first().ok_or_else(|| {
@@ -978,6 +1219,8 @@ fn build_receipt_draft(
         outcome,
         created: request.created.clone(),
         plan: request.plan.clone(),
+        left_out: progress.left_out.clone(),
+        installed_plan: (!progress.left_out.is_empty()).then(|| progress.effective_plan.clone()),
     })
 }
 
@@ -985,6 +1228,7 @@ fn write_terminal_receipt<D>(
     dependencies: &mut D,
     request: &CampaignRequest,
     replay: &SessionReplay,
+    progress: &Progress,
     outcome: &CampaignOutcome,
 ) -> Result<(), OrchestratorError>
 where
@@ -1012,7 +1256,7 @@ where
             }
         }
     };
-    let draft = build_receipt_draft(request, replay, draft_outcome)?;
+    let draft = build_receipt_draft(request, replay, progress, draft_outcome)?;
     dependencies
         .write(&draft)
         .map_err(|failure| OrchestratorError::TerminalReceipt(failure.into_message()))
@@ -1038,13 +1282,19 @@ where
         while self.progress.completed_prefix < self.schedule.len() {
             let step = self.schedule[self.progress.completed_prefix].clone();
             let outcome = match step.kind.clone() {
-                PipelineKind::Install(index) => self.run_install(&step, index)?,
+                PipelineKind::Install(run) => self.run_install(&step, *run)?,
                 _ => self.run_simple(&step)?,
             };
             if let Some(outcome) = outcome {
                 let replay = self.store.replay()?;
                 if !matches!(outcome, CampaignOutcome::Paused { .. }) {
-                    write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
+                    write_terminal_receipt(
+                        self.dependencies,
+                        self.request,
+                        &replay,
+                        &self.progress,
+                        &outcome,
+                    )?;
                 }
                 return Ok(outcome);
             }
@@ -1068,7 +1318,10 @@ where
             PipelineKind::ManualCheckpoint(checkpoint) => {
                 // The preceding WeiDU invocation has exited and its exact log/debug
                 // evidence is complete. Never hand over a suspended child process.
-                match self.dependencies.manual_checkpoint(checkpoint) {
+                match self
+                    .dependencies
+                    .manual_checkpoint(checkpoint, &self.progress.effective_plan)
+                {
                     Ok(false) => {
                         return Ok(Some(CampaignOutcome::Paused {
                             after_step_id: step.id.clone(),
@@ -1084,10 +1337,15 @@ where
                     .initial(self.request, &replay)
                     .map(|()| SimpleExecution::Complete)
             }
-            PipelineKind::Acquire(identity, kind) => self
-                .dependencies
-                .acquire(identity, *kind)
-                .map(|()| SimpleExecution::Complete),
+            PipelineKind::Acquire(identity, kind) => {
+                match self.dependencies.acquire(identity, *kind) {
+                    Ok(AcquisitionOutcome::Ready) => Ok(SimpleExecution::Complete),
+                    Ok(AcquisitionOutcome::LeaveOut { reason }) => {
+                        self.remaining_plan(identity, *kind, &reason)
+                    }
+                    Err(failure) => Err(failure),
+                }
+            }
             PipelineKind::Stage(role) => {
                 let target = role_target(*role);
                 self.recheck(step, target, MutationKind::Stage)
@@ -1109,16 +1367,20 @@ where
                 .map(|()| SimpleExecution::Complete),
             PipelineKind::FinalVerify => self
                 .dependencies
-                .verify_final(&self.request.plan)
+                .verify_final(&self.progress.effective_plan)
                 .map(|()| SimpleExecution::Complete),
             PipelineKind::Receipt => (|| {
                 let replay = self
                     .store
                     .replay()
                     .map_err(|error| StepFailure::new(error.to_string()))?;
-                let draft =
-                    build_receipt_draft(self.request, &replay, ReceiptDraftOutcome::Succeeded)
-                        .map_err(|error| StepFailure::new(error.to_string()))?;
+                let draft = build_receipt_draft(
+                    self.request,
+                    &replay,
+                    &self.progress,
+                    ReceiptDraftOutcome::Succeeded,
+                )
+                .map_err(|error| StepFailure::new(error.to_string()))?;
                 self.dependencies
                     .write(&draft)
                     .map(|()| SimpleExecution::Complete)
@@ -1129,6 +1391,13 @@ where
         match execution {
             Ok(SimpleExecution::Complete) => {
                 self.complete_step(step, &attempt)?;
+                Ok(None)
+            }
+            Ok(SimpleExecution::LeftOut { reason, plan }) => {
+                let PipelineKind::Acquire(identity, _) = &step.kind else {
+                    unreachable!("only acquisition steps leave a payload out");
+                };
+                self.leave_out(step, &attempt, &identity.id, &reason, *plan)?;
                 Ok(None)
             }
             Ok(SimpleExecution::FreshCopyRequired(reason)) => {
@@ -1145,12 +1414,74 @@ where
         }
     }
 
+    /// The plan without `identity` and the payloads left out before it. A tool, or a payload
+    /// the recipe cannot do without, fails the step with both reasons instead.
+    fn remaining_plan(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+        reason: &str,
+    ) -> Result<SimpleExecution, StepFailure> {
+        let reason = nonempty_detail(reason);
+        if kind == ArtifactKind::Tool {
+            return Err(StepFailure::new(format!(
+                "{reason}\nThe installation cannot continue without this tool."
+            )));
+        }
+        let mut ids = self.progress.left_out_ids();
+        ids.push(identity.id.clone());
+        let plan = self
+            .dependencies
+            .plan_without(&self.request.plan, &ids)
+            .map_err(|failure| StepFailure::new(format!("{reason}\n{failure}")))?;
+        Ok(SimpleExecution::LeftOut {
+            reason,
+            plan: Box::new(plan),
+        })
+    }
+
+    /// Durably ends an acquisition step by leaving its payload out, then continues with the
+    /// remaining plan. Resume recomputes that plan from the ledger record.
+    fn leave_out(
+        &mut self,
+        step: &PipelineStep,
+        attempt: &StepAttempt,
+        artifact_id: &str,
+        reason: &str,
+        plan: InstallPlan,
+    ) -> Result<(), OrchestratorError> {
+        let mut ids = self.progress.left_out_ids();
+        ids.push(artifact_id.to_owned());
+        validate_reduced_plan(&self.progress.effective_plan, &plan, &ids)?;
+        self.store.append(SessionEvent::ArtifactLeftOut {
+            step_id: step.id.clone(),
+            attempt: attempt.attempt,
+            artifact_id: artifact_id.to_owned(),
+            detail: reason.to_owned(),
+            plan_sha256: plan_digest(&plan)?,
+        })?;
+        let left_out = self
+            .progress
+            .record_left_out(&mut self.schedule, artifact_id, reason, plan)
+            .clone();
+        self.progress.unresolved = None;
+        self.progress.last_failed.remove(&step.id);
+        self.progress.completed_prefix += 1;
+        self.sink.emit(EngineEvent::ArtifactLeftOut {
+            artifact_id: left_out.artifact_id,
+            reason: left_out.reason,
+            runs: left_out.runs,
+            changed_runs: left_out.changed_runs,
+        });
+        emit_finished(self.sink, &step.id, StepOutcome::Skipped);
+        Ok(())
+    }
+
     fn run_install(
         &mut self,
         step: &PipelineStep,
-        run_index: usize,
+        run: PlannedRun,
     ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
-        let run = self.request.plan.runs[run_index].clone();
         if self.active_phase != Some(run.phase) {
             self.sink.emit(EngineEvent::PhaseStarted {
                 name: friendly_phase(run.phase).to_owned(),
@@ -1521,6 +1852,11 @@ where
 enum SimpleExecution {
     Complete,
     FreshCopyRequired(String),
+    /// The acquired payload cannot be used; continue with this plan instead.
+    LeftOut {
+        reason: String,
+        plan: Box<InstallPlan>,
+    },
 }
 
 fn validate_remaining(

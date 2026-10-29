@@ -148,6 +148,22 @@ pub enum SessionEvent {
         /// Durable diagnostic summary.
         detail: String,
     },
+    /// An acquisition step ended because the mod's current download cannot be used. The
+    /// campaign continues without that mod and without everything that depends on it.
+    ///
+    /// Like [`SessionEvent::StepCompleted`], this ends the step and advances the campaign.
+    ArtifactLeftOut {
+        /// Stable acquisition step id.
+        step_id: String,
+        /// Attempt that found the download unusable.
+        attempt: u32,
+        /// Payload artifact that is left out.
+        artifact_id: String,
+        /// Why its download cannot be used.
+        detail: String,
+        /// Digest of the plan that remains to be installed, rechecked on every resume.
+        plan_sha256: String,
+    },
 }
 
 /// One immutable JSON record in the campaign hash chain.
@@ -864,6 +880,36 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
             }
             Ok(())
         }
+        SessionEvent::ArtifactLeftOut {
+            step_id,
+            attempt,
+            artifact_id,
+            detail,
+            plan_sha256,
+        } => {
+            validate_step(step_id, *attempt, path)?;
+            validate_artifact_identifier(artifact_id, "left-out artifact", path)?;
+            if step_id.strip_prefix("acquire:") != Some(artifact_id.as_str()) {
+                return Err(ledger_error(
+                    path,
+                    "a left-out artifact must end its own acquisition step",
+                ));
+            }
+            if detail.trim().is_empty() {
+                return Err(ledger_error(path, "terminal step detail may not be empty"));
+            }
+            if plan_sha256.len() != 64
+                || !plan_sha256
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+            {
+                return Err(ledger_error(
+                    path,
+                    "the remaining plan digest must be 64 lowercase hexadecimal characters",
+                ));
+            }
+            Ok(())
+        }
     }
 }
 
@@ -920,6 +966,9 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             }
             | SessionEvent::FreshCopyRequired {
                 step_id, attempt, ..
+            }
+            | SessionEvent::ArtifactLeftOut {
+                step_id, attempt, ..
             },
         ) if current_step == step_id && current_attempt == attempt => Ok(()),
         (Some(_), SessionEvent::StepStarted { .. }) => Err(ledger_error(
@@ -930,7 +979,8 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             None,
             SessionEvent::StepCompleted { .. }
             | SessionEvent::StepFailed { .. }
-            | SessionEvent::FreshCopyRequired { .. },
+            | SessionEvent::FreshCopyRequired { .. }
+            | SessionEvent::ArtifactLeftOut { .. },
         ) => Err(ledger_error(
             path,
             "terminal step event has no matching StepStarted",
@@ -939,7 +989,8 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             Some(_),
             SessionEvent::StepCompleted { .. }
             | SessionEvent::StepFailed { .. }
-            | SessionEvent::FreshCopyRequired { .. },
+            | SessionEvent::FreshCopyRequired { .. }
+            | SessionEvent::ArtifactLeftOut { .. },
         ) => Err(ledger_error(
             path,
             "terminal step event does not match the unresolved step",
@@ -976,7 +1027,10 @@ fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<ReplayProgre
                 unresolved = Some((step_id.clone(), *attempt));
                 last_failed = None;
             }
-            SessionEvent::StepCompleted { step_id, attempt } => match unresolved.as_ref() {
+            SessionEvent::StepCompleted { step_id, attempt }
+            | SessionEvent::ArtifactLeftOut {
+                step_id, attempt, ..
+            } => match unresolved.as_ref() {
                 Some((current_step, current_attempt))
                     if current_step == step_id && current_attempt == attempt =>
                 {

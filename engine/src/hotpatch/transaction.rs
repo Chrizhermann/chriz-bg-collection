@@ -20,17 +20,17 @@ use serde::{Deserialize, Serialize};
 use super::catalog::{Catalog, Hotpatch};
 use super::{gate, Context, HotpatchPreview};
 use crate::acquire::{
-    extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache,
-    DownloadRequest,
+    extract_archive, extract_served_archive, AcceptedContent, ArchiveFormat, ArchiveLimits,
+    ArchiveMode, ArchiveRequirements, ArtifactCache, DownloadRequest, DownloadRoute, StopSignal,
 };
 use crate::digest::sha256_bytes;
 use crate::events::ConsoleSink;
 use crate::game_files::{self, Difference, GameFiles};
 use crate::held_folder::Existing;
-use crate::manifest::Artifact;
+use crate::manifest::{Artifact, ToolSpec};
 use crate::patches::files;
 use crate::preflight::{PreflightHost, SystemPreflight};
-use crate::receipt::LogComponentReceipt;
+use crate::receipt::{InstallReceipt, LogComponentReceipt};
 use crate::weidu::invocation::{Invocation, VerifiedWeidu};
 use crate::weidu::log::{normalize_tp2_key, parse_active_entries};
 use crate::weidu::runner::{self, RunOutcome, RunnerRequest};
@@ -439,11 +439,102 @@ fn unpack(ctx: &Context<'_>, artifact: &Artifact) -> Result<PathBuf, String> {
     .root)
 }
 
+/// The WeiDU an installation was made with.
+#[derive(Debug, PartialEq, Eq)]
+pub(super) struct InstalledTool {
+    /// The archive the installer accepted instead of the pinned one, when the tool's official
+    /// link served a different file; `None` for the reviewed archive.
+    pub served: Option<AcceptedContent>,
+    /// SHA-256 of the WeiDU program the installation ran.
+    pub executable_sha256: String,
+}
+
+/// Which WeiDU `receipt`'s installation used for the tool `artifact`: the reviewed one, or the
+/// changed download its installer accepted and the program it verified and recorded from it.
+pub(super) fn installed_tool(
+    receipt: &InstallReceipt,
+    artifact: &Artifact,
+    spec: &ToolSpec,
+) -> Result<InstalledTool, String> {
+    let Some(acquired) = receipt
+        .artifacts
+        .iter()
+        .find(|acquired| acquired.id == artifact.id && acquired.served_difference.is_some())
+    else {
+        return Ok(InstalledTool {
+            served: None,
+            executable_sha256: spec.sha256.to_ascii_lowercase(),
+        });
+    };
+    let program = receipt
+        .weidu_tools
+        .iter()
+        .find(|tool| tool.id == artifact.id)
+        .ok_or("The installation record names no WeiDU program for its changed WeiDU download.")?;
+    Ok(InstalledTool {
+        served: Some(AcceptedContent {
+            length: acquired.length,
+            sha256: acquired.sha256.to_ascii_lowercase(),
+        }),
+        executable_sha256: program.sha256.to_ascii_lowercase(),
+    })
+}
+
+/// [`unpack`] for a changed download an installation was made with: exactly that file, from the
+/// cache or from the official link while it still serves it, unpacked by the rules for served
+/// archives as the installer did.
+pub(super) fn unpack_served(
+    ctx: &Context<'_>,
+    artifact: &Artifact,
+    accepted: &AcceptedContent,
+) -> Result<PathBuf, String> {
+    let cache = ArtifactCache::open(ctx.cache).map_err(files::err)?;
+    let served = cache
+        .acquire_as_served(
+            &DownloadRequest {
+                request_id: format!("hotpatch-{}", artifact.id),
+                url: artifact.source.url.clone(),
+                expected_length: artifact
+                    .source
+                    .expected_length
+                    .ok_or("The package has no pinned length.")?,
+                expected_sha256: artifact.source.sha256.clone(),
+                redirect_hosts: artifact.source.redirect_hosts.clone(),
+                max_attempts: crate::acquire::DEFAULT_DOWNLOAD_ATTEMPTS,
+                route: DownloadRoute::for_source(&artifact.source).map_err(files::err)?,
+            },
+            Some(accepted),
+            &ConsoleSink,
+            &StopSignal::never(),
+        )
+        .map_err(files::err)?;
+    let digest = &served.artifact.metadata.sha256;
+    if !digest.eq_ignore_ascii_case(&accepted.sha256) {
+        return Err(format!(
+            "This game was installed with a newer or different download of {} (SHA-256 {}). That file is no longer in the download folder, and its official link now serves another one (SHA-256 {digest}). A hotpatch runs only with the WeiDU the game was installed with.",
+            artifact.name, accepted.sha256
+        ));
+    }
+    let mut requirements = requirements(artifact);
+    requirements.artifact_sha256 = accepted.sha256.clone();
+    requirements.limits = requirements.limits.for_served_archive();
+    Ok(extract_served_archive(
+        &served.artifact.archive_path,
+        &ctx.cache.join("hotpatch-extracted"),
+        &requirements,
+        &StopSignal::never(),
+    )
+    .map_err(files::err)?
+    .0
+    .root)
+}
+
 /// Download (or reuse) and check the package and the WeiDU the installation was made with.
 fn sources(
     ctx: &Context<'_>,
     hotpatch: &Hotpatch,
     base: &crate::Manifest,
+    receipt: &InstallReceipt,
 ) -> Result<Sources, String> {
     let root = unpack(ctx, &hotpatch.artifact)?;
     let published = &hotpatch.artifact.archive.publish_roots[0];
@@ -486,12 +577,17 @@ fn sources(
         .tool
         .as_ref()
         .ok_or("The installation's WeiDU artifact is not a tool.")?;
-    let tool = unpack(ctx, tool_artifact)?.join(&tool_spec.executable);
-    VerifiedWeidu::verify(&tool, &tool_spec.sha256).map_err(files::err)?;
+    let installed = installed_tool(receipt, tool_artifact, tool_spec)?;
+    let root = match &installed.served {
+        None => unpack(ctx, tool_artifact)?,
+        Some(accepted) => unpack_served(ctx, tool_artifact, accepted)?,
+    };
+    let tool = root.join(&tool_spec.executable);
+    VerifiedWeidu::verify(&tool, &installed.executable_sha256).map_err(files::err)?;
     Ok(Sources {
         payload,
         tool,
-        tool_sha256: tool_spec.sha256.to_ascii_lowercase(),
+        tool_sha256: installed.executable_sha256,
     })
 }
 
@@ -600,7 +696,7 @@ pub fn apply_with_progress(
     files::create(&dir.join("identity"), ctx.record.install_id.as_bytes())?;
     crate::operation_progress::stage(progress, "downloading");
     // No game writes happen here, even if a download fails.
-    let sources = sources(ctx, &hotpatch, &baseline.manifest)?;
+    let sources = sources(ctx, &hotpatch, &baseline.manifest, &baseline.receipt)?;
     let backup = ctx.backups().join(&id);
     files::create(&backup.join("identity"), ctx.record.install_id.as_bytes())?;
     if full_backup {
