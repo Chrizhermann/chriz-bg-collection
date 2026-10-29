@@ -69,7 +69,7 @@ Cross-repository status. Component detail stays in the sections below and in the
      - Both questions from the lab are closed (see his review queue): the second Brimstone
        stays in EET's invisible import container, and the camp copy stays as it is.
      BG Rebalance v0.8.8 replaces v0.8.7 in both recipes since
-     [PR #EPR](https://github.com/Chrizhermann/chriz-bg-collection/pull/EPR) (merged on
+     [PR #64](https://github.com/Chrizhermann/chriz-bg-collection/pull/64) (merged on
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance-088.toml`),
      with Druid weapons `410` and Alaghor of Clangeddin weapons `411` as defaults
      (Christopher, 2026-10-29; see Weapon access below).
@@ -319,7 +319,7 @@ Cross-repository status. Component detail stays in the sections below and in the
     v1.3.1. `411` needs Artisan's Kitpack and EEex: the engine reads a kit's own weapon
     column only when the kit's class is the character's class, and Yeslick is a
     fighter/cleric. v0.8.8 changes nothing else. Pinned in both recipes since
-    [PR #EPR](https://github.com/Chrizhermann/chriz-bg-collection/pull/EPR) (merged on
+    [PR #64](https://github.com/Chrizhermann/chriz-bg-collection/pull/64) (merged on
     2026-10-29), both as defaults (Christopher, 2026-10-29). The Rebalance run comes after
     the Kitpack's late tweak run, so `1010000` rebuilds the class weapon grants before
     `410` adds the druid ones, and no later run rebuilds them
@@ -359,7 +359,7 @@ Cross-repository status. Component detail stays in the sections below and in the
     components, their decisions and their order are unchanged.
   - Since PR #56 (merged on 2026-10-29) v0.8.7 replaces v0.8.6. Only `360` changes: its
     new name and its guard against the standalone package, which CEBG never installs.
-  - Since PR #EPR (merged on 2026-10-29) v0.8.8 replaces v0.8.7. It adds `410` and `411`
+  - Since PR #64 (merged on 2026-10-29) v0.8.8 replaces v0.8.7. It adds `410` and `411`
     (Weapon access, above) as defaults between `302` and `420`; nothing else changes.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.

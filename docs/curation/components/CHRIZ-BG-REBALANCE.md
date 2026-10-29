@@ -278,8 +278,8 @@ next section).
   - `1010000` rebuilds the class weapon grants in `C0PR#CL.SPL` from `WEAPPROF.2DA` as it
     is then. `410` runs afterwards: it raises the druid and fighter/druid columns and adds
     its grants after the Kitpack's own, with the Kitpack's marker, so a later rebuild would
-    recreate them from the raised columns. No run after the Rebalance run rebuilds those
-    grants or changes `WEAPPROF.2DA`, so the druids keep the axes and bows that carry the
+    recreate them from the raised columns. No Kitpack run follows the Rebalance run, so
+    nothing rebuilds those grants, and the druids keep the axes and bows that carry the
     Kitpack's weapon check.
   - In the October 29 EET lab install (before `410`), no axe or bow in `override` that
     fighters may use carried the druid usability bit or the bits of the Totemic Druid, the Shapeshifter or
