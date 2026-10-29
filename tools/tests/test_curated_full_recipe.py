@@ -401,7 +401,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # and Eldritch Knight 20000 or Arcane Trickster 8204; without it the October
                 # 28 digest 1df78afce7729152da614ca3877a33da03119eae6d93b7c45657c83f61840967
                 # returns.
-                "5ec32478457d3d9f535687dde5469d0c34341b7a8ebb4152ec077a3f10aa17a4",
+                # October 29 intake: default Sirene NPC for BG:EE 0/3/6 (Christopher,
+                # 2026-10-29) with optional classes 7/8/9 in its own run after Kitpack main,
+                # and sirene-bg2 moved there from after Yeslick; without the run, its
+                # features and preset entries and with sirene-bg2 back, the 1010000 digest
+                # 5ec32478457d3d9f535687dde5469d0c34341b7a8ebb4152ec077a3f10aa17a4 returns.
+                "042dc03d9670386688578abb9933e2bd12ce4f6d1305ef736fc881c9cdfbdc7b",
             )
 
             legacy_bg1npc_groups = {

@@ -338,18 +338,24 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // plan changes, in the chriz-sod-remix-bg2 run's artifact id; its components and the
     // selection stay. With v0.6.15 restored, the previous plan digests return (manifest
     // 29a3cb46…, curated e59b795b…).
+    // Re-pinned on October 29 for Sirene NPC for BG:EE as a default (Christopher, 2026-10-29):
+    // its run after Kitpack main with sirene-bg2 moved there from after Yeslick, its six
+    // features and its three preset entries change all six digests. With the run, the
+    // features and the preset entries removed and sirene-bg2 back after Yeslick, the six
+    // previous digests return (manifest f0fd7718…, 1cb14fad…, 7c78ecb2…; curated b633893e…,
+    // cb328676…, 87f1ab67…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "f0fd7718d0e8a1a7e0844cc55e1226c3f08837d84453d918878283203cc01c6c",
-            "1cb14fad984623fba94375b29b920ffd43617622a8bcbc1ae890a1c0bbf6ee21",
-            "7c78ecb22962fe482faed75d1a93f89c7f6a394f1afdafee423d14b509b8afd9",
+            "2b77e6d25b7a8aa778330d7e95363117cc17b6f44585c19e93d6c0aba389792b",
+            "90703460a01f06c3cdcb8cc8c4fec67538a105bb1bb292818af48a6e7803ec59",
+            "616da1fb686aa5767cda50349f5a6c18a42331160ecbf51116f115f779cc950d",
         ),
         (
             "../recipes/curated-full-current",
-            "b633893e96bfbe5054f96322c83ea5404d13046638842e8ab27da373d251fbf8",
-            "cb32867668e1eabea927189e4eb4862033988a464e0b175e4ba691226b9df30e",
-            "87f1ab67e434ae7daa5e990dc5181b3062bc97d653ccb1ab785076a832c50cb6",
+            "d4413a740b3a5eee66bfef2cf2dfcedb721d26afb447ac6cc696643dfeb60fe6",
+            "e99943302b228205cd657de0b87ed60f4d86f948b4d35ed6ca618f7f9baf9156",
+            "b9e1d11853e49855a8c09ded5c5529f4f65734bac3a8cdc233e564b6f57d2d58",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

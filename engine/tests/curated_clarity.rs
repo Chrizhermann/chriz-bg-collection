@@ -24,7 +24,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
     // The October 22 intake adds one run for each of the 18 default player voicepacks.
     // BG1 Unfinished Business became optional and unselected on October 23, so the
     // bg1ub-bg1 run no longer runs by default; the new quest mods are unchecked.
-    assert_eq!(result.plan.runs.len(), 69);
+    // The October 29 intake adds the default Sirene NPC for BG:EE run.
+    assert_eq!(result.plan.runs.len(), 70);
     assert_eq!(
         result
             .plan
@@ -50,8 +51,8 @@ fn clarity_keeps_the_accepted_default_install_and_buffbot_tail() {
         // The October 28 intake (Rebalance v0.8.6) adds default Time Stop and Haste
         // effect clocks 360.
         // The October 29 intake adds the Kitpack's weapon-usability sweep 1010000 at the
-        // end of the late tweak run.
-        470
+        // end of the late tweak run, and Sirene NPC for BG:EE 0, 3 and 6.
+        473
     );
     // Scroll policy 430 hashes the final scrolls and spells, so it follows BuffBot.
     let (tail, rest) = result.plan.runs.split_last().unwrap();

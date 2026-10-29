@@ -1,0 +1,32 @@
+id = "sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+name = "Sirene NPC for BG:EE"
+version = "1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+reference = "1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+expected_filename = "Sirene-BG1-1c8600029a9ac31395a61b5d4d03f98337dcf83e.zip"
+expected_length = 3734521
+sha256 = "f46b035395c4310103e9be2d1623a113e6f3aa66f520624c30c7f355518f4eb9"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["Sirene"]
+tp2_paths = ["Sirene/Setup-Sirene.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 512
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/TheArtisanBG/Sirene-BG1"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/TheArtisanBG/Sirene-BG1/commit/1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+reviewed_on = "2026-10-29"

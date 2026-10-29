@@ -72,10 +72,12 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn(2292, actual["cdtweaks-bg2"])
         # October 28: the Rebalance v0.8.6 pin adds default 360.
         self.assertIn(360, actual["chriz-bg-rebalance-bg2"])
-        # October 29: the Kitpack's weapon-usability sweep 1010000 ends the late tweak run.
+        # October 29: the Kitpack's weapon-usability sweep 1010000 ends the late tweak run,
+        # and Sirene NPC for BG:EE adds its own run with default 0, 3 and 6.
         self.assertEqual(actual["artisanskitpack-tweak-late-bg2"][-1], 1010000)
-        self.assertEqual(self.result["componentCount"], 470)
-        self.assertEqual(len(actual), 69)
+        self.assertEqual(actual["sirene-bg1-bg2"], [0, 3, 6])
+        self.assertEqual(self.result["componentCount"], 473)
+        self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

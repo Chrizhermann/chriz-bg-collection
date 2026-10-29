@@ -121,6 +121,11 @@ unchanged.
   kit weapon rules now also cover weapons that mods installed after the Kitpack add. For
   example, the Priest of Tempus and the Eldritch Knight can use IWDification's two-handed
   axes, and the Arcane Trickster sorcerer the SCS Drow Katana. (Artisan's Kitpack)
+- **Sirene in BG1 and Siege of Dragonspear** — **Default.** Sirene, a paladin, can join
+  the party in BG1 and in Siege of Dragonspear, and with Sirene NPC for BG2 (Default) she
+  carries on into Shadows of Amn. As in BG2, she is a True Paladin with the Sirick
+  portrait; Cavalier, Inquisitor and Undead Hunter are **Optional**. Pick the same class
+  for her in both games. (Sirene NPC for BG:EE)
 - **EEex attack info** — **Optional.** Shows your chance to hit when the attack
   cursor is over a target. You can also switch it on or off later in EEex's
   options; the change takes effect after a restart. (EEex v1.3.1)
@@ -199,6 +204,9 @@ unchanged.
     Christopher decides whether that stays. (Upstream's fix for Black Blade
     attacks stacking with grandmastery changes nothing here: v18 never had that
     bug.)
+- **The Martyr paladin kit** (Default, unchanged choice) now comes from Artisan's Kitpack
+  alone. Both Sirene mods install after the Kitpack and leave their own copy out, so the
+  Martyr stays available at character creation, unchanged.
 - **Move NPCs to convenient locations** (Default) now also moves **Ajantis**
   to the Friendly Arm Inn, along with Alora, Eldoth, Quayle, Shar-Teel, Tiax and
   Viconia. (Tweaks Anthology)
@@ -329,6 +337,8 @@ unchanged.
 - Portraits Portraits Everywhere: DaftHunk's fork at `417226e` (its readme says
   v1.03) (new)
 - Black Hearts v2.05 (new)
+- Sirene NPC for BG:EE: development version `1c86000` (new). The collection pins this
+  exact version because the last release, v3.1, installs on BG:EE only, not on EET.
 
 ## Release-note entry (collection alpha.21)
 
@@ -349,7 +359,8 @@ dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; sensible entrance points; 18 player
 voicepacks from ChrizFader's voicepacks; Artisan's Kitpack weapon rules that also cover
-weapons from later mods; and a choice of how Imoen continues
+weapons from later mods; Sirene in BG1 and Siege of Dragonspear, who carries on into BG2;
+and a choice of how Imoen continues
 into Shadows of Amn, by default as the BG2 thief/mage Imoen. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. The optional,
@@ -460,6 +471,13 @@ apply to new installations; existing games and saves are unchanged.
   CEBG's order, and chriz.4 in another order without Spell Revisions. Not covered there:
   EET, kits other than the Favored Soul and the Ninja, and characters created before the
   installation (its release notes; see `FOLLOW_UPS.md`).
+- **Sirene NPC for BG:EE** (Default; Christopher, 2026-10-29) is a GitHub commit archive
+  of unreleased `master`, like the Sirene NPC for BG2 pin. Both Sirene mods now install
+  after Artisan's Kitpack's main run, Sirene BG1 first: the Kitpack's Martyr kit stays
+  selectable, and on EET Sirene NPC for BG2 continues a Sirene who travelled with the
+  party from SoD into SoA. Sirene NPC for BG2's files are therefore no longer changed by
+  Spell Revisions' main component, Bardic Wonders `2003`/`2005` and the Kitpack's main
+  item passes (`SIRENE_BG2.md`). The EET lab result is recorded in `FOLLOW_UPS.md`.
 - **Artisan's Kitpack `1010000`** (kit weapon rules for weapons from later mods, Default;
   Christopher, 2026-10-26) installs only where `C0PR#CL.SPL` exists, which within the
   collection means EEex with Eldritch Knight `20000` or Arcane Trickster `8204`; the
