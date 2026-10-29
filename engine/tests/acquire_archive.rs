@@ -3,8 +3,9 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use bg_engine::acquire::{
-    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop, AcquireError,
-    ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact, StopSignal,
+    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop,
+    extract_served_archive, AcquireError, ArchiveFormat, ArchiveLimits, ArchiveMode,
+    ArchiveRequirements, ExtractedArtifact, StopSignal,
 };
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
@@ -1547,4 +1548,339 @@ fn rebuilds_a_content_addressed_extraction_that_gained_unrecorded_files() {
         &["unrecorded extracted file", "mod/injected.txt"],
     );
     assert!(!extracted.root.join("mod/injected.txt").exists());
+}
+
+/// Requirements for a changed download of the archive at `path`.
+fn served_requirements(path: &Path) -> ArchiveRequirements {
+    let mut request = requirements(path);
+    request.limits = request.limits.for_served_archive();
+    request
+}
+
+fn extract_served(
+    archive: &Path,
+    cache: &Path,
+    request: &ArchiveRequirements,
+) -> Result<ExtractedArtifact, AcquireError> {
+    extract_served_archive(archive, cache, request, &StopSignal::never())
+        .map(|(extracted, _repair)| extracted)
+}
+
+#[test]
+fn reviewed_extractions_keep_their_identity_and_changed_ones_get_their_own() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("simple.zip");
+    write_zip(
+        &archive,
+        &[Entry::File(
+            "mod/setup-mod.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+    let cache = temp.path().join("extract");
+    // The contract exactly as reviewed extractions recorded it before changed downloads existed.
+    let contract = concat!(
+        r#"{"version":3,"format":"zip","mode":"public","expected_roots":["mod"],"#,
+        r#""expected_tp2_paths":["mod/setup-mod.tp2"],"limits":{"max_depth":32,"#,
+        r#""max_entries":100000,"max_entry_uncompressed_bytes":2147483648,"#,
+        r#""max_total_uncompressed_bytes":8589934592,"max_compression_ratio":1000}}"#
+    );
+
+    let reviewed = extract_archive(&archive, &cache, &requirements(&archive)).unwrap();
+    let served = extract_served(&archive, &cache, &requirements(&archive)).unwrap();
+
+    assert_eq!(
+        reviewed.extraction_contract_sha256,
+        sha256_bytes(contract.as_bytes())
+    );
+    let served_contract = format!(
+        "{},\"layout\":\"served-v1\"}}",
+        contract.strip_suffix('}').unwrap()
+    );
+    assert_eq!(
+        served.extraction_contract_sha256,
+        sha256_bytes(served_contract.as_bytes())
+    );
+    assert_ne!(served.root, reviewed.root);
+    assert_eq!(served.wrapper_directory, None);
+    assert_eq!(
+        std::fs::read(served.root.join("mod/setup-mod.tp2")).unwrap(),
+        TP2
+    );
+    assert_eq!(
+        extract_archive(&archive, &cache, &requirements(&archive)).unwrap(),
+        reviewed
+    );
+}
+
+#[test]
+fn a_changed_archive_finds_its_payload_below_new_folders_and_beside_other_files() {
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("moved.zip");
+    write_zip(
+        &archive,
+        &[
+            Entry::File(
+                "install-notes.txt",
+                b"read me first",
+                CompressionMethod::Stored,
+            ),
+            Entry::File(
+                "Snowytoes-v1.7/readme.txt",
+                b"changelog",
+                CompressionMethod::Stored,
+            ),
+            Entry::File(
+                "Snowytoes-v1.7/release/mod/setup-mod.tp2",
+                TP2,
+                CompressionMethod::Stored,
+            ),
+            Entry::File(
+                "Snowytoes-v1.7/release/mod/data.txt",
+                DATA,
+                CompressionMethod::Deflated,
+            ),
+            Entry::File(
+                "Snowytoes-v1.7/release/mod/new-in-1.7.txt",
+                b"new file",
+                CompressionMethod::Stored,
+            ),
+        ],
+    );
+    let cache = temp.path().join("extract");
+
+    // The reviewed rule finds no single place: the payload moved below two folders, and a
+    // file lies beside them.
+    assert!(matches!(
+        extract_archive(&archive, &cache, &requirements(&archive)),
+        Err(AcquireError::ArchiveLayout(_))
+    ));
+    let extracted = extract_served(&archive, &cache, &served_requirements(&archive)).unwrap();
+
+    assert_eq!(
+        extracted.wrapper_directory.as_deref(),
+        Some("Snowytoes-v1.7/release")
+    );
+    assert_eq!(
+        std::fs::read(extracted.root.join("mod/setup-mod.tp2")).unwrap(),
+        TP2
+    );
+    assert_eq!(
+        std::fs::read(extracted.root.join("mod/data.txt")).unwrap(),
+        DATA
+    );
+    assert!(extracted.root.join("mod/new-in-1.7.txt").is_file());
+    for outside in ["install-notes.txt", "readme.txt", "Snowytoes-v1.7"] {
+        assert!(!extracted.root.join(outside).exists(), "{outside}");
+    }
+    assert_eq!(
+        extract_served(&archive, &cache, &served_requirements(&archive)).unwrap(),
+        extracted
+    );
+}
+
+#[test]
+fn a_changed_archive_is_refused_when_its_payload_is_missing_or_in_two_places() {
+    let temp = TempDir::new().unwrap();
+    let twice = temp.path().join("twice.zip");
+    write_zip(
+        &twice,
+        &[
+            Entry::File("v1.6/mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("v1.7/mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("notes.txt", b"both versions", CompressionMethod::Stored),
+        ],
+    );
+    let missing = temp.path().join("missing.zip");
+    write_zip(
+        &missing,
+        &[Entry::File(
+            "renamed/setup-renamed.tp2",
+            TP2,
+            CompressionMethod::Stored,
+        )],
+    );
+
+    for (archive, expected) in [
+        (&twice, "more than one place"),
+        (
+            &missing,
+            "was not found together with every reviewed payload path",
+        ),
+    ] {
+        let cache = temp.path().join("extract");
+        let request = served_requirements(archive);
+        let error = extract_served(archive, &cache, &request).unwrap_err();
+        assert!(
+            matches!(&error, AcquireError::ArchiveLayout(message) if message.contains(expected)),
+            "{error}"
+        );
+        assert!(!published_archive_parent(&cache, &request.artifact_sha256).exists());
+    }
+}
+
+#[test]
+fn a_changed_archive_may_add_an_installer_but_never_one_named_like_a_reviewed_one() {
+    let temp = TempDir::new().unwrap();
+    let added = temp.path().join("added.zip");
+    write_zip(
+        &added,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File(
+                "mod/extras/setup-extras.tp2",
+                TP2,
+                CompressionMethod::Stored,
+            ),
+        ],
+    );
+    let shadowing = temp.path().join("shadowing.zip");
+    write_zip(
+        &shadowing,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/old/mod.tp2", TP2, CompressionMethod::Stored),
+        ],
+    );
+    let cache = temp.path().join("extract");
+
+    assert!(matches!(
+        extract_archive(&added, &cache, &requirements(&added)),
+        Err(AcquireError::ArchiveLayout(message)) if message.contains("undeclared TP2")
+    ));
+    let extracted = extract_served(&added, &cache, &served_requirements(&added)).unwrap();
+    assert!(extracted.root.join("mod/extras/setup-extras.tp2").is_file());
+
+    let error = extract_served(&shadowing, &cache, &served_requirements(&shadowing)).unwrap_err();
+    assert!(
+        matches!(&error, AcquireError::ArchiveLayout(message) if message.contains("undeclared TP2 `mod/old/mod.tp2`")),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_changed_archive_still_meets_every_guard_that_protects_the_computer() {
+    let unsafe_entries = [
+        Entry::File("../escape.txt", b"unsafe", CompressionMethod::Stored),
+        Entry::File("/absolute.txt", b"unsafe", CompressionMethod::Stored),
+        Entry::File(r"C:\drive.txt", b"unsafe", CompressionMethod::Stored),
+        Entry::File(
+            r"\\server\share\file.txt",
+            b"unsafe",
+            CompressionMethod::Stored,
+        ),
+        Entry::File("mod/CON.txt", b"unsafe", CompressionMethod::Stored),
+        Entry::File("mod/file.txt:stream", b"unsafe", CompressionMethod::Stored),
+        Entry::Symlink("mod/link", "../outside"),
+    ];
+    for (index, unsafe_entry) in unsafe_entries.iter().enumerate() {
+        let temp = TempDir::new().unwrap();
+        let archive = temp.path().join(format!("unsafe-{index}.zip"));
+        write_zip(
+            &archive,
+            &[
+                Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+                unsafe_entry.clone(),
+            ],
+        );
+        let cache = temp.path().join("extract");
+        let request = served_requirements(&archive);
+        assert!(
+            extract_served(&archive, &cache, &request).is_err(),
+            "unsafe entry {index} was accepted"
+        );
+        assert!(!published_archive_parent(&cache, &request.artifact_sha256).exists());
+        assert!(!cache.join("temporary").exists());
+    }
+
+    // The compression ratio guard applies to a changed archive as well.
+    let temp = TempDir::new().unwrap();
+    let bomb = temp.path().join("bomb.zip");
+    write_zip(
+        &bomb,
+        &[
+            Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+            Entry::File("mod/bomb", &[0_u8; 32_768], CompressionMethod::Deflated),
+        ],
+    );
+    let mut request = served_requirements(&bomb);
+    request.limits.max_compression_ratio = 2;
+    let cache = temp.path().join("extract");
+    assert!(matches!(
+        extract_served(&bomb, &cache, &request),
+        Err(AcquireError::ArchiveLimitExceeded(_))
+    ));
+    assert!(!published_archive_parent(&cache, &request.artifact_sha256).exists());
+}
+
+#[test]
+fn served_limits_let_a_grown_update_through_but_keep_the_bomb_and_depth_guards() {
+    // Tight reviewed limits as the production recipes author them.
+    let reviewed = ArchiveLimits {
+        max_depth: 8,
+        max_entries: 256,
+        max_entry_uncompressed_bytes: 4 * 1024 * 1024,
+        max_total_uncompressed_bytes: 16 * 1024 * 1024,
+        max_compression_ratio: 100,
+    };
+    assert_eq!(
+        reviewed.for_served_archive(),
+        ArchiveLimits {
+            max_depth: 32,
+            max_entries: 100_000,
+            max_entry_uncompressed_bytes: 2 * 1024 * 1024 * 1024,
+            max_total_uncompressed_bytes: 8 * 1024 * 1024 * 1024,
+            max_compression_ratio: 1_000,
+        }
+    );
+    // Generous reviewed limits grow sixteenfold; ratio and depth never drop below the reviewed.
+    let generous = ArchiveLimits {
+        max_depth: 40,
+        max_entries: 200_000,
+        max_entry_uncompressed_bytes: 4 * 1024 * 1024 * 1024,
+        max_total_uncompressed_bytes: 16 * 1024 * 1024 * 1024,
+        max_compression_ratio: 2_000,
+    };
+    assert_eq!(
+        generous.for_served_archive(),
+        ArchiveLimits {
+            max_depth: 40,
+            max_entries: 3_200_000,
+            max_entry_uncompressed_bytes: 64 * 1024 * 1024 * 1024,
+            max_total_uncompressed_bytes: 256 * 1024 * 1024 * 1024,
+            max_compression_ratio: 2_000,
+        }
+    );
+
+    let temp = TempDir::new().unwrap();
+    let archive = temp.path().join("grown.zip");
+    let new_files: Vec<String> = (0..8)
+        .map(|index| format!("mod/new/file-{index}.txt"))
+        .collect();
+    let mut entries = vec![
+        Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+        Entry::File("mod/data.txt", DATA, CompressionMethod::Stored),
+    ];
+    entries.extend(
+        new_files
+            .iter()
+            .map(|name| Entry::File(name.as_str(), DATA, CompressionMethod::Stored)),
+    );
+    write_zip(&archive, &entries);
+    let mut tight = requirements(&archive);
+    tight.limits = ArchiveLimits {
+        max_entries: 2,
+        ..reviewed
+    };
+    let cache = temp.path().join("extract");
+
+    assert!(matches!(
+        extract_archive(&archive, &cache, &tight),
+        Err(AcquireError::ArchiveLimitExceeded(_))
+    ));
+    let mut served = tight.clone();
+    served.limits = tight.limits.for_served_archive();
+    let extracted = extract_served(&archive, &cache, &served).unwrap();
+    assert!(extracted.root.join("mod/new/file-7.txt").is_file());
 }

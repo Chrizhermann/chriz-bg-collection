@@ -10,8 +10,8 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use bg_engine::acquire::{
-    AcquireError, ArtifactCache, CacheDisposition, DownloadRequest, DownloadRoute,
-    DEFAULT_DOWNLOAD_ATTEMPTS,
+    AcquireError, ArchiveFormat, ArtifactCache, CacheDisposition, DownloadRequest, DownloadRoute,
+    ServedArtifact, ServedRedirects, ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use bg_engine::events::ChannelSink;
 use sha2::{Digest, Sha256};
@@ -229,6 +229,19 @@ fn assert_nothing_kept(temp: &TempDir, request: &DownloadRequest) {
 fn archive_bytes() -> Vec<u8> {
     // The route checks headers only; archive layout is checked later by extraction.
     b"PK\x03\x04 synthetic package archive".to_vec()
+}
+
+/// A complete ZIP archive, as a changed download must be to be accepted.
+fn zip_archive(text: &[u8]) -> Vec<u8> {
+    let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    writer
+        .start_file(
+            "bethany/readme.txt",
+            zip::write::SimpleFileOptions::default(),
+        )
+        .unwrap();
+    writer.write_all(text).unwrap();
+    writer.finish().unwrap().into_inner()
 }
 
 #[test]
@@ -553,6 +566,141 @@ fn a_link_on_another_host_or_of_another_shape_is_refused_before_any_connection()
         );
     }
     assert!(server.finish().is_empty());
+}
+
+/// What an installation takes from a package link: whatever it serves.
+fn acquire_as_served(
+    temp: &TempDir,
+    request: &DownloadRequest,
+) -> Result<ServedArtifact, AcquireError> {
+    let (sink, _) = ChannelSink::unbounded();
+    cache(temp).acquire_as_served(
+        request,
+        None,
+        ServedRules {
+            format: ArchiveFormat::Zip,
+            redirects: ServedRedirects::AnyHttpsHost,
+        },
+        &sink,
+        &StopSignal::never(),
+    )
+}
+
+#[test]
+fn an_installation_takes_the_newer_package_a_link_now_serves() {
+    // As for Snowytoes Hamlet on 2026-10-30: the link of the reviewed 1.6 serves 1.7.
+    let pinned = archive_bytes();
+    let newer = zip_archive(b"the next release");
+    let body = newer.clone();
+    let server = TestServer::start(1, move |_, _, _| Reply::package(&body, "Bethany-v1.04.zip"));
+    let temp = TempDir::new().unwrap();
+    let request = package_request(server.url(PACKAGE_PATH), &pinned, "Bethany-v1.03.zip");
+
+    let served = acquire_as_served(&temp, &request).unwrap();
+
+    assert!(!served.matches_pin(&request));
+    assert_eq!(served.served_filename.as_deref(), Some("Bethany-v1.04.zip"));
+    assert_eq!(served.artifact.metadata.length, newer.len() as u64);
+    assert_eq!(served.artifact.metadata.sha256, sha256(&newer));
+    assert_eq!(std::fs::read(&served.artifact.archive_path).unwrap(), newer);
+    assert!(served.unreviewed_hosts.is_empty());
+    // The normal acquisition of the pin still refuses that response.
+    assert_eq!(server.finish().len(), 1);
+    let server = TestServer::start(1, move |_, _, _| {
+        Reply::package(&newer, "Bethany-v1.04.zip")
+    });
+    let (sink, _) = ChannelSink::unbounded();
+    let strict = cache(&TempDir::new().unwrap()).acquire(
+        &DownloadRequest {
+            url: server.url(PACKAGE_PATH),
+            ..request
+        },
+        &sink,
+    );
+    assert!(
+        matches!(&strict, Err(AcquireError::UnexpectedResponse { message, .. }) if message.contains("filename")),
+        "{strict:?}"
+    );
+    server.finish();
+}
+
+#[test]
+fn an_installation_follows_a_package_link_to_another_host_and_reports_it() {
+    let bytes = archive_bytes();
+    let body = bytes.clone();
+    let server = TestServer::start(2, move |index, _, base| match index {
+        0 => Reply::redirect(format!(
+            "{}/wp-content/uploads/Bethany-v1.03.zip",
+            base.replace("127.0.0.1", "localhost")
+        )),
+        _ => Reply::package(&body, "Bethany-v1.03.zip"),
+    });
+    let temp = TempDir::new().unwrap();
+    let request = package_request(server.url(PACKAGE_PATH), &bytes, "Bethany-v1.03.zip");
+
+    let served = acquire_as_served(&temp, &request).unwrap();
+
+    assert!(served.matches_pin(&request), "the file is the reviewed one");
+    assert_eq!(served.unreviewed_hosts, ["localhost"]);
+    assert!(served
+        .artifact
+        .metadata
+        .final_url
+        .starts_with("http://localhost:"));
+    assert_eq!(
+        server.finish()[1].path,
+        "/wp-content/uploads/Bethany-v1.03.zip"
+    );
+}
+
+#[test]
+fn an_installation_asks_again_for_a_page_served_instead_of_the_package_and_keeps_none() {
+    // A changed package has other headers than the reviewed one, so the page is not refused by
+    // its headers here. It is no ZIP archive, though: it is asked for again, refused on the
+    // last attempt, and nothing of it is kept. The installer then leaves the mod out.
+    let pinned = archive_bytes();
+    let page = b"<!DOCTYPE html><html><body>Download link expired</body></html>".to_vec();
+    let body = page.clone();
+    let server = TestServer::start(2, move |_, _, _| Reply {
+        status: 200,
+        headers: vec![("Content-Type", "text/html; charset=UTF-8".to_owned())],
+        advertised_length: Some(body.len()),
+        body: body.clone(),
+    });
+    let temp = TempDir::new().unwrap();
+    let request = DownloadRequest {
+        // The first repeat follows at once; later ones would wait.
+        max_attempts: 2,
+        ..package_request(server.url(PACKAGE_PATH), &pinned, "Bethany-v1.03.zip")
+    };
+
+    let result = acquire_as_served(&temp, &request);
+
+    assert!(
+        matches!(&result, Err(AcquireError::ServedNotArchive { problem, .. })
+            if problem.starts_with("it does not begin like a ZIP archive but with the text \"<!DOCTYPE html>")),
+        "{result:?}"
+    );
+    assert_nothing_kept(&temp, &request);
+    assert_eq!(server.finish().len(), 2);
+}
+
+#[test]
+fn an_installation_still_refuses_a_package_link_of_another_shape() {
+    let bytes = archive_bytes();
+    let temp = TempDir::new().unwrap();
+    let request = package_request(
+        "http://127.0.0.1:9/download/bethany/?wpdmdl=751&other=1".to_owned(),
+        &bytes,
+        "Bethany-v1.03.zip",
+    );
+
+    let result = acquire_as_served(&temp, &request);
+
+    assert!(
+        matches!(&result, Err(AcquireError::InvalidUrl { .. })),
+        "{result:?}"
+    );
 }
 
 /// Downloads one small package from the real host and checks it against the pin the IWD:EE

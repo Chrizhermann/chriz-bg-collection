@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::installed_updates::ComparisonState;
+use crate::installed_updates::{ComparisonState, InstalledRunState};
 use crate::registry::REGISTRY_SCHEMA_VERSION;
 
 const OLD_BUFFBOT: &str = "1.8.3-alpha";
@@ -272,6 +272,7 @@ impl Fixture {
                     length: identity.length,
                     sha256: identity.sha256.clone(),
                     cache_outcome: ArtifactCacheOutcome::Hit,
+                    served_difference: None,
                 })
                 .collect(),
             weidu_tools: created
@@ -282,6 +283,7 @@ impl Fixture {
                     version: identity.version.clone(),
                     length: identity.length,
                     sha256: identity.sha256.clone(),
+                    reviewed: None,
                 })
                 .collect(),
             runs: frozen
@@ -316,6 +318,8 @@ impl Fixture {
                 })
                 .collect(),
             final_state: Some(final_state.clone()),
+            left_out: Vec::new(),
+            installed_plan: None,
         };
         let receipt_bytes = serde_json::to_vec_pretty(&receipt).unwrap();
         fs::write(root.join(".chriz/install-receipt.json"), &receipt_bytes).unwrap();
@@ -613,7 +617,6 @@ fn failed_receipt_cannot_be_presented_as_a_completed_installation_update() {
 
 #[test]
 fn recorded_buffbot_update_compares_effective_version_without_rewriting_base_choices() {
-    use crate::installed_updates::InstalledRunState;
     let fixture = Fixture::with_buffbot(true);
     let original_receipt = fs::read(
         fixture
@@ -658,6 +661,107 @@ fn recorded_buffbot_update_compares_effective_version_without_rewriting_base_cho
         )
         .unwrap(),
         original_receipt
+    );
+}
+
+/// The receipt of an installation whose BuffBot link served `served` instead of the pin.
+fn record_changed_buffbot_download(fixture: &mut Fixture, served: &DownloadIdentity) {
+    let artifact = fixture
+        .receipt
+        .artifacts
+        .iter_mut()
+        .find(|artifact| artifact.id == "buffbot")
+        .unwrap();
+    artifact.served_difference = Some(ServedDifference {
+        reviewed: DownloadIdentity {
+            filename: Some("buffbot-old.zip".into()),
+            length: artifact.length,
+            sha256: artifact.sha256.clone(),
+        },
+        served: served.clone(),
+        unreviewed_hosts: Vec::new(),
+    });
+    artifact.length = served.length;
+    artifact.sha256 = served.sha256.clone();
+    fixture.rewrite_receipt();
+}
+
+#[test]
+fn a_changed_download_is_compared_as_the_file_that_was_installed() {
+    // The link served the file the new collection pins, so the installed mod is already it.
+    let mut fixture = Fixture::with_buffbot(true);
+    let served = DownloadIdentity {
+        filename: Some("buffbot-new.zip".into()),
+        length: 4_241_150,
+        sha256: NEW_BUFFBOT_HASH.into(),
+    };
+    let reviewed = fixture.compare_without_writes().unwrap();
+    assert_eq!(reviewed.runs[0].state, InstalledRunState::Unassessed);
+    record_changed_buffbot_download(&mut fixture, &served);
+
+    let baseline = verify_installed_baseline(&fixture.record).unwrap();
+    assert!(!baseline.recovered, "a changed download is not a repair");
+    let installed = &baseline.replacements["buffbot-bg2"];
+    assert_eq!(installed.id, "buffbot");
+    assert_eq!(installed.length, served.length);
+    assert_eq!(installed.sha256, served.sha256);
+    let comparison = fixture.compare_without_writes().unwrap();
+    assert_eq!(comparison.state, ComparisonState::ComparisonReady);
+    assert_eq!(comparison.runs[0].run_id, "buffbot-bg2");
+    assert_eq!(comparison.runs[0].state, InstalledRunState::Unchanged);
+}
+
+#[test]
+fn an_installation_that_left_out_a_mod_is_verified_but_offered_no_game_update() {
+    let mut fixture = Fixture::with_buffbot(true);
+    let root = fixture.record.managed_root.clone();
+    let reason = "its official link now serves a different archive, which cannot be installed";
+    let remaining = InstallPlan { runs: Vec::new() };
+    let store = SessionStore::open(&root).unwrap();
+    store
+        .append(SessionEvent::StepStarted {
+            step_id: "acquire:buffbot".into(),
+            attempt: 1,
+        })
+        .unwrap();
+    store
+        .append(SessionEvent::ArtifactLeftOut {
+            step_id: "acquire:buffbot".into(),
+            attempt: 1,
+            artifact_id: "buffbot".into(),
+            detail: reason.into(),
+            plan_sha256: plan_digest(&remaining).unwrap(),
+            removed_runs: vec!["buffbot-bg2".into()],
+            changed_runs: Vec::new(),
+        })
+        .unwrap();
+    // BuffBot was never installed, so the finished mod list is empty.
+    fs::write(root.join("game/WeiDU.log"), b"").unwrap();
+    for log in &mut fixture.receipt.final_state.as_mut().unwrap().logs {
+        log.sha256 = sha256_bytes(b"");
+        log.components.clear();
+    }
+    fixture.receipt.runs.clear();
+    fixture.receipt.left_out = vec![crate::receipt::LeftOutReceipt {
+        artifact_id: "buffbot".into(),
+        reason: reason.into(),
+        runs: vec!["buffbot-bg2".into()],
+        changed_runs: Vec::new(),
+    }];
+    fixture.receipt.installed_plan = Some(remaining);
+    fixture.rewrite_receipt();
+
+    // The records verify, so work that follows the installed mods, such as a hotpatch, can
+    // rely on them.
+    let baseline = verify_installed_baseline(&fixture.record).unwrap();
+    assert!(baseline.receipt.effective_plan().runs.is_empty());
+    assert_eq!(baseline.receipt.plan.runs.len(), 1, "the frozen plan stays");
+    // A game update reasons about the frozen plan run by run, so it is not offered.
+    let error = fixture.compare_without_writes().unwrap_err();
+    assert_eq!(error.code(), "installed_update_unavailable");
+    assert!(
+        error.to_string().contains("left out of this installation"),
+        "{error}"
     );
 }
 

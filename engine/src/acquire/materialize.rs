@@ -96,12 +96,35 @@ struct PlannedPublish {
     action: PublishAction,
 }
 
+/// A materialization planned against the destination as it is now. Planning writes nothing.
+#[derive(Debug)]
+pub struct PlannedMaterialization<'a> {
+    destination: &'a Path,
+    materialization_id: &'a str,
+    owner: &'a str,
+    state_directory: PathBuf,
+    manifest_path: PathBuf,
+    manifest: PublicationManifest,
+    planned: Vec<PlannedPublish>,
+}
+
 /// Safely project only declared payload roots and TP2s into an existing staged game.
 pub fn materialize(
     artifact: &ExtractedArtifact,
     destination: &Path,
     request: &MaterializationRequest,
 ) -> Result<MaterializationResult, AcquireError> {
+    plan_materialization(artifact, destination, request)?.publish()
+}
+
+/// Plans [`materialize`] without writing anything to `destination`. Every file that would
+/// overwrite different bytes without a signed rule is refused here, before the first write:
+/// [`AcquireError::UndeclaredOverwrite`] or [`AcquireError::CollisionRuleRejected`].
+pub fn plan_materialization<'a>(
+    artifact: &ExtractedArtifact,
+    destination: &'a Path,
+    request: &'a MaterializationRequest,
+) -> Result<PlannedMaterialization<'a>, AcquireError> {
     validate_identifier(&request.materialization_id, "materialization_id")?;
     validate_owner(&request.owner)?;
     validate_directory(destination, "materialization destination")?;
@@ -184,51 +207,74 @@ pub fn materialize(
             action,
         });
     }
-
-    for plan in &planned {
-        remove_owned_temporary(destination, plan, &request.materialization_id)?;
-    }
-
-    let mut entries: BTreeMap<String, PublishedPath> = manifest
-        .entries
-        .into_iter()
-        .map(|entry| (casefold(&entry.relative_path), entry))
-        .collect();
-    for plan in planned {
-        publish_one(destination, &plan, &request.materialization_id)?;
-        let owner = match &plan.action {
-            PublishAction::Identical {
-                preserve_owner: Some(owner),
-            } => owner.clone(),
-            _ => request.owner.clone(),
-        };
-        entries.insert(
-            casefold(&plan.payload.relative_path),
-            PublishedPath {
-                relative_path: plan.payload.relative_path,
-                owner,
-                length: plan.payload.length,
-                sha256: plan.payload.sha256,
-            },
-        );
-    }
-    let mut manifest = PublicationManifest {
-        version: 1,
-        entries: entries.into_values().collect(),
-    };
-    manifest
-        .entries
-        .sort_by_key(|entry| casefold(&entry.relative_path));
-    persist_manifest(
-        &state_directory,
-        &manifest_path,
-        &manifest,
-        &request.materialization_id,
-    )?;
-    Ok(MaterializationResult {
+    Ok(PlannedMaterialization {
+        destination,
+        materialization_id: &request.materialization_id,
+        owner: &request.owner,
+        state_directory,
         manifest_path,
         manifest,
+        planned,
     })
+}
+
+impl PlannedMaterialization<'_> {
+    /// Publishes the planned files and then their manifest.
+    pub fn publish(self) -> Result<MaterializationResult, AcquireError> {
+        let Self {
+            destination,
+            materialization_id,
+            owner: incoming_owner,
+            state_directory,
+            manifest_path,
+            manifest,
+            planned,
+        } = self;
+        for plan in &planned {
+            remove_owned_temporary(destination, plan, materialization_id)?;
+        }
+
+        let mut entries: BTreeMap<String, PublishedPath> = manifest
+            .entries
+            .into_iter()
+            .map(|entry| (casefold(&entry.relative_path), entry))
+            .collect();
+        for plan in planned {
+            publish_one(destination, &plan, materialization_id)?;
+            let owner = match &plan.action {
+                PublishAction::Identical {
+                    preserve_owner: Some(owner),
+                } => owner.clone(),
+                _ => incoming_owner.to_owned(),
+            };
+            entries.insert(
+                casefold(&plan.payload.relative_path),
+                PublishedPath {
+                    relative_path: plan.payload.relative_path,
+                    owner,
+                    length: plan.payload.length,
+                    sha256: plan.payload.sha256,
+                },
+            );
+        }
+        let mut manifest = PublicationManifest {
+            version: 1,
+            entries: entries.into_values().collect(),
+        };
+        manifest
+            .entries
+            .sort_by_key(|entry| casefold(&entry.relative_path));
+        persist_manifest(
+            &state_directory,
+            &manifest_path,
+            &manifest,
+            materialization_id,
+        )?;
+        Ok(MaterializationResult {
+            manifest_path,
+            manifest,
+        })
+    }
 }
 
 fn validate_identifier(value: &str, label: &str) -> Result<(), AcquireError> {

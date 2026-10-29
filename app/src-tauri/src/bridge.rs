@@ -1503,6 +1503,23 @@ impl NativeBridge {
         result
     }
 
+    /// End-summary lines of one completed installation, in English: mods left out because their
+    /// downloads could not be used, and downloads or tools that differed from their reviewed
+    /// versions. Empty when the installation used exactly the reviewed files.
+    pub fn installation_summary(&self, install_id: &str) -> Result<Vec<String>, CommandError> {
+        let record = self.available_managed_install(install_id)?.record;
+        bg_engine::cli::report_managed_install(&record.managed_root)
+            .map(|report| report.notes)
+            .map_err(|error| {
+                CommandError::new(
+                    "installation_summary_unavailable",
+                    "The summary of this installation could not be read.",
+                    "The installation itself is complete. Export diagnostics from My installs if this keeps happening.",
+                    error.to_string(),
+                )
+            })
+    }
+
     /// Launches the exact verified InfinityLoader path owned by one available registry id. A
     /// standalone installation without EEex launches its game's own verified executable.
     pub fn launch_install(

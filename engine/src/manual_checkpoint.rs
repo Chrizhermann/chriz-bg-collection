@@ -976,25 +976,35 @@ pub fn accept(
 }
 
 /// Include accepted additions exactly at their checkpoint, preserving both log histories.
+///
+/// `frozen` is the frozen execution plan, which places every checkpoint; `plan` is the part
+/// of it being installed, which lacks the runs of left-out mods. A checkpoint after a
+/// left-out run keeps its place between the installed runs around it.
 pub fn expected_components(
     root: &Path,
+    frozen: &InstallPlan,
     plan: &InstallPlan,
     mods: &BTreeMap<String, ModFile>,
     checkpoints: &[FrozenCheckpoint],
     target: GameRoot,
 ) -> Result<Vec<LogComponentReceipt>, String> {
     let mut expected = Vec::new();
-    for run in &plan.runs {
-        if run.target != target {
+    for frozen_run in &frozen.runs {
+        if frozen_run.target != target {
             continue;
         }
-        let installer = mods.get(&run.mod_id).ok_or("Missing frozen installer.")?;
-        expected.extend(run.components.iter().map(|component| LogComponentReceipt {
-            tp2: installer.tp2.replace('\\', "/").to_ascii_lowercase(),
-            language: installer.language,
-            component: *component,
-        }));
-        for checkpoint in checkpoints.iter().filter(|c| c.after_run_id == run.run_id) {
+        if let Some(run) = plan.runs.iter().find(|run| run.run_id == frozen_run.run_id) {
+            let installer = mods.get(&run.mod_id).ok_or("Missing frozen installer.")?;
+            expected.extend(run.components.iter().map(|component| LogComponentReceipt {
+                tp2: installer.tp2.replace('\\', "/").to_ascii_lowercase(),
+                language: installer.language,
+                component: *component,
+            }));
+        }
+        for checkpoint in checkpoints
+            .iter()
+            .filter(|c| c.after_run_id == frozen_run.run_id)
+        {
             if let Some(accepted) = acceptance(root, checkpoint)? {
                 expected.extend(accepted.additions.into_iter().map(|addition| {
                     LogComponentReceipt {

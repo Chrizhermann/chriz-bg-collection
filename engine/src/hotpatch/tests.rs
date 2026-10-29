@@ -5,13 +5,15 @@ use super::catalog::{self, Catalog};
 use super::transaction::{self, History, Prepared, Sources, State};
 use super::*;
 use crate::{
+    acquire::AcceptedContent,
     cli::VerifiedInstalledBaseline,
     digest::plan_digest,
     game_files,
     manifest::GameRoot,
     receipt::{
-        FinalLogReceipt, FinalReceiptState, InstallReceipt, LogComponentReceipt, ReceiptOutcome,
-        ReceiptVersions, RECEIPT_SCHEMA_VERSION,
+        ArtifactCacheOutcome, ArtifactReceipt, DownloadIdentity, FinalLogReceipt,
+        FinalReceiptState, InstallReceipt, LeftOutReceipt, LogComponentReceipt, ReceiptOutcome,
+        ReceiptVersions, ReviewedTool, ServedDifference, WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
     },
     recipe_view::evaluate_preset,
     registry::REGISTRY_SCHEMA_VERSION,
@@ -210,6 +212,8 @@ impl Fixture {
             artifacts: Vec::new(),
             weidu_tools: Vec::new(),
             runs: Vec::new(),
+            left_out: Vec::new(),
+            installed_plan: None,
             final_state: Some(FinalReceiptState {
                 logs: vec![FinalLogReceipt {
                     target: GameRoot::Bg2,
@@ -870,4 +874,301 @@ fn checking_reads_but_never_writes() {
     assert_eq!(f.now(), before);
     assert!(!f.root().join(".chriz/hotpatches").exists());
     f.assert_untouched();
+}
+
+const TOOL_ID: &str = "weidu-249-amd64";
+
+/// The receipt record of a download whose official link served `served` instead of the pin.
+fn changed_download(manifest: &crate::Manifest, id: &str, served: &[u8]) -> ArtifactReceipt {
+    let artifact = &manifest.artifacts[id];
+    ArtifactReceipt {
+        id: id.to_owned(),
+        version: artifact.version.clone(),
+        original_url: artifact.source.url.clone(),
+        final_url: artifact.source.url.clone(),
+        length: served.len() as u64,
+        sha256: sha256_bytes(served),
+        cache_outcome: ArtifactCacheOutcome::Downloaded,
+        served_difference: Some(ServedDifference {
+            reviewed: DownloadIdentity {
+                filename: artifact.source.expected_filename.clone(),
+                length: artifact.source.expected_length.unwrap(),
+                sha256: artifact.source.sha256.clone(),
+            },
+            served: DownloadIdentity {
+                filename: Some(format!("{id}-newer.zip")),
+                length: served.len() as u64,
+                sha256: sha256_bytes(served),
+            },
+            unreviewed_hosts: Vec::new(),
+        }),
+    }
+}
+
+/// The WeiDU program record of an installation whose WeiDU download changed to `program`.
+fn changed_weidu(manifest: &crate::Manifest, program: &[u8]) -> WeiDuToolReceipt {
+    let spec = manifest.artifacts[TOOL_ID].tool.clone().unwrap();
+    WeiDuToolReceipt {
+        id: TOOL_ID.into(),
+        version: "25000".into(),
+        length: program.len() as u64,
+        sha256: sha256_bytes(program),
+        reviewed: Some(ReviewedTool {
+            version: spec.weidu_version,
+            length: spec.expected_length,
+            sha256: spec.sha256,
+        }),
+    }
+}
+
+/// `baseline` as the installer records it after leaving out `mod_id`, whose download could not
+/// be used: its runs are missing from the installed plan.
+fn leave_out(baseline: &mut VerifiedInstalledBaseline, mod_id: &str) {
+    let plan = &baseline.receipt.plan;
+    let runs = plan
+        .runs
+        .iter()
+        .filter(|run| run.mod_id == mod_id)
+        .map(|run| run.run_id.clone())
+        .collect::<Vec<_>>();
+    assert!(!runs.is_empty(), "{mod_id} is in the recommended setup");
+    let artifact_id = plan
+        .runs
+        .iter()
+        .find(|run| run.mod_id == mod_id)
+        .unwrap()
+        .artifact_id
+        .clone();
+    let installed = crate::resolve::InstallPlan {
+        runs: plan
+            .runs
+            .iter()
+            .filter(|run| run.mod_id != mod_id)
+            .cloned()
+            .collect(),
+    };
+    baseline.receipt.left_out.push(LeftOutReceipt {
+        artifact_id,
+        reason: "its official link now serves a different archive, which cannot be installed"
+            .into(),
+        runs,
+        changed_runs: Vec::new(),
+    });
+    baseline.receipt.installed_plan = Some(installed);
+}
+
+/// A mod of the recommended setup whose differences count: neither free nor required.
+fn counted_mod(f: &Fixture) -> String {
+    let rules = &f.catalog.gate;
+    let runs = &f.receipt.plan.runs;
+    let runs_of = |id: &str| runs.iter().filter(|run| run.mod_id == id).count();
+    runs.iter()
+        .map(|run| run.mod_id.clone())
+        .find(|id| {
+            !rules.free_mods.contains(id) && !rules.required_mods.contains(id) && runs_of(id) == 1
+        })
+        .expect("the recommended setup has a mod whose differences count")
+}
+
+#[test]
+fn an_installation_with_changed_downloads_is_offered_its_hotpatch() {
+    // What the official links served instead of the pins is the installation as published:
+    // it neither changes the recipe the rule identifies nor counts as a difference.
+    let f = Fixture::new();
+    let mut baseline = f.baseline();
+    let mod_artifact = f.receipt.plan.runs[0].artifact_id.clone();
+    baseline.receipt.artifacts = vec![
+        changed_download(&baseline.manifest, &mod_artifact, b"newer mod release"),
+        changed_download(&baseline.manifest, TOOL_ID, b"newer WeiDU release"),
+    ];
+    baseline.receipt.weidu_tools = vec![changed_weidu(&baseline.manifest, b"MZ newer WeiDU")];
+    baseline.replacements.insert(
+        f.receipt.plan.runs[0].run_id.clone(),
+        crate::session::FrozenIdentity {
+            id: mod_artifact,
+            version: "newer".into(),
+            sha256: sha256_bytes(b"newer mod release"),
+            length: 17,
+        },
+    );
+
+    let assessment = f.assess(baseline);
+
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+    assert!(assessment.notes.is_empty(), "{:?}", assessment.notes);
+    assert_eq!(assessment.base.unwrap().id, "iwd-fixture");
+    assert_eq!(assessment.next.unwrap().id, "belhifet-1");
+}
+
+#[test]
+fn a_mod_left_out_for_its_download_counts_like_one_the_player_left_out() {
+    let f = Fixture::new();
+    let id = counted_mod(&f);
+    let name = recipe().mods[&id].name.clone();
+    let mut baseline = f.baseline();
+    leave_out(&mut baseline, &id);
+    let assessment = f.assess(baseline);
+    assert!(assessment.refusals.is_empty(), "{:?}", assessment.refusals);
+    assert_eq!(
+        assessment.notes,
+        [format!(
+            "Allowed difference from the recommended setup (1 of at most 2): {name} left out."
+        )]
+    );
+    assert_eq!(assessment.next.unwrap().id, "belhifet-1");
+
+    let mut baseline = f.baseline();
+    leave_out(&mut baseline, "stratagems");
+    let refusals = f.assess(baseline).refusals.join(" ");
+    assert!(
+        refusals.contains("was left out. Hotpatches need it."),
+        "{refusals}"
+    );
+}
+
+#[test]
+fn a_hotpatch_needing_a_left_out_mod_is_refused() {
+    let f = Fixture::new();
+    let id = counted_mod(&f);
+    let component = f
+        .receipt
+        .plan
+        .runs
+        .iter()
+        .find(|run| run.mod_id == id)
+        .unwrap()
+        .components[0];
+    let mut catalog = f.catalog.clone();
+    catalog.hotpatches[0].requires_components = vec![catalog::ComponentRequirement {
+        mod_id: id.clone(),
+        any_of: vec![component],
+    }];
+    let needs = format!(
+        "This hotpatch needs {} with component {component}.",
+        recipe().mods[&id].name
+    );
+    let installed = gate::assess_with(&f.ctx(), &catalog, &f.history(), Ok(f.baseline()));
+    assert!(
+        !installed.refusals.contains(&needs),
+        "{:?}",
+        installed.refusals
+    );
+
+    let mut baseline = f.baseline();
+    leave_out(&mut baseline, &id);
+    let left_out = gate::assess_with(&f.ctx(), &catalog, &f.history(), Ok(baseline));
+    assert!(
+        left_out.refusals.contains(&needs),
+        "{:?}",
+        left_out.refusals
+    );
+}
+
+#[test]
+fn a_hotpatch_runs_with_the_weidu_the_installation_used() {
+    let manifest = recipe();
+    let artifact = &manifest.artifacts[TOOL_ID];
+    let spec = artifact.tool.as_ref().unwrap();
+    let mut receipt = Fixture::new().receipt;
+    let reviewed = transaction::installed_tool(&receipt, artifact, spec).unwrap();
+    assert_eq!(
+        reviewed,
+        transaction::InstalledTool {
+            served: None,
+            executable_sha256: spec.sha256.clone(),
+        }
+    );
+
+    receipt.artifacts = vec![changed_download(&manifest, TOOL_ID, b"newer WeiDU release")];
+    let missing = transaction::installed_tool(&receipt, artifact, spec).unwrap_err();
+    assert!(missing.contains("names no WeiDU program"), "{missing}");
+
+    receipt.weidu_tools = vec![changed_weidu(&manifest, b"MZ newer WeiDU")];
+    assert_eq!(
+        transaction::installed_tool(&receipt, artifact, spec).unwrap(),
+        transaction::InstalledTool {
+            served: Some(AcceptedContent {
+                length: 19,
+                sha256: sha256_bytes(b"newer WeiDU release"),
+            }),
+            executable_sha256: sha256_bytes(b"MZ newer WeiDU"),
+        }
+    );
+}
+
+/// A ZIP holding `name` with `bytes`.
+fn zip_of(name: &str, bytes: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    writer
+        .start_file(
+            name,
+            zip::write::SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored),
+        )
+        .unwrap();
+    writer.write_all(bytes).unwrap();
+    writer.finish().unwrap().into_inner()
+}
+
+/// Serves `body` once over loopback HTTP; returns the server's address.
+fn serve_once(body: Vec<u8>) -> (String, std::thread::JoinHandle<()>) {
+    use std::io::{BufRead, Write};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = format!("http://{}", listener.local_addr().unwrap());
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut reader = std::io::BufReader::new(stream.try_clone().unwrap());
+        let mut line = String::new();
+        while reader.read_line(&mut line).unwrap() > 0 && line != "\r\n" {
+            line.clear();
+        }
+        write!(
+            stream,
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        )
+        .unwrap();
+        stream.write_all(&body).unwrap();
+    });
+    (address, server)
+}
+
+#[test]
+fn a_hotpatch_unpacks_exactly_the_changed_weidu_download_the_installation_used() {
+    let f = Fixture::new();
+    let program = b"MZ newer WeiDU stand-in; never executed";
+    let served = zip_of("WeiDU-Windows-250/weidu.exe", program);
+    let (address, server) = serve_once(served.clone());
+    let mut tool = recipe().artifacts[TOOL_ID].clone();
+    tool.source.url = format!("{address}/WeiDU-Windows-amd64.zip");
+    let accepted = AcceptedContent {
+        length: served.len() as u64,
+        sha256: sha256_bytes(&served),
+    };
+
+    let root = transaction::unpack_served(&f.ctx(), &tool, &accepted).unwrap();
+    server.join().unwrap();
+    let executable = root.join(&tool.tool.as_ref().unwrap().executable);
+    assert_eq!(files::hash(&executable).unwrap(), sha256_bytes(program));
+    // A later hotpatch finds the same file in the download folder; nothing is served now.
+    assert_eq!(
+        transaction::unpack_served(&f.ctx(), &tool, &accepted).unwrap(),
+        root
+    );
+
+    // Without that file, a link that now serves yet another release is not used instead.
+    let other = f.temp.path().join("other-cache");
+    let ctx = Context {
+        cache: &other,
+        ..f.ctx()
+    };
+    let (address, server) = serve_once(zip_of("WeiDU/weidu.exe", b"MZ yet another WeiDU"));
+    tool.source.url = format!("{address}/WeiDU-Windows-amd64.zip");
+    let error = transaction::unpack_served(&ctx, &tool, &accepted).unwrap_err();
+    server.join().unwrap();
+    assert!(
+        error.contains("runs only with the WeiDU the game was installed with"),
+        "{error}"
+    );
 }
