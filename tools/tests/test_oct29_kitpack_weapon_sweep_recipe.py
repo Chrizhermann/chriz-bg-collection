@@ -13,6 +13,10 @@ Samurai 1010 and Favored Soul 30001, which the collection does not offer. The fe
 requires EEex and 20000 or 8204. It is the last component of the late tweak run, which follows
 Tweaks Anthology and SCS; 1110 (Samurai items) stays unavailable with 1010.
 
+The Kitpack fork chriz.5 (October 29, test_oct29_kitpack_chriz5_pin_recipe) includes the
+generator in the same components, declares tweak 7205 between 7203 and 8204, and ends
+1010000 with 7205's pass; 1010000 stays the last component of the late run.
+
 Static recipe checks for both profiles only. Nothing here is a game installation.
 """
 
@@ -32,7 +36,9 @@ SWEEP = "feature:artisanskitpack-tweak:component-1010000"
 EEEX_CORE = "feature:eeex:mandatory-components"
 ELDRITCH_KNIGHT = "feature:artisanskitpack:component-20000"
 ARCANE_TRICKSTER = "feature:artisanskitpack-tweak:component-8204"
-LATE_RUN = [51010, 12012, 3202, 3302, 8204, 1010000]
+# chriz.5's 7205 joins the run before 8204; it is checked against its own record.
+LATER = {7205}
+LATE_RUN = [51010, 12012, 3202, 3302, 7205, 8204, 1010000]
 
 
 def _load(path: Path) -> dict:
@@ -83,7 +89,9 @@ class Oct29KitpackWeaponSweepTests(unittest.TestCase):
         native = self.tweak_record["native_components"]
         self.assertIn(1010000, native)
         self.assertEqual(NATIVE_RUN_ORDERS[RUN], LATE_RUN)
-        self.assertEqual(LATE_RUN, [component for component in native if component in LATE_RUN])
+        self.assertEqual([component for component in LATE_RUN if component not in LATER],
+                         [component for component in native if component in LATE_RUN])
+        self.assertEqual(LATE_RUN[-1], 1010000)
         for directory in self.directories:
             with self.subTest(profile=str(directory)):
                 mod = _load(directory / "mods/artisanskitpack-tweak.toml")

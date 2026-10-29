@@ -372,7 +372,7 @@ args = []
 run_id = "artisanskitpack-tweak-late-bg2"
 mod_id = "artisanskitpack-tweak"
 phase = "main"
-components = [51010, 12012, 3202, 3302, 8204, 1010000]
+components = [51010, 12012, 3202, 3302, 7205, 8204, 1010000]
 args = []
 
 [[runs]]
@@ -4384,6 +4384,18 @@ readiness = "ready"
 parent = "mod:artisanskitpack-tweak"
 requires = ["feature:artisanskitpack:component-3002", "feature:eeex:mandatory-components"]
 components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 3302 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-7205"
+title = "Katana fix for items and kits from later mods"
+description = "The Invisible Blade and Bardic Wonders' Dancer, who may not wear armor, can also use the katanas and other items that mods installed after the Kitpack add, such as SCS's Drow Katana and Tweaks Anthology's two-handed katanas. Every other kit stays blocked where it was."
+category = "kits"
+source_label = "Artisan kit compatibility tweaks"
+group_label = "Kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 7205 }]
 
 [[features]]
 id = "feature:artisanskitpack-tweak:component-8204"

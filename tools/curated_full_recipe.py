@@ -45,7 +45,7 @@ BG1NPC_NATIVE_ORDER = [
     240, 241, 150, 155, 160, 200,
 ]
 
-# Exact pinned Artisan v4.81a-dev.85928f9-chriz.4 (same order as chriz.1) and Randomiser v8.1.1
+# Exact pinned Artisan v4.81a-dev.85928f9-chriz.5 (same order as chriz.1; its tweak TP2 adds 7205) and Randomiser v8.1.1
 # TP2 order, restricted to offered choices. Re-audit a newly offered ID instead of guessing its
 # position.
 NATIVE_RUN_ORDERS = {
@@ -58,7 +58,9 @@ NATIVE_RUN_ORDERS = {
     ],
     # The tweak TP2 declares the weapon-usability sweep 1010000 after 8204 (offered from
     # 2026-10-29); it must stay last so that it also covers 8204's thief equipment.
-    "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 8204, 1010000],
+    # chriz.5 (October 29) declares the Invisible Blade's katana fix for later mods 7205
+    # between 7203 and 8204.
+    "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 7205, 8204, 1010000],
     # Modpack alpha.12 (October 14) declares companion stats 230-234 right after 225.
     "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234],
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;

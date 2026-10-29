@@ -9,7 +9,9 @@ Nothing here is a game installation or gameplay acceptance. The Artisan's Kitpac
 chriz.4 (October 27, test_oct27_alpha22_pins_recipe) supersedes the chriz.3 pin and keeps
 its components and order, and BG Rebalance v0.8.6 (October 28, same test) supersedes the
 v0.8.5 pin, keeps its components and order and adds the Time Stop and Haste effect clocks
-360 after 340. The chriz.3 and v0.8.5 records and artifacts stay as verified here.
+360 after 340. The chriz.3 and v0.8.5 records and artifacts stay as verified here. The
+Kitpack fork chriz.5 (October 29, test_oct29_kitpack_chriz5_pin_recipe) then supersedes
+chriz.4 and adds tweak 7205, which is checked against its own record.
 """
 
 from pathlib import Path
@@ -47,6 +49,12 @@ SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.7"
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.8"
 LATER_COMPONENTS["chriz-bg-rebalance"] = {360, 410, 411}
 LATER_ROWS["CHRIZ-BG-REBALANCE"] = {360, 410, 411}
+# The October 29 Kitpack intake (test_oct29_kitpack_chriz5_pin_recipe) replaces chriz.4 with
+# chriz.5 for all three installers; its tweak TP2 declares 7205 between 7203 and 8204.
+SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
+                   for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
+LATER_COMPONENTS["artisanskitpack-tweak"] = {7205}
+LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {

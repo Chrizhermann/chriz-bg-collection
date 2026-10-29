@@ -1,7 +1,7 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1350
+expected_rows = 1351
 expected_choice_groups = 88
 expected_optional_none_groups = 31
 expected_fixed_groups = 12
@@ -854,6 +854,11 @@ rows = ["ARTISANSKITPACK_TWEAK:3302"]
 id = "feature:artisanskitpack-tweak:component-7203"
 kind = "feature"
 rows = ["ARTISANSKITPACK_TWEAK:7203"]
+
+[[targets]]
+id = "feature:artisanskitpack-tweak:component-7205"
+kind = "feature"
+rows = ["ARTISANSKITPACK_TWEAK:7205"]
 
 [[targets]]
 id = "feature:artisanskitpack-tweak:component-8204"

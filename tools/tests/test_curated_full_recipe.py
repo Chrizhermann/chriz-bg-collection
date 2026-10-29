@@ -411,7 +411,12 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # requiring EEex, Yeslick's Fighter-Alaghor and Eldritch Knight 20000 or
                 # Arcane Trickster 8204; without them the Sirene digest
                 # 042dc03d9670386688578abb9933e2bd12ce4f6d1305ef736fc881c9cdfbdc7b returns.
-                "014a25b8005ccd293859c4659f88d60b373cec0eb007e0097e2e717eeb07ece7",
+                # October 29, Artisan's Kitpack chriz.5 pin: default katana fix for later mods
+                # 7205 in the late tweak run before 8204 (Christopher, 2026-10-29), without
+                # requirements; without its feature, run component and preset entry the
+                # v0.8.8 digest 014a25b8005ccd293859c4659f88d60b373cec0eb007e0097e2e717eeb07ece7
+                # returns.
+                "9a03e46d776b7885bdb5bf426db90dd8aeb9feb64b2c1b32b49201766a32e77a",
             )
 
             legacy_bg1npc_groups = {

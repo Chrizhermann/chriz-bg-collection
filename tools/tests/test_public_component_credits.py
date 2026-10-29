@@ -78,7 +78,9 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(actual["sirene-bg1-bg2"], [0, 3, 6])
         # October 29: the Rebalance v0.8.8 pin adds default 410 and 411 after 302.
         self.assertEqual(actual["chriz-bg-rebalance-bg2"][actual["chriz-bg-rebalance-bg2"].index(302) + 1:][:2], [410, 411])
-        self.assertEqual(self.result["componentCount"], 475)
+        # October 29: the Kitpack chriz.5 pin adds default 7205 before 8204 in the late tweak run.
+        self.assertEqual(actual["artisanskitpack-tweak-late-bg2"][-3:], [7205, 8204, 1010000])
+        self.assertEqual(self.result["componentCount"], 476)
         self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
