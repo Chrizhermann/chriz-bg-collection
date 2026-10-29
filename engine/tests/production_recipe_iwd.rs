@@ -670,7 +670,7 @@ const RECOMMENDED: &[(&str, &[u32])] = &[
     ("eeex-main", &[0, 1, 2, 3, 4, 5, 6, 7, 8]),
     ("bubb-spell-menu-main", &[0]),
     ("iwdgo-main", &[0]),
-    ("ub-iwd-main", &[300, 700, 800]),
+    ("ub-iwd-main", &[700, 800]),
     ("minervanpc-main", &[0]),
     ("karihinpc-main", &[0]),
     ("athanasiosnpc-main", &[0, 1]),
@@ -956,7 +956,7 @@ fn resolves_the_exact_recommended_plan() {
         .iter()
         .map(|run| run.components.len())
         .sum::<usize>();
-    assert_eq!(components, 126);
+    assert_eq!(components, 125);
 }
 
 #[test]

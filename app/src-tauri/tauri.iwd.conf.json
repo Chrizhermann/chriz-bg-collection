@@ -1,6 +1,6 @@
 {
   "productName": "Chriz Easy IWD",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "mainBinaryName": "chriz-easy-iwd",
   "identifier": "dev.chrizhermann.iwdcollection",
   "build": {
