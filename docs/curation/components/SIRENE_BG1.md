@@ -83,15 +83,16 @@ listed below; everything else ran natively.
 - **SoD to SoA, with Remix `290`.** Simulated: chapter 12, plot 581 and the start of the
   victory cutscene `bdcut59a`. From there it ran natively:
   - Sirene's remark set the plot to 587, and the talks with de Lancie and Dazzo ended
-    SoD. The character was moved next to de Lancie in the same area, because the walk
-    got stuck in the crowd.
+    SoD. The walk to de Lancie got stuck in the crowd, so the character was moved next
+    to de Lancie, and later next to Dazzo, within the same area.
   - SoA's opening played to the end.
   - In the Order of the Most Radiant Heart (`AR0903`), Sirene BG2 brought back the same
     creature, with her SoD experience, kit and portrait and new gear. She joined.
   - A save census found exactly one Sirene in the game.
   - Her SoD armour and Brimstone +1 wait in SoA's import chest, so with her new gear
-    there are two Brimstones. Without `290` she leaves the party before the gear is
-    banked. This question waits in FOLLOW_UPS.
+    there are two Brimstones. Without `290`, her own `bdcut61` script makes her leave
+    the party and destroys her equipment before the gear is banked (read from the
+    script, not run). This question waits in FOLLOW_UPS.
 - **Not covered:**
   - the Cavalier, Inquisitor and Undead Hunter options;
   - a Sirene recruited and then left at a camp;

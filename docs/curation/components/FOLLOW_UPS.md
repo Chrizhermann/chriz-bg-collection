@@ -719,7 +719,9 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   - She is still in the party when `290`'s ending banks the party's gear. So her armour
     and her sword Brimstone +1 wait in the import chest of the first SoA dungeon.
   - Sirene NPC for BG2 then gives her new gear, so the player gets a second Brimstone +1.
-  - Without `290` she leaves the party before the bank and nothing of hers is banked.
+  - Without `290`, her own `bdcut61` script makes her leave the party and destroys her
+    equipment before the bank, so nothing of hers is banked (read from the script; the
+    ending without `290` was not run).
   - Accept this, or change `290` (our mod)?
 - [ ] Sirene NPC for BG:EE, as-is (lab, 2026-10-29): a Sirene the party never recruited
   appears in the Iron Throne building and again at the first SoD camp. The first copy
