@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{Cursor, Write};
 use std::path::PathBuf;
@@ -7,8 +7,45 @@ use bg_engine::updates::{
     classify_updates, diff_recipe_packages, ensure_change_coverage, load_release, RecipeChange,
     RecipeDifference, RecipeRelease, SaveApplicability, UpdateDisposition, Urgency,
 };
+use semver::Version;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
+
+/// Subject kinds that `diff_recipe_packages` emits. A ledger cover of any other kind can
+/// never match a recipe difference, so it covers nothing.
+const DIFF_SUBJECT_KINDS: [&str; 5] = ["artifact", "feature", "game-profile", "input", "run"];
+
+/// Covers of other kinds in ledgers that are already published. Those ledgers are history
+/// and stay unchanged (#7); the entries are harmless, because coverage only requires every
+/// real difference to be covered. No new ledger may add one.
+const SHIPPED_DEAD_COVERS: [(&str, &str); 4] = [
+    ("0.1.0-alpha.1", "release:initial"),
+    ("0.1.0-alpha.12", "mod:chriz-sod-remix"),
+    ("0.1.0-alpha.12", "release:customization-presentation"),
+    ("0.1.0-alpha.13", "mod:chriz-bg-rebalance"),
+];
+
+/// Recorded semantic differences of released recipes, as `{version, from_commit,
+/// to_commit, subjects}` objects in version order.
+fn released_snapshots() -> Vec<serde_json::Value> {
+    let snapshots: serde_json::Value = serde_json::from_str(include_str!(
+        "fixtures/updates/released-recipe-differences.json"
+    ))
+    .unwrap();
+    snapshots.as_array().unwrap().clone()
+}
+
+fn snapshot_differences(snapshot: &serde_json::Value) -> Vec<RecipeDifference> {
+    snapshot["subjects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|subject| RecipeDifference {
+            subject: subject.as_str().unwrap().to_owned(),
+            cosmetic_only: false,
+        })
+        .collect()
+}
 
 fn fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -201,6 +238,15 @@ fn semantic_diff_and_coverage_include_features_artifacts_runs_inputs_and_game_pr
         .iter()
         .find(|difference| difference.subject == "feature:f")
         .is_some_and(|difference| difference.cosmetic_only));
+    // This payload pair changes every kind of address, so a new kind fails here until
+    // DIFF_SUBJECT_KINDS, which the ledger cover check uses, names it too.
+    assert_eq!(
+        differences
+            .iter()
+            .map(|difference| difference.subject.split_once(':').unwrap().0)
+            .collect::<BTreeSet<_>>(),
+        BTreeSet::from(DIFF_SUBJECT_KINDS)
+    );
 
     let mut ledger = release("0.1.0-alpha.1", Some("0.1.0-alpha.0"), "0.1.0");
     ledger.changes[0].covers = differences
@@ -224,7 +270,7 @@ fn no_later_releases_is_up_to_date() {
 }
 
 #[test]
-fn draft_alpha14_ledger_covers_armor_and_bardic_update_addresses() {
+fn alpha14_ledger_covers_armor_and_bardic_update_addresses() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let ledger = load_release(
         &root.join("recipes/curated-full-current/releases/v0.1.0-alpha.14/ledger.toml"),
@@ -405,6 +451,99 @@ fn alpha20_requires_the_feature_group_app_and_waits_for_the_next_playthrough() {
 }
 
 #[test]
+fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_playthrough() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let curated = root.join("recipes/curated-full-current");
+    let ledger = load_release(&curated.join("releases/v0.1.0-alpha.22/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.0-alpha.22/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.version, "0.1.0-alpha.22");
+    assert_eq!(
+        bg_engine::cli::recipe_release_version(&curated)
+            .unwrap()
+            .as_deref(),
+        Some("0.1.0-alpha.22")
+    );
+    // Alpha.21 was an app-only release that shipped the alpha.20 recipe.
+    assert!(!curated.join("releases/v0.1.0-alpha.21").exists());
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0-alpha.20"));
+
+    // The alpha.21 app cannot use this recipe: its engine rejects Challenge Mode's
+    // `variants` and the `config_files` of Tweaks Anthology 3347, and without them its
+    // public-alpha validation reports the quest mods' defaults as omitted.
+    let old_app = classify_updates(
+        "0.1.0-alpha.20",
+        "0.1.0-alpha.21",
+        std::slice::from_ref(&ledger),
+    )
+    .unwrap();
+    assert_eq!(old_app.disposition, UpdateDisposition::AppUpdateRequired);
+    assert_eq!(
+        old_app.minimum_app_version.as_deref(),
+        Some("0.1.0-alpha.22")
+    );
+    let new_app = classify_updates(
+        "0.1.0-alpha.20",
+        "0.1.0-alpha.22",
+        std::slice::from_ref(&ledger),
+    )
+    .unwrap();
+    assert_eq!(new_app.latest_version.as_deref(), Some("0.1.0-alpha.22"));
+    assert_eq!(
+        new_app.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(new_app.changes, ledger.changes);
+    // Everything in this release is install-time content for new installations.
+    assert!(ledger
+        .changes
+        .iter()
+        .all(|change| change.save_applicability == SaveApplicability::NextPlaythrough));
+
+    // An alpha.19 installation that skipped alpha.20 gets both releases once, in order.
+    let alpha20 = load_release(&curated.join("releases/v0.1.0-alpha.20/ledger.toml")).unwrap();
+    let skipped = classify_updates(
+        "0.1.0-alpha.19",
+        "0.1.0-alpha.22",
+        &[ledger.clone(), alpha20.clone()],
+    )
+    .unwrap();
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.0-alpha.22"));
+    assert_eq!(
+        skipped.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(
+        skipped.changes,
+        [alpha20.changes, ledger.changes.clone()].concat()
+    );
+
+    // The ledger covers the recorded alpha.20 -> alpha.22 differences and nothing else.
+    // They were taken from payloads that chriz-bg-author package-recipe built from the
+    // recipe trees of both commits; e0b5116 is the recipe that app alpha.20 and alpha.21
+    // shipped.
+    let snapshot = released_snapshots()
+        .into_iter()
+        .find(|snapshot| snapshot["version"] == "0.1.0-alpha.22")
+        .expect("the alpha.22 differences are recorded");
+    assert_eq!(snapshot["from_commit"], "e0b5116");
+    let differences = snapshot_differences(&snapshot);
+    assert_eq!(differences.len(), 229);
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    assert_eq!(
+        ledger
+            .changes
+            .iter()
+            .flat_map(|change| change.covers.iter().map(String::as_str))
+            .collect::<BTreeSet<_>>(),
+        differences
+            .iter()
+            .map(|difference| difference.subject.as_str())
+            .collect::<BTreeSet<_>>()
+    );
+}
+
+#[test]
 fn coverage_error_names_uncovered_subject() {
     let differences = vec![RecipeDifference {
         subject: "run:missing".to_owned(),
@@ -418,31 +557,94 @@ fn coverage_error_names_uncovered_subject() {
 }
 
 #[test]
+fn ledger_covers_name_only_subject_kinds_the_recipe_diff_emits() {
+    // Authoring check over both profiles. Runtime loading stays tolerant: an installed app
+    // must not refuse a published ledger over a cover that merely matches nothing.
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let shipped = SHIPPED_DEAD_COVERS
+        .iter()
+        .map(|(version, cover)| ((*version).to_owned(), (*cover).to_owned()))
+        .collect::<BTreeSet<_>>();
+    for profile in ["manifest", "recipes/curated-full-current"] {
+        let mut ledgers = 0;
+        let mut dead = BTreeSet::new();
+        for entry in fs::read_dir(root.join(profile).join("releases")).unwrap() {
+            let path = entry.unwrap().path().join("ledger.toml");
+            if !path.is_file() {
+                continue;
+            }
+            ledgers += 1;
+            let ledger = load_release(&path).unwrap();
+            for cover in ledger.changes.iter().flat_map(|change| &change.covers) {
+                let emitted = cover.split_once(':').is_some_and(|(kind, address)| {
+                    DIFF_SUBJECT_KINDS.contains(&kind) && !address.is_empty()
+                });
+                if !emitted {
+                    dead.insert((ledger.version.clone(), cover.clone()));
+                }
+            }
+        }
+        // alpha.1, alpha.12 to alpha.20 and alpha.22; published ledgers are never removed.
+        assert!(ledgers >= 11, "{profile}: only {ledgers} ledgers found");
+        assert_eq!(
+            dead, shipped,
+            "{profile}: covers that no recipe difference can match (kinds: {DIFF_SUBJECT_KINDS:?})"
+        );
+    }
+}
+
+#[test]
 fn released_history_covers_real_differences_and_skipping_versions_does_not_duplicate_changes() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     // Captured by comparing the exact recipe Git objects named in the fixture,
     // using diff_recipe_packages' subject rules; not inferred from the ledgers.
-    let snapshots: serde_json::Value = serde_json::from_str(include_str!(
-        "fixtures/updates/released-recipe-differences.json"
-    ))
-    .unwrap();
-    for snapshot in snapshots.as_array().unwrap() {
+    let snapshots = released_snapshots();
+    for snapshot in &snapshots {
         let version = snapshot["version"].as_str().unwrap();
         let ledger = load_release(&root.join(format!(
             "recipes/curated-full-current/releases/v{version}/ledger.toml"
         )))
         .unwrap();
-        let differences = snapshot["subjects"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|subject| RecipeDifference {
-                subject: subject.as_str().unwrap().to_owned(),
-                cosmetic_only: false,
-            })
-            .collect::<Vec<_>>();
-        ensure_change_coverage(&differences, &ledger).unwrap();
+        ensure_change_coverage(&snapshot_differences(snapshot), &ledger).unwrap();
     }
+
+    // No release gate can diff against the previous recipe (the app bundles the recipe
+    // directory and CI checks out one commit), so this fixture is the coverage gate. Every
+    // release from alpha.20 on needs its snapshot, recorded from the previous release's
+    // commit; alpha.17 to alpha.19 were never recorded.
+    let tracked_from = Version::parse("0.1.0-alpha.20").unwrap();
+    let recorded = snapshots
+        .iter()
+        .map(|snapshot| {
+            (
+                Version::parse(snapshot["version"].as_str().unwrap()).unwrap(),
+                snapshot,
+            )
+        })
+        .filter(|(version, _)| *version >= tracked_from)
+        .collect::<BTreeMap<_, _>>();
+    let mut released = fs::read_dir(root.join("recipes/curated-full-current/releases"))
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.join("ledger.toml").is_file())
+        .map(|path| load_release(&path.join("ledger.toml")).unwrap().version)
+        .map(|version| Version::parse(&version).unwrap())
+        .filter(|version| *version >= tracked_from)
+        .collect::<Vec<_>>();
+    released.sort();
+    assert_eq!(
+        recorded.keys().cloned().collect::<Vec<_>>(),
+        released,
+        "every release ledger from alpha.20 on needs its recorded differences"
+    );
+    for (previous, next) in recorded.values().zip(recorded.values().skip(1)) {
+        assert_eq!(
+            next["from_commit"], previous["to_commit"],
+            "{} must be recorded from the commit that {} shipped",
+            next["version"], previous["version"]
+        );
+    }
+
     let releases = (14..=18)
         .map(|number| {
             load_release(&root.join(format!(
