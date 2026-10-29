@@ -223,6 +223,9 @@ unchanged.
   - Mages can decline the Sphere stronghold (Multiple Strongholds).
   - Familiars no longer get the boosted hit points meant for party members.
   - The kit ability table change that SCS reads is labelled correctly.
+- **Customize (via cdtweaks.txt)** for party movement speed outside combat (Optional,
+  unchanged choice) now uses the collection's settings: 125% movement, no faster casting
+  and portrait icons on. Before, it installed the Tweaks Anthology's default of 200%.
 - **Modpack** (since alpha.12) also installs companion fixes `196`/`197` when only
   some of the files they patch are present, and says which ones it skipped.
 - **Campaign XP caps with banked XP** (Optional, experimental, unchanged choice)
@@ -351,9 +354,9 @@ unchanged.
 - Sirene NPC for BG:EE: development version `1c86000` (new). The collection pins this
   exact version because the last release, v3.1, installs on BG:EE only, not on EET.
 
-## Release-note entry (collection alpha.21)
+## Release-note entry (collection alpha.22)
 
-**Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
+**Collection alpha.22** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
 Rebalance to v0.8.8, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
 EEex to v1.3.1, BuffBot to v1.11.0, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
