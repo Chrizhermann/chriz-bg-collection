@@ -35,9 +35,10 @@ replaced. No component or decision changes.
   after SCS; weapons that runs after it add are not swept.
 - What `1010000` changed in the October 29 EET lab (curated Recommended with Sirene NPC
   for BG:EE from PR #58; every swept file compared with its state before the sweep): 20
-  items came under the Kitpack's weapon rules. The static analysis of 2026-10-26 named
-  Tweaks Anthology's two-handed axes and the Eldritch Knight with the Drow Katana; the
-  lab data corrects both.
+  items came under the Kitpack's weapon rules. A second, complete Recommended lab the
+  same day gave the identical result. The static analysis of 2026-10-26 named Tweaks
+  Anthology's two-handed axes and the Eldritch Knight with the Drow Katana; the lab data
+  corrects both.
   - IWDification's eight two-handed axes (`60` and `140`, curated recipe only) are no
     longer closed to clerics, mages and thieves, so the Priest of Tempus, the Eldritch
     Knight and the Eldritch Knight sorcerer can use them.

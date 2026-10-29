@@ -654,13 +654,14 @@ content, evaluated component by component (keep, fix or extend).
   `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first
   session and that the loader shows no log warning.
 - [ ] Visually verify the Evandra portrait override in game.
-- [ ] [Artisan's Kitpack](ARTISANSKITPACK_TWEAK.md) `1010000`: data check done in the
-  October 29 EET lab (curated Recommended with PR #58's Sirene order; the install
-  stopped later, at SoD Remix `290`, after the sweep had run). Every swept file was
-  compared with its state before the sweep: 20 items came under the Kitpack's weapon
-  rules, 806 more only got a duplicate weapon check, and the plain dagger, quarterstaff
-  and dart and the mage, sorcerer, monk and kit weapon grants did not change. Open:
-  repeat it in a complete Recommended lab.
+- [x] [Artisan's Kitpack](ARTISANSKITPACK_TWEAK.md) `1010000`: data check done in two
+  October 29 EET labs. The first (curated Recommended with PR #58's Sirene order)
+  stopped later, at SoD Remix `290`, after the sweep had run. The second, complete one
+  (with #58 and the SoD Remix v0.6.16 candidate) gave the identical result. Every swept
+  file was compared with its state before the sweep: 20 items came under the Kitpack's
+  weapon rules, 806 more only got a duplicate weapon check, and the plain dagger,
+  quarterstaff and dart and the mage, sorcerer, monk and kit weapon grants did not
+  change. Data only: no weapon was equipped in the game.
 
 ## Conditional/future feature gates
 
