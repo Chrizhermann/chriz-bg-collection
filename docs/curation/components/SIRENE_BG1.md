@@ -92,10 +92,13 @@ listed below; everything else ran natively.
   - In the Order of the Most Radiant Heart (`AR0903`), Sirene BG2 brought back the same
     creature, with her SoD experience, kit and portrait and new gear. She joined.
   - A save census found exactly one Sirene in the game.
-  - Her SoD armour and Brimstone +1 wait in SoA's import chest, so with her new gear
-    there are two Brimstones. Without `290`, her own `bdcut61` script makes her leave
-    the party and destroys her equipment before the gear is banked (read from the
-    script, not run). This question waits in FOLLOW_UPS.
+  - Her SoD armour and Brimstone +1 go where EET puts everything the party still
+    carries at the SoD-to-SoA transition: the invisible container `K#ImportContainer`
+    in the first SoA dungeon (`AR0602`; container type non-visible, in the map corner).
+    No script in the Recommended install hands its contents back, so no second
+    Brimstone reaches the player. Without `290`, her own `bdcut61` script makes her
+    leave the party and destroys her equipment before that move (read from the script,
+    not run). No change to `290`.
 - **Not covered:**
   - the Cavalier, Inquisitor and Undead Hunter options;
   - a Sirene recruited and then left at a camp;

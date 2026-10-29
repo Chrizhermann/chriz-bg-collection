@@ -24,10 +24,10 @@ be considered final:
   BG2/EET Sirene route. Decided 2026-10-29: Sirene NPC for BG:EE is a default in
   alpha.22, pinned at its EET-ready `master` commit `1c86000` (see
   [SIRENE_BG1](curation/components/SIRENE_BG1.md)). Its EET lab passed on 2026-10-29.
-- [ ] Two Sirene questions from that lab; details in his review queue in
-  [FOLLOW_UPS](curation/components/FOLLOW_UPS.md):
-  - accept the second Brimstone +1 that SoD Remix `290` causes, or change `290`;
-  - report the extra camp copy of a never-recruited Sirene upstream?
+- [ ] One Sirene question from that lab, in his review queue in
+  [FOLLOW_UPS](curation/components/FOLLOW_UPS.md): report the extra camp copy of a
+  never-recruited Sirene upstream? The second Brimstone from the same lab stays in
+  EET's invisible import container, so SoD Remix `290` stays as it is.
 - [ ] Choose exactly one restored-Bhaalspawn-powers provider: Ascension `40`
   (technical recommendation) or UB `19`.
 - [ ] Finish the remaining NPC edge cases: Sarah remains an Archer; Dynaheir gets Haste

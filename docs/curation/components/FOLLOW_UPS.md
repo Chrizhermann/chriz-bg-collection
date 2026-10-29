@@ -60,7 +60,8 @@ Cross-repository status. Component detail stays in the sections below and in the
        handover with SoD Remix `290` ([SIRENE_BG1](SIRENE_BG1.md), lab test).
      - **#58 merges only after the SoD Remix v0.6.16 pin.** With v0.6.15, `290` stops the
        installation on Sirene's victory remark (see Release gates).
-     - Two questions for Christopher came out of the lab (see his review queue).
+     - One question for Christopher came out of the lab (see his review queue); the
+       second Brimstone turned out to stay in EET's invisible import container.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
@@ -715,14 +716,16 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   BG2 mod: `0`, the Sirick portrait `3` and True Paladin `6` by default, Cavalier,
   Inquisitor and Undead Hunter `7`–`9` optional. See [SIRENE_BG1](SIRENE_BG1.md) and the
   alpha.22 item at the top. The EET lab passed on 2026-10-29.
-- [ ] Sirene in the SoD-to-SoA handover with SoD Remix `290` (lab, 2026-10-29):
-  - She is still in the party when `290`'s ending banks the party's gear. So her armour
-    and her sword Brimstone +1 wait in the import chest of the first SoA dungeon.
-  - Sirene NPC for BG2 then gives her new gear, so the player gets a second Brimstone +1.
-  - Without `290`, her own `bdcut61` script makes her leave the party and destroys her
-    equipment before the bank, so nothing of hers is banked (read from the script; the
-    ending without `290` was not run).
-  - Accept this, or change `290` (our mod)?
+- [x] Sirene in the SoD-to-SoA handover with SoD Remix `290` (lab, 2026-10-29):
+  - She is still in the party when the ending moves the party's remaining gear into
+    EET's invisible container `K#ImportContainer` in the first SoA dungeon. Nothing in
+    the Recommended install hands it back, so her SoD armour and Brimstone +1 stay out of
+    the player's reach and no second Brimstone appears.
+  - Without `290`, her own `bdcut61` script makes her leave the party and destroys that
+    gear first (read from the script; the ending without `290` was not run).
+  - No change to `290` (2026-10-29). Christopher: between SoD and SoA, leave things out
+    rather than add mechanics, checks or placed items. Remember when reworking the SoD
+    ending: `290` does not play `bdcut61`, so other mods' additions to it never run.
 - [ ] Sirene NPC for BG:EE, as-is (lab, 2026-10-29): a Sirene the party never recruited
   appears in the Iron Throne building and again at the first SoD camp. The first copy
   stays behind in the Iron Throne building. Report it upstream?
