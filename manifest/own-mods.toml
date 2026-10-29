@@ -1,0 +1,100 @@
+# Our own mods and the installers that ship them.
+#
+# Every mod released from Christopher's GitHub account counts as ours, forks included
+# (Christopher, 2026-10-28). When we pin a new release of one of them, it goes into every
+# installer in the same step. tools/own_mod_pins.py checks that, and that the pin is the
+# mod's newest release unless a hold below says why not. The rules: docs/own-mod-pins.md.
+#
+# The app does not read this file; it is not bundled.
+schema = 1
+account = "Chrizhermann"
+
+# The recipes each installer bundles (app/src-tauri/tauri*.conf.json). The historical
+# recipes/creator-full-current is not one: the app refuses it, and its old pins stay.
+[[installers]]
+id = "chriz-easy-bg"
+name = "Chriz Easy BG"
+recipes = ["manifest", "recipes/curated-full-current"]
+
+[[installers]]
+id = "chriz-easy-iwd"
+name = "Chriz Easy IWD"
+recipes = ["recipes/iwd-current"]
+# Chriz Easy IWD joins the next-release branch after CEBG alpha.22. Until its recipe is in
+# the working tree, the check reads it from this branch, and its pins go there in a
+# matching pull request.
+branch = "claude/iwdee-app"
+
+# `newest` says where a mod's newest release comes from: the release GitHub marks as
+# Latest (the default), or the highest version tag for a repository without releases.
+[[mods]]
+id = "buffbot"
+name = "BuffBot"
+repository = "Chrizhermann/bg-eeex-buffbot"
+
+[[mods]]
+id = "chriz-bg-modpack"
+name = "Chriz BG Modpack"
+repository = "Chrizhermann/chriz-bg-modpack"
+
+[[mods]]
+id = "chriz-bg-rebalance"
+name = "BG Rebalance"
+repository = "Chrizhermann/chriz-bg-rebalance"
+
+[[mods]]
+id = "chriz-sod-remix"
+name = "SoD Remix"
+repository = "Chrizhermann/chriz-sod-rebalance"
+
+[[mods]]
+id = "eeex-remote-console"
+name = "EEex Remote Console"
+repository = "Chrizhermann/eeex-remote-console"
+newest = "newest-tag"
+
+[[mods]]
+id = "chriz-bg-voicepacks"
+name = "Voicepacks"
+repository = "Chrizhermann/chriz-bg-voicepacks"
+
+[[mods]]
+id = "chriz-iwd-encounters"
+name = "Chriz IWD Encounters"
+repository = "Chrizhermann/chriz-iwd-encounters"
+
+[[mods]]
+id = "artisans-kitpack"
+name = "Artisan's Kitpack (our fork)"
+repository = "Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch"
+
+[[mods]]
+id = "bardic-wonders"
+name = "Bardic Wonders (our fork)"
+repository = "Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
+
+[[mods]]
+id = "spell-revisions"
+name = "Spell Revisions (our fork)"
+repository = "Chrizhermann/chriz-spell-revisions-patch"
+
+[[mods]]
+id = "item-randomiser"
+name = "Item Randomiser (our fork)"
+repository = "Chrizhermann/chriz-item-randomiser"
+
+# A hold keeps a mod's newest release out of the installers on purpose. It names that
+# release, why, and since when; `installers` lists each installer's pin while they differ.
+# Remove a hold in the pull request that ends it. Only Christopher decides a hold.
+[[holds]]
+mod = "buffbot"
+release = "v1.12.1"
+reason = "Christopher tests v1.12.1 himself first; then it goes into both installers together (Chriz Easy BG: PR #44, Chriz Easy IWD: PR #51). Meanwhile Chriz Easy BG keeps v1.11.0 and Chriz Easy IWD keeps v1.12.0, the first release with IWD support."
+decided = "2026-10-28"
+installers = { chriz-easy-bg = "v1.11.0", chriz-easy-iwd = "v1.12.0" }
+
+[[holds]]
+mod = "item-randomiser"
+release = "v1.0.2"
+reason = "v1.0.x is the Campaign Item Randomiser, which replaces Randomiser v8.1.1 only after its integration into the collection and a lab test."
+decided = "2026-10-25"

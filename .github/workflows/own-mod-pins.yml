@@ -1,0 +1,70 @@
+name: Own mod pins
+
+# Every installer pins the same, newest release of our own mods, unless a recorded hold in
+# manifest/own-mods.toml says why not (docs/own-mod-pins.md). Red when installers disagree,
+# when a change pins one of our mods but not its newest release, and in a release check;
+# otherwise a newer release only shows as a warning.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Release check (every mod on its newest release or held)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Same newest release of our mods in every installer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch the base of this change
+        id: base
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base=""
+          if [ "$EVENT" = "pull_request" ]; then
+            base="$PR_BASE"
+          elif [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            base="$BEFORE"
+          fi
+          if [ -n "$base" ]; then
+            if git fetch --no-tags --quiet --depth=1 origin "$base"; then
+              echo "sha=$base" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning title=Own mod pins::Could not fetch the base $base, so no pin counts as changed by this push."
+            fi
+          fi
+
+      - name: Check the pins of our own mods
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ steps.base.outputs.sha }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          args=(check --fetch --fetch-depth 1)
+          if [ -n "$BASE" ]; then args+=(--base "$BASE"); fi
+          if [ "$RELEASE" = "true" ]; then args+=(--release); fi
+          python -I tools/own_mod_pins.py "${args[@]}"
