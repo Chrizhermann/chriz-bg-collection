@@ -2,7 +2,9 @@
 
 Static recipe, selection, dependency and order checks for both recipe profiles only.
 The pin follows the October 23 publication; nothing here is a game installation or
-gameplay acceptance.
+gameplay acceptance. SoD Remix v0.6.16 (October 29, test_oct29_sod_remix_pin_recipe)
+supersedes the v0.6.15 pin and keeps its components and order; the v0.6.15 record and
+artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -18,6 +20,8 @@ ROOT = Path(__file__).resolve().parents[2]
 MOD_ID = "chriz-sod-remix"
 ARTIFACT_ID = "chriz-sod-remix-0.6.15"
 PREVIOUS_ARTIFACT_ID = "chriz-sod-remix-0.6.13"
+# The October 29 intake replaces v0.6.15 with v0.6.16, which keeps every component and the order.
+SUCCESSOR_ARTIFACT_ID = "chriz-sod-remix-0.6.16"
 SOD_RUN = "chriz-sod-remix-bg2"
 SOD = "feature:chriz-sod-remix:component-{}"
 BUNDLE = "feature:chriz-sod-remix:mandatory-components"
@@ -178,10 +182,12 @@ class Oct23SodRemixIntakeTests(unittest.TestCase):
         for component in IMOEN:
             self.assertEqual(targets[SOD.format(component)].rows, (RowKey("CHRIZ-SOD-REMIX", component),))
         catalog = (ROOT / "docs/curation/components/CHRIZ-SOD-REMIX.md").read_text(encoding="utf-8")
-        self.assertIn("Pinned public release **v0.6.15**", catalog)
+        # Pinned as v0.6.15 here; v0.6.16 replaced it on October 29 and the catalog keeps its history.
+        self.assertIn("v0.6.15 lets `256`\ninstall alongside Tweaks Anthology `3500`", catalog)
         self.assertNotIn("Pinned public release **v0.6.11**", catalog)
+        self.assertNotIn("Pinned public release **v0.6.15**", catalog)
 
-    def test_intake_evidence_matches_current_pins_and_native_order(self):
+    def test_intake_evidence_matches_the_kept_pins_and_native_order(self):
         record = self.record
         self.assertEqual(self.evidence["verified_on"], "2026-10-23")
         self.assertEqual(record["mod_id"], MOD_ID)
@@ -194,7 +200,7 @@ class Oct23SodRemixIntakeTests(unittest.TestCase):
         for profile in (ROOT / "manifest", ROOT / "recipes/curated-full-current", self.output):
             with self.subTest(profile=str(profile)):
                 mod = tomllib.loads((profile / f"mods/{MOD_ID}.toml").read_text(encoding="utf-8"))
-                self.assertEqual(mod["artifact_id"], ARTIFACT_ID)
+                self.assertEqual(mod["artifact_id"], SUCCESSOR_ARTIFACT_ID)
                 self.assertTrue(set(IMOEN) <= {component["id"] for component in mod["components"]})
                 artifact = tomllib.loads((profile / f"artifacts/{ARTIFACT_ID}.toml").read_text(encoding="utf-8"))
                 for key, measured in (("sha256", "actual_sha256"), ("expected_length", "actual_length"),

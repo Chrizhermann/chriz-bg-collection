@@ -1,10 +1,10 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1338
-expected_choice_groups = 87
+expected_rows = 1351
+expected_choice_groups = 88
 expected_optional_none_groups = 31
-expected_fixed_groups = 11
+expected_fixed_groups = 12
 
 parents = [
   "mod:artisanskitpack",
@@ -63,7 +63,7 @@ excluded = [1102, 1103, 1104]
 
 [[catalogs]]
 id = "ARTISANSKITPACK_TWEAK"
-excluded = [20021, 3210, 1110, 110000, 1, 2, 300010, 1010000, 1020000, 2000001]
+excluded = [20021, 3210, 1110, 110000, 1, 2, 300010, 1020000, 2000001]
 
 [[catalogs]]
 id = "ASCENSION"
@@ -292,6 +292,10 @@ excluded = []
 [[catalogs]]
 id = "SARAHTOB"
 excluded = [0]
+
+[[catalogs]]
+id = "SIRENE_BG1"
+excluded = [1, 2, 4, 5]
 
 [[catalogs]]
 id = "SIRENE_BG2"
@@ -852,9 +856,19 @@ kind = "feature"
 rows = ["ARTISANSKITPACK_TWEAK:7203"]
 
 [[targets]]
+id = "feature:artisanskitpack-tweak:component-7205"
+kind = "feature"
+rows = ["ARTISANSKITPACK_TWEAK:7205"]
+
+[[targets]]
 id = "feature:artisanskitpack-tweak:component-8204"
 kind = "feature"
 rows = ["ARTISANSKITPACK_TWEAK:8204"]
+
+[[targets]]
+id = "feature:artisanskitpack-tweak:component-1010000"
+kind = "feature"
+rows = ["ARTISANSKITPACK_TWEAK:1010000"]
 
 [[targets]]
 id = "feature:artisanskitpack-tweak:component-51010"
@@ -2747,6 +2761,36 @@ kind = "feature"
 rows = ["RR:999"]
 
 [[targets]]
+id = "feature:sirene-bg1:component-0"
+kind = "feature"
+rows = ["SIRENE_BG1:0"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-3"
+kind = "feature"
+rows = ["SIRENE_BG1:3"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-6"
+kind = "feature"
+rows = ["SIRENE_BG1:6"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-7"
+kind = "feature"
+rows = ["SIRENE_BG1:7"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-8"
+kind = "feature"
+rows = ["SIRENE_BG1:8"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-9"
+kind = "feature"
+rows = ["SIRENE_BG1:9"]
+
+[[targets]]
 id = "feature:sirene-bg2:component-0"
 kind = "feature"
 rows = ["SIRENE_BG2:0"]
@@ -3855,6 +3899,13 @@ options = ["RR:9", "RR:10"]
 default = "none"
 
 [[choice_groups]]
+id = "choice:sirene-bg1:choose-an-alternate-class-for-sirene"
+catalog = "SIRENE_BG1"
+subgroup = "Choose an alternate class for Sirene?"
+options = ["SIRENE_BG1:6", "SIRENE_BG1:7", "SIRENE_BG1:8", "SIRENE_BG1:9"]
+default = "SIRENE_BG1:6"
+
+[[choice_groups]]
 id = "choice:sirene-bg2:choose-an-alternate-class-for-sirene"
 catalog = "SIRENE_BG2"
 subgroup = "Choose an alternate class for Sirene?"
@@ -3960,6 +4011,13 @@ options = ["SARAHTOB:1"]
 reason = "Sarah's revised-audio full install is fixed and the original-audio alternative is excluded."
 
 [[fixed_groups]]
+id = "fixed:sirene-bg1-portrait"
+catalog = "SIRENE_BG1"
+subgroup = "Choose an alternate portrait for Sirene?"
+options = ["SIRENE_BG1:3"]
+reason = "Only Christopher's curated portrait component remains exposed, so it is a fixed child rather than a choice."
+
+[[fixed_groups]]
 id = "fixed:sirene-portrait"
 catalog = "SIRENE_BG2"
 subgroup = "Choose an alternate portrait for Sirene?"
@@ -4048,6 +4106,18 @@ parent = "mod:chriz-bg-rebalance"
 id = "feature:chriz-bg-rebalance:component-360"
 kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:360"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-410"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:410"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-411"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:411"]
 parent = "mod:chriz-bg-rebalance"
 
 [[targets]]

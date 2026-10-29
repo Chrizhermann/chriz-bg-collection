@@ -1,0 +1,91 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-29"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 <TP2 path>, for the three TP2s; chriz-bg-author artifact verify <artifact.toml> --cache-root <same cache>, for each profile; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id <mod> --archive <downloaded ZIP from that cache>"
+scope = "The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.5 (published 2026-10-29 09:50 UTC as a normal GitHub release, marked Latest; annotated tag on 10a4a29, the merge commit of fork PR #16) replaces chriz.4 for the main, NPC and tweak installers in both recipe profiles. The release ZIP was downloaded anonymously into one fresh cache for the inspection; the manifest artifact TOML's verify fetched it once more into that cache's production namespace, and the curated profile's byte-identical copy verified as a cache hit. Both passed the production acquisition and extraction contracts; length and SHA-256 match the digest GitHub publishes for the asset, and the final host is release-assets.githubusercontent.com. Its 3,014 entries (118,211,371 bytes uncompressed, largest entry 6,142,193 bytes, depth 7, highest compression ratio 431.1) stay within the unchanged archive limits of the chriz.4 pin, and the three expected TP2s match directly. All 2,667 files under the published roots (ArtisansKitpack, ArtisansKitpack_npc and ArtisansKitpack_tweak) match the tag commit's tree byte for byte. The native TP2 declaration order matches both recipes except where a record says otherwise. The chriz.4 records in release-intake-20261027.toml and their artifact TOMLs stay as history. This is automated source/package verification, not a combined WeiDU install or gameplay acceptance; the owner's lab results are in the release notes."
+
+# One archive serves the main, NPC and tweak installers. Against chriz.4 all three TP2s
+# change their VERSION; the main and tweak TP2s also include the new
+# lib/shapeshifter_kit_bit.tpa in ALWAYS. The main TP2 calls its pass,
+# c0_free_borrowed_shapeshifter_bit, in the Elementalist 5001 and the Invisible Blade 7005
+# right after they add their kit; no BEGIN, DESIGNATED, SUBCOMPONENT, GROUP, REQUIRE or
+# FORBID line changes, so the 59 components, their order and every recorded decision are
+# unchanged. The pass takes the Shapeshifter's usability bit (item byte 0x29, bit 4) off
+# items other than body armor where it only stands for the druid kits, for the kits that
+# borrow it to keep out of armor and are not druid kits (the Invisible Blade and Bardic
+# Wonders' Dancer), and blocks every other kit with the bit there through an opcode 319
+# KIT.IDS check marked with the resource C0SHAPE_. A second run without new items or kits
+# changes nothing (the fork's tests).
+# The curated profile's main run follows this native order. The manifest profile's main
+# run keeps the authored order it has had since chriz.1 (10002 before 10001, 1100 after
+# 1009), which the order checker rejects; this intake does not change it, and
+# engine/tests/production_recipe_artisan.rs pins it. native_order_recipe_profiles names
+# the profiles whose runs were checked against this record.
+[[artifacts]]
+mod_id = "artisanskitpack"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+native_order_recipe_profiles = ["recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.5"
+source_commit = "10a4a2987c8a2898534022d1ce138ac5fd395ca4"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.5/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.5.zip"
+actual_length = 89698447
+actual_sha256 = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6"
+tp2_sha256 = "798753c7aa33ed1e9cf779c56f4f68796f0ba5852235265c4b7d02fe2c5026c8"
+native_components = [
+  1, 2, 3, 20000, 20001, 8001, 8101, 8102, 8002, 8003, 8004, 10001, 10002, 10003, 10004, 1100,
+  1003, 1006, 1004, 1005, 1007, 1002, 1000, 1001, 1008, 1009, 1010, 2000, 2010, 2011, 2012, 2002,
+  2003, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5300, 5100, 5110, 5111, 5200, 5001, 5002,
+  7000, 7004, 7007, 7006, 7008, 7001, 7002, 7003, 7005, 9001, 30001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# Against chriz.4 the NPC TP2 changes only its VERSION.
+[[artifacts]]
+mod_id = "artisanskitpack-npc"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.5"
+source_commit = "10a4a2987c8a2898534022d1ce138ac5fd395ca4"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.5/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.5.zip"
+actual_length = 89698447
+actual_sha256 = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6"
+tp2_sha256 = "ed377d2ae2563a4731db477e8a8867e75a148ea3ef9a4585caa2d5087aba4e93"
+native_components = [
+  1101, 1102, 1103, 1104, 2001, 3101, 3102, 5101, 5102, 7101, 7102, 7104, 21001, 9101, 10004,
+  20002, 200010, 99001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true
+
+# Against chriz.4 the tweak TP2 includes the library in ALWAYS and declares 7205, Invisible
+# Blade - Apply the Katana Fix to Items and Kits Added Later, between 7203 and 8204; it only
+# calls the pass and requires nothing. lib/profs_eeex_patch.tpa, which 1010000 includes,
+# now ends with the same call after its sweep and its C0PR#CL/C0PR#KG rebuild, which are
+# unchanged. 8204 between 7205 and 1010000 adds no kit, writes no kit usability byte and
+# deletes only opcode 319 effects that use the Kitpack's SPLPROT rows or CLASS.IDS, none of
+# the pass's KIT.IDS checks. Christopher took chriz.5 and 7205 into alpha.22 on 2026-10-29,
+# 7205 as a default; it joins the late tweak run before 8204 and 1010000 in both recipes.
+[[artifacts]]
+mod_id = "artisanskitpack-tweak"
+artifact_id = "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v4.81a-dev.85928f9-chriz.5"
+source_commit = "10a4a2987c8a2898534022d1ce138ac5fd395ca4"
+immutable_source_url = "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.5/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.5.zip"
+actual_length = 89698447
+actual_sha256 = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6"
+tp2_sha256 = "fa573207e22b7d1e81bf22ac4cd410414c0eddd652d0cfe747c4ce2b84085b7c"
+native_components = [
+  51010, 20101, 12012, 20021, 3210, 1209, 1110, 3202, 3302, 7203, 7205, 8204, 110000, 1, 2,
+  300010, 1010000, 1020000, 2000001
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

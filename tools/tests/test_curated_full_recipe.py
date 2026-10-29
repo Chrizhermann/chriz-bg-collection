@@ -58,7 +58,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         run_id = "chriz-bg-rebalance-bg2"
         runs = tomllib.loads(collection)["runs"]
         run = next(run for run in runs if run["run_id"] == run_id)
-        self.assertEqual(run["components"][-13:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
         # Regression: sorting numerical IDs recreated the September 30 failure.
         sorted_source = collection.replace(
             f"components = {run['components']}",
@@ -396,7 +396,27 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # 360 at the end of the Rebalance run, after 340 (Christopher, 2026-10-27);
                 # with v0.8.5 restored and without 360 the October 27 digest
                 # 654ae8d42a63de4d3e6f1c767df3a7bf65eabe2bb383889088986621b2958780 returns.
-                "1df78afce7729152da614ca3877a33da03119eae6d93b7c45657c83f61840967",
+                # October 29: Artisan tweak 1010000, the weapon-usability sweep (Christopher,
+                # 2026-10-26), is a default at the end of the late tweak run, requiring EEex
+                # and Eldritch Knight 20000 or Arcane Trickster 8204; without it the October
+                # 28 digest 1df78afce7729152da614ca3877a33da03119eae6d93b7c45657c83f61840967
+                # returns.
+                # October 29 intake: default Sirene NPC for BG:EE 0/3/6 (Christopher,
+                # 2026-10-29) with optional classes 7/8/9 in its own run after Kitpack main,
+                # and sirene-bg2 moved there from after Yeslick; without the run, its
+                # features and preset entries and with sirene-bg2 back, the 1010000 digest
+                # 5ec32478457d3d9f535687dde5469d0c34341b7a8ebb4152ec077a3f10aa17a4 returns.
+                # October 29, Rebalance v0.8.8 pin: default Druid weapons 410 and Alaghor of
+                # Clangeddin weapons 411 between 302 and 420 (Christopher, 2026-10-29), 411
+                # requiring EEex, Yeslick's Fighter-Alaghor and Eldritch Knight 20000 or
+                # Arcane Trickster 8204; without them the Sirene digest
+                # 042dc03d9670386688578abb9933e2bd12ce4f6d1305ef736fc881c9cdfbdc7b returns.
+                # October 29, Artisan's Kitpack chriz.5 pin: default katana fix for later mods
+                # 7205 in the late tweak run before 8204 (Christopher, 2026-10-29), without
+                # requirements; without its feature, run component and preset entry the
+                # v0.8.8 digest 014a25b8005ccd293859c4659f88d60b373cec0eb007e0097e2e717eeb07ece7
+                # returns.
+                "9a03e46d776b7885bdb5bf426db90dd8aeb9feb64b2c1b32b49201766a32e77a",
             )
 
             legacy_bg1npc_groups = {
@@ -509,31 +529,32 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(compatibility_prompt["answer"]["value"], {"kind": "choice", "value": "y"})
             self.assertIn("leave these items where they are", compatibility_prompt["expected_output"])
             sod_mod = tomllib.loads((output / "mods/chriz-sod-remix.toml").read_text(encoding="utf-8"))
-            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.15")
+            self.assertEqual(sod_mod["artifact_id"], "chriz-sod-remix-0.6.16")
             # Setup-name WeiDU resolves the nested copy when both identical TP2s
             # are shipped. The frozen expected log identity must use that path.
             self.assertEqual(sod_mod["tp2"], "chriz-sod-remix/setup-chriz-sod-remix.tp2")
             sod_artifact = tomllib.loads(
-                (output / "artifacts/chriz-sod-remix-0.6.15.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-sod-remix-0.6.16.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.4.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.5.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.6.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.7.toml").exists())
             self.assertFalse((output / "artifacts/chriz-sod-remix-0.6.11.toml").exists())
-            self.assertEqual(sod_artifact["version"], "0.6.15")
-            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.15")
+            self.assertEqual(sod_artifact["version"], "0.6.16")
+            self.assertEqual(sod_artifact["source"]["reference"], "v0.6.16")
             self.assertEqual(
                 sod_artifact["source"]["expected_filename"],
-                "chriz-sod-remix-v0.6.15.zip",
+                "chriz-sod-remix-v0.6.16.zip",
             )
-            self.assertEqual(sod_artifact["source"]["expected_length"], 3045799)
+            self.assertEqual(sod_artifact["source"]["expected_length"], 3055655)
             self.assertEqual(
                 sod_artifact["source"]["sha256"],
-                "3a295832f9af3540bf079ba437676b70b019ce8db506ef89fde28addd0b4feaf",
+                "7da50d206e4f0d50dd94d5e60fd985290a245d2dc3bed32068e1eaad0219c2e6",
             )
             # October 13 adds mandatory v0.6.13 rows 177, 198 and 285 in native TP2 order;
-            # October 23 (v0.6.15) adds the Imoen choice 292/293/294 after 910.
+            # October 23 (v0.6.15) adds the Imoen choice 292/293/294 after 910; October 29
+            # (v0.6.16) keeps the components and their order.
             self.assertEqual(runs["chriz-sod-remix-bg2"]["components"], [100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197, 198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 257, 260, 265, 266, 270, 280, 285, 290, 900, 910, 292, 293, 294])
             self.assertNotIn(291, runs["chriz-sod-remix-bg2"]["components"])
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
@@ -707,18 +728,18 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.6")
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.8")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.6.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.8.toml").read_text(encoding="utf-8")
             )
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.6")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.6")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1817306)
+            self.assertEqual(bg_artifact["version"], "0.8.8")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.8")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1839187)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba",
+                "dec0544b3cc0f2197b5791e89cf0eb73d2cdb563d3ae35c254d0da719d89a2e3",
             )
             self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.20")
             for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19"):
@@ -1069,7 +1090,7 @@ class CuratedFullRecipeTests(unittest.TestCase):
         self.assertTrue(all(f"feature:chriz-bg-rebalance:component-{id_}" not in features for id_ in (420, 421)))
         run = next(run for run in collection["runs"] if run["run_id"] == "chriz-bg-rebalance-bg2")
         self.assertEqual(run["phase"], "post-eet-end")
-        self.assertEqual(run["components"][-13:], [408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+        self.assertEqual(run["components"][-15:], [408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
 
     def test_shifted_dialogue_is_optional_and_requires_either_kit_without_eeex(self) -> None:
         collection = tomllib.loads((self.root / "manifest/collection.toml").read_text(encoding="utf-8"))

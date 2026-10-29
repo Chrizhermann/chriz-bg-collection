@@ -45,7 +45,7 @@ BG1NPC_NATIVE_ORDER = [
     240, 241, 150, 155, 160, 200,
 ]
 
-# Exact pinned Artisan v4.81a-dev.85928f9-chriz.4 (same order as chriz.1) and Randomiser v8.1.1
+# Exact pinned Artisan v4.81a-dev.85928f9-chriz.5 (same order as chriz.1; its tweak TP2 adds 7205) and Randomiser v8.1.1
 # TP2 order, restricted to offered choices. Re-audit a newly offered ID instead of guessing its
 # position.
 NATIVE_RUN_ORDERS = {
@@ -56,7 +56,11 @@ NATIVE_RUN_ORDERS = {
         3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110,
         5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001,
     ],
-    "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 8204],
+    # The tweak TP2 declares the weapon-usability sweep 1010000 after 8204 (offered from
+    # 2026-10-29); it must stay last so that it also covers 8204's thief equipment.
+    # chriz.5 (October 29) declares the Invisible Blade's katana fix for later mods 7205
+    # between 7203 and 8204.
+    "artisanskitpack-tweak-late-bg2": [51010, 12012, 3202, 3302, 7205, 8204, 1010000],
     # Modpack alpha.12 (October 14) declares companion stats 230-234 right after 225.
     "chriz-bg-modpack-pre-continuity-bg2": [110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 222, 223, 224, 225, 230, 231, 232, 233, 234],
     # Modpack alpha.11 (October 13): scroll policy 430 moved to its own final run;
@@ -73,8 +77,9 @@ NATIVE_RUN_ORDERS = {
     # Verify new source pins with tools/check_native_component_order.py.
     # v0.8.3 (October 14) declares potion uniqueness 330/331 and Heroism 332 last;
     # v0.8.5 (October 25) declares Chris Revisions 340 after them, and v0.8.6 (October 27)
-    # the Time Stop and Haste effect clocks 360 after 340.
-    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360],
+    # the Time Stop and Haste effect clocks 360 after 340. v0.8.8 (October 29) declares
+    # Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420.
+    "chriz-bg-rebalance-bg2": [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360],
     "chriz-bg-modpack-edwin-bg2": [236],
     "chriz-bg-modpack-baeloth-bg2": [235],
     "randomiser-bg2": [500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300],

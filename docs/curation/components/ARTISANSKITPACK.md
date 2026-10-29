@@ -2,9 +2,9 @@
 
 Listed at reference version **6.0**; refreshed for the selected fork release
 **chriz-v1.3.1** (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
-**v4.81a-dev.85928f9-chriz.4** (tag commit `afa3316`, pinned 2026-10-27), whose TP2
+**v4.81a-dev.85928f9-chriz.5** (tag commit `10a4a29`, pinned 2026-10-29), whose TP2
 declares the same 59 components in the same order as listed here. Against chriz.1 it
-changes three things, all only when the EEex weapon usability is installed:
+changes four things, the first three only when the EEex weapon usability is installed:
 
 - chriz.2: every sorcerer kit, the Dragon Disciple included, can equip daggers,
   quarterstaves, darts and slings without proficiency pips again, like mages. Since
@@ -31,10 +31,23 @@ changes three things, all only when the EEex weapon usability is installed:
   from the new `eeex/class_weapon_grants.tpa`; both do nothing without `C0PR#CL.SPL`.
   The fork's labs passed on BG2:EE 2.7.3.0 with EEex 1.3.1, in the collection's
   Kitpack order and in another order; EET was not covered.
+- chriz.5: the Invisible Blade (`7005`) and Bardic Wonders' Dancer can use the katanas
+  they may train and the rogue and bard items that the item files closed to them. Like
+  the Elementalist (`5001`), they borrow the Shapeshifter's item usability bit to keep
+  out of armor, and the item files set that bit wherever druids may not use an item.
+  `7005` and `5001` now call a pass (`lib/shapeshifter_kit_bit.tpa`) after adding their
+  kit: it takes the bit off such items, body armor excepted, and blocks every other kit
+  with the bit there through an exact kit check, so the Shapeshifter and the
+  Elementalist, both druid kits, stay blocked. Tweak `7205` and tweak `1010000` run the
+  same pass for items and kits that later mods add (see
+  [ARTISANSKITPACK_TWEAK](ARTISANSKITPACK_TWEAK.md)). The fork's labs passed on three
+  BG2:EE 2.7.3.0 games with EEex 1.3.1; EET and installations without EEex were not
+  covered.
 
 No component, order or decision changes. Existing installations are not changed by
-chriz.3 or chriz.4, which have no tail patch (Christopher, 2026-10-26 and 2026-10-27:
-new installations only); chriz.2's sorcerer fix has one, `AKCB_SORCERER_WEAPONS`,
+chriz.3, chriz.4 or chriz.5, which have no tail patch (Christopher, 2026-10-26 and
+2026-10-27: new installations only; chriz.5's release notes say the same); chriz.2's
+sorcerer fix has one, `AKCB_SORCERER_WEAPONS`,
 which the collection does not install.
 59 entries, 47 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
@@ -54,6 +67,9 @@ which the collection does not install.
   `2380` complements it by expanding playable kit eligibility, including elf mage
   specialists; it does not replace `1/2`. Future overlapping `2350/2351/2353/2357/2358`
   and `2550`–`2552` choices must be mutually exclusive in the UI.
+- Martyr `3005`: Sirene NPC for BG2, installed after it, replaces its unused
+  `c0ilms2a.spl` with an unrelated, also unused file of the same name. No in-game effect
+  in the tested Recommended install; see [SIRENE_BG2](SIRENE_BG2.md).
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|

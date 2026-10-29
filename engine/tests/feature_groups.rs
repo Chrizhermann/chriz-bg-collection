@@ -324,21 +324,53 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // from the chriz.4 ones only in the Rebalance run's artifact id; with v0.8.5 restored and
     // 360 removed, the six chriz.4 digests return (manifest ea31c07f…, d27b9fa5…, 3f1671d8…;
     // curated 54993bc2…, 3c42bcea…, 5ed8b9b7…).
-    // Re-pinned on October 28 for BuffBot v1.12.1: in both recipes only the Recommended plan
-    // changes, in the buffbot-bg2 run's artifact id. With v1.11.0 restored, the previous plan
-    // digests return (manifest f4ab1fd8…, curated c18baa9d…).
+    // Re-pinned on October 29 for BG Rebalance v0.8.7, which renames 360 to True Time Stop –
+    // fair Haste & Slow: the collections change in 360's title and the plans in the Rebalance
+    // run's artifact id; the selections are unchanged. With the old title restored the previous
+    // collection digests return (manifest 820fab4c…, curated 9a8d8095…), and with v0.8.6
+    // restored the previous plan digests (manifest f4ab1fd8…, curated c18baa9d…).
+    // Re-pinned on October 29 for Artisan's Kitpack tweak 1010000 (weapon-usability sweep,
+    // Christopher, 2026-10-26) as a default at the end of the late tweak run: its feature,
+    // run component and preset entry change all six digests. Without them the six previous
+    // digests return (manifest b16c7f80…, b1f467ef…, 4fd9d65f…; curated a9ce4259…,
+    // c2684cfe…, 2614b16c…).
+    // Re-pinned on October 29 for SoD Remix v0.6.16: in both recipes only the Recommended
+    // plan changes, in the chriz-sod-remix-bg2 run's artifact id; its components and the
+    // selection stay. With v0.6.15 restored, the previous plan digests return (manifest
+    // 29a3cb46…, curated e59b795b…).
+    // Re-pinned on October 29 for Sirene NPC for BG:EE as a default (Christopher, 2026-10-29):
+    // its run after Kitpack main with sirene-bg2 moved there from after Yeslick, its six
+    // features and its three preset entries change all six digests. With the run, the
+    // features and the preset entries removed and sirene-bg2 back after Yeslick, the six
+    // previous digests return (manifest f0fd7718…, 1cb14fad…, 7c78ecb2…; curated b633893e…,
+    // cb328676…, 87f1ab67…).
+    // Re-pinned on October 29 for BG Rebalance v0.8.8 with Druid weapons 410 and Alaghor of
+    // Clangeddin weapons 411 as defaults (Christopher, 2026-10-29): their features, run
+    // components and preset entries change all six digests, and the plans also the Rebalance
+    // run's artifact id. With both removed and v0.8.7 restored, the six previous digests
+    // return (manifest 2b77e6d2…, 90703460…, 616da1fb…; curated d4413a74…, e9994330…,
+    // b9e1d118…).
+    // Re-pinned on October 29 for Artisan's Kitpack chriz.5 with the katana fix for later mods
+    // 7205 as a default (Christopher, 2026-10-29): its feature, run component and preset entry
+    // change all six digests, and the plans also the selected Kitpack runs' artifact id. With
+    // 7205 removed and chriz.4 restored, the six previous digests return (manifest ece76967…,
+    // f6ad7fd6…, 55b18383…; curated 455b2e6b…, fa83cc45…, 5e6ff963…).
+    // Re-pinned on October 29 for BuffBot v1.12.1, which goes into the alpha.22 release
+    // candidate (Christopher, 2026-10-29): in both recipes only the Recommended plan changes,
+    // in the buffbot-bg2 run's artifact id. With v1.11.0 restored, the previous plan digests
+    // return (manifest 59f7b6fc…, curated 5dd76d84…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "820fab4c5d8b6fdb7496d18214f0dd44f1f781bbef3866ae9da14dd905a9feb1",
-            "b1f467ef9288a2a0dd3138dc4fb670abc9762579309af3f2efaea03ff19bddec",
-            "2e8bfe20930e5b1aabe2cd4243ae7599002db22e0eb953c3ee36066b7e38d9a3",
+            "f338fc118fe8a2264b2ae95ef2baf1b634b3f236de82d73757296d693878efd0",
+            "2447350d05c9e316570f961b1b2efda6f89882c596b393a8ebb0f94662ae171f",
+            "8b3233288fe0d8abff1126de3ba0c8534b769467942c64736a1a23059123caee",
         ),
         (
             "../recipes/curated-full-current",
-            "9a8d8095af092adc6ed2aef455f23fe1059e393bbf4f0e3e6371b162578812d5",
-            "c2684cfef6bcfc9c2e83ab218b88390288daf7412f670fa82410dff2f1daaee9",
-            "f2ff4710fc76601632e54c07d7e2fddac9ac202d4c1845f0aca204f4682cee31",
+            "bb95f4581529cfb6dadd14cb382c996b6c9b91dfaca70a2c4e59a9da286999b2",
+            "7cf6a3b5aa6a6ac274186247768145a5e66522bb3dd9d35df2dd04678d045f02",
+            "d0b7318df0d9fb57296d70c46bc70b2d63c157090b021499c7188e2d49a0726b",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

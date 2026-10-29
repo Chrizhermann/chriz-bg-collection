@@ -19,6 +19,7 @@ import type {
   GameRole,
   InstallationDefaults,
   InstallationRemovalPreview,
+  InstallationRemovalResult,
   LaunchInstallResult,
   InstalledComponent,
   InstalledUpdatePlan,
@@ -81,7 +82,7 @@ export interface Backend {
   listManagedInstallations(): Promise<ManagedInstallation[]>;
   renameInstallation?(installId: string, name: string): Promise<{ readonly name: string }>;
   previewInstallationRemoval(installId: string): Promise<InstallationRemovalPreview>;
-  removeInstallation(installId: string, confirmationToken: string): Promise<void>;
+  removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult>;
   launchInstall(installId: string, startRadar: boolean): Promise<LaunchInstallResult>;
   /** Reads only: whether the game writes its log for crash reports, and where the evidence is. */
   gameLogStatus?(installId: string): Promise<GameLogStatus>;
@@ -659,8 +660,8 @@ export class NativeBackend implements Backend {
     return this.#command("preview_installation_removal", { installId });
   }
 
-  async removeInstallation(installId: string, confirmationToken: string): Promise<void> {
-    await this.#command("remove_installation", { installId, confirmationToken });
+  removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult> {
+    return this.#command("remove_installation", { installId, confirmationToken });
   }
 
   async openInstallFolder(installId: string): Promise<void> {
@@ -1055,11 +1056,12 @@ export class FixtureBackend implements Backend {
       preservedSavePath: "C:\\Users\\Player\\Documents\\Chriz Easy BG", confirmationToken: token };
   }
 
-  async removeInstallation(installId: string, confirmationToken: string): Promise<void> {
+  async removeInstallation(installId: string, confirmationToken: string): Promise<InstallationRemovalResult> {
     const expected = this.#removalTokens.get(confirmationToken);
     this.#removalTokens.delete(confirmationToken);
     if (expected !== installId) throw new Error("Removal confirmation does not match.");
     this.#removedInstallations.add(installId);
+    return { unusedSavePathKept: null };
   }
 
   openInstallFolder(_installId: string): Promise<void> {

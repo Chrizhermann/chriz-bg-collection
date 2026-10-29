@@ -131,9 +131,14 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # 135 and 460 to the main post-EET_end Modpack run; chapter caps 652 stay unchecked.
         # October 27: Tweaks 2292 (druids level on the cleric XP table) is no longer a default.
         # October 28: the Rebalance v0.8.6 pin adds default Time Stop and Haste effect clocks 360.
-        self.assertEqual(len(without_controls), 468)
-        self.assertEqual(len(selected), 469)
-        self.assertEqual(len({run for run, _ in selected}), 69)
+        # October 29: the Kitpack's weapon-usability sweep 1010000 ends the late tweak run,
+        # and Sirene NPC for BG:EE adds its own run with default 0, 3 and 6.
+        # October 29: the Rebalance v0.8.8 pin adds default Druid weapons 410 and Alaghor of
+        # Clangeddin weapons 411 to the Rebalance run.
+        # October 29: the Kitpack chriz.5 pin adds default katana fix 7205 to the late tweak run.
+        self.assertEqual(len(without_controls), 475)
+        self.assertEqual(len(selected), 476)
+        self.assertEqual(len({run for run, _ in selected}), 70)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -231,7 +236,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(baseline - opted_in, set())
         # October 27: Tweaks 2292 is no longer selected by default.
         # October 28: Rebalance 360 is selected by default.
-        self.assertEqual(len(baseline), 469)
+        # October 29: so are Artisan tweak 1010000, Sirene NPC for BG:EE 0, 3 and 6,
+        # Rebalance 410 and 411 (v0.8.8 pin) and Artisan tweak 7205 (chriz.5 pin).
+        self.assertEqual(len(baseline), 476)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")
@@ -251,7 +258,7 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
     def test_emotion_run_keeps_source_order_including_default_bard_ceilings(self):
         run_id = "chriz-bg-rebalance-bg2"
         self.assertEqual(self.runs[run_id]["components"],
-                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
+                         [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360])
         for component in (420, 421):
             self.assertNotIn(f"feature:chriz-bg-rebalance:component-{component}", self.features)
             self.assertIn((run_id, component), self.selected())

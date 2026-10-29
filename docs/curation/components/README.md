@@ -10,7 +10,7 @@ Decision column is Chris's. Where the pin-list targets a newer version the menu 
 This directory indexes the full menus generated for the mods listed below; it is not one
 file per manifest entry because pseudo-installers and the reference install's other local
 soundsets are intentionally outside the component UI. Christopher's 18 published player
-voicepacks (the `CD_*` catalogs, October 22) are offered, one catalog each. Six third-party catalogs (October 23: NTOTSC, AC_QUEST, BLACKHEARTS, ZG_IWD_VOICES, THALAN, PPE) are offered, optional, unchecked and experimental: the three quest mods under "Quest mods", and since October 25 ZG_IWD_VOICES under "Audio", PPE under "Visuals" and THALAN under "Items". The 22 historical single-component local fixes are all covered by the
+voicepacks (the `CD_*` catalogs, October 22) are offered, one catalog each. Six third-party catalogs (October 23: NTOTSC, AC_QUEST, BLACKHEARTS, ZG_IWD_VOICES, THALAN, PPE) are offered, optional, unchecked and experimental: the three quest mods under "Quest mods", and since October 25 ZG_IWD_VOICES under "Audio", PPE under "Visuals" and THALAN under "Items". Sirene NPC for BG:EE (SIRENE_BG1, October 29) is offered as a default beside SIRENE_BG2. The 22 historical single-component local fixes are all covered by the
 [collection tail-fix migration inventory](COLLECTION_TAIL_FIXES.md). Every unresolved
 release, installer, and live-acceptance check is indexed separately in
 [curation follow-ups](FOLLOW_UPS.md); detailed evidence stays in each mod catalog.
@@ -104,3 +104,4 @@ or a file-specific UI/dependency note, not in the `Decision` value.
 | ZG_IWD_VOICES | 1 | 0 | [ZG_IWD_VOICES.md](ZG_IWD_VOICES.md) |
 | THALAN | 1 | 0 | [THALAN.md](THALAN.md) |
 | PPE | 21 | 0 | [PPE.md](PPE.md) |
+| SIRENE_BG1 | 10 | 0 | [SIRENE_BG1.md](SIRENE_BG1.md) |

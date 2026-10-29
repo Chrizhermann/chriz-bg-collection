@@ -11,7 +11,9 @@ its components and order, and BG Rebalance v0.8.6 (October 28, same test) supers
 v0.8.5 pin, keeps its components and order and adds the Time Stop and Haste effect clocks
 360 after 340. BuffBot v1.12.1 (October 28, test_oct28_buffbot_pin_recipe) supersedes the
 v1.11.0 pin and keeps its components and order. The chriz.3, v0.8.5 and v1.11.0 records and
-artifacts stay as verified here.
+artifacts stay as verified here. The Kitpack fork chriz.5 (October 29,
+test_oct29_kitpack_chriz5_pin_recipe) then supersedes chriz.4 and adds tweak 7205, which is
+checked against its own record.
 """
 
 from pathlib import Path
@@ -43,6 +45,20 @@ SUCCESSORS["buffbot"] = "buffbot-1.12.1"
 # record of this intake.
 LATER_COMPONENTS = {"chriz-bg-rebalance": {360}}
 LATER_ROWS = {"CHRIZ-BG-REBALANCE": {360}}
+# The October 29 intake (test_oct29_rebalance_pin_recipe) then replaces Rebalance v0.8.6
+# with v0.8.7, which keeps every component and the order.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.7"
+# The October 29 v0.8.8 intake (test_oct29_rebalance_088_pin_recipe) replaces v0.8.7 and
+# declares Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420.
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.8"
+LATER_COMPONENTS["chriz-bg-rebalance"] = {360, 410, 411}
+LATER_ROWS["CHRIZ-BG-REBALANCE"] = {360, 410, 411}
+# The October 29 Kitpack intake (test_oct29_kitpack_chriz5_pin_recipe) replaces chriz.4 with
+# chriz.5 for all three installers; its tweak TP2 declares 7205 between 7203 and 8204.
+SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
+                   for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
+LATER_COMPONENTS["artisanskitpack-tweak"] = {7205}
+LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {

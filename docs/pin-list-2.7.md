@@ -14,12 +14,12 @@ no installer references, such as older versions, are not listed.
 <!-- BEGIN GENERATED PINS -->
 ### Shipped recipe: `recipes/curated-full-current/`
 
-68 archives for 71 installers.
+69 archives for 72 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
 | Ascalon's Questpack | 7.0 | `ac-quest` | `87c2feb30c89…` | [release asset](https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod) |
-| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.4 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `8d08fc2be48c…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.4/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.4.zip) |
+| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.5 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `b5527feef6d6…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.5/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.5.zip) |
 | Ascension | 2.1.0 | `ascension` | `bd0ee14b3770…` | [release asset](https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip) |
 | Bardic Wonders — Christopher's balance fork | 2.9c-balance.8 | `bardicwonders` | `fa99ef91f39d…` | [release asset](https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.8/Bardic-Wonders-v2.9c-balance.8.zip) |
 | The BG1 NPC Project | 32 | `bg1npc` | `8e34f397e960…` | [release asset](https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod) |
@@ -31,8 +31,8 @@ no installer references, such as older versions, are not listed.
 | BuffBot | 1.12.1 | `buffbot` | `7ab5f040b05d…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.1/buffbot-v1.12.1.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
 | chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
-| CHRIZ-BG-REBALANCE | 0.8.6 | `chriz-bg-rebalance` | `24e3117e9a32…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.6/chriz-bg-rebalance-v0.8.6-windows.zip) |
-| CHRIZ-SOD-REMIX | 0.6.15 | `chriz-sod-remix` | `3a295832f9af…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip) |
+| CHRIZ-BG-REBALANCE | 0.8.8 | `chriz-bg-rebalance` | `dec0544b3cc0…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.8/chriz-bg-rebalance-v0.8.8-windows.zip) |
+| CHRIZ-SOD-REMIX | 0.6.16 | `chriz-sod-remix` | `7da50d206e4f…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
@@ -58,6 +58,7 @@ no installer references, such as older versions, are not listed.
 | Rogue Rebalancing | 4.92 | `rr` | `692297f6da8f…` | [release asset](https://github.com/Spellhold-Studios/Rogue-Rebalancing/releases/download/v4.92/rr-v492.zip) |
 | Safana in Amn | 05 | `safana` | `29672c878cfb…` | [tag archive](https://github.com/RoxanneSHS/SafanaBG2/archive/refs/tags/v05.zip) |
 | Sarah NPC Romance Mod for BG2:ToB | 8 | `sarahtob` | `061b1da90d8c…` | [release asset](https://github.com/Gibberlings3/Sarah/releases/download/v8/sarah-npc-romance-mod-for-bg2-tob-v8.iemod) |
+| Sirene NPC for BG:EE | 1c8600029a9ac31395a61b5d4d03f98337dcf83e | `sirene-bg1` | `f46b035395c4…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e) |
 | Sirene NPC for BG2:EE | 00beda909a4a791a35016069b4ebb77f27279723 | `sirene-bg2` | `1a6d517b7b02…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-NPC-for-BG2-EE/zip/00beda909a4a791a35016069b4ebb77f27279723) |
 | Spell Revisions | 4.21-chriz.7 | `spell-rev` | `613fca7d637b…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/spell_rev-v4-21-chriz-7.zip) |
 | Spell Revisions / Rogue Rebalancing compatibility | 4.21-chriz.7 | `srcb-rr-compat` | `705289651b99…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/SRCB_RR_COMPAT-v4-21-chriz-7.zip) |
@@ -89,12 +90,12 @@ no installer references, such as older versions, are not listed.
 
 ### Base recipe: `manifest/`
 
-62 archives for 65 installers.
+63 archives for 66 installers.
 
 | Archive | Version | Used by | SHA-256 | Source |
 |---|---|---|---|---|
 | Ascalon's Questpack | 7.0 | `ac-quest` | `87c2feb30c89…` | [release asset](https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod) |
-| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.4 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `8d08fc2be48c…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.4/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.4.zip) |
+| The Artisan's Kitpack - Chriz Balance Patch | 4.81a-dev.85928f9-chriz.5 | `artisanskitpack`, `artisanskitpack-npc`, `artisanskitpack-tweak` | `b5527feef6d6…` | [release asset](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/v4.81a-dev.85928f9-chriz.5/ArtisansKitpack-Chriz-Balance-Patch-v4.81a-dev.85928f9-chriz.5.zip) |
 | Ascension | 2.1.0 | `ascension` | `bd0ee14b3770…` | [release asset](https://github.com/Gibberlings3/Ascension/releases/download/2.1.0/ascension-2.1.0.zip) |
 | The BG1 NPC Project | 32 | `bg1npc` | `8e34f397e960…` | [release asset](https://github.com/Gibberlings3/BG1NPC/releases/download/v32/the-bg1npc-project-v32.iemod) |
 | BG1 Unfinished Business | 17.1 | `bg1ub` | `5a525eb37f68…` | [release asset](https://github.com/Pocket-Plane-Group/bg1ub/releases/download/v17.1/bg1-unfinished-business-v17.1.iemod) |
@@ -103,8 +104,8 @@ no installer references, such as older versions, are not listed.
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
 | BuffBot | 1.12.1 | `buffbot` | `7ab5f040b05d…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.1/buffbot-v1.12.1.zip) |
 | chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
-| CHRIZ-BG-REBALANCE | 0.8.6 | `chriz-bg-rebalance` | `24e3117e9a32…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.6/chriz-bg-rebalance-v0.8.6-windows.zip) |
-| CHRIZ-SOD-REMIX | 0.6.15 | `chriz-sod-remix` | `3a295832f9af…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip) |
+| CHRIZ-BG-REBALANCE | 0.8.8 | `chriz-bg-rebalance` | `dec0544b3cc0…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.8/chriz-bg-rebalance-v0.8.8-windows.zip) |
+| CHRIZ-SOD-REMIX | 0.6.16 | `chriz-sod-remix` | `7da50d206e4f…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip) |
 | Crossmod Banter Pack for Baldur's Gate II | 30 | `crossmodbg2` | `6b1555d1cf6f…` | [release asset](https://github.com/Gibberlings3/Crossmod_Banter_Pack_for_Baldurs_Gate_II/releases/download/v30/crossmod-banter-pack-for-baldurs-gate-ii-v30.iemod) |
 | DLC Merger | 2.1 | `dlcmerger` | `ea7584fd7285…` | [release asset](https://github.com/Argent77/A7-DlcMerger/releases/download/v2.1/DlcMerger-v2.1.iemod) |
 | Dragonspear UI++ (anongit continuation) | 22.01.3 | `dragonspear-ui` | `81bf0403bc5f…` | [commit archive](https://codeload.github.com/anongit/DragonspearUI/zip/d86bdddd0d74ebadc9ebcd40351021d6d1dadbc0) |
@@ -127,6 +128,7 @@ no installer references, such as older versions, are not listed.
 | Rogue Rebalancing | 4.92 | `rr` | `692297f6da8f…` | [release asset](https://github.com/Spellhold-Studios/Rogue-Rebalancing/releases/download/v4.92/rr-v492.zip) |
 | Safana in Amn | 05 | `safana` | `29672c878cfb…` | [tag archive](https://github.com/RoxanneSHS/SafanaBG2/archive/refs/tags/v05.zip) |
 | Sarah NPC Romance Mod for BG2:ToB | 8 | `sarahtob` | `061b1da90d8c…` | [release asset](https://github.com/Gibberlings3/Sarah/releases/download/v8/sarah-npc-romance-mod-for-bg2-tob-v8.iemod) |
+| Sirene NPC for BG:EE | 1c8600029a9ac31395a61b5d4d03f98337dcf83e | `sirene-bg1` | `f46b035395c4…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e) |
 | Sirene NPC for BG2:EE | 00beda909a4a791a35016069b4ebb77f27279723 | `sirene-bg2` | `1a6d517b7b02…` | [commit archive](https://codeload.github.com/TheArtisanBG/Sirene-NPC-for-BG2-EE/zip/00beda909a4a791a35016069b4ebb77f27279723) |
 | Spell Revisions | 4.21-chriz.7 | `spell-rev` | `613fca7d637b…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/spell_rev-v4-21-chriz-7.zip) |
 | Spell Revisions / Rogue Rebalancing compatibility | 4.21-chriz.7 | `srcb-rr-compat` | `705289651b99…` | [release asset](https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.7/SRCB_RR_COMPAT-v4-21-chriz-7.zip) |
@@ -208,7 +210,7 @@ except AJANTISBG2 (language 1).
 | RR | v4.92 | v4.92 | unchanged (installed = latest) |
 | SAFANA | v0.5 | v05 | unchanged (tag is spelled v05); SoD-items carryover fix component still to be built |
 | SARAHTOB | v8 | v8 | Official v8 IEMOD frozen; custom portraits remain a separate blocked/manual asset decision. |
-| SIRENE_BG2 | — | commit `00beda90` | Exact official commit archive frozen; the separate BG1 package remains a curation decision. |
+| SIRENE_BG2 | — | commit `00beda90` | Exact official commit archive frozen; the separate BG1 package remains a curation decision (decided 2026-10-29: Sirene NPC for BG:EE is a default at its EET-ready commit `1c860002`; see the tables above). |
 | SPELL_REV | v4.19 | v4.21-chriz.3 | Immutable successor release pinned with the protection-refresh and hidden-subspell work; component `60` runs late. |
 | STRATAGEMS | 35.21 | v35.21 | unchanged; MUST run under WeiDU 249 (breaks on 251); unverified-by-author on 2.7, community installs work |
 | UB | v28 | v28 | Official v28 release ZIP frozen; component `19` remains omitted with Ascension `40` pending the canonical provider decision. |

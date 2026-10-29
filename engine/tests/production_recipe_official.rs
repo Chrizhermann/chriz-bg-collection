@@ -275,6 +275,25 @@ fn pins_the_reviewed_official_artifacts_from_eeex_through_ascension() {
             },
         ),
         (
+            // October 29: the BG1 and SoD mod by the same author, pinned to the
+            // unreleased master commit whose tp2 supports EET (v3.1 is BG:EE-only).
+            "sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e",
+            ExpectedArtifact {
+                version: "1c8600029a9ac31395a61b5d4d03f98337dcf83e",
+                source_kind: SourceKind::GithubCommitZip,
+                url: "https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e",
+                reference: "1c8600029a9ac31395a61b5d4d03f98337dcf83e",
+                filename: "Sirene-BG1-1c8600029a9ac31395a61b5d4d03f98337dcf83e.zip",
+                length: 3_734_521,
+                sha256: "f46b035395c4310103e9be2d1623a113e6f3aa66f520624c30c7f355518f4eb9",
+                archive_kind: ArchiveKind::Zip,
+                root_rule: ArchiveRootRule::SingleWrapper,
+                publish_roots: &["Sirene"],
+                tp2_paths: &["Sirene/Setup-Sirene.tp2"],
+                reviewed_on: "2026-10-29",
+            },
+        ),
+        (
             "ascension-2.1.0",
             ExpectedArtifact {
                 version: "2.1.0",
@@ -342,6 +361,7 @@ fn declares_the_reviewed_component_menus_and_late_hgo_run() {
         ("xan", &[0, 1, 2, 3, 4][..]),
         ("yeslicknpc", &[0, 1][..]),
         ("sirene-bg2", &[0, 2, 5, 6, 7, 8][..]),
+        ("sirene-bg1", &[0, 3, 6, 7, 8, 9][..]),
         ("ascension", ASCENSION_COMPONENTS),
     ]);
     for (mod_id, expected_components) in expected {
@@ -422,10 +442,14 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
             "ub-bg2",
             "xan-bg2",
             "yeslicknpc-bg2",
-            "sirene-bg2",
             "ascension-bg2",
             "spell-rev-core-bg2",
             "artisanskitpack-main-bg2",
+            // October 29: both Sirene mods after Kitpack main, so that they skip
+            // their own Martyr kit and the Kitpack's player-selectable Martyr is the
+            // only one; BG1 first, because the BG2 mod continues her from it on EET.
+            "sirene-bg1-bg2",
+            "sirene-bg2",
             "artisanskitpack-npc-bg2",
             "chriz-bg-modpack-edwin-bg2",
             "iepbanters-bg2",
@@ -482,10 +506,10 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
         ]
     );
     // The six October 23 quest-mod runs are main-phase runs before EET_end too.
-    assert!(manifest.collection.runs[6..46]
+    assert!(manifest.collection.runs[6..47]
         .iter()
         .all(|run| run.phase == Phase::Main));
-    assert_eq!(manifest.collection.runs[46].run_id, "eet-end-bg2");
+    assert_eq!(manifest.collection.runs[47].run_id, "eet-end-bg2");
     assert_eq!(manifest.collection.runs[6].components, EEEX_RUN_COMPONENTS);
     assert_eq!(
         manifest.collection.runs[19].components,
@@ -496,11 +520,11 @@ fn authors_the_reviewed_official_run_order_and_filters_unresolved_duplicates() {
         UB_AUTHORED_COMPONENTS
     );
     assert_eq!(
-        manifest.collection.runs[27].components,
+        manifest.collection.runs[26].components,
         ASCENSION_COMPONENTS
     );
     assert!(!manifest.collection.runs[23].components.contains(&19));
-    assert!(!manifest.collection.runs[27].components.contains(&40));
+    assert!(!manifest.collection.runs[26].components.contains(&40));
 }
 
 #[test]
@@ -527,6 +551,7 @@ fn recommended_preset_reproduces_the_proven_official_defaults_except_recorded_om
     assert_eq!(plan.components_for("xan-bg2"), Some(&[0, 1][..]));
     assert_eq!(plan.components_for("yeslicknpc-bg2"), Some(&[1][..]));
     assert_eq!(plan.components_for("sirene-bg2"), Some(&[0, 2, 5][..]));
+    assert_eq!(plan.components_for("sirene-bg1-bg2"), Some(&[0, 3, 6][..]));
     assert_eq!(
         plan.components_for("hiddengameplayoptions-bg2"),
         Some(

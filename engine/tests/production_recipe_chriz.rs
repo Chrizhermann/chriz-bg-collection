@@ -9,7 +9,8 @@ use bg_engine::Manifest;
 
 /// The October 13 intake adds the mandatory v0.6.13 rows 177, 198 and 285 in TP2 order.
 /// The October 23 intake (v0.6.15) adds the Imoen in Shadows of Amn choice after 910;
-/// Recommended installs its default 292.
+/// Recommended installs its default 292. v0.6.16 (October 29 intake) changes 290 and the
+/// timer-name reads of 265 and six more components; components and order stay the same.
 const SOD_REMIX_COMPONENTS: &[u32] = &[
     100, 110, 115, 120, 130, 135, 140, 150, 145, 160, 170, 180, 175, 177, 185, 190, 195, 210, 197,
     198, 187, 200, 215, 220, 225, 245, 230, 240, 250, 255, 256, 260, 265, 266, 270, 280, 285, 290,
@@ -29,14 +30,17 @@ const IMOEN_SOD_LEVEL_DUAL: &str = "feature:chriz-sod-remix:component-294";
 // 331 (Genius still stacks) and 332 are defaults, 330 is the optional strict variant.
 // v0.8.5 (October 26 intake) declares Chris Revisions 340 after them, a default.
 // v0.8.6 (October 28 intake) declares the Time Stop and Haste effect clocks 360 after 340,
-// a default (Christopher, 2026-10-27).
+// a default (Christopher, 2026-10-27); v0.8.7 (October 29 intake) renames 360 to True Time
+// Stop – fair Haste & Slow and keeps every component and the order. v0.8.8 (October 29)
+// declares Druid weapons 410 and Alaghor of Clangeddin weapons 411 between 302 and 420, both
+// defaults (Christopher, 2026-10-29).
 const BG_REBALANCE_COMPONENTS: &[u32] = &[
-    100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130,
-    220, 320, 331, 332, 340, 360,
+    100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421,
+    310, 130, 220, 320, 331, 332, 340, 360,
 ];
 const BG_REBALANCE_RUN_COMPONENTS: &[u32] = &[
     100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302,
-    420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360,
+    410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360,
 ];
 const TEMPUS_COMPONENTS: &[u32] = &[400, 401, 404, 405, 407, 408];
 
@@ -53,25 +57,25 @@ fn freezes_the_reviewed_sod_remix_release() {
     let manifest = recipe();
     assert_eq!(
         manifest.mods["chriz-sod-remix"].artifact_id,
-        "chriz-sod-remix-0.6.15"
+        "chriz-sod-remix-0.6.16"
     );
-    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.15"];
-    assert_eq!(artifact.version, "0.6.15");
+    let artifact = &manifest.artifacts["chriz-sod-remix-0.6.16"];
+    assert_eq!(artifact.version, "0.6.16");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.15/chriz-sod-remix-v0.6.15.zip"
+        "https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.6.15");
+    assert_eq!(artifact.source.reference, "v0.6.16");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-sod-remix-v0.6.15.zip")
+        Some("chriz-sod-remix-v0.6.16.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(3_045_799));
+    assert_eq!(artifact.source.expected_length, Some(3_055_655));
     assert_eq!(
         artifact.source.sha256,
-        "3a295832f9af3540bf079ba437676b70b019ce8db506ef89fde28addd0b4feaf"
+        "7da50d206e4f0d50dd94d5e60fd985290a245d2dc3bed32068e1eaad0219c2e6"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -235,24 +239,24 @@ fn offers_imoen_in_shadows_of_amn_as_one_choice_with_the_vanilla_dual_by_default
 fn freezes_the_reviewed_bg_rebalance_release() {
     let manifest = recipe();
     let artifact_id = &manifest.mods["chriz-bg-rebalance"].artifact_id;
-    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.6");
+    assert_eq!(artifact_id, "chriz-bg-rebalance-0.8.8");
     let artifact = &manifest.artifacts[artifact_id];
-    assert_eq!(artifact.version, "0.8.6");
+    assert_eq!(artifact.version, "0.8.8");
     assert_eq!(artifact.acquisition, AcquisitionPolicy::FetchOnly);
     assert_eq!(artifact.source.kind, SourceKind::GithubRelease);
     assert_eq!(
         artifact.source.url,
-        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.6/chriz-bg-rebalance-v0.8.6-windows.zip"
+        "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.8/chriz-bg-rebalance-v0.8.8-windows.zip"
     );
-    assert_eq!(artifact.source.reference, "v0.8.6");
+    assert_eq!(artifact.source.reference, "v0.8.8");
     assert_eq!(
         artifact.source.expected_filename.as_deref(),
-        Some("chriz-bg-rebalance-v0.8.6-windows.zip")
+        Some("chriz-bg-rebalance-v0.8.8-windows.zip")
     );
-    assert_eq!(artifact.source.expected_length, Some(1_817_306));
+    assert_eq!(artifact.source.expected_length, Some(1_839_187));
     assert_eq!(
         artifact.source.sha256,
-        "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba"
+        "dec0544b3cc0f2197b5791e89cf0eb73d2cdb563d3ae35c254d0da719d89a2e3"
     );
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(
@@ -415,9 +419,22 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
                 Decision::Default,
                 1
             ),
-            // v0.8.6: Time Stop and Haste effect clocks 360 (Christopher, 2026-10-27).
+            // v0.8.6: Time Stop and Haste effect clocks 360 (Christopher, 2026-10-27), named
+            // True Time Stop – fair Haste & Slow since v0.8.7.
             (
                 "feature:chriz-bg-rebalance:component-360",
+                Decision::Default,
+                1
+            ),
+            // v0.8.8: Druid weapons 410 and Alaghor of Clangeddin weapons 411 (Christopher,
+            // 2026-10-29).
+            (
+                "feature:chriz-bg-rebalance:component-410",
+                Decision::Default,
+                1
+            ),
+            (
+                "feature:chriz-bg-rebalance:component-411",
                 Decision::Default,
                 1
             ),
@@ -451,8 +468,8 @@ fn authors_bg_rebalance_as_late_independent_fixes_and_one_atomic_tempus_bundle()
         no_tempus.plan.components_for("chriz-bg-rebalance-bg2"),
         Some(
             &[
-                100, 101, 111, 120, 121, 200, 210, 211, 302, 420, 421, 310, 130, 220, 320, 331,
-                332, 340, 360
+                100, 101, 111, 120, 121, 200, 210, 211, 302, 410, 411, 420, 421, 310, 130, 220,
+                320, 331, 332, 340, 360
             ][..]
         )
     );
@@ -512,8 +529,8 @@ fn defaults_wing_buffet_spacing_with_scs_and_an_independent_optout() {
         opted_out.plan.components_for(run_id),
         Some(
             &[
-                100, 101, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 420, 421,
-                310, 130, 220, 320, 331, 332, 340, 360
+                100, 101, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 408, 302, 410, 411,
+                420, 421, 310, 130, 220, 320, 331, 332, 340, 360
             ][..]
         )
     );

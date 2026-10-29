@@ -56,6 +56,11 @@ published.
   Unticking Hidden Gameplay Options, for example, added one setup note per default
   component, each saying "Available when Hidden Gameplay Options is selected." A
   default that is unavailable while its mod is ticked still gets its note.
+- **Removing an installation also removes its saved-game profile if the game never
+  used it.** CEBG creates the profile folder in Documents when it installs, and until
+  the game first starts it holds only CEBG's marker file. Removing the installation
+  used to leave that folder behind; now the confirmation names it and it is deleted
+  too. A profile with settings or saves in it is kept as before.
 
 ## Collection changelog
 
@@ -103,15 +108,31 @@ unchanged.
   Recitation no longer stack: Recitation's bonus or penalty replaces Prayer's while
   it lasts. Exact copies, such as Bardic Wonders' Troubadour Aid, change with them.
   (Rebalance v0.8.5)
-- **Time Stop stops everything but the caster; Haste and Slow only change actions and
-  movement** — **Default.** In a Time Stop, the frozen creatures' spells and potions no
-  longer run out while they cannot act, and their poison and regeneration wait too;
-  everything continues afterwards with the time it had left. Haste and Slow no longer
-  speed up or slow down poison, regeneration and other repeated effects; attacks,
-  actions and movement stay hasted or slowed. It applies to new installations only:
-  install it before a playthrough, because adding or removing it during one is not
-  supported. Saving, dispelling, curing or dying during a Time Stop are not covered yet.
-  (Rebalance v0.8.6)
+- **True Time Stop – fair Haste & Slow** — **Default.** Time Stop stops everything
+  but the caster, and Haste and Slow only change actions and movement. In a Time Stop,
+  the frozen creatures' spells and potions no longer run out while they cannot act, and
+  their poison and regeneration wait too; everything continues afterwards with the time
+  it had left. Haste and Slow no longer speed up or slow down poison, regeneration and
+  other repeated effects; attacks, actions and movement stay hasted or slowed. It
+  applies to new installations only: install it before a playthrough, because adding or
+  removing it during one is not supported. Saving, dispelling, curing or dying during a
+  Time Stop are not covered yet. (Rebalance v0.8.6; named in v0.8.7)
+- **Kit weapon rules for weapons from later mods** — **Default.** Artisan's Kitpack's
+  kit weapon rules now also cover weapons that mods installed after the Kitpack add. For
+  example, the Priest of Tempus and the Eldritch Knight can use IWDification's two-handed
+  axes, and the Arcane Trickster sorcerer the SCS Drow Katana. (Artisan's Kitpack)
+- **Druid weapons** — **Default.** Druids and every druid kit can use axes and short bows
+  and put one point into them; fighter/druids can also use long bows, with up to two
+  points in all three. (Rebalance v0.8.8)
+- **Alaghor of Clangeddin weapons** — **Default.** Yeslick's kit trains and uses the
+  cleric weapons plus axes, Clangeddin's weapon, with up to two points; the thief weapons
+  its weapon list allowed drop out, and points already spent stay. Needs EEex and
+  Artisan's Kitpack's weapon rules. (Rebalance v0.8.8)
+- **Sirene in BG1 and Siege of Dragonspear** — **Default.** Sirene, a paladin, can join
+  the party in BG1 and in Siege of Dragonspear, and with Sirene NPC for BG2 (Default) she
+  carries on into Shadows of Amn. As in BG2, she is a True Paladin with the Sirick
+  portrait; Cavalier, Inquisitor and Undead Hunter are **Optional**. Pick the same class
+  for her in both games. (Sirene NPC for BG:EE)
 - **EEex attack info** — **Optional.** Shows your chance to hit when the attack
   cursor is over a target. You can also switch it on or off later in EEex's
   options; the change takes effect after a restart. (EEex v1.3.1)
@@ -190,6 +211,9 @@ unchanged.
     Christopher decides whether that stays. (Upstream's fix for Black Blade
     attacks stacking with grandmastery changes nothing here: v18 never had that
     bug.)
+- **The Martyr paladin kit** (Default, unchanged choice) now comes from Artisan's Kitpack
+  alone. Both Sirene mods install after the Kitpack and leave their own copy out, so the
+  Martyr stays available at character creation, unchanged.
 - **Move NPCs to convenient locations** (Default) now also moves **Ajantis**
   to the Friendly Arm Inn, along with Alora, Eldoth, Quayle, Shar-Teel, Tiax and
   Viconia. (Tweaks Anthology)
@@ -223,6 +247,10 @@ unchanged.
   "Summoned creatures clear the fog of war" (Default). Chris's Recommended used to
   stop there; the hostile bridge elementals now leave that ally-only effect out.
   (SoD Remix v0.6.15)
+- **SoD Remix's victory ending** (Mandatory) installs alongside mods that add their own
+  victory remark after the battle of Avernus, such as Sirene NPC for BG:EE, and keeps the
+  pause after every remark short. Other SoD Remix parts no longer stop when a mod gives
+  one of the game's timer lengths another name. (SoD Remix v0.6.16)
 - **Bardic Wonders fixes** (Default components; Bardic Wonders v2.9c-balance.8):
   - The Troubadour, Deathsinger and New Bard Spells copies of priest spells are
     now found by the spell's name, so they follow Spell Revisions. Recasting one
@@ -299,8 +327,12 @@ unchanged.
   and these characters could equip any weapon after joining the party until the game
   next loaded or entered an area; their level-ups did not apply the weapon limits either.
   (Artisan's Kitpack fork chriz.4)
-  - Existing games keep the old sorcerer, Eldritch Knight, Arcane Trickster, monk and
-    shaman weapon behavior until you install again.
+- **The Invisible Blade and Bardic Wonders' Dancer can use katanas** (Default) and the
+  rogue and bard items that kept them out by mistake, also those that mods installed
+  later add, such as SCS's Drow Katana. The Shapeshifter and the Elementalist still
+  cannot use them. (Artisan's Kitpack fork chriz.5)
+  - Existing games keep the old sorcerer, Eldritch Knight, Arcane Trickster, monk,
+    shaman, Invisible Blade and Dancer weapon behavior until you install again.
 - **EEex Remote Console** (Optional, experimental): after you return to the main menu
   from character creation, the load screen or the options, the single-player menu no
   longer stays behind the game's screens for the rest of the session. Its installer
@@ -309,18 +341,18 @@ unchanged.
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.14 (was alpha.11)
-- BG Rebalance v0.8.6 (was v0.8.2)
+- BG Rebalance v0.8.8 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
   (was v18). There is no newer release yet; the collection pins this exact
   version, as it does for EET.
 - ChrizFader's voicepacks v1.1.0 (new)
-- SoD Remix v0.6.15 (was v0.6.13)
+- SoD Remix v0.6.16 (was v0.6.13)
 - BuffBot v1.12.1 (was v1.10.0)
 - EEex Remote Console v0.2.1 (was v0.2.0)
 - Spell Revisions fork v4.21-chriz.7 (was v4.21-chriz.5)
-- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.4 (was chriz.1)
+- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.5 (was chriz.1)
 - Northern Tales of the Sword Coast: development version `f0ef953`, 35 changes after
   v5.0.0 (new). The collection pins this exact version because v5.0.0 lacks a fix
   that SCS needs and the Island of the Sirines on the worldmap.
@@ -330,17 +362,20 @@ unchanged.
 - Portraits Portraits Everywhere: DaftHunk's fork at `417226e` (its readme says
   v1.03) (new)
 - Black Hearts v2.05 (new)
+- Sirene NPC for BG:EE: development version `1c86000` (new). The collection pins this
+  exact version because the last release, v3.1, installs on BG:EE only, not on EET.
 
 ## Release-note entry (collection alpha.21)
 
 **Collection alpha.21** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
-Rebalance to v0.8.6, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.15,
+Rebalance to v0.8.8, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
 EEex to v1.3.1, BuffBot to v1.12.1, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
-v4.81a-dev.85928f9-chriz.4 and The Tweaks Anthology to its current development
+v4.81a-dev.85928f9-chriz.5 and The Tweaks Anthology to its current development
 version. New in Chris's Recommended: Christopher's revisions of Aid, Luck, Bless,
-Chaotic Commands, Prayer and Recitation; Time Stop that stops everything but the
-caster, and Haste and Slow that no longer change poison and regeneration; companion
+Chaotic Commands, Prayer and Recitation; True Time Stop – fair Haste & Slow, with a
+Time Stop that stops everything but the caster and Haste and Slow that no longer change
+poison and regeneration; companion
 stat adjustments for Rasaad,
 Dorn, Eldoth, Garrick and Quayle; EET's join XP for every joinable NPC that
 lacked it; a fix for the crash after Dorn's BG1 ambush; party AI that uses Defensive
@@ -348,7 +383,11 @@ Stance only with "Use special abilities" on; SCS fine weapons that never break; 
 dose of each type at a time (Potions of Genius still stack); Heroism effects
 that don't combine; summoned creatures that clear the fog of war; Ribald's
 special stock in his regular store; sensible entrance points; 18 player
-voicepacks from ChrizFader's voicepacks; and a choice of how Imoen continues
+voicepacks from ChrizFader's voicepacks; Artisan's Kitpack weapon rules that also cover
+weapons from later mods; axes and short bows for druids, and long bows as well for
+fighter/druids; the cleric weapons plus axes for Yeslick's Alaghor of Clangeddin kit;
+Sirene in BG1 and Siege of Dragonspear, who carries on into BG2;
+and a choice of how Imoen continues
 into Shadows of Amn, by default as the BG2 thief/mage Imoen. Challenge
 Mode adds that fences can't be stolen from and ignore reputation, and picks the
 strict potion rule where Potions of Genius don't stack either. The optional,
@@ -373,6 +412,8 @@ included, can equip daggers, quarterstaves, darts and slings again, and Eldritch
 Knight and Arcane Trickster sorcerers keep their kit weapons when they level up or
 join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a
 kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the start.
+The Invisible Blade and Bardic Wonders' Dancer can use katanas and the rogue and bard
+items that kept them out, also those that later mods add.
 EEex's attack info display is offered as an option. These changes
 apply to new installations; existing games and saves are unchanged.
 
@@ -397,10 +438,19 @@ apply to new installations; existing games and saves are unchanged.
   console, not through the story (the Modpack's banking guide).
 - **SoD Remix v0.6.15** fixes the bridge finale `256` with Tweaks Anthology `3500`
   on; the owner lab reinstalled the remix tail on a copy of the Recommended stack.
-  This release still needs one combined lab install of the whole Recommended
-  selection with `3500` on (see `FOLLOW_UPS.md`). The Imoen choice (v0.6.14) passed
-  the owner lab for all three options; thief kits other than `C0TRICKS` and games
-  without Spell Revisions were not covered there.
+  The combined lab install of the whole Recommended selection with `3500` on passed on
+  2026-10-29, from the v0.6.16 candidate (see `FOLLOW_UPS.md`). The Imoen choice
+  (v0.6.14) passed the owner lab for all three options; thief kits other than
+  `C0TRICKS` and games without Spell Revisions were not covered there.
+- **SoD Remix v0.6.16** (pinned on 2026-10-29) lets `290` accept other mods' victory
+  remarks in the vanilla shape and lets `265` and six more components read timer names
+  from the game's own `GTIMES.IDS`. Its mod files equal those of the candidate in the
+  October 29 Recommended lab with Sirene NPC for BG:EE, where the ending ran from the
+  victory remarks into SoA's opening; only part of the way there was played natively. The
+  owner tracks two frozen expectations of the ending verifier
+  ([chriz-sod-rebalance#36](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/36))
+  and `290` skipping SoD's `bdcut61`
+  ([chriz-sod-rebalance#37](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/37)).
 - **Voicepacks** (18 defaults, release v1.1.0) passed per-pack fixture installs
   with the pinned WeiDU only; this release needs one combined lab install with the
   full Recommended selection first (see `FOLLOW_UPS.md`).
@@ -437,7 +487,7 @@ apply to new installations; existing games and saves are unchanged.
   (Christopher, 2026-10-26). Since v0.8.4,
   Rebalance components that cannot apply a change correctly stop the installation
   with the reason instead of guessing.
-- **Rebalance `360`** (Time Stop and Haste effect clocks, Default; Christopher,
+- **Rebalance `360`** (True Time Stop – fair Haste & Slow, Default; Christopher,
   2026-10-27) needs EEex installed before it, `data/PATCH27.BIF` and the 64-bit
   BG2:EE 2.7.3.0 executable (PE timestamp `0x6a18d73d`). CEBG's only accepted
   `Baldur.exe` has that timestamp, and EEex runs before Rebalance in both recipes.
@@ -445,20 +495,55 @@ apply to new installations; existing games and saves are unchanged.
   BG2:EE 2.7.3.0 and in the full CEBG stack (EET, Recommended, Spell Revisions), both
   with EEex's LuaJIT option; it has not been accepted in real gameplay yet (its release
   notes). Saving, dispel, cure and death during a stop are not covered. It is marked
-  "ready" like `340`, without a recorded readiness decision of its own.
+  "ready" like `340`, without a recorded readiness decision of its own. v0.8.7 renamed
+  it (it was *Time Stop and Haste effect clocks*; Christopher took v0.8.7 into this
+  release on 2026-10-28) and added a check against its new standalone package
+  `CBR_TRUE_TIMESTOP`, which the collection does not install; its other checks, its two
+  files and what it does in the game are unchanged.
+- **Rebalance `410` and `411`** (Druid weapons and Alaghor of Clangeddin weapons, Default;
+  Christopher, 2026-10-29) run in the Rebalance run after every Artisan's Kitpack run, the
+  late tweak run with `1010000` included, as their release notes ask: `1010000` rebuilds
+  the Kitpack's class weapon grants before `410` adds the druid grants, and no later run
+  rebuilds them. `411` needs EEex, Yeslick's Fighter-Alaghor and the Kitpack's EEex weapon
+  rules, and it refuses an executable in which its hook site does not occur exactly once.
+  Their owner labs ran on BG2:EE 2.7.3.0 with EEex v1.3.1, not on EET and not in the full
+  Recommended stack (`CHRIZ-BG-REBALANCE.md`).
 - **Spell Revisions fork v4.21-chriz.7**: the Rogue Rebalancing level-5 replacements
   (v4.21-chriz.6) have not been checked in game yet (its release notes).
-- **Artisan's Kitpack fork chriz.4** (with chriz.2's sorcerer fix and chriz.3's kit
-  weapon fix) reaches new installations only: existing installations get the weapon
-  fixes only through a new installation (Christopher, 2026-10-26 and 2026-10-27), as the
-  collection changelog says. The fork's `AKCB_SORCERER_WEAPONS` tail is not part of the
+- **Artisan's Kitpack fork chriz.5** (with chriz.2's sorcerer fix, chriz.3's kit weapon
+  fix and chriz.4's monk and shaman fix) reaches new installations only: existing
+  installations get the weapon fixes only through a new installation (Christopher,
+  2026-10-26 and 2026-10-27; chriz.5's release notes say the same), as the collection
+  changelog says. The fork's `AKCB_SORCERER_WEAPONS` tail is not part of the
   collection, and the kit, monk and shaman weapon fixes have no tail; in existing games
-  the helper creature gives the weapons back as before. chriz.3's lab ran on BG2:EE
+  the helper creature gives the weapons back as before. chriz.5's Invisible Blade and
+  Dancer fix has no tail either. chriz.3's lab ran on BG2:EE
   2.7.3.0, not EET, with a fresh install in the collection's Kitpack order. chriz.4's labs
   ran on three disposable BG2:EE 2.7.3.0 games with EEex 1.3.1: chriz.3 and chriz.4 in
   CEBG's order, and chriz.4 in another order without Spell Revisions. Not covered there:
   EET, kits other than the Favored Soul and the Ninja, and characters created before the
-  installation (its release notes; see `FOLLOW_UPS.md`).
+  installation (its release notes; see `FOLLOW_UPS.md`). chriz.5's three labs (BG2:EE
+  2.7.3.0, EEex 1.3.1; with and without Spell Revisions, and another layout with
+  `1010000` instead of `7205`) did not cover EET, the NPC installer or installations
+  without EEex. Its new tweak `7205` (Default; Christopher, 2026-10-29) runs before
+  `8204` in the late tweak run, and `1010000`, which ends that run, ends with the same
+  pass (`ARTISANSKITPACK_TWEAK.md`).
+- **Sirene NPC for BG:EE** (Default; Christopher, 2026-10-29) is a GitHub commit archive
+  of unreleased `master`, like the Sirene NPC for BG2 pin. Both Sirene mods now install
+  after Artisan's Kitpack's main run, Sirene BG1 first: the Kitpack's Martyr kit stays
+  selectable, and on EET Sirene NPC for BG2 continues a Sirene who travelled with the
+  party from SoD into SoA. Sirene NPC for BG2's files are therefore no longer changed by
+  Spell Revisions' main component, Bardic Wonders `2003`/`2005` and the Kitpack's main
+  item passes (`SIRENE_BG2.md`). The EET lab result is recorded in `FOLLOW_UPS.md`.
+- **Artisan's Kitpack `1010000`** (kit weapon rules for weapons from later mods, Default;
+  Christopher, 2026-10-26) installs only where `C0PR#CL.SPL` exists, which within the
+  collection means EEex with Eldritch Knight `20000` or Arcane Trickster `8204`; the
+  feature requires exactly that. It ends the late tweak run, after Tweaks Anthology and
+  SCS; weapons that later runs add are not swept. Its examples come from the October 29
+  EET lab, which compared every swept file with its state before the sweep: 20 items came
+  under the Kitpack's weapon rules; six of them, Sirene's weapons and Tweaks Anthology's
+  copies of them, only because that lab also had PR #58's Sirene order
+  (`ARTISANSKITPACK_TWEAK.md`). The lab check is recorded in `FOLLOW_UPS.md`.
 - **EEex Remote Console v0.2.1** is a tag without GitHub release assets, like
   v0.2.0, so the pin is GitHub's commit archive of the tag commit. Its `START_SP` fix
   passed the README checklist on EET 2.7.3.0 with EEex v1.3.1 in the October 18 lab.

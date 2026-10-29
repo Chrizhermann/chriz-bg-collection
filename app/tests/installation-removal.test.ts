@@ -3,16 +3,17 @@ import { afterEach, describe, expect, it } from "vitest";
 import { getByRole, getByText, queryByRole, waitFor } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { BackendCommandError, FixtureBackend } from "../src/backend";
-import type { InstallationRemovalPreview, ManagedInstallation } from "../src/contracts";
+import type { InstallationRemovalPreview, InstallationRemovalResult, ManagedInstallation } from "../src/contracts";
 import { mountApp } from "../src/app";
 import { buildScreen } from "../src/screens/build";
-import { installationRemovalDialog } from "../src/components/installation-removal";
+import { installationRemovalDialog, installationRemovalNotice } from "../src/components/installation-removal";
 
 const installation: ManagedInstallation = {
   id: "chosen", name: "My test installation", path: "D:\\CEBG\\My test installation", status: "Ready",
   receiptPath: null, launchPath: "D:\\CEBG\\My test installation\\game\\InfinityLoader.exe",
   completedAtMillis: 1, available: true, resumable: false,
 };
+const profile = "C:\\Users\\Fixture\\Documents\\Chriz Easy BG-test";
 
 class RemovalBackend extends FixtureBackend {
   entries = [installation];
@@ -20,22 +21,26 @@ class RemovalBackend extends FixtureBackend {
   removals: { id: string; token: string }[] = [];
   action: "delete" | "forget" | "unlist" = "delete";
   inUse = false;
+  /** Whether the profile holds nothing but CEBG's marker, and whether it then stays after all. */
+  unusedProfile = false;
+  unusedProfileKept = false;
   override listManagedInstallations() { return Promise.resolve([...this.entries]); }
   override previewInstallationRemoval(id: string): Promise<InstallationRemovalPreview> {
     this.previews.push(id);
     return Promise.resolve({
       installId: id, displayName: installation.name, managedRoot: installation.path, action: this.action,
       reason: this.action === "unlist" ? "Its CEBG install records are missing or damaged." : null,
-      preservedSavePath: "C:\\Users\\Fixture\\Documents\\Chriz Easy BG-test", confirmationToken: "exact-preview-token",
+      preservedSavePath: this.unusedProfile ? null : profile, unusedSavePath: this.unusedProfile ? profile : null,
+      confirmationToken: "exact-preview-token",
     });
   }
-  override removeInstallation(id: string, token: string): Promise<void> {
+  override removeInstallation(id: string, token: string): Promise<InstallationRemovalResult> {
     this.removals.push({ id, token });
     if (this.inUse) return Promise.reject(new BackendCommandError({
       code: "installation_in_use", message: "This game is still running.", recovery_action: "Close the game and try again.", technical_detail: "fixture process",
     }));
     this.entries = this.entries.filter((entry) => entry.id !== id);
-    return Promise.resolve();
+    return Promise.resolve({ unusedSavePathKept: this.unusedProfileKept ? profile : null });
   }
 }
 
@@ -145,6 +150,58 @@ describe("explicit managed-install removal", () => {
     expect(queryByRole(root, "button", { name: "Delete permanently" })).toBeNull();
     await user.click(getByRole(root, "button", { name: "Forget installation" }));
     expect(backend.removals[0]?.id).toBe("chosen");
+  });
+
+  it("names an unused saved-game profile that deletion removes too", () => {
+    const dialog = installationRemovalDialog({
+      installId: installation.id, displayName: installation.name, managedRoot: installation.path,
+      action: "delete", preservedSavePath: null, unusedSavePath: profile, confirmationToken: "token",
+    }, false, null, () => {}, () => {});
+    expect(dialog.textContent).toContain("Saved-game profile deleted too, since the game never used it:");
+    expect(getByText(dialog, profile)).toBeTruthy();
+    expect(dialog.textContent).not.toContain("Saved-game profile kept");
+  });
+
+  it("says that forgetting a missing folder deletes only its unused profile", () => {
+    const dialog = installationRemovalDialog({
+      installId: installation.id, displayName: installation.name, managedRoot: installation.path,
+      action: "forget", preservedSavePath: null, unusedSavePath: profile, confirmationToken: "token",
+    }, false, null, () => {}, () => {});
+    expect(dialog.textContent).toContain("only its unused saved-game profile below is deleted");
+    expect(dialog.textContent).not.toContain("no files will be deleted");
+    expect(getByText(dialog, profile)).toBeTruthy();
+  });
+
+  it.each([
+    ["delete", false, null, "Installation deleted. Saved games outside its folder were kept."],
+    ["delete", true, null, "Installation deleted, along with its unused saved-game profile."],
+    ["delete", true, profile, `Installation deleted. Its unused saved-game profile could not be deleted; it stays at ${profile}.`],
+    ["forget", false, null, "Installation entry removed. No files were deleted."],
+    ["forget", true, null, "Installation entry removed, along with its unused saved-game profile."],
+    ["forget", true, profile, `Installation entry removed. Its unused saved-game profile could not be deleted; it stays at ${profile}.`],
+    ["unlist", false, null, "Installation removed from My installs. Its folder was not changed."],
+  ] as const)("reports a completed %s (unused profile: %s, kept: %s)", (action, unused, kept, notice) => {
+    const preview: InstallationRemovalPreview = {
+      installId: installation.id, displayName: installation.name, managedRoot: installation.path, action,
+      preservedSavePath: unused ? null : profile, unusedSavePath: unused ? profile : null, confirmationToken: "token",
+    };
+    expect(installationRemovalNotice(preview, { unusedSavePathKept: kept })).toBe(notice);
+  });
+
+  it("reports an unused profile that stays after the installation was deleted", async () => {
+    const backend = new RemovalBackend();
+    backend.unusedProfile = true;
+    backend.unusedProfileKept = true;
+    const root = document.createElement("div");
+    document.body.append(root);
+    const user = userEvent.setup();
+    await mountApp(root, backend);
+    await user.click(getByRole(root, "button", { name: "Delete / remove installation…" }));
+    expect(getByRole(root, "alertdialog").textContent).toContain("since the game never used it");
+    await user.click(getByRole(root, "button", { name: "Delete permanently" }));
+    await waitFor(() => expect(backend.removals).toEqual([{ id: "chosen", token: "exact-preview-token" }]));
+    expect(queryByRole(root, "alertdialog")).toBeNull();
+    expect(root.textContent).toContain(`Its unused saved-game profile could not be deleted; it stays at ${profile}.`);
   });
 
   it("explains entry-only removal of a folder that cannot be proven to be the installation", () => {

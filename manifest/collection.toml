@@ -207,13 +207,6 @@ components = [0, 1]
 args = []
 
 [[runs]]
-run_id = "sirene-bg2"
-mod_id = "sirene-bg2"
-phase = "main"
-components = [0, 2, 5, 6, 7, 8]
-args = []
-
-[[runs]]
 run_id = "ascension-bg2"
 mod_id = "ascension"
 phase = "main"
@@ -232,6 +225,20 @@ run_id = "artisanskitpack-main-bg2"
 mod_id = "artisanskitpack"
 phase = "main"
 components = [1, 2, 20000, 20001, 8001, 8101, 8002, 8004, 10002, 10001, 10003, 10004, 1003, 1006, 1004, 1005, 1007, 1000, 1001, 1008, 1009, 1100, 2000, 2010, 2011, 2012, 2002, 3000, 3010, 3003, 3011, 3004, 3001, 3002, 3005, 5100, 5110, 5001, 5002, 7004, 7006, 7001, 7002, 7003, 7005, 9001]
+args = []
+
+[[runs]]
+run_id = "sirene-bg1-bg2"
+mod_id = "sirene-bg1"
+phase = "main"
+components = [0, 3, 6, 7, 8, 9]
+args = []
+
+[[runs]]
+run_id = "sirene-bg2"
+mod_id = "sirene-bg2"
+phase = "main"
+components = [0, 2, 5, 6, 7, 8]
 args = []
 
 [[runs]]
@@ -315,7 +322,7 @@ args = []
 run_id = "artisanskitpack-tweak-late-bg2"
 mod_id = "artisanskitpack-tweak"
 phase = "main"
-components = [51010, 12012, 3202, 3302, 8204]
+components = [51010, 12012, 3202, 3302, 7205, 8204, 1010000]
 args = []
 
 [[runs]]
@@ -371,7 +378,7 @@ args = []
 run_id = "chriz-bg-rebalance-bg2"
 mod_id = "chriz-bg-rebalance"
 phase = "post-eet-end"
-components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360]
+components = [100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 404, 405, 407, 408, 302, 410, 411, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360]
 args = []
 
 [[runs]]
@@ -2503,6 +2510,85 @@ conflicts = [{ feature_id = "feature:yeslicknpc:component-0", reason = "Choose e
 components = [{ run_id = "yeslicknpc-bg2", component = 1 }]
 
 [[features]]
+id = "feature:sirene-bg1:component-0"
+title = "Sirene NPC for BG1 and Siege of Dragonspear"
+description = "Add Sirene to BG1 and Siege of Dragonspear. With Sirene NPC for BG2, she can travel on with you into BG2."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+components = [{ run_id = "sirene-bg1-bg2", component = 0 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-3"
+title = "Sirene portrait in BG1 and SoD: Sirick, Light Armor"
+description = "Use Christopher's curated Sirene portrait, the same one as in BG2."
+category = "visuals"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+components = [{ run_id = "sirene-bg1-bg2", component = 3 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-6"
+title = "Sirene as a True Paladin in BG1 and SoD"
+description = "Use the curated default class for Sirene in BG1 and Siege of Dragonspear, the same as in BG2."
+category = "npcs"
+decision = "default"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 6 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-7"
+title = "Sirene as a Cavalier in BG1 and SoD"
+description = "Optional. Make Sirene a Cavalier in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 7 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-8"
+title = "Sirene as an Inquisitor in BG1 and SoD"
+description = "Optional. Make Sirene an Inquisitor in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-9", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 8 }]
+
+[[features]]
+id = "feature:sirene-bg1:component-9"
+title = "Sirene as an Undead Hunter in BG1 and SoD"
+description = "Optional. Make Sirene an Undead Hunter in BG1 and Siege of Dragonspear; pick the same class for Sirene in BG2."
+category = "npcs"
+decision = "optional"
+readiness = "ready"
+parent = "feature:sirene-bg1:component-0"
+conflicts = [
+  { feature_id = "feature:sirene-bg1:component-6", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-7", reason = "Choose at most one alternate class for Sirene." },
+  { feature_id = "feature:sirene-bg1:component-8", reason = "Choose at most one alternate class for Sirene." },
+]
+components = [{ run_id = "sirene-bg1-bg2", component = 9 }]
+
+[[features]]
 id = "feature:sirene-bg2:component-0"
 title = "Sirene NPC for BG2"
 description = "Add Sirene to the BG2 campaign."
@@ -3622,6 +3708,16 @@ requires = ["feature:artisanskitpack:component-3002", "feature:eeex:mandatory-co
 components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 3302 }]
 
 [[features]]
+id = "feature:artisanskitpack-tweak:component-7205"
+title = "Katana fix for items and kits from later mods"
+description = "The Invisible Blade and Bardic Wonders' Dancer, who may not wear armor, can also use the katanas and other items that mods installed after the Kitpack add, such as SCS's Drow Katana and Tweaks Anthology's two-handed katanas. Every other kit stays blocked where it was."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 7205 }]
+
+[[features]]
 id = "feature:artisanskitpack-tweak:component-8204"
 title = "Arcane Trickster Sorcerer thief equipment"
 description = "Enable thief equipment for the Arcane Trickster sorcerer."
@@ -3631,6 +3727,18 @@ readiness = "ready"
 parent = "mod:artisanskitpack-tweak"
 requires = ["feature:artisanskitpack:component-8004", "feature:eeex:mandatory-components"]
 components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 8204 }]
+
+[[features]]
+id = "feature:artisanskitpack-tweak:component-1010000"
+title = "Kit weapon rules for weapons from later mods"
+description = "Extend the Artisan kits' weapon rules to weapons that mods installed after the Kitpack add, such as the SCS Drow Katana for the Arcane Trickster sorcerer."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:artisanskitpack-tweak"
+requires = ["feature:eeex:mandatory-components"]
+requires_any = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-tweak:component-8204"]
+components = [{ run_id = "artisanskitpack-tweak-late-bg2", component = 1010000 }]
 
 [[features]]
 id = "feature:artisanskitpack-tweak:component-51010"
@@ -4621,7 +4729,7 @@ components = [{ run_id = "chriz-bg-rebalance-bg2", component = 340 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:component-360"
-title = "Time Stop and Haste effect clocks"
+title = "True Time Stop – fair Haste & Slow"
 description = "In a Time Stop everything but the caster stops: the frozen creatures' spell and item durations, poison, disease, regeneration and other repeated effects wait and continue afterwards with the time they had left. Haste and Slow no longer speed up or slow down poison, regeneration and other repeated effects; actions, attacks and movement stay hasted or slowed. Install it before a playthrough: adding or removing it during one is not supported. Saving, dispelling, curing or dying during a Time Stop are not covered yet."
 category = "spells"
 decision = "default"
@@ -4629,6 +4737,28 @@ readiness = "ready"
 parent = "mod:chriz-bg-rebalance"
 requires = ["feature:eeex:mandatory-components"]
 components = [{ run_id = "chriz-bg-rebalance-bg2", component = 360 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-410"
+title = "Druid weapons"
+description = "Druids and every druid kit may use axes and short bows and put one proficiency point into them; fighter/druids may also use long bows and put up to two points into all three. Higher limits that another mod set stay. The English druid and fighter/druid descriptions name the new weapons. Existing party members get them at their next level-up at the latest."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 410 }]
+
+[[features]]
+id = "feature:chriz-bg-rebalance:component-411"
+title = "Alaghor of Clangeddin weapons"
+description = "Yeslick's Alaghor of Clangeddin kit trains and uses the cleric weapons plus axes, Clangeddin's weapon, with up to two proficiency points like a fighter/cleric. The thief weapons its weapon list allowed drop out; points already spent stay. Needs EEex, Yeslick as a Fighter-Alaghor and the Artisan's Kitpack weapon rules. The English kit description names the axes."
+category = "kits"
+decision = "default"
+readiness = "ready"
+parent = "mod:chriz-bg-rebalance"
+requires = ["feature:eeex:mandatory-components", "feature:yeslicknpc:component-1"]
+requires_any = ["feature:artisanskitpack:component-20000", "feature:artisanskitpack-tweak:component-8204"]
+components = [{ run_id = "chriz-bg-rebalance-bg2", component = 411 }]
 
 [[features]]
 id = "feature:chriz-bg-rebalance:bard-spell-ceilings"

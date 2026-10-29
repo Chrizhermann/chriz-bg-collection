@@ -62,6 +62,33 @@ signed setup. Do not run all ignored tests as part of a routine source build. A 
 normal suite does not establish full installation, gameplay, save/reload, or native updater
 apply/restart acceptance.
 
+Test builds never resolve the player's real Documents folder, where every installation
+reserves its saved-game folder. The engine's `test-documents` feature, which only the engine's
+and the app's dev-dependencies enable, makes every Documents lookup use the folder a test
+names in `CHRIZ_BG_COLLECTION_TEST_DOCUMENTS` and stops a test that names none, in debug and
+`--release` test runs alike.
+
+The engine's CLI tests declare which programs run and simulate failures and interruptions
+through environment variables (`CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES`,
+`CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL`, `CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK` and
+`CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU`). The engine's `test-hooks` feature, which
+only the engine's dev-dependency enables, compiles these hooks into every test build, so
+`--release` test runs check the same paths as debug runs. Other builds honor these variables
+only with debug assertions.
+
+Test builds never remove the player's real application data either. When the uninstaller asks
+the app to remove it (`--remove-application-data`), the app's `test-application-data` feature,
+which only the app's own dev-dependency enables, makes the app remove only the folders a test
+names in `CHRIZ_BG_COLLECTION_TEST_APPLICATION_DATA_PARENTS` and refuse when a test names
+none, in debug and `--release` test runs alike. Other builds honor this variable only with
+debug assertions. A later release build of the app replaces `target/release/chriz-bg-app.exe`,
+so the tests run a copy of it, and only a copy that contains this variable's name.
+
+A binary from a build that also compiles tests (`cargo test`, `--all-targets`) carries these
+features; build the app, installer or CLI for real use with a plain `cargo build` or
+`tauri build`. Such a build contains none of the variable names above, and
+`cargo tree --locked -e normal,build -f "{p} {f}"` shows none of these features.
+
 The app's development dependencies enable Tauri's mock runtime, and `build.rs` embeds
 the Common Controls v6 manifest into Windows MSVC integration-test executables. No
 external `.exe.manifest` or ad hoc linker flags are needed for a fresh checkout.
