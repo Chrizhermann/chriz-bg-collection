@@ -36,6 +36,9 @@ Listed at the pinned upstream commit **`1c8600029a9ac31395a61b5d4d03f98337dcf83e
   and the Kitpack's Martyr rewrites an existing copy's description, ability table and
   spells anyway. Without a class component Sirene herself would be a Martyr; the curated
   class `6` makes her a True Paladin.
+- In this order Sirene NPC for BG2 replaces one unused Kitpack Martyr file
+  (`c0ilms2a.spl`, no in-game effect; see [SIRENE_BG2](SIRENE_BG2.md)). This mod ships
+  no such file.
 - Before Sirene NPC for BG2. On EET that mod continues Sirene from SoD into SoA only if
   `c0sirene.cre` from this mod exists when it installs (`AR0903_e.baf`); otherwise it
   spawns its own Sirene.

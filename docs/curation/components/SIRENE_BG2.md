@@ -27,6 +27,12 @@ Listed at installed version **—**.
   `C0SBLUN`, `C0SS1H1` and `C0SS1H2`, `10001`/`10003` `C0SW2H`/`C0SW2H2`, `1006`
   `C0SRING2`, `7005` `C02PLAT`/`C0SLEAT` and `7006` `C02PLAT`. Spell Revisions' NPC
   spellbooks `60` runs after EET_end and still reaches Sirene.
+- Known name clash, no in-game effect in the tested Recommended install: this mod's
+  `spells/c0ilms2a.spl` replaces the Kitpack Martyr's (`3005`) file of the same name.
+  Both files are unused: nothing casts `C0ILMS2A` or applies the Kitpack's
+  `c0ilms2a.eff`. It would matter only if a later Kitpack version wired up that hit
+  effect, and then for Martyrs only, Sirene included in a Custom setup without a class
+  option.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|

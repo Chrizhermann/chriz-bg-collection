@@ -54,6 +54,9 @@ which the collection does not install.
   `2380` complements it by expanding playable kit eligibility, including elf mage
   specialists; it does not replace `1/2`. Future overlapping `2350/2351/2353/2357/2358`
   and `2550`–`2552` choices must be mutually exclusive in the UI.
+- Martyr `3005`: Sirene NPC for BG2, installed after it, replaces its unused
+  `c0ilms2a.spl` with an unrelated, also unused file of the same name. No in-game effect
+  in the tested Recommended install; see [SIRENE_BG2](SIRENE_BG2.md).
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
