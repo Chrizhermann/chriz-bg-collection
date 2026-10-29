@@ -283,6 +283,20 @@ unchanged.
     restoring temporarily equipped items no longer risks overwriting the first
     backpack slot on BG2:EE 2.7.3.0, which could corrupt the character's name and
     crash the game. (BuffBot v1.11.0)
+  - New: a preset can cast its longest-lasting buffs first ("Order: Duration"; your
+    own order stays the default), and buffs that are nearly over can be cast again,
+    through "Refresh buffs that are nearly over" in the EEex options (off by default)
+    or the panel's "Active: Skip / Refresh Low / Force All" toggle. The panel's
+    buttons, tabs, scrollbars and frame now wear the theme's artwork, and the theme
+    colours show, so the Duration, Uses and Target columns are readable on dark
+    themes. (BuffBot v1.12.0)
+  - Removed: the F12 preset abilities. To buff without the panel, right-click the
+    HUD gear and choose a preset. BuffBot no longer adds text to the game's
+    `dialog.tlk`. (BuffBot v1.12.0)
+  - Fixed: on a small panel, button captions no longer spill onto the neighbouring
+    buttons, so a click lands on the button you see; spare tab slots stay inside
+    the panel; and the quick-preset menu's captions move with the menu.
+    (BuffBot v1.12.1)
 - **BG Rebalance fixes** for components the collection installs (Rebalance v0.8.4):
   - Bracers of Blinding Strike and Spell Revisions' Haste or Improved Haste no
     longer combine when the spell is cast first.
@@ -338,7 +352,7 @@ unchanged.
   version, as it does for EET.
 - ChrizFader's voicepacks v1.1.0 (new)
 - SoD Remix v0.6.16 (was v0.6.13)
-- BuffBot v1.11.0 (was v1.10.0)
+- BuffBot v1.12.1 (was v1.10.0)
 - EEex Remote Console v0.2.1 (was v0.2.0)
 - Spell Revisions fork v4.21-chriz.7 (was v4.21-chriz.5)
 - The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.5 (was chriz.1)
@@ -358,7 +372,7 @@ unchanged.
 
 **Collection alpha.22** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
 Rebalance to v0.8.8, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
-EEex to v1.3.1, BuffBot to v1.11.0, EEex Remote Console to v0.2.1, the Spell
+EEex to v1.3.1, BuffBot to v1.12.1, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
 v4.81a-dev.85928f9-chriz.5 and The Tweaks Anthology to its current development
 version. New in Chris's Recommended: Christopher's revisions of Aid, Luck, Bless,
@@ -392,9 +406,11 @@ High Mastery now gives +5 damage, and the NPC move now includes Ajantis. In Bard
 Troubadour and Deathsinger spell copies and descriptions follow Spell Revisions,
 the Gallant gets the new bard spells, and Symphony of the Dark Children ends
 with its round of Invisibility. BuffBot's combat-stop notices now appear over the
-party leader, BuffBot can speed up a buff run to 2x or 4x and no longer risks a crash
-when it puts equipped items back, and the optional EEex Remote Console no longer leaves the
-single-player menu behind the game's screens. Sorcerers, the Dragon Disciple
+party leader, BuffBot can speed up a buff run to 2x or 4x, cast the longest-lasting
+buffs first and cast buffs that are nearly over again, draws its panel in the theme's
+artwork, takes presets from the HUD gear instead of F12 abilities and no longer risks a
+crash when it puts equipped items back, and the optional EEex Remote Console no longer
+leaves the single-player menu behind the game's screens. Sorcerers, the Dragon Disciple
 included, can equip daggers, quarterstaves, darts and slings again, and Eldritch
 Knight and Arcane Trickster sorcerers keep their kit weapons when they level up or
 join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a
@@ -419,7 +435,7 @@ apply to new installations; existing games and saves are unchanged.
   Its owner labs ran on disposable 2.7.3.0 installs with EEex v1.3.1, the last one with the
   release candidate's package on a copy of the Recommended install; no ongoing
   playthrough has run with `430` yet, so the Recommended lab run checks the loader log,
-  together with BuffBot v1.11.0 (see `FOLLOW_UPS.md`).
+  together with BuffBot v1.12.1 (see `FOLLOW_UPS.md`).
   `135` and `460` were checked in game for alpha.13 on a copy of the Recommended install.
   Chapter caps `652` stay experimental: their lab set chapters and gave XP from the
   console, not through the story (the Modpack's banking guide).
@@ -457,6 +473,17 @@ apply to new installations; existing games and saves are unchanged.
   Recommended installs, not accepted yet. The column headers and the artwork were
   not checked in game, and nobody checked the new PVRZ page numbers against the
   interface mods' pages.
+- **BuffBot v1.12.1** (with v1.12.0) changes BuffBot's Lua code and menu, and its panel
+  now draws the control artwork that v1.11.0 only shipped. Its TP2 also accepts IWD:EE,
+  no longer appends the eight F12 ability names to the TLK, no longer writes
+  `override/bfbot_strrefs.txt` or copies `BFBOTIB.BAM`, and copies the new
+  `BfBotPln.lua`; components `1` and `0`, their order, the EEex checks and the artwork's
+  PVRZ pages are unchanged. Its owner labs ran on BG2:EE 2.7.3.0 and IWD:EE 2.7.3.0 with
+  EEex v1.3.1, with the panel and its artwork seen on screen in all six themes; BG:EE and
+  EET were not checked in game, and its README still calls the configuration with Modpack
+  `430` not accepted. Christopher takes it into this release and tests it in the release
+  candidate (2026-10-29). The PVRZ page check above still applies, now with the artwork on
+  screen.
 - **Rebalance `340`** (Chris Revisions, Default) was installed on scratch copies of
   game resources only and has not run in a game yet (its release notes). Its "ready"
   flag, like EEex `9`'s, stays as it is until the Recommended lab run decides

@@ -355,18 +355,22 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // change all six digests, and the plans also the selected Kitpack runs' artifact id. With
     // 7205 removed and chriz.4 restored, the six previous digests return (manifest ece76967…,
     // f6ad7fd6…, 55b18383…; curated 455b2e6b…, fa83cc45…, 5e6ff963…).
+    // Re-pinned on October 29 for BuffBot v1.12.1, which goes into the alpha.22 release
+    // candidate (Christopher, 2026-10-29): in both recipes only the Recommended plan changes,
+    // in the buffbot-bg2 run's artifact id. With v1.11.0 restored, the previous plan digests
+    // return (manifest 59f7b6fc…, curated 5dd76d84…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "f338fc118fe8a2264b2ae95ef2baf1b634b3f236de82d73757296d693878efd0",
             "2447350d05c9e316570f961b1b2efda6f89882c596b393a8ebb0f94662ae171f",
-            "59f7b6fc7d1f57937dd428e907c38cf15d58651cec34372d59b9a6d6dd29b602",
+            "8b3233288fe0d8abff1126de3ba0c8534b769467942c64736a1a23059123caee",
         ),
         (
             "../recipes/curated-full-current",
             "bb95f4581529cfb6dadd14cb382c996b6c9b91dfaca70a2c4e59a9da286999b2",
             "7cf6a3b5aa6a6ac274186247768145a5e66522bb3dd9d35df2dd04678d045f02",
-            "5dd76d845dc10d47309b99e6b4f2596db4ac8d79d2b61fa0539d46d73e412d01",
+            "d0b7318df0d9fb57296d70c46bc70b2d63c157090b021499c7188e2d49a0726b",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();

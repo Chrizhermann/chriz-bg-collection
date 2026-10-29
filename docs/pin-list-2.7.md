@@ -28,7 +28,7 @@ no installer references, such as older versions, are not listed.
 | Black Hearts | 2.05 | `blackhearts` | `a1a6257a2c21…` | [release asset](https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod) |
 | Branwen for BGII | 8 | `branwen` | `f82c93e67f19…` | [release asset](https://github.com/Pocket-Plane-Group/Branwen_for_BGII/releases/download/v8/branwen-v8pre.zip) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
-| BuffBot | 1.11.0 | `buffbot` | `c147919db1e6…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.11.0/buffbot-v1.11.0.zip) |
+| BuffBot | 1.12.1 | `buffbot` | `7ab5f040b05d…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.1/buffbot-v1.12.1.zip) |
 | The Tweaks Anthology | 7649ced6cd25865874d787ec1a9abbc67b068729 | `cdtweaks` | `117cd79cb518…` | [commit archive](https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729) |
 | chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.8 | `chriz-bg-rebalance` | `dec0544b3cc0…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.8/chriz-bg-rebalance-v0.8.8-windows.zip) |
@@ -102,7 +102,7 @@ no installer references, such as older versions, are not listed.
 | Baldur's Gate Graphical Overhaul | 3.6 | `bggo` | `59e01a3dcf48…` | [release asset](https://github.com/Spellhold-Studios/Baldurs-Gate-Graphical-Overhaul/releases/download/v3.6/baldurs-gate-graphical-overhaul-v3.6.zip) |
 | Black Hearts | 2.05 | `blackhearts` | `a1a6257a2c21…` | [release asset](https://github.com/A-Wizard-Did-It/Black-Hearts/releases/download/v2.05/BlackHearts-v2.05.iemod) |
 | Bubb's Spell Menu Extended | 5.2 | `bubb-spell-menu` | `ac5380e99a53…` | [tag archive](https://codeload.github.com/Bubb13/Bubbs-Spell-Menu-Extended/zip/refs/tags/v5.2) |
-| BuffBot | 1.11.0 | `buffbot` | `c147919db1e6…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.11.0/buffbot-v1.11.0.zip) |
+| BuffBot | 1.12.1 | `buffbot` | `7ab5f040b05d…` | [release asset](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.1/buffbot-v1.12.1.zip) |
 | chriz-bg-modpack | 0.2.0-alpha.14 | `chriz-bg-modpack` | `45c767b21342…` | [release asset](https://github.com/Chrizhermann/chriz-bg-modpack/releases/download/v0.2.0-alpha.14/chriz-bg-modpack-v0.2.0-alpha.14.zip) |
 | CHRIZ-BG-REBALANCE | 0.8.8 | `chriz-bg-rebalance` | `dec0544b3cc0…` | [release asset](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.8/chriz-bg-rebalance-v0.8.8-windows.zip) |
 | CHRIZ-SOD-REMIX | 0.6.16 | `chriz-sod-remix` | `7da50d206e4f…` | [release asset](https://github.com/Chrizhermann/chriz-sod-rebalance/releases/download/v0.6.16/chriz-sod-remix-v0.6.16.zip) |
