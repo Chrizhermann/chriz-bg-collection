@@ -54,7 +54,8 @@ Cross-repository status. Component detail stays in the sections below and in the
      Christopher, 2026-10-26) is a default in both recipes since
      [PR #60](https://github.com/Chrizhermann/chriz-bg-collection/pull/60) (merged on
      2026-10-29). Its examples come from the October 29 EET lab data (below).
-     SoD Remix v0.6.16 replaces v0.6.15 in both recipes since PR #PINPR (below).
+     SoD Remix v0.6.16 replaces v0.6.15 in both recipes since
+     [PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63) (below).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
   3. A full lab run of the Recommended selection.
@@ -97,7 +98,8 @@ Cross-repository status. Component detail stays in the sections below and in the
     draft (`docs/plans/2026-10-14-next-release-changelogs.md`) still calls this open; the
     alpha.22 release notes take the decision.
 - SoD Remix v0.6.16, released on 2026-10-29 (Christopher's OK of the same day), pinned in
-  both recipes since PR #PINPR (fresh-download and native-order evidence in
+  both recipes since [PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63)
+  (fresh-download and native-order evidence in
   `manifest/evidence/release-intake-20261029-sodremix.toml`). It replaces v0.6.15 with the
   same components, order and decisions:
   - `290` accepts every victory remark in the vanilla shape, whoever added it, so Sirene
