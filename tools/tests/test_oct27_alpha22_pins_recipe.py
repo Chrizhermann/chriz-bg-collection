@@ -58,9 +58,10 @@ CONCERNED = {
     ("ARTISANSKITPACK_NPC", 2001): (NPC_RUN, Decision.DEFAULT),
     ("ARTISANSKITPACK_NPC", 5102): (NPC_RUN, Decision.DEFAULT),
 }
-# Named in chriz.4's notes and still not offered: the Favored Soul, the weapon usability
-# update tweak and the dual-class kit name tweak.
-NOT_OFFERED = {("artisanskitpack", 30001), ("artisanskitpack-tweak", 1010000), ("artisanskitpack-tweak", 1020000)}
+# Named in chriz.4's notes and still not offered: the Favored Soul and the dual-class kit
+# name tweak. The weapon usability update tweak 1010000 is a default since the October 29
+# intake (Christopher, 2026-10-26; test_oct29_kitpack_weapon_sweep_recipe.py).
+NOT_OFFERED = {("artisanskitpack", 30001), ("artisanskitpack-tweak", 1020000)}
 
 
 def _load_profile(directory: Path) -> tuple[dict, dict]:

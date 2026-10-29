@@ -131,8 +131,9 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # 135 and 460 to the main post-EET_end Modpack run; chapter caps 652 stay unchecked.
         # October 27: Tweaks 2292 (druids level on the cleric XP table) is no longer a default.
         # October 28: the Rebalance v0.8.6 pin adds default Time Stop and Haste effect clocks 360.
-        self.assertEqual(len(without_controls), 468)
-        self.assertEqual(len(selected), 469)
+        # October 29: the Kitpack's weapon-usability sweep 1010000 ends the late tweak run.
+        self.assertEqual(len(without_controls), 469)
+        self.assertEqual(len(selected), 470)
         self.assertEqual(len({run for run, _ in selected}), 69)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
@@ -231,7 +232,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         self.assertEqual(baseline - opted_in, set())
         # October 27: Tweaks 2292 is no longer selected by default.
         # October 28: Rebalance 360 is selected by default.
-        self.assertEqual(len(baseline), 469)
+        # October 29: so is Artisan tweak 1010000.
+        self.assertEqual(len(baseline), 470)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

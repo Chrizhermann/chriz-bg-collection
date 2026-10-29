@@ -37,3 +37,7 @@ name = "Trickster: Mimic Mod Kit Abilities"
 [[components]]
 id = 8204
 name = "Arcane Trickster Sorcerer: Enable Thief Equipment"
+
+[[components]]
+id = 1010000
+name = "Update EEex-based Weapon Usability Changes"

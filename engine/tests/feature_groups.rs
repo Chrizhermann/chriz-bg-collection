@@ -329,18 +329,23 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // run's artifact id; the selections are unchanged. With the old title restored the previous
     // collection digests return (manifest 820fab4c…, curated 9a8d8095…), and with v0.8.6
     // restored the previous plan digests (manifest f4ab1fd8…, curated c18baa9d…).
+    // Re-pinned on October 29 for Artisan's Kitpack tweak 1010000 (weapon-usability sweep,
+    // Christopher, 2026-10-26) as a default at the end of the late tweak run: its feature,
+    // run component and preset entry change all six digests. Without them the six previous
+    // digests return (manifest b16c7f80…, b1f467ef…, 4fd9d65f…; curated a9ce4259…,
+    // c2684cfe…, 2614b16c…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "b16c7f80fcc5e48f2d61a5e50616e329b06deca13f92f29e4312f0113727c655",
-            "b1f467ef9288a2a0dd3138dc4fb670abc9762579309af3f2efaea03ff19bddec",
-            "4fd9d65f14bef85188ae3371e17638d6c9896a5dcd8e1f35cbc9b6b8ce29c762",
+            "f0fd7718d0e8a1a7e0844cc55e1226c3f08837d84453d918878283203cc01c6c",
+            "1cb14fad984623fba94375b29b920ffd43617622a8bcbc1ae890a1c0bbf6ee21",
+            "29a3cb468284d6332682eac8ac8d28db8f2130d02942c3925b657720fe9c6c9d",
         ),
         (
             "../recipes/curated-full-current",
-            "a9ce4259cba3e2d42b3be4106ce8298f1ca0eb704626a7b3bd660af5d1cb99a8",
-            "c2684cfef6bcfc9c2e83ab218b88390288daf7412f670fa82410dff2f1daaee9",
-            "2614b16c2a45d2222735c5e65feee1e738b42bf354a4e373f4f6c4a8c76a38f5",
+            "b633893e96bfbe5054f96322c83ea5404d13046638842e8ab27da373d251fbf8",
+            "cb32867668e1eabea927189e4eb4862033988a464e0b175e4ba691226b9df30e",
+            "e59b795ba91c4a6e7a6915226e487fe0de7cd3901b8bc2e8092446293334ccc6",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
