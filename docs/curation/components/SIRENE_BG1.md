@@ -52,12 +52,64 @@ Listed at the pinned upstream commit **`1c8600029a9ac31395a61b5d4d03f98337dcf83e
   Sirene at install time, so installing both Sirene mods after them loses no crossmod
   content (static audit, 2026-10-29).
 
+## Lab test (2026-10-29)
+
+A disposable lab with the full Recommended plan on EET 2.7.3.0, with SoD Remix's v0.6.16
+candidate. It ran on a hidden desktop through the quiet lab runner. The EEex remote
+console started dialogues, moved the party between areas and set the plot variables
+listed below; everything else ran natively.
+
+- **Install.** Clean.
+  - WeiDU.log has Sirene BG1 `0`, `3` and `6` after Kitpack `3005` and before Sirene BG2.
+  - KITLIST has exactly one Martyr (`C0ILM`) row. Every one of the seven `K_P_*` tables
+    lists it, and its ability table and help text are the Kitpack's.
+  - `AR0903.bcs` has Sirene BG2's EET block.
+  - No creature in the Recommended set gets the Martyr kit.
+- **BG1.** Sirene stood at the Song of the Morning (`BG3400`).
+  - She was a True Paladin (kit `0x4000`) with the Sirick portrait, chain mail and her
+    sword Brimstone +1.
+  - She joined a chaotic good character through her own dialogue.
+- **End of BG1.** Simulated: Sarevok's death marker and chapter 7. The temple's own script
+  then ran the transition into SoD, and SoD Remix took the party to the palace.
+  - The palace removed Sirene from the party, as the mod intends.
+- **SoD.**
+  - The Iron Throne building (`BD0111`) brought back the same creature.
+  - She rejoined through "It hasn't been that long".
+  - At the first camp (`BD1000`) she stayed in the party, with no second copy.
+- **SoD, never recruited.** In a game where she was never recruited:
+  - The Iron Throne building created her from `C02SIREN`: a True Paladin with the Sirick
+    portrait.
+  - The first camp created a second copy (see the upstream notes), and that copy joined.
+- **SoD to SoA, with Remix `290`.** Simulated: chapter 12, plot 581 and the start of the
+  victory cutscene `bdcut59a`. From there it ran natively:
+  - Sirene's remark set the plot to 587, and the talks with de Lancie and Dazzo ended
+    SoD. The character was moved next to de Lancie in the same area, because the walk
+    got stuck in the crowd.
+  - SoA's opening played to the end.
+  - In the Order of the Most Radiant Heart (`AR0903`), Sirene BG2 brought back the same
+    creature, with her SoD experience, kit and portrait and new gear. She joined.
+  - A save census found exactly one Sirene in the game.
+  - Her SoD armour and Brimstone +1 wait in SoA's import chest, so with her new gear
+    there are two Brimstones. Without `290` she leaves the party before the gear is
+    banked. This question waits in FOLLOW_UPS.
+- **Not covered:**
+  - the Cavalier, Inquisitor and Undead Hunter options;
+  - a Sirene recruited and then left at a camp;
+  - the vanilla ending without `290`;
+  - other portraits;
+  - anything a player would only see on screen.
+
 ## Upstream notes (third-party mod, installed as-is)
 
 - The class components require `~Sirene.tp2~` component `0`, while the file is
-  `Setup-Sirene.tp2`; WeiDU treats the `setup-` prefix as optional.
+  `Setup-Sirene.tp2`; WeiDU treats the `setup-` prefix as optional. In the lab, `6`
+  installed and made Sirene a True Paladin.
 - Both `lib/Sirene.tpa` and `lib/Sirene_sod.tpa` extend `BDINTRO.bcs` with the same
   `BDINTRO.baf`, and `scripts/c0dornf.baf` checks `Dead("C@Sirene")`.
+- The camp scripts (`bd1000`, `bd3000` and `bd7100`) create Sirene whenever she has
+  never been in the party. They do not check whether she already exists elsewhere. In
+  the lab the first camp made a second copy, and the one in the Iron Throne building
+  stayed there.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|

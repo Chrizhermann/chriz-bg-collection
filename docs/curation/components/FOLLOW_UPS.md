@@ -51,14 +51,21 @@ Cross-repository status. Component detail stays in the sections below and in the
      #56, #44 conflicts in `engine/tests/feature_groups.rs` (keep #56's collection digests;
      the plan digests change for both pins) and in the changelog draft (keep both lines).
      Christopher added Sirene NPC for BG:EE (BG1 and SoD) as a default on 2026-10-29,
-     after an EET lab test: pinned in both recipes on `claude/sirene-bg1-alpha22` (draft
-     PR until the full Recommended EET lab passes; evidence in
+     after an EET lab test: pinned in both recipes in
+     [PR #58](https://github.com/Chrizhermann/chriz-bg-collection/pull/58) (evidence in
      `manifest/evidence/release-intake-20261029-sirene-bg1.toml`). Both Sirene mods now
      install after Artisan's Kitpack's main run, Sirene BG1 first, so the Martyr kit comes
      from the Kitpack (see [SIRENE_BG1](SIRENE_BG1.md)).
+     - The full Recommended EET lab passed on 2026-10-29: BG1, SoD and the SoD-to-SoA
+       handover with SoD Remix `290` ([SIRENE_BG1](SIRENE_BG1.md), lab test).
+     - **#58 merges only after the SoD Remix v0.6.16 pin.** With v0.6.15, `290` stops the
+       installation on Sirene's victory remark (see Release gates).
+     - Two questions for Christopher came out of the lab (see his review queue).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
-  3. A full lab run of the Recommended selection.
+  3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
+     installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
+     install was clean and the lab is kept; it ran Sirene's checks only.
   4. Acceptance, build, signing and publishing, and the website.
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
@@ -111,6 +118,15 @@ Cross-repository status. Component detail stays in the sections below and in the
     merged on 2026-10-23: `265` and six other components read timer names from the
     game's own `GTIMES.IDS`, so a mod that gives a timer value another name no longer
     stops them. It ships with the next SoD Remix release.
+  - v0.6.16 candidate,
+    [chriz-sod-rebalance#35](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/35)
+    (draft): `290` no longer stops on a victory remark that another mod adds in the
+    vanilla shape, such as Sirene BG1's.
+    - Its release package passed the full Recommended EET lab on 2026-10-29, and Sirene
+      carried over into SoA.
+    - The ending verifier's two frozen expectations are tracked in
+      [chriz-sod-rebalance#36](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/36).
+    - Release, tag and pin wait for Christopher's OK.
 - BuffBot v1.10.1 (released on 2026-10-20) and EEex Remote Console v0.2.1 (tagged on
   2026-10-23), pinned in both recipes since
   [PR #28](https://github.com/Chrizhermann/chriz-bg-collection/pull/28) (merged on 2026-10-23; fresh-download
@@ -484,6 +500,12 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] [Sarah](SARAHTOB.md) portraits: captured with hashes on Modpack branch
   `codex/sarah-options`, but their artist and licence are unknown, so they are not
   published and the recipe has no feature for them.
+- [ ] [CHRIZ-SOD-REMIX](CHRIZ-SOD-REMIX.md) v0.6.16 before Sirene BG1 ([PR #58](https://github.com/Chrizhermann/chriz-bg-collection/pull/58)).
+  - With v0.6.15, `290` stops the installation: Sirene adds an 18th victory remark to
+    `BD4300`, and v0.6.15 counts exactly 17 (plus Aura's).
+  - The v0.6.16 candidate ([chriz-sod-rebalance#35](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/35))
+    passed the full Recommended EET lab on 2026-10-29.
+  - Release, tag and pin need Christopher's OK. #58 merges only after that pin.
 
 ## Release gates — installer and static integration
 
@@ -692,7 +714,16 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
   `master` commit `1c86000` rather than v3.1, which supports BG:EE only. Picks as for the
   BG2 mod: `0`, the Sirick portrait `3` and True Paladin `6` by default, Cavalier,
   Inquisitor and Undead Hunter `7`–`9` optional. See [SIRENE_BG1](SIRENE_BG1.md) and the
-  alpha.22 item at the top.
+  alpha.22 item at the top. The EET lab passed on 2026-10-29.
+- [ ] Sirene in the SoD-to-SoA handover with SoD Remix `290` (lab, 2026-10-29):
+  - She is still in the party when `290`'s ending banks the party's gear. So her armour
+    and her sword Brimstone +1 wait in the import chest of the first SoA dungeon.
+  - Sirene NPC for BG2 then gives her new gear, so the player gets a second Brimstone +1.
+  - Without `290` she leaves the party before the bank and nothing of hers is banked.
+  - Accept this, or change `290` (our mod)?
+- [ ] Sirene NPC for BG:EE, as-is (lab, 2026-10-29): a Sirene the party never recruited
+  appears in the Iron Throne building and again at the first SoD camp. The first copy
+  stays behind in the Iron Throne building. Report it upstream?
 - [ ] Choose one restored-Bhaalspawn-powers provider: Ascension `40` (technical
   recommendation) or UB `19`; never expose both together. Since 2026-10-17 every
   Unfinished Business component, including `19`, is optional and unselected.
