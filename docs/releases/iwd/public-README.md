@@ -5,7 +5,7 @@ Icewind Dale: Enhanced Edition setup, the one played on stream. Player guide:
 [bg.chrizfader.org/iwd](https://bg.chrizfader.org/iwd).
 
 Chriz Easy IWD copies your own clean Icewind Dale: Enhanced Edition into a new folder and
-installs the recommended mods there: 28 mods with 126 components, each downloaded from its
+installs the recommended mods there: 28 mods with 125 components, each downloaded from its
 official source and checked against the exact tested version. Your original game stays
 unchanged. Installer packages and their SHA-256 checksums are published under
 [Releases](https://github.com/Chrizhermann/chriz-easy-iwd/releases).
@@ -44,8 +44,8 @@ This describes the recommended setup. Optional choices are listed separately bel
   Icewind Dale Crossmod Banter Pack (at most one every 30 minutes). Companions react more
   often, answer your main character instead of whoever talks to them, and may grumble about
   reputation but never leave over it.
-- **Restored content.** Unfinished Business adds Marketh's Ring, real shadows in the Vale of
-  Shadows and the Wardstone for Lower Dorn's Deep.
+- **Restored content.** Unfinished Business adds real shadows in the Vale of Shadows and the
+  Wardstone for Lower Dorn's Deep.
 - **Characters.** Maximum hit points at level 1 and on every level-up; un-nerfed spell
   progression for mages, sorcerers, bards and clerics; true grandmastery; kits without racial
   restrictions; mages may use bucklers and thieves small shields; dual- and multi-class thieves
@@ -75,6 +75,8 @@ This describes the recommended setup. Optional choices are listed separately bel
 - **Quests by Lava:** Below & Below Inn, Night of the Blinking Dead, Snowytoes Hamlet, Tale of
   Our Lady Dreamless, Terror of the Skineater, The Rediscovery of Kuldahar, The War of Bloom and
   Rot, and Will of the Wisps (new shaman kits and items, optional new enemies).
+- **Marketh's Ring** from Unfinished Business. It is off because Marketh can vanish together
+  with his signet, so the quest cannot be finished.
 - **More choices** from the Tweaks Anthology, SCS, the Crossmod Banter Pack and Hidden Gameplay
   Options. Alternatives are exclusive: picking one replaces the other.
 - **EEex Remote Console**, a developer tool.

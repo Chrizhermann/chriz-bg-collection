@@ -44,10 +44,14 @@ go for merging #42 and #52, the three hotpatch defaults, the release and the web
 - [x] "17 new companions" reads "17 companions" on the page, in the release notes, the download
   README and the Discord draft (Christopher, 2026-10-29: nobody had them before installing).
 - [x] Discord announcement: posted by Christopher on 2026-10-29.
-- [ ] 0.1.2: Marketh's Ring (Unfinished Business) is offered but off, since a player reports that
-  Marketh can vanish with his signet and the quest cannot be finished (Christopher, 2026-10-29).
-  PR #65 on `claude/iwdee-app` also numbers recipe and app 0.1.2 and adds base `iwd-0.1.2`. It
-  awaits his merge OK; building and publishing the 0.1.2 installer waits for his OK too.
+- [x] 0.1.2 released 2026-10-29 at Christopher's request: Marketh's Ring (Unfinished Business)
+  is offered but off, since a player reports that Marketh can vanish with his signet and the
+  quest cannot be finished. PR #65 (merged 6a6d745) also numbers recipe and app 0.1.2 and adds
+  base `iwd-0.1.2`. Installer built from 92c2274 (same tree as the merge) and verified like
+  0.1.1, SHA-256 `db83d2f74c4b7ce2c1072b4956d0cc8af6ea30c29315f1bac18ea361aa1f4360`; release v0.1.2
+  with README update (ed18d32) in `chriz-easy-iwd`; notes in `docs/releases/iwd/0.1.2.md`. No
+  new release lab: only this default changed, and the two remaining Unfinished Business parts
+  do not depend on it (checked in the v13 installer). Website: site PR 41 links 0.1.2.
 - [ ] A later release that changes the recipe needs a new `[[bases]]` entry with its digest;
   hotpatches name every base they fit (`iwd-0.1.1`, `iwd-0.1.2`).
 
