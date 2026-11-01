@@ -333,4 +333,11 @@ pub enum AcquireError {
         /// Lock file of the cache entry that was being waited for.
         lock: PathBuf,
     },
+    /// The user stopped while a downloaded file was being checked, as while every file of a
+    /// self-extracting RAR archive is test-read.
+    #[error("stopped by the user while checking the download `{path}`")]
+    StoppedWhileChecking {
+        /// The downloaded file being checked.
+        path: PathBuf,
+    },
 }

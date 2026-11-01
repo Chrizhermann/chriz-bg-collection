@@ -7,7 +7,8 @@ use std::time::{Duration, Instant};
 
 use bg_engine::acquire::{
     served_length_limit, validate_redirect_target, AcceptedContent, AcquireError, ArchiveFormat,
-    ArtifactCache, CacheDisposition, DownloadRequest, ServedRedirects, ServedRules, StopSignal,
+    ArchiveLimits, ArtifactCache, CacheDisposition, DownloadRequest, ServedRedirects, ServedRules,
+    StopSignal,
 };
 use bg_engine::events::{ChannelSink, EngineEvent};
 use sha2::{Digest, Sha256};
@@ -190,6 +191,13 @@ fn cache(temp: &TempDir) -> ArtifactCache {
 const ZIP: ServedRules = ServedRules {
     format: ArchiveFormat::Zip,
     redirects: ServedRedirects::AnyHttpsHost,
+    limits: ArchiveLimits::GENERAL,
+};
+
+/// What a changed installer tool must still be.
+const TOOL: ServedRules = ServedRules {
+    redirects: ServedRedirects::ReviewedHostsForChanges,
+    ..ZIP
 };
 
 /// A small ZIP archive whose only file holds `text`.
@@ -800,12 +808,8 @@ fn a_changed_tool_comes_only_from_its_reviewed_hosts() {
     let cache = cache(&temp);
     let (sink, _) = ChannelSink::unbounded();
     let download = request("weidu", server.url("/weidu"), &reviewed, 3);
-    let tool = ServedRules {
-        format: ArchiveFormat::Zip,
-        redirects: ServedRedirects::ReviewedHostsForChanges,
-    };
 
-    let refused = cache.acquire_as_served(&download, None, tool, &sink, &StopSignal::never());
+    let refused = cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never());
     assert!(
         matches!(&refused, Err(AcquireError::UnreviewedRedirect { from, to })
             if *from == download.url && to.starts_with("http://localhost:")),
@@ -818,7 +822,7 @@ fn a_changed_tool_comes_only_from_its_reviewed_hosts() {
     assert_eq!(cached_objects(&temp), 0);
 
     let accepted = cache
-        .acquire_as_served(&download, None, tool, &sink, &StopSignal::never())
+        .acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never())
         .unwrap();
     assert!(accepted.matches_pin(&download));
     assert_eq!(accepted.unreviewed_hosts, ["localhost"]);

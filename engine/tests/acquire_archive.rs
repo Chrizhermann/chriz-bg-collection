@@ -234,7 +234,7 @@ fn rejects_depth_count_size_and_compression_ratio_limits_before_writing() {
         let archive = temp.path().join(format!("limit-{index}.zip"));
         write_zip(&archive, entries);
         let mut request = requirements(&archive);
-        request.limits = limits.clone();
+        request.limits = *limits;
         let cache = temp.path().join("extract");
         assert_rejected_before_publish(&archive, &cache, &request);
         assert!(!cache.join("temporary").exists());
