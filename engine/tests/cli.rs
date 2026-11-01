@@ -3636,6 +3636,81 @@ fn a_damaged_changed_archive_is_asked_for_again_and_left_out_only_when_it_stays_
     }
 }
 
+/// The review's coverage gap: a link that answers 410 and one that announces a changed
+/// download larger than the installer accepts leave the mod out and install the rest, as a
+/// link that answers 404 does. A size the installer refuses is not asked for again.
+#[cfg(windows)]
+#[test]
+fn a_mod_whose_link_is_gone_or_serves_too_much_is_left_out() {
+    let reviewed = zip_bytes(&[(
+        "Snowytoes/setup-snowytoes.tp2",
+        b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+    )]);
+    let limit = 1024 * 1024 * 1024_u64;
+    for (answer, reason, requests) in [
+        (
+            Answer::status("410 Gone"),
+            "its official link answers HTTP 410 (no such file) from 127.0.0.1, and still did on the last of 5 attempts".to_owned(),
+            5,
+        ),
+        (
+            Answer {
+                status: "200 OK",
+                body: Vec::new(),
+                announced: Some(limit + 1),
+            },
+            format!(
+                "its official link now serves a download of at least {} bytes, more than the {limit} bytes the installer accepts for a changed download",
+                limit + 1
+            ),
+            1,
+        ),
+    ] {
+        let fixture = executable_fixture();
+        add_snowytoes(&fixture, &reviewed);
+        let asked = Arc::new(AtomicU64::new(0));
+        let counted = Arc::clone(&asked);
+        let link = ArtifactServer::start_answering(
+            BTreeMap::from([("/snowytoes.zip".to_owned(), vec![answer])]),
+            move |path| {
+                if path == "/snowytoes.zip" {
+                    counted.fetch_add(1, Ordering::SeqCst);
+                }
+            },
+        );
+
+        let output = executable_command(&fixture)
+            .env(DOWNLOAD_ORIGIN, &link.base_url)
+            .env(NO_RETRY_WAIT, "1")
+            .args(install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ))
+            .output()
+            .expect("run the installation");
+
+        assert!(
+            output.status.success(),
+            "stdout:\n{}\nstderr:\n{}",
+            stdout(&output),
+            stderr(&output)
+        );
+        assert_eq!(asked.load(Ordering::SeqCst), requests);
+        let receipt = read_install_receipt(&fixture);
+        assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+        assert_eq!(receipt.left_out.len(), 1);
+        assert_eq!(receipt.left_out[0].artifact_id, "snowytoes");
+        assert_eq!(receipt.left_out[0].reason, reason);
+        assert_eq!(receipt.left_out[0].runs, ["snowytoes-bg2"]);
+        assert!(!fixture.cache.join("partial/snowytoes.part").exists());
+        assert!(!fixture.managed.join("game/Snowytoes").exists());
+        assert_eq!(receipt.runs.len(), 2);
+    }
+}
+
 /// The official link of the installer tool serves a newer WeiDU build than the reviewed one.
 /// The installer checks it as a changed tool, installs every mod with it, says so, and records
 /// both builds; the report and the hotpatches read that record.
