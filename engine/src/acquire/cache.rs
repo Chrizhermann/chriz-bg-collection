@@ -409,6 +409,33 @@ impl ArtifactCache {
         })
     }
 
+    /// Removes the cached archive with `sha256`, a changed download that
+    /// [`Self::acquire_as_served`] returned for `request` and that turned out to be unusable,
+    /// such as an archive whose data is damaged, so that no later request is given it again.
+    /// The reviewed archive of `request` is never removed this way.
+    pub fn discard(
+        &self,
+        request: &DownloadRequest,
+        sha256: &str,
+        stop: &StopSignal,
+    ) -> Result<(), AcquireError> {
+        let reviewed = validate_request(request)?;
+        let digest = validate_sha256(sha256, "discarded sha256")?;
+        if digest == reviewed {
+            return Err(AcquireError::InvalidRequest(
+                "the reviewed archive of a download is never discarded".to_owned(),
+            ));
+        }
+        let paths = self.paths(request, &digest);
+        let _guard = lock_entry(&paths.lock, stop)?;
+        for entry in [paths.archive.as_path(), paths.metadata.as_path()] {
+            if entry_is_present(entry)? {
+                set_aside(&self.root, entry, &digest)?;
+            }
+        }
+        Ok(())
+    }
+
     /// The reviewed archive of `request` when the cache already holds it, verified like every
     /// cache hit; `None` without asking its link.
     pub fn cached(
@@ -638,36 +665,17 @@ fn retry_transfer<T>(
             break;
         }
 
-        let seconds = match attempt {
-            1 => 0,
-            2 => 2,
-            3 => 10,
-            _ => 30,
-        };
-        let when = if seconds == 0 {
-            "immediately".to_owned()
-        } else {
-            format!("in {seconds} seconds")
-        };
-        let line = if unusable {
-            format!(
-                "The download of {} gave no usable file: {last_error}. Asking again {when} (attempt {}/{}).",
-                request.request_id,
-                attempt + 1,
-                request.max_attempts,
-            )
-        } else {
-            format!(
-                "Download interrupted for {}. Retrying {when} (attempt {}/{}).",
-                request.request_id,
-                attempt + 1,
-                request.max_attempts,
-            )
-        };
+        let seconds = retry_delay_seconds(attempt);
         sink.emit(EngineEvent::ConsoleLine {
             step_id: format!("acquire:{}", request.request_id),
             stream: Stream::Stdout,
-            line,
+            line: retry_line(
+                &request.request_id,
+                unusable.then_some(last_error.as_str()),
+                seconds,
+                attempt,
+                request.max_attempts,
+            ),
         });
         if seconds != 0 {
             wait(Duration::from_secs(seconds));
@@ -677,6 +685,63 @@ fn retry_transfer<T>(
         attempts: request.max_attempts,
         last_error,
     })
+}
+
+/// Seconds a download waits after attempt `attempt` before the next one: none after the first,
+/// then 2, 10 and at most 30.
+fn retry_delay_seconds(attempt: u32) -> u64 {
+    match attempt {
+        1 => 0,
+        2 => 2,
+        3 => 10,
+        _ => 30,
+    }
+}
+
+/// The installation-log line before attempt `attempt + 1` of `max_attempts`: after an answer
+/// that gave no usable file because of `unusable`, or after an interrupted transfer.
+fn retry_line(
+    request_id: &str,
+    unusable: Option<&str>,
+    seconds: u64,
+    attempt: u32,
+    max_attempts: u32,
+) -> String {
+    let when = if seconds == 0 {
+        "immediately".to_owned()
+    } else {
+        format!("in {seconds} seconds")
+    };
+    let next = attempt + 1;
+    match unusable {
+        Some(problem) => format!(
+            "The download of {request_id} gave no usable file: {problem}. Asking again {when} (attempt {next}/{max_attempts})."
+        ),
+        None => format!(
+            "Download interrupted for {request_id}. Retrying {when} (attempt {next}/{max_attempts})."
+        ),
+    }
+}
+
+/// After attempt `attempt` of `max_attempts` for `request_id` gave a file that cannot be used
+/// because of `problem`, as an archive whose data is damaged: says so in the installation log
+/// and waits as a download does before it asks again.
+pub(crate) fn announce_and_wait_before_asking_again(
+    request_id: &str,
+    problem: &str,
+    attempt: u32,
+    max_attempts: u32,
+    sink: &dyn EventSink,
+) {
+    let seconds = retry_delay_seconds(attempt);
+    sink.emit(EngineEvent::ConsoleLine {
+        step_id: format!("acquire:{request_id}"),
+        stream: Stream::Stdout,
+        line: retry_line(request_id, Some(problem), seconds, attempt, max_attempts),
+    });
+    if seconds != 0 {
+        wait_before_retry(Duration::from_secs(seconds));
+    }
 }
 
 fn validate_request(request: &DownloadRequest) -> Result<String, AcquireError> {
