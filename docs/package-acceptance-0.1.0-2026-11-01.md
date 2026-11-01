@@ -1,5 +1,12 @@
 # 0.1.0 package verification — November 1
 
+**Superseded on November 2:** Christopher took two content fixes into 0.1.0, the
+Artisan's Kitpack fork chriz.6 and BG Rebalance v0.8.9. This first 0.1.0 candidate was
+never published; the rebuilt candidate and its checks are recorded in
+[0.1.0 package verification — November 2](package-acceptance-0.1.0-2026-11-02.md). This
+record stays as the evidence for the first candidate's binary, which is kept in the owner's
+test folder.
+
 App **0.1.0**, bundled collection **0.1.0**. Build source:
 `e91e9e2ed2c1e6e11038b5546663b90396b7a05b` (PR #76). This is a release candidate for
 Christopher's own test; nothing is tagged, published or uploaded. Later documentation does

@@ -2,7 +2,7 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## November 1 — 0.1.0 release candidate for Christopher's own test (not published)
+## November 1–2 — 0.1.0 release candidate for Christopher's own test (not published)
 
 Christopher decided on 2026-11-01 that the release prepared as alpha.22 is **0.1.0**,
 without a pre-release suffix; the content stays the same. Branch `claude/release-alpha22`
@@ -32,18 +32,21 @@ Also in this candidate:
   selection. The ledger covers the two new recorded differences with two new entries,
   34 in all.
 
-The signed setup is built from `e91e9e2`: 6,079,798 bytes, SHA-256
-`ff4f8d34d05cebfc4c39148d39ec795257ef1d2a4baaaf6adda4d4349a5c1f97`. A verified copy and
+The signed setup is built from `50a4239` (rebuilt on 2026-11-02 with the two fixes):
+6,081,271 bytes, SHA-256
+`295b6ac614430e8ca560d2801b2c4f57ad256229543e7777080d639f2e692d58`. A verified copy and
 its signature are in Christopher's Downloads folder. All automated checks passed in a new
-clean worktree (1,155 native, 452 frontend and 267 Python tests), as did the native order
-proof of both fixed runs, the signature, resource and updater checks (alpha.21 → 0.1.0)
-and a Defender scan of the setup. Exact results:
-[0.1.0 package verification](package-acceptance-0.1.0-2026-11-01.md).
+clean worktree (1,155 native, 452 frontend and 272 Python tests), as did the native order
+proof of the two new pins, the recipe-difference proof, the signature, resource and
+updater checks (alpha.21 → 0.1.0) and a Defender scan of the setup. Exact results:
+[0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md).
 
-An alpha.22 candidate built earlier on November 1 (setup SHA-256 `1101253f…`) was
-superseded before publication; its record is
-[alpha.22 package verification](package-acceptance-alpha22-2026-11-01.md), and its setup
-is kept in Christopher's test folder.
+Two earlier candidates were superseded before publication; their setups are kept in
+Christopher's test folder: the first 0.1.0 candidate, built on November 1 from `e91e9e2`
+(setup SHA-256 `ff4f8d34…`,
+[record](package-acceptance-0.1.0-2026-11-01.md)), and the alpha.22 candidate built
+earlier that day (`1101253f…`,
+[record](package-acceptance-alpha22-2026-11-01.md)).
 
 This candidate is for Christopher's own test. Nothing is tagged, published or uploaded,
 the alpha channel still announces alpha.21, and the website is unchanged. Not in it: the
