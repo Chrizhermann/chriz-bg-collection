@@ -3406,6 +3406,7 @@ fn download_unavailable(error: &AcquireError) -> bool {
             | AcquireError::ServedNotArchive { .. }
             | AcquireError::RedirectDowngrade { .. }
             | AcquireError::UnreviewedRedirect { .. }
+            | AcquireError::UnreviewedSource { .. }
             | AcquireError::HttpStatus {
                 status: 404 | 410,
                 ..
@@ -3434,6 +3435,15 @@ fn unavailable_reason(error: &AcquireError) -> String {
         AcquireError::UnreviewedRedirect { to, .. } => format!(
             "its official link now serves a different file from {}, a host the recipe did not review for it",
             final_host(to)
+        ),
+        AcquireError::UnreviewedSource {
+            length,
+            sha256,
+            unreviewed_hosts,
+            ..
+        } => format!(
+            "its official link now serves a different file ({length} bytes, SHA-256 {sha256}), at least in part through {}, which the recipe did not review for it",
+            unreviewed_hosts.join(", ")
         ),
         other => format!("its official link cannot be used: {other}"),
     }

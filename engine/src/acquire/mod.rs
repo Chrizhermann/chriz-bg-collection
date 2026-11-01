@@ -192,6 +192,26 @@ pub enum AcquireError {
         /// Redirect target on an undeclared host.
         to: String,
     },
+    /// A download that differs from its pin came, at least in part, through hosts that neither
+    /// its link nor its reviewed redirect hosts name, where a changed file may come only from
+    /// those. Every segment of a resumed download counts. The refused file is not kept.
+    #[error(
+        "the changed download from `{url}` came, at least in part, through hosts its recipe did not review: {}",
+        .unreviewed_hosts.join(", ")
+    )]
+    UnreviewedSource {
+        /// The download's link.
+        url: String,
+        /// Length of the refused download.
+        length: u64,
+        /// Lowercase SHA-256 of the refused download.
+        sha256: String,
+        /// Every host that the requests which wrote the download reached, in every segment,
+        /// in the order first reached.
+        hosts: Vec<String>,
+        /// Those among `hosts` outside the link's own and its reviewed redirect hosts.
+        unreviewed_hosts: Vec<String>,
+    },
     /// A redirect omitted its target.
     #[error("redirect from `{url}` did not include a valid Location header")]
     MissingRedirectLocation {
