@@ -244,6 +244,8 @@ impl PlannedMaterialization<'_> {
             .collect();
         for plan in planned {
             publish_one(destination, &plan, materialization_id)?;
+            #[cfg(any(debug_assertions, feature = "test-hooks"))]
+            interrupt_publication_for_test(destination, incoming_owner, &plan)?;
             let owner = match &plan.action {
                 PublishAction::Identical {
                     preserve_owner: Some(owner),
@@ -278,6 +280,27 @@ impl PlannedMaterialization<'_> {
             manifest,
         })
     }
+}
+
+/// Test builds stop a publication of `owner` right after it placed its first file when
+/// `CHRIZ_BG_COLLECTION_TEST_INTERRUPT_PUBLICATION` names that owner: the file stays and the
+/// manifest does not record it, as after a crash at that moment.
+#[cfg(any(debug_assertions, feature = "test-hooks"))]
+fn interrupt_publication_for_test(
+    destination: &Path,
+    owner: &str,
+    placed: &PlannedPublish,
+) -> Result<(), AcquireError> {
+    if matches!(placed.action, PublishAction::Identical { .. })
+        || std::env::var("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_PUBLICATION").as_deref() != Ok(owner)
+    {
+        return Ok(());
+    }
+    Err(AcquireError::Io {
+        action: "finish placing files (simulated interruption)",
+        path: join_relative(destination, &placed.payload.relative_path),
+        source: std::io::Error::other("simulated interruption after the first placed file"),
+    })
 }
 
 fn validate_identifier(value: &str, label: &str) -> Result<(), AcquireError> {
