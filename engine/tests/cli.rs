@@ -3382,6 +3382,102 @@ fn a_changed_archive_that_meets_a_file_or_folder_of_another_mod_is_left_out() {
     }
 }
 
+/// A placing step of a changed archive writes its first file, and the installation stops
+/// before the step records that file, as after a crash. Someone then edits the file. The
+/// collision this causes on resume is no proof that nothing was written: the step had begun to
+/// place files, so the copy stays sealed instead of leaving the mod out with its file behind.
+#[cfg(windows)]
+#[test]
+fn an_interrupted_placing_of_a_changed_archive_stays_sealed_when_its_file_changed() {
+    let fixture = executable_fixture();
+    let reviewed = zip_bytes(&[(
+        "Snowytoes/setup-snowytoes.tp2",
+        b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+    )]);
+    add_snowytoes(&fixture, &reviewed);
+    let changed = zip_bytes(&[
+        ("Snowytoes/readme.txt", b"new in 1.7"),
+        (
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes 1.7~\nDESIGNATED 0\n",
+        ),
+    ]);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/snowytoes.zip".to_owned(),
+        changed.clone(),
+    )]));
+
+    let interrupted = executable_command(&fixture)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_INTERRUPT_PUBLICATION",
+            "snowytoes",
+        )
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .expect("start the installation");
+    assert_eq!(
+        interrupted.status.code(),
+        Some(1),
+        "{}",
+        stdout(&interrupted)
+    );
+    assert_eq!(
+        json_stdout(&interrupted)["status"]["step_id"],
+        "materialize:snowytoes:bg2"
+    );
+    // The first file is placed, the second is not, and the publication manifest records
+    // neither.
+    let placed = fixture.managed.join("game/Snowytoes/readme.txt");
+    assert_eq!(fs::read(&placed).unwrap(), b"new in 1.7");
+    assert!(!fixture
+        .managed
+        .join("game/Snowytoes/setup-snowytoes.tp2")
+        .exists());
+    let manifest = fs::read_to_string(
+        fixture
+            .managed
+            .join("game/.chriz-bg-collection/publication-manifest.json"),
+    )
+    .unwrap();
+    assert!(!manifest.contains("Snowytoes"), "{manifest}");
+    fs::write(&placed, b"edited by hand").unwrap();
+
+    drop(link);
+    let resumed = executable_command(&fixture)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("resume the installation");
+
+    assert_eq!(resumed.status.code(), Some(1), "{}", stdout(&resumed));
+    let resumed = json_stdout(&resumed);
+    assert_eq!(
+        resumed["status"]["status"], "fresh_copy_required",
+        "{resumed:#}"
+    );
+    assert_eq!(resumed["status"]["step_id"], "materialize:snowytoes:bg2");
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert!(!replay.records.iter().any(|record| matches!(
+        &record.event,
+        bg_engine::session::SessionEvent::ArtifactLeftOut { .. }
+    )));
+    assert!(replay.records.iter().any(|record| matches!(
+        &record.event,
+        bg_engine::session::SessionEvent::FreshCopyRequired { step_id, .. }
+            if step_id == "materialize:snowytoes:bg2"
+    )));
+    assert_eq!(fs::read(&placed).unwrap(), b"edited by hand");
+}
+
 /// A changed archive whose stored data is damaged, as when its server keeps a broken copy: its
 /// headers and directory are intact, so the download looks complete, and only unpacking finds
 /// the bad checksum. The installer removes the damaged file from the download folder, asks the

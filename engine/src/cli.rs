@@ -106,6 +106,9 @@ const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
 /// Damaged download or extraction cache entries that were set aside and rebuilt. Stored as
 /// `<category>/<artifact-id>/<digest>.json`.
 const CACHE_REPAIRS_EVIDENCE: &str = "cache-repairs";
+/// Placing steps of changed downloads that began to write files into a game copy. Stored as
+/// `<category>/<materialization-id>.json` before the first file is written.
+const PUBLICATIONS_EVIDENCE: &str = "publications";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
 const INVOCATION_FILE: &str = "invocation.json";
@@ -136,6 +139,14 @@ struct CacheRepairRecord<'a> {
     artifact_id: &'a str,
     artifact_sha256: &'a str,
     reason: &'a str,
+}
+
+/// A placing step that may have written files: recorded durably before its publication writes
+/// the first one, and the same for every attempt of the step.
+#[derive(Debug, Deserialize, Serialize)]
+struct PublicationStart {
+    step_id: String,
+    materialization_id: String,
 }
 
 type InterruptHandler = Box<dyn FnMut() + Send + 'static>;
@@ -4225,6 +4236,13 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
             }
             error => Err(step_error(error)),
         };
+        let served = self
+            .load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?
+            .and_then(|receipt| receipt.served_difference);
+        let publication = PublicationStart {
+            step_id: task.step_id(),
+            materialization_id: request.materialization_id.clone(),
+        };
         let planned = match plan_materialization(
             &extracted,
             self.target_root(task.target)?,
@@ -4232,30 +4250,43 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
         ) {
             Ok(planned) => planned,
             // A collision found while planning proves that no attempt of this step wrote
-            // anything: an earlier attempt that got past planning saw the same files, and the
-            // files it placed would read as identical now. So a changed archive whose files
-            // would overwrite others can be left out, as when it cannot be unpacked.
+            // anything, unless an earlier attempt began to place files: those may have changed
+            // since, so the copy stays sealed as after any other write. Otherwise a changed
+            // archive whose files would replace others can be left out, as when it cannot be
+            // unpacked.
             Err(
                 error @ (AcquireError::UndeclaredOverwrite { .. }
                 | AcquireError::CollisionRuleRejected { .. }
                 | AcquireError::DestinationKindConflict { .. }),
             ) => {
-                let served = self
-                    .load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?
-                    .and_then(|receipt| receipt.served_difference);
+                let started = self
+                    .load_named_evidence::<PublicationStart>(
+                        PUBLICATIONS_EVIDENCE,
+                        &publication.materialization_id,
+                    )?
+                    .is_some();
                 return match served {
-                    Some(difference) => Ok(MaterializationOutcome::LeaveOut {
+                    Some(difference) if !started => Ok(MaterializationOutcome::LeaveOut {
                         reason: format!(
                             "its official link now serves a different archive ({}), which cannot be installed: {}",
                             describe_download(&difference.served),
                             describe_collision(&error)
                         ),
                     }),
-                    None => fresh_copy(error),
+                    _ => fresh_copy(error),
                 };
             }
             Err(error) => return fresh_copy(error),
         };
+        if served.is_some() {
+            // Durable before the first file is written, so that a resume knows this step may
+            // have placed files.
+            self.persist_named_evidence(
+                PUBLICATIONS_EVIDENCE,
+                &publication.materialization_id,
+                &publication,
+            )?;
+        }
         match planned.publish() {
             Ok(_) => Ok(MaterializationOutcome::Complete),
             Err(error) => fresh_copy(error),
