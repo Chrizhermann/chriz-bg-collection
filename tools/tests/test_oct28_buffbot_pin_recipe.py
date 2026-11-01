@@ -6,7 +6,9 @@ more F12 preset innates) and fixes three panel layout defects of v1.12.0. Agains
 the TP2 adds no component and keeps the declaration order, so no decision changes.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. The November 1 intake
+(test_nov01_buffbot_pin_recipe) supersedes this pin with v1.12.6, which keeps both
+components and their order; the v1.12.1 record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -25,6 +27,8 @@ PROFILES = ["manifest", "recipes/curated-full-current"]
 MOD = "buffbot"
 PIN = "buffbot-1.12.1"
 PREVIOUS = "buffbot-1.11.0"
+# The November 1 intake (test_nov01_buffbot_pin_recipe) moves both profiles to v1.12.6.
+SUCCESSOR = "buffbot-1.12.6"
 TAG = "v1.12.1"
 FILENAME = "buffbot-v1.12.1.zip"
 SHA256 = "7ab5f040b05d474edfb846b11bff5fda134ee468e3e3a289e6f788f33e34ed22"
@@ -116,12 +120,13 @@ class Oct28BuffBotV1121PinTests(unittest.TestCase):
         self.assertEqual(record["native_components"], self.previous["native_components"])
         self.assertEqual(record["native_components"], [component for component, _ in COMPONENTS])
 
-    def test_both_profiles_pin_v1121_and_keep_v1110(self):
+    def test_both_profiles_keep_v1121_and_v1110_as_verified(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                # A superseded pin stays available as history, verified as recorded here.
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 artifact = _load(directory / f"artifacts/{PIN}.toml")
                 previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
                 self.assertEqual(artifact["id"], PIN)
@@ -195,10 +200,9 @@ class Oct28BuffBotV1121PinTests(unittest.TestCase):
             self.assertFalse(any(run_id == RUN for run_id, _ in
                                  self._selected(collection, preset, **{"mod:eeex": "off"})))
 
-    def test_catalog_names_the_pin_and_its_open_checks(self):
+    def test_catalog_keeps_the_pin_history_and_its_open_checks(self):
         text = (ROOT / "docs/curation/components/BUFFBOT.md").read_text(encoding="utf-8")
-        self.assertIn(f"**{TAG}**", text)
-        self.assertIn(f"`{TAG_COMMIT[:7]}`", text)
+        self.assertIn(f"{TAG} (released 2026-10-27, annotated tag on commit `{TAG_COMMIT[:7]}`", text)
         for phrase in ("IWD:EE", "F12", "`override/bfbot_strrefs.txt`", "`BFBOTIB.BAM`", "`BfBotPln.lua`",
                        "`430`", "`MOS88809`–`MOS88993`", EVIDENCE, "Christopher, 2026-10-28"):
             self.assertIn(phrase, text)
