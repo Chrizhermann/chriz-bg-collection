@@ -17,9 +17,12 @@ use bg_engine::Manifest;
 // and Bardic Wonders' Dancer: the Elementalist and the Invisible Blade call a new pass after
 // adding their kit, and the tweak TP2 adds 7205, the same pass for items and kits that later
 // mods add, between 7203 and 8204 (a default in the late run, Christopher, 2026-10-29).
-const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.5";
-const ARTIFACT_SHA256: &str = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6";
-const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.5";
+// chriz.6 (November 2 intake) gives the white and greater white werewolves' overhand swing
+// frames in all eight directions, which stops a crash near walls; the three TP2s change only
+// their VERSION, so components, order and this route are unchanged.
+const ARTIFACT_ID: &str = "artisans-kitpack-4.81a-dev.85928f9-chriz.6";
+const ARTIFACT_SHA256: &str = "9644f01cdeeebf56912723e53267e91feb4404fb5c8d7305e0b112189095777e";
+const RELEASE_TAG: &str = "v4.81a-dev.85928f9-chriz.6";
 
 // The main TP2's declaration order (issue 77): 10001 before 10002, and 1100 right after
 // 10004. WeiDU installs a batch in this order whatever order the run requests, and the
@@ -67,7 +70,7 @@ fn freezes_the_upstream_based_release_identity_for_all_three_installers() {
             "https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/download/{RELEASE_TAG}/ArtisansKitpack-Chriz-Balance-Patch-{RELEASE_TAG}.zip"
         )
     );
-    assert_eq!(artifact.source.expected_length, Some(89_698_447));
+    assert_eq!(artifact.source.expected_length, Some(89_856_136));
     assert_eq!(artifact.source.sha256, ARTIFACT_SHA256);
     assert_eq!(artifact.archive.root_rule, ArchiveRootRule::Direct);
     assert_eq!(

@@ -11,7 +11,10 @@ Changes" 1010000 now ends with the same pass. Christopher took chriz.5 and 7205 
 on 2026-10-29, 7205 as a default. The release changes new installations only.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. The November 2 intake
+(test_nov02_kitpack_rebalance_fix_pins_recipe) supersedes this pin with chriz.6, which fixes
+the white werewolf animations and changes no component; the chriz.5 record and artifacts stay
+as verified here.
 """
 
 from pathlib import Path
@@ -34,6 +37,9 @@ FILENAME = f"ArtisansKitpack-Chriz-Balance-Patch-{TAG}.zip"
 SHA256 = "b5527feef6d641a61f90c8faddaa98d1b81cff43a0141cd4748d9c099a5412a6"
 LENGTH = 89_698_447
 TAG_COMMIT = "10a4a2987c8a2898534022d1ce138ac5fd395ca4"
+# The November 2 intake moves all three installers to chriz.6.
+SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
+SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.6"
 # Mod id, its TP2 and the catalog that lists its components.
 INSTALLERS = {
     "artisanskitpack": ("ArtisansKitpack/ArtisansKitpack.TP2", "ARTISANSKITPACK"),
@@ -145,7 +151,7 @@ class Oct29KitpackChriz5PinTests(unittest.TestCase):
         self.assertEqual(self.records["artisanskitpack-tweak"]["native_components"],
                          previous[:after] + [7205] + previous[after:])
 
-    def test_both_profiles_pin_chriz5_and_keep_chriz4(self):
+    def test_both_profiles_keep_chriz5_and_chriz4_as_verified(self):
         for profile_name, directory in self.directories:
             artifact = _load(directory / f"artifacts/{PIN}.toml")
             previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
@@ -173,7 +179,8 @@ class Oct29KitpackChriz5PinTests(unittest.TestCase):
                         # The chriz.4 records still describe the kept chriz.4 artifact.
                         self.assertEqual(previous["source"][key], self.previous[mod_id][measured], key)
                     mod = _load(directory / f"mods/{mod_id}.toml")
-                    self.assertEqual(mod["artifact_id"], PIN, mod_id)
+                    # A superseded pin stays available as history, verified as recorded here.
+                    self.assertEqual(mod["artifact_id"], SUCCESSOR, mod_id)
                     self.assertEqual(mod["tp2"], tp2)
                     self.assertIn(tp2, artifact["archive"]["tp2_paths"])
                 tweak = {component["id"]: component["name"] for component in
@@ -207,8 +214,8 @@ class Oct29KitpackChriz5PinTests(unittest.TestCase):
                                 self.assertNotIn(not_offered[1], run["components"])
             (late,) = [run for run in collection["runs"] if run["run_id"] == LATE_RUN]
             self.assertEqual(late["components"], LATE_COMPONENTS, str(directory))
-        # The curated generator restores the main run's native order; the authored fallback
-        # keeps the order it has had since chriz.1 (see the evidence record).
+        # The curated generator restores the main run's native order; since issue 77 the
+        # authored manifest run follows it too (test_native_run_orders).
         native_main = self.records["artisanskitpack"]["native_components"]
         curated_main = NATIVE_RUN_ORDERS["artisanskitpack-main-bg2"]
         self.assertEqual(curated_main, [c for c in native_main if c in curated_main])
@@ -273,8 +280,9 @@ class Oct29KitpackChriz5PinTests(unittest.TestCase):
             with self.subTest(catalog=catalog):
                 self.assertEqual(set(rows[catalog]), set(self.records[mod_id]["native_components"]))
                 text = (ROOT / f"docs/curation/components/{catalog}.md").read_text(encoding="utf-8")
-                self.assertIn(f"**{TAG}**", text)
-                self.assertIn("`10a4a29`", text)
+                # The catalogs name the current pin and keep chriz.5 as its predecessor.
+                self.assertIn(f"**{SUCCESSOR_TAG}**", text)
+                self.assertIn("chriz.5 (tag commit `10a4a29`, pinned 2026-10-29)", text)
         tweak_rows = rows["ARTISANSKITPACK_TWEAK"]
         self.assertEqual(tweak_rows[7205].decision, Decision.DEFAULT)
         self.assertEqual(tweak_rows[1010000].decision, Decision.DEFAULT)
@@ -291,12 +299,13 @@ class Oct29KitpackChriz5PinTests(unittest.TestCase):
                        "19 entries, 7 reference-installed"):
             self.assertIn(phrase, tweak)
         main = (ROOT / "docs/curation/components/ARTISANSKITPACK.md").read_text(encoding="utf-8")
-        for phrase in ("- chriz.5: the Invisible Blade (`7005`) and Bardic Wonders' Dancer", "chriz.5's release notes"):
+        for phrase in ("- chriz.5: the Invisible Blade (`7005`) and Bardic Wonders' Dancer",
+                       "chriz.5's and chriz.6's release notes"):
             self.assertIn(phrase, main)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
         for phrase in ("**The Invisible Blade and Bardic Wonders' Dancer can use katanas** (Default)",
-                       "(Artisan's Kitpack fork chriz.5)", f"The Artisan's Kitpack fork {TAG} (was chriz.1)",
-                       f"{TAG} and The Tweaks Anthology", "**Artisan's Kitpack fork chriz.5**",
+                       "(Artisan's Kitpack fork chriz.5)", f"The Artisan's Kitpack fork {SUCCESSOR_TAG} (was chriz.1)",
+                       f"{SUCCESSOR_TAG} and The Tweaks Anthology", "**Artisan's Kitpack fork chriz.5**",
                        "shaman, Invisible Blade and Dancer weapon behavior until you install again"):
             self.assertIn(phrase, changelog)
         self.assertNotIn("The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.4 (was", changelog)
