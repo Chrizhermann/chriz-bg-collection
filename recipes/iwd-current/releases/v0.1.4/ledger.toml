@@ -1,0 +1,17 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.4"
+published_at = "2026-11-01T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.3"
+
+[[changes]]
+id = "buffbot-1.12.6"
+title = "BuffBot 1.12.6"
+summary = "BuffBot installs version 1.12.6 (was 1.12.0). On a small panel the button captions fit their buttons, the Summons view can switch back to the party and lists only creatures your party summoned, the colour schemes carry the right game's names (the default looks as before), a pressed button looks pressed, and a buff run no longer speeds the game up while a menu, the character record, a level-up, the journal or a shop is open."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.12.0",
+  "artifact:buffbot-1.12.6",
+]
