@@ -1451,6 +1451,50 @@ fn leaving_out_a_mod_never_lets_a_held_off_alternative_win_its_choice() {
     );
 }
 
+/// The review's case: both frost options are ticked and cancel each other, and `frost-cover`
+/// needs either snowy or `frost-plain`, so it works through snowy. Leaving snowy out lets
+/// `frost-plain` win its choice while the remaining plan is derived, but leaving out never adds
+/// a part, so `frost-plain` stays out, and `frost-cover`, without either, must go as well.
+#[test]
+fn a_feature_that_only_a_held_off_alternative_would_support_goes_with_the_left_out_mod() {
+    let mut manifest = leave_out_choice_manifest();
+    add_run_with_own_download(&mut manifest, "frost-cover", &[0]);
+    let mut cover = feature(
+        "frost-cover",
+        Decision::Default,
+        component_refs("frost-cover", &[0]),
+    );
+    cover.requires_any = vec!["snowy".to_owned(), "frost-plain".to_owned()];
+    manifest.collection.features.push(cover);
+    check(&manifest).unwrap();
+    let evaluation = evaluate(
+        &manifest,
+        &choice_selection(&[("frost-plain", true), ("frost-snowy", true)]),
+    )
+    .unwrap();
+    let plan = &evaluation.plan;
+    assert!(!run_ids(plan).contains(&"frost"));
+    assert!(evaluation.view.control("frost-cover").unwrap().selected);
+    assert!(run_ids(plan).contains(&"frost-cover"));
+
+    let remaining = plan_without_artifacts(
+        &manifest,
+        &evaluation.normalized_selection,
+        plan,
+        &unusable(&["snowy-archive"]),
+    )
+    .unwrap();
+
+    assert_eq!(
+        run_ids(&remaining),
+        ["core", "either", "other", "tweaks", "stacking"]
+    );
+    assert_eq!(
+        prompt_outputs(planned_run(&remaining, "tweaks")),
+        [(1, vec!["Always asked"]), (3, vec!["Confirm"])]
+    );
+}
+
 #[test]
 fn leaving_out_a_mod_undoes_a_feature_group_variant_without_restoring_the_default() {
     let manifest = leave_out_choice_manifest();

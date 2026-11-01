@@ -1248,10 +1248,17 @@ pub fn plan_without_artifacts(
         desired.insert(current.id.clone(), false);
     }
     let reduced = effective_features(manifest, &base_effective_features(manifest, &desired));
-    let kept = effective
-        .iter()
-        .map(|(id, selected)| (id.clone(), *selected && is_on(&reduced, id)))
-        .collect::<BTreeMap<_, _>>();
+    // Removing a feature can let an alternative it held off become effective in `reduced`;
+    // the intersection drops that alternative again, since leaving out never adds a part. A
+    // feature that `reduced` kept only through it would then stay without support, so the
+    // dependency relations are applied once more, removing only.
+    let kept = without_unsupported_features(
+        manifest,
+        effective
+            .iter()
+            .map(|(id, selected)| (id.clone(), *selected && is_on(&reduced, id)))
+            .collect::<BTreeMap<_, _>>(),
+    );
     if let Some(feature) = manifest
         .collection
         .features
@@ -1323,6 +1330,32 @@ pub fn plan_without_artifacts(
         runs.push(remaining);
     }
     Ok(InstallPlan { runs })
+}
+
+/// Switches off, until nothing changes, every feature that `kept` has on although its parent, a
+/// `requires` feature or every `requires_any` feature is off in `kept`. It only removes: a
+/// feature that is off stays off, so no conflict can arise.
+fn without_unsupported_features(
+    manifest: &Manifest,
+    mut kept: BTreeMap<String, bool>,
+) -> BTreeMap<String, bool> {
+    loop {
+        let mut removed = false;
+        for feature in &manifest.collection.features {
+            let on = |id: &str| kept.get(id).copied().unwrap_or(false);
+            let supported = feature.parent.as_deref().is_none_or(on)
+                && feature.requires.iter().all(|required| on(required))
+                && (feature.requires_any.is_empty()
+                    || feature.requires_any.iter().any(|required| on(required)));
+            if on(&feature.id) && !supported {
+                kept.insert(feature.id.clone(), false);
+                removed = true;
+            }
+        }
+        if !removed {
+            return kept;
+        }
+    }
 }
 
 fn render_literal(value: &InputValue) -> String {
