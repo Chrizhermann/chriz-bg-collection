@@ -12,12 +12,23 @@ collection already reads alpha.22, and its update ledger needs this app version.
 collection alpha.20. The package record is
 [alpha.22 package verification](package-acceptance-alpha22-2026-11-01.md).
 
+The signed setup is built from `52f797b`: 6,078,951 bytes, SHA-256
+`1101253fa38c2d90aad71c3f7d0a8fff7e6b80bfae73c8ebd1faab0fd45f45a0`. A verified copy and
+its signature are in Christopher's Downloads folder. All automated checks passed on a clean
+checkout (1,155 native, 452 frontend and 265 Python tests), as did the signature, updater
+download and resource checks and a Defender scan of the setup. A first run on `2933b8e`
+failed only the dependency-notice check, because the bump changes both lockfiles; `52f797b`
+refreshes the two digests, as alpha.21 did in `8d82c8e`. The TP2-order recheck of all 36
+changed pins found one old mismatch in the "Smaller downloadable alpha" profile's
+Artisan's Kitpack main run ([issue 77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77)).
+
 This candidate is for Christopher's own test. Nothing is tagged, published or uploaded,
 the alpha channel still announces alpha.21, and the website is unchanged. Not in it: the
 open PRs against the next-release branch, #69 (install what a mod's official link serves
 when it differs from the pin) and #53 (own-mod pin check). Still open before publication:
-the ledger's `published_at` is the placeholder from #67, and the work queue's lab run of
-the Recommended selection (`docs/curation/components/FOLLOW_UPS.md`, step 3).
+his test and OK, the ledger's `published_at` (still the placeholder from #67), issue 77,
+and the work queue's lab run of the Recommended selection
+(`docs/curation/components/FOLLOW_UPS.md`, step 3).
 
 ## October 14 — app alpha.21 and its website published (installer fixes)
 

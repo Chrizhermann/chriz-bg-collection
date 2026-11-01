@@ -85,8 +85,8 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
      with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
      see Weapon access below).
-     Still open in this step: #75 and #74, BuffBot v1.12.6 for both installers (above);
-     #51 is superseded.
+     #75 and #74, BuffBot v1.12.6 for both installers (above), merged on 2026-11-01; #51
+     is closed as superseded.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
      update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
@@ -101,7 +101,13 @@ Cross-repository status. Component detail stays in the sections below and in the
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
      v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44), now
      v1.12.6 (#75), came after it.
-  4. Acceptance, build, signing and publishing, and the website.
+  4. Acceptance, build, signing and publishing, and the website. A signed release
+     candidate of app 0.1.0-alpha.22 for Christopher's own test is built from
+     [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (exact package
+     and test results in `docs/package-acceptance-alpha22-2026-11-01.md`); nothing is
+     tagged or published. Still open before publishing: his test and OK, the ledger's
+     publication time (step 2), the lab run (step 3), and a decision on
+     [#77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77) (below).
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).
@@ -646,6 +652,14 @@ content, evaluated component by component (keep, fix or extend).
   files v0.6.16 ships unchanged) installed `3500`, `256`, the default Imoen choice `292`
   and the rest of the remix run without errors. Data only for `256`: the bridge fight
   was not played.
+- [ ] "Smaller downloadable alpha" (`manifest/`): its Artisan's Kitpack main run requests
+  `10002` before `10001` and `1100` after `1009`, against the TP2's declaration order, so the
+  order checker rejects it ([#77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77);
+  found in the alpha.22 package acceptance, unchanged since chriz.1). WeiDU installs a batch
+  in TP2 order and the engine's reconciliation expects the requested order, so an
+  installation with this profile and the default selection would likely stop there; not
+  reproduced. The default "Full curated setup" passes. Reorder the run or stop offering the
+  profile (Christopher decides).
 - [ ] Modpack `430` (scrolls at the reader's caster level) failed on 2.7.3.0 with EEex
   v1.3.1 in alpha.11 to alpha.13: on the first load, a new game or an NPC join it showed
   its EEex error box ("copied action construction overlaps an existing lifetime") and
