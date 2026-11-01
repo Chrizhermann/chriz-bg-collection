@@ -22,6 +22,7 @@ pub use archive::{
     extract_served_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
     ExtractedArtifact,
 };
+pub(crate) use cache::announce_and_wait_before_asking_again;
 pub use cache::{
     served_length_limit, AcceptedContent, ArtifactCache, ServedArtifact, ServedRedirects,
     ServedRules,

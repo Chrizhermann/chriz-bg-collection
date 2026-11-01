@@ -41,6 +41,33 @@ struct ArtifactServer {
     thread: Option<JoinHandle<()>>,
 }
 
+/// What the test server answers for one path.
+#[derive(Clone)]
+struct Answer {
+    status: &'static str,
+    body: Vec<u8>,
+    /// The announced length; `None` announces the body's.
+    announced: Option<u64>,
+}
+
+impl Answer {
+    fn file(body: Vec<u8>) -> Self {
+        Self {
+            status: "200 OK",
+            body,
+            announced: None,
+        }
+    }
+
+    fn status(status: &'static str) -> Self {
+        Self {
+            status,
+            body: Vec::new(),
+            announced: None,
+        }
+    }
+}
+
 impl ArtifactServer {
     fn start(artifacts: BTreeMap<String, Vec<u8>>) -> Self {
         Self::start_with(artifacts, |_| {})
@@ -52,6 +79,20 @@ impl ArtifactServer {
         artifacts: BTreeMap<String, Vec<u8>>,
         on_request: impl Fn(&str) + Send + 'static,
     ) -> Self {
+        Self::start_answering(
+            artifacts
+                .into_iter()
+                .map(|(path, body)| (path, vec![Answer::file(body)]))
+                .collect(),
+            on_request,
+        )
+    }
+
+    /// Answers the requests of each path with its answers in turn, the last one from then on.
+    fn start_answering(
+        answers: BTreeMap<String, Vec<Answer>>,
+        on_request: impl Fn(&str) + Send + 'static,
+    ) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind artifact server");
         let address = listener.local_addr().expect("artifact server address");
         listener
@@ -61,11 +102,12 @@ impl ArtifactServer {
         let thread_stop = Arc::clone(&stop);
         let signatures = AtomicU64::new(0);
         let thread = thread::spawn(move || {
+            let mut asked = BTreeMap::new();
             while !thread_stop.load(Ordering::Acquire) {
                 match listener.accept() {
                     Ok((_stream, _)) if thread_stop.load(Ordering::Acquire) => break,
                     Ok((stream, _)) => {
-                        serve_artifact(stream, &artifacts, &signatures, &on_request);
+                        serve_artifact(stream, &answers, &mut asked, &signatures, &on_request);
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                         thread::sleep(Duration::from_millis(5));
@@ -98,7 +140,8 @@ impl Drop for ArtifactServer {
 /// bytes reports a different final URL.
 fn serve_artifact(
     mut stream: TcpStream,
-    artifacts: &BTreeMap<String, Vec<u8>>,
+    answers: &BTreeMap<String, Vec<Answer>>,
+    asked: &mut BTreeMap<String, usize>,
     signatures: &AtomicU64,
     on_request: &dyn Fn(&str),
 ) {
@@ -140,17 +183,23 @@ Connection: close
         return;
     }
     let path = path.split_once('?').map_or(path, |(path, _query)| path);
-    let (status, body) = artifacts
+    let answer = answers
         .get(path)
-        .map(|body| ("200 OK", body.as_slice()))
-        .unwrap_or(("404 Not Found", &[]));
+        .map(|answers| {
+            let count = asked.entry(path.to_owned()).or_default();
+            let answer = answers[(*count).min(answers.len() - 1)].clone();
+            *count += 1;
+            answer
+        })
+        .unwrap_or_else(|| Answer::status("404 Not Found"));
     write!(
         stream,
-        "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-        body.len()
+        "HTTP/1.1 {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        answer.status,
+        answer.announced.unwrap_or(answer.body.len() as u64)
     )
     .expect("write artifact headers");
-    stream.write_all(body).expect("write artifact body");
+    stream.write_all(&answer.body).expect("write artifact body");
     stream.flush().expect("flush artifact response");
     let _ = stream.shutdown(Shutdown::Both);
 }
@@ -3254,6 +3303,164 @@ fn a_changed_archive_that_would_overwrite_another_mods_file_is_left_out() {
         .map(|run| run.run_id.as_str())
         .collect::<Vec<_>>();
     assert_eq!(installed_runs, ["eefixpack-bg1", "eefixpack-bg2"]);
+}
+
+/// A changed archive whose stored data is damaged, as when its server keeps a broken copy: its
+/// headers and directory are intact, so the download looks complete, and only unpacking finds
+/// the bad checksum. The installer removes the damaged file from the download folder, asks the
+/// link again with the usual waits, and leaves the mod out once every attempt was damaged. A
+/// link that serves an intact copy on a later attempt installs that copy.
+#[cfg(windows)]
+#[test]
+fn a_damaged_changed_archive_is_asked_for_again_and_left_out_only_when_it_stays_damaged() {
+    let data: Vec<u8> = (0..4096_u32)
+        .map(|index| (index.wrapping_mul(2_654_435_761) >> 11) as u8)
+        .collect();
+    // An intact changed archive of `folder`, and the same with one stored data byte changed.
+    let archives = |tp2: &str, data_path: &str| {
+        let intact = zip_bytes(&[
+            (tp2, b"BEGIN ~A newer release~\nDESIGNATED 0\n"),
+            (data_path, &data),
+        ]);
+        let mut damaged = intact.clone();
+        let data_start = intact
+            .windows(data.len())
+            .position(|window| window == data.as_slice())
+            .expect("the stored data is in the archive");
+        damaged[data_start + 100] ^= 0x55;
+        (intact, damaged)
+    };
+    let request_counter = |path: &'static str| {
+        let asked = Arc::new(AtomicU64::new(0));
+        let counted = Arc::clone(&asked);
+        (asked, move |requested: &str| {
+            if requested == path {
+                counted.fetch_add(1, Ordering::SeqCst);
+            }
+        })
+    };
+    let install = |fixture: &ExecutableFixture, link: &ArtifactServer| {
+        let output = executable_command(fixture)
+            .env(DOWNLOAD_ORIGIN, &link.base_url)
+            .env(NO_RETRY_WAIT, "1")
+            .args(install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ))
+            .output()
+            .expect("run the installation");
+        assert!(
+            output.status.success(),
+            "stdout:\n{}\nstderr:\n{}",
+            stdout(&output),
+            stderr(&output)
+        );
+        console_lines(&json_stdout(&output))
+    };
+    let not_cached = |fixture: &ExecutableFixture, bytes: &[u8]| {
+        let digest = sha256_bytes(bytes);
+        !fixture
+            .cache
+            .join("sha256")
+            .join(&digest[..2])
+            .join(format!("{digest}.archive"))
+            .exists()
+    };
+
+    // Every answer is damaged: Snowytoes is left out after the last attempt.
+    let fixture = executable_fixture();
+    add_snowytoes(
+        &fixture,
+        &zip_bytes(&[(
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+        )]),
+    );
+    let (_, damaged) = archives("Snowytoes/setup-snowytoes.tp2", "Snowytoes/data.bin");
+    let (asked, on_request) = request_counter("/snowytoes.zip");
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([(
+            "/snowytoes.zip".to_owned(),
+            vec![Answer::file(damaged.clone())],
+        )]),
+        on_request,
+    );
+    let lines = install(&fixture, &link);
+    assert_eq!(asked.load(Ordering::SeqCst), 5);
+    assert_eq!(
+        lines
+            .iter()
+            .filter(|line| line.starts_with(
+                "The download of snowytoes gave no usable file: its archive is damaged (archive entry `Snowytoes/data.bin` is damaged: "
+            ))
+            .count(),
+        4,
+        "{lines:#?}"
+    );
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert_eq!(receipt.left_out.len(), 1);
+    let reason = &receipt.left_out[0].reason;
+    assert!(
+        reason.starts_with(&format!(
+            "its official link now serves a different archive (snowytoes.zip, {} bytes, SHA-256 {}), which cannot be installed: archive entry `Snowytoes/data.bin` is damaged: ",
+            damaged.len(),
+            sha256_bytes(&damaged)
+        )) && reason.ends_with("; it was still damaged on the last of 5 attempts"),
+        "{reason}"
+    );
+    assert_eq!(receipt.left_out[0].runs, ["snowytoes-bg2"]);
+    // Nothing of it was accepted, kept or placed.
+    assert!(!receipt
+        .artifacts
+        .iter()
+        .any(|artifact| artifact.id == "snowytoes"));
+    assert!(not_cached(&fixture, &damaged));
+    assert!(!fixture.managed.join("game/Snowytoes").exists());
+
+    // The second answer is intact: the changed EE Fixpack is installed from it.
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let (intact, damaged) = archives("EE_Fixpack/EE_Fixpack.tp2", "EE_Fixpack/data.bin");
+    let (asked, on_request) = request_counter("/eefixpack.zip");
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([(
+            "/eefixpack.zip".to_owned(),
+            vec![Answer::file(damaged.clone()), Answer::file(intact.clone())],
+        )]),
+        on_request,
+    );
+    let lines = install(&fixture, &link);
+    assert_eq!(asked.load(Ordering::SeqCst), 2);
+    assert_eq!(
+        lines
+            .iter()
+            .filter(|line| line.starts_with(
+                "The download of eefixpack gave no usable file: its archive is damaged (archive entry `EE_Fixpack/data.bin` is damaged: "
+            ))
+            .count(),
+        1,
+        "{lines:#?}"
+    );
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert!(receipt.left_out.is_empty());
+    let recorded = receipt
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.id == "eefixpack")
+        .expect("the intact copy is recorded");
+    assert_eq!(recorded.sha256, sha256_bytes(&intact));
+    assert!(not_cached(&fixture, &damaged));
+    for game in ["bg1", "game"] {
+        assert_eq!(
+            fs::read(fixture.managed.join(game).join("EE_Fixpack/data.bin")).unwrap(),
+            data
+        );
+    }
 }
 
 /// The official link of the installer tool serves a newer WeiDU build than the reviewed one.

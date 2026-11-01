@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::acquire::{
-    extract_archive_with_stop, extract_served_archive, plan_materialization,
-    provide_manual_archive, AcceptedContent, AcquireError, ArchiveFormat, ArchiveLimits,
-    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
+    announce_and_wait_before_asking_again, extract_archive_with_stop, extract_served_archive,
+    plan_materialization, provide_manual_archive, AcceptedContent, AcquireError, ArchiveFormat,
+    ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
     DownloadRequest, DownloadRoute, ExtractedArtifact, MaterializationRequest, ServedRedirects,
     ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
@@ -3323,25 +3323,106 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     /// Acquires a mod's archive. A changed download is unpacked now, before anything is
     /// staged, so that a mod whose new archive cannot be used is left out instead of stopping
     /// the installation later. The archive is unpacked once into the shared extraction cache
-    /// either way.
+    /// either way. A changed download is recorded only once it unpacked, so that a damaged one
+    /// can be asked for again ([`Self::first_acquisition`]).
     fn acquire_payload(
         &self,
         artifact: &Artifact,
     ) -> Result<AcquisitionOutcome, AcquisitionFailure> {
-        let (archive, receipt) = self.acquire_archive(artifact)?;
-        let Some(difference) = &receipt.served_difference else {
-            return Ok(AcquisitionOutcome::Ready);
-        };
-        match self.extract_from(artifact, &archive, &receipt) {
-            Ok(_) => Ok(AcquisitionOutcome::Ready),
-            Err(ExtractionFailure::Unusable(error)) => Ok(AcquisitionOutcome::LeaveOut {
-                reason: format!(
-                    "its official link now serves a different archive ({}), which cannot be installed: {error}",
-                    describe_download(&difference.served)
-                ),
-            }),
-            Err(ExtractionFailure::Step(failure)) => Err(failure.into()),
+        if self
+            .load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?
+            .is_some()
+        {
+            // A resumed step: the recorded file is the one to use.
+            let (archive, receipt) = self.acquire_archive(artifact)?;
+            let Some(difference) = &receipt.served_difference else {
+                return Ok(AcquisitionOutcome::Ready);
+            };
+            return match self.extract_from(artifact, &archive, &receipt) {
+                Ok(_) => Ok(AcquisitionOutcome::Ready),
+                Err(ExtractionFailure::Unusable(error)) => {
+                    if matches!(error, AcquireError::CorruptArchiveData { .. }) {
+                        self.discard_download(artifact, &receipt.sha256)?;
+                    }
+                    Ok(AcquisitionOutcome::LeaveOut {
+                        reason: UnusableDownload {
+                            served: difference.served.clone(),
+                            error,
+                            attempts: None,
+                        }
+                        .reason(),
+                    })
+                }
+                Err(ExtractionFailure::Step(failure)) => Err(failure.into()),
+            };
         }
+        match self.first_acquisition(artifact)? {
+            FirstAcquisition::Reviewed(fetched) | FirstAcquisition::Changed(fetched, _) => {
+                self.record_acquisition(artifact, None, fetched)?;
+                Ok(AcquisitionOutcome::Ready)
+            }
+            FirstAcquisition::Unusable(unusable) => Ok(AcquisitionOutcome::LeaveOut {
+                reason: unusable.reason(),
+            }),
+        }
+    }
+
+    /// Gets an artifact's archive for its first acquisition, unpacking a changed download, and
+    /// records nothing. A changed archive whose data turns out damaged is removed from the
+    /// download folder and asked for again with the usual waits, as an answer without a usable
+    /// file is: the link may serve an intact copy next time. When no attempt is left, or the
+    /// archive cannot be used for another reason, it is [`FirstAcquisition::Unusable`].
+    fn first_acquisition(
+        &self,
+        artifact: &Artifact,
+    ) -> Result<FirstAcquisition, AcquisitionFailure> {
+        let mut attempt = 1;
+        loop {
+            let fetched = self.fetch_archive(artifact, None)?;
+            let Some(difference) = fetched.receipt.served_difference.clone() else {
+                return Ok(FirstAcquisition::Reviewed(fetched));
+            };
+            match self.extract_from(artifact, &fetched.path, &fetched.receipt) {
+                Ok(extracted) => return Ok(FirstAcquisition::Changed(fetched, extracted)),
+                Err(ExtractionFailure::Unusable(
+                    error @ AcquireError::CorruptArchiveData { .. },
+                )) => {
+                    self.discard_download(artifact, &fetched.receipt.sha256)?;
+                    if attempt >= DEFAULT_DOWNLOAD_ATTEMPTS {
+                        return Ok(FirstAcquisition::Unusable(UnusableDownload {
+                            served: difference.served,
+                            error,
+                            attempts: Some(attempt),
+                        }));
+                    }
+                    announce_and_wait_before_asking_again(
+                        &artifact.id,
+                        &format!("its archive is damaged ({error})"),
+                        attempt,
+                        DEFAULT_DOWNLOAD_ATTEMPTS,
+                        self.sink,
+                    );
+                    attempt += 1;
+                }
+                Err(ExtractionFailure::Unusable(error)) => {
+                    return Ok(FirstAcquisition::Unusable(UnusableDownload {
+                        served: difference.served,
+                        error,
+                        attempts: None,
+                    }))
+                }
+                Err(ExtractionFailure::Step(failure)) => return Err(failure.into()),
+            }
+        }
+    }
+
+    /// Removes a changed download whose archive data is damaged from the download folder, so
+    /// that no later attempt or installation is given that file again.
+    fn discard_download(&self, artifact: &Artifact, sha256: &str) -> Result<(), StepFailure> {
+        let request = self.download_request(artifact)?;
+        ArtifactCache::open(&self.created.cache_root)
+            .and_then(|cache| cache.discard(&request, sha256, &self.stop_signal()))
+            .map_err(step_error)
     }
 
     /// Acquires an installer tool. A changed download is recorded only once its WeiDU program
@@ -3359,8 +3440,8 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             }
             return Ok(AcquisitionOutcome::Ready);
         }
-        let fetched = match self.fetch_archive(artifact, None) {
-            Ok(fetched) => fetched,
+        let acquisition = match self.first_acquisition(artifact) {
+            Ok(acquisition) => acquisition,
             Err(AcquisitionFailure::Unavailable(error)) => {
                 return if self.use_cached_reviewed_tool(artifact, &unavailable_reason(&error))? {
                     Ok(AcquisitionOutcome::Ready)
@@ -3370,30 +3451,28 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             }
             Err(failure) => return Err(failure),
         };
-        if fetched.receipt.served_difference.is_none() {
-            self.record_acquisition(artifact, None, fetched)?;
-            return Ok(AcquisitionOutcome::Ready);
-        }
-        let checked = match self.extract_from(artifact, &fetched.path, &fetched.receipt) {
-            Ok(extracted) => check_tool(artifact, contract, &extracted, true)
-                .map(|(_, receipt)| receipt)
-                .map_err(|error| error.to_string()),
-            Err(ExtractionFailure::Unusable(error)) => Err(error.to_string()),
-            Err(ExtractionFailure::Step(failure)) => return Err(failure.into()),
-        };
-        match checked {
-            Ok(tool) => {
+        let problem = match acquisition {
+            FirstAcquisition::Reviewed(fetched) => {
                 self.record_acquisition(artifact, None, fetched)?;
-                self.persist_named_evidence("tools", &artifact.id, &tool)?;
+                return Ok(AcquisitionOutcome::Ready);
             }
-            Err(problem) => {
-                let reason = format!(
-                    "it is newer or different than the reviewed version, and its WeiDU program does not work: {problem}"
-                );
-                if !self.use_cached_reviewed_tool(artifact, &reason)? {
-                    return Err(unusable_changed_tool(&artifact.id, &problem).into());
+            FirstAcquisition::Changed(fetched, extracted) => {
+                match check_tool(artifact, contract, &extracted, true) {
+                    Ok((_, tool)) => {
+                        self.record_acquisition(artifact, None, fetched)?;
+                        self.persist_named_evidence("tools", &artifact.id, &tool)?;
+                        return Ok(AcquisitionOutcome::Ready);
+                    }
+                    Err(error) => error.to_string(),
                 }
             }
+            FirstAcquisition::Unusable(unusable) => unusable.problem(),
+        };
+        let reason = format!(
+            "it is newer or different than the reviewed version, and its WeiDU program does not work: {problem}"
+        );
+        if !self.use_cached_reviewed_tool(artifact, &reason)? {
+            return Err(unusable_changed_tool(&artifact.id, &problem).into());
         }
         Ok(AcquisitionOutcome::Ready)
     }
@@ -3844,7 +3923,10 @@ impl From<StepFailure> for ExtractionFailure {
     }
 }
 
-/// Archive problems that retrying cannot fix: the file's own content or layout.
+/// Archive problems of the file's own content or layout, which a retry of this step cannot fix.
+/// Damaged data is among them; a new download may still bring an intact file, which is why the
+/// acquisition asks the link again before it leaves the mod out. A failure of this computer,
+/// such as a full disk or an unreadable file, is an I/O error and never one of them.
 fn archive_content_error(error: &crate::acquire::AcquireError) -> bool {
     matches!(
         error,
@@ -3876,6 +3958,46 @@ struct FetchedArchive {
     path: PathBuf,
     receipt: ArtifactReceipt,
     unreviewed_hosts: Vec<String>,
+}
+
+/// The first acquisition of a fetched artifact, before anything about it is recorded.
+enum FirstAcquisition {
+    /// The reviewed archive.
+    Reviewed(FetchedArchive),
+    /// A changed archive that unpacked.
+    Changed(FetchedArchive, ExtractedArtifact),
+    /// A changed archive that cannot be installed.
+    Unusable(UnusableDownload),
+}
+
+/// A changed download that cannot be installed: what its link served, and why.
+struct UnusableDownload {
+    served: DownloadIdentity,
+    error: AcquireError,
+    /// For damaged archive data: how many downloads in a row were damaged.
+    attempts: Option<u32>,
+}
+
+impl UnusableDownload {
+    /// Why its mod is left out, for the ledger and the receipt.
+    fn reason(&self) -> String {
+        format!(
+            "its official link now serves a different archive ({}), which cannot be installed: {}",
+            describe_download(&self.served),
+            self.problem()
+        )
+    }
+
+    /// Why the archive cannot be installed.
+    fn problem(&self) -> String {
+        match self.attempts {
+            Some(attempts) => format!(
+                "{}; it was still damaged on the last of {attempts} attempts",
+                self.error
+            ),
+            None => self.error.to_string(),
+        }
+    }
 }
 
 fn archive_format(artifact: &Artifact) -> ArchiveFormat {
