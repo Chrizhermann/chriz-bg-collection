@@ -1,7 +1,7 @@
 # Chriz Easy BG 0.1.0
 
 **Release candidate, not published:** app 0.1.0 / collection 0.1.0.
-Exact package and test results: [0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md).
+Exact package and test results: [0.1.0 package verification](package-acceptance-0.1.0-2026-11-01.md).
 
 This update brings a new recommended mod setup with new choices, updated mods and many
 fixes, and makes the installer sturdier. These notes cover everything since app alpha.21

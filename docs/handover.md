@@ -26,6 +26,14 @@ Also in this candidate:
   texts, the GOG and locale findings of the game check, one busy-installer detail and the
   troubleshooting guide. Internal names such as `public-alpha` and the `alpha` channel stay.
 
+The signed setup is built from `e91e9e2`: 6,079,798 bytes, SHA-256
+`ff4f8d34d05cebfc4c39148d39ec795257ef1d2a4baaaf6adda4d4349a5c1f97`. A verified copy and
+its signature are in Christopher's Downloads folder. All automated checks passed in a new
+clean worktree (1,155 native, 452 frontend and 267 Python tests), as did the native order
+proof of both fixed runs, the signature, resource and updater checks (alpha.21 → 0.1.0)
+and a Defender scan of the setup. Exact results:
+[0.1.0 package verification](package-acceptance-0.1.0-2026-11-01.md).
+
 An alpha.22 candidate built earlier on November 1 (setup SHA-256 `1101253f…`) was
 superseded before publication; its record is
 [alpha.22 package verification](package-acceptance-alpha22-2026-11-01.md), and its setup

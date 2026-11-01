@@ -107,7 +107,7 @@ Cross-repository status. Component detail stays in the sections below and in the
   4. Acceptance, build, signing and publishing, and the website. A signed release
      candidate of app and collection 0.1.0 for Christopher's own test is built from
      [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (exact package
-     and test results in `docs/package-acceptance-0.1.0-2026-11-02.md`); nothing is
+     and test results in `docs/package-acceptance-0.1.0-2026-11-01.md`); nothing is
      tagged or published. The ledger is renamed to 0.1.0 and dated 2026-11-02 (step 2),
      and #77 is fixed in the same PR (below). The earlier alpha.22 candidate of
      2026-11-01 is superseded. Still open before publishing: his test and OK and the lab
