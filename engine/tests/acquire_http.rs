@@ -862,12 +862,13 @@ fn a_changed_download_beyond_the_served_limit_is_refused_before_it_is_stored() {
     assert!(!temp.path().join("cache/partial/huge.part").exists());
 }
 
-/// The download of `id` in the cache below `temp`, while it is incomplete.
+/// The download of `id` in the cache below `temp`, while it is incomplete: the partial file and
+/// its resume record.
 fn partial_files(temp: &TempDir, id: &str) -> [std::path::PathBuf; 2] {
     let partial = temp.path().join("cache/partial");
     [
         partial.join(format!("{id}.part")),
-        partial.join(format!("{id}.json")),
+        partial.join(format!("{id}.part.json")),
     ]
 }
 
