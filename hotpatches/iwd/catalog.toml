@@ -67,3 +67,9 @@ id = "iwd-0.1.4"
 label = "Chriz Easy IWD 0.1.4"
 recipe_version = "0.1.4"
 content_sha256 = "710913cb01ab21e07f9d9aff935ca2145d1465cfe25fc1bc9897930a269c2ead"
+
+[[bases]]
+id = "iwd-0.1.5"
+label = "Chriz Easy IWD 0.1.5"
+recipe_version = "0.1.5"
+content_sha256 = "03620b43e93a779bc03d8375bbd6d2568e9a3224cf064d6ce7e4e8d5cfa2f365"

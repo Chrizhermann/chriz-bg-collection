@@ -1,0 +1,17 @@
+schema = 1
+recipe_id = "chriz-easy-iwd"
+version = "0.1.5"
+published_at = "2026-11-02T00:00:00Z"
+minimum_app_version = "0.1.1"
+supersedes = "0.1.4"
+
+[[changes]]
+id = "snowytoes-1.7.1"
+title = "Snowytoes Hamlet 1.7.1"
+summary = "Snowytoes Hamlet installs version 1.7.1, with its author's improved portal and more typo fixes. Its download page now serves only 1.7.1, so earlier releases stopped at the Snowytoes download."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = [
+  "artifact:snowytoes-1.7",
+  "artifact:snowytoes-1.7.1",
+]
