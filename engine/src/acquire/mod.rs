@@ -132,6 +132,27 @@ pub struct AcquiredArtifact {
     pub repaired: Option<CacheRepair>,
 }
 
+/// A changed download that was refused because of where it came from, as it was served. The
+/// refused file itself is not kept.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RefusedDownload {
+    /// The download's link.
+    pub url: String,
+    /// The address that answered with the file, after redirects.
+    pub final_url: String,
+    /// File name the server gave the download, when known.
+    pub filename: Option<String>,
+    /// Length of the refused download.
+    pub length: u64,
+    /// Lowercase SHA-256 of the refused download.
+    pub sha256: String,
+    /// Every host that the requests which wrote the download reached, in every segment, in the
+    /// order first reached.
+    pub hosts: Vec<String>,
+    /// Those among `hosts` outside the link's own and its reviewed redirect hosts.
+    pub unreviewed_hosts: Vec<String>,
+}
+
 /// Failure while validating, transferring, or publishing an immutable artifact.
 #[derive(Debug, Error)]
 pub enum AcquireError {
@@ -207,22 +228,11 @@ pub enum AcquireError {
     /// its link nor its reviewed redirect hosts name, where a changed file may come only from
     /// those. Every segment of a resumed download counts. The refused file is not kept.
     #[error(
-        "the changed download from `{url}` came, at least in part, through hosts its recipe did not review: {}",
-        .unreviewed_hosts.join(", ")
+        "the changed download from `{}` came, at least in part, through hosts its recipe did not review: {}",
+        .0.url,
+        .0.unreviewed_hosts.join(", ")
     )]
-    UnreviewedSource {
-        /// The download's link.
-        url: String,
-        /// Length of the refused download.
-        length: u64,
-        /// Lowercase SHA-256 of the refused download.
-        sha256: String,
-        /// Every host that the requests which wrote the download reached, in every segment,
-        /// in the order first reached.
-        hosts: Vec<String>,
-        /// Those among `hosts` outside the link's own and its reviewed redirect hosts.
-        unreviewed_hosts: Vec<String>,
-    },
+    UnreviewedSource(Box<RefusedDownload>),
     /// A download authorized as exactly one changed file ([`ServedRules::authorized`]) served
     /// another file. The refused file is not kept.
     #[error(

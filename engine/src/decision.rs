@@ -500,36 +500,61 @@ pub fn pending_decision(records: &[LedgerRecord]) -> Option<PendingDecision> {
         .filter(|pending| unresolved.as_ref() == Some(&(pending.step_id.clone(), pending.attempt)))
 }
 
-/// Every answer the ledger recorded, in order, with its question and whether it was withdrawn
-/// later.
+/// What became of an answer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DecisionOutcome {
+    /// The answer took effect: its step stopped after "No", completed with exactly the file
+    /// asked about, or left the mod out with the recorded closure.
+    Applied,
+    /// The question was withdrawn after the answer, because the situation it asked about no
+    /// longer held; the answer had no effect.
+    Withdrawn,
+    /// Applying the answer did not succeed, for example because the accepted file was gone and
+    /// the link served yet another one; the attempt ended and a later one asked anew.
+    Failed,
+    /// The step has not ended since the answer.
+    Pending,
+}
+
+/// Every answer the ledger recorded, in order, with its question and what became of it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AnsweredDecision {
     /// Step that asked.
     pub step_id: String,
+    /// Its attempt.
+    pub attempt: u32,
     /// The question's id.
     pub decision_id: String,
     /// The question as recorded.
     pub question: Question,
     /// The answer.
     pub answer: RecordedAnswer,
-    /// Whether the question was withdrawn after it was answered, because the situation it
-    /// answered no longer held.
-    pub withdrawn: bool,
+    /// What became of the answer, by the ledger records that follow it.
+    pub outcome: DecisionOutcome,
 }
 
-/// Every answered question in `records`, in ledger order.
+/// Every answered question in `records`, in ledger order, with what became of each answer.
 pub fn answered_decisions(records: &[LedgerRecord]) -> Vec<AnsweredDecision> {
-    let mut questions = BTreeMap::<&str, (&str, &Question)>::new();
+    let mut questions = BTreeMap::<&str, (&str, u32, &Question)>::new();
     let mut answered = Vec::<AnsweredDecision>::new();
+    // The answer whose step has not ended yet.
+    let mut open: Option<usize> = None;
     for record in records {
+        let ended = |decision: &AnsweredDecision, step_id: &str, attempt: u32| {
+            decision.step_id == step_id && decision.attempt == attempt
+        };
         match &record.event {
             SessionEvent::DecisionRequired {
                 step_id,
+                attempt,
                 decision_id,
                 question,
-                ..
             } => {
-                questions.insert(decision_id.as_str(), (step_id.as_str(), question.as_ref()));
+                questions.insert(
+                    decision_id.as_str(),
+                    (step_id.as_str(), *attempt, question.as_ref()),
+                );
             }
             SessionEvent::DecisionAnswered {
                 decision_id,
@@ -537,9 +562,10 @@ pub fn answered_decisions(records: &[LedgerRecord]) -> Vec<AnsweredDecision> {
                 source,
                 ..
             } => {
-                if let Some((step_id, question)) = questions.get(decision_id.as_str()) {
+                if let Some((step_id, attempt, question)) = questions.get(decision_id.as_str()) {
                     answered.push(AnsweredDecision {
                         step_id: (*step_id).to_owned(),
+                        attempt: *attempt,
                         decision_id: decision_id.clone(),
                         question: (*question).clone(),
                         answer: RecordedAnswer {
@@ -547,25 +573,59 @@ pub fn answered_decisions(records: &[LedgerRecord]) -> Vec<AnsweredDecision> {
                             source: *source,
                             answered_at: record.recorded_at,
                         },
-                        withdrawn: false,
+                        outcome: DecisionOutcome::Pending,
                     });
+                    open = Some(answered.len() - 1);
                 }
             }
             SessionEvent::DecisionWithdrawn { decision_id, .. } => {
-                if let Some(decision) = answered
-                    .iter_mut()
-                    .rev()
-                    .find(|decision| &decision.decision_id == decision_id)
+                if let Some(index) =
+                    open.filter(|index| answered[*index].decision_id == *decision_id)
                 {
-                    decision.withdrawn = true;
+                    answered[index].outcome = DecisionOutcome::Withdrawn;
+                    open = None;
                 }
             }
-            _ => {}
+            SessionEvent::StepFailed {
+                step_id, attempt, ..
+            } => {
+                if let Some(index) =
+                    open.filter(|index| ended(&answered[*index], step_id, *attempt))
+                {
+                    answered[index].outcome = if answered[index].answer.answer == Answer::No {
+                        DecisionOutcome::Applied
+                    } else {
+                        DecisionOutcome::Failed
+                    };
+                    open = None;
+                }
+            }
+            SessionEvent::StepCompleted { step_id, attempt }
+            | SessionEvent::ArtifactLeftOut {
+                step_id, attempt, ..
+            } => {
+                if let Some(index) =
+                    open.filter(|index| ended(&answered[*index], step_id, *attempt))
+                {
+                    answered[index].outcome = DecisionOutcome::Applied;
+                    open = None;
+                }
+            }
+            SessionEvent::FreshCopyRequired {
+                step_id, attempt, ..
+            } => {
+                if let Some(index) =
+                    open.filter(|index| ended(&answered[*index], step_id, *attempt))
+                {
+                    answered[index].outcome = DecisionOutcome::Failed;
+                    open = None;
+                }
+            }
+            SessionEvent::StepStarted { .. } | SessionEvent::Created(_) => {}
         }
     }
     answered
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

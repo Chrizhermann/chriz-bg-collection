@@ -911,12 +911,15 @@ fn a_changed_tool_comes_only_from_its_reviewed_hosts() {
 
     let refused = cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never());
     assert!(
-        matches!(&refused, Err(AcquireError::UnreviewedSource { url, length, sha256: digest, hosts, unreviewed_hosts })
-            if *url == download.url
-                && *length == changed.len() as u64
-                && *digest == sha256(&changed)
-                && *hosts == ["127.0.0.1", "localhost"]
-                && *unreviewed_hosts == ["localhost"]),
+        matches!(&refused, Err(AcquireError::UnreviewedSource(refused))
+            if refused.url == download.url
+                && refused.final_url.ends_with("/weidu.zip")
+                && refused.final_url.starts_with("http://localhost:")
+                && refused.filename.as_deref() == Some("weidu.zip")
+                && refused.length == changed.len() as u64
+                && refused.sha256 == sha256(&changed)
+                && refused.hosts == ["127.0.0.1", "localhost"]
+                && refused.unreviewed_hosts == ["localhost"]),
         "{refused:?}"
     );
     // A refusal is final: no further attempt, and nothing was kept.
@@ -1001,10 +1004,10 @@ fn a_resumed_changed_tool_keeps_the_unreviewed_host_of_its_first_part() {
     let refused = cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never());
 
     assert!(
-        matches!(&refused, Err(AcquireError::UnreviewedSource { length, sha256: digest, unreviewed_hosts, .. })
-            if *length == changed.len() as u64
-                && *digest == sha256(&changed)
-                && *unreviewed_hosts == ["localhost"]),
+        matches!(&refused, Err(AcquireError::UnreviewedSource(refused))
+            if refused.length == changed.len() as u64
+                && refused.sha256 == sha256(&changed)
+                && refused.unreviewed_hosts == ["localhost"]),
         "{refused:?}"
     );
     for file in partial_files(&temp, "weidu") {

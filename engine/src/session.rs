@@ -218,7 +218,8 @@ pub struct SessionReplay {
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct DecisionState {
     decision_id: String,
-    answered: bool,
+    question: Box<Question>,
+    answer: Option<Answer>,
 }
 
 /// Durable terminal state preventing any further managed-copy mutation.
@@ -1000,9 +1001,17 @@ fn decision_transition(
     path: &Path,
 ) -> Result<Option<DecisionState>> {
     match (decision, event) {
-        (None, SessionEvent::DecisionRequired { decision_id, .. }) => Ok(Some(DecisionState {
+        (
+            None,
+            SessionEvent::DecisionRequired {
+                decision_id,
+                question,
+                ..
+            },
+        ) => Ok(Some(DecisionState {
             decision_id: decision_id.clone(),
-            answered: false,
+            question: question.clone(),
+            answer: None,
         })),
         (Some(_), SessionEvent::DecisionRequired { .. }) => Err(ledger_error(
             path,
@@ -1011,13 +1020,27 @@ fn decision_transition(
         (
             Some(DecisionState {
                 decision_id: current,
-                answered: false,
+                question,
+                answer: None,
             }),
-            SessionEvent::DecisionAnswered { decision_id, .. },
-        ) if current == decision_id => Ok(Some(DecisionState {
-            decision_id: decision_id.clone(),
-            answered: true,
-        })),
+            SessionEvent::DecisionAnswered {
+                decision_id,
+                answer,
+                ..
+            },
+        ) if current == decision_id => {
+            if !question.offers(*answer) {
+                return Err(ledger_error(
+                    path,
+                    "an answer must be one that its question offers",
+                ));
+            }
+            Ok(Some(DecisionState {
+                decision_id: decision_id.clone(),
+                question: question.clone(),
+                answer: Some(*answer),
+            }))
+        }
         (_, SessionEvent::DecisionAnswered { .. }) => Err(ledger_error(
             path,
             "an answer must answer the unanswered question of its step",
@@ -1033,19 +1056,56 @@ fn decision_transition(
             path,
             "a withdrawal must name the standing question of its step",
         )),
-        (
-            Some(DecisionState {
-                answered: false, ..
-            }),
-            _,
-        ) => Err(ledger_error(
+        (None, _) => Ok(None),
+        (Some(DecisionState { answer: None, .. }), _) => Err(ledger_error(
             path,
             "a step cannot end while its question is unanswered",
         )),
-        _ => Ok(decision.clone()),
+        (
+            Some(DecisionState {
+                question,
+                answer: Some(answer),
+                ..
+            }),
+            next,
+        ) => {
+            if answered_outcome_fits(question, *answer, next) {
+                Ok(None)
+            } else {
+                Err(ledger_error(
+                    path,
+                    "a step must end as its answered question says: stopped after No, completed after installing, left out with the recorded closure after leaving out",
+                ))
+            }
+        }
     }
 }
 
+/// Whether `next`, the end of a step whose standing question was answered with `answer`, is
+/// what that answer leads to. Any answer may end in a failed attempt, for example when the
+/// accepted file is gone and the link changed again.
+fn answered_outcome_fits(question: &Question, answer: Answer, next: &SessionEvent) -> bool {
+    match next {
+        SessionEvent::StepFailed { .. } => true,
+        SessionEvent::StepCompleted { .. } => answer == Answer::Yes && !question.leaves_out(answer),
+        SessionEvent::ArtifactLeftOut {
+            artifact_id,
+            plan_sha256,
+            removed_runs,
+            changed_runs,
+            ..
+        } => {
+            question.leaves_out(answer)
+                && question.leave_out.as_ref().is_some_and(|closure| {
+                    *artifact_id == question.artifact_id
+                        && *plan_sha256 == closure.plan_sha256
+                        && *removed_runs == closure.removed_runs
+                        && *changed_runs == closure.changed_runs
+                })
+        }
+        _ => false,
+    }
+}
 fn is_decision_event(event: &SessionEvent) -> bool {
     matches!(
         event,

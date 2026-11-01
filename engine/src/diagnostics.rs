@@ -267,9 +267,35 @@ fn select_entries(
     }
 
     // Answers to questions about downloads; the questions themselves are in the ledger.
-    let decisions = state_root.join("evidence").join("decisions");
-    if decisions.exists() {
-        validate_direct_directory(&decisions)?;
+    // Each folder on the way must be a direct folder of the installation: a link, junction or
+    // other reparse point could lead the export to files outside it.
+    let evidence = state_root.join("evidence");
+    let decisions = evidence.join("decisions");
+    let mut present = true;
+    for folder in [&evidence, &decisions] {
+        match fs::symlink_metadata(folder) {
+            Ok(metadata) => {
+                if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+                    return Err(unsafe_path(
+                        folder,
+                        "links and reparse points are forbidden in diagnostics evidence",
+                    ));
+                }
+                validate_direct_directory(folder)?;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                present = false;
+                break;
+            }
+            Err(source) => {
+                return Err(DiagnosticsError::Io {
+                    path: folder.clone(),
+                    source,
+                })
+            }
+        }
+    }
+    if present {
         for entry in read_directory(&decisions)? {
             let name = entry.file_name().to_string_lossy().into_owned();
             let is_answer = name
@@ -1151,6 +1177,18 @@ fn canonical_direct_directory(path: &Path) -> Result<PathBuf, DiagnosticsError> 
         path: path.to_path_buf(),
         source,
     })
+}
+
+#[cfg(windows)]
+fn is_reparse_point(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    // FILE_ATTRIBUTE_REPARSE_POINT
+    metadata.file_attributes() & 0x400 != 0
+}
+
+#[cfg(not(windows))]
+fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
+    false
 }
 
 fn validate_direct_directory(path: &Path) -> Result<(), DiagnosticsError> {

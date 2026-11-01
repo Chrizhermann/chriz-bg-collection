@@ -1273,20 +1273,67 @@ fn open_decision_campaign(
 }
 
 /// Where `decide` stores the answer to `decision_id` in the campaign at `managed_root`.
-fn decision_answer_path(managed_root: &Path, decision_id: &str) -> PathBuf {
-    managed_root
-        .join(STATE_DIRECTORY)
-        .join(EVIDENCE_DIRECTORY)
-        .join(DECISIONS_EVIDENCE)
-        .join(format!("{decision_id}.json"))
+/// The folder of answers of the campaign at `managed_root`, which must be its canonical path:
+/// `.chriz/evidence/decisions`, each of them a direct folder, never a link, junction or other
+/// reparse point that could lead outside the installation. With `create`, the missing
+/// `evidence` and `decisions` folders are created; otherwise `None` when one is missing.
+fn decisions_directory(managed_root: &Path, create: bool) -> Result<Option<PathBuf>, String> {
+    let mut path = managed_root.to_path_buf();
+    for (index, name) in [STATE_DIRECTORY, EVIDENCE_DIRECTORY, DECISIONS_EVIDENCE]
+        .into_iter()
+        .enumerate()
+    {
+        path.push(name);
+        match fs::symlink_metadata(&path) {
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                if !create || index == 0 {
+                    return Ok(None);
+                }
+                match fs::create_dir(&path) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+                    Err(error) => return Err(format!("{}: {error}", path.display())),
+                }
+            }
+            Err(error) => return Err(format!("{}: {error}", path.display())),
+        }
+        let metadata =
+            fs::symlink_metadata(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir()
+        {
+            return Err(format!(
+                "{} is not a direct folder of this installation",
+                path.display()
+            ));
+        }
+    }
+    Ok(Some(path))
 }
 
-/// The answer file of `decision`, when `decide` wrote one for exactly this question.
+/// Where `decide` stores the answer to `decision_id`; `None` when no answer folder exists yet
+/// and `create` is false.
+fn decision_answer_path(
+    managed_root: &Path,
+    decision_id: &str,
+    create: bool,
+) -> Result<Option<PathBuf>, String> {
+    if !crate::decision::is_decision_id(decision_id) {
+        return Err(format!("{decision_id:?} is not a question id"));
+    }
+    Ok(decisions_directory(managed_root, create)?
+        .map(|directory| directory.join(format!("{decision_id}.json"))))
+}
+
+/// The answer file of `decision`, when `decide` wrote one for exactly this question with an
+/// answer the question offers.
 fn read_decision_answer(
     managed_root: &Path,
     decision: &PendingDecision,
 ) -> Result<Option<AnswerRecord>, String> {
-    let path = decision_answer_path(managed_root, &decision.decision_id);
+    let Some(path) = decision_answer_path(managed_root, &decision.decision_id, false)? else {
+        return Ok(None);
+    };
     let Some(record) =
         read_optional_json::<AnswerRecord>(&path).map_err(|failure| failure.to_string())?
     else {
@@ -1296,6 +1343,13 @@ fn read_decision_answer(
         return Err(format!(
             "the answer stored for question {} was given to another question",
             decision.decision_id
+        ));
+    }
+    if !decision.question.offers(record.answer) {
+        return Err(format!(
+            "the answer stored for question {} is {}, which the question does not offer",
+            decision.decision_id,
+            record.answer.flag_value()
         ));
     }
     Ok(Some(record))
@@ -1326,7 +1380,7 @@ pub fn inspect_decision(
         step_id: pending.step_id.clone(),
         decision_id: pending.decision_id.clone(),
         token: pending.question.token(),
-        texts: render_question(&frozen, &pending.question),
+        texts: render_question(&frozen, &pending.question, &left_out_runs(&replay)),
         question: pending.question,
         answer,
     }))
@@ -1399,11 +1453,16 @@ pub fn answer_decision(
         answered_at: unix_millis()
             .map_err(|failure| CliError::new("decision_failed", failure.to_string()))?,
     };
-    publish_json_once(
-        &decision_answer_path(&managed_root, &pending.decision_id),
-        &record,
-    )
-    .map_err(|failure| CliError::new("decision_failed", failure.to_string()))
+    let path = decision_answer_path(&managed_root, &pending.decision_id, true)
+        .map_err(|message| CliError::new("decision_unavailable", message))?
+        .ok_or_else(|| {
+            CliError::new(
+                "decision_unavailable",
+                "the installation has no state folder",
+            )
+        })?;
+    publish_json_once(&path, &record)
+        .map_err(|failure| CliError::new("decision_failed", failure.to_string()))
 }
 
 /// The player-facing name of the artifact `id` in the frozen recipe.
@@ -1414,31 +1473,18 @@ fn frozen_artifact_name(frozen: &FrozenCliRecipe, id: &str) -> String {
         .map_or_else(|| id.to_owned(), |artifact| artifact.name.clone())
 }
 
-/// The names of the mods of `run_ids` in the frozen plan, each once, without `skip_artifact`.
-fn frozen_mod_names(
-    frozen: &FrozenCliRecipe,
-    run_ids: &[String],
-    skip_artifact: Option<&str>,
-) -> Vec<String> {
-    let mut names = Vec::<String>::new();
-    for run in frozen
-        .plan
-        .runs
+/// Every run that the leave-outs recorded in `replay` removed.
+fn left_out_runs(replay: &SessionReplay) -> BTreeSet<String> {
+    replay
+        .records
         .iter()
-        .filter(|run| run_ids.contains(&run.run_id))
-        .filter(|run| Some(run.artifact_id.as_str()) != skip_artifact)
-    {
-        let name = frozen
-            .mods
-            .get(&run.mod_id)
-            .map_or_else(|| run.mod_id.clone(), |installer| installer.name.clone());
-        if !names.contains(&name) {
-            names.push(name);
-        }
-    }
-    names
+        .filter_map(|record| match &record.event {
+            SessionEvent::ArtifactLeftOut { removed_runs, .. } => Some(removed_runs.clone()),
+            _ => None,
+        })
+        .flatten()
+        .collect()
 }
-
 /// One sentence that names `question`, for the installation log and "You chose to stop: …".
 fn question_summary(frozen: &FrozenCliRecipe, question: &Question) -> String {
     let name = frozen_artifact_name(frozen, &question.artifact_id);
@@ -1454,21 +1500,92 @@ fn question_summary(frozen: &FrozenCliRecipe, question: &Question) -> String {
     }
 }
 
-/// `question` in the player's words, as the app and the command line show it.
-fn render_question(frozen: &FrozenCliRecipe, question: &Question) -> QuestionTexts {
-    let name = frozen_artifact_name(frozen, &question.artifact_id);
-    let closure = question.leave_out.as_ref();
-    let dependents = closure.map_or_else(Vec::new, |closure| {
-        frozen_mod_names(frozen, &closure.removed_runs, Some(&question.artifact_id))
-    });
-    let reduced = closure.map_or_else(Vec::new, |closure| {
-        let changed = closure
-            .changed_runs
+/// The mods that leaving out `artifact_id` affects, split into those left out entirely and
+/// those still installed without some of their parts: a mod with a run in `remaining`, the
+/// runs still planned without it, keeps being installed even when it loses other runs.
+fn affected_mods(
+    frozen: &FrozenCliRecipe,
+    artifact_id: &str,
+    removed: &[String],
+    changed: &[String],
+    remaining: &BTreeSet<String>,
+) -> (Vec<String>, Vec<String>) {
+    let name = |mod_id: &str| {
+        frozen
+            .mods
+            .get(mod_id)
+            .map_or_else(|| mod_id.to_owned(), |installer| installer.name.clone())
+    };
+    let (mut left_out, mut reduced) = (Vec::<String>::new(), Vec::<String>::new());
+    for run in frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| removed.contains(&run.run_id) && run.artifact_id != artifact_id)
+    {
+        let keeps_runs = frozen
+            .plan
+            .runs
             .iter()
-            .map(|run| run.run_id.clone())
-            .collect::<Vec<_>>();
-        frozen_mod_names(frozen, &changed, None)
-    });
+            .any(|other| other.mod_id == run.mod_id && remaining.contains(&other.run_id));
+        let list = if keeps_runs {
+            &mut reduced
+        } else {
+            &mut left_out
+        };
+        let name = name(&run.mod_id);
+        if !list.contains(&name) {
+            list.push(name);
+        }
+    }
+    for run in frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| changed.contains(&run.run_id))
+    {
+        let name = name(&run.mod_id);
+        if !reduced.contains(&name) && !left_out.contains(&name) {
+            reduced.push(name);
+        }
+    }
+    (left_out, reduced)
+}
+
+/// `question` in the player's words, as the app and the command line show it. `earlier` are
+/// the runs that earlier leave-outs of this installation removed.
+fn render_question(
+    frozen: &FrozenCliRecipe,
+    question: &Question,
+    earlier: &BTreeSet<String>,
+) -> QuestionTexts {
+    let name = frozen_artifact_name(frozen, &question.artifact_id);
+    let (dependents, reduced) = question.leave_out.as_ref().map_or_else(
+        || (Vec::new(), Vec::new()),
+        |closure| {
+            let remaining = frozen
+                .plan
+                .runs
+                .iter()
+                .map(|run| run.run_id.clone())
+                .filter(|run_id| {
+                    !earlier.contains(run_id) && !closure.removed_runs.contains(run_id)
+                })
+                .collect::<BTreeSet<_>>();
+            let changed = closure
+                .changed_runs
+                .iter()
+                .map(|run| run.run_id.clone())
+                .collect::<Vec<_>>();
+            affected_mods(
+                frozen,
+                &question.artifact_id,
+                &closure.removed_runs,
+                &changed,
+                &remaining,
+            )
+        },
+    );
     let stop = AnswerText {
         answer: Answer::No,
         label: "Stop the installation".to_owned(),
@@ -1833,30 +1950,24 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
 /// End-summary lines, in English, for what a receipt records about changed downloads: one per
 /// answer that took effect, and the earlier generic lines for whatever no answer covers.
 fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<String> {
-    let mods = &frozen.mods;
     let artifact_name = |id: &str| frozen_artifact_name(frozen, id);
-    let mod_names = |run_ids: &[String], skip_artifact: Option<&str>| {
-        let mut names = Vec::<String>::new();
-        for run in receipt
-            .plan
-            .runs
-            .iter()
-            .filter(|run| run_ids.contains(&run.run_id))
-            .filter(|run| Some(run.artifact_id.as_str()) != skip_artifact)
-        {
-            let name = mods
-                .get(&run.mod_id)
-                .map_or_else(|| run.mod_id.clone(), |installer| installer.name.clone());
-            if !names.contains(&name) {
-                names.push(name);
-            }
-        }
-        names
+    // A mod still installed with other runs lost only parts; one without runs was left out.
+    let remaining = receipt
+        .effective_plan()
+        .runs
+        .iter()
+        .map(|run| run.run_id.clone())
+        .collect::<BTreeSet<_>>();
+    let affected = |artifact_id: &str, removed: &[String], changed: &[String]| {
+        affected_mods(frozen, artifact_id, removed, changed, &remaining)
     };
     let effective = receipt
         .decisions
         .iter()
-        .filter(|decision| !decision.withdrawn && decision.answer != Answer::No)
+        .filter(|decision| {
+            decision.outcome == crate::decision::DecisionOutcome::Applied
+                && decision.answer != Answer::No
+        })
         .collect::<Vec<_>>();
     let answered_leave_out = |id: &str| {
         effective.iter().any(|decision| {
@@ -1875,6 +1986,12 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
         })
     };
     let mut notes = Vec::new();
+    let left_out_in_the_end = |id: &str| {
+        receipt
+            .left_out
+            .iter()
+            .any(|left_out| left_out.artifact_id == id)
+    };
     for decision in &effective {
         let name = artifact_name(&decision.artifact_id);
         let file = decision.served.as_ref().map_or_else(String::new, |served| {
@@ -1884,6 +2001,10 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
                 .unwrap_or_else(|| format!("{} bytes", served.length))
         });
         match (decision.kind, decision.answer) {
+            // A newer download that was installed, then left out after all, as when placing
+            // its files met another mod's, has only its leave-out line.
+            (QuestionKind::ChangedDownload | QuestionKind::UnreviewedTool, Answer::Yes)
+                if left_out_in_the_end(&decision.artifact_id) => {}
             (QuestionKind::ChangedDownload, Answer::Yes) => {
                 notes.push(format!(
                     "You chose to install a newer download of {name} ({file})."
@@ -1906,11 +2027,14 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
                     _ => format!("a newer download than the reviewed one was found: {file}"),
                 };
                 let mut note = format!("You chose to continue without {name} ({why}).");
-                let dependents = mod_names(&decision.removed_runs, Some(&decision.artifact_id));
+                let (dependents, changed) = affected(
+                    &decision.artifact_id,
+                    &decision.removed_runs,
+                    &decision.changed_runs,
+                );
                 if !dependents.is_empty() {
                     note.push_str(&format!(" Also left out: {}.", dependents.join(", ")));
                 }
-                let changed = mod_names(&decision.changed_runs, None);
                 if !changed.is_empty() {
                     note.push_str(&format!(
                         " Installed without the parts that need it: {}.",
@@ -1930,14 +2054,17 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
             "Left out: {}. Its download could not be used.",
             artifact_name(&left_out.artifact_id)
         );
-        let dependents = mod_names(&left_out.runs, Some(&left_out.artifact_id));
+        let (dependents, changed) = affected(
+            &left_out.artifact_id,
+            &left_out.runs,
+            &left_out.changed_runs,
+        );
         if !dependents.is_empty() {
             note.push_str(&format!(
                 " Also left out because they need it: {}.",
                 dependents.join(", ")
             ));
         }
-        let changed = mod_names(&left_out.changed_runs, None);
         if !changed.is_empty() {
             note.push_str(&format!(
                 " Installed without the parts that need it: {}.",
@@ -2077,14 +2204,21 @@ fn validate_report_receipt(
 
     let succeeded = matches!(receipt.outcome, ReceiptOutcome::Succeeded);
     validate_receipt_left_out(receipt, replay, succeeded)?;
-    // A receipt names the answers the ledger recorded up to it, all of them once it succeeded.
-    let answered = answered_decisions(&replay.records)
+    // A receipt names exactly the answers the ledger recorded up to it: a terminal receipt up to
+    // the ledger record its attempt id names, a successful one all of them.
+    let cutoff = if succeeded {
+        replay.records.len()
+    } else {
+        terminal_receipt_sequence(&receipt.attempt_id)
+            .and_then(|sequence| sequence.checked_add(1))
+            .filter(|cutoff| *cutoff <= replay.records.len())
+            .ok_or_else(|| "terminal receipt sequence is absent from the ledger".to_owned())?
+    };
+    let answered = answered_decisions(&replay.records[..cutoff])
         .iter()
         .map(DecisionReceipt::from)
         .collect::<Vec<_>>();
-    if !answered.starts_with(&receipt.decisions)
-        || (succeeded && receipt.decisions.len() != answered.len())
-    {
+    if receipt.decisions != answered {
         return Err("answers to questions differ from the campaign ledger".to_owned());
     }
     let installed = receipt.effective_plan();
@@ -2269,6 +2403,15 @@ fn validate_receipt_outcome_link(
     Ok(())
 }
 
+/// The ledger sequence that a terminal receipt's attempt id, `terminal-<sequence>-<digest>`,
+/// names.
+fn terminal_receipt_sequence(attempt_id: &str) -> Option<usize> {
+    let (sequence, _) = attempt_id.strip_prefix("terminal-")?.split_once('-')?;
+    if sequence.len() != 10 || !sequence.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    sequence.parse().ok()
+}
 fn validate_terminal_receipt_link(
     receipt: &InstallReceipt,
     replay: &SessionReplay,
@@ -3055,19 +3198,20 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                     let request = self.download_request(artifact)?;
                     // Once this campaign accepted a changed download, every later step uses
                     // exactly that file again, even if the link has changed once more.
-                    let accepted =
-                        match authorized {
-                            Some(authorized) => Some(AcceptedContent {
-                                length: authorized.length(),
-                                sha256: authorized.sha256(),
-                            }),
-                            None => first.filter(|first| first.served_difference.is_some()).map(
-                                |first| AcceptedContent {
-                                    length: first.length,
-                                    sha256: first.sha256.clone(),
-                                },
-                            ),
-                        };
+                    // Only that file is accepted from its link then, from whichever host it was
+                    // accepted from, so that a lost download folder can be filled again.
+                    let authorized = match authorized {
+                        Some(authorized) => Some(authorized),
+                        None => first
+                            .filter(|first| first.served_difference.is_some())
+                            .map(|first| AuthorizedContent::new(first.length, &first.sha256))
+                            .transpose()
+                            .map_err(step_error)?,
+                    };
+                    let accepted = authorized.map(|authorized| AcceptedContent {
+                        length: authorized.length(),
+                        sha256: authorized.sha256(),
+                    });
                     let rules = ServedRules {
                         format: archive_format(artifact),
                         // A changed program that runs every mod comes only from where it was
@@ -3563,10 +3707,14 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 let (_, tool) = check_tool(artifact, contract, &extracted, true)
                     .map_err(|error| unusable_changed_tool(&artifact.id, &error))?;
                 self.record_acquisition(artifact, None, fetched)?;
+                #[cfg(any(debug_assertions, feature = "test-hooks"))]
+                exit_after_accepted_for_test(&artifact.id);
                 self.persist_named_evidence("tools", &artifact.id, &tool)?;
             }
             None => {
                 self.record_acquisition(artifact, None, fetched)?;
+                #[cfg(any(debug_assertions, feature = "test-hooks"))]
+                exit_after_accepted_for_test(&artifact.id);
             }
         }
         Ok(AnsweredAcquisition::Accepted)
@@ -3654,24 +3802,18 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 if self.use_cached_reviewed_tool(artifact, &unavailable_reason(&error).detail)? {
                     return Ok(AcquisitionOutcome::Ready);
                 }
-                if let AcquireError::UnreviewedSource {
-                    url,
-                    length,
-                    sha256,
-                    hosts,
-                    unreviewed_hosts,
-                } = error
-                {
+                if let AcquireError::UnreviewedSource(refused) = error {
+                    let refused = *refused;
                     return Ok(AcquisitionOutcome::Ask {
                         kind: QuestionKind::UnreviewedTool,
                         served: ServedDownload {
-                            filename: None,
-                            length,
-                            sha256: sha256.to_ascii_lowercase(),
-                            link: url.clone(),
-                            final_url: url,
-                            hosts,
-                            unreviewed_hosts,
+                            filename: refused.filename,
+                            length: refused.length,
+                            sha256: refused.sha256.to_ascii_lowercase(),
+                            link: refused.url,
+                            final_url: refused.final_url,
+                            hosts: refused.hosts,
+                            unreviewed_hosts: refused.unreviewed_hosts,
                         },
                     });
                 }
@@ -4088,6 +4230,18 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
             .map(|answer| (answer, AnswerSource::Preset)))
     }
 
+    fn reviewed_is_available(
+        &mut self,
+        identity: &FrozenIdentity,
+        _kind: ArtifactKind,
+    ) -> Result<bool, StepFailure> {
+        let artifact = self.artifact(&identity.id)?;
+        if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
+            return Ok(false);
+        }
+        Ok(self.cached_reviewed_archive(artifact)?.is_some())
+    }
+
     fn acquire_answered(
         &mut self,
         identity: &FrozenIdentity,
@@ -4325,7 +4479,7 @@ fn download_unavailable(error: &AcquireError) -> bool {
             | AcquireError::ServedNotArchive { .. }
             | AcquireError::RedirectDowngrade { .. }
             | AcquireError::UnreviewedRedirect { .. }
-            | AcquireError::UnreviewedSource { .. }
+            | AcquireError::UnreviewedSource(_)
             | AcquireError::AuthorizedContentChanged { .. }
             | AcquireError::HttpStatus {
                 status: 404 | 410,
@@ -4385,14 +4539,11 @@ fn unavailable_reason(error: &AcquireError) -> UnusableReason {
             "its official link now serves a different file from {}, a host the recipe did not review for it",
             final_host(to)
         )),
-        AcquireError::UnreviewedSource {
-            length,
-            sha256,
-            unreviewed_hosts,
-            ..
-        } => other(format!(
-            "its official link now serves a different file ({length} bytes, SHA-256 {sha256}), at least in part through {}, which the recipe did not review for it",
-            unreviewed_hosts.join(", ")
+        AcquireError::UnreviewedSource(refused) => other(format!(
+            "its official link now serves a different file ({} bytes, SHA-256 {}), at least in part through {}, which the recipe did not review for it",
+            refused.length,
+            refused.sha256,
+            refused.unreviewed_hosts.join(", ")
         )),
         AcquireError::AuthorizedContentChanged { length, sha256, .. } => other(format!(
             "its official link now serves yet another file ({length} bytes, SHA-256 {sha256})"
@@ -5735,6 +5886,19 @@ fn holds_once(path: &Path, bytes: &[u8]) -> Result<bool, StepFailure> {
     }
 }
 
+/// Test builds end the process, as a crash would, right after the accepted changed download of
+/// the artifact that `CHRIZ_BG_COLLECTION_TEST_EXIT_AFTER_ACCEPTED` names is recorded and before
+/// its step completes.
+#[cfg(any(debug_assertions, feature = "test-hooks"))]
+fn exit_after_accepted_for_test(artifact_id: &str) {
+    if std::env::var("CHRIZ_BG_COLLECTION_TEST_EXIT_AFTER_ACCEPTED")
+        .ok()
+        .as_deref()
+        == Some(artifact_id)
+    {
+        std::process::exit(86);
+    }
+}
 /// Test builds stop [`publish_bytes_once`] halfway through a record in the evidence folder that
 /// `CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD` names, as a crash would: half of the record is
 /// written and its temporary file stays behind.
@@ -6762,10 +6926,76 @@ mod tests {
                 format!("{base}{dependents}{reduced}"),
             ),
         ] {
-            let texts = render_question(&frozen, &question(removed, changed));
+            let texts = render_question(
+                &frozen,
+                &question(removed, changed),
+                &std::collections::BTreeSet::new(),
+            );
             assert_eq!(texts.message, expected);
             assert_eq!(texts.focus, Answer::Yes);
         }
+    }
+
+    /// A mod that loses one of its runs, such as Modpack's interface compatibility run for a
+    /// left-out interface mod, is still installed: it is named among the mods installed without
+    /// some parts, not among those left out, unless no run of it remains.
+    #[test]
+    fn a_mod_that_keeps_other_runs_is_installed_without_parts_not_left_out() {
+        let mut frozen = frozen_recipe_fixture();
+        let run = |run_id: &str, mod_id: &str| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![0],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        frozen.plan.runs = vec![
+            run("lefreut-bg2", "lefreut"),
+            run("modpack-main-bg2", "modpack"),
+            run("modpack-ui-bg2", "modpack"),
+        ];
+        let question = Question {
+            kind: QuestionKind::UnusableDownload,
+            artifact_id: "lefreut".to_owned(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: "lefreut".to_owned(),
+                version: "1".to_owned(),
+                sha256: "11".repeat(32),
+                length: 10,
+            },
+            served: None,
+            reason: Some(crate::decision::UnusableReason::new(
+                crate::decision::UnusableKind::HttpStatus {
+                    status: 410,
+                    attempts: 5,
+                },
+                "its official link answers HTTP 410",
+            )),
+            leave_out: Some(crate::decision::LeaveOutClosure {
+                removed_runs: vec!["lefreut-bg2".to_owned(), "modpack-ui-bg2".to_owned()],
+                changed_runs: Vec::new(),
+                plan_sha256: "33".repeat(32),
+            }),
+        };
+        let texts = render_question(&frozen, &question, &std::collections::BTreeSet::new());
+        assert_eq!(
+            texts.message,
+            "lefreut can't be installed (its link no longer has the file). It will be left out. Installed without the parts that need it: modpack. Continue the installation?"
+        );
+        assert_eq!(texts.answers[0].label, "Continue without them");
+        // With its other run left out earlier, Modpack goes along entirely.
+        let earlier = std::collections::BTreeSet::from(["modpack-main-bg2".to_owned()]);
+        let texts = render_question(&frozen, &question, &earlier);
+        assert_eq!(
+            texts.message,
+            "lefreut can't be installed (its link no longer has the file). It and the mods that depend on it (modpack) will be left out. Continue the installation?"
+        );
     }
 
     #[test]

@@ -17,7 +17,7 @@ use super::http::{
 };
 use super::{
     AcquireError, AcquiredArtifact, ArchiveFormat, ArchiveLimits, ArtifactMetadata,
-    CacheDisposition, DownloadRequest, StopSignal,
+    CacheDisposition, DownloadRequest, RefusedDownload, StopSignal,
 };
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -611,13 +611,17 @@ impl ArtifactCache {
                     && rules.redirects == ServedRedirects::ReviewedHostsForChanges
                     && !transfer.unreviewed_hosts.is_empty()
                 {
-                    Some(AttemptFailure::Fatal(AcquireError::UnreviewedSource {
-                        url: request.url.clone(),
-                        length,
-                        sha256: sha256.clone(),
-                        hosts: transfer.hosts.clone(),
-                        unreviewed_hosts: transfer.unreviewed_hosts.clone(),
-                    }))
+                    Some(AttemptFailure::Fatal(AcquireError::UnreviewedSource(
+                        Box::new(RefusedDownload {
+                            url: request.url.clone(),
+                            final_url: transfer.final_url.clone(),
+                            filename: transfer.served_filename.clone(),
+                            length,
+                            sha256: sha256.clone(),
+                            hosts: transfer.hosts.clone(),
+                            unreviewed_hosts: transfer.unreviewed_hosts.clone(),
+                        }),
+                    )))
                 } else {
                     served_container_problem(&paths.partial, rules.format, &rules.limits, stop)
                         .map_err(AttemptFailure::Fatal)?

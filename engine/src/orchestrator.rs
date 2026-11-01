@@ -470,6 +470,17 @@ pub trait ArtifactAcquirer {
         Ok(None)
     }
 
+    /// Whether the download folder holds the reviewed archive of `identity` now, looking only
+    /// there and never asking its link.
+    fn reviewed_is_available(
+        &mut self,
+        identity: &FrozenIdentity,
+        kind: ArtifactKind,
+    ) -> Result<bool, StepFailure> {
+        let _ = (identity, kind);
+        Ok(false)
+    }
+
     /// Applies the answer "install it" to `question`, a changed download of `identity`: records
     /// exactly the file that was asked about, getting it again from its link when the download
     /// folder lost it, but only with the same length and SHA-256.
@@ -2045,7 +2056,25 @@ where
             ))
         })?;
         let at_materialization = match &step.kind {
-            PipelineKind::Acquire(..) => false,
+            // The reviewed archive may have come back to the download folder meanwhile, as when
+            // another installation downloaded it: then the mod is installed after all. This
+            // looks only into the download folder; nothing asks the link.
+            PipelineKind::Acquire(identity, kind) => {
+                match self.dependencies.reviewed_is_available(identity, *kind) {
+                    Ok(false) => false,
+                    Ok(true) => {
+                        self.withdraw(
+                            step,
+                            attempt,
+                            &pending,
+                            "the reviewed version is in the download folder now",
+                        )?;
+                        let execution = self.acquire_execution(identity, *kind);
+                        return self.finish_simple(step, attempt, execution);
+                    }
+                    Err(failure) => return self.failed(step, attempt, failure.into_message()),
+                }
+            }
             PipelineKind::Materialize(task) => {
                 let planned = self
                     .recheck(step, task.target, MutationKind::Materialize)

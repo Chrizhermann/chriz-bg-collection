@@ -11,7 +11,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::decision::{Answer, AnswerSource, AnsweredDecision, QuestionKind, UnusableReason};
+use crate::decision::{
+    Answer, AnswerSource, AnsweredDecision, DecisionOutcome, QuestionKind, UnusableReason,
+};
 use crate::games::{GameRole, Storefront};
 use crate::manifest::GameRoot;
 use crate::orchestrator::{ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter, StepFailure};
@@ -252,10 +254,9 @@ pub struct DecisionReceipt {
     /// Runs installed with fewer parts because the answer left the mod out.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub changed_runs: Vec<String>,
-    /// The question was withdrawn after this answer, because the situation it asked about no
-    /// longer held; the answer had no effect.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub withdrawn: bool,
+    /// What became of the answer: applied, withdrawn because the situation it answered no
+    /// longer held, failed, or still pending. Only an applied answer took effect.
+    pub outcome: DecisionOutcome,
 }
 
 impl From<&AnsweredDecision> for DecisionReceipt {
@@ -298,7 +299,7 @@ impl From<&AnsweredDecision> for DecisionReceipt {
                         .collect()
                 })
                 .unwrap_or_default(),
-            withdrawn: decision.withdrawn,
+            outcome: decision.outcome,
         }
     }
 }
