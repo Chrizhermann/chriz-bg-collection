@@ -189,6 +189,38 @@ class Nov02FixPinsTests(unittest.TestCase):
                        "**Rebalance v0.8.9** (pinned 2026-11-02"):
             self.assertIn(phrase, changelog)
 
+    def test_ledger_and_release_notes_describe_the_fixes(self):
+        for path in LEDGERS:
+            with self.subTest(ledger=path):
+                ledger = _load(ROOT / path)
+                self.assertEqual(ledger["version"], "0.1.0")
+                self.assertEqual(ledger["published_at"], "2026-11-02T00:00:00Z")
+                # Two new entries; the changed Kitpack entry keeps its id.
+                self.assertEqual(len(ledger["changes"]), 34)
+                changes = {change["id"]: change for change in ledger["changes"]}
+                werewolf = changes["kitpack-white-werewolf-crash-fix"]
+                self.assertEqual(werewolf["covers"], ["artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.6"])
+                self.assertIn("no longer crash", werewolf["title"])
+                texts = changes["rebalance-pierce-magic-spellstrike-texts"]
+                self.assertEqual(texts["covers"], ["artifact:chriz-bg-rebalance-0.8.9"])
+                for phrase in ("by at least 10 and at most 40 points", "15% chance of spell failure",
+                               "Only the texts change."):
+                    self.assertIn(phrase, texts["summary"])
+                self.assertIn("chriz.6", changes["kitpack-kit-weapon-fixes"]["summary"])
+                for change in (werewolf, texts):
+                    self.assertEqual(change["save_applicability"], "next-playthrough")
+                    self.assertEqual(change["urgency"], "recommended")
+        # The release notes, with line breaks folded, describe both fixes and the versions.
+        notes = " ".join((ROOT / "docs/release-notes-0.1.0.md").read_text(encoding="utf-8").split())
+        for phrase in ("record of the 34 changes in collection 0.1.0",
+                       "**White werewolves no longer crash the game.**",
+                       "white and greater white werewolves",
+                       "**Pierce Magic and Spellstrike describe what they do.**",
+                       "by at least 10 and at most 40 points", "The spells themselves are unchanged.",
+                       "Artisan's Kitpack fork 4.81a-dev.85928f9-chriz.6 (was chriz.1)",
+                       "BG Rebalance 0.8.9 (was 0.8.2)"):
+            self.assertIn(phrase, notes)
+
 
 if __name__ == "__main__":
     unittest.main()

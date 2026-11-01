@@ -519,14 +519,15 @@ fn release_0_1_0_supersedes_alpha20_requires_the_0_1_0_app_and_waits_for_the_nex
     // They were taken from payloads that chriz-bg-author package-recipe built from the
     // recipe trees of both commits; e0b5116 is the recipe that app alpha.20 and alpha.21
     // shipped. Renaming the release changed only release.json and the ledger, which the
-    // recipe diff does not compare.
+    // recipe diff does not compare. The November 2 pins of Artisan's Kitpack chriz.6 and
+    // BG Rebalance v0.8.9 (9bb496a) add their two artifacts.
     let snapshot = released_snapshots()
         .into_iter()
         .find(|snapshot| snapshot["version"] == "0.1.0")
         .expect("the 0.1.0 differences are recorded");
     assert_eq!(snapshot["from_commit"], "e0b5116");
     let differences = snapshot_differences(&snapshot);
-    assert_eq!(differences.len(), 231);
+    assert_eq!(differences.len(), 233);
     ensure_change_coverage(&differences, &ledger).unwrap();
     assert_eq!(
         ledger

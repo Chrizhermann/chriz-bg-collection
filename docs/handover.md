@@ -25,6 +25,12 @@ Also in this candidate:
 - Player-visible texts no longer call the product an alpha: the profile label, two Updates
   texts, the GOG and locale findings of the game check, one busy-installer detail and the
   troubleshooting guide. Internal names such as `public-alpha` and the `alpha` channel stay.
+- Two content fixes that Christopher took into 0.1.0 on 2026-11-02, pinned in both
+  recipes: the Artisan's Kitpack fork chriz.6 (the Shapeshifter's white werewolf forms no
+  longer crash the game near walls) and BG Rebalance v0.8.9 (the Pierce Magic and
+  Spellstrike descriptions match the spells). Neither changes a component, the order or a
+  selection. The ledger covers the two new recorded differences with two new entries,
+  34 in all.
 
 The signed setup is built from `e91e9e2`: 6,079,798 bytes, SHA-256
 `ff4f8d34d05cebfc4c39148d39ec795257ef1d2a4baaaf6adda4d4349a5c1f97`. A verified copy and

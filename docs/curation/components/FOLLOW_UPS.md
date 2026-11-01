@@ -89,21 +89,29 @@ Cross-repository status. Component detail stays in the sections below and in the
      see Weapon access below).
      #75 and #74, BuffBot v1.12.6 for both installers (above), merged on 2026-11-01; #51
      is closed as superseded.
+     Christopher took two fixes into 0.1.0 on 2026-11-02, both released on 2026-11-01
+     (UTC) and pinned in both recipes in
+     [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (evidence in
+     `manifest/evidence/release-intake-20261102-kitpack-chriz6-rebalance-089.toml`): the
+     Artisan's Kitpack fork chriz.6 (white werewolf crash, below) and BG Rebalance v0.8.9
+     (Pierce Magic and Spellstrike texts, below). Neither changes a component, the order
+     or a decision.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
      update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
      merged on 2026-10-30. The ledger supersedes alpha.20 (alpha.21 shipped
      the alpha.20 recipe), covers all 231 recorded differences, BuffBot v1.12.6 from #75
      included, and needs the app version that ships it. Since PR #76 it is the 0.1.0 ledger
-     (`releases/v0.1.0/ledger.toml`), needs app 0.1.0 and is dated 2026-11-02; the recorded
-     differences are unchanged, because release.json and the ledgers are not part of the
-     recipe diff. If the recipe changes again before the release, the recorded differences
-     and the ledger need the new subjects (steps in #67).
+     (`releases/v0.1.0/ledger.toml`), needs app 0.1.0 and is dated 2026-11-02; the rename
+     left the recorded differences unchanged, because release.json and the ledgers are not
+     part of the recipe diff. The chriz.6 and v0.8.9 pins (step 1) add two differences, so
+     the ledger covers 233, with two new entries. If the recipe changes again before the
+     release, the recorded differences and the ledger need the new subjects (steps in #67).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
      v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44), now
-     v1.12.6 (#75), came after it.
+     v1.12.6 (#75), came after it, and so did Kitpack chriz.6 and Rebalance v0.8.9 (#76).
   4. Acceptance, build, signing and publishing, and the website. A signed release
      candidate of app and collection 0.1.0 for Christopher's own test is built from
      [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (exact package
@@ -327,6 +335,19 @@ Cross-repository status. Component detail stays in the sections below and in the
       `7205` as a default. Since PR #66 (merged on 2026-10-29) chriz.5 is pinned for all
       three Kitpack installers in place of chriz.4, and `7205` joins the late tweak run
       before `8204`; no other component, order or decision changes.
+  - [chriz.6](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.6),
+    released on 2026-11-01 (UTC; fork PR #17, for new installations): the Shapeshifter's
+    white and greater white werewolf forms (`5110`) had no attack 1 frames in the five base
+    directions, which crashes BG2:EE 2.7.3.0 or corrupts memory near a wall. Both files are
+    now copies of the same fur's attack 2; the three TP2s change only their VERSION.
+    - Seen in play in his stream game; in a lab on a copy of it, the old greater white
+      file crashed after 107 s, and with the A2 copy in `override` the same scene ran
+      424 s without a crash. The white fur was checked offline only, and no WeiDU install
+      of the release ran in a game. A one-off repair of the stream game waits for
+      Christopher.
+    - Christopher took chriz.6 into 0.1.0 on 2026-11-02; pinned for all three Kitpack
+      installers in place of chriz.5 in PR #76. Existing games keep the old files; there
+      is no tail.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -425,6 +446,15 @@ Cross-repository status. Component detail stays in the sections below and in the
     new name and its guard against the standalone package, which CEBG never installs.
   - Since PR #64 (merged on 2026-10-29) v0.8.8 replaces v0.8.7. It adds `410` and `411`
     (Weapon access, above) as defaults between `302` and `420`; nothing else changes.
+  - v0.8.9 (released on 2026-11-01 UTC,
+    [PR #25](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/25)) gives Pierce
+    Magic `210` and Spellstrike `211` descriptions in Spell Revisions' layout that match
+    their effects, and repoints the scrolls, the Wand of Spell Striking and sibling
+    spells such as the Kitpack monk's Spellstrike and SCS's wand spell. No mechanic and no
+    component of the main TP2 changes. Its texts-only components `212`/`213` for existing
+    installations ship in the release's separate `CBR_SR_ANTIMAGIC` package, which CEBG
+    does not install. Christopher took v0.8.9 into 0.1.0 on 2026-11-02; pinned in place
+    of v0.8.8 in PR #76.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
   - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
@@ -558,6 +588,11 @@ Cross-repository status. Component detail stays in the sections below and in the
   - Pierce Magic: its description does not match what the spell does (Christopher, seen on
     stream 2026-11-02 in his 2026-09-16 stream install). Check which mod shapes the live
     spell and its text there and in 0.1.0, then make the description match the effects.
+    Done for new installations: BG Rebalance `210`/`211` shape both spells with Spell
+    Revisions, and v0.8.9 (pinned in 0.1.0 by PR #76) describes Pierce Magic and
+    Spellstrike as they work. Existing installations, such as his stream game, keep the
+    old texts; the release's separate texts-only package (`212`/`213`) is meant for them,
+    and applying it there waits for Christopher.
 
 **Ideas for later (community, recorded 2026-10-20)**
 

@@ -18,7 +18,7 @@ and saves unchanged. The installer fixes also help with installations you alread
   stop with "Access is denied". CEBG now waits a moment and tries again, for up to about
   five seconds, before it reports a problem.
 - **CEBG carries the collection's change record.** The app now includes a record of the
-  32 changes in collection 0.1.0, which follows collection alpha.20, the collection that
+  34 changes in collection 0.1.0, which follows collection alpha.20, the collection that
   app alpha.21 installed. The record marks every change for your next playthrough,
   because each comes with a new installation. The Updates page does not list these
   changes yet; these notes describe them.
@@ -159,6 +159,16 @@ All are selected in Chris's Recommended unless marked optional.
 - **The Invisible Blade and Bardic Wonders' Dancer can use katanas** and the rogue and bard
   items that kept them out by mistake, also those that later mods add, such as SCS's Drow
   Katana. The Shapeshifter and the Elementalist still cannot use them.
+- **White werewolves no longer crash the game.** The Shapeshifter's white and greater
+  white werewolves, the forms with the white fur, had no overhand-swing animation in five
+  of the eight directions, and drawing that swing next to a wall could crash the game. In
+  those directions the swing now shows the werewolf's other attack.
+- **Pierce Magic and Spellstrike describe what they do.** Their descriptions now follow
+  Spell Revisions' layout and match the spells: Pierce Magic halves the target's magic
+  resistance for 5 rounds, by at least 10 and at most 40 points, and removes one spell
+  protection; Spellstrike removes all spell protections and gives a 15% chance of spell
+  failure for 2 rounds. Their scrolls, the Wand of Spell Striking and the monk's
+  Spellstrike show the same texts. The spells themselves are unchanged.
 - **BuffBot v1.12.6** (was v1.10.0):
   - The "Combat detected - casting stopped" and "casting timed out" notices now appear
     over the party leader's head; before, they were always lost.
@@ -221,13 +231,13 @@ All are selected in Chris's Recommended unless marked optional.
 ### Package versions
 
 - Chriz BG Modpack 0.2.0-alpha.14 (was alpha.11)
-- BG Rebalance 0.8.8 (was 0.8.2)
+- BG Rebalance 0.8.9 (was 0.8.2)
 - SoD Remix 0.6.16 (was 0.6.13)
 - BuffBot 1.12.6 (was 1.10.0)
 - EEex 1.3.1 (was 1.2.0)
 - Bardic Wonders 2.9c-balance.8 (was balance.7)
 - Spell Revisions fork 4.21-chriz.7 (was chriz.5)
-- Artisan's Kitpack fork 4.81a-dev.85928f9-chriz.5 (was chriz.1)
+- Artisan's Kitpack fork 4.81a-dev.85928f9-chriz.6 (was chriz.1)
 - EEex Remote Console 0.2.1 (was 0.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18 (was v18)
 - New: ChrizFader's voicepacks 1.1.0, Sirene NPC for BG:EE (development version
