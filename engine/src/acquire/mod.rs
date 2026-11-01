@@ -162,6 +162,16 @@ pub enum AcquireError {
     /// An archive exceeded a recipe-authored extraction bound.
     #[error("archive limit exceeded: {0}")]
     ArchiveLimitExceeded(String),
+    /// The data of an archive entry is damaged: it fails its checksum or does not decompress.
+    /// Reading the archive file itself worked, so this is the archive's content, not this
+    /// computer's disk.
+    #[error("archive entry `{entry}` is damaged: {message}")]
+    CorruptArchiveData {
+        /// Entry path inside the archive.
+        entry: String,
+        /// Decoder or checksum detail.
+        message: String,
+    },
     /// The archive did not contain one exact recipe-declared payload layout.
     #[error("archive payload layout is invalid: {0}")]
     ArchiveLayout(String),

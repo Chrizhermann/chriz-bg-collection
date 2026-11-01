@@ -817,14 +817,14 @@ fn extract_with_rule(
                 path: archive_path.to_path_buf(),
                 source,
             })?;
-            let mut archive =
-                ZipArchive::new(file).map_err(|source| AcquireError::ArchiveFormat {
-                    path: archive_path.to_path_buf(),
-                    message: source.to_string(),
-                })?;
+            let file = TrackedArchiveFile::new(file);
+            let failed = file.failed();
+            let mut archive = ZipArchive::new(file)
+                .map_err(|source| zip_error(source, failed.get(), "read archive", archive_path))?;
             validate_central_directory(
                 &mut archive,
                 snapshot.path(),
+                &failed,
                 &expected_roots,
                 &expected_tp2_paths,
                 &requirements.limits,
@@ -1040,9 +1040,12 @@ fn snapshot_archive(
     Ok((snapshot, length, hex::encode(hash.finalize()), prefix))
 }
 
+/// `file_failed` turns `true` once reading the archive file failed, which makes a failure here
+/// this computer's instead of the archive's.
 fn validate_central_directory<R: Read + std::io::Seek>(
     archive: &mut ZipArchive<R>,
     archive_path: &Path,
+    file_failed: &std::cell::Cell<bool>,
     expected_roots: &[String],
     expected_tp2_paths: &[String],
     limits: &ArchiveLimits,
@@ -1061,10 +1064,7 @@ fn validate_central_directory<R: Read + std::io::Seek>(
     for index in 0..archive.len() {
         let entry = archive
             .by_index_raw(index)
-            .map_err(|source| AcquireError::ArchiveFormat {
-                path: archive_path.to_path_buf(),
-                message: source.to_string(),
-            })?;
+            .map_err(|source| zip_error(source, file_failed.get(), "read archive", archive_path))?;
         let archive_name = entry.name().to_owned();
         let normalized = normalize_relative_path(&archive_name, entry.is_dir())?;
         let depth = normalized.split('/').count();
@@ -1644,6 +1644,92 @@ fn path_is_within_root(root: &str, path: &str) -> bool {
     path == root || path.starts_with(&format!("{root}/"))
 }
 
+/// The archive file being unpacked, remembering whether reading it failed. A failure while an
+/// entry is unpacked is then either this computer's, when the file could not be read, or the
+/// archive's, when its data does not decompress or fails its checksum.
+struct TrackedArchiveFile<R = File> {
+    file: R,
+    failed: std::rc::Rc<std::cell::Cell<bool>>,
+}
+
+impl<R> TrackedArchiveFile<R> {
+    fn new(file: R) -> Self {
+        Self {
+            file,
+            failed: std::rc::Rc::default(),
+        }
+    }
+
+    /// Becomes `true` once reading or seeking the file failed.
+    fn failed(&self) -> std::rc::Rc<std::cell::Cell<bool>> {
+        std::rc::Rc::clone(&self.failed)
+    }
+}
+
+impl<R: Read> Read for TrackedArchiveFile<R> {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        self.file
+            .read(buffer)
+            .inspect_err(|_| self.failed.set(true))
+    }
+}
+
+impl<R: std::io::Seek> std::io::Seek for TrackedArchiveFile<R> {
+    fn seek(&mut self, position: std::io::SeekFrom) -> std::io::Result<u64> {
+        // A seek before the start of the file follows an offset in the archive, not a failure
+        // of this computer.
+        std::io::Seek::seek(&mut self.file, position).inspect_err(|error| {
+            if error.kind() != std::io::ErrorKind::InvalidInput {
+                self.failed.set(true);
+            }
+        })
+    }
+}
+
+/// A ZIP library failure while `action` on `path`: an I/O error of this computer when reading
+/// the archive file failed (`file_failed`), otherwise the archive's format.
+fn zip_error(
+    error: zip::result::ZipError,
+    file_failed: bool,
+    action: &'static str,
+    path: &Path,
+) -> AcquireError {
+    match error {
+        zip::result::ZipError::Io(source) if file_failed => AcquireError::Io {
+            action,
+            path: path.to_path_buf(),
+            source,
+        },
+        error => AcquireError::ArchiveFormat {
+            path: path.to_path_buf(),
+            message: error.to_string(),
+        },
+    }
+}
+
+/// A failure while reading the unpacked data of `entry` from `archive_path`: an I/O error of
+/// this computer when reading the archive file failed (`file_failed`), otherwise damaged data,
+/// such as a deflate stream that does not decode or a checksum that does not match.
+fn unpacked_read_error(
+    source: std::io::Error,
+    file_failed: bool,
+    archive_path: &Path,
+    entry: &str,
+) -> AcquireError {
+    if file_failed {
+        AcquireError::Io {
+            action: "read archive for unpacking",
+            path: archive_path.to_path_buf(),
+            source,
+        }
+    } else {
+        AcquireError::CorruptArchiveData {
+            entry: entry.to_owned(),
+            message: source.to_string(),
+        }
+    }
+}
+
 fn extract_zip_entries(
     archive_path: &Path,
     entries: &[ValidatedEntry],
@@ -1656,10 +1742,10 @@ fn extract_zip_entries(
         path: archive_path.to_path_buf(),
         source,
     })?;
-    let mut archive = ZipArchive::new(file).map_err(|source| AcquireError::ArchiveFormat {
-        path: archive_path.to_path_buf(),
-        message: source.to_string(),
-    })?;
+    let file = TrackedArchiveFile::new(file);
+    let failed = file.failed();
+    let mut archive = ZipArchive::new(file)
+        .map_err(|source| zip_error(source, failed.get(), "read archive", archive_path))?;
     let mut records = Vec::new();
     for plan in entries.iter().filter(|entry| !entry.is_directory) {
         let output = join_relative(temporary, &plan.relative_path);
@@ -1671,13 +1757,14 @@ fn extract_zip_entries(
             path: parent.to_path_buf(),
             source,
         })?;
-        let mut input =
-            archive
-                .by_index(plan.index)
-                .map_err(|source| AcquireError::ArchiveFormat {
-                    path: PathBuf::from(&plan.archive_path),
-                    message: source.to_string(),
-                })?;
+        let mut input = archive.by_index(plan.index).map_err(|source| {
+            zip_error(
+                source,
+                failed.get(),
+                "read archive entry",
+                Path::new(&plan.archive_path),
+            )
+        })?;
         let mut output_file = File::create(&output).map_err(|source| AcquireError::Io {
             action: "create extracted file",
             path: output.clone(),
@@ -1687,10 +1774,8 @@ fn extract_zip_entries(
         let mut length = 0_u64;
         let mut buffer = [0_u8; BUFFER_SIZE];
         loop {
-            let read = input.read(&mut buffer).map_err(|source| AcquireError::Io {
-                action: "read compressed archive entry",
-                path: PathBuf::from(&plan.archive_path),
-                source,
+            let read = input.read(&mut buffer).map_err(|source| {
+                unpacked_read_error(source, failed.get(), archive_path, &plan.archive_path)
             })?;
             if read == 0 {
                 break;
@@ -1698,10 +1783,12 @@ fn extract_zip_entries(
             length = length.checked_add(read as u64).ok_or_else(|| {
                 AcquireError::ArchiveLimitExceeded("extracted length overflowed u64".to_owned())
             })?;
+            // The central directory was checked, so data that decodes to another length is
+            // damaged, as data that fails its checksum is.
             if length > plan.size {
-                return Err(AcquireError::ArchiveFormat {
-                    path: PathBuf::from(&plan.archive_path),
-                    message: "entry produced more bytes than its central-directory size".to_owned(),
+                return Err(AcquireError::CorruptArchiveData {
+                    entry: plan.archive_path.clone(),
+                    message: "it produced more bytes than its central-directory size".to_owned(),
                 });
             }
             output_file
@@ -1714,9 +1801,9 @@ fn extract_zip_entries(
             hash.update(&buffer[..read]);
         }
         if length != plan.size {
-            return Err(AcquireError::ArchiveFormat {
-                path: PathBuf::from(&plan.archive_path),
-                message: format!("entry announced {} bytes but produced {length}", plan.size),
+            return Err(AcquireError::CorruptArchiveData {
+                entry: plan.archive_path.clone(),
+                message: format!("it announced {} bytes but produced {length}", plan.size),
             });
         }
         output_file.sync_all().map_err(|source| AcquireError::Io {
@@ -1754,7 +1841,67 @@ struct RarCallbackState {
     hash: Sha256,
     length: u64,
     expected_length: u64,
+    /// What the archive did wrong.
     error: Option<String>,
+    /// Writing the unpacked data failed on this computer, as on a full disk: an I/O failure
+    /// that a retry may not have, never a reason to call the archive unusable.
+    write_error: Option<std::io::Error>,
+}
+
+#[cfg(windows)]
+impl RarCallbackState {
+    fn new(output: Option<File>, expected_length: u64) -> Self {
+        Self {
+            output,
+            hash: Sha256::new(),
+            length: 0,
+            expected_length,
+            error: None,
+            write_error: None,
+        }
+    }
+
+    /// Why UnRAR's processing of the entry at `entry` (inside the archive) failed, written to
+    /// `output` (on this computer), once it returned `process`: a failure of this computer stays
+    /// an I/O error; a damaged entry is damaged data; anything else the archive's format.
+    fn failure(&mut self, process: i32, entry: &str, output: &Path) -> Option<AcquireError> {
+        if let Some(source) = self.write_error.take() {
+            return Some(AcquireError::Io {
+                action: "write extracted RAR file",
+                path: output.to_path_buf(),
+                source,
+            });
+        }
+        if let Some(message) = self.error.take() {
+            return Some(AcquireError::ArchiveFormat {
+                path: PathBuf::from(entry),
+                message,
+            });
+        }
+        if process == unrar_sys::ERAR_SUCCESS {
+            return None;
+        }
+        if rar_local_failure(process.into()) {
+            return Some(rar_local_error(
+                "unpack archive entry with UnRAR",
+                output,
+                process.into(),
+            ));
+        }
+        if process == unrar_sys::ERAR_BAD_DATA {
+            return Some(AcquireError::CorruptArchiveData {
+                entry: entry.to_owned(),
+                message: format!("UnRAR found its data damaged (code {process})"),
+            });
+        }
+        Some(AcquireError::ArchiveFormat {
+            path: PathBuf::from(entry),
+            message: format!(
+                "UnRAR returned {process}; entry announced {} bytes but produced {}",
+                self.expected_length, self.length
+            ),
+        })
+    }
 }
 
 #[cfg(windows)]
@@ -1801,7 +1948,7 @@ extern "C" fn rar_callback(
         return -1;
     };
     if let Err(error) = output.write_all(bytes) {
-        state.error = Some(format!("write extracted RAR file: {error}"));
+        state.write_error = Some(error);
         return -1;
     }
     state.hash.update(bytes);
@@ -1884,13 +2031,7 @@ fn extract_rar_entries(
                 path: output.clone(),
                 source,
             })?;
-            let mut state = RarCallbackState {
-                output: Some(output_file),
-                hash: Sha256::new(),
-                length: 0,
-                expected_length: plan.size,
-                error: None,
-            };
+            let mut state = RarCallbackState::new(Some(output_file), plan.size);
             unsafe {
                 unrar_sys::RARSetCallback(
                     handle,
@@ -1907,13 +2048,10 @@ fn extract_rar_entries(
                 )
             };
             unsafe { unrar_sys::RARSetCallback(handle, None, 0) };
-            if let Some(message) = state.error {
-                return Err(AcquireError::ArchiveFormat {
-                    path: PathBuf::from(&plan.archive_path),
-                    message,
-                });
+            if let Some(failure) = state.failure(process, &plan.archive_path, &output) {
+                return Err(failure);
             }
-            if process != unrar_sys::ERAR_SUCCESS || state.length != plan.size {
+            if state.length != plan.size {
                 return Err(AcquireError::ArchiveFormat {
                     path: PathBuf::from(&plan.archive_path),
                     message: format!(
@@ -1956,13 +2094,7 @@ fn extract_rar_entries(
             });
             extracted_indices.insert(index);
         } else {
-            let mut state = RarCallbackState {
-                output: None,
-                hash: Sha256::new(),
-                length: 0,
-                expected_length: 0,
-                error: None,
-            };
+            let mut state = RarCallbackState::new(None, 0);
             unsafe {
                 unrar_sys::RARSetCallback(
                     handle,
@@ -1984,6 +2116,13 @@ fn extract_rar_entries(
                     path: archive_path.to_path_buf(),
                     message,
                 });
+            }
+            if process != unrar_sys::ERAR_SUCCESS && rar_local_failure(process.into()) {
+                return Err(rar_local_error(
+                    "skip archive entry with UnRAR",
+                    archive_path,
+                    process.into(),
+                ));
             }
             if process != unrar_sys::ERAR_SUCCESS {
                 return Err(AcquireError::ArchiveFormat {
@@ -2954,13 +3093,7 @@ mod rar_safety_tests {
     fn callback_rejects_overproduction_before_writing_the_chunk() {
         let temporary = tempfile::NamedTempFile::new().unwrap();
         let output = temporary.reopen().unwrap();
-        let mut state = RarCallbackState {
-            output: Some(output),
-            hash: Sha256::new(),
-            length: 0,
-            expected_length: 3,
-            error: None,
-        };
+        let mut state = RarCallbackState::new(Some(output), 3);
         let bytes = [1_u8, 2, 3, 4];
         let result = rar_callback(
             unrar_sys::UCM_PROCESSDATA,
@@ -2972,6 +3105,59 @@ mod rar_safety_tests {
         assert_eq!(result, -1);
         assert_eq!(state.length, 0);
         assert_eq!(fs::read(temporary.path()).unwrap(), Vec::<u8>::new());
+        assert!(matches!(
+            state.failure(unrar_sys::ERAR_UNKNOWN, "mod/a.txt", temporary.path()),
+            Some(AcquireError::ArchiveFormat { .. })
+        ));
+    }
+
+    /// Writing an unpacked file can fail on this computer, as on a full disk. That failure
+    /// stays an I/O error, so the step stops and a resume tries again; it never makes the
+    /// archive count as unusable, which would leave its mod out for good.
+    #[test]
+    fn a_local_write_failure_while_unpacking_stays_an_io_error() {
+        let temporary = tempfile::NamedTempFile::new().unwrap();
+        // A handle opened only for reading cannot be written, as a full disk cannot.
+        let read_only = File::open(temporary.path()).unwrap();
+        let mut state = RarCallbackState::new(Some(read_only), 4);
+        let bytes = [1_u8, 2, 3, 4];
+        let result = rar_callback(
+            unrar_sys::UCM_PROCESSDATA,
+            std::ptr::from_mut(&mut state) as unrar_sys::LPARAM,
+            bytes.as_ptr() as unrar_sys::LPARAM,
+            bytes.len() as unrar_sys::LPARAM,
+        );
+
+        assert_eq!(result, -1);
+        // UnRAR reports a stopped callback with a code of its own; the write failure decides.
+        match state.failure(unrar_sys::ERAR_UNKNOWN, "mod/a.txt", temporary.path()) {
+            Some(AcquireError::Io { action, path, .. }) => {
+                assert_eq!(action, "write extracted RAR file");
+                assert_eq!(path, temporary.path());
+            }
+            other => panic!("expected a local I/O error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn damaged_rar_data_is_corrupt_data_and_unrar_local_failures_are_io() {
+        let mut state = RarCallbackState::new(None, 7);
+        assert!(matches!(
+            state.failure(unrar_sys::ERAR_BAD_DATA, "mod/a.txt", Path::new("out")),
+            Some(AcquireError::CorruptArchiveData { entry, .. }) if entry == "mod/a.txt"
+        ));
+        for code in [unrar_sys::ERAR_NO_MEMORY, unrar_sys::ERAR_EOPEN] {
+            assert!(
+                matches!(
+                    state.failure(code, "mod/a.txt", Path::new("out")),
+                    Some(AcquireError::Io { .. })
+                ),
+                "{code}"
+            );
+        }
+        assert!(state
+            .failure(unrar_sys::ERAR_SUCCESS, "mod/a.txt", Path::new("out"))
+            .is_none());
     }
 
     #[test]
@@ -3333,5 +3519,118 @@ mod served_container_tests {
             );
         }
         println!("half: {half:?}; one byte changed: {flipped:?}");
+    }
+}
+
+#[cfg(test)]
+mod unpack_failure_tests {
+    use std::io::{Cursor, Seek, SeekFrom};
+    use std::ops::Range;
+
+    use super::*;
+
+    /// An archive file whose bytes in `failing` cannot be read, as on a failing disk.
+    struct FailingDisk {
+        bytes: Cursor<Vec<u8>>,
+        failing: Range<u64>,
+    }
+
+    impl Read for FailingDisk {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            let position = self.bytes.position();
+            if self.failing.contains(&position) {
+                return Err(std::io::Error::other("the disk could not be read"));
+            }
+            let end = if position < self.failing.start {
+                self.failing.start
+            } else {
+                u64::MAX
+            };
+            let readable = usize::try_from(end - position).unwrap_or(usize::MAX);
+            let length = buffer.len().min(readable);
+            self.bytes.read(&mut buffer[..length])
+        }
+    }
+
+    impl Seek for FailingDisk {
+        fn seek(&mut self, position: SeekFrom) -> std::io::Result<u64> {
+            self.bytes.seek(position)
+        }
+    }
+
+    /// One entry of 64 KiB that deflate cannot shrink to nothing, and where its data starts.
+    fn archive(method: CompressionMethod) -> (Vec<u8>, usize) {
+        let data: Vec<u8> = (0..64 * 1024_u32)
+            .map(|index| (index.wrapping_mul(2_654_435_761) >> 13) as u8)
+            .collect();
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        writer
+            .start_file(
+                "mod/data.bin",
+                zip::write::SimpleFileOptions::default().compression_method(method),
+            )
+            .unwrap();
+        writer.write_all(&data).unwrap();
+        let bytes = writer.finish().unwrap().into_inner();
+        let name = usize::from(u16::from_le_bytes([bytes[26], bytes[27]]));
+        let extra = usize::from(u16::from_le_bytes([bytes[28], bytes[29]]));
+        (bytes, 30 + name + extra)
+    }
+
+    /// Reads the entry the way unpacking does and classifies its failure the same way.
+    fn unpack<R: Read + Seek>(file: R) -> Result<usize, AcquireError> {
+        let file = TrackedArchiveFile::new(file);
+        let failed = file.failed();
+        let archive_path = Path::new("download.zip");
+        let mut archive = ZipArchive::new(file)
+            .map_err(|source| zip_error(source, failed.get(), "read archive", archive_path))?;
+        let mut entry = archive.by_index(0).map_err(|source| {
+            zip_error(
+                source,
+                failed.get(),
+                "read archive entry",
+                Path::new("mod/data.bin"),
+            )
+        })?;
+        let mut length = 0;
+        let mut buffer = [0_u8; 4096];
+        loop {
+            let read = entry.read(&mut buffer).map_err(|source| {
+                unpacked_read_error(source, failed.get(), archive_path, "mod/data.bin")
+            })?;
+            if read == 0 {
+                return Ok(length);
+            }
+            length += read;
+        }
+    }
+
+    /// A changed archive whose data fails its checksum or does not decompress is damaged, an
+    /// unusable download; a disk that fails while the same data is read is this computer's
+    /// failure, which a retry may not have.
+    #[test]
+    fn damaged_data_and_a_failing_disk_are_told_apart() {
+        for method in [CompressionMethod::Stored, CompressionMethod::Deflated] {
+            let (bytes, data_start) = archive(method);
+            assert_eq!(unpack(Cursor::new(bytes.clone())).unwrap(), 64 * 1024);
+
+            let mut damaged = bytes.clone();
+            damaged[data_start + 100] ^= 0x55;
+            let found = unpack(Cursor::new(damaged));
+            assert!(
+                matches!(&found, Err(AcquireError::CorruptArchiveData { entry, .. }) if entry == "mod/data.bin"),
+                "{method:?}: {found:?}"
+            );
+
+            let start = data_start as u64 + 512;
+            let found = unpack(FailingDisk {
+                bytes: Cursor::new(bytes),
+                failing: start..start + 1,
+            });
+            assert!(
+                matches!(&found, Err(AcquireError::Io { action, .. }) if *action == "read archive for unpacking"),
+                "{method:?}: {found:?}"
+            );
+        }
     }
 }

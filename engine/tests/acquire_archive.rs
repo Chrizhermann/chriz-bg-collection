@@ -1566,6 +1566,47 @@ fn extract_served(
         .map(|(extracted, _repair)| extracted)
 }
 
+/// A changed download whose archive data is damaged, as when a byte of a file changed on its
+/// server, is reported as damaged data: the archive's own content, not this computer's disk.
+/// The installer then treats the download as unusable instead of stopping every resume on it.
+#[test]
+fn a_changed_archive_whose_data_is_damaged_is_damaged_data_not_a_disk_error() {
+    let data: Vec<u8> = (0..4096_u32)
+        .map(|index| (index.wrapping_mul(2_654_435_761) >> 11) as u8)
+        .collect();
+    for compression in [CompressionMethod::Stored, CompressionMethod::Deflated] {
+        let temp = TempDir::new().unwrap();
+        let archive = temp.path().join("damaged.zip");
+        write_zip(
+            &archive,
+            &[
+                Entry::File("mod/setup-mod.tp2", TP2, CompressionMethod::Stored),
+                Entry::File("mod/data.txt", &data, compression),
+            ],
+        );
+        let data_start = {
+            let mut zip = zip::ZipArchive::new(File::open(&archive).unwrap()).unwrap();
+            let entry = zip.by_index(1).unwrap();
+            assert_eq!(entry.name(), "mod/data.txt");
+            entry
+                .data_start()
+                .expect("the entry's data start is known once it is opened")
+        };
+        let mut bytes = std::fs::read(&archive).unwrap();
+        bytes[usize::try_from(data_start).unwrap() + 100] ^= 0x55;
+        std::fs::write(&archive, &bytes).unwrap();
+        let cache = temp.path().join("extract");
+
+        let result = extract_served(&archive, &cache, &served_requirements(&archive));
+
+        assert!(
+            matches!(&result, Err(AcquireError::CorruptArchiveData { entry, .. }) if entry == "mod/data.txt"),
+            "{compression:?}: {result:?}"
+        );
+        assert!(!cache.join("sha256-v3").exists());
+    }
+}
+
 #[test]
 fn reviewed_extractions_keep_their_identity_and_changed_ones_get_their_own() {
     let temp = TempDir::new().unwrap();
