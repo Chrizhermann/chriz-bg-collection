@@ -87,13 +87,6 @@ repository = "Chrizhermann/chriz-item-randomiser"
 # release, why, and since when; `installers` lists each installer's pin while they differ.
 # Remove a hold in the pull request that ends it. Only Christopher decides a hold.
 [[holds]]
-mod = "buffbot"
-release = "v1.12.1"
-reason = "Chriz Easy BG has v1.12.1 since PR #44 (merged 2026-10-29). Chriz Easy IWD gets it with PR #51, which waits for Christopher's OK; until then it keeps v1.12.0, the first release with IWD support."
-decided = "2026-10-28"
-installers = { chriz-easy-bg = "v1.12.1", chriz-easy-iwd = "v1.12.0" }
-
-[[holds]]
 mod = "item-randomiser"
 release = "v1.0.3"
 reason = "v1.0.x is the Campaign Item Randomiser, which replaces Randomiser v8.1.1 only after its integration into the collection and a lab test."
