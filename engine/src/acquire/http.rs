@@ -24,9 +24,9 @@ pub(crate) struct HttpClient {
 pub(crate) struct HttpResponse {
     pub response: ureq::http::Response<ureq::Body>,
     pub final_url: String,
-    /// Redirect hosts outside the link's own host and its reviewed redirect hosts, in the order
-    /// the request reached them. Only [`RedirectPolicy::NoteUnreviewed`] fills it.
-    pub unreviewed_hosts: Vec<String>,
+    /// Every host the request reached, lowercase and each once, in the order first reached: the
+    /// link's own host, each redirect target, and so the host that answered.
+    pub hosts: Vec<String>,
 }
 
 /// Which redirects a request follows. Every followed redirect must also stay on HTTPS (or
@@ -40,9 +40,35 @@ pub(crate) enum RedirectPolicy<'a> {
     /// Only a reviewed host, so with none reviewed every redirect fails, even on the original
     /// host.
     ReviewedOnly(&'a [String]),
-    /// Any host, noting each one that is neither the original host nor reviewed, for a download
-    /// that installs whatever the official link serves.
-    NoteUnreviewed(&'a [String]),
+}
+
+/// The hosts among `hosts` that are neither the host of `link` nor one of the reviewed
+/// `redirect_hosts`, in their order. A redirect that [`RedirectPolicy::OriginalOrReviewed`]
+/// refuses is one to such a host.
+pub(crate) fn unreviewed_hosts(
+    link: &str,
+    hosts: &[String],
+    redirect_hosts: &[String],
+) -> Vec<String> {
+    let link_host = Url::parse(link)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_owned));
+    hosts
+        .iter()
+        .filter(|host| !is_reviewed_host(host, link_host.as_deref(), redirect_hosts))
+        .cloned()
+        .collect()
+}
+
+fn is_reviewed_host(host: &str, link_host: Option<&str>, redirect_hosts: &[String]) -> bool {
+    link_host.is_some_and(|link| link.eq_ignore_ascii_case(host))
+        || redirect_hosts
+            .iter()
+            .any(|reviewed| reviewed.eq_ignore_ascii_case(host))
+}
+
+fn lowercase_host(url: &Url) -> String {
+    url.host_str().unwrap_or_default().to_ascii_lowercase()
 }
 
 /// Connection setup, header wait and body stall limits of one request.
@@ -86,7 +112,8 @@ impl HttpClient {
 
     /// Follows at most [`MAX_REDIRECTS`] redirects that `policy` allows; a redirect it does not
     /// allow fails before its target is contacted. An HTTPS-to-HTTP downgrade is refused under
-    /// every policy before the HTTP target is contacted.
+    /// every policy before the HTTP target is contacted. The response names every host the
+    /// request reached, so the caller can tell which were not reviewed ([`unreviewed_hosts`]).
     pub fn get_with_redirect_policy(
         &self,
         original_url: &str,
@@ -95,7 +122,7 @@ impl HttpClient {
     ) -> Result<HttpResponse, AcquireError> {
         let mut current = parse_download_url(original_url)?;
         let original_host = current.host_str().map(str::to_owned);
-        let mut unreviewed_hosts = Vec::<String>::new();
+        let mut hosts = vec![lowercase_host(&current)];
         for redirect_count in 0..=MAX_REDIRECTS {
             let agent = if is_loopback_http(&current) {
                 &self.direct_agent
@@ -117,7 +144,7 @@ impl HttpClient {
                 return Ok(HttpResponse {
                     response,
                     final_url: current.to_string(),
-                    unreviewed_hosts,
+                    hosts,
                 });
             }
             if redirect_count == MAX_REDIRECTS {
@@ -133,35 +160,19 @@ impl HttpClient {
                     url: current.to_string(),
                 })?;
             let target = resolve_redirect(&current, location)?;
-            let listed = |redirect_hosts: &[String], host: &str| {
-                redirect_hosts
-                    .iter()
-                    .any(|reviewed| reviewed.eq_ignore_ascii_case(host))
-            };
-            let original_or_listed = |redirect_hosts: &[String]| {
-                target.host_str().is_some_and(|host| {
-                    original_host
-                        .as_deref()
-                        .is_some_and(|original| original.eq_ignore_ascii_case(host))
-                        || listed(redirect_hosts, host)
-                })
-            };
             let allowed = match policy {
                 RedirectPolicy::Any => true,
                 RedirectPolicy::OriginalOrReviewed(redirect_hosts) => {
-                    original_or_listed(redirect_hosts)
+                    target.host_str().is_some_and(|host| {
+                        is_reviewed_host(host, original_host.as_deref(), redirect_hosts)
+                    })
                 }
-                RedirectPolicy::ReviewedOnly(redirect_hosts) => target
-                    .host_str()
-                    .is_some_and(|host| listed(redirect_hosts, host)),
-                RedirectPolicy::NoteUnreviewed(redirect_hosts) => {
-                    if !original_or_listed(redirect_hosts) {
-                        let host = target.host_str().unwrap_or_default().to_ascii_lowercase();
-                        if !unreviewed_hosts.contains(&host) {
-                            unreviewed_hosts.push(host);
-                        }
-                    }
-                    true
+                RedirectPolicy::ReviewedOnly(redirect_hosts) => {
+                    target.host_str().is_some_and(|host| {
+                        redirect_hosts
+                            .iter()
+                            .any(|reviewed| reviewed.eq_ignore_ascii_case(host))
+                    })
                 }
             };
             if !allowed {
@@ -169,6 +180,10 @@ impl HttpClient {
                     from: current.to_string(),
                     to: target.to_string(),
                 });
+            }
+            let host = lowercase_host(&target);
+            if !hosts.contains(&host) {
+                hosts.push(host);
             }
             current = target;
         }

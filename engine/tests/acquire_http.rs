@@ -812,8 +812,12 @@ fn a_changed_tool_comes_only_from_its_reviewed_hosts() {
 
     let refused = cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never());
     assert!(
-        matches!(&refused, Err(AcquireError::UnreviewedRedirect { from, to })
-            if *from == download.url && to.starts_with("http://localhost:")),
+        matches!(&refused, Err(AcquireError::UnreviewedSource { url, length, sha256: digest, hosts, unreviewed_hosts })
+            if *url == download.url
+                && *length == changed.len() as u64
+                && *digest == sha256(&changed)
+                && *hosts == ["127.0.0.1", "localhost"]
+                && *unreviewed_hosts == ["localhost"]),
         "{refused:?}"
     );
     // A refusal is final: no further attempt, and nothing was kept.
@@ -826,8 +830,95 @@ fn a_changed_tool_comes_only_from_its_reviewed_hosts() {
         .acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never())
         .unwrap();
     assert!(accepted.matches_pin(&download));
+    assert_eq!(accepted.hosts, ["127.0.0.1", "localhost"]);
     assert_eq!(accepted.unreviewed_hosts, ["localhost"]);
     assert_eq!(server.finish().len(), 4);
+}
+
+/// A changed tool whose download a host the recipe did not review began, and a reviewed host
+/// finished through a matching partial response, still came from that host: the sidecar of the
+/// partial download names every host that served bytes, a resumed segment adds its own, and an
+/// equal entity tag proves nothing across hosts. The refused file is not kept.
+#[test]
+fn a_resumed_changed_tool_keeps_the_unreviewed_host_of_its_first_part() {
+    let reviewed = zip_archive(b"the reviewed WeiDU");
+    let changed = zip_archive(b"a WeiDU that mostly came from somewhere else");
+    let body = changed.clone();
+    let prefix_len = changed.len() - 22;
+    let server = TestServer::start(3, move |index, seen| match index {
+        // The link redirects the first request to a host the recipe did not review...
+        0 => {
+            let port = seen.headers["host"].rsplit(':').next().unwrap().to_owned();
+            Reply {
+                status: 302,
+                headers: vec![("Location", format!("http://localhost:{port}/weidu.zip"))],
+                body: Vec::new(),
+                advertised_length: Some(0),
+            }
+        }
+        // ...which serves all but the archive's final directory record, then disconnects...
+        1 => Reply::interrupted(&body[..prefix_len], body.len(), "\"same\""),
+        // ...and the link's own host answers the resume with the remaining bytes.
+        2 => Reply {
+            status: 206,
+            headers: vec![
+                ("ETag", "\"same\"".to_owned()),
+                (
+                    "Content-Range",
+                    format!(
+                        "bytes {prefix_len}-{}/{total}",
+                        body.len() - 1,
+                        total = body.len()
+                    ),
+                ),
+            ],
+            body: body[prefix_len..].to_vec(),
+            advertised_length: Some(body.len() - prefix_len),
+        },
+        _ => unreachable!(),
+    });
+    let temp = TempDir::new().unwrap();
+    let cache = cache(&temp);
+    let (sink, _) = ChannelSink::unbounded();
+    let download = request("weidu", server.url("/weidu"), &reviewed, 1);
+
+    assert!(matches!(
+        cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never()),
+        Err(AcquireError::RetryExhausted { attempts: 1, .. })
+    ));
+    // The interrupted download is resumable, and its record names where its bytes came from.
+    let [partial, sidecar] = partial_files(&temp, "weidu");
+    assert_eq!(
+        std::fs::metadata(&partial).unwrap().len(),
+        prefix_len as u64
+    );
+    let record: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&sidecar).unwrap()).unwrap();
+    assert_eq!(
+        record["hosts"],
+        serde_json::json!(["127.0.0.1", "localhost"])
+    );
+
+    let refused = cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never());
+
+    assert!(
+        matches!(&refused, Err(AcquireError::UnreviewedSource { length, sha256: digest, unreviewed_hosts, .. })
+            if *length == changed.len() as u64
+                && *digest == sha256(&changed)
+                && *unreviewed_hosts == ["localhost"]),
+        "{refused:?}"
+    );
+    for file in partial_files(&temp, "weidu") {
+        assert!(!file.exists(), "{}", file.display());
+    }
+    assert_eq!(cached_objects(&temp), 0);
+    let seen = server.finish();
+    assert_eq!(seen[1].path, "/weidu.zip");
+    assert_eq!(seen[2].path, "/weidu");
+    assert_eq!(
+        seen[2].headers.get("range").unwrap(),
+        &format!("bytes={prefix_len}-")
+    );
 }
 
 #[test]

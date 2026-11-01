@@ -12,7 +12,8 @@ use super::archive::served_container_problem;
 use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
 use super::entry_lock::lock_entry;
 use super::http::{
-    served_filename, validate_download_url, HttpClient, HttpResponse, RedirectPolicy,
+    served_filename, unreviewed_hosts, validate_download_url, HttpClient, HttpResponse,
+    RedirectPolicy,
 };
 use super::{
     AcquireError, AcquiredArtifact, ArchiveFormat, ArchiveLimits, ArtifactMetadata,
@@ -44,7 +45,10 @@ pub struct ServedArtifact {
     pub artifact: AcquiredArtifact,
     /// File name the server gave the download; `None` when no transfer took place.
     pub served_filename: Option<String>,
-    /// Redirect hosts that neither the link nor its reviewed redirect hosts name.
+    /// Every host that the requests which wrote the download reached, in every segment of a
+    /// resumed one, in the order first reached; empty when no transfer took place.
+    pub hosts: Vec<String>,
+    /// Those among [`Self::hosts`] that neither the link nor its reviewed redirect hosts name.
     pub unreviewed_hosts: Vec<String>,
 }
 
@@ -53,6 +57,7 @@ impl ServedArtifact {
         Self {
             artifact,
             served_filename: None,
+            hosts: Vec::new(),
             unreviewed_hosts: Vec::new(),
         }
     }
@@ -137,6 +142,13 @@ struct PartialState {
     /// download the length its server announced.
     expected_length: u64,
     etag: String,
+    /// Provenance of the partial's bytes: every host that the requests which wrote them reached,
+    /// redirect hosts and answering hosts alike, lowercase and each once, in the order first
+    /// reached. A resumed segment adds its own hosts before it writes, so a changed tool with any
+    /// byte through an unreviewed host is refused even when a reviewed host served the rest; an
+    /// equal entity tag proves nothing across hosts. A sidecar without this record, as written
+    /// by an older installer, is not resumed: the download starts over.
+    hosts: Vec<String>,
 }
 
 struct ResumeCandidate {
@@ -144,6 +156,8 @@ struct ResumeCandidate {
     etag: String,
     /// Total length of the entity the partial belongs to.
     total: u64,
+    /// Every host that the requests which wrote the partial's bytes reached.
+    hosts: Vec<String>,
 }
 
 struct TransferResult {
@@ -151,6 +165,9 @@ struct TransferResult {
     etag: Option<String>,
     last_modified: Option<String>,
     served_filename: Option<String>,
+    /// Every host of every segment that wrote the download.
+    hosts: Vec<String>,
+    /// Unreviewed hosts among [`Self::hosts`].
     unreviewed_hosts: Vec<String>,
     /// Length and SHA-256 of the complete download, when the transfer already hashed it.
     content: Option<(u64, String)>,
@@ -295,7 +312,8 @@ impl ArtifactCache {
     /// reported), a partial download resumes when the server proves the same entity, and the
     /// file is cached under its own digest. A plain-HTTP downgrade is still refused, the
     /// download may be at most [`served_length_limit`] bytes long, and a changed file comes
-    /// only from the hosts `rules.redirects` allows ([`AcquireError::UnreviewedRedirect`]).
+    /// only from the hosts `rules.redirects` allows ([`AcquireError::UnreviewedSource`]): the
+    /// hosts of every segment of a resumed download count.
     ///
     /// A server answer that a later attempt may not repeat is asked for again with the usual
     /// waits, and returned only when no attempt is left: a file that is clearly not an archive
@@ -374,6 +392,7 @@ impl ArtifactCache {
             return Ok(ServedArtifact {
                 artifact: AcquiredArtifact { repaired, ..hit },
                 served_filename: transfer.served_filename,
+                hosts: transfer.hosts,
                 unreviewed_hosts: transfer.unreviewed_hosts,
             });
         }
@@ -387,6 +406,7 @@ impl ArtifactCache {
                 repaired,
             },
             served_filename: transfer.served_filename,
+            hosts: transfer.hosts,
             unreviewed_hosts: transfer.unreviewed_hosts,
         })
     }
@@ -476,8 +496,9 @@ impl ArtifactCache {
         let redirects = match policy {
             LengthPolicy::Reviewed => request.route.redirect_policy(&request.redirect_hosts),
             // Whatever the official link serves is installed, so its redirects may lead to any
-            // HTTPS host, whichever route published it; the hosts are reported.
-            LengthPolicy::Served { .. } => RedirectPolicy::NoteUnreviewed(&request.redirect_hosts),
+            // HTTPS host, whichever route published it; the response names every host it
+            // reached, and the unreviewed ones are reported.
+            LengthPolicy::Served { .. } => RedirectPolicy::Any,
         };
         self.client
             .get_with_redirect_policy(&request.url, range, redirects)
@@ -485,8 +506,9 @@ impl ArtifactCache {
     }
 
     /// One attempt. A changed download must also come from a host `rules` allows and be framed
-    /// like the declared archive. One from another host is refused; one that is not framed like
-    /// the archive, such as an error page, is asked for again. Neither is kept.
+    /// like the declared archive. One through another host, in any segment of it, is refused;
+    /// one that is not framed like the archive, such as an error page, is asked for again.
+    /// Neither is kept.
     fn transfer_once(
         &self,
         request: &DownloadRequest,
@@ -504,9 +526,12 @@ impl ArtifactCache {
                 let refusal = if rules.redirects == ServedRedirects::ReviewedHostsForChanges
                     && !transfer.unreviewed_hosts.is_empty()
                 {
-                    Some(AttemptFailure::Fatal(AcquireError::UnreviewedRedirect {
-                        from: request.url.clone(),
-                        to: transfer.final_url.clone(),
+                    Some(AttemptFailure::Fatal(AcquireError::UnreviewedSource {
+                        url: request.url.clone(),
+                        length,
+                        sha256: sha256.clone(),
+                        hosts: transfer.hosts.clone(),
+                        unreviewed_hosts: transfer.unreviewed_hosts.clone(),
                     }))
                 } else {
                     served_container_problem(&paths.partial, rules.format, &rules.limits, stop)
@@ -802,7 +827,15 @@ fn stream_response(
     let etag = header_string(&response.response, "etag");
     let last_modified = header_string(&response.response, "last-modified");
     let filename = served_filename(&response);
-    let unreviewed_hosts = response.unreviewed_hosts.clone();
+    // A resumed partial keeps the bytes it holds, so their hosts stay part of its provenance;
+    // a matching entity tag from another host does not make them that host's bytes.
+    let mut hosts = resume.map_or_else(Vec::new, |candidate| candidate.hosts.clone());
+    for host in &response.hosts {
+        if !hosts.contains(host) {
+            hosts.push(host.clone());
+        }
+    }
+    let unreviewed_hosts = unreviewed_hosts(&request.url, &hosts, &request.redirect_hosts);
 
     if truncate {
         remove_if_exists(&paths.partial_state).map_err(AttemptFailure::Fatal)?;
@@ -831,7 +864,8 @@ fn stream_response(
         })?;
     }
 
-    // Only an entity of known length can be resumed: the partial response must name it.
+    // Only an entity of known length can be resumed: the partial response must name it. The
+    // record names this response's hosts before any of its bytes reach the partial.
     match (etag.as_deref().filter(|value| is_strong_etag(value)), total) {
         (Some(strong), Some(total)) => write_partial_state(
             &paths.partial_state,
@@ -839,6 +873,7 @@ fn stream_response(
                 original_url: request.url.clone(),
                 expected_length: total,
                 etag: strong.to_owned(),
+                hosts: hosts.clone(),
             },
         )
         .map_err(AttemptFailure::Fatal)?,
@@ -908,6 +943,7 @@ fn stream_response(
         etag,
         last_modified,
         served_filename: filename,
+        hosts,
         unreviewed_hosts,
         content: None,
     })
@@ -1017,6 +1053,7 @@ fn load_resume_candidate(
         start: length,
         etag: state.etag,
         total: state.expected_length,
+        hosts: state.hosts,
     }))
 }
 
