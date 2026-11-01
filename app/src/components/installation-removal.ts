@@ -1,5 +1,20 @@
-import type { InstallationRemovalPreview } from "../contracts";
+import type { InstallationRemovalPreview, InstallationRemovalResult } from "../contracts";
 import { actionButton, element } from "./app-shell";
+
+function unusedProfile(path: string): HTMLElement[] {
+  return [element("p", "muted", "Saved-game profile deleted too, since the game never used it:"), element("p", "path", path)];
+}
+
+/** What the app reports once a removal has succeeded. */
+export function installationRemovalNotice(preview: InstallationRemovalPreview, result: InstallationRemovalResult): string {
+  if (preview.action === "unlist") return "Installation removed from My installs. Its folder was not changed.";
+  const removed = preview.action === "forget" ? "Installation entry removed" : "Installation deleted";
+  if (result.unusedSavePathKept) {
+    return `${removed}. Its unused saved-game profile could not be deleted; it stays at ${result.unusedSavePathKept}.`;
+  }
+  if (preview.unusedSavePath) return `${removed}, along with its unused saved-game profile.`;
+  return preview.action === "forget" ? `${removed}. No files were deleted.` : `${removed}. Saved games outside its folder were kept.`;
+}
 
 function approximateSize(value: string | null | undefined): string {
   if (value == null || !/^\d+$/.test(value)) return "unavailable";
@@ -31,7 +46,9 @@ export function installationRemovalDialog(
     : unlist ? "Remove this installation from My installs?" : "Delete this installation?");
   title.id = "removal-title";
   const description = element("p", undefined, forget
-    ? "This folder is missing. Remove its entry from My installs; no files will be deleted."
+    ? preview.unusedSavePath
+      ? "This folder is missing. Remove its entry from My installs; only its unused saved-game profile below is deleted."
+      : "This folder is missing. Remove its entry from My installs; no files will be deleted."
     : unlist
       ? "CEBG can no longer confirm that this folder is this installation, so it will not delete anything in it. Only the entry leaves My installs; the folder stays where it is."
       : "Permanently delete this installation folder and everything inside it, including any files or saves you manually placed there. This cannot be undone.");
@@ -47,7 +64,10 @@ export function installationRemovalDialog(
     if (preview.preservedSavePath) {
       dialog.append(element("p", "muted", "Saved-game profile kept:"), element("p", "path", preview.preservedSavePath));
     }
+    if (preview.unusedSavePath) dialog.append(...unusedProfile(preview.unusedSavePath));
     dialog.append(element("p", "muted", "Export diagnostics first if you want to keep the failure logs."));
+  } else if (preview.unusedSavePath) {
+    dialog.append(...unusedProfile(preview.unusedSavePath));
   }
   if (error !== null) {
     const feedback = element("p", "removal-error", error);

@@ -26,7 +26,7 @@ import {
 import { statusCard } from "./components/status-card";
 import { errorDetails } from "./components/error-details";
 import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from "./setup-draft";
-import { installationRemovalDialog } from "./components/installation-removal";
+import { installationRemovalDialog, installationRemovalNotice } from "./components/installation-removal";
 import { operationFeedback } from "./components/operation-feedback";
 import { clearAppUpdate, completedAppUpdate, rememberAppUpdate, type OperationFeedback } from "./operation-feedback";
 import type { OperationProgress } from "./contracts";
@@ -1644,8 +1644,9 @@ class AppController implements AppHandle {
     this.#removalBusy = true;
     this.#removalError = null;
     this.#render();
+    let result;
     try {
-      await this.backend.removeInstallation(preview.installId, preview.confirmationToken);
+      result = await this.backend.removeInstallation(preview.installId, preview.confirmationToken);
     } catch (error: unknown) {
       this.#removalError = error instanceof BackendCommandError
         ? `${error.message} ${error.recoveryAction}`
@@ -1656,9 +1657,7 @@ class AppController implements AppHandle {
     }
     this.#removalPreview = null;
     this.#removalBusy = false;
-    this.#removalNotice = preview.action === "forget" ? "Installation entry removed. No files were deleted."
-      : preview.action === "unlist" ? "Installation removed from My installs. Its folder was not changed."
-      : "Installation deleted. Saved games outside its folder were kept.";
+    this.#removalNotice = installationRemovalNotice(preview, result);
     this.#checkedPatches.delete(preview.installId);
     if (this.#patchPreview?.installId === preview.installId) this.#patchPreview = null;
     if (this.#installedUpdateInstallId === preview.installId) {

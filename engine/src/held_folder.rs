@@ -363,13 +363,24 @@ impl HeldFolder {
 
     /// Remove this folder, which must be empty and opened with [`Self::open_for_removal`].
     pub(crate) fn remove(self) -> io::Result<()> {
+        self.remove_folder(false)
+    }
+
+    /// Like [`Self::remove`], but a folder marked read-only is removed too. Windows marks folders
+    /// read-only for its own use, OneDrive for example every folder it syncs, so on a folder the
+    /// mark does not ask to keep it; Explorer removes such folders as well.
+    pub(crate) fn remove_even_if_read_only(self) -> io::Result<()> {
+        self.remove_folder(true)
+    }
+
+    fn remove_folder(self, ignore_read_only: bool) -> io::Result<()> {
         if !self.removable {
             return Err(io::Error::new(
                 ErrorKind::InvalidInput,
                 "the folder was not opened for removal",
             ));
         }
-        handles::delete(self.folder(), false)
+        handles::delete(self.folder(), ignore_read_only)
     }
 
     /// Remove everything inside this folder through the held handles, depth first. A link or other
@@ -1101,6 +1112,11 @@ impl HeldFolder {
         fs::remove_dir(&self.path)
     }
 
+    /// Elsewhere a folder's own permissions never keep it from being removed.
+    pub(crate) fn remove_even_if_read_only(self) -> io::Result<()> {
+        self.remove()
+    }
+
     pub(crate) fn remove_contents(
         &self,
         last: &[&str],
@@ -1282,6 +1298,31 @@ pub(crate) mod tests {
             .collect::<Vec<_>>();
         names.sort();
         names
+    }
+
+    /// OneDrive marks the folders it syncs read-only.
+    #[cfg(windows)]
+    #[test]
+    fn only_removal_even_if_read_only_removes_a_folder_marked_read_only() {
+        let temp = tempfile::tempdir().unwrap();
+        let folder = temp.path().join("marked");
+        fs::create_dir(&folder).unwrap();
+        let mut permissions = fs::metadata(&folder).unwrap().permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(&folder, permissions).unwrap();
+
+        let plain = HeldFolder::open_for_removal(&folder).unwrap().remove();
+
+        assert_eq!(
+            plain.unwrap_err().kind(),
+            ErrorKind::PermissionDenied,
+            "a plain removal keeps it"
+        );
+        HeldFolder::open_for_removal(&folder)
+            .unwrap()
+            .remove_even_if_read_only()
+            .unwrap();
+        assert!(!folder.exists());
     }
 
     /// Make `link` a junction to the folder `target`, as an unprivileged user can.

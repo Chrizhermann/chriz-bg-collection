@@ -220,6 +220,7 @@ SOURCE_LABELS = {
     "IWDIFICATION": "IWDification",
     "KLATU": "Klatu Tweaks and Fixes",
     "RR": "Rogue Rebalancing",
+    "SIRENE_BG1": "Sirene for BG1 and SoD",
     "SIRENE_BG2": "Sirene for BG2",
     "UB": "Unfinished Business",
     "YESLICKNPC": "Yeslick NPC for BGII",

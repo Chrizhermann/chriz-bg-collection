@@ -72,8 +72,16 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertNotIn(2292, actual["cdtweaks-bg2"])
         # October 28: the Rebalance v0.8.6 pin adds default 360.
         self.assertIn(360, actual["chriz-bg-rebalance-bg2"])
-        self.assertEqual(self.result["componentCount"], 469)
-        self.assertEqual(len(actual), 69)
+        # October 29: the Kitpack's weapon-usability sweep 1010000 ends the late tweak run,
+        # and Sirene NPC for BG:EE adds its own run with default 0, 3 and 6.
+        self.assertEqual(actual["artisanskitpack-tweak-late-bg2"][-1], 1010000)
+        self.assertEqual(actual["sirene-bg1-bg2"], [0, 3, 6])
+        # October 29: the Rebalance v0.8.8 pin adds default 410 and 411 after 302.
+        self.assertEqual(actual["chriz-bg-rebalance-bg2"][actual["chriz-bg-rebalance-bg2"].index(302) + 1:][:2], [410, 411])
+        # October 29: the Kitpack chriz.5 pin adds default 7205 before 8204 in the late tweak run.
+        self.assertEqual(actual["artisanskitpack-tweak-late-bg2"][-3:], [7205, 8204, 1010000])
+        self.assertEqual(self.result["componentCount"], 476)
+        self.assertEqual(len(actual), 70)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.
@@ -81,7 +89,7 @@ class PublicComponentCreditsTests(unittest.TestCase):
         recipe_version = json.loads((self.recipe / "release.json").read_text(encoding="utf-8"))["version"]
         self.assertEqual(self.result["applicationVersion"], app_version)
         self.assertEqual(self.result["recipeVersion"], recipe_version)
-        self.assertEqual(recipe_version, "0.1.0-alpha.20")
+        self.assertEqual(recipe_version, "0.1.0-alpha.22")
         encoded = json.dumps(self.result).lower()
         for forbidden in ("artifact_id", "source_reference", "expected_filename", ".zip", ".iemod", "c:\\\\", "creator-full"):
             self.assertNotIn(forbidden, encoded)

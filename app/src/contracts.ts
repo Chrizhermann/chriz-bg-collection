@@ -389,7 +389,14 @@ export interface InstallationRemovalPreview {
   /** Advisory logical file bytes; absent when the bounded scan cannot finish. */
   readonly approximateSizeBytes?: string | null;
   readonly preservedSavePath: string | null;
+  /** The saved-game profile the game never used, which removal deletes too. */
+  readonly unusedSavePath?: string | null;
   readonly confirmationToken: string;
+}
+
+export interface InstallationRemovalResult {
+  /** The unused saved-game profile the preview named, when it stays after all. */
+  readonly unusedSavePathKept?: string | null;
 }
 
 export interface InstalledComponent {

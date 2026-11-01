@@ -99,6 +99,14 @@ fn spawn_paced_feed(version: &str, signature: &str, artifact: Vec<u8>, pace: Pac
 fn mock_app(current_version: &str) -> tauri::App<tauri::test::MockRuntime> {
     let mut context = tauri::generate_context!();
     context.package_info_mut().version = current_version.parse().expect("parse current version");
+    // The local feeds are plain HTTP on the loopback address. Release builds of the updater
+    // refuse such endpoints unless its configuration allows them; debug builds only warn.
+    context
+        .config_mut()
+        .plugins
+        .0
+        .get_mut("updater")
+        .expect("updater configuration")["dangerousInsecureTransportProtocol"] = true.into();
     tauri::test::mock_builder()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .build(context)
@@ -135,7 +143,7 @@ fn a_slow_update_download_outlasts_the_feed_check_timeout() {
         let updater = app
             .updater_builder()
             .endpoints(vec![endpoint])
-            .expect("use loopback endpoint in this debug-only test")
+            .expect("use the loopback endpoint")
             .no_proxy()
             .pubkey(public_key)
             .timeout(check_timeout)
@@ -192,7 +200,7 @@ fn real_tauri_updater_downloads_and_verifies_the_signed_nsis() {
         let updater = app
             .updater_builder()
             .endpoints(vec![valid_endpoint])
-            .expect("use loopback endpoint in this debug-only test")
+            .expect("use the loopback endpoint")
             .no_proxy()
             .timeout(Duration::from_secs(15))
             .build()
@@ -230,7 +238,7 @@ fn real_tauri_updater_downloads_and_verifies_the_signed_nsis() {
         let updater = app
             .updater_builder()
             .endpoints(vec![tampered_endpoint])
-            .expect("use loopback endpoint in this debug-only test")
+            .expect("use the loopback endpoint")
             .no_proxy()
             .timeout(Duration::from_secs(15))
             .build()

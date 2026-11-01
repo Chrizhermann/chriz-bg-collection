@@ -2,13 +2,14 @@
 
 Refreshed for the selected Artisan fork release **chriz-v1.3.1**
 (`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
-**v4.81a-dev.85928f9-chriz.4** (tag commit `afa3316`, pinned 2026-10-27), whose NPC TP2
+**v4.81a-dev.85928f9-chriz.5** (tag commit `10a4a29`, pinned 2026-10-29), whose NPC TP2
 declares the same 18 components in the same order as chriz.1 (the sorcerer, kit and
 class weapon fixes are in the main installer's libraries, see
 [ARTISANSKITPACK](ARTISANSKITPACK.md)). Besides its version, chriz.4's NPC TP2 only ends
 the two components that add kits, Rashemi Berserker Minsc `2001` and Red Wizard Edwin
 `5102`, with the pass that gives every class and kit ability table "apply `C0PR#CL`" at
-every level; no component or decision changes.
+every level. chriz.5's NPC TP2 changes only its version; no component or decision
+changes.
 18 entries, 6 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes

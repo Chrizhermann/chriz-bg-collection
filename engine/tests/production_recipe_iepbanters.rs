@@ -50,6 +50,7 @@ fn installs_iepbanters_before_crossmod_with_one_default_interval() {
     };
     assert!(position("eet-initialize-bg2") < position("iepbanters-bg2"));
     assert!(position("sirene-bg2") < position("iepbanters-bg2"));
+    assert!(position("sirene-bg1-bg2") < position("iepbanters-bg2"));
     assert!(position("iepbanters-bg2") < position("crossmodbg2-bg2"));
     assert!(position("iepbanters-bg2") < position("eet-end-bg2"));
     let run = &runs[position("iepbanters-bg2")];

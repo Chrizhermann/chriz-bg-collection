@@ -9,7 +9,14 @@ with the EEex-based weapon usability. It reaches new installations only (Christo
 declaration order, so no decision changes.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. BG Rebalance v0.8.7 (October 29,
+test_oct29_rebalance_pin_recipe) supersedes the v0.8.6 pin, renames 360 to True Time Stop –
+fair Haste & Slow and keeps its components and order; the v0.8.6 record and artifacts stay
+as verified here. v0.8.8 (October 29, test_oct29_rebalance_088_pin_recipe) then adds 410 and
+411, which are checked against its own record. The Kitpack fork chriz.5 (October 29,
+test_oct29_kitpack_chriz5_pin_recipe) supersedes the chriz.4 pin of all three installers,
+keeps their components and order and adds tweak 7205, which is checked against its own
+record; the chriz.4 records and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -32,6 +39,12 @@ FILENAME = f"ArtisansKitpack-Chriz-Balance-Patch-{KITPACK_TAG}.zip"
 SHA256 = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336"
 LENGTH = 89_682_621
 TAG_COMMIT = "afa3316cdcf0d9dd8c0678c5e578b2621a3373ee"
+# The October 29 Kitpack intake replaces chriz.4 with chriz.5 for all three installers; its
+# tweak TP2 declares 7205 between 7203 and 8204 (checked against its own record).
+KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
+KITPACK_SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.5"
+KITPACK_LATER = {"artisanskitpack-tweak": {7205}}
+KITPACK_LATER_ROWS = {"ARTISANSKITPACK_TWEAK": {7205}}
 # Mod id, its TP2 and the catalog that lists its components.
 INSTALLERS = {
     "artisanskitpack": ("ArtisansKitpack/ArtisansKitpack.TP2", "ARTISANSKITPACK"),
@@ -55,9 +68,10 @@ CONCERNED = {
     ("ARTISANSKITPACK_NPC", 2001): (NPC_RUN, Decision.DEFAULT),
     ("ARTISANSKITPACK_NPC", 5102): (NPC_RUN, Decision.DEFAULT),
 }
-# Named in chriz.4's notes and still not offered: the Favored Soul, the weapon usability
-# update tweak and the dual-class kit name tweak.
-NOT_OFFERED = {("artisanskitpack", 30001), ("artisanskitpack-tweak", 1010000), ("artisanskitpack-tweak", 1020000)}
+# Named in chriz.4's notes and still not offered: the Favored Soul and the dual-class kit
+# name tweak. The weapon usability update tweak 1010000 is a default since the October 29
+# intake (Christopher, 2026-10-26; test_oct29_kitpack_weapon_sweep_recipe.py).
+NOT_OFFERED = {("artisanskitpack", 30001), ("artisanskitpack-tweak", 1020000)}
 
 
 def _load_profile(directory: Path) -> tuple[dict, dict]:
@@ -142,7 +156,7 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
                          ["recipes/curated-full-current"])
         self.assertEqual(len({record["tp2_sha256"] for record in self.records.values()}), 3)
 
-    def test_both_profiles_pin_chriz4_and_keep_chriz3(self):
+    def test_both_profiles_keep_the_chriz4_and_chriz3_artifacts(self):
         for profile_name, directory in self.directories:
             artifact = tomllib.loads((directory / f"artifacts/{KITPACK}.toml").read_text(encoding="utf-8"))
             previous = tomllib.loads((directory / f"artifacts/{KITPACK_PREVIOUS}.toml").read_text(encoding="utf-8"))
@@ -165,7 +179,8 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
                                           ("url", "immutable_source_url"), ("reference", "source_reference")):
                         self.assertEqual(artifact["source"][key], record[measured], key)
                     mod = tomllib.loads((directory / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                    self.assertEqual(mod["artifact_id"], KITPACK, mod_id)
+                    # chriz.4 stays available as history, verified as recorded here.
+                    self.assertEqual(mod["artifact_id"], KITPACK_SUCCESSOR, mod_id)
                     self.assertEqual(mod["tp2"], tp2)
                     self.assertIn(tp2, artifact["archive"]["tp2_paths"])
                 # The chriz.3 records still describe the kept chriz.3 artifact.
@@ -183,15 +198,17 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
             collection = tomllib.loads((directory / "collection.toml").read_text(encoding="utf-8"))
             for mod_id, record in self.records.items():
                 native = record["native_components"]
+                later = KITPACK_LATER.get(mod_id, set())
                 mod = tomllib.loads((directory / f"mods/{mod_id}.toml").read_text(encoding="utf-8"))
-                self.assertTrue({component["id"] for component in mod["components"]} <= set(native), mod_id)
+                self.assertTrue({component["id"] for component in mod["components"]} - later <= set(native), mod_id)
                 runs = [run for run in collection["runs"] if run["mod_id"] == mod_id]
                 self.assertTrue(runs, mod_id)
                 for run in runs:
                     with self.subTest(profile=str(directory), run=run["run_id"]):
-                        self.assertTrue(set(run["components"]) <= set(native))
+                        components = [c for c in run["components"] if c not in later]
+                        self.assertTrue(set(components) <= set(native))
                         if profile_name in record.get("native_order_recipe_profiles", record["recipe_profiles"]):
-                            self.assertEqual(run["components"], [c for c in native if c in run["components"]])
+                            self.assertEqual(components, [c for c in native if c in components])
                         for not_offered in NOT_OFFERED:
                             if not_offered[0] == mod_id:
                                 self.assertNotIn(not_offered[1], run["components"])
@@ -209,13 +226,15 @@ class Oct27Alpha22KitpackPinTests(unittest.TestCase):
             rows.setdefault(row.catalog, {})[row.component_id] = row
         for mod_id, (_, catalog) in INSTALLERS.items():
             with self.subTest(catalog=catalog):
-                self.assertEqual(set(rows[catalog]), set(self.records[mod_id]["native_components"]))
+                later = KITPACK_LATER_ROWS.get(catalog, set())
+                self.assertEqual(set(rows[catalog]) - later, set(self.records[mod_id]["native_components"]))
         for (catalog, component), (_, decision) in CONCERNED.items():
             self.assertEqual(rows[catalog][component].decision, decision, (catalog, component))
-        # The catalogs name the new pin.
+        # The catalogs name the current pin and still describe chriz.4.
         for _, catalog in INSTALLERS.values():
             text = (ROOT / f"docs/curation/components/{catalog}.md").read_text(encoding="utf-8")
-            self.assertIn(f"**{KITPACK_TAG}**", text, catalog)
+            self.assertIn(f"**{KITPACK_SUCCESSOR_TAG}**", text, catalog)
+            self.assertIn("chriz.4", text, catalog)
 
     def test_the_fixed_characters_stay_in_recommended_after_eeex(self):
         for name, _, collection, preset in self._each_profile():
@@ -253,6 +272,11 @@ REBALANCE_FILENAME = "chriz-bg-rebalance-v0.8.6-windows.zip"
 REBALANCE_SHA256 = "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ede3ba"
 REBALANCE_LENGTH = 1_817_306
 REBALANCE_COMMIT = "43b8811abe04ad71575c89d5589866919801bdff"
+# The October 29 intakes replace v0.8.6 with v0.8.7, which renames 360, and v0.8.7 with
+# v0.8.8, which declares 410 and 411 (checked against its own record).
+REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.8"
+REBALANCE_LATER = {410, 411}
+CLOCKS_TITLE = "True Time Stop – fair Haste & Slow"
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"
 CLOCKS = "feature:chriz-bg-rebalance:component-360"
 # CEBG's only accepted BG2:EE executable, whose PE timestamp 360's installer requires.
@@ -315,11 +339,11 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
         self.assertNotEqual(record["tp2_sha256"], self.previous["tp2_sha256"])
         self.assertEqual(record["native_components"], self.previous["native_components"] + [360])
 
-    def test_both_profiles_pin_v086_keep_v085_and_leave_the_tail_packages_out(self):
+    def test_both_profiles_keep_v086_and_v085_and_leave_the_tail_packages_out(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 mod = tomllib.loads((directory / f"mods/{REBALANCE}.toml").read_text(encoding="utf-8"))
-                self.assertEqual(mod["artifact_id"], REBALANCE_PIN)
+                self.assertEqual(mod["artifact_id"], REBALANCE_SUCCESSOR)
                 self.assertIn(360, {component["id"] for component in mod["components"]})
                 artifact = tomllib.loads((directory / f"artifacts/{REBALANCE_PIN}.toml").read_text(encoding="utf-8"))
                 previous = tomllib.loads((directory / f"artifacts/{REBALANCE_PREVIOUS}.toml").read_text(encoding="utf-8"))
@@ -344,7 +368,8 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
 
     def test_clocks_360_is_a_default_after_340_and_needs_eeex_first(self):
         native = self.record["native_components"]
-        self.assertEqual([c for c in NATIVE_RUN_ORDERS[REBALANCE_RUN] if c in native], NATIVE_RUN_ORDERS[REBALANCE_RUN])
+        order = [c for c in NATIVE_RUN_ORDERS[REBALANCE_RUN] if c not in REBALANCE_LATER]
+        self.assertEqual([c for c in order if c in native], order)
         self.assertEqual(NATIVE_RUN_ORDERS[REBALANCE_RUN][-2:], [340, 360])
         for name, _, collection, preset in self._each_profile():
             features = {feature["id"]: feature for feature in collection["features"]}
@@ -357,7 +382,8 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
             self.assertEqual(feature.get("conflicts", []), [])
             self.assertNotIn("choice_group", feature)
             self.assertEqual(feature["components"], [{"run_id": REBALANCE_RUN, "component": 360}])
-            self.assertEqual(feature["title"], "Time Stop and Haste effect clocks")
+            # Released as "Time Stop and Haste effect clocks"; v0.8.7 renamed it.
+            self.assertEqual(feature["title"], CLOCKS_TITLE)
             for phrase in ("Time Stop", "everything but the caster stops", "Haste and Slow",
                            "poison", "regeneration", "before a playthrough", "not supported",
                            "not covered yet"):
@@ -365,8 +391,8 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
             self.assertEqual(preset.get(CLOCKS), "on")
             runs = {run["run_id"]: run for run in collection["runs"]}
             self.assertEqual(runs[REBALANCE_RUN]["components"][-2:], [340, 360])
-            self.assertEqual(runs[REBALANCE_RUN]["components"],
-                             [c for c in native if c in runs[REBALANCE_RUN]["components"]])
+            components = [c for c in runs[REBALANCE_RUN]["components"] if c not in REBALANCE_LATER]
+            self.assertEqual(components, [c for c in native if c in components])
             self.assertEqual(runs[REBALANCE_RUN]["phase"], "post-eet-end")
             order = [run["run_id"] for run in collection["runs"]]
             self.assertLess(order.index(EEEX_RUN), order.index(REBALANCE_RUN))
@@ -384,11 +410,11 @@ class Oct28RebalanceV086PinTests(unittest.TestCase):
     def test_catalog_records_the_decision_and_the_executable_check(self):
         rows = {row.component_id: row for row in load_catalogs(ROOT / "docs/curation/components")
                 if row.catalog == "CHRIZ-BG-REBALANCE"}
-        self.assertEqual(set(rows), set(self.record["native_components"]))
+        self.assertEqual(set(rows) - REBALANCE_LATER, set(self.record["native_components"]))
         self.assertEqual(rows[360].decision, Decision.DEFAULT)
         self.assertEqual(rows[340].decision, Decision.DEFAULT)
         text = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")
-        self.assertIn(f"**{REBALANCE_TAG}**", text)
+        self.assertIn(f"{REBALANCE_TAG} (2026-10-27, tag commit `{REBALANCE_COMMIT[:7]}`) added `360`", text)
         for phrase in ("Christopher's decision, 2026-10-27", "`data/PATCH27.BIF`", "`0x6a18d73d`", "`0x8664`",
                        "`b51093a4…`", "adding or removing it during one is\n  not supported"):
             self.assertIn(phrase, text)
