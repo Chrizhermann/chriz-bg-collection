@@ -47,7 +47,7 @@ Its old pins stay as they are.
      registry). The static-test record of the mod's run in
      `recipes/iwd-current/releases/v0.1.0-alpha.1/acceptance.toml` names a commit of the
      pin PR; merge that PR with a merge commit, so that the commit stays on the branch
-     ([PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51)).
+     ([PR #74](https://github.com/Chrizhermann/chriz-bg-collection/pull/74)).
    - While Chriz Easy IWD lives on `claude/iwdee-app`, open a matching PR against that
      branch. Each PR links the other, and they merge together: first the IWD PR, then the
      BG PR, which ends the hold (step 3).
@@ -69,9 +69,10 @@ Its old pins stay as they are.
    The PR that ends a hold removes it; a hold that no longer matches the pins fails the
    check. A hold covers only the release it names: the next release needs a new decision.
    A commit-pinned mod such as EEex Remote Console names full commits in `installers`.
-4. **Keep the evidence and tests as before.** The worked examples are
-   [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (Chriz Easy BG) and
-   [PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51) (Chriz Easy IWD):
+4. **Keep the evidence and tests as before.** The worked examples are BuffBot v1.12.6,
+   prepared with `tools/prepare_own_mod_pin.py`, in
+   [PR #75](https://github.com/Chrizhermann/chriz-bg-collection/pull/75) (Chriz Easy BG) and
+   [PR #74](https://github.com/Chrizhermann/chriz-bg-collection/pull/74) (Chriz Easy IWD):
    - a fresh anonymous download, with `chriz-bg-author artifact inspect` and
      `artifact verify` for each recipe's artifact TOML;
    - `tools/check_native_component_order.py` on the fresh archive;
