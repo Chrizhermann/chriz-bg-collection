@@ -2,6 +2,23 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 1 — alpha.22 release candidate for Christopher's own test (not published)
+
+Branch `claude/release-alpha22`, from the next-release branch
+`claude/cebg-installer-fixes-20261014` at `5a4b1f6` (BuffBot v1.12.6, PR #75), bumps the
+app to **0.1.0-alpha.22** in the five files the alpha.21 bump changed. The bundled
+collection already reads alpha.22, and its update ledger needs this app version. The
+[release notes](release-notes-alpha22.md) cover everything since app alpha.21 and
+collection alpha.20. The package record is
+[alpha.22 package verification](package-acceptance-alpha22-2026-11-01.md).
+
+This candidate is for Christopher's own test. Nothing is tagged, published or uploaded,
+the alpha channel still announces alpha.21, and the website is unchanged. Not in it: the
+open PRs against the next-release branch, #69 (install what a mod's official link serves
+when it differs from the pin) and #53 (own-mod pin check). Still open before publication:
+the ledger's `published_at` is the placeholder from #67, and the work queue's lab run of
+the Recommended selection (`docs/curation/components/FOLLOW_UPS.md`, step 3).
+
 ## October 14 — app alpha.21 and its website published (installer fixes)
 
 **App alpha.21 is public** as a prerelease and on the alpha updater channel; the
