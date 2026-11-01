@@ -214,7 +214,7 @@ fn cache(temp: &TempDir) -> ArtifactCache {
     ArtifactCache::open(temp.path().join("cache")).expect("open artifact cache")
 }
 
-/// Neither a published archive nor a partial download is left behind.
+/// Neither a published archive nor a partial download, with its resume record, is left behind.
 #[track_caller]
 fn assert_nothing_kept(temp: &TempDir, request: &DownloadRequest) {
     let cache = temp.path().join("cache");
@@ -222,9 +222,11 @@ fn assert_nothing_kept(temp: &TempDir, request: &DownloadRequest) {
     assert!(!cache
         .join(format!("sha256/{}/{digest}.archive", &digest[..2]))
         .exists());
-    assert!(!cache
-        .join(format!("partial/{}.part", request.request_id))
-        .exists());
+    for partial in ["part", "part.json"] {
+        assert!(!cache
+            .join(format!("partial/{}.{partial}", request.request_id))
+            .exists());
+    }
 }
 
 fn archive_bytes() -> Vec<u8> {
