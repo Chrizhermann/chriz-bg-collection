@@ -119,7 +119,10 @@ pub fn materialize(
 
 /// Plans [`materialize`] without writing anything to `destination`. Every file that would
 /// overwrite different bytes without a signed rule is refused here, before the first write:
-/// [`AcquireError::UndeclaredOverwrite`] or [`AcquireError::CollisionRuleRejected`].
+/// [`AcquireError::UndeclaredOverwrite`] or [`AcquireError::CollisionRuleRejected`]. So is a
+/// payload file that meets the other kind of entry, an ordinary folder where it is a file or an
+/// ordinary file where it needs a folder: [`AcquireError::DestinationKindConflict`]. A link or
+/// another reparse point on the way stays an invalid materialization.
 pub fn plan_materialization<'a>(
     artifact: &ExtractedArtifact,
     destination: &'a Path,
@@ -171,10 +174,8 @@ pub fn plan_materialization<'a>(
         .collect();
     let mut planned = Vec::with_capacity(payload.len());
     for payload_file in payload {
-        validate_destination_ancestors(destination, &payload_file.relative_path)?;
         let key = casefold(&payload_file.relative_path);
-        let target = join_relative(destination, &payload_file.relative_path);
-        let existing = inspect_optional_regular_file(&target)?;
+        let existing = inspect_payload_destination(destination, &payload_file.relative_path)?;
         let recorded = manifest_by_key.get(&key);
         let action = match existing {
             None => PublishAction::Create,
@@ -662,6 +663,78 @@ fn validate_destination_ancestors(
         }
     }
     Ok(())
+}
+
+/// What a payload file at `relative_path` meets below `destination`: nothing, or a regular file
+/// (its length and SHA-256). An ordinary file where the payload needs a folder, or an ordinary
+/// folder where it has a file, is [`AcquireError::DestinationKindConflict`]: the game or an
+/// earlier mod placed it, and placing the payload would replace it. A link, another reparse
+/// point or a special file anywhere on the way stays an invalid materialization.
+fn inspect_payload_destination(
+    destination: &Path,
+    relative_path: &str,
+) -> Result<Option<(u64, String)>, AcquireError> {
+    let components: Vec<_> = relative_path.split('/').collect();
+    let mut current = destination.to_path_buf();
+    let ancestors = components.len().saturating_sub(1);
+    for (depth, component) in components.iter().enumerate().take(ancestors) {
+        current.push(component);
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {}
+            Ok(metadata) if is_ordinary(&metadata) && metadata.is_file() => {
+                return Err(AcquireError::DestinationKindConflict {
+                    path: relative_path.to_owned(),
+                    message: format!(
+                        "the game or an earlier mod already placed a file `{}` where it needs a folder",
+                        components[..=depth].join("/")
+                    ),
+                });
+            }
+            Ok(_) => {
+                return Err(AcquireError::InvalidMaterialization(format!(
+                    "destination ancestor `{}` is not a regular directory",
+                    current.display()
+                )));
+            }
+            Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(source) => {
+                return Err(AcquireError::Io {
+                    action: "inspect destination ancestor",
+                    path: current,
+                    source,
+                });
+            }
+        }
+    }
+    let target = join_relative(destination, relative_path);
+    match fs::symlink_metadata(&target) {
+        Ok(metadata) if metadata.is_dir() && is_ordinary(&metadata) => {
+            Err(AcquireError::DestinationKindConflict {
+                path: relative_path.to_owned(),
+                message: "the game or an earlier mod already placed a folder of that name"
+                    .to_owned(),
+            })
+        }
+        _ => inspect_optional_regular_file(&target),
+    }
+}
+
+/// Neither a link nor another reparse point.
+fn is_ordinary(metadata: &fs::Metadata) -> bool {
+    !metadata.file_type().is_symlink() && !is_reparse_point(metadata)
+}
+
+#[cfg(windows)]
+fn is_reparse_point(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    metadata.file_attributes()
+        & windows_sys::Win32::Storage::FileSystem::FILE_ATTRIBUTE_REPARSE_POINT
+        != 0
+}
+
+#[cfg(not(windows))]
+fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
+    false
 }
 
 fn inspect_optional_regular_file(path: &Path) -> Result<Option<(u64, String)>, AcquireError> {

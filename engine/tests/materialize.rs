@@ -254,6 +254,110 @@ fn rejects_unknown_overwrites_but_accepts_identical_existing_bytes() {
     assert_eq!(result.manifest.entries.len(), 2);
 }
 
+/// A payload file that meets the other kind of entry, an ordinary file where it needs a folder
+/// or an ordinary folder where it is a file, is a collision found before anything is written,
+/// like an undeclared overwrite, so that a changed download can be left out for it.
+#[test]
+fn a_file_where_a_folder_is_needed_and_the_reverse_are_collisions_before_any_write() {
+    let temp = TempDir::new().unwrap();
+    let payload = extracted(
+        &temp,
+        "kinds",
+        &[
+            ("mod/setup-mod.tp2", TP2),
+            ("mod/shared/data.txt", b"payload"),
+            ("mod/notes", b"a file named like a folder"),
+        ],
+        &["mod"],
+        &["mod/setup-mod.tp2"],
+    );
+    let materialization = request("kinds-run", "mod", &["mod"], &["mod/setup-mod.tp2"]);
+
+    let file_in_the_way = temp.path().join("game-file");
+    std::fs::create_dir_all(file_in_the_way.join("mod")).unwrap();
+    std::fs::write(file_in_the_way.join("mod/shared"), b"placed earlier").unwrap();
+    let folder_in_the_way = temp.path().join("game-folder");
+    std::fs::create_dir_all(folder_in_the_way.join("mod/notes")).unwrap();
+
+    for (destination, path, message) in [
+        (
+            &file_in_the_way,
+            "mod/shared/data.txt",
+            "the game or an earlier mod already placed a file `mod/shared` where it needs a folder",
+        ),
+        (
+            &folder_in_the_way,
+            "mod/notes",
+            "the game or an earlier mod already placed a folder of that name",
+        ),
+    ] {
+        let result = materialize(&payload, destination, &materialization);
+        assert!(
+            matches!(&result, Err(AcquireError::DestinationKindConflict { path: found, message: why })
+                if found == path && why == message),
+            "{result:?}"
+        );
+        assert!(!destination.join("mod/setup-mod.tp2").exists());
+        assert!(!destination.join(".chriz-bg-collection").exists());
+    }
+    assert_eq!(
+        std::fs::read(file_in_the_way.join("mod/shared")).unwrap(),
+        b"placed earlier"
+    );
+    assert!(folder_in_the_way.join("mod/notes").is_dir());
+}
+
+/// A link on the way is not an ordinary entry another mod placed: it stays refused as an
+/// invalid materialization, never a collision that a changed download is left out for.
+#[cfg(windows)]
+#[test]
+fn a_junction_on_the_way_stays_an_invalid_materialization() {
+    let temp = TempDir::new().unwrap();
+    let payload = extracted(
+        &temp,
+        "linked",
+        &[
+            ("mod/setup-mod.tp2", TP2),
+            ("mod/shared/data.txt", b"payload"),
+        ],
+        &["mod"],
+        &["mod/setup-mod.tp2"],
+    );
+    let outside = temp.path().join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    for (destination, link) in [
+        (temp.path().join("game-ancestor"), "shared"),
+        (temp.path().join("game-target"), "setup-mod.tp2"),
+    ] {
+        std::fs::create_dir_all(destination.join("mod")).unwrap();
+        // A junction needs no privilege, unlike a symbolic link. `mklink` would read a `/` in
+        // its path as a switch.
+        let output = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(destination.join("mod").join(link))
+            .arg(&outside)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        let result = materialize(
+            &payload,
+            &destination,
+            &request("linked-run", "mod", &["mod"], &["mod/setup-mod.tp2"]),
+        );
+
+        assert!(
+            matches!(result, Err(AcquireError::InvalidMaterialization(_))),
+            "{link}: {result:?}"
+        );
+        assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
+    }
+}
+
 #[test]
 fn signed_collision_rule_requires_both_owners_and_exact_input_output_hashes() {
     let temp = TempDir::new().unwrap();

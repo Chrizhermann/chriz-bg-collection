@@ -3305,6 +3305,83 @@ fn a_changed_archive_that_would_overwrite_another_mods_file_is_left_out() {
     assert_eq!(installed_runs, ["eefixpack-bg1", "eefixpack-bg2"]);
 }
 
+/// The changed archive of a mod has a file where an earlier mod placed a folder, or needs a
+/// folder where an earlier mod placed a file. Nothing of it is placed yet, so the installer
+/// leaves the mod out, as for an overwrite, instead of stopping at that step on every resume.
+#[cfg(windows)]
+#[test]
+fn a_changed_archive_that_meets_a_file_or_folder_of_another_mod_is_left_out() {
+    let fixpack_tp2: &[u8] = b"BEGIN ~Synthetic EE Fixpack~\nDESIGNATED 0\n";
+    let snowytoes_tp2: &[u8] = b"BEGIN ~Snowytoes~\nDESIGNATED 0\n";
+    for (in_the_way, reason) in [
+        (
+            "EE_Fixpack/EE_Fixpack.tp2/readme.txt",
+            "its file `EE_Fixpack/EE_Fixpack.tp2/readme.txt` cannot be placed: the game or an earlier mod already placed a file `EE_Fixpack/EE_Fixpack.tp2` where it needs a folder",
+        ),
+        (
+            "EE_Fixpack",
+            "its file `EE_Fixpack` cannot be placed: the game or an earlier mod already placed a folder of that name",
+        ),
+    ] {
+        let fixture = executable_fixture();
+        // The reviewed release carries an identical copy of an EE Fixpack file.
+        let reviewed = zip_bytes(&[
+            ("Snowytoes/setup-snowytoes.tp2", snowytoes_tp2),
+            ("EE_Fixpack/EE_Fixpack.tp2", fixpack_tp2),
+        ]);
+        add_snowytoes_publishing(&fixture, &reviewed, &["Snowytoes", "EE_Fixpack"]);
+        let changed = zip_bytes(&[
+            ("Snowytoes/setup-snowytoes.tp2", snowytoes_tp2),
+            (in_the_way, b"in the way"),
+        ]);
+        let link = ArtifactServer::start(BTreeMap::from([(
+            "/snowytoes.zip".to_owned(),
+            changed.clone(),
+        )]));
+
+        let output = executable_command(&fixture)
+            .env(DOWNLOAD_ORIGIN, &link.base_url)
+            .args(install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ))
+            .output()
+            .expect("run the installation");
+
+        assert!(
+            output.status.success(),
+            "stdout:\n{}\nstderr:\n{}",
+            stdout(&output),
+            stderr(&output)
+        );
+        let receipt = read_install_receipt(&fixture);
+        assert_eq!(receipt.left_out.len(), 1);
+        assert_eq!(
+            receipt.left_out[0].reason,
+            format!(
+                "its official link now serves a different archive (snowytoes.zip, {} bytes, SHA-256 {}), which cannot be installed: {reason}",
+                changed.len(),
+                sha256_bytes(&changed)
+            )
+        );
+        assert_eq!(receipt.left_out[0].runs, ["snowytoes-bg2"]);
+        assert_eq!(
+            fs::read(fixture.managed.join("game/EE_Fixpack/EE_Fixpack.tp2")).unwrap(),
+            fixpack_tp2
+        );
+        assert!(!fixture.managed.join("game/Snowytoes").exists());
+        // Nothing began to place its files, so nothing records that it did.
+        assert_eq!(
+            fs::read_dir(fixture.managed.join(".chriz/evidence/publications"))
+                .map_or(0, Iterator::count),
+            0
+        );
+    }
+}
+
 /// A changed archive whose stored data is damaged, as when its server keeps a broken copy: its
 /// headers and directory are intact, so the download looks complete, and only unpacking finds
 /// the bad checksum. The installer removes the damaged file from the download folder, asks the
