@@ -117,6 +117,9 @@ struct SelectedEntry {
     source: PathBuf,
     archive_name: String,
     binary: bool,
+    /// For evidence that must stay inside the installation: the folder its open handle must
+    /// really lie in when it is read.
+    contained_in: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]
@@ -304,12 +307,11 @@ fn select_entries(
             if !is_answer {
                 continue;
             }
-            add_optional(
-                &mut selected,
-                entry.path(),
-                &format!("evidence/decisions/{name}"),
-                false,
-            )?;
+            let archive_name = format!("evidence/decisions/{name}");
+            add_optional(&mut selected, entry.path(), &archive_name, false)?;
+            if let Some(selected) = selected.get_mut(&archive_name) {
+                selected.contained_in = Some(evidence.clone());
+            }
         }
     }
 
@@ -427,6 +429,7 @@ fn add_required(
             source,
             archive_name: archive_name.to_owned(),
             binary,
+            contained_in: None,
         },
     );
     Ok(())
@@ -644,6 +647,18 @@ fn read_selected_entry(entry: &SelectedEntry) -> Result<Vec<u8>, DiagnosticsErro
     // Recheck the selected file before opening; bound new patch evidence even if it grew
     // after selection. Existing receipt/recipe/log behavior remains unchanged.
     validate_direct_file(&entry.source)?;
+    if let Some(root) = &entry.contained_in {
+        // Read through a handle whose real path lies inside the installation's evidence, so that
+        // a folder replaced after the checks above never leads the export elsewhere.
+        return crate::contained::read_inside(&entry.source, root)
+            .map_err(|source| DiagnosticsError::Io {
+                path: entry.source.clone(),
+                source,
+            })?
+            .ok_or_else(|| DiagnosticsError::MissingEvidence {
+                path: entry.source.clone(),
+            });
+    }
     if !entry.archive_name.starts_with("patches/cebg-v1/")
         && !entry.archive_name.starts_with("mod-upgrades/v1/")
     {

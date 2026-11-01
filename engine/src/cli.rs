@@ -51,9 +51,9 @@ use crate::preflight::{
     InitialPreflight, RequiredInput, SpaceRequirement,
 };
 use crate::receipt::{
-    ArtifactCacheOutcome, ArtifactReceipt, DecisionReceipt, DownloadIdentity, FinalLogReceipt,
-    FinalReceiptState, InstallReceipt, LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter,
-    PromptReceipt, ReceiptEvidence, ReceiptOutcome, ReceiptStore, ReceiptVersions, ReviewedTool,
+    ArtifactCacheOutcome, ArtifactReceipt, DownloadIdentity, FinalLogReceipt, FinalReceiptState,
+    InstallReceipt, LogComponentReceipt, LogDiffReceipt, ManagedReceiptWriter, PromptReceipt,
+    ReceiptEvidence, ReceiptOutcome, ReceiptStore, ReceiptVersions, ReviewedTool,
     RunAttemptReceipt, RunReceipt, RunTiming, ServedDifference, SourceGameReceipt,
     WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
 };
@@ -113,11 +113,11 @@ const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
 const CACHE_REPAIRS_EVIDENCE: &str = "cache-repairs";
 /// Placing steps of changed downloads that began to write files into a game copy. Stored as
 /// `<category>/<materialization-id>.json` before the first file is written, complete or not at
-/// all ([`publish_bytes_once`]): a step without the record has not begun to write.
+/// all ([`publish_contained_json`]): a step without the record has not begun to write.
 const PUBLICATIONS_EVIDENCE: &str = "publications";
 /// Answers to questions about downloads, written by `decide` under the target lock and read by
 /// the campaign worker on resume. Stored as `<category>/<decision-id>.json`, complete or not at
-/// all ([`publish_bytes_once`]), once per question.
+/// all ([`publish_contained_json`]), once per question.
 const DECISIONS_EVIDENCE: &str = "decisions";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
@@ -1272,22 +1272,42 @@ fn open_decision_campaign(
     Ok((replay, frozen))
 }
 
-/// Where `decide` stores the answer to `decision_id` in the campaign at `managed_root`.
-/// The folder of answers of the campaign at `managed_root`, which must be its canonical path:
-/// `.chriz/evidence/decisions`, each of them a direct folder, never a link, junction or other
-/// reparse point that could lead outside the installation. With `create`, the missing
-/// `evidence` and `decisions` folders are created; otherwise `None` when one is missing.
-fn decisions_directory(managed_root: &Path, create: bool) -> Result<Option<PathBuf>, String> {
+/// The evidence folder of the campaign at `managed_root`, which must be its canonical path.
+fn evidence_root_of(managed_root: &Path) -> PathBuf {
+    managed_root.join(STATE_DIRECTORY).join(EVIDENCE_DIRECTORY)
+}
+
+/// The folder `.chriz/evidence/<category>` of the campaign at `managed_root`, which must be its
+/// canonical path. Every folder on the way is a direct folder, never a link, junction or other
+/// reparse point that could lead outside the installation. With `create`, missing folders are
+/// created; otherwise `None` when one is missing.
+fn contained_evidence_directory(
+    managed_root: &Path,
+    category: &Path,
+    create: bool,
+) -> Result<Option<PathBuf>, String> {
+    let mut names = vec![
+        std::ffi::OsString::from(STATE_DIRECTORY),
+        std::ffi::OsString::from(EVIDENCE_DIRECTORY),
+    ];
+    for component in category.components() {
+        match component {
+            Component::Normal(name) => names.push(name.to_owned()),
+            _ => {
+                return Err(format!(
+                    "{} is not a plain evidence category",
+                    category.display()
+                ))
+            }
+        }
+    }
     let mut path = managed_root.to_path_buf();
-    for (index, name) in [STATE_DIRECTORY, EVIDENCE_DIRECTORY, DECISIONS_EVIDENCE]
-        .into_iter()
-        .enumerate()
-    {
+    for name in names {
         path.push(name);
         match fs::symlink_metadata(&path) {
             Ok(_) => {}
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                if !create || index == 0 {
+                if !create {
                     return Ok(None);
                 }
                 match fs::create_dir(&path) {
@@ -1321,8 +1341,50 @@ fn decision_answer_path(
     if !crate::decision::is_decision_id(decision_id) {
         return Err(format!("{decision_id:?} is not a question id"));
     }
-    Ok(decisions_directory(managed_root, create)?
-        .map(|directory| directory.join(format!("{decision_id}.json"))))
+    Ok(
+        contained_evidence_directory(managed_root, Path::new(DECISIONS_EVIDENCE), create)?
+            .map(|directory| directory.join(format!("{decision_id}.json"))),
+    )
+}
+
+/// The JSON evidence at `path`, read through a handle that really lies inside `root`, the
+/// installation's evidence folder; `None` when there is none.
+fn read_contained_json<T: for<'de> Deserialize<'de>>(
+    path: &Path,
+    root: &Path,
+) -> Result<Option<T>, StepFailure> {
+    let Some(bytes) = crate::contained::read_inside(path, root).map_err(step_error)? else {
+        return Ok(None);
+    };
+    serde_json::from_slice(&bytes)
+        .map(Some)
+        .map_err(|error| StepFailure::new(format!("{}: {error}", path.display())))
+}
+
+/// Publishes `value` as JSON evidence at `path`, complete or not at all and only inside `root`,
+/// the installation's evidence folder ([`crate::contained::publish_inside`]). The same record
+/// again is accepted; a different one is refused.
+fn publish_contained_json<T: Serialize>(
+    path: &Path,
+    value: &T,
+    root: &Path,
+) -> Result<(), StepFailure> {
+    let mut bytes = serde_json::to_vec_pretty(value).map_err(step_error)?;
+    bytes.push(b'\n');
+    let published = crate::contained::publish_inside(path, &bytes, root, |temporary| {
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
+        let temporary = interrupt_record_for_test(temporary, path, &bytes)
+            .map_err(|failure| std::io::Error::other(failure.to_string()))?;
+        Ok(temporary)
+    })
+    .map_err(step_error)?;
+    match published {
+        crate::contained::Published::Written | crate::contained::Published::AlreadyThere => Ok(()),
+        crate::contained::Published::Differs => Err(StepFailure::new(format!(
+            "create-once evidence differs at {}",
+            path.display()
+        ))),
+    }
 }
 
 /// The answer file of `decision`, when `decide` wrote one for exactly this question with an
@@ -1334,8 +1396,8 @@ fn read_decision_answer(
     let Some(path) = decision_answer_path(managed_root, &decision.decision_id, false)? else {
         return Ok(None);
     };
-    let Some(record) =
-        read_optional_json::<AnswerRecord>(&path).map_err(|failure| failure.to_string())?
+    let Some(record) = read_contained_json::<AnswerRecord>(&path, &evidence_root_of(managed_root))
+        .map_err(|failure| failure.to_string())?
     else {
         return Ok(None);
     };
@@ -1354,7 +1416,6 @@ fn read_decision_answer(
     }
     Ok(Some(record))
 }
-
 /// The question about a download that the installation at `managed_root` waits for, with its
 /// English texts and the token that `decide` needs; `None` when it waits for nothing.
 pub fn inspect_decision(
@@ -1461,7 +1522,7 @@ pub fn answer_decision(
                 "the installation has no state folder",
             )
         })?;
-    publish_json_once(&path, &record)
+    publish_contained_json(&path, &record, &evidence_root_of(&managed_root))
         .map_err(|failure| CliError::new("decision_failed", failure.to_string()))
 }
 
@@ -1538,14 +1599,21 @@ fn affected_mods(
             list.push(name);
         }
     }
+    // A mod that lost parts but no longer has any run in `remaining` was left out later on
+    // its own account, or with another mod: it is not installed, so it is not named here.
     for run in frozen
         .plan
         .runs
         .iter()
         .filter(|run| changed.contains(&run.run_id))
     {
+        let still_installed = frozen
+            .plan
+            .runs
+            .iter()
+            .any(|other| other.mod_id == run.mod_id && remaining.contains(&other.run_id));
         let name = name(&run.mod_id);
-        if !reduced.contains(&name) && !left_out.contains(&name) {
+        if still_installed && !reduced.contains(&name) && !left_out.contains(&name) {
             reduced.push(name);
         }
     }
@@ -2214,10 +2282,10 @@ fn validate_report_receipt(
             .filter(|cutoff| *cutoff <= replay.records.len())
             .ok_or_else(|| "terminal receipt sequence is absent from the ledger".to_owned())?
     };
-    let answered = answered_decisions(&replay.records[..cutoff])
-        .iter()
-        .map(DecisionReceipt::from)
-        .collect::<Vec<_>>();
+    let answered = crate::receipt::decision_receipts(
+        &answered_decisions(&replay.records[..cutoff]),
+        &receipt.artifacts,
+    );
     if receipt.decisions != answered {
         return Err("answers to questions differ from the campaign ledger".to_owned());
     }
@@ -3930,29 +3998,38 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         id: &str,
     ) -> Result<PathBuf, StepFailure> {
         validate_cli_identifier(id, "evidence id").map_err(StepFailure::new)?;
-        let directory = self.evidence_root().join(category);
-        ensure_directories(&directory)?;
+        let directory =
+            contained_evidence_directory(&self.created.managed_root, category.as_ref(), true)
+                .map_err(StepFailure::new)?
+                .ok_or_else(|| StepFailure::new("the installation has no state folder"))?;
         Ok(directory.join(format!("{id}.json")))
     }
 
+    /// Records named evidence once, complete or not at all, so that an interruption never
+    /// leaves a half-written record that would stop every resume, and only inside this
+    /// installation's evidence folder ([`publish_contained_json`]).
     fn persist_named_evidence<T: Serialize>(
         &self,
         category: impl AsRef<Path>,
         id: &str,
         value: &T,
     ) -> Result<(), StepFailure> {
-        write_json_once(&self.named_evidence_path(category, id)?, value)
+        publish_contained_json(
+            &self.named_evidence_path(category, id)?,
+            value,
+            &self.evidence_root(),
+        )
     }
 
     /// [`Self::persist_named_evidence`] for a record whose absence has a meaning, such as that a
-    /// step has not begun to write: it appears complete or not at all ([`publish_bytes_once`]).
+    /// step has not begun to write.
     fn publish_named_evidence_once<T: Serialize>(
         &self,
         category: impl AsRef<Path>,
         id: &str,
         value: &T,
     ) -> Result<(), StepFailure> {
-        publish_json_once(&self.named_evidence_path(category, id)?, value)
+        self.persist_named_evidence(category, id, value)
     }
 
     fn load_named_evidence<T: for<'de> Deserialize<'de>>(
@@ -3960,7 +4037,10 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         category: impl AsRef<Path>,
         id: &str,
     ) -> Result<Option<T>, StepFailure> {
-        read_optional_json(&self.named_evidence_path(category, id)?)
+        read_contained_json(
+            &self.named_evidence_path(category, id)?,
+            &self.evidence_root(),
+        )
     }
 
     /// Keep the provenance of a later acquisition that was accepted against, but differs
@@ -5818,46 +5898,6 @@ fn write_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
     file.sync_all().map_err(step_error)
 }
 
-/// [`write_json_once`] for a record whose absence has a meaning ([`publish_bytes_once`]).
-fn publish_json_once<T: Serialize>(path: &Path, value: &T) -> Result<(), StepFailure> {
-    let mut bytes = serde_json::to_vec_pretty(value).map_err(step_error)?;
-    bytes.push(b'\n');
-    publish_bytes_once(path, &bytes)
-}
-
-/// [`write_bytes_once`], but the file at `path` appears complete or not at all: `bytes` go to a
-/// temporary file in the same folder, which is synced and only then published under `path`,
-/// never replacing a file there. An interruption, such as a crash or a full disk, leaves at most
-/// that temporary file, which nothing reads, so the record still counts as absent and the next
-/// attempt writes it anew.
-fn publish_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| StepFailure::new(format!("path has no parent: {}", path.display())))?;
-    ensure_directories(parent)?;
-    if holds_once(path, bytes)? {
-        return Ok(());
-    }
-    let temporary = tempfile::NamedTempFile::new_in(parent).map_err(step_error)?;
-    #[cfg(any(debug_assertions, feature = "test-hooks"))]
-    let temporary = interrupt_record_for_test(temporary, path, bytes)?;
-    let mut temporary = temporary;
-    temporary.write_all(bytes).map_err(step_error)?;
-    temporary.as_file().sync_all().map_err(step_error)?;
-    match crate::fs_retry::persist_noclobber(temporary, path) {
-        Ok(()) => Ok(()),
-        // An earlier attempt published it after all; it must be the same record.
-        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-            if holds_once(path, bytes)? {
-                Ok(())
-            } else {
-                Err(step_error(error))
-            }
-        }
-        Err(error) => Err(step_error(error)),
-    }
-}
-
 /// Whether the create-once file `path` exists already, which is only fine when it is a direct
 /// file holding exactly `bytes`.
 fn holds_once(path: &Path, bytes: &[u8]) -> Result<bool, StepFailure> {
@@ -5899,7 +5939,7 @@ fn exit_after_accepted_for_test(artifact_id: &str) {
         std::process::exit(86);
     }
 }
-/// Test builds stop [`publish_bytes_once`] halfway through a record in the evidence folder that
+/// Test builds stop [`publish_contained_json`] halfway through a record in the evidence folder that
 /// `CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD` names, as a crash would: half of the record is
 /// written and its temporary file stays behind.
 #[cfg(any(debug_assertions, feature = "test-hooks"))]
@@ -6995,6 +7035,39 @@ mod tests {
         assert_eq!(
             texts.message,
             "lefreut can't be installed (its link no longer has the file). It and the mods that depend on it (modpack) will be left out. Continue the installation?"
+        );
+    }
+
+    /// A mod that lost parts because one mod was left out, and was then left out itself, is
+    /// not described as installed without those parts: by the final remaining runs it is not
+    /// installed at all. While a run of it remains, it is.
+    #[test]
+    fn a_reduced_mod_left_out_later_is_not_named_as_installed() {
+        let mut frozen = frozen_recipe_fixture();
+        let run = |run_id: &str, mod_id: &str| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![0],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        frozen.plan.runs = vec![run("snowy-bg2", "snowy"), run("tweaks-bg2", "tweaks")];
+        let removed = vec!["snowy-bg2".to_owned()];
+        let changed = vec!["tweaks-bg2".to_owned()];
+        let still_there = std::collections::BTreeSet::from(["tweaks-bg2".to_owned()]);
+        assert_eq!(
+            super::affected_mods(&frozen, "snowy", &removed, &changed, &still_there),
+            (Vec::<String>::new(), vec!["tweaks".to_owned()])
+        );
+        let gone_later = std::collections::BTreeSet::new();
+        assert_eq!(
+            super::affected_mods(&frozen, "snowy", &removed, &changed, &gone_later),
+            (Vec::<String>::new(), Vec::<String>::new())
         );
     }
 

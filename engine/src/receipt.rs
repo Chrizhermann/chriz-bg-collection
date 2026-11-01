@@ -304,6 +304,40 @@ impl From<&AnsweredDecision> for DecisionReceipt {
     }
 }
 
+/// The receipt rows of `decisions`, settled by what supplied the installed bytes: an answer to
+/// install a changed download whose accepted file is the one `artifacts` records took effect,
+/// even when an earlier attempt to apply it failed and a later one used the recorded file
+/// without asking again. Of several answers for the same file, the last one is the effective
+/// one; the others keep what the ledger says.
+pub fn decision_receipts(
+    decisions: &[AnsweredDecision],
+    artifacts: &[ArtifactReceipt],
+) -> Vec<DecisionReceipt> {
+    let mut receipts = decisions
+        .iter()
+        .map(DecisionReceipt::from)
+        .collect::<Vec<_>>();
+    for artifact in artifacts
+        .iter()
+        .filter(|artifact| artifact.served_difference.is_some())
+    {
+        let supplied = receipts.iter().rposition(|decision| {
+            decision.artifact_id == artifact.id
+                && decision.kind != QuestionKind::UnusableDownload
+                && decision.answer == Answer::Yes
+                && decision.served.as_ref().is_some_and(|served| {
+                    served.length == artifact.length
+                        && served.sha256.eq_ignore_ascii_case(&artifact.sha256)
+                })
+        });
+        if let Some(index) = supplied {
+            if receipts[index].outcome == DecisionOutcome::Failed {
+                receipts[index].outcome = DecisionOutcome::Applied;
+            }
+        }
+    }
+    receipts
+}
 /// One output-gated prompt observed during a WeiDU run.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -690,7 +724,7 @@ impl ManagedReceiptWriter {
                 })
                 .collect(),
             installed_plan: draft.installed_plan.clone(),
-            decisions: draft.decisions.iter().map(DecisionReceipt::from).collect(),
+            decisions: decision_receipts(&draft.decisions, &self.evidence.artifacts),
         };
         let published = self.store.publish(&receipt)?;
         let Some(final_state) = final_state else {
