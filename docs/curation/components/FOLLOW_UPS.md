@@ -555,6 +555,9 @@ Cross-repository status. Component detail stays in the sections below and in the
     keeps +3/2 attacks per round and +8 to hit / +10 damage ([CDTWEAKS](CDTWEAKS.md)); how
     strong it should be is decided later.
   - Edwin: whether he is too strong; a later discussion.
+  - Pierce Magic: its description does not match what the spell does (Christopher, seen on
+    stream 2026-11-02 in his 2026-09-16 stream install). Check which mod shapes the live
+    spell and its text there and in 0.1.0, then make the description match the effects.
 
 **Ideas for later (community, recorded 2026-10-20)**
 
