@@ -42,6 +42,8 @@ COMPONENTS = [
     (1, "BuffBot: EEex LuaJIT Support (auto-detected)"),
     (0, "BuffBot: In-Game Buff Automation"),
 ]
+LEDGERS = ["manifest/releases/v0.1.0-alpha.22/ledger.toml",
+           "recipes/curated-full-current/releases/v0.1.0-alpha.22/ledger.toml"]
 
 
 def _load(path: Path) -> dict:
@@ -223,6 +225,20 @@ class Nov01BuffBotV1126PinTests(unittest.TestCase):
         pin_list = (ROOT / "docs/pin-list-2.7.md").read_text(encoding="utf-8")
         self.assertEqual(pin_list.count(f"| BuffBot | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
         self.assertNotIn("| BuffBot | 1.12.1 |", pin_list)
+
+    def test_alpha22_ledgers_name_the_release_and_cover_its_artifact(self):
+        # The superseded pins stay covered because their artifact TOMLs stay in the recipe.
+        for path in LEDGERS:
+            with self.subTest(ledger=path):
+                changes = {change["id"]: change for change in _load(ROOT / path)["changes"]}
+                self.assertEqual(changes["buffbot-1-12-6"]["title"], "BuffBot 1.12.6")
+                self.assertIn("BuffBot v1.12.6 (was v1.10.0)", changes["buffbot-1-12-6"]["summary"])
+                self.assertEqual(changes["buffbot-1-12-6"]["covers"],
+                                 [f"artifact:{artifact}" for artifact in (*HISTORY, PREVIOUS, PIN)])
+                self.assertIn("v1.11.0 to v1.12.6", changes["buffbot-fixes-to-1-12-6"]["summary"])
+                self.assertEqual(changes["buffbot-fixes-to-1-12-6"]["covers"],
+                                 [f"artifact:{artifact}" for artifact in (HISTORY[1], PREVIOUS, PIN)])
+                self.assertFalse({"buffbot-1-12-1", "buffbot-fixes-to-1-12-1"} & set(changes))
 
 
 if __name__ == "__main__":
