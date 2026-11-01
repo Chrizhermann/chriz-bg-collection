@@ -446,10 +446,25 @@ fn open_rar_archive(
 }
 
 /// Whether an UnRAR result reports a failure of this computer, not of the archive: too little
-/// memory, or a file that could not be opened (as while another program holds it).
+/// memory, or a file that could not be opened (as while another program holds it), created,
+/// closed, read or written.
+///
+/// UnRAR gives a failed read (code 18) also for some fatal errors of its own, such as a failed
+/// seek, so that code alone does not prove the computer at fault; but it proves no damage
+/// either. Damage has codes of its own, a bad checksum or header (12) or an unknown format, so a
+/// failed read stays a failure that a resume retries instead of making the archive unusable.
 #[cfg(windows)]
 fn rar_local_failure(code: i64) -> bool {
-    code == i64::from(unrar_sys::ERAR_NO_MEMORY) || code == i64::from(unrar_sys::ERAR_EOPEN)
+    [
+        unrar_sys::ERAR_NO_MEMORY,
+        unrar_sys::ERAR_EOPEN,
+        unrar_sys::ERAR_ECREATE,
+        unrar_sys::ERAR_ECLOSE,
+        unrar_sys::ERAR_EREAD,
+        unrar_sys::ERAR_EWRITE,
+    ]
+    .into_iter()
+    .any(|local| code == i64::from(local))
 }
 
 #[cfg(windows)]
@@ -1208,6 +1223,13 @@ fn validate_rar_entries(
         if code == unrar_sys::ERAR_END_ARCHIVE {
             break;
         }
+        if code != unrar_sys::ERAR_SUCCESS && rar_local_failure(code.into()) {
+            return Err(rar_local_error(
+                "read archive headers with UnRAR",
+                archive_path,
+                code.into(),
+            ));
+        }
         if code != unrar_sys::ERAR_SUCCESS {
             return Err(AcquireError::ArchiveFormat {
                 path: archive_path.to_path_buf(),
@@ -1322,6 +1344,13 @@ fn validate_rar_entries(
                 std::ptr::null(),
             )
         };
+        if process != unrar_sys::ERAR_SUCCESS && rar_local_failure(process.into()) {
+            return Err(rar_local_error(
+                "skip archive entry with UnRAR",
+                archive_path,
+                process.into(),
+            ));
+        }
         if process != unrar_sys::ERAR_SUCCESS {
             return Err(AcquireError::ArchiveFormat {
                 path: archive_path.to_path_buf(),
@@ -1995,6 +2024,13 @@ fn extract_rar_entries(
         };
         if code == unrar_sys::ERAR_END_ARCHIVE {
             break;
+        }
+        if code != unrar_sys::ERAR_SUCCESS && rar_local_failure(code.into()) {
+            return Err(rar_local_error(
+                "read archive headers with UnRAR",
+                archive_path,
+                code.into(),
+            ));
         }
         if code != unrar_sys::ERAR_SUCCESS {
             return Err(AcquireError::ArchiveFormat {
@@ -3148,7 +3184,16 @@ mod rar_safety_tests {
             state.failure(unrar_sys::ERAR_BAD_DATA, "mod/a.txt", Path::new("out")),
             Some(AcquireError::CorruptArchiveData { entry, .. }) if entry == "mod/a.txt"
         ));
-        for code in [unrar_sys::ERAR_NO_MEMORY, unrar_sys::ERAR_EOPEN] {
+        // A failed read (18) proves no damage, though UnRAR also reports some fatal errors of
+        // its own with it, so it stays a failure that a resume retries.
+        for code in [
+            unrar_sys::ERAR_NO_MEMORY,
+            unrar_sys::ERAR_EOPEN,
+            unrar_sys::ERAR_ECREATE,
+            unrar_sys::ERAR_ECLOSE,
+            unrar_sys::ERAR_EREAD,
+            unrar_sys::ERAR_EWRITE,
+        ] {
             assert!(
                 matches!(
                     state.failure(code, "mod/a.txt", Path::new("out")),
@@ -3402,6 +3447,40 @@ mod served_container_tests {
             "{found:?}"
         );
         fs::remove_file(&path).unwrap();
+    }
+
+    /// A file that cannot be read, here because another handle holds an exclusive lock on all
+    /// of it, is this computer's failure: UnRAR reports it with its read failure (18) when it
+    /// opens the file, and neither the check of a download nor unpacking takes that for a
+    /// damaged or foreign archive, which would ask the link again or leave the mod out. Both
+    /// stop for a retry, and once the file can be read again it passes.
+    #[cfg(windows)]
+    #[test]
+    fn an_archive_file_that_cannot_be_read_stops_for_a_retry() {
+        let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
+        let temporary = tempfile::TempDir::new().unwrap();
+        let path = temporary.path().join("evandra.exe");
+        fs::write(&path, &archive).unwrap();
+        let holder = File::open(&path).unwrap();
+        holder.lock().unwrap();
+
+        let checked = rar_container_problem(&path, &ArchiveLimits::default(), &StopSignal::never());
+        assert!(
+            matches!(&checked, Err(AcquireError::Io { source, .. }) if source.to_string() == "UnRAR code 18"),
+            "{checked:?}"
+        );
+        let opened = open_rar_archive(&path, unrar_sys::RAR_OM_EXTRACT).map(|_| ());
+        assert!(
+            matches!(&opened, Err(AcquireError::Io { source, .. }) if source.to_string() == "UnRAR code 18"),
+            "{opened:?}"
+        );
+
+        holder.unlock().unwrap();
+        assert_eq!(
+            rar_container_problem(&path, &ArchiveLimits::default(), &StopSignal::never()).unwrap(),
+            None
+        );
+        assert!(open_rar_archive(&path, unrar_sys::RAR_OM_EXTRACT).is_ok());
     }
 
     /// A stop ends the check of a changed self-extractor, before a file is tested or while one
