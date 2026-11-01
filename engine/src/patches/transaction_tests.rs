@@ -125,6 +125,7 @@ impl Fixture {
             }),
             left_out: Vec::new(),
             installed_plan: None,
+            decisions: Vec::new(),
         };
         let receipt = serde_json::to_vec_pretty(&receipt).unwrap();
         write(&root.join(".chriz/install-receipt.json"), &receipt);

@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use fs4::fs_std::FileExt;
 use serde::{Deserialize, Serialize};
 
+use crate::decision::{is_decision_id, Answer, AnswerSource, Question};
 use crate::digest::{selection_digest, sha256_bytes};
 use crate::error::{EngineError, Result};
 use crate::recipe_view::NormalizedSelection;
@@ -148,6 +149,43 @@ pub enum SessionEvent {
         /// `removed_runs` this rebuilds the remaining plan on a resume.
         changed_runs: Vec<PlannedRun>,
     },
+    /// An acquisition or placing step asks the player a question ([`crate::decision`]) and
+    /// stops until it is answered. The step stays unresolved, as at a manual checkpoint.
+    DecisionRequired {
+        /// Unresolved step that asks.
+        step_id: String,
+        /// Its attempt.
+        attempt: u32,
+        /// Stable id of the question within this attempt.
+        decision_id: String,
+        /// The question, exactly as asked.
+        question: Box<Question>,
+    },
+    /// The answer to a question of the unresolved step, which the worker applies next.
+    DecisionAnswered {
+        /// Step that asked.
+        step_id: String,
+        /// Its attempt.
+        attempt: u32,
+        /// The question answered.
+        decision_id: String,
+        /// The answer.
+        answer: Answer,
+        /// Who gave it.
+        source: AnswerSource,
+    },
+    /// A question no longer applies, because the situation it asked about changed; the step
+    /// continues without its answer.
+    DecisionWithdrawn {
+        /// Step that asked.
+        step_id: String,
+        /// Its attempt.
+        attempt: u32,
+        /// The question withdrawn.
+        decision_id: String,
+        /// What changed.
+        why: String,
+    },
 }
 
 /// One immutable JSON record in the campaign hash chain.
@@ -173,6 +211,14 @@ pub struct SessionReplay {
     created: CampaignCreated,
     unresolved: Option<(String, u32)>,
     fresh_copy_required: Option<FreshCopySeal>,
+    decision: Option<DecisionState>,
+}
+
+/// The latest question of the unresolved step that was not withdrawn.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DecisionState {
+    decision_id: String,
+    answered: bool,
 }
 
 /// Durable terminal state preventing any further managed-copy mutation.
@@ -195,6 +241,11 @@ impl SessionReplay {
     /// Returns a step whose persisted start has no terminal evidence record.
     pub fn unresolved_step(&self) -> Option<&str> {
         self.unresolved.as_ref().map(|(step, _)| step.as_str())
+    }
+
+    /// The question of the unresolved step that stands, with its answer once recorded.
+    pub fn pending_decision(&self) -> Option<crate::decision::PendingDecision> {
+        crate::decision::pending_decision(&self.records)
     }
 
     /// Returns the permanent fresh-copy seal, when target mutation is no longer allowed.
@@ -617,6 +668,7 @@ impl SessionStore {
             created,
             unresolved: progress.unresolved,
             fresh_copy_required: progress.fresh_copy_required,
+            decision: progress.decision,
         })
     }
 }
@@ -874,6 +926,158 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
             }
             Ok(())
         }
+        SessionEvent::DecisionRequired {
+            step_id,
+            attempt,
+            decision_id,
+            question,
+        } => {
+            validate_decision(step_id, *attempt, decision_id, path)?;
+            question
+                .validate()
+                .map_err(|message| ledger_error(path, &message))?;
+            validate_artifact_identifier(&question.artifact_id, "questioned artifact", path)?;
+            if !own_step_of(step_id, &question.artifact_id) {
+                return Err(ledger_error(
+                    path,
+                    "a question must be asked by the acquisition or placing step of its artifact",
+                ));
+            }
+            if question.decision_id(step_id, *attempt) != *decision_id {
+                return Err(ledger_error(
+                    path,
+                    "a decision id must be derived from its step, attempt and question",
+                ));
+            }
+            Ok(())
+        }
+        SessionEvent::DecisionAnswered {
+            step_id,
+            attempt,
+            decision_id,
+            ..
+        } => validate_decision(step_id, *attempt, decision_id, path),
+        SessionEvent::DecisionWithdrawn {
+            step_id,
+            attempt,
+            decision_id,
+            why,
+        } => {
+            validate_decision(step_id, *attempt, decision_id, path)?;
+            if why.trim().is_empty() {
+                return Err(ledger_error(path, "a withdrawal must say what changed"));
+            }
+            Ok(())
+        }
+    }
+}
+
+fn validate_decision(step_id: &str, attempt: u32, decision_id: &str, path: &Path) -> Result<()> {
+    validate_step(step_id, attempt, path)?;
+    if !is_decision_id(decision_id) {
+        return Err(ledger_error(
+            path,
+            "a decision id must be 16 lowercase hexadecimal characters",
+        ));
+    }
+    Ok(())
+}
+
+/// Whether `step_id` acquires or places `artifact_id`.
+fn own_step_of(step_id: &str, artifact_id: &str) -> bool {
+    step_id.strip_prefix("acquire:") == Some(artifact_id)
+        || step_id
+            .strip_prefix("materialize:")
+            .and_then(|rest| rest.strip_prefix(artifact_id))
+            .is_some_and(|root| matches!(root, ":bg1" | ":bg2"))
+}
+
+/// Checks a question event against the state of the unresolved step's latest question: one
+/// question at a time, answered once, and withdrawn only while it stands.
+fn decision_transition(
+    decision: &Option<DecisionState>,
+    event: &SessionEvent,
+    path: &Path,
+) -> Result<Option<DecisionState>> {
+    match (decision, event) {
+        (None, SessionEvent::DecisionRequired { decision_id, .. }) => Ok(Some(DecisionState {
+            decision_id: decision_id.clone(),
+            answered: false,
+        })),
+        (Some(_), SessionEvent::DecisionRequired { .. }) => Err(ledger_error(
+            path,
+            "a question is asked while an earlier one of this step still stands",
+        )),
+        (
+            Some(DecisionState {
+                decision_id: current,
+                answered: false,
+            }),
+            SessionEvent::DecisionAnswered { decision_id, .. },
+        ) if current == decision_id => Ok(Some(DecisionState {
+            decision_id: decision_id.clone(),
+            answered: true,
+        })),
+        (_, SessionEvent::DecisionAnswered { .. }) => Err(ledger_error(
+            path,
+            "an answer must answer the unanswered question of its step",
+        )),
+        (
+            Some(DecisionState {
+                decision_id: current,
+                ..
+            }),
+            SessionEvent::DecisionWithdrawn { decision_id, .. },
+        ) if current == decision_id => Ok(None),
+        (_, SessionEvent::DecisionWithdrawn { .. }) => Err(ledger_error(
+            path,
+            "a withdrawal must name the standing question of its step",
+        )),
+        (
+            Some(DecisionState {
+                answered: false, ..
+            }),
+            _,
+        ) => Err(ledger_error(
+            path,
+            "a step cannot end while its question is unanswered",
+        )),
+        _ => Ok(decision.clone()),
+    }
+}
+
+fn is_decision_event(event: &SessionEvent) -> bool {
+    matches!(
+        event,
+        SessionEvent::DecisionRequired { .. }
+            | SessionEvent::DecisionAnswered { .. }
+            | SessionEvent::DecisionWithdrawn { .. }
+    )
+}
+
+fn event_step(event: &SessionEvent) -> Option<(&str, u32)> {
+    match event {
+        SessionEvent::Created(_) => None,
+        SessionEvent::StepStarted { step_id, attempt }
+        | SessionEvent::StepCompleted { step_id, attempt }
+        | SessionEvent::StepFailed {
+            step_id, attempt, ..
+        }
+        | SessionEvent::FreshCopyRequired {
+            step_id, attempt, ..
+        }
+        | SessionEvent::ArtifactLeftOut {
+            step_id, attempt, ..
+        }
+        | SessionEvent::DecisionRequired {
+            step_id, attempt, ..
+        }
+        | SessionEvent::DecisionAnswered {
+            step_id, attempt, ..
+        }
+        | SessionEvent::DecisionWithdrawn {
+            step_id, attempt, ..
+        } => Some((step_id, *attempt)),
     }
 }
 
@@ -898,6 +1102,19 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             path,
             "campaign is sealed as fresh-copy-required; no later progress is legal",
         ));
+    }
+    if is_decision_event(next) {
+        let own_step = replay
+            .unresolved
+            .as_ref()
+            .is_some_and(|(step, attempt)| event_step(next) == Some((step.as_str(), *attempt)));
+        if !own_step {
+            return Err(ledger_error(
+                path,
+                "a question event must belong to the unresolved step and attempt",
+            ));
+        }
+        return decision_transition(&replay.decision, next, path).map(|_| ());
     }
     if let (
         None,
@@ -934,7 +1151,9 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             | SessionEvent::ArtifactLeftOut {
                 step_id, attempt, ..
             },
-        ) if current_step == step_id && current_attempt == attempt => Ok(()),
+        ) if current_step == step_id && current_attempt == attempt => {
+            decision_transition(&replay.decision, next, path).map(|_| ())
+        }
         (Some(_), SessionEvent::StepStarted { .. }) => Err(ledger_error(
             path,
             "cannot start another step before reconciling the unresolved step",
@@ -960,18 +1179,26 @@ fn validate_transition(replay: &SessionReplay, next: &SessionEvent, path: &Path)
             "terminal step event does not match the unresolved step",
         )),
         (_, SessionEvent::Created(_)) => Err(ledger_error(path, "Created cannot be appended")),
+        (
+            _,
+            SessionEvent::DecisionRequired { .. }
+            | SessionEvent::DecisionAnswered { .. }
+            | SessionEvent::DecisionWithdrawn { .. },
+        ) => unreachable!("question events were checked above"),
     }
 }
 
 struct ReplayProgress {
     unresolved: Option<(String, u32)>,
     fresh_copy_required: Option<FreshCopySeal>,
+    decision: Option<DecisionState>,
 }
 
 fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<ReplayProgress> {
-    let mut unresolved = None;
+    let mut unresolved: Option<(String, u32)> = None;
     let mut fresh_copy_required = None;
     let mut last_failed = None;
+    let mut decision = None;
     for record in records.iter().skip(1) {
         if fresh_copy_required.is_some() {
             return Err(ledger_error(
@@ -980,6 +1207,23 @@ fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<ReplayProgre
             ));
         }
         validate_progress_event(&record.event, path)?;
+        if is_decision_event(&record.event) {
+            let own_step = unresolved.as_ref().is_some_and(|(step, attempt)| {
+                event_step(&record.event) == Some((step.as_str(), *attempt))
+            });
+            if !own_step {
+                return Err(ledger_error(
+                    path,
+                    "a question event does not belong to the unresolved step and attempt",
+                ));
+            }
+            decision = decision_transition(&decision, &record.event, path)?;
+            continue;
+        }
+        if unresolved.is_some() && !matches!(record.event, SessionEvent::StepStarted { .. }) {
+            decision_transition(&decision, &record.event, path)?;
+            decision = None;
+        }
         match &record.event {
             SessionEvent::StepStarted { step_id, attempt } => {
                 if unresolved.is_some() {
@@ -1049,11 +1293,17 @@ fn replay_progress(records: &[LedgerRecord], path: &Path) -> Result<ReplayProgre
             SessionEvent::Created(_) => {
                 return Err(ledger_error(path, "Created appears after record zero"));
             }
+            SessionEvent::DecisionRequired { .. }
+            | SessionEvent::DecisionAnswered { .. }
+            | SessionEvent::DecisionWithdrawn { .. } => {
+                unreachable!("question events were handled above")
+            }
         }
     }
     Ok(ReplayProgress {
         unresolved,
         fresh_copy_required,
+        decision,
     })
 }
 

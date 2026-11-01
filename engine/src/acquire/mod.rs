@@ -23,8 +23,8 @@ pub use archive::{
 };
 pub(crate) use cache::announce_and_wait_before_asking_again;
 pub use cache::{
-    served_length_limit, AcceptedContent, ArtifactCache, ServedArtifact, ServedRedirects,
-    ServedRules,
+    served_length_limit, AcceptedContent, ArtifactCache, AuthorizedContent, ServedArtifact,
+    ServedRedirects, ServedRules,
 };
 pub use damaged::CacheRepair;
 pub use http::validate_redirect_target;
@@ -222,6 +222,23 @@ pub enum AcquireError {
         hosts: Vec<String>,
         /// Those among `hosts` outside the link's own and its reviewed redirect hosts.
         unreviewed_hosts: Vec<String>,
+    },
+    /// A download authorized as exactly one changed file ([`ServedRules::authorized`]) served
+    /// another file. The refused file is not kept.
+    #[error(
+        "the download from `{url}` changed again: it is now {length} bytes with SHA-256 {sha256}, not the {authorized_length} bytes with SHA-256 {authorized_sha256} that were accepted"
+    )]
+    AuthorizedContentChanged {
+        /// The download's link.
+        url: String,
+        /// Length of the refused download.
+        length: u64,
+        /// Lowercase SHA-256 of the refused download.
+        sha256: String,
+        /// The accepted length.
+        authorized_length: u64,
+        /// The accepted lowercase SHA-256.
+        authorized_sha256: String,
     },
     /// A redirect omitted its target.
     #[error("redirect from `{url}` did not include a valid Location header")]

@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::decision::{Answer, AnswerSource, AnsweredDecision, QuestionKind, UnusableReason};
 use crate::games::{GameRole, Storefront};
 use crate::manifest::GameRoot;
 use crate::orchestrator::{ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter, StepFailure};
@@ -215,6 +216,93 @@ pub struct LeftOutReceipt {
     pub changed_runs: Vec<String>,
 }
 
+/// One answer to a question about a download ([`crate::decision`]).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DecisionReceipt {
+    /// The question's id.
+    pub decision_id: String,
+    /// Step that asked.
+    pub step_id: String,
+    /// Which question.
+    pub kind: QuestionKind,
+    /// Artifact the question was about.
+    pub artifact_id: String,
+    /// The answer.
+    pub answer: Answer,
+    /// Who gave it.
+    pub source: AnswerSource,
+    /// When the ledger recorded it, in Unix milliseconds.
+    pub answered_at: u64,
+    /// The file the link served, for a changed download or tool.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub served: Option<DownloadIdentity>,
+    /// Every host the served file came through.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hosts: Vec<String>,
+    /// Those hosts the recipe did not review.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unreviewed_hosts: Vec<String>,
+    /// Why the download could not be used, for an unusable download.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<UnusableReason>,
+    /// Runs no longer installed because the answer left the mod out.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed_runs: Vec<String>,
+    /// Runs installed with fewer parts because the answer left the mod out.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub changed_runs: Vec<String>,
+    /// The question was withdrawn after this answer, because the situation it asked about no
+    /// longer held; the answer had no effect.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub withdrawn: bool,
+}
+
+impl From<&AnsweredDecision> for DecisionReceipt {
+    fn from(decision: &AnsweredDecision) -> Self {
+        let question = &decision.question;
+        let served = question.served.as_ref();
+        let closure = question
+            .leave_out
+            .as_ref()
+            .filter(|_| question.leaves_out(decision.answer.answer));
+        Self {
+            decision_id: decision.decision_id.clone(),
+            step_id: decision.step_id.clone(),
+            kind: question.kind,
+            artifact_id: question.artifact_id.clone(),
+            answer: decision.answer.answer,
+            source: decision.answer.source,
+            answered_at: decision.answer.answered_at,
+            served: served.map(|served| DownloadIdentity {
+                filename: served.filename.clone(),
+                length: served.length,
+                sha256: served.sha256.clone(),
+            }),
+            hosts: served
+                .map(|served| served.hosts.clone())
+                .unwrap_or_default(),
+            unreviewed_hosts: served
+                .map(|served| served.unreviewed_hosts.clone())
+                .unwrap_or_default(),
+            reason: question.reason.clone(),
+            removed_runs: closure
+                .map(|closure| closure.removed_runs.clone())
+                .unwrap_or_default(),
+            changed_runs: closure
+                .map(|closure| {
+                    closure
+                        .changed_runs
+                        .iter()
+                        .map(|run| run.run_id.clone())
+                        .collect()
+                })
+                .unwrap_or_default(),
+            withdrawn: decision.withdrawn,
+        }
+    }
+}
+
 /// One output-gated prompt observed during a WeiDU run.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -389,6 +477,10 @@ pub struct InstallReceipt {
     /// The plan actually installed when mods were left out. Absent means [`Self::plan`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub installed_plan: Option<InstallPlan>,
+    /// Every answer to a question about a download, in ledger order, earlier "No" answers
+    /// included. Absent when nothing was asked, so such a receipt is unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub decisions: Vec<DecisionReceipt>,
 }
 
 impl InstallReceipt {
@@ -597,6 +689,7 @@ impl ManagedReceiptWriter {
                 })
                 .collect(),
             installed_plan: draft.installed_plan.clone(),
+            decisions: draft.decisions.iter().map(DecisionReceipt::from).collect(),
         };
         let published = self.store.publish(&receipt)?;
         let Some(final_state) = final_state else {

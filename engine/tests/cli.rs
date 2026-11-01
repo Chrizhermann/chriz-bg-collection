@@ -49,6 +49,9 @@ struct Answer {
     body: Vec<u8>,
     /// The announced length; `None` announces the body's.
     announced: Option<u64>,
+    /// A path on this server under the host name `localhost`, which a recipe never reviews, to
+    /// redirect to.
+    elsewhere: Option<&'static str>,
 }
 
 impl Answer {
@@ -57,6 +60,7 @@ impl Answer {
             status: "200 OK",
             body,
             announced: None,
+            elsewhere: None,
         }
     }
 
@@ -65,6 +69,7 @@ impl Answer {
             status,
             body: Vec::new(),
             announced: None,
+            elsewhere: None,
         }
     }
 }
@@ -193,9 +198,13 @@ Connection: close
             answer
         })
         .unwrap_or_else(|| Answer::status("404 Not Found"));
+    let location = answer.elsewhere.map_or_else(String::new, |path| {
+        let port = stream.local_addr().expect("artifact server address").port();
+        format!("Location: http://localhost:{port}{path}\r\n")
+    });
     write!(
         stream,
-        "HTTP/1.1 {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {}\r\n{location}Content-Length: {}\r\nConnection: close\r\n\r\n",
         answer.status,
         answer.announced.unwrap_or(answer.body.len() as u64)
     )
@@ -360,6 +369,19 @@ fn install_args<'a>(
         cache.to_str().unwrap(),
     ]
 }
+
+/// `args` with a preset `--answer` for each of `answers`, as tests and automation give them.
+fn answering<'a>(mut args: Vec<&'a str>, answers: &[&'a str]) -> Vec<&'a str> {
+    for answer in answers {
+        args.extend(["--answer", answer]);
+    }
+    args
+}
+
+/// Installs a changed download, as the player's "Install it" does.
+const INSTALL_CHANGED: &str = "changed-download=yes";
+/// Continues without a mod whose download cannot be used, as "Continue without them" does.
+const CONTINUE_WITHOUT: &str = "unusable-download=yes";
 
 fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
     InstallCommandRequest {
@@ -1022,6 +1044,8 @@ fn help_exposes_the_complete_safe_command_surface_without_bypasses() {
         "resume",
         "report",
         "diagnostics",
+        "check-decision",
+        "decide",
     ] {
         assert!(text.contains(command), "missing {command} in:\n{text}");
     }
@@ -2161,10 +2185,21 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
             "left_out",
             "installed_plan",
             "\"reviewed\"",
+            "decisions",
         ] {
             assert!(!text.contains(field), "{field} in {text}");
         }
     }
+    // Nothing was asked: no answer was stored, and the ledger holds no question.
+    assert!(!evidence.join("decisions").exists());
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert!(!replay.records.iter().any(|record| matches!(
+        record.event,
+        bg_engine::session::SessionEvent::DecisionRequired { .. }
+    )));
     assert_eq!(receipt.schema_version, RECEIPT_SCHEMA_VERSION);
     assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
     assert_eq!(receipt.versions.recipe, "0.1.0-alpha.2");
@@ -2849,12 +2884,15 @@ fn a_changed_download_is_installed_recorded_and_kept_when_the_installation_resum
             "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
             "materialize:materialize:eefixpack:bg1",
         )
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED],
         ))
         .output()
         .expect("start the installation");
@@ -2942,10 +2980,19 @@ fn a_changed_download_is_installed_recorded_and_kept_when_the_installation_resum
     assert_eq!(
         report_json(&fixture)["notes"],
         serde_json::json!([
-            "Installed a newer or different download than the reviewed version: EE Fixpack.",
+            "You chose to install a newer download of EE Fixpack (eefixpack.zip).",
             "If something does not work as expected, please report it so the collection can be fixed."
         ])
     );
+    let decisions = &receipt.decisions;
+    assert_eq!(decisions.len(), 1, "{decisions:#?}");
+    assert_eq!(decisions[0].step_id, "acquire:eefixpack");
+    assert_eq!(decisions[0].answer, bg_engine::decision::Answer::Yes);
+    assert_eq!(
+        decisions[0].source,
+        bg_engine::decision::AnswerSource::Preset
+    );
+    assert_eq!(decisions[0].served, Some(difference.served.clone()));
 }
 
 /// Adds Snowytoes, a second mod from its own download, to the executable fixture's recipe.
@@ -3037,12 +3084,15 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     let failed = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[CONTINUE_WITHOUT],
         ))
         .output()
         .expect("start the installation");
@@ -3081,7 +3131,7 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     assert_eq!(
         summary,
         [
-            "Left out: Snowytoes. Its download could not be used.",
+            "You chose to continue without Snowytoes (the newer download is packed in a way it can't use).",
             "If something does not work as expected, please report it so the collection can be fixed."
         ],
         "{printed}"
@@ -3127,7 +3177,18 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     let report = report_json(&fixture);
     assert_eq!(
         report["notes"][0],
-        "Left out: Snowytoes. Its download could not be used."
+        "You chose to continue without Snowytoes (the newer download is packed in a way it can't use)."
+    );
+    let decision = &receipt.decisions[..];
+    assert_eq!(decision.len(), 1, "{decision:#?}");
+    assert_eq!(
+        decision[0].kind,
+        bg_engine::decision::QuestionKind::UnusableDownload
+    );
+    assert_eq!(decision[0].removed_runs, ["snowytoes-bg2"]);
+    assert_eq!(
+        decision[0].reason.as_ref().map(|reason| &reason.detail),
+        Some(&snowytoes.reason)
     );
 }
 
@@ -3143,14 +3204,16 @@ const NO_RETRY_WAIT: &str = "CHRIZ_BG_COLLECTION_TEST_NO_RETRY_WAIT";
 fn a_mod_whose_link_serves_no_archive_is_left_out_after_every_attempt() {
     let page =
         b"<!DOCTYPE html>\n<html><body>This download is not available right now.</body></html>\n";
-    for (served, reason) in [
+    for (served, reason, short) in [
         (
             Some(page.to_vec()),
             "its official link does not serve the archive (it does not begin like a ZIP archive but with the text \"<!DOCTYPE html> <html><body>This\"), and still did not on the last of 5 attempts; the last answer came from 127.0.0.1",
+            "its link no longer serves the archive",
         ),
         (
             None,
             "its official link answers HTTP 404 (no such file) from 127.0.0.1, and still did on the last of 5 attempts",
+            "its link no longer has the file",
         ),
     ] {
         let fixture = executable_fixture();
@@ -3169,12 +3232,15 @@ fn a_mod_whose_link_serves_no_archive_is_left_out_after_every_attempt() {
         let output = executable_command(&fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env(NO_RETRY_WAIT, "1")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3211,7 +3277,7 @@ fn a_mod_whose_link_serves_no_archive_is_left_out_after_every_attempt() {
         assert_eq!(
             report_json(&fixture)["notes"],
             serde_json::json!([
-                "Left out: Snowytoes. Its download could not be used.",
+                format!("You chose to continue without Snowytoes ({short})."),
                 "If something does not work as expected, please report it so the collection can be fixed."
             ])
         );
@@ -3251,12 +3317,15 @@ fn a_changed_archive_that_would_overwrite_another_mods_file_is_left_out() {
     let failed = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED, CONTINUE_WITHOUT],
         ))
         .output()
         .expect("start the installation");
@@ -3357,12 +3426,15 @@ fn a_changed_archive_that_meets_a_file_or_folder_of_another_mod_is_left_out() {
 
         let output = executable_command(&fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[INSTALL_CHANGED, CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3429,12 +3501,15 @@ fn an_interrupted_placing_of_a_changed_archive_stays_sealed_when_its_file_change
             "CHRIZ_BG_COLLECTION_TEST_INTERRUPT_PUBLICATION",
             "snowytoes",
         )
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED],
         ))
         .output()
         .expect("start the installation");
@@ -3506,12 +3581,15 @@ fn an_interrupted_record_that_a_placing_step_begins_leaves_the_step_to_begin_aga
         let interrupted = executable_command(fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD", "publications")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[INSTALL_CHANGED],
             ))
             .output()
             .expect("start the installation");
@@ -3542,7 +3620,13 @@ fn an_interrupted_record_that_a_placing_step_begins_leaves_the_step_to_begin_aga
     };
     let resume = |fixture: &ExecutableFixture| {
         let resumed = executable_command(fixture)
-            .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+            .args([
+                "--json",
+                "resume",
+                fixture.managed.to_str().unwrap(),
+                "--answer",
+                CONTINUE_WITHOUT,
+            ])
             .output()
             .expect("resume the installation");
         assert!(
@@ -3672,12 +3756,15 @@ fn a_damaged_changed_archive_is_asked_for_again_and_left_out_only_when_it_stays_
         let output = executable_command(fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env(NO_RETRY_WAIT, "1")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[INSTALL_CHANGED, CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3814,6 +3901,7 @@ fn a_mod_whose_link_is_gone_or_serves_too_much_is_left_out() {
                 status: "200 OK",
                 body: Vec::new(),
                 announced: Some(limit + 1),
+                elsewhere: None,
             },
             format!(
                 "its official link now serves a download of at least {} bytes, more than the {limit} bytes the installer accepts for a changed download",
@@ -3838,12 +3926,15 @@ fn a_mod_whose_link_is_gone_or_serves_too_much_is_left_out() {
         let output = executable_command(&fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env(NO_RETRY_WAIT, "1")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3887,12 +3978,15 @@ fn a_changed_weidu_download_is_checked_used_and_recorded() {
 
     let output = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED],
         ))
         .output()
         .expect("run the installation");
@@ -3939,7 +4033,7 @@ fn a_changed_weidu_download_is_checked_used_and_recorded() {
     assert_eq!(
         report_json(&fixture)["notes"],
         serde_json::json!([
-            "Used a newer or different installer tool than the reviewed version: WeiDU (WeiDU 24900).",
+            "You chose to install a newer download of WeiDU (weidu.zip).",
             "If something does not work as expected, please report it so the collection can be fixed."
         ])
     );

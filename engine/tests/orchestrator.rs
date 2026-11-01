@@ -2,18 +2,22 @@ use std::collections::{BTreeMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use bg_engine::decision::{
+    Answer, AnswerSource, PendingDecision, Question, QuestionKind, ServedDownload, UnusableKind,
+    UnusableReason,
+};
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink, StepOutcome};
 use bg_engine::games::GameRole;
 use bg_engine::lock::{LockError, TargetLock};
 use bg_engine::manifest::{GameRoot, Phase, Postcondition, RunArg};
 use bg_engine::orchestrator::{
-    run_campaign, run_campaign_controlled, AcquisitionOutcome, ArtifactAcquirer, ArtifactKind,
-    ArtifactMaterializer, BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight,
-    CampaignRecorder, CampaignRequest, InstallLogVerifier, InstallReconciliation,
-    InvocationBuilder, LeftOutArtifact, MaterializationOutcome, MaterializationTask, MutationCheck,
-    MutationKind, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter,
-    StagingService, StepAttempt, StepFailure,
+    run_campaign, run_campaign_controlled, AcquisitionOutcome, AnsweredAcquisition,
+    ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation, CampaignClock,
+    CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest, InstallLogVerifier,
+    InstallReconciliation, InvocationBuilder, LeftOutArtifact, MaterializationOutcome,
+    MaterializationTask, MutationCheck, MutationKind, ProcessResult, ProcessRunner, ReceiptDraft,
+    ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt, StepFailure,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -214,6 +218,20 @@ struct FakeDeps {
     checkpoint_plans: Vec<InstallPlan>,
     /// The plan final verification received.
     verified_plans: Vec<InstallPlan>,
+    /// Answers this run gives to questions, by kind, as a preset or as the player.
+    answers: BTreeMap<QuestionKind, (Answer, AnswerSource)>,
+    /// How often the campaign asked for an answer.
+    answer_requests: usize,
+    /// Payloads or tools whose link serves a changed file that passed every check.
+    changed: BTreeMap<String, ServedDownload>,
+    /// Tools whose changed file came from a host the recipe did not review.
+    unreviewed: BTreeMap<String, ServedDownload>,
+    /// What applying "install it" finds, in turn; `Accepted` once they are used up.
+    answered_results: VecDeque<AnsweredAcquisition>,
+    /// Every "install it" applied, by artifact id.
+    answered_calls: Vec<String>,
+    /// The link keeps serving the changed file even after "install it" was applied.
+    keep_changed: bool,
 }
 
 impl CampaignRecorder for FakeDeps {
@@ -271,12 +289,62 @@ impl ArtifactAcquirer for FakeDeps {
             self.controls.as_ref().unwrap().pause_after_boundary();
         }
         self.maybe_fail(&operation)?;
+        // Once "install it" was applied, as after a withdrawal, the reviewed file is there,
+        // unless the link keeps serving the changed one.
+        if self.answered_calls.contains(&identity.id) && !self.keep_changed {
+            return Ok(AcquisitionOutcome::Ready);
+        }
+        if let Some(served) = self.changed.get(&identity.id) {
+            return Ok(AcquisitionOutcome::Ask {
+                kind: QuestionKind::ChangedDownload,
+                served: served.clone(),
+            });
+        }
+        if let Some(served) = self.unreviewed.get(&identity.id) {
+            return Ok(AcquisitionOutcome::Ask {
+                kind: QuestionKind::UnreviewedTool,
+                served: served.clone(),
+            });
+        }
         Ok(match self.leave_out.get(&identity.id) {
             Some(reason) => AcquisitionOutcome::LeaveOut {
-                reason: reason.clone(),
+                reason: UnusableReason::new(
+                    UnusableKind::Layout {
+                        message: reason.clone(),
+                    },
+                    reason.clone(),
+                ),
             },
             None => AcquisitionOutcome::Ready,
         })
+    }
+
+    fn artifact_name(&self, artifact_id: &str) -> String {
+        format!("The {artifact_id} mod")
+    }
+
+    fn decision_answer(
+        &mut self,
+        decision: &PendingDecision,
+    ) -> Result<Option<(Answer, AnswerSource)>, StepFailure> {
+        self.trace.push(format!("answer?:{}", decision.decision_id));
+        self.answer_requests += 1;
+        Ok(self.answers.get(&decision.question.kind).copied())
+    }
+
+    fn acquire_answered(
+        &mut self,
+        identity: &FrozenIdentity,
+        _kind: ArtifactKind,
+        question: &Question,
+    ) -> Result<AnsweredAcquisition, StepFailure> {
+        assert_eq!(identity, &question.reviewed);
+        self.trace.push(format!("install-anyway:{}", identity.id));
+        self.answered_calls.push(identity.id.clone());
+        Ok(self
+            .answered_results
+            .pop_front()
+            .unwrap_or(AnsweredAcquisition::Accepted))
     }
 
     fn plan_without(
@@ -359,7 +427,13 @@ impl ArtifactMaterializer for FakeDeps {
         self.maybe_fail(&operation)?;
         if let Some(reason) = self.unplaceable.get(&operation) {
             return Ok(MaterializationOutcome::LeaveOut {
-                reason: reason.clone(),
+                reason: UnusableReason::new(
+                    UnusableKind::Collision {
+                        path: "Shared/file.txt".to_owned(),
+                        message: reason.clone(),
+                    },
+                    reason.clone(),
+                ),
             });
         }
         Ok(self
@@ -1566,9 +1640,19 @@ fn eefix_recipe_deps() -> FakeDeps {
     }
 }
 
+/// A preset answer for this run that continues without a mod whose download cannot be used,
+/// as `--answer unusable-download=yes` gives it.
+fn continue_without() -> BTreeMap<QuestionKind, (Answer, AnswerSource)> {
+    BTreeMap::from([(
+        QuestionKind::UnusableDownload,
+        (Answer::Yes, AnswerSource::Preset),
+    )])
+}
+
 fn eefix_unusable_deps() -> FakeDeps {
     FakeDeps {
         leave_out: BTreeMap::from([("eefix".to_owned(), LAYOUT_CHANGED.to_owned())]),
+        answers: continue_without(),
         ..eefix_recipe_deps()
     }
 }
@@ -1777,6 +1861,7 @@ fn a_changed_archive_that_cannot_be_placed_is_left_out_while_none_of_its_files_a
         unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
         pause_after_operation: Some("materialize:eefix:bg1".to_owned()),
         controls: Some(controls.clone()),
+        answers: continue_without(),
         ..eefix_recipe_deps()
     };
 
@@ -1954,10 +2039,15 @@ fn a_tool_whose_download_cannot_be_used_is_never_left_out() {
     };
     assert_eq!(step_id, "acquire:weidu");
     assert!(
-        reason.contains("cannot continue without this tool"),
+        reason.starts_with(
+            "The weidu mod can't be installed (the newer download is packed in a way it can't use), and the collection can't be installed without it. Try again later; if it keeps happening, please report it.\n"
+        ),
         "{reason}"
     );
+    assert!(reason.ends_with("its program does not run"), "{reason}");
     assert!(deps.plan_without_calls.is_empty());
+    // A tool is never a question.
+    assert_eq!(deps.answer_requests, 0);
 }
 
 #[test]

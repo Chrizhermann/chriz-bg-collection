@@ -314,6 +314,7 @@ impl Fixture {
             final_state: Some(final_state.clone()),
             left_out: Vec::new(),
             installed_plan: None,
+            decisions: Vec::new(),
         };
         let receipt_bytes = serde_json::to_vec_pretty(&receipt).unwrap();
         fs::write(root.join(".chriz/install-receipt.json"), &receipt_bytes).unwrap();

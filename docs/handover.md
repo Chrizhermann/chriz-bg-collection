@@ -2,6 +2,18 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 2 — questions about changed or unusable downloads, engine and CLI (draft)
+
+Stacked on PR 69 (`claude/drift-dialogs`). The installer no longer decides silently: a
+changed download that passed every check, a mod whose download cannot be used (with the mods
+that need it), and a changed installer tool from a host the recipe did not review each stop
+the installation with a question recorded in the ledger (`DecisionRequired`). `check-decision`
+shows it with its English texts and token, `decide` stores the answer once under the target
+lock, and `resume` records and applies it. `--answer <question>=<answer>` on `install` and
+`resume` answers for one run, for tests and automation. Parts the collection cannot do without
+and tools still stop without a question. The app does not show the questions yet: an app build
+from this branch reports a waiting installation as failed until the dialog phase lands.
+
 ## November 1 — download drift fixes (PR 69)
 
 Campaigns started with a build of PR 69 from before ba32684 are unsupported: those builds

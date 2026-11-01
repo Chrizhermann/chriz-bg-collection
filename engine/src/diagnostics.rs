@@ -266,6 +266,27 @@ fn select_entries(
         }
     }
 
+    // Answers to questions about downloads; the questions themselves are in the ledger.
+    let decisions = state_root.join("evidence").join("decisions");
+    if decisions.exists() {
+        validate_direct_directory(&decisions)?;
+        for entry in read_directory(&decisions)? {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let is_answer = name
+                .strip_suffix(".json")
+                .is_some_and(crate::decision::is_decision_id);
+            if !is_answer {
+                continue;
+            }
+            add_optional(
+                &mut selected,
+                entry.path(),
+                &format!("evidence/decisions/{name}"),
+                false,
+            )?;
+        }
+    }
+
     Ok(selected.into_values().collect())
 }
 
