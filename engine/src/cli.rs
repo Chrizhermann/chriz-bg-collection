@@ -3302,6 +3302,7 @@ fn archive_content_error(error: &crate::acquire::AcquireError) -> bool {
         crate::acquire::AcquireError::ArchiveFormat { .. }
             | crate::acquire::AcquireError::UnsafeArchiveEntry { .. }
             | crate::acquire::AcquireError::ArchiveLimitExceeded(_)
+            | crate::acquire::AcquireError::CorruptArchiveData { .. }
             | crate::acquire::AcquireError::ArchiveLayout(_)
             | crate::acquire::AcquireError::PublicArchiveRejected(_)
     )
@@ -5362,9 +5363,10 @@ mod tests {
     use crate::Manifest;
 
     use super::{
-        install_interrupt_handler_with, non_prefix_component_diagnostic,
-        retain_first_acquisition_receipt, select_terminal_evidence, selection_choices,
-        stack_disturbed_reconciliation, validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource,
+        archive_content_error, download_unavailable, install_interrupt_handler_with,
+        non_prefix_component_diagnostic, retain_first_acquisition_receipt,
+        select_terminal_evidence, selection_choices, stack_disturbed_reconciliation,
+        validate_frozen_cli_recipe, AcquireError, FrozenCliRecipe, FrozenSource,
         InstallReconciliation, LaterAcquisition, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
     };
 
@@ -5877,6 +5879,30 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// A failure of this computer while a changed archive is unpacked, such as a full disk,
+    /// stops the step so that a resume tries again; only the archive's own content, damaged data
+    /// included, makes a changed download unusable.
+    #[test]
+    fn local_unpacking_failures_never_make_a_changed_archive_unusable() {
+        for source in [
+            std::io::Error::from(std::io::ErrorKind::StorageFull),
+            std::io::Error::other("UnRAR code 15"),
+        ] {
+            assert!(!archive_content_error(&AcquireError::Io {
+                action: "write extracted RAR file",
+                path: PathBuf::from("mod/data.bin"),
+                source,
+            }));
+        }
+        assert!(archive_content_error(&AcquireError::CorruptArchiveData {
+            entry: "mod/data.bin".to_owned(),
+            message: "Invalid checksum".to_owned(),
+        }));
+        assert!(!download_unavailable(&AcquireError::StoppedWhileChecking {
+            path: PathBuf::from("snowytoes.part"),
+        }));
     }
 
     #[test]
