@@ -116,9 +116,10 @@ Run the release check and keep its output in the release's acceptance record:
 $env:GH_TOKEN = (gh auth token --user Chrizhermann); python -I tools/own_mod_pins.py check --release
 ```
 
-CI runs the release check by itself on every change of the app version or a recipe's
-`release.json` version. Each of our mods must be on its newest release in every installer
-that ships it, or held with Christopher's reason.
+CI runs the release check by itself on every pull request that changes the app version or
+a recipe's `release.json` version. Each of our mods must be on its newest release in every
+installer that ships it, or held with Christopher's reason. A push without a pull request
+gets the status check only.
 
 ## Preparing a pin
 
