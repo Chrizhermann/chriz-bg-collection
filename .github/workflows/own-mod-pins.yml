@@ -2,8 +2,8 @@ name: Own mod pins
 
 # Every installer pins the same, newest release of our own mods, unless a recorded hold in
 # manifest/own-mods.toml says why not (docs/own-mod-pins.md). Red when installers disagree,
-# when a change pins one of our mods but not its newest release, and in a release check;
-# otherwise a newer release only shows as a warning.
+# when a pull request pins one of our mods but not its newest release, and in a release
+# check; otherwise a newer release only shows as a warning.
 on:
   push:
   pull_request:
@@ -37,25 +37,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Fetch the base of this change
+      # A pull request is checked on the merge of its change into its base, so comparing
+      # with the base finds exactly the pins and versions it changes. A push has no such
+      # base: after a branch merges its base branch, comparing with the previous tip would
+      # count the base branch's changes as the push's own. A push gets the status check.
+      - name: Fetch the base of this pull request
         id: base
+        if: github.event_name == 'pull_request'
         env:
-          EVENT: ${{ github.event_name }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
-          BEFORE: ${{ github.event.before }}
         run: |
-          base=""
-          if [ "$EVENT" = "pull_request" ]; then
-            base="$PR_BASE"
-          elif [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
-            base="$BEFORE"
-          fi
-          if [ -n "$base" ]; then
-            if git fetch --no-tags --quiet --depth=1 origin "$base"; then
-              echo "sha=$base" >> "$GITHUB_OUTPUT"
-            else
-              echo "::warning title=Own mod pins::Could not fetch the base $base, so no pin counts as changed by this push."
-            fi
+          if git fetch --no-tags --quiet --depth=1 origin "$PR_BASE"; then
+            echo "sha=$PR_BASE" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning title=Own mod pins::Could not fetch the base $PR_BASE, so no pin counts as changed by this pull request."
           fi
 
       - name: Check the pins of our own mods
