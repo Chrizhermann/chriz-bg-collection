@@ -4083,45 +4083,56 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         )
     }
 
-    fn run_attempt_path(&self, run_id: &str, attempt: u32) -> Result<PathBuf, StepFailure> {
+    /// The folder of the attempt records of `run_id`: every folder on the way a direct folder
+    /// of this installation ([`contained_evidence_directory`]); `None` without `create` when it
+    /// does not exist.
+    fn run_evidence_directory(
+        &self,
+        run_id: &str,
+        create: bool,
+    ) -> Result<Option<PathBuf>, StepFailure> {
         validate_cli_identifier(run_id, "run id").map_err(StepFailure::new)?;
+        contained_evidence_directory(
+            &self.created.managed_root,
+            &Path::new("runs").join(run_id),
+            create,
+        )
+        .map_err(StepFailure::new)
+    }
+
+    fn run_attempt_path(&self, run_id: &str, attempt: u32) -> Result<PathBuf, StepFailure> {
         if attempt == 0 {
             return Err(StepFailure::new("run attempt number must be positive"));
         }
-        let directory = self.evidence_root().join("runs").join(run_id);
-        ensure_directories(&directory)?;
+        let directory = self
+            .run_evidence_directory(run_id, true)?
+            .ok_or_else(|| StepFailure::new("the installation has no state folder"))?;
         Ok(directory.join(format!("attempt-{attempt:04}.json")))
     }
 
+    /// Records one WeiDU attempt once, complete or not at all and only inside this
+    /// installation's evidence ([`publish_contained_json`]).
     fn persist_run_attempt(
         &self,
         run_id: &str,
         receipt: &RunAttemptReceipt,
     ) -> Result<(), StepFailure> {
-        write_json_once(&self.run_attempt_path(run_id, receipt.attempt)?, receipt)
+        publish_contained_json(
+            &self.run_attempt_path(run_id, receipt.attempt)?,
+            receipt,
+            &self.evidence_root(),
+        )
     }
 
     fn load_run_receipt(&self, run: &PlannedRun) -> Result<RunReceipt, StepFailure> {
-        validate_cli_identifier(&run.run_id, "run id").map_err(StepFailure::new)?;
-        let directory = self.evidence_root().join("runs").join(&run.run_id);
-        let metadata = match fs::symlink_metadata(&directory) {
-            Ok(metadata) => metadata,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(RunReceipt {
-                    run_id: run.run_id.clone(),
-                    target: run.target,
-                    components: run.components.clone(),
-                    attempts: Vec::new(),
-                })
-            }
-            Err(error) => return Err(step_error(error)),
+        let Some(directory) = self.run_evidence_directory(&run.run_id, false)? else {
+            return Ok(RunReceipt {
+                run_id: run.run_id.clone(),
+                target: run.target,
+                components: run.components.clone(),
+                attempts: Vec::new(),
+            });
         };
-        if metadata.file_type().is_symlink() || !metadata.is_dir() {
-            return Err(StepFailure::new(format!(
-                "run evidence path is not a direct directory: {}",
-                directory.display()
-            )));
-        }
         let mut paths = fs::read_dir(&directory)
             .map_err(step_error)?
             .map(|entry| entry.map(|entry| entry.path()).map_err(step_error))
@@ -4135,13 +4146,21 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                     path.display()
                 )));
             };
+            // The temporary file of a record whose writing was interrupted; nothing reads it.
+            if name.starts_with(".tmp") {
+                continue;
+            }
             if !name.starts_with("attempt-") || !name.ends_with(".json") {
                 return Err(StepFailure::new(format!(
                     "unexpected run evidence file: {}",
                     path.display()
                 )));
             }
-            attempts.push(read_required_json(&path)?);
+            attempts.push(
+                read_contained_json(&path, &self.evidence_root())?.ok_or_else(|| {
+                    StepFailure::new(format!("{} disappeared while it was read", path.display()))
+                })?,
+            );
         }
         Ok(RunReceipt {
             run_id: run.run_id.clone(),

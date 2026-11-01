@@ -6475,3 +6475,96 @@ fn an_answer_whose_recorded_file_is_installed_after_a_failed_recovery_took_effec
         ])
     );
 }
+
+/// The records of WeiDU attempts are read and written only inside the installation: an
+/// `evidence/runs` folder that is a junction to a copy elsewhere stops the resume instead of
+/// being followed.
+#[cfg(windows)]
+#[test]
+fn run_attempt_records_are_never_followed_through_a_junction() {
+    let fixture = executable_fixture();
+    let stopped = executable_command(&fixture)
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            "invocation-build:install:eefixpack-bg2",
+        )
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .unwrap();
+    assert_eq!(stopped.status.code(), Some(1), "{}", stdout(&stopped));
+    let runs = fixture.managed.join(".chriz/evidence/runs");
+    assert!(runs.join("eefixpack-bg1/attempt-0001.json").is_file());
+    let elsewhere = fixture._temp.path().join("elsewhere-runs");
+    fs::rename(&runs, &elsewhere).unwrap();
+    let linked = Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(&runs)
+        .arg(&elsewhere)
+        .output()
+        .unwrap();
+    assert!(linked.status.success(), "{}", stderr(&linked));
+
+    let (code, resumed) = resume_answering(&fixture, None, &[]);
+
+    assert_eq!(code, Some(1), "{resumed:#}");
+    assert!(
+        resumed
+            .to_string()
+            .contains("is not a direct folder of this installation"),
+        "{resumed:#}"
+    );
+    assert!(!elsewhere.join("eefixpack-bg2").exists());
+    assert!(!fixture.managed.join(".chriz/install-receipt.json").exists());
+}
+
+/// A WeiDU attempt record is written complete or not at all: an installation interrupted while
+/// it writes one leaves only a temporary file, and the resume completes.
+#[cfg(windows)]
+#[test]
+fn an_interrupted_run_attempt_record_leaves_the_installation_resumable() {
+    let fixture = executable_fixture();
+    let interrupted = executable_command(&fixture)
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD", "eefixpack-bg1")
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .unwrap();
+    assert_eq!(
+        interrupted.status.code(),
+        Some(1),
+        "{}",
+        stdout(&interrupted)
+    );
+    let records = fixture.managed.join(".chriz/evidence/runs/eefixpack-bg1");
+    let left_behind = files(&records);
+    assert!(
+        !left_behind.is_empty()
+            && left_behind.iter().all(|path| path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                != Some("json")),
+        "{left_behind:?}"
+    );
+
+    let (code, finished) = resume_answering(&fixture, None, &[]);
+
+    assert_eq!(code, Some(0), "{finished:#}");
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert!(receipt
+        .runs
+        .iter()
+        .find(|run| run.run_id == "eefixpack-bg1")
+        .is_some_and(|run| !run.attempts.is_empty()));
+}
