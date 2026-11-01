@@ -23,7 +23,7 @@ const EXTRACTION_CACHE_NAMESPACE: &str = "sha256-v3";
 static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Resource limits applied before any archive entry is written.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct ArchiveLimits {
     /// Maximum number of path components in one entry.
     pub max_depth: usize,
@@ -37,15 +37,20 @@ pub struct ArchiveLimits {
     pub max_compression_ratio: u64,
 }
 
+impl ArchiveLimits {
+    /// The general limits, which [`Default`] gives.
+    pub const GENERAL: Self = Self {
+        max_depth: 32,
+        max_entries: 100_000,
+        max_entry_uncompressed_bytes: 2 * 1024 * 1024 * 1024,
+        max_total_uncompressed_bytes: 8 * 1024 * 1024 * 1024,
+        max_compression_ratio: 1_000,
+    };
+}
+
 impl Default for ArchiveLimits {
     fn default() -> Self {
-        Self {
-            max_depth: 32,
-            max_entries: 100_000,
-            max_entry_uncompressed_bytes: 2 * 1024 * 1024 * 1024,
-            max_total_uncompressed_bytes: 8 * 1024 * 1024 * 1024,
-            max_compression_ratio: 1_000,
-        }
+        Self::GENERAL
     }
 }
 
@@ -284,9 +289,18 @@ pub fn extract_served_archive(
 ///
 /// Both checks are the ones unpacking would fail first, so a file refused here could never be
 /// installed, while asking the link again may still give the real archive.
+///
+/// A self-extracting RAR archive is test-read file by file, but only within `limits`, the
+/// limits it would be unpacked with: before a file's data is read, its announced size, the
+/// running total and its compression ratio must fit them, and the test never reads more than
+/// they allow. An archive beyond them is left to unpacking, which refuses it without reading
+/// any file's data. `stop` ends the test ([`AcquireError::StoppedWhileChecking`]), and a
+/// failure to read the file here is this computer's ([`AcquireError::Io`]).
 pub(super) fn served_container_problem(
     path: &Path,
     format: ArchiveFormat,
+    limits: &ArchiveLimits,
+    stop: &StopSignal,
 ) -> Result<Option<String>, AcquireError> {
     let mut start = [0_u8; 32];
     let mut length = 0;
@@ -347,7 +361,7 @@ pub(super) fn served_container_problem(
                 )));
             }
             drop(file);
-            Ok(rar_container_problem(path))
+            rar_container_problem(path, limits, stop)
         }
     }
 }
@@ -381,35 +395,102 @@ fn describe_start(start: &[u8]) -> String {
     format!("the bytes {}", bytes.join(" "))
 }
 
-/// Entries tested before the check of a RAR archive gives up and leaves the rest to
-/// unpacking, which bounds the entry count itself.
+/// An open UnRAR archive, closed when dropped.
 #[cfg(windows)]
-const MAX_RAR_FRAMING_HEADERS: usize = 10_000_000;
+struct RarHandle(*const unrar_sys::Handle);
+
+#[cfg(windows)]
+impl Drop for RarHandle {
+    fn drop(&mut self) {
+        unsafe { unrar_sys::RARCloseArchive(self.0) };
+    }
+}
+
+/// Opens `path` with UnRAR. The handle is closed when the result is dropped, also when UnRAR
+/// returns one for a file it then finds is no archive: an unclosed handle would keep the file
+/// open, so it could not be removed. `Err` carries UnRAR's open result.
+#[cfg(windows)]
+fn open_rar(path: &Path, mode: u32) -> Result<(RarHandle, unrar_sys::OpenArchiveDataEx), u32> {
+    let path = WideCString::from_os_str(path).map_err(|_| unrar_sys::ERAR_EOPEN as u32)?;
+    let mut open = unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), mode);
+    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
+    if handle.is_null() {
+        return Err(open.open_result);
+    }
+    let handle = RarHandle(handle);
+    if open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
+        return Err(open.open_result);
+    }
+    Ok((handle, open))
+}
+
+/// [`open_rar`] for unpacking: a file that UnRAR cannot open as an archive is refused as such,
+/// while a failure of this computer stays an I/O error, so that the step stops for a retry.
+#[cfg(windows)]
+fn open_rar_archive(
+    archive_path: &Path,
+    mode: u32,
+) -> Result<(RarHandle, unrar_sys::OpenArchiveDataEx), AcquireError> {
+    open_rar(archive_path, mode).map_err(|code| {
+        if rar_local_failure(code.into()) {
+            rar_local_error("open archive with UnRAR", archive_path, code.into())
+        } else {
+            AcquireError::ArchiveFormat {
+                path: archive_path.to_path_buf(),
+                message: format!("UnRAR open failed with code {code}"),
+            }
+        }
+    })
+}
+
+/// Whether an UnRAR result reports a failure of this computer, not of the archive: too little
+/// memory, or a file that could not be opened (as while another program holds it).
+#[cfg(windows)]
+fn rar_local_failure(code: i64) -> bool {
+    code == i64::from(unrar_sys::ERAR_NO_MEMORY) || code == i64::from(unrar_sys::ERAR_EOPEN)
+}
+
+#[cfg(windows)]
+fn rar_local_error(action: &'static str, path: &Path, code: i64) -> AcquireError {
+    AcquireError::Io {
+        action,
+        path: path.to_path_buf(),
+        source: std::io::Error::other(format!("UnRAR code {code}")),
+    }
+}
 
 /// Whether UnRAR finds every file of a self-extracting RAR archive complete and intact, as
 /// `unrar t` tests an archive. Its headers alone do not show a transfer that ended early: the
 /// last file is merely cut short, which only reading its data reveals. An archive that
 /// unpacking refuses whatever its state, such as a solid or a split one, is left to unpacking,
 /// which says why; asking its link again could not help.
+///
+/// Nothing is decompressed beyond `limits`: before a file is tested, the entry count, its
+/// announced size, the running total of announced sizes and its compression ratio must fit
+/// them, as unpacking checks them, and the test stops at the announced size, which they bound.
+/// At the first entry beyond them the check ends without a problem, since unpacking refuses
+/// the archive for it without reading any file's data.
 #[cfg(windows)]
-fn rar_container_problem(path: &Path) -> Option<String> {
-    let path = WideCString::from_os_str(path).ok()?;
-    let mut open =
-        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_EXTRACT);
-    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
-    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
-        return Some(format!(
-            "UnRAR cannot open it as an archive (code {})",
-            open.open_result
-        ));
-    }
-    struct Guard(*const unrar_sys::Handle);
-    impl Drop for Guard {
-        fn drop(&mut self) {
-            unsafe { unrar_sys::RARCloseArchive(self.0) };
+fn rar_container_problem(
+    path: &Path,
+    limits: &ArchiveLimits,
+    stop: &StopSignal,
+) -> Result<Option<String>, AcquireError> {
+    let (handle, open) = match open_rar(path, unrar_sys::RAR_OM_EXTRACT) {
+        Ok(opened) => opened,
+        Err(code) if rar_local_failure(i64::from(code)) => {
+            return Err(rar_local_error(
+                "open the download with UnRAR",
+                path,
+                code.into(),
+            ));
         }
-    }
-    let _guard = Guard(handle);
+        Err(code) => {
+            return Ok(Some(format!(
+                "UnRAR cannot open it as an archive (code {code})"
+            )))
+        }
+    };
     if open.flags
         & (unrar_sys::ROADF_VOLUME
             | unrar_sys::ROADF_FIRSTVOLUME
@@ -417,57 +498,99 @@ fn rar_container_problem(path: &Path) -> Option<String> {
             | unrar_sys::ROADF_SOLID)
         != 0
     {
-        return None;
+        return Ok(None);
     }
-    for _ in 0..MAX_RAR_FRAMING_HEADERS {
+    let stopped = || AcquireError::StoppedWhileChecking {
+        path: path.to_path_buf(),
+    };
+    let mut total = 0_u64;
+    for index in 0..=limits.max_entries {
+        if stop.requested() {
+            return Err(stopped());
+        }
         let mut header = unrar_sys::HeaderDataEx::default();
         let code = unsafe {
-            unrar_sys::RARReadHeaderEx(handle, std::ptr::from_mut(&mut header).cast_const())
+            unrar_sys::RARReadHeaderEx(handle.0, std::ptr::from_mut(&mut header).cast_const())
         };
         if code == unrar_sys::ERAR_END_ARCHIVE {
-            return None;
+            return Ok(None);
         }
         if code != unrar_sys::ERAR_SUCCESS {
-            return Some(format!(
+            if rar_local_failure(code.into()) {
+                return Err(rar_local_error(
+                    "read the download with UnRAR",
+                    path,
+                    code.into(),
+                ));
+            }
+            return Ok(Some(format!(
                 "its archive is damaged or ends early (UnRAR code {code})"
-            ));
+            )));
         }
-        if header.flags
-            & (unrar_sys::RHDF_SPLITBEFORE
-                | unrar_sys::RHDF_SPLITAFTER
-                | unrar_sys::RHDF_ENCRYPTED
-                | unrar_sys::RHDF_SOLID)
-            != 0
+        if index == limits.max_entries
+            || header.flags
+                & (unrar_sys::RHDF_SPLITBEFORE
+                    | unrar_sys::RHDF_SPLITAFTER
+                    | unrar_sys::RHDF_ENCRYPTED
+                    | unrar_sys::RHDF_SOLID)
+                != 0
             || header.redir_type != 0
         {
-            return None;
+            return Ok(None);
         }
         let announced = if header.flags & unrar_sys::RHDF_DIRECTORY != 0 {
             0
         } else {
-            (u64::from(header.unp_size_high) << 32) | u64::from(header.unp_size)
+            let announced = (u64::from(header.unp_size_high) << 32) | u64::from(header.unp_size);
+            let packed = (u64::from(header.pack_size_high) << 32) | u64::from(header.pack_size);
+            let within_total = total
+                .checked_add(announced)
+                .filter(|sum| *sum <= limits.max_total_uncompressed_bytes);
+            match within_total {
+                Some(sum)
+                    if announced <= limits.max_entry_uncompressed_bytes
+                        && announced
+                            <= packed.max(1).saturating_mul(limits.max_compression_ratio) =>
+                {
+                    total = sum;
+                    announced
+                }
+                _ => return Ok(None),
+            }
         };
         let mut tested = RarTestState {
             length: 0,
-            announced,
+            budget: announced,
             refused: false,
+            stopped: false,
+            stop,
         };
         unsafe {
             unrar_sys::RARSetCallback(
-                handle,
+                handle.0,
                 Some(rar_test_callback),
                 std::ptr::from_mut(&mut tested) as unrar_sys::LPARAM,
             )
         };
         let process = unsafe {
             unrar_sys::RARProcessFileW(
-                handle,
+                handle.0,
                 unrar_sys::RAR_TEST,
                 std::ptr::null(),
                 std::ptr::null(),
             )
         };
-        unsafe { unrar_sys::RARSetCallback(handle, None, 0) };
+        unsafe { unrar_sys::RARSetCallback(handle.0, None, 0) };
+        if tested.stopped {
+            return Err(stopped());
+        }
+        if process != unrar_sys::ERAR_SUCCESS && rar_local_failure(process.into()) {
+            return Err(rar_local_error(
+                "test the download with UnRAR",
+                path,
+                process.into(),
+            ));
+        }
         if process != unrar_sys::ERAR_SUCCESS || tested.refused || tested.length != announced {
             let name = unsafe {
                 WideCString::from_ptr_truncate(header.filename_w.as_ptr(), header.filename_w.len())
@@ -479,7 +602,9 @@ fn rar_container_problem(path: &Path) -> Option<String> {
             } else {
                 format!("`{name}`")
             };
-            let detail = if tested.length < announced {
+            let detail = if tested.refused {
+                format!("{entry} gives more than its {announced} bytes or asks for a password")
+            } else if tested.length < announced {
                 format!(
                     "{entry} ends after {} of its {announced} bytes",
                     tested.length
@@ -489,24 +614,29 @@ fn rar_container_problem(path: &Path) -> Option<String> {
             } else {
                 format!("UnRAR stops at {entry}")
             };
-            return Some(format!(
+            return Ok(Some(format!(
                 "its archive is damaged or ends early: {detail} (UnRAR code {process})"
-            ));
+            )));
         }
     }
-    None
+    Ok(None)
 }
 
-/// What testing one RAR entry produced: its length, and whether it gave more than announced
-/// or asked for something a test cannot answer.
+/// What testing one RAR entry produced: its length, and whether it gave more than its budget,
+/// asked for something a test cannot answer, or was stopped.
 #[cfg(windows)]
-struct RarTestState {
+struct RarTestState<'a> {
     length: u64,
-    announced: u64,
+    /// The most the test may produce: the entry's announced size, which the archive limits
+    /// bound before the test starts.
+    budget: u64,
     refused: bool,
+    stopped: bool,
+    stop: &'a StopSignal,
 }
 
-/// Counts the data UnRAR tests without keeping it; a password or volume request is refused.
+/// Counts the data UnRAR tests without keeping it, up to the entry's budget; a password or
+/// volume request is refused, and a stop ends the test.
 #[cfg(windows)]
 extern "C" fn rar_test_callback(
     message: unrar_sys::UINT,
@@ -517,12 +647,16 @@ extern "C" fn rar_test_callback(
     if user_data == 0 {
         return -1;
     }
-    let state = unsafe { &mut *(user_data as *mut RarTestState) };
+    let state = unsafe { &mut *(user_data as *mut RarTestState<'_>) };
+    if state.stop.requested() {
+        state.stopped = true;
+        return -1;
+    }
     let next = if message == unrar_sys::UCM_PROCESSDATA {
         u64::try_from(length)
             .ok()
             .and_then(|chunk| state.length.checked_add(chunk))
-            .filter(|next| *next <= state.announced)
+            .filter(|next| *next <= state.budget)
     } else {
         None
     };
@@ -540,8 +674,12 @@ extern "C" fn rar_test_callback(
 
 /// Self-extracting RAR archives are unpacked only by the Windows installer, which checks them.
 #[cfg(not(windows))]
-fn rar_container_problem(_path: &Path) -> Option<String> {
-    None
+fn rar_container_problem(
+    _path: &Path,
+    _limits: &ArchiveLimits,
+    _stop: &StopSignal,
+) -> Result<Option<String>, AcquireError> {
+    Ok(None)
 }
 
 fn extract_with_rule(
@@ -1036,25 +1174,8 @@ fn validate_rar_entries(
     limits: &ArchiveLimits,
     rule: LayoutRule,
 ) -> Result<(Vec<ValidatedEntry>, Option<String>), AcquireError> {
-    let path = WideCString::from_os_str(archive_path).map_err(|_| {
-        AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
-    })?;
-    let mut open =
-        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_LIST_INCSPLIT);
-    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
-    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
-        return Err(AcquireError::ArchiveFormat {
-            path: archive_path.to_path_buf(),
-            message: format!("UnRAR open failed with code {}", open.open_result),
-        });
-    }
-    struct Guard(*const unrar_sys::Handle);
-    impl Drop for Guard {
-        fn drop(&mut self) {
-            unsafe { unrar_sys::RARCloseArchive(self.0) };
-        }
-    }
-    let _guard = Guard(handle);
+    let (rar, open) = open_rar_archive(archive_path, unrar_sys::RAR_OM_LIST_INCSPLIT)?;
+    let handle = rar.0;
     if open.flags & (unrar_sys::ROADF_VOLUME | unrar_sys::ROADF_FIRSTVOLUME) != 0 {
         return Err(AcquireError::ArchiveFormat {
             path: archive_path.to_path_buf(),
@@ -1696,25 +1817,8 @@ fn extract_rar_entries(
     wrapper_directory: Option<String>,
     identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
-    let path = WideCString::from_os_str(archive_path).map_err(|_| {
-        AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
-    })?;
-    let mut open =
-        unrar_sys::OpenArchiveDataEx::new(path.as_ptr().cast(), unrar_sys::RAR_OM_EXTRACT);
-    let handle = unsafe { unrar_sys::RAROpenArchiveEx(std::ptr::from_mut(&mut open).cast_const()) };
-    if handle.is_null() || open.open_result != unrar_sys::ERAR_SUCCESS as u32 {
-        return Err(AcquireError::ArchiveFormat {
-            path: archive_path.to_path_buf(),
-            message: format!("UnRAR open failed with code {}", open.open_result),
-        });
-    }
-    struct Guard(*const unrar_sys::Handle);
-    impl Drop for Guard {
-        fn drop(&mut self) {
-            unsafe { unrar_sys::RARCloseArchive(self.0) };
-        }
-    }
-    let _guard = Guard(handle);
+    let (rar, open) = open_rar_archive(archive_path, unrar_sys::RAR_OM_EXTRACT)?;
+    let handle = rar.0;
     if open.flags
         & (unrar_sys::ROADF_VOLUME
             | unrar_sys::ROADF_FIRSTVOLUME
@@ -2891,9 +2995,17 @@ mod served_container_tests {
     use super::*;
 
     fn problem(bytes: &[u8], format: ArchiveFormat) -> Option<String> {
+        problem_within(bytes, format, &ArchiveLimits::default())
+    }
+
+    fn problem_within(
+        bytes: &[u8],
+        format: ArchiveFormat,
+        limits: &ArchiveLimits,
+    ) -> Option<String> {
         let temporary = tempfile::NamedTempFile::new().unwrap();
         fs::write(temporary.path(), bytes).unwrap();
-        served_container_problem(temporary.path(), format).unwrap()
+        served_container_problem(temporary.path(), format, limits, &StopSignal::never()).unwrap()
     }
 
     fn zip(text: &[u8]) -> Vec<u8> {
@@ -2973,25 +3085,177 @@ mod served_container_tests {
     /// A stored RAR4 self-extractor with one file, as `tests/rar_archive.rs` builds them.
     #[cfg(windows)]
     fn rar4_sfx(name: &str, payload: &[u8]) -> Vec<u8> {
+        rar4_sfx_announcing(&[(name, payload, payload.len() as u32, crc32(payload))])
+    }
+
+    /// A stored RAR4 self-extractor whose files announce the given unpacked sizes and CRCs,
+    /// which need not be those of their stored bytes.
+    #[cfg(windows)]
+    fn rar4_sfx_announcing(entries: &[(&str, &[u8], u32, u32)]) -> Vec<u8> {
         let mut bytes = vec![b'M', b'Z'];
         bytes.resize(128, 0);
         bytes.extend_from_slice(b"Rar!\x1a\x07\x00");
         bytes.extend(rar4_header(0x73, 0, &[0; 6]));
-        let mut body = Vec::new();
-        body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
-        body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
-        body.push(2);
-        body.extend_from_slice(&crc32(payload).to_le_bytes());
-        body.extend_from_slice(&0_u32.to_le_bytes());
-        body.push(20);
-        body.push(0x30);
-        body.extend_from_slice(&(name.len() as u16).to_le_bytes());
-        body.extend_from_slice(&0x20_u32.to_le_bytes());
-        body.extend_from_slice(name.as_bytes());
-        bytes.extend(rar4_header(0x74, 0x8000, &body));
-        bytes.extend_from_slice(payload);
+        for (name, payload, announced, crc) in entries {
+            let mut body = Vec::new();
+            body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+            body.extend_from_slice(&announced.to_le_bytes());
+            body.push(2);
+            body.extend_from_slice(&crc.to_le_bytes());
+            body.extend_from_slice(&0_u32.to_le_bytes());
+            body.push(20);
+            body.push(0x30);
+            body.extend_from_slice(&(name.len() as u16).to_le_bytes());
+            body.extend_from_slice(&0x20_u32.to_le_bytes());
+            body.extend_from_slice(name.as_bytes());
+            bytes.extend(rar4_header(0x74, 0x8000, &body));
+            bytes.extend_from_slice(payload);
+        }
         bytes.extend(rar4_header(0x7b, 0, &[]));
         bytes
+    }
+
+    /// A changed self-extractor whose headers announce more than the limits it would be
+    /// unpacked with is never test-read: its data is not decompressed at all, and the check
+    /// leaves it to unpacking, which refuses it from its headers alone. Each archive here would
+    /// be reported as damaged if it were test-read, so `None` proves that it was not.
+    #[cfg(windows)]
+    #[test]
+    fn a_self_extractor_beyond_its_limits_is_refused_by_unpacking_without_being_test_read() {
+        let payload: &[u8] = b"BACKUP ~evandra/backup~";
+        let crc = crc32(payload);
+        let general = ArchiveLimits::default();
+        // One file announcing 3 GiB, more than one file may have, and one announcing a
+        // compression ratio above 1,000:1; both store only 23 bytes.
+        for announced in [3 * 1024 * 1024 * 1024_u32, 100_000] {
+            let archive =
+                rar4_sfx_announcing(&[("evandra/setup-evandra.tp2", payload, announced, crc)]);
+            assert_eq!(
+                problem_within(&archive, ArchiveFormat::SelfExtractingRar, &general),
+                None,
+                "{announced}"
+            );
+            let temporary = tempfile::TempDir::new().unwrap();
+            let path = temporary.path().join("evandra.exe");
+            fs::write(&path, &archive).unwrap();
+            let unpacked = extract_served_archive(
+                &path,
+                &temporary.path().join("cache"),
+                &ArchiveRequirements {
+                    artifact_sha256: hex::encode(Sha256::digest(&archive)),
+                    format: ArchiveFormat::SelfExtractingRar,
+                    expected_roots: vec!["evandra".to_owned()],
+                    expected_tp2_paths: vec!["evandra/setup-evandra.tp2".to_owned()],
+                    limits: general,
+                    mode: ArchiveMode::Public,
+                },
+                &StopSignal::never(),
+            );
+            assert!(
+                matches!(unpacked, Err(AcquireError::ArchiveLimitExceeded(_))),
+                "{unpacked:?}"
+            );
+        }
+
+        // The second file is damaged, which a test would find; but its size passes the total,
+        // or it is one file more than the archive may have.
+        let damaged = rar4_sfx_announcing(&[
+            ("evandra/one.txt", payload, payload.len() as u32, crc),
+            ("evandra/two.txt", payload, payload.len() as u32, crc ^ 1),
+        ]);
+        for limits in [
+            ArchiveLimits {
+                max_total_uncompressed_bytes: 30,
+                ..general
+            },
+            ArchiveLimits {
+                max_entries: 1,
+                ..general
+            },
+        ] {
+            assert_eq!(
+                problem_within(&damaged, ArchiveFormat::SelfExtractingRar, &limits),
+                None,
+                "{limits:?}"
+            );
+        }
+        // Within its limits the same archive is test-read, and the damage found.
+        assert_eq!(
+            problem(&damaged, ArchiveFormat::SelfExtractingRar).as_deref(),
+            Some(
+                "its archive is damaged or ends early: `evandra/two.txt` fails its checksum \
+                 (UnRAR code 12)"
+            )
+        );
+    }
+
+    /// UnRAR returns a handle also for a file that it then finds is no archive. The check closes
+    /// it, so the refused download can be removed: an open handle would keep it from being
+    /// deleted, and the refusal would fail on every attempt.
+    #[cfg(windows)]
+    #[test]
+    fn a_program_that_is_no_archive_can_be_removed_after_its_check() {
+        let temporary = tempfile::TempDir::new().unwrap();
+        let path = temporary.path().join("download.part");
+        fs::write(&path, b"MZ\x90\x00 just a program").unwrap();
+
+        let found = served_container_problem(
+            &path,
+            ArchiveFormat::SelfExtractingRar,
+            &ArchiveLimits::default(),
+            &StopSignal::never(),
+        )
+        .unwrap();
+
+        assert!(
+            found
+                .as_deref()
+                .is_some_and(|found| found.starts_with("UnRAR cannot open it as an archive")),
+            "{found:?}"
+        );
+        fs::remove_file(&path).unwrap();
+    }
+
+    /// A stop ends the check of a changed self-extractor, before a file is tested or while one
+    /// is, instead of reading the rest of the archive.
+    #[cfg(windows)]
+    #[test]
+    fn a_stop_ends_the_check_of_a_self_extractor() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let archive = rar4_sfx("evandra/setup-evandra.tp2", b"BACKUP ~evandra/backup~");
+        let temporary = tempfile::NamedTempFile::new().unwrap();
+        fs::write(temporary.path(), &archive).unwrap();
+        let check = |stop: &StopSignal| {
+            served_container_problem(
+                temporary.path(),
+                ArchiveFormat::SelfExtractingRar,
+                &ArchiveLimits::default(),
+                stop,
+            )
+        };
+
+        let stopped = check(&StopSignal::new(|| true));
+        assert!(
+            matches!(&stopped, Err(AcquireError::StoppedWhileChecking { path }) if path == temporary.path()),
+            "{stopped:?}"
+        );
+        // The first question comes before the file is tested; the test itself asks next.
+        let questions = Arc::new(AtomicUsize::new(0));
+        let asked = Arc::clone(&questions);
+        let during_the_test = check(&StopSignal::new(move || {
+            asked.fetch_add(1, Ordering::SeqCst) >= 1
+        }));
+        assert!(
+            matches!(
+                during_the_test,
+                Err(AcquireError::StoppedWhileChecking { .. })
+            ),
+            "{during_the_test:?}"
+        );
+        assert_eq!(questions.load(Ordering::SeqCst), 2);
+        assert_eq!(check(&StopSignal::never()).unwrap(), None);
     }
 
     #[cfg(windows)]
@@ -3046,7 +3310,13 @@ mod served_container_tests {
         };
         let path = PathBuf::from(path);
         assert_eq!(
-            served_container_problem(&path, ArchiveFormat::SelfExtractingRar).unwrap(),
+            served_container_problem(
+                &path,
+                ArchiveFormat::SelfExtractingRar,
+                &ArchiveLimits::default(),
+                &StopSignal::never()
+            )
+            .unwrap(),
             None
         );
         let bytes = fs::read(&path).unwrap();

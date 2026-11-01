@@ -10,8 +10,9 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use bg_engine::acquire::{
-    AcquireError, ArchiveFormat, ArtifactCache, CacheDisposition, DownloadRequest, DownloadRoute,
-    ServedArtifact, ServedRedirects, ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
+    AcquireError, ArchiveFormat, ArchiveLimits, ArtifactCache, CacheDisposition, DownloadRequest,
+    DownloadRoute, ServedArtifact, ServedRedirects, ServedRules, StopSignal,
+    DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use bg_engine::events::ChannelSink;
 use sha2::{Digest, Sha256};
@@ -580,6 +581,7 @@ fn acquire_as_served(
         ServedRules {
             format: ArchiveFormat::Zip,
             redirects: ServedRedirects::AnyHttpsHost,
+            limits: ArchiveLimits::GENERAL,
         },
         &sink,
         &StopSignal::never(),

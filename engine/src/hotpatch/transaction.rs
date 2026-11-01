@@ -509,6 +509,7 @@ pub(super) fn unpack_served(
             ServedRules {
                 format: ArchiveFormat::Zip,
                 redirects: ServedRedirects::ReviewedHostsForChanges,
+                limits: requirements(artifact).limits.for_served_archive(),
             },
             &ConsoleSink,
             &StopSignal::never(),

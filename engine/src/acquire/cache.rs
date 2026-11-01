@@ -15,8 +15,8 @@ use super::http::{
     served_filename, validate_download_url, HttpClient, HttpResponse, RedirectPolicy,
 };
 use super::{
-    AcquireError, AcquiredArtifact, ArchiveFormat, ArtifactMetadata, CacheDisposition,
-    DownloadRequest, StopSignal,
+    AcquireError, AcquiredArtifact, ArchiveFormat, ArchiveLimits, ArtifactMetadata,
+    CacheDisposition, DownloadRequest, StopSignal,
 };
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -76,6 +76,11 @@ pub struct ServedRules {
     pub format: ArchiveFormat,
     /// Which hosts a changed download may come from.
     pub redirects: ServedRedirects,
+    /// The archive limits a changed download is unpacked with, usually
+    /// [`ArchiveLimits::for_served_archive`]. Checking that a changed self-extracting RAR
+    /// archive is complete reads its files only within these limits; an archive beyond them is
+    /// left to unpacking, which refuses it without reading any file's data.
+    pub limits: ArchiveLimits,
 }
 
 /// Which hosts a download that may differ from its pin may come from. Its HTTPS redirects are
@@ -229,7 +234,7 @@ impl ArtifactCache {
             }
         }
 
-        let transfer = self.transfer(request, &paths, sink, LengthPolicy::Reviewed)?;
+        let transfer = self.transfer(request, &paths, sink, LengthPolicy::Reviewed, stop)?;
         let (actual_length, actual_digest) = hash_file(&paths.partial)?;
         if actual_length != request.expected_length {
             remove_if_exists(&paths.partial)?;
@@ -294,7 +299,9 @@ impl ArtifactCache {
     ///
     /// A server answer that a later attempt may not repeat is asked for again with the usual
     /// waits, and returned only when no attempt is left: a file that is clearly not an archive
-    /// of `rules.format` ([`AcquireError::ServedNotArchive`]), or status 404 or 410.
+    /// of `rules.format` ([`AcquireError::ServedNotArchive`]), or status 404 or 410. `stop` also
+    /// ends the check of a changed self-extracting RAR archive
+    /// ([`AcquireError::StoppedWhileChecking`]).
     pub fn acquire_as_served(
         &self,
         request: &DownloadRequest,
@@ -337,7 +344,7 @@ impl ArtifactCache {
             limit: served_length_limit(request.expected_length),
             rules,
         };
-        let mut transfer = self.transfer(request, &reviewed, sink, policy)?;
+        let mut transfer = self.transfer(request, &reviewed, sink, policy, stop)?;
         let (actual_length, actual_digest) = match transfer.content.take() {
             Some(content) => content,
             None => hash_file(&reviewed.partial)?,
@@ -450,11 +457,12 @@ impl ArtifactCache {
         paths: &CachePaths,
         sink: &dyn EventSink,
         policy: LengthPolicy,
+        stop: &StopSignal,
     ) -> Result<TransferResult, AcquireError> {
         retry_transfer(
             request,
             sink,
-            || self.transfer_once(request, paths, sink, policy),
+            || self.transfer_once(request, paths, sink, policy, stop),
             wait_before_retry,
         )
     }
@@ -485,6 +493,7 @@ impl ArtifactCache {
         paths: &CachePaths,
         sink: &dyn EventSink,
         policy: LengthPolicy,
+        stop: &StopSignal,
     ) -> Result<TransferResult, AttemptFailure> {
         let mut transfer = self.transfer_body(request, paths, sink, policy)?;
         if let LengthPolicy::Served { rules, .. } = policy {
@@ -500,7 +509,7 @@ impl ArtifactCache {
                         to: transfer.final_url.clone(),
                     }))
                 } else {
-                    served_container_problem(&paths.partial, rules.format)
+                    served_container_problem(&paths.partial, rules.format, &rules.limits, stop)
                         .map_err(AttemptFailure::Fatal)?
                         .map(|problem| {
                             AttemptFailure::Unusable(AcquireError::ServedNotArchive {
@@ -1212,7 +1221,8 @@ mod tests {
     };
     use crate::acquire::http::{HttpClient, HttpTimeouts};
     use crate::acquire::{
-        AcquireError, ArchiveFormat, CacheDisposition, DownloadRequest, DownloadRoute,
+        AcquireError, ArchiveFormat, ArchiveLimits, CacheDisposition, DownloadRequest,
+        DownloadRoute, StopSignal,
     };
     use crate::events::{ChannelSink, EngineEvent, Stream};
 
@@ -1685,11 +1695,12 @@ mod tests {
             rules: ServedRules {
                 format: ArchiveFormat::Zip,
                 redirects: ServedRedirects::AnyHttpsHost,
+                limits: ArchiveLimits::default(),
             },
         };
 
         let error = cache
-            .transfer(&request, &paths, &sink, policy)
+            .transfer(&request, &paths, &sink, policy, &StopSignal::never())
             .err()
             .expect("a download past its limit is refused");
 

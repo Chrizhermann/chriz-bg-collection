@@ -2979,6 +2979,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                         } else {
                             ServedRedirects::AnyHttpsHost
                         },
+                        limits: reviewed_limits(artifact).for_served_archive(),
                     };
                     let served = ArtifactCache::open(&self.created.cache_root)
                         .and_then(|cache| {
@@ -3219,13 +3220,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         archive: &Path,
         receipt: &ArtifactReceipt,
     ) -> Result<ExtractedArtifact, ExtractionFailure> {
-        let reviewed_limits = ArchiveLimits {
-            max_depth: artifact.archive.limits.max_depth,
-            max_entries: artifact.archive.limits.max_entries,
-            max_entry_uncompressed_bytes: artifact.archive.limits.max_entry_uncompressed_bytes,
-            max_total_uncompressed_bytes: artifact.archive.limits.max_total_uncompressed_bytes,
-            max_compression_ratio: artifact.archive.limits.max_compression_ratio,
-        };
+        let reviewed_limits = reviewed_limits(artifact);
         let served = receipt.served_difference.is_some();
         let requirements = ArchiveRequirements {
             artifact_sha256: if served {
@@ -3887,6 +3882,17 @@ fn archive_format(artifact: &Artifact) -> ArchiveFormat {
         ManifestArchiveKind::Zip => ArchiveFormat::Zip,
         ManifestArchiveKind::Iemod => ArchiveFormat::Iemod,
         ManifestArchiveKind::SelfExtractingRar => ArchiveFormat::SelfExtractingRar,
+    }
+}
+
+/// The archive limits the recipe reviewed for `artifact`.
+fn reviewed_limits(artifact: &Artifact) -> ArchiveLimits {
+    ArchiveLimits {
+        max_depth: artifact.archive.limits.max_depth,
+        max_entries: artifact.archive.limits.max_entries,
+        max_entry_uncompressed_bytes: artifact.archive.limits.max_entry_uncompressed_bytes,
+        max_total_uncompressed_bytes: artifact.archive.limits.max_total_uncompressed_bytes,
+        max_compression_ratio: artifact.archive.limits.max_compression_ratio,
     }
 }
 
