@@ -1,11 +1,11 @@
-# Chriz Easy BG 0.1.0-alpha.22
+# Chriz Easy BG 0.1.0
 
-**Release candidate, not published:** app alpha.22 / collection alpha.22.
-Exact package and test results: [alpha.22 package verification](package-acceptance-alpha22-2026-11-01.md).
+**Release candidate, not published:** app 0.1.0 / collection 0.1.0.
+Exact package and test results: [0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md).
 
 This update brings a new recommended mod setup with new choices, updated mods and many
 fixes, and makes the installer sturdier. These notes cover everything since app alpha.21
-and collection alpha.20.
+and collection alpha.20. 0.1.0 is the first CEBG release without the alpha label.
 
 The new mod setup is for **fresh installations**. Updating CEBG leaves your current games
 and saves unchanged. The installer fixes also help with installations you already have.
@@ -18,10 +18,15 @@ and saves unchanged. The installer fixes also help with installations you alread
   stop with "Access is denied". CEBG now waits a moment and tries again, for up to about
   five seconds, before it reports a problem.
 - **CEBG carries the collection's change record.** The app now includes a record of the
-  32 changes in collection alpha.22, which follows collection alpha.20; app alpha.21
-  installed collection alpha.20, so there is no collection alpha.21. The record marks
-  every change for your next playthrough, because each comes with a new installation.
-  The Updates page does not list these changes yet; these notes describe them.
+  32 changes in collection 0.1.0, which follows collection alpha.20, the collection that
+  app alpha.21 installed. The record marks every change for your next playthrough,
+  because each comes with a new installation. The Updates page does not list these
+  changes yet; these notes describe them.
+- **The smaller setup installs Artisan's Kitpack and the Randomiser in the right order.**
+  The second setup you can pick when you install, now called **Smaller downloadable
+  setup** (was "Smaller downloadable alpha"), asked for some components of both mods in
+  another order than the mods install them, so an installation with it could stop there.
+  The default full setup was not affected.
 - **Uninstalling with "Delete the application data" removes it completely and safely.**
   The uninstaller used to leave files with very long paths behind, such as unpacked mods,
   and could follow a folder link to delete files outside CEBG. CEBG now removes its own
@@ -232,7 +237,7 @@ All are selected in Chris's Recommended unless marked optional.
 
 ## Important notes
 
-- Collection alpha.22 needs app alpha.22. Older apps cannot install it.
+- Collection 0.1.0 needs app 0.1.0. Older apps cannot install it.
 - Existing installations keep EEex v1.2.0 and their other mod versions; the new versions
   come with a new installation.
 - Several new parts passed automated checks or their own lab tests but have not been

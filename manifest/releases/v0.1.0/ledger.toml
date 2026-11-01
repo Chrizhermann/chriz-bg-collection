@@ -1,9 +1,8 @@
 schema = 1
 recipe_id = "chriz-bg-collection"
-version = "0.1.0-alpha.22"
-# PLACEHOLDER: the release step sets the exact UTC publication time before packaging.
-published_at = "2026-10-29T00:00:00Z"
-minimum_app_version = "0.1.0-alpha.22"
+version = "0.1.0"
+published_at = "2026-11-02T00:00:00Z"
+minimum_app_version = "0.1.0"
 supersedes = "0.1.0-alpha.20"
 
 [[changes]]

@@ -2,32 +2,40 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## November 1 — alpha.22 release candidate for Christopher's own test (not published)
+## November 1 — 0.1.0 release candidate for Christopher's own test (not published)
 
-Branch `claude/release-alpha22`, from the next-release branch
-`claude/cebg-installer-fixes-20261014` at `5a4b1f6` (BuffBot v1.12.6, PR #75), bumps the
-app to **0.1.0-alpha.22** in the five files the alpha.21 bump changed. The bundled
-collection already reads alpha.22, and its update ledger needs this app version. The
-[release notes](release-notes-alpha22.md) cover everything since app alpha.21 and
-collection alpha.20. The package record is
-[alpha.22 package verification](package-acceptance-alpha22-2026-11-01.md).
+Christopher decided on 2026-11-01 that the release prepared as alpha.22 is **0.1.0**,
+without a pre-release suffix; the content stays the same. Branch `claude/release-alpha22`
+(PR #76), from the next-release branch `claude/cebg-installer-fixes-20261014` at
+`5a4b1f6` (BuffBot v1.12.6, PR #75), sets the app and the bundled collection to **0.1.0**:
+the app in the five files the alpha.21 bump changed, the collection's `release.json`, and
+its update ledger, now `releases/v0.1.0/ledger.toml`, published on 2026-11-02 and needing
+app 0.1.0. The updater endpoint and the `alpha` channel stay as they are: 0.1.0 orders
+after every 0.1.0 alpha, so alpha installations find it there. The
+[release notes](release-notes-0.1.0.md) cover everything since app alpha.21 and
+collection alpha.20.
 
-The signed setup is built from `52f797b`: 6,078,951 bytes, SHA-256
-`1101253fa38c2d90aad71c3f7d0a8fff7e6b80bfae73c8ebd1faab0fd45f45a0`. A verified copy and
-its signature are in Christopher's Downloads folder. All automated checks passed on a clean
-checkout (1,155 native, 452 frontend and 265 Python tests), as did the signature, updater
-download and resource checks and a Defender scan of the setup. A first run on `2933b8e`
-failed only the dependency-notice check, because the bump changes both lockfiles; `52f797b`
-refreshes the two digests, as alpha.21 did in `8d82c8e`. The TP2-order recheck of all 36
-changed pins found one old mismatch in the "Smaller downloadable alpha" profile's
-Artisan's Kitpack main run ([issue 77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77)).
+Also in this candidate:
+
+- [Issue 77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77) is fixed. The
+  "Smaller downloadable setup" profile (`manifest/`; it was "Smaller downloadable alpha")
+  requests the Artisan's Kitpack main run in its TP2's declaration order, and so does its
+  Randomiser run, the same mismatch found while fixing it. `tools/tests/test_native_run_orders.py`
+  holds both bundled profiles to the audited and the recorded native orders.
+- Player-visible texts no longer call the product an alpha: the profile label, two Updates
+  texts, the GOG and locale findings of the game check, one busy-installer detail and the
+  troubleshooting guide. Internal names such as `public-alpha` and the `alpha` channel stay.
+
+An alpha.22 candidate built earlier on November 1 (setup SHA-256 `1101253f…`) was
+superseded before publication; its record is
+[alpha.22 package verification](package-acceptance-alpha22-2026-11-01.md), and its setup
+is kept in Christopher's test folder.
 
 This candidate is for Christopher's own test. Nothing is tagged, published or uploaded,
 the alpha channel still announces alpha.21, and the website is unchanged. Not in it: the
 open PRs against the next-release branch, #69 (install what a mod's official link serves
 when it differs from the pin) and #53 (own-mod pin check). Still open before publication:
-his test and OK, the ledger's `published_at` (still the placeholder from #67), issue 77,
-and the work queue's lab run of the Recommended selection
+his test and OK, and the work queue's lab run of the Recommended selection
 (`docs/curation/components/FOLLOW_UPS.md`, step 3).
 
 ## October 14 — app alpha.21 and its website published (installer fixes)
@@ -477,7 +485,7 @@ This publication changes only the website, not the installer release or game.
 Microsoft follow-up route check: the case page still has no case-reply form;
 the analyst directs replies to their email. Correction after Christopher's
 challenge: personal Gmail IS connected through the separate Gmail plugin;
-get_profile verified christopher.hermann01@gmail.com. The previous check only
+get_profile verified the personal account. The previous check only
 listed the work account in Google Workspace Multi and incorrectly generalized
 that result. Gmail searches (including Spam/Trash) for both case IDs, analyst
 wording and recent Microsoft senders have not located an analyst email; they

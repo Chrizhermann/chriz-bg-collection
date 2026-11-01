@@ -42,8 +42,9 @@ COMPONENTS = [
     (1, "BuffBot: EEex LuaJIT Support (auto-detected)"),
     (0, "BuffBot: In-Game Buff Automation"),
 ]
-LEDGERS = ["manifest/releases/v0.1.0-alpha.22/ledger.toml",
-           "recipes/curated-full-current/releases/v0.1.0-alpha.22/ledger.toml"]
+# The release prepared as alpha.22 became 0.1.0 (Christopher, 2026-11-01).
+LEDGERS = ["manifest/releases/v0.1.0/ledger.toml",
+           "recipes/curated-full-current/releases/v0.1.0/ledger.toml"]
 
 
 def _load(path: Path) -> dict:
@@ -226,7 +227,7 @@ class Nov01BuffBotV1126PinTests(unittest.TestCase):
         self.assertEqual(pin_list.count(f"| BuffBot | {TAG.removeprefix('v')} | `{MOD}` | `{SHA256[:12]}…` |"), 2)
         self.assertNotIn("| BuffBot | 1.12.1 |", pin_list)
 
-    def test_alpha22_ledgers_name_the_release_and_cover_its_artifact(self):
+    def test_release_ledgers_name_the_release_and_cover_its_artifact(self):
         # The superseded pins stay covered because their artifact TOMLs stay in the recipe.
         for path in LEDGERS:
             with self.subTest(ledger=path):

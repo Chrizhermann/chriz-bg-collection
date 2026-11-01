@@ -19,7 +19,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **In progress (separate sessions)**
 
-- CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order:
+- CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order. On
+  2026-11-01 Christopher decided that it is released as app and collection **0.1.0**,
+  without a pre-release suffix and with the same content:
   1. One pin batch: Modpack alpha.14 (released on 2026-10-26, see below), BG Rebalance
      v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
      fork `v4.81a-dev.85928f9-chriz.3` (sorcerer and kit weapon fixes, below), EEex `9`
@@ -92,22 +94,24 @@ Cross-repository status. Component detail stays in the sections below and in the
      update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
      merged on 2026-10-30. The ledger supersedes alpha.20 (alpha.21 shipped
      the alpha.20 recipe), covers all 231 recorded differences, BuffBot v1.12.6 from #75
-     included, and needs app alpha.22, so the app release that ships it must carry that
-     version. Its publication date is a placeholder that the release step sets. If the
-     recipe changes again before the release, the recorded differences and the ledger need
-     the new subjects (steps in #67).
+     included, and needs the app version that ships it. Since PR #76 it is the 0.1.0 ledger
+     (`releases/v0.1.0/ledger.toml`), needs app 0.1.0 and is dated 2026-11-02; the recorded
+     differences are unchanged, because release.json and the ledgers are not part of the
+     recipe diff. If the recipe changes again before the release, the recorded differences
+     and the ledger need the new subjects (steps in #67).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
      v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44), now
      v1.12.6 (#75), came after it.
   4. Acceptance, build, signing and publishing, and the website. A signed release
-     candidate of app 0.1.0-alpha.22 for Christopher's own test is built from
+     candidate of app and collection 0.1.0 for Christopher's own test is built from
      [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (exact package
-     and test results in `docs/package-acceptance-alpha22-2026-11-01.md`); nothing is
-     tagged or published. Still open before publishing: his test and OK, the ledger's
-     publication time (step 2), the lab run (step 3), and a decision on
-     [#77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77) (below).
+     and test results in `docs/package-acceptance-0.1.0-2026-11-02.md`); nothing is
+     tagged or published. The ledger is renamed to 0.1.0 and dated 2026-11-02 (step 2),
+     and #77 is fixed in the same PR (below). The earlier alpha.22 candidate of
+     2026-11-01 is superseded. Still open before publishing: his test and OK and the lab
+     run (step 3).
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).
@@ -586,6 +590,15 @@ Cross-repository status. Component detail stays in the sections below and in the
   also not through a Wild Mage's Reckless Dweomer; no rest loops through Wish. They add
   to the remaining Challenge Mode rules under Larger projects.
 
+**Ideas for later (Christopher, 2026-11-01)**
+
+- Challenge Mode: no travel back into an earlier campaign's areas. After leaving BG1 for
+  Siege of Dragonspear there is no return to BG1; from BG2 (Shadows of Amn) no return to
+  BG1; from Throne of Bhaal no return to Shadows of Amn. More freedom inside one campaign
+  is fine. Optional quest mods that need such travel must say that they don't work with
+  Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
+  exact area list is defined together with Christopher later.
+
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,
 2026-10-27); configurable Spell Revisions (recover branch
@@ -652,14 +665,18 @@ content, evaluated component by component (keep, fix or extend).
   files v0.6.16 ships unchanged) installed `3500`, `256`, the default Imoen choice `292`
   and the rest of the remix run without errors. Data only for `256`: the bridge fight
   was not played.
-- [ ] "Smaller downloadable alpha" (`manifest/`): its Artisan's Kitpack main run requests
-  `10002` before `10001` and `1100` after `1009`, against the TP2's declaration order, so the
-  order checker rejects it ([#77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77);
-  found in the alpha.22 package acceptance, unchanged since chriz.1). WeiDU installs a batch
-  in TP2 order and the engine's reconciliation expects the requested order, so an
-  installation with this profile and the default selection would likely stop there; not
-  reproduced. The default "Full curated setup" passes. Reorder the run or stop offering the
-  profile (Christopher decides).
+- [x] "Smaller downloadable setup" (`manifest/`, was "Smaller downloadable alpha"): its
+  Artisan's Kitpack main run requested `10002` before `10001` and `1100` after `1009`, and
+  its Randomiser run `1100` last, against the TP2s' declaration order
+  ([#77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77); found in the
+  alpha.22 package acceptance, unchanged since chriz.1). WeiDU installs a batch in TP2 order
+  and the engine's reconciliation expects the requested order, so an installation with this
+  profile and the default selection would likely have stopped there. Fixed in
+  [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (Christopher's
+  decision of 2026-11-01): both runs follow the TP2 order, the native order checker accepts
+  both profiles against the pinned archives, and `tools/tests/test_native_run_orders.py`
+  checks both profiles against the generator's audited orders and every native order an
+  intake recorded.
 - [ ] Modpack `430` (scrolls at the reader's caster level) failed on 2.7.3.0 with EEex
   v1.3.1 in alpha.11 to alpha.13: on the first load, a new game or an NPC join it showed
   its EEex error box ("copied action construction overlaps an existing lifetime") and

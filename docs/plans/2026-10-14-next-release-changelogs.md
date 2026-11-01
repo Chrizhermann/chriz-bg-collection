@@ -6,7 +6,9 @@ Labels: **Mandatory** = always installed with its mod; **Default** = selected in
 Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting for
 Christopher's choice. Version the next release properly; never republish over
 alpha.21. The [alpha.20 drafts](2026-10-13-next-release-changelogs.md) are already
-published.
+published. Christopher decided on 2026-11-01 that this release is app and collection
+**0.1.0** (prepared as alpha.22); the player-facing notes are in
+[`docs/release-notes-0.1.0.md`](../release-notes-0.1.0.md).
 
 ## Installer changelog
 
@@ -382,9 +384,9 @@ unchanged.
 - Sirene NPC for BG:EE: development version `1c86000` (new). The collection pins this
   exact version because the last release, v3.1, installs on BG:EE only, not on EET.
 
-## Release-note entry (collection alpha.22)
+## Release-note entry (collection 0.1.0)
 
-**Collection alpha.22** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
+**Collection 0.1.0** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
 Rebalance to v0.8.8, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
 EEex to v1.3.1, BuffBot to v1.12.6, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to

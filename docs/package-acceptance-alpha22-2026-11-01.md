@@ -1,5 +1,11 @@
 # Alpha.22 package verification — November 1
 
+**Superseded the same evening:** Christopher decided that this release is **0.1.0**, with
+the same content. This candidate was never published; the 0.1.0 candidate and its checks
+are recorded in [0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md). This
+record stays as the evidence for the alpha.22 binary, which is kept in the owner's test
+folder.
+
 App **0.1.0-alpha.22**, bundled collection **0.1.0-alpha.22**. Build source:
 `52f797babeff5c878416b7b7d6bfc60ec9c46d69` (PR #76). This is a release candidate for
 Christopher's own test; nothing is tagged, published or uploaded. Later documentation does

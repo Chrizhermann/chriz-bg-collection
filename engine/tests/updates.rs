@@ -451,26 +451,30 @@ fn alpha20_requires_the_feature_group_app_and_waits_for_the_next_playthrough() {
 }
 
 #[test]
-fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_playthrough() {
+fn release_0_1_0_supersedes_alpha20_requires_the_0_1_0_app_and_waits_for_the_next_playthrough() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let curated = root.join("recipes/curated-full-current");
-    let ledger = load_release(&curated.join("releases/v0.1.0-alpha.22/ledger.toml")).unwrap();
-    let source = load_release(&root.join("manifest/releases/v0.1.0-alpha.22/ledger.toml")).unwrap();
+    let ledger = load_release(&curated.join("releases/v0.1.0/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.0/ledger.toml")).unwrap();
     assert_eq!(ledger, source);
-    assert_eq!(ledger.version, "0.1.0-alpha.22");
+    assert_eq!(ledger.version, "0.1.0");
+    assert_eq!(ledger.published_at, "2026-11-02T00:00:00Z");
     assert_eq!(
         bg_engine::cli::recipe_release_version(&curated)
             .unwrap()
             .as_deref(),
-        Some("0.1.0-alpha.22")
+        Some("0.1.0")
     );
-    // Alpha.21 was an app-only release that shipped the alpha.20 recipe.
+    // Alpha.21 was an app-only release that shipped the alpha.20 recipe, and the release
+    // prepared as alpha.22 became 0.1.0 (Christopher, 2026-11-01) before publication.
     assert!(!curated.join("releases/v0.1.0-alpha.21").exists());
+    assert!(!curated.join("releases/v0.1.0-alpha.22").exists());
     assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0-alpha.20"));
 
     // The alpha.21 app cannot use this recipe: its engine rejects Challenge Mode's
     // `variants` and the `config_files` of Tweaks Anthology 3347, and without them its
-    // public-alpha validation reports the quest mods' defaults as omitted.
+    // public-alpha validation reports the quest mods' defaults as omitted. 0.1.0 orders
+    // after every 0.1.0 pre-release, so alpha apps see it as newer.
     let old_app = classify_updates(
         "0.1.0-alpha.20",
         "0.1.0-alpha.21",
@@ -478,17 +482,10 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
     )
     .unwrap();
     assert_eq!(old_app.disposition, UpdateDisposition::AppUpdateRequired);
-    assert_eq!(
-        old_app.minimum_app_version.as_deref(),
-        Some("0.1.0-alpha.22")
-    );
-    let new_app = classify_updates(
-        "0.1.0-alpha.20",
-        "0.1.0-alpha.22",
-        std::slice::from_ref(&ledger),
-    )
-    .unwrap();
-    assert_eq!(new_app.latest_version.as_deref(), Some("0.1.0-alpha.22"));
+    assert_eq!(old_app.minimum_app_version.as_deref(), Some("0.1.0"));
+    let new_app =
+        classify_updates("0.1.0-alpha.20", "0.1.0", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(new_app.latest_version.as_deref(), Some("0.1.0"));
     assert_eq!(
         new_app.disposition,
         UpdateDisposition::DeferredForNextPlaythrough
@@ -504,11 +501,11 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
     let alpha20 = load_release(&curated.join("releases/v0.1.0-alpha.20/ledger.toml")).unwrap();
     let skipped = classify_updates(
         "0.1.0-alpha.19",
-        "0.1.0-alpha.22",
+        "0.1.0",
         &[ledger.clone(), alpha20.clone()],
     )
     .unwrap();
-    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.0-alpha.22"));
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.0"));
     assert_eq!(
         skipped.disposition,
         UpdateDisposition::DeferredForNextPlaythrough
@@ -518,14 +515,15 @@ fn alpha22_supersedes_alpha20_requires_the_alpha22_app_and_waits_for_the_next_pl
         [alpha20.changes, ledger.changes.clone()].concat()
     );
 
-    // The ledger covers the recorded alpha.20 -> alpha.22 differences and nothing else.
+    // The ledger covers the recorded alpha.20 -> 0.1.0 differences and nothing else.
     // They were taken from payloads that chriz-bg-author package-recipe built from the
     // recipe trees of both commits; e0b5116 is the recipe that app alpha.20 and alpha.21
-    // shipped.
+    // shipped. Renaming the release changed only release.json and the ledger, which the
+    // recipe diff does not compare.
     let snapshot = released_snapshots()
         .into_iter()
-        .find(|snapshot| snapshot["version"] == "0.1.0-alpha.22")
-        .expect("the alpha.22 differences are recorded");
+        .find(|snapshot| snapshot["version"] == "0.1.0")
+        .expect("the 0.1.0 differences are recorded");
     assert_eq!(snapshot["from_commit"], "e0b5116");
     let differences = snapshot_differences(&snapshot);
     assert_eq!(differences.len(), 231);
@@ -584,7 +582,7 @@ fn ledger_covers_name_only_subject_kinds_the_recipe_diff_emits() {
                 }
             }
         }
-        // alpha.1, alpha.12 to alpha.20 and alpha.22; published ledgers are never removed.
+        // alpha.1, alpha.12 to alpha.20 and 0.1.0; published ledgers are never removed.
         assert!(ledgers >= 11, "{profile}: only {ledgers} ledgers found");
         assert_eq!(
             dead, shipped,
