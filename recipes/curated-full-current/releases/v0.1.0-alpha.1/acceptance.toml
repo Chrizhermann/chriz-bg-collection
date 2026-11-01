@@ -620,6 +620,17 @@ date = "2026-10-22"
 status = "accepted"
 scope = "Static recipe checks only: published v1.1.0 pin, published folder, component 0, default selection and order (after EET_end and Baeloth, before BuffBot) in both profiles. The owner's per-pack fixture installs are in release-intake-20261022; not a combined collection install or gameplay acceptance."
 
+[[evidence]]
+subject_kind = "run"
+subject_id = "sirene-bg1-bg2"
+kind = "static-test"
+repository = "Chrizhermann/chriz-bg-collection"
+commit = "03df8e20b4b800a00668127b54eb00df33d24315"
+test_artifact = "tools/tests/test_oct29_sirene_bg1_recipe.py"
+date = "2026-10-29"
+status = "accepted"
+scope = "Static recipe checks only: the pinned master commit archive 1c8600029a9ac31395a61b5d4d03f98337dcf83e, its published Sirene folder, components 0/3/6 by default and 7/8/9 as one optional class choice, and the order after Artisan's Kitpack main and before Sirene NPC for BG2, the Kitpack NPC installer, IEP Banters and Crossmod in both profiles (release-intake-20261029-sirene-bg1); not a collection install or gameplay acceptance."
+
 # This remains intentionally pending. Static checks do not turn it into live acceptance.
 [[evidence]]
 subject_kind = "release"

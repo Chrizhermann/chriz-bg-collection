@@ -128,8 +128,14 @@ Deleting an installation is permanent, including anything you manually put insid
 that folder. Original source games and shared downloads stay untouched; saves
 outside the deleted folder are kept. Export diagnostics first if you need its logs.
 
+The installation's saved-game profile in Documents is kept too, unless the game
+never used it: until the game first starts, the profile holds only CEBG's marker
+file, and such a profile is deleted with the installation. The confirmation names
+it before anything is deleted.
+
 If the folder is already missing, **Forget installation** removes only its entry
-from the list. That is not a deletion of files somewhere else on the disk.
+from the list, and a saved-game profile the game never used. That is not a
+deletion of files somewhere else on the disk.
 
 If the folder still exists but CEBG can no longer confirm it is that installation,
 for example because parts of it were deleted or renamed by hand, CEBG never

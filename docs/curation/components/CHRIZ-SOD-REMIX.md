@@ -1,13 +1,16 @@
 # CHRIZ-SOD-REMIX — components
 
-Pinned public release **v0.6.15** from `Chrizhermann/chriz-sod-rebalance` (published
-2026-10-23). This catalog has 46 current or historical entries; the recommended EET
+Pinned public release **v0.6.16** from `Chrizhermann/chriz-sod-rebalance` (published
+2026-10-29). This catalog has 46 current or historical entries; the recommended EET
 setup installs 41 components: the 40-row mandatory bundle plus Imoen choice `292`.
 Rows `177`, `198` and `285` arrived with v0.6.13 (October 13 intake, see
 [next batch intake](../../plans/2026-10-13-next-batch-intake.md)) and are mandatory
 bundle rows. v0.6.14 added the Imoen choice `292`/`293`/`294`, and v0.6.15 lets `256`
 install alongside Tweaks Anthology `3500`
 ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
+v0.6.16 lets `290` install alongside Sirene NPC for BG:EE and other mods that add a
+victory remark, and lets `265` and six more components read timer names from the
+game's own `GTIMES.IDS`.
 Existing-save repairs `176` and `291` and alternative `901` stay out of the recipe. The [September 16 candidate](../../alpha16-candidate-2026-09-16.md)
 approved normal components `115`, `135`, `256`, `265`, and `266` in the mandatory bundle,
 with `257` optional and unchecked. Component `901` remains the unselected alternative
@@ -50,13 +53,33 @@ The Dev marks below retain their historical scope and do not certify the new add
 
 ## Source/version and follow-up checks
 
-- The pinned `v0.6.15` release changes only `256` against v0.6.14: Tweaks Anthology
+- The pinned `v0.6.16` release (2026-10-29, tag on merge commit `f0d6c5a`; evidence in
+  `manifest/evidence/release-intake-20261029-sodremix.toml`) changes two things against
+  v0.6.15, with the same components, order and decisions:
+  - `290` accepts every victory remark in `BD4300` that has the vanilla shape, whoever
+    added it, and shortens each one's pause to 2 seconds. v0.6.15 expected exactly the 17
+    vanilla remarks plus Aura's, so Sirene NPC for BG:EE's remark stopped the
+    Recommended installation
+    ([chriz-sod-rebalance#35](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/35)).
+  - `265`, `135`, `140`, `200`, `245`, `256` and `266` read the names of their timers
+    from the game's own `GTIMES.IDS`, so a mod that gives a timer value another name no
+    longer stops them
+    ([chriz-sod-rebalance#34](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/34)).
+  - Its mod files are identical to those of the v0.6.16 candidate that installed in the
+    October 29 EET 2.7.3.0 lab of the Recommended plan with Sirene NPC for BG:EE; there
+    the ending ran from the victory remarks into SoA's opening. `290` skips SoD's
+    `bdcut61`, so other mods' additions to it do not run
+    ([chriz-sod-rebalance#37](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/37));
+    the owner's ending verifier still has two frozen expectations to update
+    ([chriz-sod-rebalance#36](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/36)).
+- The earlier `v0.6.15` release changes only `256` against v0.6.14: Tweaks Anthology
   `3500` gives every summoned creature a `CDTFOW` self-cast, which v0.6.13's `256`
   refused on the fire-elemental donor `BDELFIRM`, so the Recommended selection did not
   install with `3500` on. `256` now accepts exactly that effect and leaves it out of its
   hostile clones. The owner lab reinstalled `256` and the rest of the remix tail on a
-  disposable EET 2.7.3.0 copy of the Recommended stack with `3500` on; a complete
-  Recommended collection install from this pin is still a release gate (see
+  disposable EET 2.7.3.0 copy of the Recommended stack with `3500` on. The complete
+  Recommended collection install with `3500` on followed in the October 29 lab, from the
+  v0.6.16 candidate: `256` and the whole remix run installed without errors (see
   [FOLLOW_UPS](FOLLOW_UPS.md)).
 - v0.6.14 added the Imoen choice `292`/`293`/`294` (EET only; `294` also needs EEex).
   The owner lab on 2.7.3.0 with EEex and Spell Revisions passed `292` and `293` on both

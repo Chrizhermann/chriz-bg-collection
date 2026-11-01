@@ -1,0 +1,541 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.22"
+# PLACEHOLDER: the release step sets the exact UTC publication time before packaging.
+published_at = "2026-10-29T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.22"
+supersedes = "0.1.0-alpha.20"
+
+[[changes]]
+id = "modpack-companion-stat-adjustments"
+title = "Companion stat adjustments"
+summary = "Recommended new installations change five BG1 companions' base ability scores, each as its own choice: Rasaad Dexterity 17 and Constitution 16; Dorn Constitution 16; Eldoth Strength 17, Constitution 16, Wisdom 9 and Intelligence 14; Garrick Dexterity 17 and Intelligence 15; Quayle Constitution 15. Only the base scores change; class, kit, equipment and current hit points stay as they are. Make Faldorn an Avenger and Teach Dynaheir Haste now also install when only some of the files they patch are present, and say which ones they skipped. (Chriz BG Modpack alpha.12)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.12",
+  "feature:feature:chriz-bg-modpack:component-230",
+  "feature:feature:chriz-bg-modpack:component-231",
+  "feature:feature:chriz-bg-modpack:component-232",
+  "feature:feature:chriz-bg-modpack:component-233",
+  "feature:feature:chriz-bg-modpack:component-234",
+  "run:chriz-bg-modpack-pre-continuity-bg2",
+]
+
+[[changes]]
+id = "modpack-join-xp-for-every-npc"
+title = "Join XP for every joinable NPC"
+summary = "Recommended new installations give NPCs whose scripts lack EET's join-XP catch-up, mostly from mods, EET's own: on joining in Shadows of Amn they rise to the highest protagonist XP threshold reached, from 125,000 up to 1,250,000, and in Throne of Bhaal to 2,500,000. Sarah, for example, used to join at 89,000 XP. It never lowers XP and does not repeat when an NPC rejoins. Fade's and Evandra's join XP now recognises a catch-up they already have under EET instead of adding a second one. (Chriz BG Modpack alpha.13)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.13",
+  "feature:feature:chriz-bg-modpack:component-239",
+  "run:chriz-bg-modpack-late-companions-bg2",
+]
+
+[[changes]]
+id = "modpack-dorn-ambush-crash-fix"
+title = "Dorn's BG1 ambush no longer crashes the game"
+summary = "Recommended new installations fix the cutscene when Dorn catches up with Senjak and Dorotea in BG1: it no longer locks the camera on Senjak. If their conversation stalled, leaving the area crashed the game; a completed conversation still ends in the fight. (Chriz BG Modpack alpha.13)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.13",
+  "feature:feature:chriz-bg-modpack:component-135",
+  "run:chriz-bg-modpack-bg2",
+]
+
+[[changes]]
+id = "modpack-defensive-stance-follows-ai-option"
+title = "Defensive Stance follows \"Use special abilities\""
+summary = "Recommended new installations keep your main character and others on the default party AI from entering Defensive Stance on their own in BG1 while \"Use special abilities\" is off in the AI settings. (Chriz BG Modpack alpha.13)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.13",
+  "feature:feature:chriz-bg-modpack:component-460",
+  "run:chriz-bg-modpack-bg2",
+]
+
+[[changes]]
+id = "modpack-campaign-xp-caps-work-and-chapter-caps"
+title = "Campaign XP caps work; chapter-by-chapter caps"
+summary = "The optional, experimental campaign XP caps with banked XP now work, on EEex v1.3.1 too. With Modpack alpha.11 and alpha.12 no character got a bank account, so with the caps installed every permanent XP award was refused, the optional Shadows of Amn cap included. Script variables are no longer lost at the next save when the bank could not take an XP change; if the bank cannot start, XP stays uncapped and unbanked, and the reason goes to the game's loader log. New, optional and experimental instead of the Shadows of Amn cap: chapter-by-chapter caps, from 16,000 usable XP in BG1 Chapters 1-2 up to 8,900,000 in Throne of Bhaal's last chapter, with XP above the cap banked until a later chapter raises it. With them, Baeloth's Larswood scene waits for Chapter 5, so his starting XP fits under the cap. The chapter caps have not been played through the story yet. (Chriz BG Modpack alpha.13 and alpha.14)"
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.13",
+  "artifact:chriz-bg-modpack-0.2.0-alpha.14",
+  "feature:feature:chriz-bg-modpack:component-651",
+  "feature:feature:chriz-bg-modpack:component-652",
+  "run:chriz-bg-modpack-campaign-xp-bg2",
+]
+
+[[changes]]
+id = "modpack-reader-level-scrolls-stay-on"
+title = "Scrolls at the reader's caster level stay on"
+summary = "Scrolls at the reader's caster level, a recommended default, now stay on for the whole session. With Modpack alpha.11 to alpha.13 they could turn off after a load, a new game, an NPC joining or opening a container, with an EEex message box, and scrolls then cast at their normal level until the game was restarted. Technical notices now go to the game's loader log; only in one rare case, when the scroll rule can neither start cleanly nor undo its start, does a single box ask you to restart the game as it starts. (Chriz BG Modpack alpha.14)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-modpack-0.2.0-alpha.14",
+]
+
+[[changes]]
+id = "scs-fine-weapons-and-ammunition"
+title = "Fine weapons that never break"
+summary = "Recommended new installations turn most standard +1 weapons into nonmagical fine weapons (SCS): still +1 to hit and damage, but no initiative bonus, no harm to creatures immune to normal weapons, and about a third of the price. They never break in BG1's iron crisis. Fine ammunition, the same change for +1 arrows, bolts, darts and sling bullets, is offered unchecked and is not part of Challenge Mode; Protection from Normal Missiles stops it."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:stratagems:component-3010",
+  "feature:feature:stratagems:component-3021",
+  "run:stratagems-bg2",
+]
+
+[[changes]]
+id = "rebalance-potion-doses-and-heroism"
+title = "One potion dose of each type; Heroism effects don't combine"
+summary = "Recommended new installations allow one dose of each potion type at a time: drinking a type that is already active restarts its duration instead of stacking its bonus, and Heroism, Power and other potions that raise maximum hit points keep the first dose until it ends. Potions of Genius still stack, and different potion types still combine. The strict version, where Genius does not stack either, is offered unchecked and is part of Challenge Mode. Heroism, Greater Heroism (Bardic Wonders), their copies and the Potion of Heroism don't combine either: the first one active on a creature wins. Song of Heroism, Aid and the Potion of Power stay separate. (BG Rebalance v0.8.3)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.3",
+  "feature:feature:chriz-bg-rebalance:component-330",
+  "feature:feature:chriz-bg-rebalance:component-331",
+  "feature:feature:chriz-bg-rebalance:component-332",
+  "run:chriz-bg-rebalance-bg2",
+]
+
+[[changes]]
+id = "challenge-mode-fences-and-strict-potions"
+title = "Challenge Mode: no stealing from fences, strict potions"
+summary = "Challenge Mode now also includes No stealing from fences (Tweaks Anthology), offered unchecked on its own: you can no longer steal from fences, and reputation no longer changes their prices. At fences this also replaces the chosen store-price option. Switching Challenge Mode on also picks the strict potion rule instead of the recommended one, and switching it off restores the recommended rule."
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "feature:feature:cdtweaks:component-2760",
+  "feature:feature:chriz-bg-rebalance:component-330",
+  "run:cdtweaks-bg2",
+]
+
+[[changes]]
+id = "rebalance-chris-revisions"
+title = "Chris Revisions: Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation"
+summary = "Recommended new installations add Christopher's own spell balance changes, with or without Spell Revisions. Aid grants only hit points, 1d8 +1 per caster level (at most +10), and casting it again replaces the bonus. Luck lasts 90 seconds. Bless lasts 30 seconds plus 1 round per caster level. Druids can cast Bless and Chaotic Commands again, and rangers Bless. Prayer and Recitation no longer stack: Recitation's bonus or penalty replaces Prayer's while it lasts. Exact copies, such as Bardic Wonders' Troubadour Aid, change with them. (BG Rebalance v0.8.5)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.5",
+  "feature:feature:chriz-bg-rebalance:component-340",
+  "run:chriz-bg-rebalance-bg2",
+]
+
+[[changes]]
+id = "rebalance-0-8-4-compatibility-fixes"
+title = "BG Rebalance fixes"
+summary = "Fixes for BG Rebalance components the collection already installs: Bracers of Blinding Strike and Spell Revisions' Haste or Improved Haste no longer combine when the spell is cast first. A short full immunity, such as SCS's Divine Protection, stays at 100% for as long as it lasts; other party physical resistance stays capped at 90%. Combat cloud forms turn only immunities of 100% or more into 75% resistance, and elemental arrows change only the arrow's bow-fired hit. The Cleric of Tempus rework works with Artisan's Kitpack and other layouts and keeps other mods' visuals, sounds and markers; the optional Emotion spells accept other mods' casting times, ranges, schools and levels. Components that cannot apply a change correctly now stop the installation with the reason instead of guessing. (BG Rebalance v0.8.4)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.5",
+]
+
+[[changes]]
+id = "rebalance-true-time-stop-fair-haste-slow"
+title = "True Time Stop – fair Haste & Slow"
+summary = "Recommended new installations make Time Stop stop everything but the caster, and Haste and Slow change only actions and movement. In a Time Stop, the frozen creatures' spells and potions no longer run out while they cannot act, and their poison and regeneration wait too; everything continues afterwards with the time it had left. Haste and Slow no longer speed up or slow down poison, regeneration and other repeated effects; attacks, actions and movement stay hasted or slowed. Requires EEex. Install it before a playthrough: adding or removing it during one is not supported. Saving, dispelling, curing or dying during a Time Stop are not covered yet. (BG Rebalance v0.8.6, named in v0.8.7)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.6",
+  "artifact:chriz-bg-rebalance-0.8.7",
+  "feature:feature:chriz-bg-rebalance:component-360",
+  "run:chriz-bg-rebalance-bg2",
+]
+
+[[changes]]
+id = "rebalance-druid-and-alaghor-weapons"
+title = "Druid and Alaghor of Clangeddin weapons"
+summary = "Recommended new installations let druids and every druid kit use axes and short bows and put one point into them; fighter/druids can also use long bows, with up to two points in all three. Yeslick's Alaghor of Clangeddin kit trains and uses the cleric weapons plus axes, Clangeddin's weapon, with up to two points; the thief weapons its weapon list allowed drop out, and points already spent stay. The Alaghor change needs EEex and Artisan's Kitpack's weapon rules. (BG Rebalance v0.8.8)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.8",
+  "feature:feature:chriz-bg-rebalance:component-410",
+  "feature:feature:chriz-bg-rebalance:component-411",
+  "run:chriz-bg-rebalance-bg2",
+]
+
+[[changes]]
+id = "kitpack-kit-weapon-fixes"
+title = "Kit weapon fixes"
+summary = "New installations use the Artisan's Kitpack fork chriz.5. Sorcerers, the Dragon Disciple included, can equip daggers, quarterstaves, darts and slings again without proficiency points, like mages. Eldritch Knight and Arcane Trickster sorcerers keep their kit weapons when they level up or join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the start. The Invisible Blade and Bardic Wonders' Dancer can use katanas and the rogue and bard items that kept them out by mistake, also those that later mods add, such as SCS's Drow Katana; the Shapeshifter and the Elementalist still cannot use them. Existing games keep the old weapon behavior."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.3",
+  "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.4",
+  "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.5",
+  "feature:feature:artisanskitpack-tweak:component-7205",
+  "run:artisanskitpack-tweak-late-bg2",
+]
+
+[[changes]]
+id = "kitpack-weapon-rules-for-later-mods"
+title = "Kit weapon rules for weapons from later mods"
+summary = "Recommended new installations extend Artisan's Kitpack's kit weapon rules to weapons that mods installed after the Kitpack add. For example, the Priest of Tempus and the Eldritch Knight can use IWDification's two-handed axes, and the Arcane Trickster sorcerer the SCS Drow Katana. Requires EEex."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:artisanskitpack-tweak:component-1010000",
+  "run:artisanskitpack-tweak-late-bg2",
+]
+
+[[changes]]
+id = "sirene-bg1-and-siege-of-dragonspear"
+title = "Sirene in BG1 and Siege of Dragonspear"
+summary = "Recommended new installations add Sirene NPC for BG:EE: Sirene, a paladin, can join the party in BG1 and in Siege of Dragonspear, and with Sirene NPC for BG2 she carries on into Shadows of Amn. As in BG2, she is a True Paladin with the Sirick portrait; Cavalier, Inquisitor and Undead Hunter are offered unchecked. Pick the same class for her in both games. Both Sirene mods now install after Artisan's Kitpack, so the Kitpack's Martyr paladin kit stays available at character creation, unchanged."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e",
+  "feature:feature:sirene-bg1:component-0",
+  "feature:feature:sirene-bg1:component-3",
+  "feature:feature:sirene-bg1:component-6",
+  "feature:feature:sirene-bg1:component-7",
+  "feature:feature:sirene-bg1:component-8",
+  "feature:feature:sirene-bg1:component-9",
+  "run:sirene-bg1-bg2",
+]
+
+[[changes]]
+id = "eeex-1-3-1-and-attack-info"
+title = "EEex 1.3.1 and optional attack info"
+summary = "New installations use EEex v1.3.1 (was v1.2.0): the EEex Options menu pauses the game while it is open and no longer opens during dialogs or cutscenes, and InfinityLoader no longer fails to start the game on some systems. EEex's attack info, which shows your chance to hit when the attack cursor is over a target, is offered unchecked; you can also switch it on or off later in EEex's options, and the change takes effect after a restart. Existing installations keep their EEex version."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:eeex-1.3.1",
+  "feature:feature:eeex:component-9",
+  "feature:mod:eeex",
+  "run:eeex-bg2",
+]
+
+[[changes]]
+id = "tweaks-anthology-new-defaults"
+title = "New Tweaks Anthology defaults"
+summary = "Recommended new installations add three Tweaks Anthology choices: summoned creatures clear the fog of war (requires EEex); Ribald's special stock moves into his regular store, so it is one store instead of two; and sensible entrance points, now available on EET: travelling to the Bridge District from areas further south arrives at a new southern entrance."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:cdtweaks:component-3220",
+  "feature:feature:cdtweaks:component-3500",
+  "feature:feature:cdtweaks:component-3510",
+  "run:cdtweaks-bg2",
+]
+
+[[changes]]
+id = "tweaks-anthology-grandmastery-and-ajantis"
+title = "Grandmastery and NPC moves"
+summary = "Grandmastery, a recommended default, now gives High Mastery +5 damage instead of +4, matching Grand Mastery; to-hit and the other levels are unchanged. With Spell Revisions, the Black Blade of Disaster also gets +3/2 attacks per round and +8 to hit and +10 damage instead of +5 and +5. Move NPCs to convenient locations also moves Ajantis to the Friendly Arm Inn, along with Alora, Eldoth, Quayle, Shar-Teel, Tiax and Viconia. (The Tweaks Anthology development version)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729",
+  "feature:feature:cdtweaks:component-1257",
+  "feature:feature:cdtweaks:component-2210",
+]
+
+[[changes]]
+id = "tweaks-anthology-development-version"
+title = "Tweaks Anthology development version"
+summary = "New installations use a development version of The Tweaks Anthology (7649ced, 134 changes after v18), pinned exactly because there is no newer release yet. It fixes components the collection installs: the SoD Death Cam no longer hangs in two cutscenes, mages can decline the Sphere stronghold, familiars no longer get the hit points meant for party members, and the kit ability table change that SCS reads is labelled correctly. If you choose Customize (via cdtweaks.txt) for movement speed outside combat, the installer now supplies the collection's settings: 125% movement, no faster casting and portrait icons on, instead of the Tweaks Anthology's default of 200%."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729",
+  "run:cdtweaks-bg2",
+]
+
+[[changes]]
+id = "tweaks-druid-cleric-progression-optional"
+title = "Druids level on their own XP table again"
+summary = "Druids level like clerics (Alter Druid Spell and Level Progression Tables, Tweaks Anthology) is now unchecked in Chris's Recommended and stays available. Druids keep their own XP table: level 15 at 3,000,000 XP instead of 1,575,000."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:cdtweaks:component-2292",
+]
+
+[[changes]]
+id = "chrizfader-player-voicepacks"
+title = "18 player voicepacks"
+summary = "Recommended new installations add 18 player voicepacks from ChrizFader's voicepacks v1.1.0, each as its own choice, made from the characters' original game audio: Neera, Safana (BG1 and SoD), Jaheira (BG1 and BG2), Yeslick, Edwin (BG1 and BG2), Aerie, Imoen (BG1 and BG2), Sarevok, Amelyssan, Gromnir Il-Khan, Ajantis, Viconia (BG1 and BG2), and Lord Garithos from Warcraft III (IAIWE's soundset). Choose them as your character's voice in character creation. They add voices only; companions keep their own."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:voicepack-aerie-1.0.1",
+  "artifact:voicepack-ajantis-2.0.0",
+  "artifact:voicepack-amelyssan-1.0.1",
+  "artifact:voicepack-edwin-bg1-1.0.1",
+  "artifact:voicepack-edwin-bg2-1.0.1",
+  "artifact:voicepack-garithos-1.1.0",
+  "artifact:voicepack-gromnir-il-khan-1.0.1",
+  "artifact:voicepack-imoen-bg1-1.0.1",
+  "artifact:voicepack-imoen-bg2-1.0.1",
+  "artifact:voicepack-jaheira-bg1-1.0.1",
+  "artifact:voicepack-jaheira-bg2-1.0.1",
+  "artifact:voicepack-neera-1.0.1",
+  "artifact:voicepack-safana-bg1-1.0.1",
+  "artifact:voicepack-safana-sod-1.0.1",
+  "artifact:voicepack-sarevok-1.0.1",
+  "artifact:voicepack-viconia-bg1-1.0.0",
+  "artifact:voicepack-viconia-bg2-1.0.0",
+  "artifact:voicepack-yeslick-1.0.1",
+  "feature:feature:voicepack-aerie:component-0",
+  "feature:feature:voicepack-ajantis:component-0",
+  "feature:feature:voicepack-amelyssan:component-0",
+  "feature:feature:voicepack-edwin-bg1:component-0",
+  "feature:feature:voicepack-edwin-bg2:component-0",
+  "feature:feature:voicepack-garithos:component-0",
+  "feature:feature:voicepack-gromnir-il-khan:component-0",
+  "feature:feature:voicepack-imoen-bg1:component-0",
+  "feature:feature:voicepack-imoen-bg2:component-0",
+  "feature:feature:voicepack-jaheira-bg1:component-0",
+  "feature:feature:voicepack-jaheira-bg2:component-0",
+  "feature:feature:voicepack-neera:component-0",
+  "feature:feature:voicepack-safana-bg1:component-0",
+  "feature:feature:voicepack-safana-sod:component-0",
+  "feature:feature:voicepack-sarevok:component-0",
+  "feature:feature:voicepack-viconia-bg1:component-0",
+  "feature:feature:voicepack-viconia-bg2:component-0",
+  "feature:feature:voicepack-yeslick:component-0",
+  "run:voicepack-aerie-bg2",
+  "run:voicepack-ajantis-bg2",
+  "run:voicepack-amelyssan-bg2",
+  "run:voicepack-edwin-bg1-bg2",
+  "run:voicepack-edwin-bg2-bg2",
+  "run:voicepack-garithos-bg2",
+  "run:voicepack-gromnir-il-khan-bg2",
+  "run:voicepack-imoen-bg1-bg2",
+  "run:voicepack-imoen-bg2-bg2",
+  "run:voicepack-jaheira-bg1-bg2",
+  "run:voicepack-jaheira-bg2-bg2",
+  "run:voicepack-neera-bg2",
+  "run:voicepack-safana-bg1-bg2",
+  "run:voicepack-safana-sod-bg2",
+  "run:voicepack-sarevok-bg2",
+  "run:voicepack-viconia-bg1-bg2",
+  "run:voicepack-viconia-bg2-bg2",
+  "run:voicepack-yeslick-bg2",
+]
+
+[[changes]]
+id = "sod-remix-imoen-into-shadows-of-amn"
+title = "Choose how Imoen continues into Shadows of Amn"
+summary = "Recommended new installations make Imoen the BG2 thief/mage dual-class Imoen in Shadows of Amn, plus the tome boosts she read in BG1 and SoD. Offered unchecked instead: she continues as taken along, or, with EEex, she dual-classes to mage at her end-of-SoD thief level and Shadows of Amn's catch-up XP goes into mage. With every choice her SoD gear is handed over like the party's, and she keeps only her BG2 belt, correctly equipped; she no longer reaches Shadows of Amn with all her gear and her belt in the magic-weapon slot. Raise a dead Imoen before ending SoD. (SoD Remix v0.6.14)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:chriz-sod-remix:component-292",
+  "feature:feature:chriz-sod-remix:component-293",
+  "feature:feature:chriz-sod-remix:component-294",
+  "run:chriz-sod-remix-bg2",
+]
+
+[[changes]]
+id = "sod-remix-0-6-16-compatibility"
+title = "SoD Remix installs alongside more mods"
+summary = "New installations use SoD Remix v0.6.16. Its Boareskyr Bridge finale installs alongside Summoned creatures clear the fog of war; the hostile bridge elementals leave that ally-only effect out. Its victory ending installs alongside mods that add their own victory remark after the battle of Avernus, such as Sirene NPC for BG:EE, and keeps the pause after every remark short. Other SoD Remix parts no longer stop when a mod gives one of the game's timer lengths another name."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-sod-remix-0.6.15",
+  "artifact:chriz-sod-remix-0.6.16",
+]
+
+[[changes]]
+id = "optional-quest-mods-portraits-and-voices"
+title = "New optional quest mods, portraits and voices"
+summary = "Offered unchecked and experimental, each separately, in the new Quest mods category: Northern Tales of the Sword Coast (new quests, areas and dungeons north of Baldur's Gate and along the Sword Coast) and Ascalon's Questpack (nine small BG1 quests and one for Shadows of Amn). Also new, optional and experimental: Thalantyr Item Upgrade (Thalantyr in High Hedge improves BG1 items) in Items, the Icewind Dale Voice Pack (Icewind Dale's player voices) in Audio, and Portraits Portraits Everywhere (dialogue portraits for speaking NPCs, about 0.4 GB) in Visuals. They are third-party mods, offered as they are and not yet tested in a combined installation."
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "artifact:ac-quest-7.0",
+  "artifact:ntotsc-f0ef95323630bc38df7dd4c969a2b48a71ebec82",
+  "artifact:ppe-417226ea6642b8c682b2d049d0ec6e86f38b7f47",
+  "artifact:thalan-4.5.1",
+  "artifact:zg-iwd-voices-1.2.0",
+  "feature:mod:ac-quest",
+  "feature:feature:ac-quest:component-0",
+  "feature:feature:ac-quest:component-1",
+  "feature:feature:ac-quest:component-2",
+  "feature:feature:ac-quest:component-3",
+  "feature:feature:ac-quest:component-4",
+  "feature:feature:ac-quest:component-5",
+  "feature:feature:ac-quest:component-6",
+  "feature:feature:ac-quest:component-7",
+  "feature:feature:ac-quest:component-8",
+  "feature:feature:ac-quest:component-9",
+  "feature:feature:ac-quest:component-10",
+  "feature:feature:ac-quest:component-11",
+  "feature:feature:ac-quest:component-12",
+  "feature:mod:ntotsc",
+  "feature:feature:ntotsc:component-0",
+  "feature:feature:ntotsc:component-1",
+  "feature:feature:ntotsc:component-2",
+  "feature:feature:ntotsc:component-3",
+  "feature:feature:ntotsc:component-4",
+  "feature:feature:ntotsc:component-5",
+  "feature:feature:ntotsc:component-6",
+  "feature:feature:ntotsc:component-7",
+  "feature:feature:ntotsc:component-8",
+  "feature:feature:ntotsc:component-9",
+  "feature:feature:ntotsc:component-10",
+  "feature:feature:ntotsc:component-11",
+  "feature:feature:ntotsc:component-12",
+  "feature:feature:ntotsc:component-13",
+  "feature:feature:ntotsc:component-14",
+  "feature:feature:ntotsc:component-15",
+  "feature:feature:ntotsc:component-16",
+  "feature:mod:ppe",
+  "feature:feature:ppe:component-0",
+  "feature:feature:ppe:component-10",
+  "feature:feature:ppe:component-20",
+  "feature:feature:ppe:component-25",
+  "feature:feature:ppe:component-30",
+  "feature:feature:ppe:component-40",
+  "feature:feature:ppe:component-100",
+  "feature:feature:ppe:component-150",
+  "feature:feature:ppe:component-300",
+  "feature:feature:ppe:component-301",
+  "feature:feature:ppe:component-302",
+  "feature:feature:ppe:component-311",
+  "feature:feature:ppe:component-312",
+  "feature:feature:ppe:component-322",
+  "feature:feature:ppe:component-330",
+  "feature:feature:ppe:component-332",
+  "feature:feature:ppe:component-340",
+  "feature:feature:ppe:component-342",
+  "feature:feature:ppe:component-350",
+  "feature:feature:thalan:component-0",
+  "feature:feature:zg-iwd-voices:component-0",
+  "run:ac-quest-bg2",
+  "run:ntotsc-bg2",
+  "run:ppe-bg2",
+  "run:thalan-bg2",
+  "run:zg-iwd-voices-bg2",
+]
+
+[[changes]]
+id = "optional-black-hearts"
+title = "Black Hearts for installations without the SoD Remix"
+summary = "Offered unchecked and experimental: Black Hearts v2.05, a third-party BG1 and Siege of Dragonspear quest in which Illasera hires the party. It can't be combined with the SoD Remix, because its Siege of Dragonspear part runs through areas the remix restructures, so the installer offers it only with the SoD Remix unticked."
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "artifact:blackhearts-2.05",
+  "feature:feature:blackhearts:component-1",
+  "run:blackhearts-bg2",
+]
+
+[[changes]]
+id = "unfinished-business-optional"
+title = "Unfinished Business for BG1 and BG2 is optional"
+summary = "Unfinished Business for BG2 and BG1 Unfinished Business are now unchecked in Chris's Recommended; all their components remain available in the installer. BG1 Unfinished Business's Nim Furlwing and Svlast encounters and the versions in Northern Tales of the Sword Coast are either-or: with both mods ticked, BG1 Unfinished Business keeps them."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:feature:ub:component-0",
+  "feature:feature:ub:component-1",
+  "feature:feature:ub:component-2",
+  "feature:feature:ub:component-4",
+  "feature:feature:ub:component-5",
+  "feature:feature:ub:component-6",
+  "feature:feature:ub:component-7",
+  "feature:feature:ub:component-8",
+  "feature:feature:ub:component-9",
+  "feature:feature:ub:component-10",
+  "feature:feature:ub:component-12",
+  "feature:feature:ub:component-13",
+  "feature:feature:ub:component-14",
+  "feature:feature:ub:component-15",
+  "feature:feature:ub:component-17",
+  "feature:feature:ub:component-18",
+  "feature:feature:ub:component-20",
+  "feature:feature:ub:component-21",
+  "feature:mod:bg1ub",
+  "feature:feature:bg1ub:component-0",
+  "feature:feature:bg1ub:component-11",
+  "feature:feature:bg1ub:component-12",
+  "feature:feature:bg1ub:component-13",
+  "feature:feature:bg1ub:component-14",
+  "feature:feature:bg1ub:component-16",
+  "feature:feature:bg1ub:component-17",
+  "feature:feature:bg1ub:component-18",
+  "feature:feature:bg1ub:component-19",
+  "feature:feature:bg1ub:component-21",
+  "feature:feature:bg1ub:component-22",
+  "feature:feature:bg1ub:component-29",
+  "feature:feature:bg1ub:component-30",
+  "feature:feature:bg1ub:component-32",
+  "feature:feature:bg1ub:component-33",
+  "feature:feature:bg1ub:component-34",
+]
+
+[[changes]]
+id = "bardic-wonders-balance-8-fixes"
+title = "Bardic Wonders fixes"
+summary = "New installations use Bardic Wonders v2.9c-balance.8. The Troubadour, Deathsinger and New Bard Spells copies of priest spells are now found by the spell's name, so they follow Spell Revisions, and recasting one refreshes it instead of stacking with the earlier cast. The Troubadour and Deathsinger descriptions name the spells the kits actually get. The Gallant now gets the new bard spells; in the collection's install order it got none of them. Symphony of the Dark Children (Abettor of Mask) turns the party invisible again when the song ends; before, nothing happened at the end, and a disabled singer gave Invisibility every round."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:bardicwonders-v2.9c-balance.7",
+  "artifact:bardicwonders-v2.9c-balance.8",
+]
+
+[[changes]]
+id = "buffbot-1-12-1"
+title = "BuffBot 1.12.1"
+summary = "New installations use BuffBot v1.12.1 (was v1.10.0). The \"Combat detected - casting stopped\" and \"casting timed out\" notices now appear over the party leader's head; before, both were always lost, although stopping the buff run worked. New: an optional 2x or 4x speed while a buff run lasts (Normal stays the default), presets that cast their longest-lasting buffs first (Order: Duration; your own order stays the default), and casting buffs that are nearly over again, through the EEex options (off by default) or the panel's Active toggle. Also new: a search by buff name and item powers that work through a spell found automatically. The panel wears the theme's artwork and colours, so its columns are readable on dark themes. The F12 preset abilities are gone: right-click the HUD gear to pick a named preset. BuffBot no longer adds text to the game's dialog.tlk."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.10.1",
+  "artifact:buffbot-1.11.0",
+  "artifact:buffbot-1.12.1",
+]
+
+[[changes]]
+id = "buffbot-fixes-to-1-12-1"
+title = "BuffBot fixes"
+summary = "Fixed in BuffBot v1.11.0 to v1.12.1: a configured spell variant no longer skips its casting time and aura, wearable items are no longer refused to characters without a kit, and restoring temporarily equipped items no longer risks overwriting the first backpack slot on BG2:EE 2.7.3.0, which could corrupt the character's name and crash the game. On a small panel, button captions no longer spill onto the neighbouring buttons, so a click lands on the button you see; spare tab slots stay inside the panel; and the quick-preset menu's captions move with the menu."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:buffbot-1.11.0",
+  "artifact:buffbot-1.12.1",
+]
+
+[[changes]]
+id = "eeex-remote-console-0-2-1"
+title = "EEex Remote Console keeps the single-player menu in front"
+summary = "Optional and experimental: with EEex Remote Console v0.2.1, after you return to the main menu from character creation, the load screen or the options, the single-player menu no longer stays behind the game's screens for the rest of the session. Its installer messages now name the EEex v1.2/v1.3 components it needs."
+save_applicability = "next-playthrough"
+urgency = "optional"
+covers = [
+  "artifact:eeexremote-0.2.1",
+]
+
+[[changes]]
+id = "spell-revisions-chriz-7-encounters-and-lightning"
+title = "Spell Revisions fixes for Rogue Rebalancing and Lightning Bolt"
+summary = "New installations use the Spell Revisions fork v4.21-chriz.7. With Rogue Rebalancing's encounters, Aran Linvail, the Zhentarim Mercenary and Selina prepare Hold Monster, Feeblemind and Domination in place of Rogue Rebalancing's level-5 Chaos; before, the Chaos copies were moved to level 7, where Aran and the Mercenary could never cast them. The Lightning Bolt choice keeps damage another mod adds to the bolt instead of stopping the installation."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:spell-revisions-4.21-chriz.7",
+  "artifact:srcb-rr-compat-4.21-chriz.7",
+]

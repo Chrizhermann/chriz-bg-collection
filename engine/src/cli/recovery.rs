@@ -638,7 +638,7 @@ pub fn accept_supervised_recovery(
     let layout = ManagedLayout::prepare(root, &checked.frozen.bg1.root, &checked.frozen.bg2.root)
         .map_err(error)?;
     let identity = reserve_save_identity(
-        &CliDocumentsLocator,
+        &SystemDocuments,
         &layout,
         checked.frozen.effective_display_name(),
         &checked.base.install_id,

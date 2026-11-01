@@ -1,8 +1,9 @@
-//! Explicit, registry-bound deletion of a managed game copy. Saves and cache are not targets.
+//! Explicit, registry-bound deletion of a managed game copy. Saves and cache are not targets; a
+//! saved-game profile goes too only when the game never used it.
 
 use std::fs;
 use std::hash::{Hash, Hasher};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,7 @@ use crate::preflight::{
 };
 use crate::registry::ManagedInstallRegistry;
 use crate::session::SessionStore;
-use crate::stage::DocumentsLocator;
+use crate::stage::{save_owner_records, DocumentsLocator, SystemDocuments, SAVE_OWNER_MARKER};
 
 /// A freshly validated removal description. The desktop keeps it server-side behind a token.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,7 +27,12 @@ pub struct RemovalPlan {
     pub install_id: String,
     pub display_name: String,
     pub managed_root: PathBuf,
+    /// The installation's saved-game profile, which removal keeps.
     pub preserved_save_path: Option<PathBuf>,
+    /// The installation's saved-game profile instead, when the game never used it: it holds
+    /// nothing but CEBG's ownership marker for this installation, and removal deletes it too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unused_save_path: Option<PathBuf>,
     pub action: RemovalAction,
     /// Why the folder cannot be deleted, only for [`RemovalAction::Unlist`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -34,6 +40,14 @@ pub struct RemovalPlan {
     registry_sha256: String,
     directory_identity: Option<u64>,
     protected_paths: Vec<PathBuf>,
+}
+
+/// What a removal that succeeded left undone.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct RemovalOutcome {
+    /// The plan's unused saved-game profile when it stays after all: it could not be deleted,
+    /// or something else is in it by now.
+    pub unused_save_path_kept: Option<PathBuf>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -59,6 +73,15 @@ fn io_at(path: &Path, error: io::Error) -> RemovalError {
 
 /// Does not remove files or registry entries. Unknown ids never confer path authority.
 pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, RemovalError> {
+    preview_with(app_data, install_id, &SystemDocuments)
+}
+
+/// `locator` finds the Documents folder that holds an incomplete installation's saves.
+fn preview_with(
+    app_data: &Path,
+    install_id: &str,
+    locator: &dyn DocumentsLocator,
+) -> Result<RemovalPlan, RemovalError> {
     let registry = ManagedInstallRegistry::open_or_create(app_data).map_err(failure)?;
     let installs = registry.list().map_err(failure)?;
     let campaigns = registry.list_campaigns().map_err(failure)?;
@@ -85,6 +108,7 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
             .unwrap_or_else(|| "Chriz Easy BG — incomplete installation".to_owned()),
         managed_root: root.clone(),
         preserved_save_path: install.map(|record| record.managed_save_root.clone()),
+        unused_save_path: None,
         action: RemovalAction::Forget,
         reason: None,
         registry_sha256: sha256_bytes(&snapshot),
@@ -109,7 +133,9 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
         }
     }
     match fs::symlink_metadata(root) {
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(plan),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Ok(with_unused_profile(plan))
+        }
         Err(error) => return Err(io_at(root, error)),
         Ok(metadata) if !metadata.is_dir() || reparse(&metadata) => {
             return Ok(unlisted(
@@ -129,7 +155,9 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
     }
     let identity = directory_identity(root)?;
     let journal_path = journal_path(app_data, install_id);
-    if let Some(journal) = read_journal(&journal_path)? {
+    let journal = read_journal(&journal_path)?;
+    let interrupted = journal.is_some();
+    if let Some(journal) = journal {
         if journal.install_id != plan.install_id
             || journal.managed_root != plan.managed_root
             || journal.registry_sha256 != plan.registry_sha256
@@ -204,7 +232,7 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
             }
         }
         if plan.preserved_save_path.is_none() {
-            if let Ok(documents) = crate::stage::SystemDocuments.documents_dir() {
+            if let Ok(documents) = locator.documents_dir() {
                 if prospective_path(&documents)?.starts_with(root) {
                     return Err(failure("Refusing the Documents folder or its parent."));
                 }
@@ -238,23 +266,36 @@ pub fn preview(app_data: &Path, install_id: &str) -> Result<RemovalPlan, Removal
             )));
         }
     }
-    Ok(plan)
+    // An interrupted removal keeps the profile decision it was confirmed with; deleting an unused
+    // profile checks it again anyway.
+    Ok(if interrupted {
+        plan
+    } else {
+        with_unused_profile(plan)
+    })
 }
 
 /// Revalidates the preview under the same cross-process lock used by installation.
-pub fn execute(app_data: &Path, expected: &RemovalPlan) -> Result<(), RemovalError> {
-    execute_with(app_data, expected, &SystemPreflight, &mut |_| Ok(()))
+pub fn execute(app_data: &Path, expected: &RemovalPlan) -> Result<RemovalOutcome, RemovalError> {
+    execute_with(
+        app_data,
+        expected,
+        &SystemDocuments,
+        &SystemPreflight,
+        &mut |_| Ok(()),
+    )
 }
 
 fn execute_with(
     app_data: &Path,
     expected: &RemovalPlan,
+    locator: &dyn DocumentsLocator,
     host: &dyn PreflightHost,
     before_remove: &mut dyn FnMut(&Path) -> io::Result<()>,
-) -> Result<(), RemovalError> {
+) -> Result<RemovalOutcome, RemovalError> {
     let _lock =
         TargetLock::try_acquire(app_data.join("locks"), &expected.managed_root).map_err(failure)?;
-    let current = preview(app_data, &expected.install_id)?;
+    let current = preview_with(app_data, &expected.install_id, locator)?;
     if current != *expected {
         return Err(failure(
             "Installation changed since confirmation. Review removal again.",
@@ -276,6 +317,12 @@ fn execute_with(
         persist_journal(app_data, &current)?;
         remove_tree(root, before_remove)?;
     }
+    // The installation itself is gone by now. A profile that cannot go after all stays, as
+    // every profile did before, and is reported instead of failing the removal.
+    let unused_save_path_kept = current
+        .unused_save_path
+        .clone()
+        .filter(|profile| remove_unused_profile(profile, &current).is_err());
     let registry = ManagedInstallRegistry::open_or_create(app_data).map_err(failure)?;
     match current.action {
         RemovalAction::Delete | RemovalAction::Forget => {
@@ -291,7 +338,9 @@ fn execute_with(
     // reported as such. Only a listed installation reads its journal, so a journal that stays
     // behind, for example while another program holds it open, can no longer authorize anything.
     remove_journal_best_effort(&journal);
-    Ok(())
+    Ok(RemovalOutcome {
+        unused_save_path_kept,
+    })
 }
 
 /// Removes a removal journal if it is still a plain file reached without links. It is checked
@@ -310,6 +359,89 @@ fn unlisted(mut plan: RemovalPlan, directory_identity: Option<u64>, reason: &str
     plan.directory_identity = directory_identity;
     plan.reason = Some(reason.to_owned());
     plan
+}
+
+/// Names the plan's saved-game profile as unused instead of kept when the game never used it,
+/// so that removal deletes it too.
+fn with_unused_profile(mut plan: RemovalPlan) -> RemovalPlan {
+    if plan
+        .preserved_save_path
+        .as_deref()
+        .is_some_and(|profile| unused_profile(profile, &plan))
+    {
+        plan.unused_save_path = plan.preserved_save_path.take();
+    }
+    plan
+}
+
+/// Whether the saved-game profile `profile` holds nothing but CEBG's ownership marker for the
+/// installation `plan` removes, or nothing at all, as an interrupted reservation or removal leaves
+/// it. The game writes its settings there when it first starts, so it never used such a profile.
+/// It is read through handles without following a link; a profile that cannot be read is kept.
+fn unused_profile(profile: &Path, plan: &RemovalPlan) -> bool {
+    let Ok(folder) = HeldFolder::open(profile, []) else {
+        return false;
+    };
+    match folder.names().as_deref() {
+        Ok([]) => true,
+        Ok([name]) if *name == *SAVE_OWNER_MARKER => folder
+            .open_file(SAVE_OWNER_MARKER)
+            .is_ok_and(|(marker, _)| records_this_installation(&marker, profile, plan)),
+        _ => false,
+    }
+}
+
+/// Whether `marker`, the ownership marker opened from the saved-game profile `profile`, records
+/// the installation `plan` removes.
+fn records_this_installation(marker: &fs::File, profile: &Path, plan: &RemovalPlan) -> bool {
+    // A marker is a few hundred bytes; a much larger file is not one.
+    let mut payload = Vec::new();
+    marker.take(64 * 1024).read_to_end(&mut payload).is_ok()
+        && profile
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|engine_name| {
+                save_owner_records(&payload, &plan.install_id, &plan.managed_root, engine_name)
+            })
+}
+
+/// Deletes the unused saved-game profile `profile` once the installation is gone, after checking
+/// again, through the handles that then delete them, that it holds nothing else. Neither the
+/// profile nor its marker can be renamed or replaced meanwhile.
+fn remove_unused_profile(profile: &Path, plan: &RemovalPlan) -> Result<(), RemovalError> {
+    let folder = match HeldFolder::open_for_removal(profile) {
+        // Already gone, for example by an interrupted removal.
+        Err(EntryError {
+            kind: EntryErrorKind::Missing,
+            ..
+        }) => return Ok(()),
+        held => held.map_err(entry_failure)?,
+    };
+    match folder.names().map_err(|e| io_at(profile, e))?.as_slice() {
+        [] => {}
+        [name] if *name == *SAVE_OWNER_MARKER => {
+            let marker = folder
+                .open_removable_file(SAVE_OWNER_MARKER)
+                .map_err(entry_failure)?;
+            if !records_this_installation(marker.file(), profile, plan) {
+                return Err(failure(format!(
+                    "{} no longer holds only this installation's marker.",
+                    profile.display()
+                )));
+            }
+            let path = marker.path().to_path_buf();
+            marker.remove().map_err(|e| io_at(&path, e))?;
+        }
+        _ => {
+            return Err(failure(format!(
+                "Something else is in {} by now.",
+                profile.display()
+            )))
+        }
+    }
+    folder
+        .remove_even_if_read_only()
+        .map_err(|e| io_at(profile, e))
 }
 
 /// Whether reading the install records in `root` failed because they are missing or damaged,
@@ -603,7 +735,7 @@ mod tests {
         let cache = base.join("cache");
         let source = base.join("source");
         let app = base.join("app-data");
-        for path in [&root, &cache, &source] {
+        for path in [&root, &cache, &source, &documents(&app).0] {
             fs::create_dir(path).unwrap();
         }
         fs::write(source.join("original.txt"), "source game").unwrap();
@@ -650,8 +782,28 @@ mod tests {
             source,
         }
     }
-    fn run(f: &Fixture, plan: &RemovalPlan) -> Result<(), RemovalError> {
-        execute_with(&f.app, plan, &Host::default(), &mut |_| Ok(()))
+    /// Each fixture's stand-in for the Documents folder, beside its app data.
+    struct FixtureDocuments(PathBuf);
+    impl DocumentsLocator for FixtureDocuments {
+        fn documents_dir(&self) -> io::Result<PathBuf> {
+            Ok(self.0.clone())
+        }
+    }
+    fn documents(app: &Path) -> FixtureDocuments {
+        FixtureDocuments(app.with_file_name("Documents"))
+    }
+    /// The app's preview, with the fixture's Documents folder instead of the player's.
+    fn preview(app: &Path, install_id: &str) -> Result<RemovalPlan, RemovalError> {
+        preview_with(app, install_id, &documents(app))
+    }
+    fn run(f: &Fixture, plan: &RemovalPlan) -> Result<RemovalOutcome, RemovalError> {
+        execute_with(
+            &f.app,
+            plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |_| Ok(()),
+        )
     }
     #[test]
     fn preview_and_cancel_do_not_remove_anything() {
@@ -707,6 +859,337 @@ mod tests {
             .is_empty());
         assert!(registry.list().unwrap().is_empty());
     }
+    /// Reserves the fixture's saved-game profile exactly as installing does: a folder in the
+    /// fixture's Documents that holds only CEBG's ownership marker. Its name goes into
+    /// `engine.lua`, where removal finds it while the installation is incomplete.
+    fn reserve_profile(f: &Fixture) -> PathBuf {
+        let base = f.root.parent().unwrap();
+        let sources = [base.join("bg1-source"), base.join("bg2-source")];
+        for source in &sources {
+            fs::create_dir(source).unwrap();
+        }
+        let layout =
+            crate::stage::ManagedLayout::prepare(&f.root, &sources[0], &sources[1]).unwrap();
+        let identity = crate::stage::reserve_save_identity(
+            &documents(&f.app),
+            &layout,
+            "Removal fixture",
+            "fixture-removal",
+        )
+        .unwrap();
+        fs::write(
+            f.root.join("game/engine.lua"),
+            format!("engine_name = \"{}\"\n", identity.engine_name),
+        )
+        .unwrap();
+        identity.save_root
+    }
+    /// Lists the fixture as a completed installation whose saved-game profile is `profile`.
+    fn complete(f: &Fixture, profile: &Path) {
+        let registry = ManagedInstallRegistry::open_or_create(&f.app).unwrap();
+        let campaign = registry.list_campaigns().unwrap().remove(0).record;
+        fs::write(
+            f.root.join(".chriz/install-receipt.json"),
+            "completed receipt",
+        )
+        .unwrap();
+        registry
+            .publish(&crate::registry::ManagedInstallRecord {
+                schema_version: crate::registry::REGISTRY_SCHEMA_VERSION,
+                install_id: campaign.install_id,
+                display_name: "Completed fixture".into(),
+                managed_root: f.root.clone(),
+                recipe_version: "1.0.0".into(),
+                recipe_sha256: campaign.recipe_sha256,
+                engine_name: profile.file_name().unwrap().to_str().unwrap().into(),
+                managed_save_root: profile.to_path_buf(),
+                launch_path: f.root.join("game/game.exe"),
+                receipt_sha256: sha256_bytes(b"completed receipt"),
+                completed_at_millis: 1,
+            })
+            .unwrap();
+    }
+    fn assert_unused(plan: &RemovalPlan, profile: &Path) {
+        assert_eq!(plan.unused_save_path.as_deref(), Some(profile));
+        assert_eq!(plan.preserved_save_path, None);
+    }
+    fn assert_kept(plan: &RemovalPlan, profile: &Path) {
+        assert_eq!(plan.preserved_save_path.as_deref(), Some(profile));
+        assert_eq!(plan.unused_save_path, None);
+    }
+    #[test]
+    fn an_unused_profile_of_an_incomplete_installation_is_deleted_with_it() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Delete);
+        assert_unused(&plan, &profile);
+        assert_eq!(run(&f, &plan).unwrap(), RemovalOutcome::default());
+
+        assert!(!f.root.exists());
+        assert!(!profile.exists());
+        assert!(documents(&f.app).0.is_dir());
+    }
+    #[test]
+    fn a_completed_installation_deletes_its_unused_profile_too() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        complete(&f, &profile);
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_unused(&plan, &profile);
+        assert_eq!(run(&f, &plan).unwrap(), RemovalOutcome::default());
+
+        assert!(!f.root.exists());
+        assert!(!profile.exists());
+    }
+    /// The game creates its settings when it first starts with a profile, and saves only later.
+    #[test]
+    fn a_profile_with_anything_else_in_it_is_kept() {
+        type Addition = fn(&Path);
+        let additions: [(&str, Addition); 2] = [
+            ("settings", |profile| {
+                fs::write(profile.join("Baldur.lua"), "-- settings").unwrap()
+            }),
+            ("an empty folder", |profile| {
+                fs::create_dir(profile.join("save")).unwrap()
+            }),
+        ];
+        for (what, add) in additions {
+            let f = fixture();
+            let profile = reserve_profile(&f);
+            add(&profile);
+
+            let plan = preview(&f.app, "fixture-removal").unwrap();
+            assert_kept(&plan, &profile);
+            assert_eq!(run(&f, &plan).unwrap(), RemovalOutcome::default());
+
+            assert!(!f.root.exists(), "{what}");
+            assert!(profile.join(SAVE_OWNER_MARKER).is_file(), "{what}");
+            assert_eq!(fs::read_dir(&profile).unwrap().count(), 2, "{what}");
+        }
+    }
+    #[test]
+    fn a_profile_whose_marker_records_something_else_is_kept() {
+        type Change = fn(&mut serde_json::Value);
+        let changes: [(&str, Change); 5] = [
+            ("another installation", |owner| {
+                owner["install_id"] = "another-install".into()
+            }),
+            ("another folder", |owner| {
+                owner["managed_root"] = "//?/c:/elsewhere".into()
+            }),
+            ("another profile", |owner| {
+                owner["engine_name"] = "Another profile - 0123456789ab".into()
+            }),
+            ("another format", |owner| owner["schema"] = 2.into()),
+            ("nothing", |owner| *owner = serde_json::json!({})),
+        ];
+        for (what, change) in changes {
+            let f = fixture();
+            let profile = reserve_profile(&f);
+            let marker = profile.join(SAVE_OWNER_MARKER);
+            let mut owner = serde_json::from_slice(&fs::read(&marker).unwrap()).unwrap();
+            change(&mut owner);
+            fs::write(&marker, serde_json::to_vec(&owner).unwrap()).unwrap();
+
+            let plan = preview(&f.app, "fixture-removal").unwrap();
+            assert_kept(&plan, &profile);
+            run(&f, &plan).unwrap();
+
+            assert!(marker.is_file(), "{what}");
+        }
+    }
+    /// Left by a reservation or a removal that was interrupted between its two steps.
+    #[test]
+    fn an_empty_profile_is_deleted_too() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        fs::remove_file(profile.join(SAVE_OWNER_MARKER)).unwrap();
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_unused(&plan, &profile);
+        run(&f, &plan).unwrap();
+
+        assert!(!profile.exists());
+    }
+    /// OneDrive marks every folder it syncs read-only, the player's Documents folder included.
+    #[cfg(windows)]
+    #[test]
+    fn a_read_only_unused_profile_is_deleted() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        let mut permissions = fs::metadata(&profile).unwrap().permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(&profile, permissions).unwrap();
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_unused(&plan, &profile);
+        assert_eq!(run(&f, &plan).unwrap(), RemovalOutcome::default());
+
+        assert!(!profile.exists());
+    }
+    #[test]
+    fn forgetting_a_missing_installation_deletes_its_unused_profile() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        complete(&f, &profile);
+        let moved = f._temp.path().join("moved");
+        fs::rename(&f.root, &moved).unwrap();
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Forget);
+        assert_unused(&plan, &profile);
+        assert_eq!(run(&f, &plan).unwrap(), RemovalOutcome::default());
+
+        assert!(!profile.exists());
+        assert!(moved.join("game/game.exe").exists());
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    /// Removing only the entry of a folder that cannot be proven deletes nothing at all.
+    #[test]
+    fn an_installation_that_is_only_unlisted_keeps_even_an_unused_profile() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        complete(&f, &profile);
+        fs::remove_dir_all(f.root.join(".chriz")).unwrap();
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_eq!(plan.action, RemovalAction::Unlist);
+        assert_kept(&plan, &profile);
+        run(&f, &plan).unwrap();
+
+        assert!(profile.join(SAVE_OWNER_MARKER).is_file());
+        assert_eq!(registered_campaigns(&f), 0);
+    }
+    #[test]
+    fn a_profile_used_after_confirmation_invalidates_it() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_unused(&plan, &profile);
+        fs::write(profile.join("Baldur.lua"), "-- settings").unwrap();
+
+        let error = run(&f, &plan).unwrap_err();
+
+        assert!(
+            error.to_string().contains("changed since confirmation"),
+            "{error}"
+        );
+        assert!(f.root.join("game/game.exe").exists());
+        assert!(profile.join("Baldur.lua").is_file());
+        assert!(profile.join(SAVE_OWNER_MARKER).is_file());
+    }
+    /// The profile is checked again just before it is deleted. Something that arrives in it
+    /// meanwhile keeps it, and the removal of the installation still succeeds.
+    #[test]
+    fn a_profile_used_during_removal_is_kept_and_reported() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+
+        let outcome = delete_with_last_step(&f, &mut || {
+            fs::write(profile.join("Baldur.lua"), "-- settings").unwrap();
+        })
+        .unwrap();
+
+        assert_eq!(outcome.unused_save_path_kept, Some(profile.clone()));
+        assert!(!f.root.exists());
+        assert_eq!(registered_campaigns(&f), 0);
+        assert!(profile.join("Baldur.lua").is_file());
+        assert!(profile.join(SAVE_OWNER_MARKER).is_file());
+    }
+    #[test]
+    fn a_profile_swapped_for_a_link_during_removal_is_never_followed() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        let elsewhere = f._temp.path().join("elsewhere");
+
+        let outcome = delete_with_last_step(&f, &mut || {
+            fs::rename(&profile, &elsewhere).unwrap();
+            link_directory(&profile, &elsewhere);
+        })
+        .unwrap();
+
+        assert_eq!(outcome.unused_save_path_kept, Some(profile.clone()));
+        assert!(elsewhere.join(SAVE_OWNER_MARKER).is_file());
+        assert!(reparse(&fs::symlink_metadata(&profile).unwrap()));
+    }
+    #[test]
+    fn a_linked_profile_is_kept_without_following_it() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        let elsewhere = f._temp.path().join("elsewhere");
+        fs::rename(&profile, &elsewhere).unwrap();
+        link_directory(&profile, &elsewhere);
+
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        assert_kept(&plan, &profile);
+        run(&f, &plan).unwrap();
+
+        assert!(elsewhere.join(SAVE_OWNER_MARKER).is_file());
+        assert!(reparse(&fs::symlink_metadata(&profile).unwrap()));
+    }
+    /// Another program, such as a virus scanner or a sync client, holds the marker open. The
+    /// installation is still removed, and the profile is reported.
+    #[cfg(windows)]
+    #[test]
+    fn an_unused_profile_held_open_by_another_program_is_kept_and_reported() {
+        use std::os::windows::fs::OpenOptionsExt;
+        const FILE_SHARE_READ: u32 = 1;
+
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        let mut holder = None;
+
+        let outcome = delete_with_last_step(&f, &mut || {
+            holder = Some(
+                fs::OpenOptions::new()
+                    .read(true)
+                    .share_mode(FILE_SHARE_READ)
+                    .open(profile.join(SAVE_OWNER_MARKER))
+                    .unwrap(),
+            );
+        })
+        .unwrap();
+
+        assert_eq!(outcome.unused_save_path_kept, Some(profile.clone()));
+        assert!(!f.root.exists());
+        assert_eq!(registered_campaigns(&f), 0);
+        drop(holder);
+        assert!(profile.join(SAVE_OWNER_MARKER).is_file());
+    }
+    /// An interrupted removal goes on with the profile decision it was confirmed with.
+    #[test]
+    fn an_interrupted_removal_still_deletes_the_unused_profile() {
+        let f = fixture();
+        let profile = reserve_profile(&f);
+        let plan = preview(&f.app, "fixture-removal").unwrap();
+        execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |_| Err(io::Error::other("stop")),
+        )
+        .unwrap_err();
+        assert!(profile.join(SAVE_OWNER_MARKER).is_file());
+
+        let retry = preview(&f.app, "fixture-removal").unwrap();
+        assert_unused(&retry, &profile);
+        assert_eq!(run(&f, &retry).unwrap(), RemovalOutcome::default());
+
+        assert!(!f.root.exists());
+        assert!(!profile.exists());
+    }
+    #[test]
+    fn a_documents_folder_inside_the_installation_is_refused() {
+        let f = fixture();
+        let inside = FixtureDocuments(f.root.join("game/Documents"));
+        let error = preview_with(&f.app, "fixture-removal", &inside).unwrap_err();
+        assert!(error.to_string().contains("Documents folder"), "{error}");
+        assert!(f.root.join("game/game.exe").exists());
+    }
     #[test]
     fn unknown_and_forged_identity_are_refused() {
         let f = fixture();
@@ -749,23 +1232,29 @@ mod tests {
         let host = Host {
             running: vec![f.root.join("game/game.exe")],
         };
-        assert!(execute_with(&f.app, &plan, &host, &mut |_| Ok(())).is_err());
+        assert!(execute_with(&f.app, &plan, &documents(&f.app), &host, &mut |_| Ok(())).is_err());
         assert!(f.root.join("game/game.exe").exists());
     }
     #[test]
     fn interrupted_final_metadata_cleanup_is_retryable_without_losing_registry_identity() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        let error = execute_with(&f.app, &plan, &Host::default(), &mut |path| {
-            if path == f.root {
-                Err(io::Error::new(
-                    io::ErrorKind::PermissionDenied,
-                    "fixture locked folder",
-                ))
-            } else {
-                Ok(())
-            }
-        })
+        let error = execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |path| {
+                if path == f.root {
+                    Err(io::Error::new(
+                        io::ErrorKind::PermissionDenied,
+                        "fixture locked folder",
+                    ))
+                } else {
+                    Ok(())
+                }
+            },
+        )
         .unwrap_err();
         assert!(error.to_string().contains("fixture locked folder"));
         assert!(!f.root.join(".chriz").exists());
@@ -781,9 +1270,13 @@ mod tests {
     fn partial_deletion_journal_cannot_authorize_replacement_folder() {
         let f = fixture();
         let plan = preview(&f.app, "fixture-removal").unwrap();
-        execute_with(&f.app, &plan, &Host::default(), &mut |_| {
-            Err(io::Error::other("stop"))
-        })
+        execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |_| Err(io::Error::other("stop")),
+        )
         .unwrap_err();
         fs::rename(&f.root, f._temp.path().join("moved")).unwrap();
         fs::create_dir(&f.root).unwrap();
@@ -1064,16 +1557,25 @@ mod tests {
     }
     /// Deletes the installation, calling `last_step` just before its folder itself is removed:
     /// after its journal was written, before My installs is updated and the journal cleaned up.
-    fn delete_with_last_step(f: &Fixture, last_step: &mut dyn FnMut()) -> Result<(), RemovalError> {
+    fn delete_with_last_step(
+        f: &Fixture,
+        last_step: &mut dyn FnMut(),
+    ) -> Result<RemovalOutcome, RemovalError> {
         let plan = preview(&f.app, "fixture-removal").unwrap();
         assert_eq!(plan.action, RemovalAction::Delete);
-        execute_with(&f.app, &plan, &Host::default(), &mut |path| {
-            if path == f.root {
-                assert!(journal_path(&f.app, "fixture-removal").is_file());
-                last_step();
-            }
-            Ok(())
-        })
+        execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |path| {
+                if path == f.root {
+                    assert!(journal_path(&f.app, "fixture-removal").is_file());
+                    last_step();
+                }
+                Ok(())
+            },
+        )
     }
     /// The installation is gone and no longer listed, so the removal succeeded even when its
     /// journal cannot be cleaned up afterwards; the item that took its place is left alone.
@@ -1239,20 +1741,26 @@ mod tests {
         let mut swapped = false;
 
         let game = f.root.join("game");
-        let error = execute_with(&f.app, &plan, &Host::default(), &mut |path| {
-            // Neither while its contents are removed nor once it is empty.
-            if path == game.join("game.exe") || path == game {
-                let moved = fs::rename(&game, f._temp.path().join("moved"));
-                assert!(moved.is_err(), "{} could be moved", path.display());
-            }
-            if path == game {
-                // Ownership records are removed last, so they are not reached yet.
-                fs::rename(f.root.join(".chriz"), f._temp.path().join("moved-records"))?;
-                link_directory(&f.root.join(".chriz"), &outside);
-                swapped = true;
-            }
-            Ok(())
-        })
+        let error = execute_with(
+            &f.app,
+            &plan,
+            &documents(&f.app),
+            &Host::default(),
+            &mut |path| {
+                // Neither while its contents are removed nor once it is empty.
+                if path == game.join("game.exe") || path == game {
+                    let moved = fs::rename(&game, f._temp.path().join("moved"));
+                    assert!(moved.is_err(), "{} could be moved", path.display());
+                }
+                if path == game {
+                    // Ownership records are removed last, so they are not reached yet.
+                    fs::rename(f.root.join(".chriz"), f._temp.path().join("moved-records"))?;
+                    link_directory(&f.root.join(".chriz"), &outside);
+                    swapped = true;
+                }
+                Ok(())
+            },
+        )
         .unwrap_err();
 
         assert!(swapped);

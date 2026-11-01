@@ -15,6 +15,14 @@ path = "src/bin/chriz-bg-install.rs"
 name = "chriz-bg-author"
 path = "src/bin/chriz-bg-author.rs"
 
+[features]
+# Test builds only, through the dev-dependencies below and the app's: Documents lookups use
+# the isolated folder a test names and never reach the real Documents folder.
+test-documents = []
+# Test builds only, through the dev-dependency below: the installer honors the environment
+# variables its tests use to declare running programs and simulate failures and interruptions.
+test-hooks = []
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -56,6 +64,9 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [dev-dependencies]
+# Every test build of this crate, its binaries included, runs with `test-documents` and
+# `test-hooks`.
+chriz-bg-engine = { path = ".", features = ["test-documents", "test-hooks"] }
 minisign = "0.9.1"
 tiny_http = "0.12"
 sevenz-rust2 = { version = "0.22.2", default-features = false, features = ["compress", "util"] }

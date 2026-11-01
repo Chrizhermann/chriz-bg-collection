@@ -1,0 +1,29 @@
+schema = 1
+evidence_kind = "published-commit-archive-download-and-source-audit"
+verified_on = "2026-10-29"
+command = "chriz-bg-author artifact inspect https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e --cache-root <fresh cache> --expected-tp2 Sirene/Setup-Sirene.tp2; chriz-bg-author artifact verify manifest/artifacts/sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e.toml --cache-root <cache holding that download>; source audit of the TP2's component declarations (see below)"
+scope = "Sirene NPC for BG:EE (BG1 and Siege of Dragonspear) enters both recipe profiles as a default at upstream master commit 1c86000 (2026-01-01), a commit archive rather than release v3.1, which supports BG:EE only. Christopher decided on 2026-10-29 to include it in alpha.22 after an EET lab test. The archive was downloaded once, anonymously, into a fresh cache for the inspection; the artifact TOML was then verified against that same download (a cache hit, no second download) and passed the production acquisition and extraction contracts. Its 169 entries (4,755,921 bytes uncompressed, largest entry 975,360 bytes for the unpublished Setup-Sirene.exe, depth 6, highest compression ratio 20.8) stay within the artifact's limits. Extraction publishes only the Sirene folder, never the bundled setup executable or readme. The curated profile's artifact TOML is a byte-identical copy. This is automated source/package verification plus a source audit, not a combined WeiDU install or gameplay acceptance; the EET lab test belongs to the same change."
+
+# The TP2 declares ten components without DESIGNATED, so WeiDU numbers them 0-9 in
+# declaration order: 0 the NPC (REQUIRE_PREDICATE GAME_IS ~bgee eet~), 1-5 the portrait
+# SUBCOMPONENT "Choose an alternate portrait for Sirene?" and 6-9 the class SUBCOMPONENT
+# "Choose an alternate class for Sirene?". tools/check_native_component_order.py needs
+# literal DESIGNATED numbers, so the order was audited by hand: both recipes install 0, 3,
+# 6, 7, 8 and 9 in that order. The class components require ~Sirene.tp2~ component 0
+# while the file is Setup-Sirene.tp2; the portraits require ~Setup-Sirene.tp2~.
+[[artifacts]]
+mod_id = "sirene-bg1"
+artifact_id = "sirene-bg1-1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+source_commit = "1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+immutable_source_url = "https://codeload.github.com/TheArtisanBG/Sirene-BG1/zip/1c8600029a9ac31395a61b5d4d03f98337dcf83e"
+actual_length = 3734521
+actual_sha256 = "f46b035395c4310103e9be2d1623a113e6f3aa66f520624c30c7f355518f4eb9"
+tp2_sha256 = "d9500be69db24e37edbf453f49cd8929491cd21ab5d81b173cae4f8b0804f521"
+published_roots = ["Sirene"]
+native_components = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = false
+native_component_order_verified = true

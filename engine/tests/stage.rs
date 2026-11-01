@@ -8,8 +8,11 @@ use bg_engine::stage::{
     finalize_game_identity, propose_save_identity, read_engine_name,
     repair_installed_profile_settings, reserve_save_identity, stage_bgee_sod, stage_game_copy,
     stage_game_copy_with_observer, stage_initial_games, verify_profile_settings, DocumentsLocator,
-    ManagedLayout, ReservedSaveIdentity, StageObserver, SystemDocuments,
+    ManagedLayout, ReservedSaveIdentity, StageObserver, SystemDocuments, TEST_DOCUMENTS_VARIABLE,
 };
+
+mod support;
+use support::environment::ScopedEnvVar;
 
 fn source_tree(root: &Path, name: &str) -> PathBuf {
     let source = root.join(name);
@@ -815,12 +818,34 @@ fn engine_name_patch_preserves_other_lines_and_rejects_ambiguous_assignments() {
     );
 }
 
-#[cfg(windows)]
+/// Test builds look up only the isolated Documents folder that a test names. Without one they
+/// stop before the player's real Documents folder is resolved, let alone changed.
 #[test]
-fn system_documents_uses_the_windows_known_folder() {
-    let documents = SystemDocuments.documents_dir().unwrap();
-    assert!(documents.is_absolute());
-    assert!(documents.is_dir());
+fn system_documents_in_test_builds_is_only_an_isolated_folder() {
+    let temp = tempfile::tempdir().unwrap();
+    {
+        let _documents = ScopedEnvVar::set(TEST_DOCUMENTS_VARIABLE, temp.path().to_str().unwrap());
+        assert_eq!(SystemDocuments.documents_dir().unwrap(), temp.path());
+    }
+    {
+        let _documents = ScopedEnvVar::set(TEST_DOCUMENTS_VARIABLE, "relative/Documents");
+        assert_eq!(
+            SystemDocuments.documents_dir().unwrap_err().kind(),
+            io::ErrorKind::InvalidInput
+        );
+    }
+
+    let _documents = ScopedEnvVar::remove(TEST_DOCUMENTS_VARIABLE);
+    let refused = std::panic::catch_unwind(|| SystemDocuments.documents_dir()).unwrap_err();
+    let message = refused
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| refused.downcast_ref::<&str>().copied())
+        .unwrap_or_default();
+    assert!(
+        message.contains("never use the real Documents folder"),
+        "{message}"
+    );
 }
 
 fn interval_profile_fixture(

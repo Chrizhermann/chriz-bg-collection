@@ -128,9 +128,9 @@ impl PreflightHost for SystemPreflight {
     }
 
     fn running_executable_paths(&self) -> io::Result<Vec<PathBuf>> {
-        // Debug builds only: tests that run the installer declare which programs run, so that
-        // another program's WeiDU on the same PC never decides their outcome.
-        #[cfg(debug_assertions)]
+        // Test and debug builds only: tests that run the installer declare which programs run,
+        // so that another program's WeiDU on the same PC never decides their outcome.
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
         if let Some(declared) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES") {
             return Ok(std::env::split_paths(&declared)
                 .filter(|path| !path.as_os_str().is_empty())

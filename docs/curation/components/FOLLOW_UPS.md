@@ -13,7 +13,7 @@ stack. Items under **Conditional/future gates** do not block release while that 
 remains unavailable or excluded. Items finished since the previous consolidation are
 listed with their evidence under [Done since 2026-09-04](#done-since-2026-09-04).
 
-## Work queue at a glance — 2026-10-28
+## Work queue at a glance — 2026-10-29
 
 Cross-repository status. Component detail stays in the sections below and in the catalogs.
 
@@ -37,13 +37,77 @@ Cross-repository status. Component detail stays in the sections below and in the
        `manifest/evidence/release-intake-20261027.toml`; below).
      - The engine's rename retry from PR #35, ported by
        [PR #40](https://github.com/Chrizhermann/chriz-bg-collection/pull/40) (below).
-     A newer BuffBot joins only if it is tested in time; otherwise a later release takes
-     it. Two releases close together are fine. v1.12.1 (below) waits for Christopher's
-     decision.
+     BG Rebalance v0.8.7 replaces v0.8.6 since
+     [PR #56](https://github.com/Chrizhermann/chriz-bg-collection/pull/56) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance.toml`).
+     Only `360`'s name changes, to True Time Stop – fair Haste & Slow (below).
+     BuffBot v1.12.1 replaces v1.11.0 in both recipes since
+     [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261028-buffbot.toml`).
+     Christopher, 2026-10-29: it goes into the alpha.22 release candidate, and he tests it
+     there instead of separately. The IWD recipe gets the same version in
+     [PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51) against
+     `claude/iwdee-app`. #51 is held, and this is the reason the rule below asks for: any
+     change to the IWD recipe after a release needs a version bump, because the catalog
+     test ties `release.json`'s version to a `[[bases]]` digest. So #51 goes in, with a
+     merge commit, as part of the IWD version released in the same step as CEBG alpha.22;
+     both installers then ship BuffBot v1.12.1 together. IWD 0.1.3 itself is the
+     Snowytoes v1.7 fix (2026-10-30; Weasel Mods' fixed download link started serving
+     v1.7, so new IWD installations stopped at the reviewed v1.6) and leaves BuffBot out.
+     Artisan's Kitpack tweak `1010000` (kit weapon rules for weapons from later mods;
+     Christopher, 2026-10-26) is a default in both recipes since
+     [PR #60](https://github.com/Chrizhermann/chriz-bg-collection/pull/60) (merged on
+     2026-10-29). Its examples come from the October 29 EET lab data (below).
+     SoD Remix v0.6.16 replaces v0.6.15 in both recipes since
+     [PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63) (below).
+     Christopher added Sirene NPC for BG:EE (BG1 and SoD) as a default on 2026-10-29,
+     after an EET lab test: pinned in both recipes since
+     [PR #58](https://github.com/Chrizhermann/chriz-bg-collection/pull/58) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261029-sirene-bg1.toml`).
+     Both Sirene mods now install after Artisan's Kitpack's main run, Sirene BG1 first, so
+     the Martyr kit comes from the Kitpack (see [SIRENE_BG1](SIRENE_BG1.md)).
+     - The full Recommended EET lab passed on 2026-10-29: BG1, SoD and the SoD-to-SoA
+       handover with SoD Remix `290` ([SIRENE_BG1](SIRENE_BG1.md), lab test).
+     - #58 merged after the SoD Remix v0.6.16 pin (#63): with v0.6.15, `290` stopped the
+       installation on Sirene's victory remark.
+     - Both questions from the lab are closed (see his review queue): the second Brimstone
+       stays in EET's invisible import container, and the camp copy stays as it is.
+     BG Rebalance v0.8.8 replaces v0.8.7 in both recipes since
+     [PR #64](https://github.com/Chrizhermann/chriz-bg-collection/pull/64) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance-088.toml`),
+     with Druid weapons `410` and Alaghor of Clangeddin weapons `411` as defaults
+     (Christopher, 2026-10-29; see Weapon access below).
+     The Artisan's Kitpack fork chriz.5 replaces chriz.4 in both recipes since
+     [PR #66](https://github.com/Chrizhermann/chriz-bg-collection/pull/66) (merged on
+     2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
+     with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
+     see Weapon access below).
+     Still open in this step: #51, BuffBot v1.12.1 for the IWD recipe, held for the IWD
+     version released together with alpha.22 (above).
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
-     [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8).
-  3. A full lab run of the Recommended selection.
+     [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
+     update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
+     merged on 2026-10-30. The ledger supersedes alpha.20 (alpha.21 shipped
+     the alpha.20 recipe), covers all 230 recorded differences, BuffBot v1.12.1 from #44
+     included, and needs app alpha.22, so the app release that ships it must carry that
+     version. Its publication date is a placeholder that the release step sets. If the
+     recipe changes again before the release, the recorded differences and the ledger need
+     the new subjects (steps in #67).
+  3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
+     installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
+     install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
+     v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44) came
+     after it.
   4. Acceptance, build, signing and publishing, and the website.
+- Installers keep going when a mod's official link serves a newer file (Christopher,
+  2026-10-30: as few blockers as possible; a newer version under the same link is
+  installed and logged, and players report problems afterwards).
+  [PR #69](https://github.com/Chrizhermann/chriz-bg-collection/pull/69) changes the engine
+  and [PR #70](https://github.com/Chrizhermann/chriz-bg-collection/pull/70) ports it to the
+  IWD app: the changed file is installed and recorded under its actual checksum. If its
+  layout no longer fits, that mod and the mods that need it are left out, and the
+  installation record says so. Review fixes are in progress; then Christopher's merge OK
+  (#70 together with or after #69).
 - Installer engine fix [PR #35](https://github.com/Chrizhermann/chriz-bg-collection/pull/35)
   (retry renames that a virus scanner briefly blocks), merged into `main` on 2026-10-25,
   is on the next-release branch since
@@ -54,6 +118,11 @@ Cross-repository status. Component detail stays in the sections below and in the
     cache that another program had marked read-only could no longer be replaced; the
     repair failed after about 5 s of retries. `main` keeps that regression until the
     next-release branch is merged back into it.
+- Engine test isolation (found on 2026-10-28): some engine test runs write CEBG's install
+  marker `.chriz-managed-install.json` into the real Documents folder. About 30 empty
+  profile folders came from them; some markers name a temporary test folder as their
+  install. The fix runs in its own session. Christopher decides there whether removing
+  an installation should also drop a profile folder that holds only the marker.
 - EEex v1.3.1 everywhere (Christopher, 2026-10-18: test as soon as possible and use it
   everywhere): pinned in both recipes since
   [PR #18](https://github.com/Chrizhermann/chriz-bg-collection/pull/18) (merged on
@@ -76,20 +145,35 @@ Cross-repository status. Component detail stays in the sections below and in the
     existing installation would mean reinstalling everything after it. The changelog
     draft (`docs/plans/2026-10-14-next-release-changelogs.md`) still calls this open; the
     alpha.22 release notes take the decision.
-- SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes since
+- SoD Remix v0.6.16, released on 2026-10-29 (Christopher's OK of the same day), pinned in
+  both recipes since [PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63)
+  (fresh-download and native-order evidence in
+  `manifest/evidence/release-intake-20261029-sodremix.toml`). It replaces v0.6.15 with the
+  same components, order and decisions:
+  - `290` accepts every victory remark in the vanilla shape, whoever added it, so Sirene
+    NPC for BG:EE's remark no longer stops the Recommended installation
+    ([chriz-sod-rebalance#35](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/35)).
+  - `265` and six other components read timer names from the game's own `GTIMES.IDS`
+    ([chriz-sod-rebalance#34](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/34)).
+  - Its mod files are identical to those of the candidate that installed in the
+    October 29 Recommended lab. Open on the owner's side: the ending verifier's frozen
+    expectations ([chriz-sod-rebalance#36](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/36))
+    and `290` skipping `bdcut61`
+    ([chriz-sod-rebalance#37](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/37)).
+- SoD Remix v0.6.15, released on 2026-10-23, pinned in both recipes from
   [PR #27](https://github.com/Chrizhermann/chriz-bg-collection/pull/27) (merged on 2026-10-23; fresh-download evidence in
-  `manifest/evidence/release-intake-20261023.toml`):
+  `manifest/evidence/release-intake-20261023.toml`) until v0.6.16:
   - Imoen's handover from BG1/SoD into SoA (`292`/`293`/`294`, since v0.6.14): one
     choice group with the vanilla Thief→Mage dual `292` as the default and `293`/`294`
     selectable (Christopher, 2026-10-16: three choices, each working for every thief
     kit). The owner lab covered `C0TRICKS` and no kit, with Spell Revisions only.
   - `256` × Tweaks Anthology `3500` ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)):
     fixed in v0.6.15 (option 1, Christopher's choice of 2026-10-18); the combined
-    Recommended lab install with `3500` on is still a release gate (see Release gates).
+    Recommended lab install with `3500` on passed on 2026-10-29 (see Release gates).
   - [chriz-sod-rebalance#34](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/34),
     merged on 2026-10-23: `265` and six other components read timer names from the
     game's own `GTIMES.IDS`, so a mod that gives a timer value another name no longer
-    stops them. It ships with the next SoD Remix release.
+    stops them. It ships with v0.6.16.
 - BuffBot v1.10.1 (released on 2026-10-20) and EEex Remote Console v0.2.1 (tagged on
   2026-10-23), pinned in both recipes since
   [PR #28](https://github.com/Chrizhermann/chriz-bg-collection/pull/28) (merged on 2026-10-23; fresh-download
@@ -111,8 +195,10 @@ Cross-repository status. Component detail stays in the sections below and in the
   - BuffBot [v1.12.1](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.12.1)
     (released on 2026-10-27) fixes that: three layout defects of v1.12.0, none of which
     depends on the EEex version. Its panel was checked in a BG2:EE 2.7.3.0 lab with EEex
-    v1.3.1, the version alpha.22 installs. Christopher, 2026-10-27: alpha.22 takes it only
-    if it is tested in time; otherwise a later release does. Waiting for his decision.
+    v1.3.1, the version alpha.22 installs. Pinned since PR #44 (merged on 2026-10-29);
+    Christopher tests it in the alpha.22 release candidate (2026-10-29). Components `1`
+    and `0`, their order and the run position are unchanged; the TP2 also accepts IWD:EE
+    and no longer writes TLK strings, `bfbot_strrefs.txt` or `BFBOTIB.BAM`.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -208,6 +294,18 @@ Cross-repository status. Component detail stays in the sections below and in the
     - Christopher approved the chriz.4 pin for alpha.22 on 2026-10-27. Since PR #41
       (merged on 2026-10-28) chriz.4 is pinned for all three Kitpack installers in place
       of chriz.3; components, order and decisions are unchanged.
+  - [chriz.5](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.5),
+    released on 2026-10-29 (fork PR #16, for new installations): the Invisible Blade and
+    Bardic Wonders' Dancer can use the katanas and the rogue and bard items that the
+    Shapeshifter's usability bit closed to them (Weapon access, below).
+    - Lab-verified on three disposable BG2:EE 2.7.3.0 games with EEex v1.3.1: with and
+      without Spell Revisions, and in another layout with `1010000` instead of `7205`.
+    - Not covered there: EET, the NPC installer, installations without EEex and casting
+      from the freed scrolls.
+    - Christopher took chriz.5 and its new tweak `7205` into alpha.22 on 2026-10-29,
+      `7205` as a default. Since PR #66 (merged on 2026-10-29) chriz.5 is pinned for all
+      three Kitpack installers in place of chriz.4, and `7205` joins the late tweak run
+      before `8204`; no other component, order or decision changes.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -237,7 +335,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   ([chriz-item-randomiser#23](https://github.com/Chrizhermann/chriz-item-randomiser/pull/23)).
   Christopher, 2026-10-27: two bugs that v1.0.2 already has get fixed and tested before
   v1.0.3 is released: Adalon's egg reward never arrives, and the randomiser switches
-  itself off when a recipient dies during the handover.
+  itself off when a recipient dies during the handover. Christopher, 2026-10-28: the
+  disruptive bugs should be fixed in v1.0.3; any further work comes after it.
 - Druid level progression (Christopher, 2026-10-27): Tweaks Anthology `2292` makes
   druids level up on the cleric XP table. They reach level 15 at 1,575,000 XP instead of
   3,000,000 and get their high-level spells far too early. Since
@@ -245,8 +344,33 @@ Cross-repository status. Component detail stays in the sections below and in the
   2026-10-27), `2292` is an unchecked option instead of a default, for alpha.22.
 - Weapon access (Christopher, 2026-10-27): classes and kits should be able to use the
   weapons they can put proficiency points into, with as little intrusion as possible.
-  Druids and fighter/druids get more weapons, and cleric kits bound to a god get their
-  deity's weapons, mainly for flavour. The design runs in a separate session.
+  His decisions of 2026-10-27: druids and every druid kit get axes and short bows, and
+  fighter/druids also long bows; cleric kits bound to a god stay as they are; Yeslick's
+  Alaghor of Clangeddin kit gets the cleric weapons plus axes instead of the thief
+  weapons.
+  - BG Rebalance `410` Druid weapons
+    ([PR #22](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/22)) and `411`
+    Alaghor of Clangeddin weapons
+    ([PR #23](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/23)) are released
+    in [BG Rebalance v0.8.8](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.8)
+    (2026-10-29, Christopher's OK of that day), lab-verified on BG2:EE 2.7.3.0 with EEex
+    v1.3.1. `411` needs Artisan's Kitpack and EEex: the engine reads a kit's own weapon
+    column only when the kit's class is the character's class, and Yeslick is a
+    fighter/cleric. v0.8.8 changes nothing else. Pinned in both recipes since
+    [PR #64](https://github.com/Chrizhermann/chriz-bg-collection/pull/64) (merged on
+    2026-10-29), both as defaults (Christopher, 2026-10-29). The Rebalance run comes after
+    the Kitpack's late tweak run, so `1010000` rebuilds the class weapon grants before
+    `410` adds the druid ones, and no later run rebuilds them
+    ([CHRIZ-BG-REBALANCE](CHRIZ-BG-REBALANCE.md)).
+  - The Artisan's Kitpack fork frees katanas and rogue items for kits that borrow the
+    Shapeshifter bit (the Invisible Blade and the Dancer) in
+    [PR #16](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/pull/16),
+    released as chriz.5 on 2026-10-29 (above). Pinned in both recipes since
+    [PR #66](https://github.com/Chrizhermann/chriz-bg-collection/pull/66) (merged on
+    2026-10-29), with its new tweak `7205` (the same fix for items and kits from later
+    mods) as a default (Christopher, 2026-10-29). `7205` runs in the late tweak run before
+    `8204` and `1010000`, and `1010000` ends with the same pass
+    ([ARTISANSKITPACK_TWEAK](ARTISANSKITPACK_TWEAK.md)).
 - InfinityLoader crash analysis: causes found; follow-up decisions are Christopher's.
 - BG Rebalance and the Spell Revisions fork:
   - The seven compatibility follow-ups from the October 8 audit
@@ -276,6 +400,10 @@ Cross-repository status. Component detail stays in the sections below and in the
   - Since PR #41 (merged on 2026-10-28) Rebalance v0.8.6 replaces v0.8.5. It adds `360`
     (Time Stop/Haste, below) as a default at the end of its run. The other Rebalance
     components, their decisions and their order are unchanged.
+  - Since PR #56 (merged on 2026-10-29) v0.8.7 replaces v0.8.6. Only `360` changes: its
+    new name and its guard against the standalone package, which CEBG never installs.
+  - Since PR #64 (merged on 2026-10-29) v0.8.8 replaces v0.8.7. It adds `410` and `411`
+    (Weapon access, above) as defaults between `302` and `420`; nothing else changes.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
   - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
@@ -290,12 +418,22 @@ Cross-repository status. Component detail stays in the sections below and in the
       (`6000` and up), for example right after `SRCB_RR_COMPAT`.
     - Also open for that pin: CEBG's notes on `SRCB_RR_COMPAT`, which with chriz.8 only
       changes Selina's guard, and on the new step.
+- Our own mods in every installer (Christopher, 2026-10-28): a new version of one of
+  our own mods (BuffBot, BG Rebalance, SoD Remix, Modpack, the forks, the voicepacks and
+  the like) goes into Chriz Easy BG and Chriz Easy IWD in the same step. While the IWD
+  recipe sits on `claude/iwdee-app`, every such pin needs a matching PR there.
+  - The agents follow this by hand for now. A separate session designs the automation
+    with Christopher: a marker for our own mods, a check on every PR and before every
+    release that their pins are the newest releases and the same in every recipe (holds
+    need a recorded reason), and pin PRs prepared automatically that never merge by
+    themselves.
 - Icewind Dale: Enhanced Edition installer on the CEBG framework, for Christopher's
   November stream (2026-10-25; urgent, in its own session): only a few mods, plus a
   small own mod with SCS-style scripts for selected IWD fights, because the script
   engine (Larger projects) will not be ready in time.
 
-- Time Stop and Haste effect clocks, BG Rebalance component `360`: merged on 2026-10-27
+- True Time Stop – fair Haste & Slow (was Time Stop and Haste effect clocks), BG Rebalance
+  component `360`: merged on 2026-10-27
   ([chriz-bg-rebalance#18](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/18)).
   Christopher chose the Rebalance component over the standalone Time Clocks prototype,
   which is retired (2026-10-27).
@@ -312,9 +450,20 @@ Cross-repository status. Component detail stays in the sections below and in the
     [v0.8.6](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.6) on
     2026-10-28 and pinned since PR #41, under "Spells" and not marked experimental
     (Christopher, 2026-10-28: it was tested extensively).
-  - Christopher, 2026-10-28: he would like to offer it on its own too, for EEex players
-    outside CEBG. Its installer needs no other BG Rebalance component. A separate small
-    package, like the `live-patch` tail packages, is proposed and waits for his decision.
+  - Christopher, 2026-10-28: offer it on its own too, for EEex players outside CEBG, as
+    long as it is proven to work standalone (with EEex). He chose the name on 2026-10-28.
+    Released with
+    [v0.8.7](https://github.com/Chrizhermann/chriz-bg-rebalance/releases/tag/v0.8.7) on
+    2026-10-29
+    ([chriz-bg-rebalance#20](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/20),
+    [#21](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/21)) as the extra
+    download `CBR_TRUE_TIMESTOP-v0.8.7-windows.zip`. The package and `360` each refuse
+    while the other is installed.
+    - Lab-proven on a plain BG2:EE 2.7.3.0 with only EEex v1.3.1: install from the
+      archive, behaviour, uninstall, and saves across the install and the uninstall. EET
+      was not run with the package; the same two files ran as `360` on EET.
+    - Adding or removing it during a playthrough stays unsupported (Christopher's rule).
+    - Pinned for alpha.22 in PR #56.
 
 **Ready to start**
 
@@ -361,6 +510,30 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Christopher's own Elementalist Druid mod: the design continues right after alpha.22
   (Christopher, 2026-10-25). A design record from May/June 2026 exists; which sprites
   the forms use is still open.
+- Fewer installer stops in both installers, as quick patches after the release (blocker
+  audit of 2026-10-30; Christopher: as few blockers as possible, only PC and source-game
+  safety stays strict):
+  1. A failed optional run is skipped with a warning, together with the runs that need it.
+  2. Leftover files in the source game no longer mark it as modified; the copy leaves them
+     out and warns.
+  3. Game discovery checks each candidate folder on its own.
+  4. Downloads, staging and the dialog.tlk probe retry before they fail.
+  5. The disk estimate, the `steamapps` folder-name test, a non-empty target folder (a
+     subfolder is used instead) and name sanitizing warn instead of stopping, and
+     creator-only folder names come out of the player build.
+  Also: manual downloads (Evandra) accept a newer version, as #69 does for links. GOG,
+  other game versions and non-English games install with a warning instead of stopping
+  (Christopher, 2026-10-30).
+- Balance, close to vanilla (Christopher, 2026-10-30), collected as "Chris Revisions" (the
+  name BG Rebalance `340` already carries). His line: characters, items, encounters and
+  spells may be a little unbalanced, but neither too strong nor too weak: no must-haves or
+  one-click wins, and no picks too weak to take. Fix what is clearly broken in vanilla
+  (Spell Revisions' Sleep is his example) and skip big overcorrections (Spell Revisions'
+  old Pierce Magic, which removed Magic Resistance entirely). Open items:
+  - Black Blade of Disaster with Spell Revisions and Tweaks Anthology `2210`: alpha.22
+    keeps +3/2 attacks per round and +8 to hit / +10 damage ([CDTWEAKS](CDTWEAKS.md)); how
+    strong it should be is decided later.
+  - Edwin: whether he is too strong; a later discussion.
 
 **Ideas for later (community, recorded 2026-10-20)**
 
@@ -437,19 +610,31 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] [Sarah](SARAHTOB.md) portraits: captured with hashes on Modpack branch
   `codex/sarah-options`, but their artist and licence are unknown, so they are not
   published and the recipe has no feature for them.
+- [x] [CHRIZ-SOD-REMIX](CHRIZ-SOD-REMIX.md) v0.6.16 before Sirene BG1 ([PR #58](https://github.com/Chrizhermann/chriz-bg-collection/pull/58)):
+  released and pinned in both recipes on 2026-10-29
+  ([PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63), Christopher's OK
+  of the same day), before #58 merged.
+  - With v0.6.15, `290` stopped the installation: Sirene adds an 18th victory remark to
+    `BD4300`, and v0.6.15 counts exactly 17 (plus Aura's).
+  - The v0.6.16 candidate ([chriz-sod-rebalance#35](https://github.com/Chrizhermann/chriz-sod-rebalance/pull/35))
+    passed the full Recommended EET lab on 2026-10-29; the release ships its mod files
+    unchanged.
 
 ## Release gates — installer and static integration
 
-- [ ] SoD Remix `256` × Tweaks Anthology `3500`: fixed in v0.6.15, pinned; needs the
-  combined Recommended lab install with `3500` on. v0.6.13's `256` refused the
+- [x] SoD Remix `256` × Tweaks Anthology `3500`: fixed in v0.6.15; the combined
+  Recommended lab install with `3500` on passed on 2026-10-29. v0.6.13's `256` refused the
   fire-elemental donor `BDELFIRM`, because `3500` (a default since the October 14
   intake) gives every summon a `CDTFOW` cast-spell effect
   ([chriz-sod-rebalance#31](https://github.com/Chrizhermann/chriz-sod-rebalance/issues/31)).
   v0.6.15's `256` accepts exactly that effect and leaves it out of its hostile clones.
   The October 14 and 18 labs installed with `3500` off; with the fixed library, the
   owner reinstalled `256` and the rest of the remix tail in the disposable October 18
-  lab with `3500` on (chriz-sod-rebalance PR #32). The combined install now also
-  includes the default Imoen choice `292`.
+  lab with `3500` on (chriz-sod-rebalance PR #32). The October 29 EET 2.7.3.0 lab of the
+  Recommended plan (with PRs #58 and #60 and the SoD Remix v0.6.16 candidate, whose mod
+  files v0.6.16 ships unchanged) installed `3500`, `256`, the default Imoen choice `292`
+  and the rest of the remix run without errors. Data only for `256`: the bridge fight
+  was not played.
 - [ ] Modpack `430` (scrolls at the reader's caster level) failed on 2.7.3.0 with EEex
   v1.3.1 in alpha.11 to alpha.13: on the first load, a new game or an NPC join it showed
   its EEex error box ("copied action construction overlaps an existing lifetime") and
@@ -474,7 +659,7 @@ content, evaluated component by component (keep, fix or extend).
     A lab smoke showed no box in normal play.
   - Still open: check the loader log in the Recommended lab run before the release,
     because no ongoing playthrough has run with `430` yet; the same run checks BuffBot
-    v1.11.0 together with `430`.
+    v1.12.1 together with `430`.
 - [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
   `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
@@ -505,8 +690,12 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] Validate [Tweaks Anthology](CDTWEAKS.md) `2312` against the final SR/IWDification/SCS
   spell set, `2420/2430` against the final Artisan proficiency and item rules, and `3390`
   against final tracking-area scripts.
-- [ ] Artisan: add hidden, predicate-driven activation for tweak `1110` (`1010`+EEex) and
-  `1010000` (`C0PR#CL.SPL` present); the feature schema has no file-exists predicate yet.
+- [ ] Artisan: add hidden, predicate-driven activation for tweak `1110` (`1010`+EEex); the
+  feature schema has no file-exists predicate yet. `1010000` (`C0PR#CL.SPL` present) is
+  resolved: a default since 2026-10-29 (Christopher, 2026-10-26), at the end of the late
+  tweak run, requiring EEex and Eldritch Knight `20000` or Arcane Trickster `8204`, which
+  within the collection are exactly the components that create `C0PR#CL.SPL`
+  ([ARTISANSKITPACK_TWEAK](ARTISANSKITPACK_TWEAK.md)).
   Keep `30001`, `300010` and `8102` unavailable until priest delivery is redesigned.
   Latent: NPC `10004` does not require main `10003` (unselectable today because SR blocks
   it).
@@ -586,23 +775,33 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
 - [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed with v1.10.0 (see
-  Done); the pinned v1.11.0 has not run in a collection lab. Open: toggle
+  Done); v1.12.1 (PR #44) has not run in a collection lab. Open: toggle
   stances with opcode 214 variants count as buffs, so a new party's Long preset enables
   Artisan's Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
   ([#79](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/79)). The combat-stop notice
   fix (since v1.10.1, [bg-eeex-buffbot#76](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/76))
   was checked in a lab through the engine's text object only; nobody has seen the notice
-  on screen in a real combat stop yet. v1.11.0's own EET/SR/SCS/Modpack labs ran with
-  Modpack `430` uninstalled, and its notes do not accept the configuration with `430`
-  yet, which the recommended preset installs: check BuffBot with `430` in the
-  Recommended lab run. Also check there its new column headers and control artwork, and
-  that no other mod in the stack writes its PVRZ pages `MOS88809`–`MOS88993`.
+  on screen in a real combat stop yet. v1.12.x's own labs ran on BG2:EE and IWD:EE
+  2.7.3.0 with EEex v1.3.1, not on EET, and BuffBot's README still calls the
+  configuration with `430` not accepted: check BuffBot with `430` on EET in
+  Christopher's test or the Recommended lab run. Also check there the panel and its
+  control artwork (first drawn in v1.12.0), that the F12 preset abilities are gone
+  (right-click the HUD gear instead), and that no other mod writes its PVRZ pages
+  `MOS88809`–`MOS88993`.
 - [ ] Game-log switch (see Done): no game has started with it yet. In a lab, turn it on
   in CEBG, start and quit the game twice with **Play**, and check that
   `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first
   session and that the loader shows no log warning.
 - [ ] Visually verify the Evandra portrait override in game.
+- [x] [Artisan's Kitpack](ARTISANSKITPACK_TWEAK.md) `1010000`: data check done in two
+  October 29 EET labs. The first (curated Recommended with PR #58's Sirene order)
+  stopped later, at SoD Remix `290`, after the sweep had run. The second, complete one
+  (with #58 and the SoD Remix v0.6.16 candidate) gave the identical result. Every swept
+  file was compared with its state before the sweep: 20 items came under the Kitpack's
+  weapon rules, 806 more only got a duplicate weapon check, and the plain dagger,
+  quarterstaff and dart and the mage, sorcerer, monk and kit weapon grants did not
+  change. Data only: no weapon was equipped in the game.
 
 ## Conditional/future feature gates
 
@@ -637,8 +836,35 @@ catalogs were normalized. None has a recorded decision as of 2026-10-17.
 - [ ] [BGGO](BGGO.md) `4`: decide whether Alternate Graphics is excluded, optional, or default.
 - [ ] [Warlock](C0WARLOCK.md): choose Yes or No for the Contingency UI-based
   spell-learning prompt. The component remains a default either way.
-- [ ] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
-  already curated BG2/EET Sirene route.
+- [x] Decide whether to include the separate BG1 Sirene v3.1 package in addition to the
+  already curated BG2/EET Sirene route. Christopher, 2026-10-29: Sirene NPC for BG:EE (BG1
+  and SoD) becomes a default in alpha.22 after an EET lab test, pinned at unreleased
+  `master` commit `1c86000` rather than v3.1, which supports BG:EE only. Picks as for the
+  BG2 mod: `0`, the Sirick portrait `3` and True Paladin `6` by default, Cavalier,
+  Inquisitor and Undead Hunter `7`–`9` optional. See [SIRENE_BG1](SIRENE_BG1.md) and the
+  alpha.22 item at the top. The EET lab passed on 2026-10-29.
+- [x] Sirene in the SoD-to-SoA handover with SoD Remix `290` (lab, 2026-10-29):
+  - She is still in the party when the ending moves the party's remaining gear into
+    EET's invisible container `K#ImportContainer` in the first SoA dungeon. Nothing in
+    the Recommended install hands it back, so her SoD armour and Brimstone +1 stay out of
+    the player's reach and no second Brimstone appears.
+  - Without `290`, her own `bdcut61` script makes her leave the party and destroys that
+    gear first (read from the script; the ending without `290` was not run).
+  - No change to `290` (2026-10-29). Christopher: between SoD and SoA, leave things out
+    rather than add mechanics, checks or placed items. Remember when reworking the SoD
+    ending: `290` does not play `bdcut61`, so other mods' additions to it never run.
+- [x] Sirene NPC for BG:EE, as-is (lab, 2026-10-29): a Sirene the party never recruited
+  appears in the Iron Throne building and again at the first SoD camp. The first copy
+  stays behind in the Iron Throne building. Christopher, 2026-10-29: no upstream report,
+  and a fix only if it were quick and cheap to maintain. It is not: it would need our own
+  copy of her camp set-up in `bd1000`, `bd3000` and `bd7100` plus a lab run, and it would
+  have to follow every Sirene re-pin. So it stays as it is; in play the city copy stays
+  behind when the army leaves the city.
+- [ ] Artisan's Kitpack, open question for Christopher (2026-10-29): with `1010000` the
+  Eldritch Knight sorcerer still cannot use the SCS Drow Katana. Tweak `8204` gives that
+  katana a check (`C0_SORC_THIEF_EQUIPMENT`) that keeps out every single-class mage and
+  sorcerer except the Arcane Trickster sorcerer. Is that intended? The Kitpack fork stays
+  as it is until he answers ([ARTISANSKITPACK_TWEAK](ARTISANSKITPACK_TWEAK.md)).
 - [ ] Choose one restored-Bhaalspawn-powers provider: Ascension `40` (technical
   recommendation) or UB `19`; never expose both together. Since 2026-10-17 every
   Unfinished Business component, including `19`, is optional and unselected.
