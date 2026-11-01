@@ -107,7 +107,8 @@ const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
 /// `<category>/<artifact-id>/<digest>.json`.
 const CACHE_REPAIRS_EVIDENCE: &str = "cache-repairs";
 /// Placing steps of changed downloads that began to write files into a game copy. Stored as
-/// `<category>/<materialization-id>.json` before the first file is written.
+/// `<category>/<materialization-id>.json` before the first file is written, complete or not at
+/// all ([`publish_bytes_once`]): a step without the record has not begun to write.
 const PUBLICATIONS_EVIDENCE: &str = "publications";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
@@ -3585,6 +3586,17 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         write_json_once(&self.named_evidence_path(category, id)?, value)
     }
 
+    /// [`Self::persist_named_evidence`] for a record whose absence has a meaning, such as that a
+    /// step has not begun to write: it appears complete or not at all ([`publish_bytes_once`]).
+    fn publish_named_evidence_once<T: Serialize>(
+        &self,
+        category: impl AsRef<Path>,
+        id: &str,
+        value: &T,
+    ) -> Result<(), StepFailure> {
+        publish_json_once(&self.named_evidence_path(category, id)?, value)
+    }
+
     fn load_named_evidence<T: for<'de> Deserialize<'de>>(
         &self,
         category: impl AsRef<Path>,
@@ -4280,8 +4292,9 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
         };
         if served.is_some() {
             // Durable before the first file is written, so that a resume knows this step may
-            // have placed files.
-            self.persist_named_evidence(
+            // have placed files; and complete or absent, since a half-written record would stop
+            // every resume of a step that never began to write.
+            self.publish_named_evidence_once(
                 PUBLICATIONS_EVIDENCE,
                 &publication.materialization_id,
                 &publication,
@@ -5401,6 +5414,64 @@ fn write_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
         .parent()
         .ok_or_else(|| StepFailure::new(format!("path has no parent: {}", path.display())))?;
     ensure_directories(parent)?;
+    if holds_once(path, bytes)? {
+        return Ok(());
+    }
+    let mut file = OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(path)
+        .map_err(step_error)?;
+    file.write_all(bytes).map_err(step_error)?;
+    file.sync_all().map_err(step_error)
+}
+
+/// [`write_json_once`] for a record whose absence has a meaning ([`publish_bytes_once`]).
+fn publish_json_once<T: Serialize>(path: &Path, value: &T) -> Result<(), StepFailure> {
+    let mut bytes = serde_json::to_vec_pretty(value).map_err(step_error)?;
+    bytes.push(b'\n');
+    publish_bytes_once(path, &bytes)
+}
+
+/// [`write_bytes_once`], but the file at `path` appears complete or not at all: `bytes` go to a
+/// temporary file in the same folder, which is synced and only then published under `path`,
+/// never replacing a file there. An interruption, such as a crash or a full disk, leaves at most
+/// that temporary file, which nothing reads, so the record still counts as absent and the next
+/// attempt writes it anew.
+fn publish_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| StepFailure::new(format!("path has no parent: {}", path.display())))?;
+    ensure_directories(parent)?;
+    if holds_once(path, bytes)? {
+        return Ok(());
+    }
+    let temporary = tempfile::NamedTempFile::new_in(parent).map_err(step_error)?;
+    #[cfg(debug_assertions)]
+    let temporary = interrupt_record_for_test(temporary, path, bytes)?;
+    let mut temporary = temporary;
+    temporary.write_all(bytes).map_err(step_error)?;
+    temporary.as_file().sync_all().map_err(step_error)?;
+    match temporary
+        .persist_noclobber(path)
+        .map_err(|error| error.error)
+    {
+        Ok(_) => Ok(()),
+        // An earlier attempt published it after all; it must be the same record.
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            if holds_once(path, bytes)? {
+                Ok(())
+            } else {
+                Err(step_error(error))
+            }
+        }
+        Err(error) => Err(step_error(error)),
+    }
+}
+
+/// Whether the create-once file `path` exists already, which is only fine when it is a direct
+/// file holding exactly `bytes`.
+fn holds_once(path: &Path, bytes: &[u8]) -> Result<bool, StepFailure> {
     match fs::symlink_metadata(path) {
         Ok(metadata) => {
             if metadata.file_type().is_symlink()
@@ -5419,18 +5490,42 @@ fn write_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
                     path.display()
                 )));
             }
-            return Ok(());
+            Ok(true)
         }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(step_error(error)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(step_error(error)),
     }
-    let mut file = OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(path)
+}
+
+/// Debug builds stop [`publish_bytes_once`] halfway through a record in the evidence folder that
+/// `CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD` names, as a crash would: half of the record is
+/// written and its temporary file stays behind.
+#[cfg(debug_assertions)]
+fn interrupt_record_for_test(
+    mut temporary: tempfile::NamedTempFile,
+    path: &Path,
+    bytes: &[u8],
+) -> Result<tempfile::NamedTempFile, StepFailure> {
+    let folder = path
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str());
+    if folder.is_none()
+        || std::env::var("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD")
+            .ok()
+            .as_deref()
+            != folder
+    {
+        return Ok(temporary);
+    }
+    temporary
+        .write_all(&bytes[..bytes.len() / 2])
         .map_err(step_error)?;
-    file.write_all(bytes).map_err(step_error)?;
-    file.sync_all().map_err(step_error)
+    temporary.keep().map_err(|error| step_error(error.error))?;
+    Err(StepFailure::new(format!(
+        "test interruption while recording {}",
+        path.display()
+    )))
 }
 
 fn ensure_empty_file(path: &Path) -> Result<(), StepFailure> {

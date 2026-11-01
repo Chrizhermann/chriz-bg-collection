@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{BufRead, BufReader, Cursor, Write};
 use std::net::{Shutdown, TcpListener, TcpStream};
@@ -3476,6 +3476,146 @@ fn an_interrupted_placing_of_a_changed_archive_stays_sealed_when_its_file_change
             if step_id == "materialize:snowytoes:bg2"
     )));
     assert_eq!(fs::read(&placed).unwrap(), b"edited by hand");
+}
+
+/// The record that a placing step of a changed archive begins to write is itself interrupted,
+/// as by a crash or a full disk: half of it is written and its temporary file stays behind,
+/// before any file of the mod is placed. The step has not begun, so a resume places the mod;
+/// and when a file of another mod now stands in its way, the resume leaves it out, as before
+/// any write. A half-written record must never stop every later resume.
+#[cfg(windows)]
+#[test]
+fn an_interrupted_record_that_a_placing_step_begins_leaves_the_step_to_begin_again() {
+    let interrupt = |fixture: &ExecutableFixture, link: &ArtifactServer, mod_id: &str| {
+        let interrupted = executable_command(fixture)
+            .env(DOWNLOAD_ORIGIN, &link.base_url)
+            .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD", "publications")
+            .args(install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ))
+            .output()
+            .expect("start the installation");
+        assert_eq!(
+            interrupted.status.code(),
+            Some(1),
+            "{}",
+            stdout(&interrupted)
+        );
+        let step_id = json_stdout(&interrupted)["status"]["step_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        assert!(
+            step_id.starts_with(&format!("materialize:{mod_id}:")),
+            "{step_id}"
+        );
+        // Only the temporary file of the unfinished record is there, no record.
+        let left_behind = files(&fixture.managed.join(".chriz/evidence/publications"));
+        assert_eq!(left_behind.len(), 1, "{left_behind:?}");
+        assert_ne!(
+            left_behind[0]
+                .extension()
+                .and_then(|extension| extension.to_str()),
+            Some("json"),
+            "{left_behind:?}"
+        );
+    };
+    let resume = |fixture: &ExecutableFixture| {
+        let resumed = executable_command(fixture)
+            .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+            .output()
+            .expect("resume the installation");
+        assert!(
+            resumed.status.success(),
+            "stdout:\n{}\nstderr:\n{}",
+            stdout(&resumed),
+            stderr(&resumed)
+        );
+        let records = files(&fixture.managed.join(".chriz/evidence/publications"))
+            .into_iter()
+            .filter(|path| {
+                path.extension().and_then(|extension| extension.to_str()) == Some("json")
+            })
+            .map(|path| {
+                let record: serde_json::Value =
+                    serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+                record["step_id"].as_str().unwrap().to_owned()
+            })
+            .collect::<BTreeSet<_>>();
+        (read_install_receipt(fixture), records)
+    };
+
+    // A changed EE Fixpack: the resume places it in both games.
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let changed = zip_bytes(&[
+        (
+            "EE_Fixpack/EE_Fixpack.tp2",
+            b"BEGIN ~A newer release~\nDESIGNATED 0\n",
+        ),
+        ("EE_Fixpack/newer.txt", b"new in this release"),
+    ]);
+    let link = ArtifactServer::start(BTreeMap::from([("/eefixpack.zip".to_owned(), changed)]));
+    interrupt(&fixture, &link, "eefixpack");
+    for game in ["bg1", "game"] {
+        assert!(!fixture.managed.join(game).join("EE_Fixpack").exists());
+    }
+    drop(link);
+    let (receipt, records) = resume(&fixture);
+    assert!(receipt.left_out.is_empty());
+    for game in ["bg1", "game"] {
+        assert_eq!(
+            fs::read(fixture.managed.join(game).join("EE_Fixpack/newer.txt")).unwrap(),
+            b"new in this release"
+        );
+    }
+    assert_eq!(
+        records,
+        BTreeSet::from([
+            "materialize:eefixpack:bg1".to_owned(),
+            "materialize:eefixpack:bg2".to_owned(),
+        ])
+    );
+
+    // A changed Snowytoes that a file now stands in the way of: the resume leaves it out.
+    let fixture = executable_fixture();
+    add_snowytoes(
+        &fixture,
+        &zip_bytes(&[(
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+        )]),
+    );
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/snowytoes.zip".to_owned(),
+        zip_bytes(&[(
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes 1.7~\nDESIGNATED 0\n",
+        )]),
+    )]));
+    interrupt(&fixture, &link, "snowytoes");
+    assert!(!fixture.managed.join("game/Snowytoes").exists());
+    fs::write(fixture.managed.join("game/Snowytoes"), b"in the way").unwrap();
+    drop(link);
+    let (receipt, records) = resume(&fixture);
+    assert_eq!(receipt.left_out.len(), 1);
+    assert_eq!(receipt.left_out[0].runs, ["snowytoes-bg2"]);
+    assert_eq!(
+        fs::read(fixture.managed.join("game/Snowytoes")).unwrap(),
+        b"in the way"
+    );
+    assert!(records.is_empty(), "{records:?}");
+}
+
+fn files(folder: &Path) -> Vec<PathBuf> {
+    fs::read_dir(folder)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect()
 }
 
 /// A changed archive whose stored data is damaged, as when its server keeps a broken copy: its
