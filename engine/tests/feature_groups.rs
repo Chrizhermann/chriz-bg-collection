@@ -359,18 +359,22 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // candidate (Christopher, 2026-10-29): in both recipes only the Recommended plan changes,
     // in the buffbot-bg2 run's artifact id. With v1.11.0 restored, the previous plan digests
     // return (manifest 59f7b6fc…, curated 5dd76d84…).
+    // Re-pinned on November 1 for BuffBot v1.12.6, which goes into alpha.22 and into Chriz
+    // Easy IWD (Christopher, 2026-11-01): again only the Recommended plan changes, in the
+    // buffbot-bg2 run's artifact id. With v1.12.1 restored, the previous plan digests return
+    // (manifest 8b323328…, curated d0b7318d…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
             "f338fc118fe8a2264b2ae95ef2baf1b634b3f236de82d73757296d693878efd0",
             "2447350d05c9e316570f961b1b2efda6f89882c596b393a8ebb0f94662ae171f",
-            "8b3233288fe0d8abff1126de3ba0c8534b769467942c64736a1a23059123caee",
+            "9e1d3c91aa450d5b7abeec26702ead154cb393f5a1f8df4a5cb2fa5d638a9fa1",
         ),
         (
             "../recipes/curated-full-current",
             "bb95f4581529cfb6dadd14cb382c996b6c9b91dfaca70a2c4e59a9da286999b2",
             "7cf6a3b5aa6a6ac274186247768145a5e66522bb3dd9d35df2dd04678d045f02",
-            "d0b7318df0d9fb57296d70c46bc70b2d63c157090b021499c7188e2d49a0726b",
+            "1de1d6c6aae0b8b2a2282ce418e204f74fa85521a7248715f5a500037f402970",
         ),
     ] {
         let manifest = Manifest::load(&engine_dir().join(dir)).unwrap();
