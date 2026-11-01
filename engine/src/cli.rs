@@ -3599,6 +3599,9 @@ fn describe_collision(error: &AcquireError) -> String {
         AcquireError::UndeclaredOverwrite { path } => format!(
             "its file `{path}` would overwrite different content that the game or an earlier mod already placed"
         ),
+        AcquireError::DestinationKindConflict { path, message } => {
+            format!("its file `{path}` cannot be placed: {message}")
+        }
         other => other.to_string(),
     }
 }
@@ -3676,7 +3679,8 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
             // would overwrite others can be left out, as when it cannot be unpacked.
             Err(
                 error @ (AcquireError::UndeclaredOverwrite { .. }
-                | AcquireError::CollisionRuleRejected { .. }),
+                | AcquireError::CollisionRuleRejected { .. }
+                | AcquireError::DestinationKindConflict { .. }),
             ) => {
                 let served = self
                     .load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?

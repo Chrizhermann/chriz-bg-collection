@@ -308,6 +308,16 @@ pub enum AcquireError {
         /// Destination-relative path.
         path: String,
     },
+    /// A payload path is taken by the other kind of entry: an ordinary folder where the payload
+    /// has a file, or an ordinary file where the payload needs a folder. Links and other
+    /// reparse points are refused as [`AcquireError::InvalidMaterialization`] instead.
+    #[error("`{path}` cannot be placed: {message}")]
+    DestinationKindConflict {
+        /// Destination-relative payload path.
+        path: String,
+        /// What is in the way.
+        message: String,
+    },
     /// A collision rule exists but does not match both owners and exact byte hashes.
     #[error("signed collision rule rejected for `{path}`: {message}")]
     CollisionRuleRejected {
