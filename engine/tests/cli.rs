@@ -3141,7 +3141,7 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     assert_eq!(
         summary,
         [
-            "You chose to continue without Snowytoes (the newer download is packed in a way it can't use).",
+            "You chose to continue without Snowytoes (the newer download is packed in a way the installer can't read).",
             "If something does not work as expected, please report it so the collection can be fixed."
         ],
         "{printed}"
@@ -3187,7 +3187,7 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     let report = report_json(&fixture);
     assert_eq!(
         report["notes"][0],
-        "You chose to continue without Snowytoes (the newer download is packed in a way it can't use)."
+        "You chose to continue without Snowytoes (the newer download is packed in a way the installer can't read)."
     );
     let decision = &receipt.decisions[..];
     assert_eq!(decision.len(), 1, "{decision:#?}");
@@ -5384,7 +5384,7 @@ fn a_tool_from_an_unreviewed_host_is_asked_about_and_downloaded_again() {
     );
     assert_eq!(
         decision["texts"]["message"],
-        "A newer version of WeiDU was found. The reviewed version is no longer available at this link. Install it anyway? It came from localhost, which the collection did not review. If you're not sure, choose No."
+        "A newer version of WeiDU was found. The reviewed version is no longer available at this link. Install it anyway? It came from localhost, which the collection did not review. If you're not sure, stop the installation."
     );
     assert_eq!(labels(&decision), ["Install it", "Stop the installation"]);
     assert_eq!(decision["texts"]["focus"], "no");

@@ -212,7 +212,9 @@ impl UnusableReason {
             UnusableKind::NotArchive { .. } => "its link no longer serves the archive",
             UnusableKind::Downgrade => "its link now leads to an insecure address",
             UnusableKind::Damaged { .. } => "the newer download is damaged",
-            UnusableKind::Layout { .. } => "the newer download is packed in a way it can't use",
+            UnusableKind::Layout { .. } => {
+                "the newer download is packed in a way the installer can't read"
+            }
             UnusableKind::Collision { .. } => {
                 "the newer download would replace files of another mod"
             }

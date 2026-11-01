@@ -2040,7 +2040,7 @@ fn a_tool_whose_download_cannot_be_used_is_never_left_out() {
     assert_eq!(step_id, "acquire:weidu");
     assert!(
         reason.starts_with(
-            "The weidu mod can't be installed (the newer download is packed in a way it can't use), and the collection can't be installed without it. Try again later; if it keeps happening, please report it.\n"
+            "The weidu mod can't be installed (the newer download is packed in a way the installer can't read), and the collection can't be installed without it. Try again later; if it keeps happening, please report it.\n"
         ),
         "{reason}"
     );
@@ -2289,7 +2289,7 @@ fn stopping_ends_the_attempt_and_the_next_attempt_asks_again_with_a_new_id() {
     assert_eq!(step_id, "acquire:eefix");
     assert_eq!(
         reason,
-        "You chose to stop: The eefix mod can't be installed (the newer download is packed in a way it can't use)."
+        "You chose to stop: The eefix mod can't be installed (the newer download is packed in a way the installer can't read)."
     );
     assert_eq!(count_events(root, "left-out"), 0);
     let receipt = deps.receipts.last().unwrap();

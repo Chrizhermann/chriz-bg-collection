@@ -1524,7 +1524,7 @@ fn render_question(frozen: &FrozenCliRecipe, question: &Question) -> QuestionTex
             let served = question.served.as_ref();
             if question.kind == QuestionKind::UnreviewedTool {
                 message.push_str(&format!(
-                    " It came from {}, which the collection did not review. If you're not sure, choose No.",
+                    " It came from {}, which the collection did not review. If you're not sure, stop the installation.",
                     served.map_or_else(String::new, |served| served.unreviewed_hosts.join(", "))
                 ));
             }
@@ -6440,10 +6440,11 @@ mod tests {
 
     use super::{
         archive_content_error, download_unavailable, install_interrupt_handler_with,
-        non_prefix_component_diagnostic, retain_first_acquisition_receipt,
+        non_prefix_component_diagnostic, render_question, retain_first_acquisition_receipt,
         select_terminal_evidence, selection_choices, stack_disturbed_reconciliation,
-        validate_frozen_cli_recipe, AcquireError, FrozenCliRecipe, FrozenSource,
-        InstallReconciliation, LaterAcquisition, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
+        validate_frozen_cli_recipe, AcquireError, Answer, ArtifactKind, FrozenCliRecipe,
+        FrozenIdentity, FrozenSource, GameRoot, InstallReconciliation, LaterAcquisition, Question,
+        QuestionKind, SelectionOverrides, ServedDownload, CLI_FROZEN_RECIPE_SCHEMA,
     };
 
     fn downloaded_artifact_receipt() -> ArtifactReceipt {
@@ -6688,6 +6689,82 @@ mod tests {
             tool_identities: Vec::new(),
             staged_bg1: managed.join("bg1"),
             staged_bg2: managed.join("game"),
+        }
+    }
+
+    /// "Leave it out" names whole mods that depend on the mod in one sentence and mods that only
+    /// lose parts in another, each when it applies and both when both do.
+    #[test]
+    fn leave_out_texts_name_dependent_mods_and_reduced_mods_where_each_applies() {
+        let mut frozen = frozen_recipe_fixture();
+        let run = |run_id: &str, mod_id: &str| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![0],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        frozen.plan.runs = vec![
+            run("snowytoes-bg2", "snowytoes"),
+            run("snowfall-bg2", "snowfall"),
+            run("tweaks-bg2", "tweaks"),
+        ];
+        let question = |removed: &[&str], changed: &[&str]| Question {
+            kind: QuestionKind::ChangedDownload,
+            artifact_id: "snowytoes".to_owned(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: "snowytoes".to_owned(),
+                version: "1.6".to_owned(),
+                sha256: "11".repeat(32),
+                length: 10,
+            },
+            served: Some(ServedDownload {
+                filename: Some("snowytoes.zip".to_owned()),
+                length: 12,
+                sha256: "22".repeat(32),
+                link: "https://example.invalid/snowytoes.zip".to_owned(),
+                final_url: "https://example.invalid/snowytoes.zip".to_owned(),
+                hosts: vec!["example.invalid".to_owned()],
+                unreviewed_hosts: Vec::new(),
+            }),
+            reason: None,
+            leave_out: Some(crate::decision::LeaveOutClosure {
+                removed_runs: removed.iter().map(|id| (*id).to_owned()).collect(),
+                changed_runs: changed.iter().map(|id| run(id, "tweaks")).collect(),
+                plan_sha256: "33".repeat(32),
+            }),
+        };
+        let base = "A newer version of snowytoes was found. The reviewed version is no longer available at this link. Install it anyway?";
+        let dependents =
+            " If you leave it out, the mods that depend on it are left out too: snowfall.";
+        let reduced = " Without it, these are installed without the parts that need it: tweaks.";
+        for (removed, changed, expected) in [
+            (&["snowytoes-bg2"][..], &[][..], base.to_owned()),
+            (
+                &["snowytoes-bg2", "snowfall-bg2"][..],
+                &[][..],
+                format!("{base}{dependents}"),
+            ),
+            (
+                &["snowytoes-bg2"][..],
+                &["tweaks-bg2"][..],
+                format!("{base}{reduced}"),
+            ),
+            (
+                &["snowytoes-bg2", "snowfall-bg2"][..],
+                &["tweaks-bg2"][..],
+                format!("{base}{dependents}{reduced}"),
+            ),
+        ] {
+            let texts = render_question(&frozen, &question(removed, changed));
+            assert_eq!(texts.message, expected);
+            assert_eq!(texts.focus, Answer::Yes);
         }
     }
 
