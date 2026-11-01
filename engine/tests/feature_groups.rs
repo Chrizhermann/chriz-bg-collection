@@ -363,12 +363,18 @@ fn production_recommended_identity_is_unchanged_by_the_challenge_mode_group() {
     // Easy IWD (Christopher, 2026-11-01): again only the Recommended plan changes, in the
     // buffbot-bg2 run's artifact id. With v1.12.1 restored, the previous plan digests return
     // (manifest 8b323328…, curated d0b7318d…).
+    // Re-pinned on November 1 for issue 77 (Christopher's decision of 2026-11-01): the
+    // manifest's artisanskitpack-main-bg2 and randomiser-bg2 runs follow their TP2s'
+    // declaration order, as the curated recipe already did. Only the manifest's collection
+    // and plan digests change, in those two runs' component order; its selection and all
+    // curated digests stay. With the old order restored, the previous manifest digests
+    // return (collection f338fc11…, plan 9e1d3c91…).
     for (dir, collection_sha, selection_sha, plan_sha) in [
         (
             "../manifest",
-            "f338fc118fe8a2264b2ae95ef2baf1b634b3f236de82d73757296d693878efd0",
+            "b0fd4879054d950ff1d3a4bc2cfba67b3bde80b1714cfddbf56892c8ca65afb8",
             "2447350d05c9e316570f961b1b2efda6f89882c596b393a8ebb0f94662ae171f",
-            "9e1d3c91aa450d5b7abeec26702ead154cb393f5a1f8df4a5cb2fa5d638a9fa1",
+            "75caa696d38468c6e2ec8bc077705f3dbbbefb12ca161daf67932f76a388ec65",
         ),
         (
             "../recipes/curated-full-current",

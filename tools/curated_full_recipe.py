@@ -47,7 +47,8 @@ BG1NPC_NATIVE_ORDER = [
 
 # Exact pinned Artisan v4.81a-dev.85928f9-chriz.5 (same order as chriz.1; its tweak TP2 adds 7205) and Randomiser v8.1.1
 # TP2 order, restricted to offered choices. Re-audit a newly offered ID instead of guessing its
-# position.
+# position. Since issue 77 the manifest base follows these orders too, and
+# tools/tests/test_native_run_orders.py holds both bundled profiles to them.
 NATIVE_RUN_ORDERS = {
     "artisanskitpack-main-bg2": [
         1, 2, 20000, 20001, 8001, 8101, 8002, 8004,
