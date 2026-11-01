@@ -41,19 +41,22 @@ Cross-repository status. Component detail stays in the sections below and in the
      [PR #56](https://github.com/Chrizhermann/chriz-bg-collection/pull/56) (merged on
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-rebalance.toml`).
      Only `360`'s name changes, to True Time Stop – fair Haste & Slow (below).
-     BuffBot v1.12.1 replaces v1.11.0 in both recipes since
+     BuffBot v1.12.1 replaced v1.11.0 in both recipes with
      [PR #44](https://github.com/Chrizhermann/chriz-bg-collection/pull/44) (merged on
-     2026-10-29; evidence in `manifest/evidence/release-intake-20261028-buffbot.toml`).
-     Christopher, 2026-10-29: it goes into the alpha.22 release candidate, and he tests it
-     there instead of separately. The IWD recipe gets the same version in
-     [PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51) against
-     `claude/iwdee-app`. #51 is held, and this is the reason the rule below asks for: any
-     change to the IWD recipe after a release needs a version bump, because the catalog
-     test ties `release.json`'s version to a `[[bases]]` digest. So #51 goes in, with a
-     merge commit, as part of the IWD version released in the same step as CEBG alpha.22;
-     both installers then ship BuffBot v1.12.1 together. IWD 0.1.3 itself is the
-     Snowytoes v1.7 fix (2026-10-30; Weasel Mods' fixed download link started serving
-     v1.7, so new IWD installations stopped at the reviewed v1.6) and leaves BuffBot out.
+     2026-10-29); Christopher took it into the alpha.22 release candidate to test it there.
+     BuffBot v1.12.6 replaces v1.12.1 in both recipes in
+     [PR #75](https://github.com/Chrizhermann/chriz-bg-collection/pull/75) (evidence in
+     `manifest/evidence/release-intake-20261101-buffbot-chriz-easy-bg.toml`). Christopher,
+     2026-11-01: v1.12.6 goes into alpha.22 and into Chriz Easy IWD. The IWD recipe gets it
+     in [PR #74](https://github.com/Chrizhermann/chriz-bg-collection/pull/74) against
+     `claude/iwdee-app`, numbered IWD 0.1.4, because any change to the IWD recipe after a
+     release needs a version bump (the catalog test ties `release.json`'s version to a
+     `[[bases]]` digest). #74 supersedes
+     [PR #51](https://github.com/Chrizhermann/chriz-bg-collection/pull/51) (v1.12.1 for IWD).
+     Both go in with a merge commit, so that the commits their records cite stay on the
+     branches; both installers then ship BuffBot v1.12.6. IWD 0.1.3 is the Snowytoes v1.7
+     fix (2026-10-30; Weasel Mods' fixed download link started serving v1.7, so new IWD
+     installations stopped at the reviewed v1.6).
      Artisan's Kitpack tweak `1010000` (kit weapon rules for weapons from later mods;
      Christopher, 2026-10-26) is a default in both recipes since
      [PR #60](https://github.com/Chrizhermann/chriz-bg-collection/pull/60) (merged on
@@ -82,13 +85,13 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
      with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
      see Weapon access below).
-     Still open in this step: #51, BuffBot v1.12.1 for the IWD recipe, held for the IWD
-     version released together with alpha.22 (above).
+     Still open in this step: #75 and #74, BuffBot v1.12.6 for both installers (above);
+     #51 is superseded.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
      update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
      merged on 2026-10-30. The ledger supersedes alpha.20 (alpha.21 shipped
-     the alpha.20 recipe), covers all 230 recorded differences, BuffBot v1.12.1 from #44
+     the alpha.20 recipe), covers all 231 recorded differences, BuffBot v1.12.6 from #75
      included, and needs app alpha.22, so the app release that ships it must carry that
      version. Its publication date is a placeholder that the release step sets. If the
      recipe changes again before the release, the recorded differences and the ledger need
@@ -96,8 +99,8 @@ Cross-repository status. Component detail stays in the sections below and in the
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
-     v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44) came
-     after it.
+     v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44), now
+     v1.12.6 (#75), came after it.
   4. Acceptance, build, signing and publishing, and the website.
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
@@ -195,10 +198,18 @@ Cross-repository status. Component detail stays in the sections below and in the
   - BuffBot [v1.12.1](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.12.1)
     (released on 2026-10-27) fixes that: three layout defects of v1.12.0, none of which
     depends on the EEex version. Its panel was checked in a BG2:EE 2.7.3.0 lab with EEex
-    v1.3.1, the version alpha.22 installs. Pinned since PR #44 (merged on 2026-10-29);
-    Christopher tests it in the alpha.22 release candidate (2026-10-29). Components `1`
-    and `0`, their order and the run position are unchanged; the TP2 also accepts IWD:EE
-    and no longer writes TLK strings, `bfbot_strrefs.txt` or `BFBOTIB.BAM`.
+    v1.3.1, the version alpha.22 installs. Pinned from PR #44 (merged on 2026-10-29) until
+    v1.12.6; Christopher took it into the alpha.22 release candidate (2026-10-29). Components
+    `1` and `0`, their order and the run position are unchanged; the TP2 also accepts
+    IWD:EE and no longer writes TLK strings, `bfbot_strrefs.txt` or `BFBOTIB.BAM`.
+  - BuffBot [v1.12.6](https://github.com/Chrizhermann/bg-eeex-buffbot/releases/tag/v1.12.6)
+    (released on 2026-11-01, with v1.12.2 to v1.12.5) replaces v1.12.1 in PR #75, and
+    v1.12.0 in the IWD recipe in PR #74 (Christopher, 2026-11-01). The Summons view switches
+    back to the party again and lists only creatures the party conjured, the colour
+    schemes carry the right game's names (the default look stays), pressed buttons look
+    pressed, and a 2x/4x buff run stops speeding up while a menu, the character record or
+    a shop is open. Components `1` and `0`, their order and the run position are
+    unchanged; the TP2 changes only its version and two comments.
 - Modpack v0.2.0-alpha.13, released on 2026-10-20: campaign XP caps `650`/`651` work
   again (alpha.11 and alpha.12 refused every permanent XP award with `650`), lab-verified
   on 2.7.3.0 with EEex v1.3.1. It adds EET join XP `239` for NPCs without EET's
@@ -659,7 +670,7 @@ content, evaluated component by component (keep, fix or extend).
     A lab smoke showed no box in normal play.
   - Still open: check the loader log in the Recommended lab run before the release,
     because no ongoing playthrough has run with `430` yet; the same run checks BuffBot
-    v1.12.1 together with `430`.
+    v1.12.6 together with `430`.
 - [ ] Voicepacks (`CD_*` catalogs, release v1.1.0): the 18 default runs
   `voicepack-*-bg2` have only static recipe checks and the owner's per-pack fixture
   installs with the pinned WeiDU 249 (six BG:EE/SoD/BG2:EE/EET fixtures, English and
@@ -775,7 +786,7 @@ content, evaluated component by component (keep, fix or extend).
 - [ ] Run targeted live checks for the migrated tail fixes, especially modpack `400`,
   `410`, `430`, `440` and `450`; so far only file-level checks exist.
 - [ ] [BuffBot](BUFFBOT.md): the BG1 start/save/reload smoke passed with v1.10.0 (see
-  Done); v1.12.1 (PR #44) has not run in a collection lab. Open: toggle
+  Done); v1.12.6 (PR #75) has not run in a collection lab. Open: toggle
   stances with opcode 214 variants count as buffs, so a new party's Long preset enables
   Artisan's Power Attack ([#78](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/78)); two
   in-game test suites have stale or install-specific expectations
@@ -788,7 +799,11 @@ content, evaluated component by component (keep, fix or extend).
   Christopher's test or the Recommended lab run. Also check there the panel and its
   control artwork (first drawn in v1.12.0), that the F12 preset abilities are gone
   (right-click the HUD gear instead), and that no other mod writes its PVRZ pages
-  `MOS88809`–`MOS88993`.
+  `MOS88809`–`MOS88993`. v1.12.6's guard for the 2x/4x speed reads the game's menus at run
+  time but was walked on BG2:EE only: check that a sped-up buff run stops speeding up for
+  the record screen, a level-up and a shop. Upstream
+  [#105](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/105) (a pressed button might
+  keep looking pressed) is not seen here.
 - [ ] Game-log switch (see Done): no game has started with it yet. In a lab, turn it on
   in CEBG, start and quit the game twice with **Play**, and check that
   `InfinityLoader.log` and `InfinityLoader-previous.log` hold the second and first

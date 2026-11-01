@@ -10,8 +10,9 @@ chriz.4 (October 27, test_oct27_alpha22_pins_recipe) supersedes the chriz.3 pin 
 its components and order, and BG Rebalance v0.8.6 (October 28, same test) supersedes the
 v0.8.5 pin, keeps its components and order and adds the Time Stop and Haste effect clocks
 360 after 340. BuffBot v1.12.1 (October 28, test_oct28_buffbot_pin_recipe) supersedes the
-v1.11.0 pin and keeps its components and order. The chriz.3, v0.8.5 and v1.11.0 records and
-artifacts stay as verified here. The Kitpack fork chriz.5 (October 29,
+v1.11.0 pin and keeps its components and order, and BuffBot v1.12.6 (November 1,
+test_nov01_buffbot_pin_recipe) supersedes v1.12.1 in turn. The chriz.3, v0.8.5 and v1.11.0
+records and artifacts stay as verified here. The Kitpack fork chriz.5 (October 29,
 test_oct29_kitpack_chriz5_pin_recipe) then supersedes chriz.4 and adds tweak 7205, which is
 checked against its own record.
 """
@@ -41,6 +42,9 @@ SUCCESSORS = {mod_id: KITPACK_SUCCESSOR
 SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.6"
 # The October 28 intake (test_oct28_buffbot_pin_recipe) replaces BuffBot v1.11.0 with v1.12.1.
 SUCCESSORS["buffbot"] = "buffbot-1.12.1"
+# The November 1 intake (test_nov01_buffbot_pin_recipe) replaces v1.12.1 with v1.12.6, which
+# keeps both components and their order.
+SUCCESSORS["buffbot"] = "buffbot-1.12.6"
 # Components declared by a successor pin, checked against its own record; none is in a
 # record of this intake.
 LATER_COMPONENTS = {"chriz-bg-rebalance": {360}}

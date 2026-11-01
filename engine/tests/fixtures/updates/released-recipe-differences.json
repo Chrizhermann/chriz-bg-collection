@@ -194,7 +194,7 @@
   {
     "version": "0.1.0-alpha.22",
     "from_commit": "e0b5116",
-    "to_commit": "60331a7",
+    "to_commit": "e9d90e3",
     "subjects": [
       "artifact:ac-quest-7.0",
       "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.3",
@@ -206,6 +206,7 @@
       "artifact:buffbot-1.10.1",
       "artifact:buffbot-1.11.0",
       "artifact:buffbot-1.12.1",
+      "artifact:buffbot-1.12.6",
       "artifact:cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729",
       "artifact:chriz-bg-modpack-0.2.0-alpha.12",
       "artifact:chriz-bg-modpack-0.2.0-alpha.13",
