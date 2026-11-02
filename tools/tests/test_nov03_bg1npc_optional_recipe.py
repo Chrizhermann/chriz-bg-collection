@@ -20,6 +20,8 @@ MOD = "mod:bg1npc"
 # The reviewed set that ticking the mod brings back; 160 (portraits) stays blocked.
 DEFAULT_COMPONENTS = (0, 10, 90, 111, 120, 130, 240, 200)
 GUARD = "feature:chriz-bg-modpack:component-130"
+LEDGERS = ["manifest/releases/v0.1.1/ledger.toml",
+           "recipes/curated-full-current/releases/v0.1.1/ledger.toml"]
 
 
 def _load(path: Path) -> dict:
@@ -97,6 +99,21 @@ class Nov03Bg1npcOptionalTests(unittest.TestCase):
                 self.assertEqual(omissions[0]["approved_on"], "2026-11-03")
                 self.assertIn("only when BG1 NPC Project", omissions[0]["user_facing_limitation"])
 
+    def test_the_011_ledger_tells_players(self):
+        for path in LEDGERS:
+            with self.subTest(ledger=path):
+                ledger = _load(ROOT / path)
+                self.assertEqual(ledger["version"], "0.1.1")
+                self.assertEqual(ledger["supersedes"], "0.1.0")
+                self.assertEqual(ledger["minimum_app_version"], "0.1.0")
+                (change,) = [item for item in ledger["changes"] if item["id"] == "bg1npc-optional"]
+                self.assertEqual(change["covers"], ["feature:mod:bg1npc"])
+                self.assertEqual(change["save_applicability"], "next-playthrough")
+                for phrase in ("no longer installed by default", "tick it under Customize",
+                               "Games you already installed keep it."):
+                    self.assertIn(phrase, change["summary"])
+        self.assertEqual((ROOT / LEDGERS[0]).read_bytes().replace(b"\r\n", b"\n"),
+                         (ROOT / LEDGERS[1]).read_bytes().replace(b"\r\n", b"\n"))
 
 
 if __name__ == "__main__":
