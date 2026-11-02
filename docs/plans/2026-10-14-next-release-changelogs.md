@@ -6,7 +6,9 @@ Labels: **Mandatory** = always installed with its mod; **Default** = selected in
 Chris's Recommended; **Optional** = offered, unchecked; **Pending** = waiting for
 Christopher's choice. Version the next release properly; never republish over
 alpha.21. The [alpha.20 drafts](2026-10-13-next-release-changelogs.md) are already
-published.
+published. Christopher decided on 2026-11-01 that this release is app and collection
+**0.1.0** (prepared as alpha.22); the player-facing notes are in
+[`docs/release-notes-0.1.0.md`](../release-notes-0.1.0.md).
 
 ## Installer changelog
 
@@ -207,10 +209,10 @@ unchanged.
   damage instead of +4, matching Grand Mastery. To-hit and the other levels are
   unchanged. (Tweaks Anthology)
   - With Spell Revisions, the Black Blade of Disaster now also gets +3/2 attacks
-    per round and +8 to hit / +10 damage (it was +5/+5). Still open for
-    Christopher (skipped on 2026-10-30); alpha.22 ships it this way. (Upstream's
-    fix for Black Blade attacks stacking with grandmastery changes nothing here:
-    v18 never had that bug.)
+    per round and +8 to hit / +10 damage (it was +5/+5). Christopher keeps this
+    for alpha.22 and revisits its balance later. (Upstream's fix for Black Blade
+    attacks stacking with grandmastery changes nothing here: v18 never had that
+    bug.)
 - **The Martyr paladin kit** (Default, unchanged choice) now comes from Artisan's Kitpack
   alone. Both Sirene mods install after the Kitpack and leave their own copy out, so the
   Martyr stays available at character creation, unchanged.
@@ -297,6 +299,20 @@ unchanged.
     buttons, so a click lands on the button you see; spare tab slots stay inside
     the panel; and the quick-preset menu's captions move with the menu.
     (BuffBot v1.12.1)
+  - Fixed: with a party of one to five, the panel can switch from the Summons view back
+    to the party again, and a companion who joins while the panel is open gets a tab of
+    their own instead of one stacked under the last tab. (BuffBot v1.12.2)
+  - Fixed: the Summons view lists only creatures your party summoned or cloned. A
+    friendly NPC such as Vithal, or a charmed enemy, no longer shows up there with his
+    spells. (BuffBot v1.12.3)
+  - Changed: the colour schemes carry the right game's names. The default panel looks
+    as before and is now called "Baldur's Gate" (was "Baldur's Gate II"); a scheme you
+    picked yourself now shows the colours of the game it names. On a wide panel the
+    footer buttons spread out in their groups. (BuffBot v1.12.4)
+  - Changed: a button you press now looks pressed. (BuffBot v1.12.5)
+  - Fixed: a buff run no longer speeds the game up while the options, the character
+    record, a level-up, the journal, a shop or another mod's dialog is open; before, the
+    2x or 4x speed went on there. (BuffBot v1.12.6)
 - **BG Rebalance fixes** for components the collection installs (Rebalance v0.8.4):
   - Bracers of Blinding Strike and Spell Revisions' Haste or Improved Haste no
     longer combine when the spell is cast first.
@@ -336,6 +352,17 @@ unchanged.
   cannot use them. (Artisan's Kitpack fork chriz.5)
   - Existing games keep the old sorcerer, Eldritch Knight, Arcane Trickster, monk,
     shaman, Invisible Blade and Dancer weapon behavior until you install again.
+- **The Shapeshifter's white and greater white werewolves no longer crash the game**
+  (Default, with the Shapeshifter Overhaul's werewolf sprites). Their overhand swing had
+  no animation in five of the eight directions; drawing it next to a wall could crash the
+  game or silently corrupt memory. In those directions the swing now shows the same
+  werewolf's other attack. (Artisan's Kitpack fork chriz.6)
+- **Pierce Magic and Spellstrike describe what they do** (Default). Their descriptions now
+  have Spell Revisions' usual layout, with level, school, range, the list of protections
+  they remove, and the changed effects: Pierce Magic halves Magic Resistance for 5 rounds
+  (by at least 10 and at most 40 points), and Spellstrike gives a 15% chance of spell
+  failure for 2 rounds. Their scrolls, the Wand of Spell Striking and the monk's
+  Spellstrike show the same texts. Only the texts change. (Rebalance v0.8.9)
 - **EEex Remote Console** (Optional, experimental): after you return to the main menu
   from character creation, the load screen or the options, the single-player menu no
   longer stays behind the game's screens for the rest of the session. Its installer
@@ -344,7 +371,7 @@ unchanged.
 ### Mod versions
 
 - Chriz BG Modpack v0.2.0-alpha.14 (was alpha.11)
-- BG Rebalance v0.8.8 (was v0.8.2)
+- BG Rebalance v0.8.9 (was v0.8.2)
 - Bardic Wonders v2.9c-balance.8 (was balance.7)
 - EEex v1.3.1 (was v1.2.0)
 - The Tweaks Anthology: development version `7649ced`, 134 changes after v18
@@ -352,10 +379,10 @@ unchanged.
   version, as it does for EET.
 - ChrizFader's voicepacks v1.1.0 (new)
 - SoD Remix v0.6.16 (was v0.6.13)
-- BuffBot v1.12.1 (was v1.10.0)
+- BuffBot v1.12.6 (was v1.10.0)
 - EEex Remote Console v0.2.1 (was v0.2.0)
 - Spell Revisions fork v4.21-chriz.7 (was v4.21-chriz.5)
-- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.5 (was chriz.1)
+- The Artisan's Kitpack fork v4.81a-dev.85928f9-chriz.6 (was chriz.1)
 - Northern Tales of the Sword Coast: development version `f0ef953`, 35 changes after
   v5.0.0 (new). The collection pins this exact version because v5.0.0 lacks a fix
   that SCS needs and the Island of the Sirines on the worldmap.
@@ -368,13 +395,13 @@ unchanged.
 - Sirene NPC for BG:EE: development version `1c86000` (new). The collection pins this
   exact version because the last release, v3.1, installs on BG:EE only, not on EET.
 
-## Release-note entry (collection alpha.22)
+## Release-note entry (collection 0.1.0)
 
-**Collection alpha.22** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
-Rebalance to v0.8.8, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
-EEex to v1.3.1, BuffBot to v1.12.1, EEex Remote Console to v0.2.1, the Spell
+**Collection 0.1.0** updates Chriz BG Modpack to v0.2.0-alpha.14, BG
+Rebalance to v0.8.9, Bardic Wonders to v2.9c-balance.8, SoD Remix to v0.6.16,
+EEex to v1.3.1, BuffBot to v1.12.6, EEex Remote Console to v0.2.1, the Spell
 Revisions fork to v4.21-chriz.7, the Artisan's Kitpack fork to
-v4.81a-dev.85928f9-chriz.5 and The Tweaks Anthology to its current development
+v4.81a-dev.85928f9-chriz.6 and The Tweaks Anthology to its current development
 version. New in Chris's Recommended: Christopher's revisions of Aid, Luck, Bless,
 Chaotic Commands, Prayer and Recitation; True Time Stop – fair Haste & Slow, with a
 Time Stop that stops everything but the caster and Haste and Slow that no longer change
@@ -408,15 +435,18 @@ the Gallant gets the new bard spells, and Symphony of the Dark Children ends
 with its round of Invisibility. BuffBot's combat-stop notices now appear over the
 party leader, BuffBot can speed up a buff run to 2x or 4x, cast the longest-lasting
 buffs first and cast buffs that are nearly over again, draws its panel in the theme's
-artwork, takes presets from the HUD gear instead of F12 abilities and no longer risks a
-crash when it puts equipped items back, and the optional EEex Remote Console no longer
+artwork, takes presets from the HUD gear instead of F12 abilities, lists only your own
+summons in its Summons view and no longer risks a crash when it puts equipped items
+back, and the optional EEex Remote Console no longer
 leaves the single-player menu behind the game's screens. Sorcerers, the Dragon Disciple
 included, can equip daggers, quarterstaves, darts and slings again, and Eldritch
 Knight and Arcane Trickster sorcerers keep their kit weapons when they level up or
 join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a
 kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the start.
 The Invisible Blade and Bardic Wonders' Dancer can use katanas and the rogue and bard
-items that kept them out, also those that later mods add.
+items that kept them out, also those that later mods add. The Shapeshifter's white and
+greater white werewolves no longer crash the game, and Pierce Magic and Spellstrike, their
+scrolls and the Wand of Spell Striking describe what the spells now do.
 EEex's attack info display is offered as an option. These changes
 apply to new installations; existing games and saves are unchanged.
 
@@ -435,7 +465,7 @@ apply to new installations; existing games and saves are unchanged.
   Its owner labs ran on disposable 2.7.3.0 installs with EEex v1.3.1, the last one with the
   release candidate's package on a copy of the Recommended install; no ongoing
   playthrough has run with `430` yet, so the Recommended lab run checks the loader log,
-  together with BuffBot v1.12.1 (see `FOLLOW_UPS.md`).
+  together with BuffBot v1.12.6 (see `FOLLOW_UPS.md`).
   `135` and `460` were checked in game for alpha.13 on a copy of the Recommended install.
   Chapter caps `652` stay experimental: their lab set chapters and gave XP from the
   console, not through the story (the Modpack's banking guide).
@@ -481,9 +511,21 @@ apply to new installations; existing games and saves are unchanged.
   PVRZ pages are unchanged. Its owner labs ran on BG2:EE 2.7.3.0 and IWD:EE 2.7.3.0 with
   EEex v1.3.1, with the panel and its artwork seen on screen in all six themes; BG:EE and
   EET were not checked in game, and its README still calls the configuration with Modpack
-  `430` not accepted. Christopher takes it into this release and tests it in the release
-  candidate (2026-10-29). The PVRZ page check above still applies, now with the artwork on
-  screen.
+  `430` not accepted. Christopher took it into this release on 2026-10-29, to test it in
+  the release candidate; v1.12.6 replaces it (below). The PVRZ page check above still
+  applies, now with the artwork on screen.
+- **BuffBot v1.12.6** (with v1.12.2 to v1.12.5) changes only BuffBot's Lua code and menu;
+  its TP2 changes only the version and two comments, so components `1` and `0`, their
+  order, the EEex checks and the installed files stay as in v1.12.1. No save data
+  changes. The colour scheme names move (the default look stays), and the Summons view
+  now leaves out creatures the party did not summon. Its owner labs ran on BG2:EE 2.7.3.0
+  with EEex v1.3.1 (all 28 in-game phases); BG:EE, SoD, EET and IWD:EE, a real EEex
+  v1.2.0, a real mouse press and a save and reload with a summon were not checked in
+  game, and its README still calls the configuration with Modpack `430` not accepted.
+  Open upstream: a pressed button might keep looking pressed
+  ([bg-eeex-buffbot#105](https://github.com/Chrizhermann/bg-eeex-buffbot/issues/105), not
+  seen here). Christopher takes it into this release and into Chriz Easy IWD
+  (2026-11-01).
 - **Rebalance `340`** (Chris Revisions, Default) was installed on scratch copies of
   game resources only and has not run in a game yet (its release notes). Its "ready"
   flag, like EEex `9`'s, stays as it is until the Recommended lab run decides
@@ -531,6 +573,25 @@ apply to new installations; existing games and saves are unchanged.
   without EEex. Its new tweak `7205` (Default; Christopher, 2026-10-29) runs before
   `8204` in the late tweak run, and `1010000`, which ends that run, ends with the same
   pass (`ARTISANSKITPACK_TWEAK.md`).
+- **Artisan's Kitpack fork chriz.6** (pinned 2026-11-02, Christopher's OK of that day)
+  changes only the two white werewolf attack 1 files and the three VERSION lines; the
+  components, their order and every decision stay. The crash was seen in play and
+  reproduced in a lab on a copy of a CEBG game on 2.7.3.0, where the old `C0W5A1.BAM`
+  crashed within two minutes and the A2 copy ran seven minutes without a crash; the
+  fork's new test checks every werewolf BAM for empty direction cycles. The
+  lab used the fixed file as an override copy, not an install of the release, and the
+  white fur `C0W2A1` was checked offline only. There is no tail: existing games keep the
+  broken files until a new installation (a one-off repair for a running game is
+  possible and waits for Christopher).
+- **Rebalance v0.8.9** (pinned 2026-11-02, Christopher's OK of that day) changes texts
+  only: `210` and `211` write their descriptions in Spell Revisions' layout and repoint the
+  scrolls, the Wand of Spell Striking's charge line and sibling spells (Artisan's Kitpack's
+  `C0MK#009`, SCS's `DW#WNDSS`) that still showed the old mechanic. The recipe installs
+  `210`/`211` fresh, so its selection does not change; the texts-only components
+  `212`/`213` for existing installations ship in the separate `CBR_SR_ANTIMAGIC` package,
+  which the collection does not install. Its owner suite (833 tests with WeiDU 249) and dry
+  runs on copies of two real installations' resources passed; the texts have not been
+  seen in a running game yet, and other languages keep the English texts as before.
 - **Sirene NPC for BG:EE** (Default; Christopher, 2026-10-29) is a GitHub commit archive
   of unreleased `master`, like the Sirene NPC for BG2 pin. Both Sirene mods now install
   after Artisan's Kitpack's main run, Sirene BG1 first: the Kitpack's Martyr kit stays

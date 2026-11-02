@@ -2,6 +2,67 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 2 — app and collection 0.1.0 published
+
+**App and collection 0.1.0 are public**, the first CEBG release without the alpha label:
+the [v0.1.0 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0)
+(a normal release, marked Latest), the `alpha` update channel, which every installed CEBG
+version reads, and [the collection page](https://bg.chrizfader.org/collection). Christopher
+gave the go on 2026-11-02 after testing the final lab install of the build source. PR #76
+merged into the next-release branch as `44235d8`; the release, its seven assets and the
+channel feed were checked anonymously; website PR 45 merged as `867438c`; #77 is closed.
+Details: the Publication section of the
+[0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md). The rest of this
+section describes how the release was prepared.
+
+Christopher decided on 2026-11-01 that the release prepared as alpha.22 is **0.1.0**,
+without a pre-release suffix; the content stays the same. Branch `claude/release-alpha22`
+(PR #76), from the next-release branch `claude/cebg-installer-fixes-20261014` at
+`5a4b1f6` (BuffBot v1.12.6, PR #75), sets the app and the bundled collection to **0.1.0**:
+the app in the five files the alpha.21 bump changed, the collection's `release.json`, and
+its update ledger, now `releases/v0.1.0/ledger.toml`, published on 2026-11-02 and needing
+app 0.1.0. The updater endpoint and the `alpha` channel stay as they are: 0.1.0 orders
+after every 0.1.0 alpha, so alpha installations find it there. The
+[release notes](release-notes-0.1.0.md) cover everything since app alpha.21 and
+collection alpha.20.
+
+Also in this candidate:
+
+- [Issue 77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77) is fixed. The
+  "Smaller downloadable setup" profile (`manifest/`; it was "Smaller downloadable alpha")
+  requests the Artisan's Kitpack main run in its TP2's declaration order, and so does its
+  Randomiser run, the same mismatch found while fixing it. `tools/tests/test_native_run_orders.py`
+  holds both bundled profiles to the audited and the recorded native orders.
+- Player-visible texts no longer call the product an alpha: the profile label, two Updates
+  texts, the GOG and locale findings of the game check, one busy-installer detail and the
+  troubleshooting guide. Internal names such as `public-alpha` and the `alpha` channel stay.
+- Two content fixes that Christopher took into 0.1.0 on 2026-11-02, pinned in both
+  recipes: the Artisan's Kitpack fork chriz.6 (the Shapeshifter's white werewolf forms no
+  longer crash the game near walls) and BG Rebalance v0.8.9 (the Pierce Magic and
+  Spellstrike descriptions match the spells). Neither changes a component, the order or a
+  selection. The ledger covers the two new recorded differences with two new entries,
+  34 in all.
+
+The signed setup is built from `50a4239` (rebuilt on 2026-11-02 with the two fixes):
+6,081,271 bytes, SHA-256
+`295b6ac614430e8ca560d2801b2c4f57ad256229543e7777080d639f2e692d58`. A verified copy and
+its signature are in Christopher's Downloads folder. All automated checks passed in a new
+clean worktree (1,155 native, 452 frontend and 272 Python tests), as did the native order
+proof of the two new pins, the recipe-difference proof, the signature, resource and
+updater checks (alpha.21 → 0.1.0) and a Defender scan of the setup. Exact results:
+[0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md).
+
+Two earlier candidates were superseded before publication; their setups are kept in
+Christopher's test folder: the first 0.1.0 candidate, built on November 1 from `e91e9e2`
+(setup SHA-256 `ff4f8d34…`,
+[record](package-acceptance-0.1.0-2026-11-01.md)), and the alpha.22 candidate built
+earlier that day (`1101253f…`,
+[record](package-acceptance-alpha22-2026-11-01.md)).
+
+Not in 0.1.0: the open PRs against the next-release branch, #69 (install what a mod's
+official link serves when it differs from the pin) and #53 (own-mod pin check). The
+next-release branch has not been merged back into `main` yet; Christopher decides when.
+
 ## November 1 — download drift fixes (PR 69)
 
 Campaigns started with a build of PR 69 from before ba32684 are unsupported: those builds
@@ -454,7 +515,7 @@ This publication changes only the website, not the installer release or game.
 Microsoft follow-up route check: the case page still has no case-reply form;
 the analyst directs replies to their email. Correction after Christopher's
 challenge: personal Gmail IS connected through the separate Gmail plugin;
-get_profile verified christopher.hermann01@gmail.com. The previous check only
+get_profile verified the personal account. The previous check only
 listed the work account in Google Workspace Multi and incorrectly generalized
 that result. Gmail searches (including Spam/Trash) for both case IDs, analyst
 wording and recent Microsoft senders have not located an analyst email; they

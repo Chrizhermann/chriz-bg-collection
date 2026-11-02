@@ -287,7 +287,7 @@ fn validate_profile(profile: &mut GameProfile, path: &Path) -> Result<()> {
         return invalid(
             path,
             format!(
-                "locale {:?} is not the verified alpha locale {VERIFIED_ALPHA_LOCALE:?}",
+                "locale {:?} is not the verified locale {VERIFIED_ALPHA_LOCALE:?}",
                 profile.locale
             ),
         );

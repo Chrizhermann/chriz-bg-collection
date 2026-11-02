@@ -560,15 +560,15 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertNotIn(258, runs["chriz-sod-remix-bg2"]["components"])
             self.assertLess(runs["chriz-sod-remix-bg2"]["components"].index(210), runs["chriz-sod-remix-bg2"]["components"].index(197))
             buffbot = tomllib.loads((output / "mods/buffbot.toml").read_text(encoding="utf-8"))
-            self.assertEqual(buffbot["artifact_id"], "buffbot-1.12.1")
+            self.assertEqual(buffbot["artifact_id"], "buffbot-1.12.6")
             buffbot_artifact = tomllib.loads(
-                (output / "artifacts/buffbot-1.12.1.toml").read_text(encoding="utf-8")
+                (output / "artifacts/buffbot-1.12.6.toml").read_text(encoding="utf-8")
             )
-            self.assertEqual(buffbot_artifact["version"], "1.12.1")
-            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.12.1")
-            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.12.1.zip")
-            self.assertEqual(buffbot_artifact["source"]["expected_length"], 5698539)
-            self.assertEqual(buffbot_artifact["source"]["sha256"], "7ab5f040b05d474edfb846b11bff5fda134ee468e3e3a289e6f788f33e34ed22")
+            self.assertEqual(buffbot_artifact["version"], "1.12.6")
+            self.assertEqual(buffbot_artifact["source"]["reference"], "v1.12.6")
+            self.assertEqual(buffbot_artifact["source"]["expected_filename"], "buffbot-v1.12.6.zip")
+            self.assertEqual(buffbot_artifact["source"]["expected_length"], 5713218)
+            self.assertEqual(buffbot_artifact["source"]["sha256"], "f99781368d64a419a567f48767728a600b8e81e203946217228ee9d61bc8b534")
             self.assertEqual(runs["buffbot-bg2"]["components"], [1, 0])
             self.assertEqual(runs["bardicwonders-garrick-bg2"]["components"], [1008])
             bardic = tomllib.loads((output / "mods/bardicwonders.toml").read_text(encoding="utf-8"))
@@ -728,21 +728,23 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertLess(order.index("cdtweaks-spell-save-penalties-bg2"), order.index("spell-rev-npc-spellbooks-bg2"))
             self.assertEqual(preset["selections"]["feature:evandra:component-1"], "on")
             bg_mod = tomllib.loads((output / "mods/chriz-bg-rebalance.toml").read_text(encoding="utf-8"))
-            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.8")
+            # November 2: v0.8.9 (texts of 210/211) replaces v0.8.8, whose artifact stays.
+            self.assertEqual(bg_mod["artifact_id"], "chriz-bg-rebalance-0.8.9")
             bg_artifact = tomllib.loads(
-                (output / "artifacts/chriz-bg-rebalance-0.8.8.toml").read_text(encoding="utf-8")
+                (output / "artifacts/chriz-bg-rebalance-0.8.9.toml").read_text(encoding="utf-8")
             )
+            self.assertTrue((output / "artifacts/chriz-bg-rebalance-0.8.8.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.3.1.toml").exists())
             self.assertFalse((output / "artifacts/chriz-bg-rebalance-0.4.0.toml").exists())
-            self.assertEqual(bg_artifact["version"], "0.8.8")
-            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.8")
-            self.assertEqual(bg_artifact["source"]["expected_length"], 1839187)
+            self.assertEqual(bg_artifact["version"], "0.8.9")
+            self.assertEqual(bg_artifact["source"]["reference"], "v0.8.9")
+            self.assertEqual(bg_artifact["source"]["expected_length"], 1844195)
             self.assertEqual(
                 bg_artifact["source"]["sha256"],
-                "dec0544b3cc0f2197b5791e89cf0eb73d2cdb563d3ae35c254d0da719d89a2e3",
+                "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0-alpha.22")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0-alpha.22"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(

@@ -27,10 +27,12 @@ const SCS_RECOMMENDED: &[u32] = &[
     8080, 8085, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190,
 ];
 
+// The v8.1.1 TP2 declares 1100 after 570 (found with issue 77); WeiDU installs a batch in
+// TP2 order, so the run requests it there.
 const RANDOMISER_AUTHORED: &[u32] = &[
-    500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100,
+    500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300,
 ];
-const RANDOMISER_RECOMMENDED: &[u32] = &[500, 530, 540, 560, 570, 9000, 10200, 10210, 1100];
+const RANDOMISER_RECOMMENDED: &[u32] = &[500, 530, 540, 560, 570, 1100, 9000, 10200, 10210];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -43,7 +45,7 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
     let manifest = recipe();
-    assert_eq!(manifest.mods["buffbot"].artifact_id, "buffbot-1.12.1");
+    assert_eq!(manifest.mods["buffbot"].artifact_id, "buffbot-1.12.6");
     let expected = [
         (
             "stratagems-35.21",
@@ -68,13 +70,13 @@ fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
             "randomiser/randomiser.tp2",
         ),
         (
-            "buffbot-1.12.1",
-            "1.12.1",
-            "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.1/buffbot-v1.12.1.zip",
-            "v1.12.1",
-            "buffbot-v1.12.1.zip",
-            5_698_539,
-            "7ab5f040b05d474edfb846b11bff5fda134ee468e3e3a289e6f788f33e34ed22",
+            "buffbot-1.12.6",
+            "1.12.6",
+            "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.6/buffbot-v1.12.6.zip",
+            "v1.12.6",
+            "buffbot-v1.12.6.zip",
+            5_713_218,
+            "f99781368d64a419a567f48767728a600b8e81e203946217228ee9d61bc8b534",
             "buffbot",
             "buffbot/setup-buffbot.tp2",
         ),
