@@ -551,6 +551,43 @@ fn current_plan_must_match_the_frozen_plan_digest() {
     ));
 }
 
+/// Less tested sources and two games of different versions once stopped here; now they pass,
+/// with the warnings the game check showed. A source that cannot be used still stops.
+#[test]
+fn less_tested_sources_of_different_versions_pass_and_unusable_ones_stop() {
+    let fixture = Fixture::new();
+    let artifacts = artifact_inputs();
+    let tools = tool_inputs();
+    let mut gog_bg1 = fixture.bg1.clone();
+    gog_bg1.storefront = Storefront::Gog;
+    gog_bg1.build = Some("2.6.6.0".to_owned());
+    gog_bg1.eligibility = Eligibility::Experimental;
+    gog_bg1.findings = vec![GameFinding {
+        kind: FindingKind::UnverifiedStorefront,
+        message: "GOG copies are less tested than Steam copies.".to_owned(),
+        paths: Vec::new(),
+    }];
+    let mut less_tested = request(&fixture, &artifacts, &tools);
+    less_tested.bg1_source = &gog_bg1;
+    initial_preflight_with(&less_tested, &FakeHost::default()).unwrap();
+
+    let mut unusable_bg1 = gog_bg1.clone();
+    unusable_bg1.eligibility = Eligibility::Ineligible;
+    unusable_bg1.findings.push(GameFinding {
+        kind: FindingKind::MissingSod,
+        message: "Siege of Dragonspear is missing.".to_owned(),
+        paths: Vec::new(),
+    });
+    let mut unusable = request(&fixture, &artifacts, &tools);
+    unusable.bg1_source = &unusable_bg1;
+    let error = initial_preflight_with(&unusable, &FakeHost::default()).unwrap_err();
+    assert!(
+        matches!(&error, PreflightError::SourceNotFresh { label: "BGEE+SoD", reason }
+            if reason.contains("Siege of Dragonspear is missing")),
+        "{error}"
+    );
+}
+
 #[test]
 fn current_source_fingerprint_must_match_the_frozen_campaign() {
     let fixture = Fixture::new();

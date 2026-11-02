@@ -4,7 +4,6 @@
 //! managed-state reporting, and diagnostics selection so the desktop bridge can reuse the same
 //! behavior without invoking a subprocess.
 
-use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -30,8 +29,8 @@ use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsReque
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
 use crate::events::{EngineEvent, EventSink};
 use crate::games::{
-    discover_installed_games, inspect_game_path, Eligibility, GameCandidate, GameProfiles,
-    GameRole, Storefront, SystemFileSystem,
+    detect_storefront, discover_installed_games, inspect_game_path, left_out_root_patterns,
+    GameCandidate, GameProfiles, GameRole, Storefront, SystemFileSystem,
 };
 use crate::lock::LockError;
 use crate::manifest::{
@@ -709,47 +708,31 @@ pub fn discover_games(recipe: &Path) -> Result<Vec<GameCandidate>, CliError> {
         .map_err(|error| CliError::new("game_discovery_failed", error.to_string()))
 }
 
-/// Inspect an explicit path against all applicable storefront profiles.
+/// Inspect an explicit path, with the store [`detect_storefront`] tells from the folder.
 ///
-/// A raw path does not establish storefront provenance. If more than one storefront profile
-/// accepts it, the command refuses ambiguity rather than silently relabeling the source.
+/// A raw path does not establish storefront provenance, so the store is only the folder's
+/// best guess; when the recipe has no profile for it, the role's tested profiles are the
+/// reference and the store difference is a warning.
 pub fn inspect_game(
     recipe: &Path,
     role: GameRole,
     path: &Path,
 ) -> Result<GameInspectionReport, CliError> {
+    let storefront = detect_storefront(&SystemFileSystem, path);
+    inspect_game_as(recipe, role, storefront, path)
+}
+
+/// Inspect an explicit path as a game from `storefront`, as discovery or an earlier
+/// inspection named it.
+pub fn inspect_game_as(
+    recipe: &Path,
+    role: GameRole,
+    storefront: Storefront,
+    path: &Path,
+) -> Result<GameInspectionReport, CliError> {
     let profiles = load_profiles(recipe)?;
-    let fs_provider = SystemFileSystem;
-    let mut candidates = [Storefront::Steam, Storefront::Gog]
-        .into_iter()
-        .filter(|storefront| profiles.matching(role, *storefront).next().is_some())
-        .map(|storefront| inspect_game_path(&profiles, &fs_provider, role, storefront, path))
-        .collect::<Result<Vec<_>, _>>()
+    let candidate = inspect_game_path(&profiles, &SystemFileSystem, role, storefront, path)
         .map_err(|error| CliError::new("game_inspection_failed", error.to_string()))?;
-    if candidates.is_empty() {
-        return Err(CliError::new(
-            "game_inspection_failed",
-            format!("recipe {} has no profile for {role:?}", recipe.display()),
-        ));
-    }
-    let usable = candidates
-        .iter()
-        .filter(|candidate| candidate.eligibility != Eligibility::Ineligible)
-        .count();
-    if usable > 1 {
-        return Err(CliError::new(
-            "ambiguous_storefront",
-            format!(
-                "{} matches more than one storefront profile; choose a discovered installation instead",
-                path.display()
-            ),
-        ));
-    }
-    candidates.sort_by(compare_candidates);
-    let candidate = candidates
-        .into_iter()
-        .next()
-        .expect("nonempty candidates were checked above");
     Ok(GameInspectionReport { candidate })
 }
 
@@ -871,11 +854,10 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     let managed_root = prospective_direct_path(&request.managed_root, "managed root")?;
     let cache_root = canonical_existing_directory(&request.cache, "cache root")?;
     reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
-    let (execution_plan, mut manual_checkpoints) = crate::manual_checkpoint::split_plan(
-        &evaluation.plan,
-        &request.overrides.manual_breakpoints,
-    )
-    .map_err(|error| CliError::new("invalid_manual_breakpoint", error))?;
+    let source_plan = without_runs_the_sources_provide(&evaluation.plan, &manifest.mods, &bg1);
+    let (execution_plan, mut manual_checkpoints) =
+        crate::manual_checkpoint::split_plan(&source_plan, &request.overrides.manual_breakpoints)
+            .map_err(|error| CliError::new("invalid_manual_breakpoint", error))?;
     for checkpoint in &mut manual_checkpoints {
         crate::manual_checkpoint::label_component(&mut checkpoint.after, &manifest.mods);
         if let Some(next) = &mut checkpoint.next {
@@ -932,6 +914,54 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
         staged_bg2: managed_root.join("game"),
     };
     Ok(PreparedInstall { created, frozen })
+}
+
+/// TP2 file of DLC Merger, whose component 1 merges Siege of Dragonspear into BG:EE.
+const DLC_MERGER_TP2: &str = "dlcmerger.tp2";
+const DLC_MERGER_SOD_COMPONENT: u32 = 1;
+
+/// `plan` without the work a source game already has done: when the BG:EE copy has Siege of
+/// Dragonspear merged in already, as Beamdog copies do, DLC Merger's merge is left out. DLC
+/// Merger refuses such a game ("already merged"), which would stop the installation at its
+/// first run. Nothing else changes.
+fn without_runs_the_sources_provide(
+    plan: &InstallPlan,
+    mods: &BTreeMap<String, crate::manifest::ModFile>,
+    bg1: &GameCandidate,
+) -> InstallPlan {
+    let sod_merged = bg1
+        .findings
+        .iter()
+        .any(|finding| finding.kind == crate::games::FindingKind::SodMerged);
+    if !sod_merged {
+        return plan.clone();
+    }
+    let is_dlc_merger = |run: &PlannedRun| {
+        mods.get(&run.mod_id).is_some_and(|installer| {
+            Path::new(&installer.tp2)
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().eq_ignore_ascii_case(DLC_MERGER_TP2))
+        })
+    };
+    InstallPlan {
+        runs: plan
+            .runs
+            .iter()
+            .filter_map(|run| {
+                if !is_dlc_merger(run) || !run.components.contains(&DLC_MERGER_SOD_COMPONENT) {
+                    return Some(run.clone());
+                }
+                let mut kept = run.clone();
+                kept.components
+                    .retain(|component| *component != DLC_MERGER_SOD_COMPONENT);
+                kept.prompt_scripts
+                    .retain(|script| script.component.component != DLC_MERGER_SOD_COMPONENT);
+                // The recipe's checks describe the complete run.
+                kept.postconditions.clear();
+                (!kept.components.is_empty()).then_some(kept)
+            })
+            .collect(),
+    }
 }
 
 fn install_review_identity(created: &CampaignCreated, display_name: &str) -> InstallReviewIdentity {
@@ -2761,38 +2791,14 @@ fn inspect_source_for_campaign(
     path: &Path,
     label: &str,
 ) -> Result<GameCandidate, CliError> {
-    let mut candidates = [Storefront::Steam, Storefront::Gog]
-        .into_iter()
-        .filter(|storefront| profiles.matching(role, *storefront).next().is_some())
-        .map(|storefront| inspect_game_path(profiles, &SystemFileSystem, role, storefront, path))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| {
-            CliError::new(
-                "game_inspection_failed",
-                format!(
-                    "could not inspect {label} source {}: {error}",
-                    path.display()
-                ),
-            )
-        })?;
-    candidates.sort_by(compare_candidates);
-    let eligible = candidates
-        .iter()
-        .filter(|candidate| candidate.eligibility == Eligibility::Eligible)
-        .count();
-    if eligible > 1 {
-        return Err(CliError::new(
-            "ambiguous_storefront",
-            format!(
-                "{label} source {} matches more than one verified storefront profile",
-                path.display()
-            ),
-        ));
-    }
-    candidates.into_iter().next().ok_or_else(|| {
+    let storefront = detect_storefront(&SystemFileSystem, path);
+    inspect_game_path(profiles, &SystemFileSystem, role, storefront, path).map_err(|error| {
         CliError::new(
             "game_inspection_failed",
-            format!("recipe has no source profile for {label}"),
+            format!(
+                "could not inspect {label} source {}: {error}",
+                path.display()
+            ),
         )
     })
 }
@@ -3170,11 +3176,11 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             .map(|finding| finding.message.as_str())
             .collect::<Vec<_>>()
             .join(" ");
-        if candidate.eligibility != Eligibility::Eligible
+        if !candidate.eligibility.is_usable()
             || candidate.fingerprint.as_deref() != Some(frozen.fingerprint.as_str())
         {
             return Err(StepFailure::new(format!(
-                "source_not_fresh: {label} source {} is modified, unsupported, or differs from the frozen identity. {findings}",
+                "source_not_fresh: {label} source {} can no longer be used or changed since the installation started. {findings}",
                 candidate.root.display()
             )));
         }
@@ -3182,12 +3188,28 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 
     fn layout(&self) -> Result<ManagedLayout, StepFailure> {
-        ManagedLayout::prepare(
+        let left_out = |role| {
+            let mut patterns = Vec::<String>::new();
+            for profile in self.frozen.profiles.iter().filter(|p| p.role == role) {
+                for pattern in left_out_root_patterns(profile) {
+                    if !patterns
+                        .iter()
+                        .any(|known| known.eq_ignore_ascii_case(&pattern))
+                    {
+                        patterns.push(pattern);
+                    }
+                }
+            }
+            patterns
+        };
+        Ok(ManagedLayout::prepare(
             &self.created.managed_root,
             &self.frozen.bg1.root,
             &self.frozen.bg2.root,
         )
-        .map_err(stage_error)
+        .map_err(stage_error)?
+        .leaving_out(GameRole::BgeeSod, left_out(GameRole::BgeeSod))
+        .leaving_out(GameRole::Bg2ee, left_out(GameRole::Bg2ee)))
     }
 
     fn save_identity(&self, layout: &ManagedLayout) -> Result<ReservedSaveIdentity, StepFailure> {
@@ -6439,21 +6461,6 @@ fn split_assignment<'a>(
     Ok((key, value))
 }
 
-fn compare_candidates(left: &GameCandidate, right: &GameCandidate) -> Ordering {
-    candidate_rank(right)
-        .cmp(&candidate_rank(left))
-        .then_with(|| left.findings.len().cmp(&right.findings.len()))
-        .then_with(|| left.storefront.cmp(&right.storefront))
-}
-
-fn candidate_rank(candidate: &GameCandidate) -> u8 {
-    match candidate.eligibility {
-        Eligibility::Eligible => 2,
-        Eligibility::Experimental => 1,
-        Eligibility::Ineligible => 0,
-    }
-}
-
 fn canonical_direct_directory(path: &Path, label: &str) -> Result<PathBuf, CliError> {
     validate_direct_directory(path, label)?;
     fs::canonicalize(path).map_err(|source| {
@@ -6682,6 +6689,63 @@ mod tests {
             cache_outcome: ArtifactCacheOutcome::Downloaded,
             served_difference: None,
         }
+    }
+
+    /// A BG:EE copy with Siege of Dragonspear merged in (Beamdog) would make DLC Merger refuse
+    /// with "already merged" and stop the installation; its merge is left out of the plan
+    /// instead. Every other copy keeps the plan exactly.
+    #[test]
+    fn a_source_with_merged_sod_leaves_out_only_dlc_mergers_merge() {
+        use crate::games::{Eligibility, FindingKind, GameCandidate, GameFinding};
+
+        let manifest =
+            Manifest::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest")).unwrap();
+        let run = |run_id: &str, mod_id: &str, components: Vec<u32>| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg1,
+            phase: crate::manifest::Phase::Bg1Preparation,
+            components,
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        let other = manifest
+            .mods
+            .keys()
+            .find(|id| id.as_str() != "dlcmerger")
+            .unwrap()
+            .clone();
+        assert!(manifest.mods.contains_key("dlcmerger"));
+        let plan = super::InstallPlan {
+            runs: vec![
+                run("dlcmerger-bg1", "dlcmerger", vec![1]),
+                run("other-bg1", &other, vec![0, 1]),
+            ],
+        };
+        let candidate = |findings: Vec<GameFinding>| GameCandidate {
+            role: GameRole::BgeeSod,
+            storefront: Storefront::Beamdog,
+            root: PathBuf::from(r"C:\Games\00806"),
+            build: Some("2.6.6.0".to_owned()),
+            eligibility: Eligibility::Experimental,
+            findings,
+            fingerprint: Some("ab".repeat(32)),
+        };
+
+        let unchanged =
+            super::without_runs_the_sources_provide(&plan, &manifest.mods, &candidate(Vec::new()));
+        assert_eq!(unchanged, plan);
+
+        let merged = candidate(vec![GameFinding {
+            kind: FindingKind::SodMerged,
+            message: "merged".to_owned(),
+            paths: Vec::new(),
+        }]);
+        let adapted = super::without_runs_the_sources_provide(&plan, &manifest.mods, &merged);
+        assert_eq!(adapted.runs, vec![plan.runs[1].clone()]);
     }
 
     #[test]

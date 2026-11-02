@@ -120,6 +120,50 @@ fn copies_regular_files_and_empty_directories_without_sharing_file_identity() {
 }
 
 #[test]
+fn the_copy_leaves_out_leftovers_of_earlier_mod_installs_at_the_game_root_only() {
+    let temp = tempfile::tempdir().unwrap();
+    let bg1 = source_tree(temp.path(), "source-bg1");
+    let bg2 = source_tree(temp.path(), "source-bg2");
+    fs::write(bg1.join("WeiDU.log"), b"// old mods\n").unwrap();
+    fs::write(bg1.join("setup-stratagems.exe"), b"old installer").unwrap();
+    fs::create_dir_all(bg1.join("stratagems/lib")).unwrap();
+    fs::write(bg1.join("stratagems/lib/a.tph"), b"old mod").unwrap();
+    // The same names below the root are game files and are copied.
+    fs::write(bg1.join("data/weidu.log"), b"not a leftover").unwrap();
+    let layout = ManagedLayout::prepare(temp.path().join("managed"), &bg1, &bg2)
+        .unwrap()
+        .leaving_out(
+            GameRole::BgeeSod,
+            vec![
+                "weidu*".to_owned(),
+                "setup-*".to_owned(),
+                "stratagems".to_owned(),
+            ],
+        );
+
+    let report = stage_game_copy(&layout, GameRole::BgeeSod).unwrap();
+
+    let copy = layout.bg1_root();
+    assert!(!copy.join("WeiDU.log").exists());
+    assert!(!copy.join("setup-stratagems.exe").exists());
+    assert!(!copy.join("stratagems").exists());
+    assert_eq!(
+        fs::read(copy.join("data/weidu.log")).unwrap(),
+        b"not a leftover"
+    );
+    assert_eq!(report.copied_files, 3);
+    // The source stays untouched, and a resume verifies the same copy.
+    assert!(bg1.join("WeiDU.log").is_file());
+    let resumed = stage_game_copy(&layout, GameRole::BgeeSod).unwrap();
+    assert_eq!(resumed.copied_files, 0);
+    assert_eq!(resumed.source_fingerprint, report.source_fingerprint);
+
+    // A change to a left-out leftover does not disturb the copy.
+    fs::write(bg1.join("WeiDU.log"), b"// changed\n").unwrap();
+    stage_game_copy(&layout, GameRole::BgeeSod).unwrap();
+}
+
+#[test]
 fn resume_reuses_verified_files_and_replaces_a_corrupt_file() {
     let temp = tempfile::tempdir().unwrap();
     let (layout, _, _) = layout(&temp);

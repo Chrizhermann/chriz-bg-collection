@@ -12,9 +12,9 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bg_engine::cli::{
     diagnostics_for_managed_install, discover_games as engine_discover_games, inspect_game,
-    install_campaign_reviewed, plan_recipe, resume_campaign_controlled_expected, review_install,
-    validate_recipe, CampaignReport, CliError, InstallCommandRequest, InstallReviewIdentity,
-    SelectionOverrides, ValidationProfile,
+    inspect_game_as, install_campaign_reviewed, plan_recipe, resume_campaign_controlled_expected,
+    review_install, validate_recipe, CampaignReport, CliError, InstallCommandRequest,
+    InstallReviewIdentity, SelectionOverrides, ValidationProfile,
 };
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink};
@@ -292,7 +292,15 @@ impl BridgeEngine for SystemBridgeEngine {
         recipe: &Path,
         candidate: &GameCandidate,
     ) -> Result<GameCandidate, CliError> {
-        inspect_game(recipe, candidate.role, &candidate.root).map(|report| report.candidate)
+        // The store discovery or the first inspection named stays: a folder alone does not
+        // always show it, for example a GOG install without its `goggame-*.info` file.
+        inspect_game_as(
+            recipe,
+            candidate.role,
+            candidate.storefront,
+            &candidate.root,
+        )
+        .map(|report| report.candidate)
     }
 
     fn review(&self, request: &InstallCommandRequest) -> Result<InstallReviewIdentity, CliError> {
@@ -688,8 +696,18 @@ pub enum CandidateFreshness {
     UnverifiedStorefront,
     /// Core hashes do not match a known clean variant.
     UnknownFingerprint,
-    /// The locale is not supported by the alpha.
+    /// The game is set to a language other than English.
     UnsupportedLocale,
+    /// Leftovers of earlier mod installs, which the copy leaves out.
+    LeftOut,
+    /// Siege of Dragonspear is already merged into the folder (Beamdog copies).
+    SodMerged,
+    /// Files every installation needs are missing.
+    MissingFiles,
+    /// Game files could not be read.
+    Unreadable,
+    /// A Microsoft Store folder that Windows protects.
+    ProtectedFolder,
 }
 
 /// UI-safe projection of an inspected source game.
@@ -708,8 +726,11 @@ pub struct GameCandidateResponse {
     pub build: Option<String>,
     /// Highest-priority freshness category.
     pub freshness: CandidateFreshness,
-    /// Whether this exact source can be used by the current alpha.
+    /// Whether an installation can use this exact source, tested or with warnings.
     pub eligible: bool,
+    /// Whether it is the tested setup (store, version, language and files); a usable source
+    /// that is not tested installs with the warnings in `findings`.
+    pub tested: bool,
     /// Every engine finding, without suppressing simultaneous problems.
     pub findings: Vec<String>,
 }
@@ -2361,11 +2382,11 @@ impl NativeBridge {
                 format!("registered {registered:?}; re-inspected {inspected:?}"),
             ));
         }
-        if inspected.eligibility != Eligibility::Eligible || inspected.fingerprint.is_none() {
+        if !inspected.eligibility.is_usable() || inspected.fingerprint.is_none() {
             return Err(CommandError::new(
                 "source_not_fresh",
-                "A selected source is not a verified clean supported game.",
-                "Repair or reinstall that game, then run detection again.",
+                "A selected game folder cannot be used for an installation.",
+                "Open the game's details on the install screen to see why, fix it, then check the games again.",
                 format!("candidate at {} is {inspected:?}", inspected.root.display()),
             ));
         }
@@ -3324,18 +3345,22 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
         GameRole::BgeeSod => "BG:EE + SoD",
         GameRole::Bg2ee => "BGII:EE",
     };
-    let (storefront_id, storefront) = match candidate.storefront {
-        Storefront::Steam => ("steam", "Steam"),
-        Storefront::Gog => ("gog", "GOG"),
+    let storefront_id = match candidate.storefront {
+        Storefront::Steam => "steam",
+        Storefront::Gog => "gog",
+        Storefront::Beamdog => "beamdog",
+        Storefront::Microsoft => "microsoft",
+        Storefront::Other => "other",
     };
-    let status = match freshness {
-        CandidateFreshness::Fresh => "clean",
-        CandidateFreshness::Modified => "modified",
-        CandidateFreshness::UnsupportedVersion => "unsupported version",
-        CandidateFreshness::MissingSod => "SoD missing",
-        CandidateFreshness::UnverifiedStorefront => "verify storefront",
-        CandidateFreshness::UnknownFingerprint => "unknown files",
-        CandidateFreshness::UnsupportedLocale => "unsupported language",
+    let storefront = candidate.storefront.display_name();
+    let status = match (candidate.eligibility, freshness) {
+        (Eligibility::Eligible, CandidateFreshness::LeftOut) => "clean, leftovers left out",
+        (Eligibility::Eligible, _) => "clean",
+        (Eligibility::Experimental, _) => "less tested",
+        (Eligibility::Ineligible, CandidateFreshness::MissingSod) => "SoD missing",
+        (Eligibility::Ineligible, CandidateFreshness::ProtectedFolder) => "protected folder",
+        (Eligibility::Ineligible, CandidateFreshness::Unreadable) => "cannot be read",
+        (Eligibility::Ineligible, _) => "files missing",
     };
     let identity = format!(
         "{:?}\0{:?}\0{canonical_path}",
@@ -3348,7 +3373,8 @@ fn project_candidate(candidate: GameCandidate) -> Result<GameCandidateResponse, 
         storefront: storefront_id.to_owned(),
         build: candidate.build,
         freshness,
-        eligible: candidate.eligibility == Eligibility::Eligible,
+        eligible: candidate.eligibility.is_usable(),
+        tested: candidate.eligibility == Eligibility::Eligible,
         findings: candidate
             .findings
             .into_iter()
@@ -3453,12 +3479,19 @@ fn project_managed_campaign(
 
 fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
     for (kind, freshness) in [
+        // What stops an installation first, then the warnings by weight.
+        (
+            FindingKind::ProtectedFolder,
+            CandidateFreshness::ProtectedFolder,
+        ),
+        (FindingKind::Unreadable, CandidateFreshness::Unreadable),
+        (FindingKind::MissingFiles, CandidateFreshness::MissingFiles),
+        (FindingKind::MissingSod, CandidateFreshness::MissingSod),
         (FindingKind::Modified, CandidateFreshness::Modified),
         (
             FindingKind::UnsupportedVersion,
             CandidateFreshness::UnsupportedVersion,
         ),
-        (FindingKind::MissingSod, CandidateFreshness::MissingSod),
         (
             FindingKind::UnsupportedLocale,
             CandidateFreshness::UnsupportedLocale,
@@ -3471,6 +3504,8 @@ fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
             FindingKind::UnverifiedStorefront,
             CandidateFreshness::UnverifiedStorefront,
         ),
+        (FindingKind::SodMerged, CandidateFreshness::SodMerged),
+        (FindingKind::LeftOut, CandidateFreshness::LeftOut),
     ] {
         if candidate
             .findings
@@ -3484,10 +3519,12 @@ fn candidate_freshness(candidate: &GameCandidate) -> CandidateFreshness {
 }
 
 fn sort_candidates(candidates: &mut [GameCandidateResponse]) {
+    // The tested setup first, then other usable copies, then those that cannot be used.
     candidates.sort_by(|left, right| {
         right
             .eligible
             .cmp(&left.eligible)
+            .then_with(|| right.tested.cmp(&left.tested))
             .then_with(|| left.label.cmp(&right.label))
             .then_with(|| left.path.cmp(&right.path))
     });

@@ -123,6 +123,20 @@ export function validateInstallationName(name: string): string | null {
   return null;
 }
 
+/** How a source can be used: the tested setup, usable with warnings, or not at all. */
+export type SourceStatus = "ready" | "less-tested" | "blocked";
+
+export function sourceStatus(candidate: GameCandidate | undefined): SourceStatus {
+  if (candidate?.eligible !== true) return "blocked";
+  return candidate.tested === false ? "less-tested" : "ready";
+}
+
+/** A note when both usable sources report different game versions; `null` otherwise. */
+export function sourceVersionNote(bg1: GameCandidate | undefined, bg2: GameCandidate | undefined): string | null {
+  if (bg1?.eligible !== true || bg2?.eligible !== true || !bg1.build || !bg2.build || bg1.build === bg2.build) return null;
+  return `Your two games have different versions (${bg1.build} and ${bg2.build}). The installation continues; if something does not work, please report it.`;
+}
+
 export function automaticInstallationPath(defaultPath: string, name: string): string {
   const withoutTrailingSeparators = defaultPath.replace(/[\\/]+$/u, "");
   const separatorIndex = Math.max(withoutTrailingSeparators.lastIndexOf("\\"), withoutTrailingSeparators.lastIndexOf("/"));

@@ -1060,7 +1060,11 @@ fn discovery_groups_roles_and_selects_each_candidate_independently() {
         discovery.bg1_candidates[0].build.as_deref(),
         Some("2.7.3.0")
     );
-    assert!(!discovery.bg2_candidates[0].eligible);
+    assert!(discovery.bg1_candidates[0].tested);
+    // A GOG copy is usable, with its "less tested" warning; it is not the tested setup.
+    assert!(discovery.bg2_candidates[0].eligible);
+    assert!(!discovery.bg2_candidates[0].tested);
+    assert!(discovery.bg2_candidates[0].label.contains("less tested"));
 }
 
 #[test]
@@ -1078,8 +1082,13 @@ fn explicit_game_paths_are_inspected_by_the_engine_before_projection() {
         game.canonicalize().unwrap()
     );
     assert!(!inspected.path.starts_with(r"\\?\"));
-    assert!(!inspected.eligible);
-    assert!(!inspected.findings.is_empty());
+    // The fixture's program has no readable version: a warning, not a stop.
+    assert!(inspected.eligible);
+    assert!(!inspected.tested);
+    assert!(inspected
+        .findings
+        .iter()
+        .any(|finding| finding.contains("game version")));
 }
 
 #[test]

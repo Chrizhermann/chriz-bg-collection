@@ -137,6 +137,7 @@ type GameCandidateWire = {
   readonly build: string | null;
   readonly freshness: Freshness;
   readonly eligible: boolean;
+  readonly tested?: boolean;
   readonly findings: readonly string[];
 };
 
@@ -867,13 +868,13 @@ export class FixtureBackend implements Backend {
       selectedBg2Id: "bg2-fresh",
       bg1Candidates: [
         { id: "bg1-fresh", label: "BG:EE + SoD — clean", path: this.#options.textOverrides?.gamePath ?? "C:\\Fixture\\BGEE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
-        { id: "bg1-modified", label: "BG:EE — modified", path: "C:\\Fixture\\BGEE Modified", storefront: "steam", build: "2.7.3.0", freshness: "modified", eligible: false, findings: ["Files differ from a clean store installation."] },
-        { id: "bg1-old", label: "BG:EE — old version", path: "C:\\Fixture\\BGEE Old", storefront: "steam", build: "2.6.6.0", freshness: "unsupported-version", eligible: false, findings: ["The installed game version is not supported."] },
+        { id: "bg1-modified", label: "BG:EE + SoD — Steam — less tested", path: "C:\\Fixture\\BGEE Modified", storefront: "steam", build: "2.7.3.0", freshness: "modified", eligible: true, tested: false, findings: ["Files that mods change differ from a clean game, so mods were probably installed into this folder. The installation continues, but it may fail or behave differently."] },
+        { id: "bg1-old", label: "BG:EE + SoD — Steam — less tested", path: "C:\\Fixture\\BGEE Old", storefront: "steam", build: "2.6.6.0", freshness: "unsupported-version", eligible: true, tested: false, findings: ["Game version 2.6.6.0. The collection is tested with version 2.7.3.0; other versions install too, but some mods may not work as expected."] },
         { id: "bg1-nosod", label: "BG:EE — SoD missing", path: "C:\\Fixture\\BGEE No SoD", storefront: "steam", build: "2.7.3.0", freshness: "missing-sod", eligible: false, findings: ["Siege of Dragonspear is required for this EET recipe."] },
       ],
       bg2Candidates: [
         { id: "bg2-fresh", label: "BGII:EE — clean", path: "C:\\Fixture\\BG2EE", storefront: "steam", build: "2.7.3.0", freshness: "fresh", eligible: true, findings: ["Clean supported installation."] },
-        { id: "bg2-store", label: "BGII:EE — verify storefront", path: "C:\\Fixture\\BG2EE Other", storefront: "gog", build: "2.7.3.0", freshness: "unverified-storefront", eligible: false, findings: ["This storefront layout has not been verified yet."] },
+        { id: "bg2-store", label: "BGII:EE — GOG — less tested", path: "C:\\Fixture\\BG2EE Other", storefront: "gog", build: "2.7.3.0", freshness: "unverified-storefront", eligible: true, tested: false, findings: ["GOG copies are less tested than Steam copies. CEBG runs the same checks; if something does not work, please report it."] },
       ],
     });
   }

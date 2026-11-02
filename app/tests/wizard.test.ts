@@ -149,7 +149,7 @@ describe("Chriz Easy BG application flow", () => {
     const originalBg2 = bg2.value;
     await user.selectOptions(bg1, "bg1-modified");
     expect(bg2.value).toBe(originalBg2);
-    expect(getByText(root, "Files differ from a clean store installation.")).toBeTruthy();
+    expect(getByText(root, /mods were probably installed into this folder/)).toBeTruthy();
     await user.selectOptions(bg1, "bg1-fresh");
     await user.click(getByRole(root, "button", { name: "Customize" }));
     expect(getByRole(root, "heading", { level: 1, name: "Customize your installation" })).toBeTruthy();
@@ -186,23 +186,32 @@ describe("Chriz Easy BG application flow", () => {
     expect(getByRole(root, "button", { name: "Play Chriz Easy BG" })).toBeTruthy();
   });
 
-  it("surfaces every non-fresh source reason", async () => {
+  it("surfaces every source finding and whether the source still installs", async () => {
     const root = document.createElement("div");
     document.body.append(root);
     const user = userEvent.setup();
     await mountApp(root, new FixtureBackend());
 
+    const bg1Status = (): string | null | undefined => root.querySelector('[data-source="bg1"] .source-status')?.textContent;
     const cases = [
-      ["bg1-modified", "Files differ from a clean store installation."],
-      ["bg1-old", "The installed game version is not supported."],
-      ["bg1-nosod", "Siege of Dragonspear is required for this EET recipe."],
+      ["bg1-modified", /mods were probably installed into this folder/, "Less tested"],
+      ["bg1-old", /Game version 2\.6\.6\.0/, "Less tested"],
+      ["bg1-nosod", /Siege of Dragonspear is required/, "Needs attention"],
     ] as const;
-    for (const [id, message] of cases) {
+    for (const [id, message, status] of cases) {
       await user.selectOptions(getByLabelText(root, "Baldur's Gate source"), id);
       expect(getByText(root, message)).toBeTruthy();
+      expect(bg1Status()).toBe(status);
     }
+    // A usable but less tested pair of different versions installs, with a note.
+    await user.selectOptions(getByLabelText(root, "Baldur's Gate source"), "bg1-old");
+    expect(getByText(root, /different versions \(2\.6\.6\.0 and 2\.7\.3\.0\)/)).toBeTruthy();
+    expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(false);
     await user.selectOptions(getByLabelText(root, "Baldur's Gate II source"), "bg2-store");
-    expect(getByText(root, "This storefront layout has not been verified yet.")).toBeTruthy();
+    expect(getByText(root, /GOG copies are less tested than Steam copies/)).toBeTruthy();
+    expect(root.querySelector('[data-source="bg2"] .source-status')?.textContent).toBe("Less tested");
+    await user.selectOptions(getByLabelText(root, "Baldur's Gate source"), "bg1-nosod");
+    expect((getByRole(root, "button", { name: "Install Chriz Easy BG" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("bounds the selectable technical tail and allows auto-scroll to be paused", async () => {

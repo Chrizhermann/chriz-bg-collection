@@ -32,7 +32,7 @@ export interface CommandErrorPayload {
 }
 
 export type GameRole = "bgee_sod" | "bg2ee";
-export type Storefront = "steam" | "gog";
+export type Storefront = "steam" | "gog" | "beamdog" | "microsoft" | "other";
 
 export type Freshness =
   | "fresh"
@@ -41,7 +41,12 @@ export type Freshness =
   | "missing-sod"
   | "unverified-storefront"
   | "unknown-fingerprint"
-  | "unsupported-locale";
+  | "unsupported-locale"
+  | "left-out"
+  | "sod-merged"
+  | "missing-files"
+  | "unreadable"
+  | "protected-folder";
 
 export interface GameCandidate {
   readonly id: string;
@@ -50,7 +55,10 @@ export interface GameCandidate {
   readonly storefront: Storefront;
   readonly build: string | null;
   readonly freshness: Freshness;
+  /** Whether an installation can use this source: tested, or with the warnings in indings. */
   readonly eligible: boolean;
+  /** Whether it is the tested setup. Absent in older answers, which only knew tested sources. */
+  readonly tested?: boolean;
   readonly findings: readonly string[];
 }
 
