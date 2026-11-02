@@ -11,9 +11,9 @@ find out why.
 | Apply a supported game fix or BuffBot update | Only the named fix/mod in the selected installation, after confirmation. Availability depends on that installation. |
 | Create an updated installation | A new game folder using the newer collection. Your existing copy stays unchanged. |
 
-The supported game-update features are in the alpha.19 candidate, not promised
-in every older public installer. They are not an **Update all mods** button.
-Check the installer version and release notes if an action is missing.
+These update actions are not an **Update all mods** button, and an older CEBG
+version may lack some of them. Check the installer version and release notes if an
+action is missing.
 
 ## CEBG disappears and Windows Security reports a threat
 
@@ -33,15 +33,14 @@ your game or saves just because the launcher is missing.
 Radar is stored in **BG Radar Overlay** inside the installation's `game` folder,
 not directly beside `InfinityLoader.exe`.
 
-The next corrected build adds **Start Radar with the game** beside Play. It is
-off initially and remembers your choice for each installation. Windows may ask
-for administrator approval for Radar; cancelling starts the game without it.
-If Radar cannot start, the corrected build shows a warning and optional details.
-This does not require running the whole CEBG installer as administrator.
+Check **Start Radar with the game** beside Play. It is off initially and
+remembers your choice for each installation. Windows may ask for administrator
+approval for Radar; cancelling starts the game without it. If Radar cannot start,
+CEBG shows a warning and optional details. This does not require running the whole
+CEBG installer as administrator.
 
-Older alpha.19 builds can silently fail to start Radar because they do not
-request its required Windows approval. The source correction is not yet a
-published or live-tested fix.
+Some early alpha.19 builds could silently fail to start Radar because they did not
+request its required Windows approval; updating CEBG fixes that.
 
 ## The installer cannot find or create a folder
 
@@ -144,8 +143,8 @@ why. Delete the folder yourself afterwards if you are sure you no longer need it
 
 ## The game crashes or freezes
 
-The next build adds a **Troubleshooting** section at the end of each installation
-on the home screen. It stays closed and changes nothing until you open it. There,
+Since 0.1.0, each installation on the home screen ends with a **Troubleshooting**
+section. It stays closed and changes nothing until you open it. There,
 **Write a game log for crash reports** makes the game write `InfinityLoader.log`
 in the installation's `game` folder from its next start. It is off initially,
 works for existing installations without reinstalling, and turns off the same way.
