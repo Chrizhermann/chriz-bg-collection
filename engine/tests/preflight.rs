@@ -444,6 +444,69 @@ fn locked_root_tlk_is_rejected_before_mutation() {
     ));
 }
 
+/// A host whose TLK probe fails while another program briefly holds the file, for the first
+/// `held_for` calls, as a virus scanner does.
+struct BrieflyHeldTlkHost {
+    held_for: usize,
+    calls: std::cell::Cell<usize>,
+}
+
+impl PreflightHost for BrieflyHeldTlkHost {
+    fn available_space(&self, path: &Path) -> io::Result<u64> {
+        FakeHost::default().available_space(path)
+    }
+
+    fn volume_key(&self, path: &Path) -> io::Result<std::ffi::OsString> {
+        FakeHost::default().volume_key(path)
+    }
+
+    fn probe_directory_writable(&self, path: &Path) -> io::Result<()> {
+        FakeHost::default().probe_directory_writable(path)
+    }
+
+    fn running_executable_paths(&self) -> io::Result<Vec<PathBuf>> {
+        Ok(Vec::new())
+    }
+
+    fn probe_exclusive_writable_files(&self, paths: &[PathBuf]) -> Result<(), ExclusiveFileError> {
+        let call = self.calls.get() + 1;
+        self.calls.set(call);
+        if call <= self.held_for {
+            const ERROR_SHARING_VIOLATION: i32 = 32;
+            return Err(ExclusiveFileError {
+                path: paths[0].clone(),
+                source: io::Error::from_raw_os_error(ERROR_SHARING_VIOLATION),
+            });
+        }
+        Ok(())
+    }
+}
+
+// Windows names the sharing violation that a brief hold causes; elsewhere it is no such error.
+#[cfg(windows)]
+#[test]
+fn a_tlk_briefly_held_by_another_program_is_probed_again_instead_of_stopping() {
+    let fixture = Fixture::new();
+    let target = fixture.destination.join("game");
+    create_target(&target);
+    let host = BrieflyHeldTlkHost {
+        held_for: 3,
+        calls: std::cell::Cell::new(0),
+    };
+
+    recheck_target_before_mutation_with(&target, "en_US", &host).unwrap();
+    assert_eq!(host.calls.get(), 4);
+
+    // A hold that lasts still stops, after the retries, with the file named.
+    let lasting = BrieflyHeldTlkHost {
+        held_for: usize::MAX,
+        calls: std::cell::Cell::new(0),
+    };
+    let error = recheck_target_before_mutation_with(&target, "en_US", &lasting).unwrap_err();
+    assert!(matches!(error, PreflightError::TlkUnavailable { .. }));
+    assert!(lasting.calls.get() > 1);
+}
+
 #[test]
 fn locked_language_tlk_is_rejected_before_mutation() {
     let fixture = Fixture::new();
