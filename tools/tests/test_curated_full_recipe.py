@@ -253,7 +253,10 @@ class CuratedFullRecipeTests(unittest.TestCase):
             children = {key for key in features if key.startswith("feature:bg1npc:") and key != core}
             for key in children:
                 self.assertIn(core, features[key].get("requires", []), key)
-            selection = {**preset, **{key: "on" for key in children}, core: "off"}
+            # Since 2026-11-03 the mod itself is optional and off (Christopher); tick it first.
+            self.assertEqual(features["mod:bg1npc"]["decision"], "optional")
+            self.assertEqual(preset["mod:bg1npc"], "off")
+            selection = {**preset, "mod:bg1npc": "on", **{key: "on" for key in children}, core: "off"}
             effective = _effective_features(collection, selection)
             self.assertTrue(effective["mod:bg1npc"])
             self.assertFalse(any(effective[key] for key in children))
@@ -416,7 +419,11 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 # requirements; without its feature, run component and preset entry the
                 # v0.8.8 digest 014a25b8005ccd293859c4659f88d60b373cec0eb007e0097e2e717eeb07ece7
                 # returns.
-                "9a03e46d776b7885bdb5bf426db90dd8aeb9feb64b2c1b32b49201766a32e77a",
+                # November 3: BG1 NPC Project leaves the defaults (Christopher, 2026-11-03):
+                # mod:bg1npc is optional and off, its components keep their decisions; with
+                # the mod back to default and on, the chriz.5 digest
+                # 9a03e46d776b7885bdb5bf426db90dd8aeb9feb64b2c1b32b49201766a32e77a returns.
+                "53944ad6b3baa0eb92482b4ff17f8f6247ac2226f9b6d53556db73459ff1562a",
             )
 
             legacy_bg1npc_groups = {
@@ -424,7 +431,13 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 (240, 241): 240,
                 (130, 131): 130,
             }
-            baseline = preset["selections"]
+            # BG1 NPC Project is optional and off since 2026-11-03 (Christopher); none of its
+            # components installs by default, and ticking it brings back these defaults.
+            self.assertFalse(any(
+                selected for feature_id, selected in _effective_features(collection, preset["selections"]).items()
+                if feature_id.startswith("feature:bg1npc:")
+            ))
+            baseline = {**preset["selections"], "mod:bg1npc": "on"}
             baseline_effective = _effective_features(collection, baseline)
             for components, default_component in legacy_bg1npc_groups.items():
                 ids = [f"feature:bg1npc:component-{component}" for component in components]
@@ -743,8 +756,8 @@ class CuratedFullRecipeTests(unittest.TestCase):
                 bg_artifact["source"]["sha256"],
                 "da03fe9e2a36f5af155311197e68d6f82ead270426015363fa161ad56e8ea6f2",
             )
-            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.0")
-            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0"):
+            self.assertEqual(json.loads((output / "release.json").read_text())["version"], "0.1.1")
+            for version in ("0.1.0-alpha.1", "0.1.0-alpha.12", "0.1.0-alpha.13", "0.1.0-alpha.14", "0.1.0-alpha.15", "0.1.0-alpha.16", "0.1.0-alpha.17", "0.1.0-alpha.18", "0.1.0-alpha.19", "0.1.0-alpha.20", "0.1.0", "0.1.1"):
                 generated_ledger = output / f"releases/v{version}/ledger.toml"
                 authored_ledger = self.root / f"manifest/releases/v{version}/ledger.toml"
                 self.assertEqual(
@@ -848,8 +861,14 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertFalse(effective["feature:chriz-bg-modpack:component-220"])
             self.assertFalse(effective["feature:chriz-bg-modpack:component-221"])
             self.assertTrue(effective["feature:chriz-bg-modpack:component-197"])
-            for component in (130, 430, 440, 450):
+            for component in (430, 440, 450):
                 self.assertTrue(effective[f"feature:chriz-bg-modpack:component-{component}"])
+            # The Kivan quest guard follows BG1 NPC Project, which is off by default since
+            # 2026-11-03, and comes back with it on this route too.
+            self.assertFalse(effective["feature:chriz-bg-modpack:component-130"])
+            self.assertTrue(_effective_features(
+                collection, {**original_classes, "mod:bg1npc": "on"}
+            )["feature:chriz-bg-modpack:component-130"])
 
     def test_interval_save_options_default_with_hgo_and_can_be_disabled(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -979,15 +998,24 @@ class CuratedFullRecipeTests(unittest.TestCase):
             self.assertEqual(guard["requires"], [
                 "feature:bg1npc:component-10", "feature:stratagems:mandatory-components"
             ])
-            self.assertTrue(_effective_features(collection, baseline)[guard_id])
+            # BG1 NPC Project is optional and off since 2026-11-03 (Christopher): the guard is
+            # not installed by default, and ticking the mod brings it back automatically.
+            self.assertFalse(_effective_features(collection, baseline)[guard_id])
+            with_bg1npc = {**baseline, "mod:bg1npc": "on"}
+            self.assertTrue(_effective_features(collection, with_bg1npc)[guard_id])
             for prerequisite in ("mod:bg1npc", "feature:bg1npc:component-10", "mod:stratagems"):
                 with self.subTest(prerequisite=prerequisite):
-                    effective = _effective_features(collection, {**baseline, prerequisite: "off"})
+                    effective = _effective_features(collection, {**with_bg1npc, prerequisite: "off"})
                     self.assertFalse(effective[guard_id])
             # Kivan's class choice is unrelated to his quest dialogue guard.
             self.assertTrue(_effective_features(
-                collection, {**baseline, "feature:chriz-bg-modpack:component-198": "off"}
+                collection, {**with_bg1npc, "feature:chriz-bg-modpack:component-198": "off"}
             )[guard_id])
+            limitations = tomllib.loads(
+                (output / "releases/v0.1.0-alpha.1/known-limitations.toml").read_text(encoding="utf-8")
+            )
+            (omission,) = [item for item in limitations["omissions"] if item["feature_id"] == guard_id]
+            self.assertEqual((omission["approved_by"], omission["approved_on"]), ("Christopher", "2026-11-03"))
             runs = collection["runs"]
             guard_runs = [run for run in runs if run["mod_id"] == "chriz-bg-modpack" and 130 in run["components"]]
             self.assertEqual(len(guard_runs), 1)

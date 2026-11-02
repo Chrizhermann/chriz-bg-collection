@@ -136,9 +136,11 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # October 29: the Rebalance v0.8.8 pin adds default Druid weapons 410 and Alaghor of
         # Clangeddin weapons 411 to the Rebalance run.
         # October 29: the Kitpack chriz.5 pin adds default katana fix 7205 to the late tweak run.
-        self.assertEqual(len(without_controls), 475)
-        self.assertEqual(len(selected), 476)
-        self.assertEqual(len({run for run, _ in selected}), 70)
+        # November 3: BG1 NPC Project is optional and off (Christopher, 2026-11-03), which
+        # removes its 8 defaults, its bg1npc-bg1 run and the Kivan quest guard Modpack 130.
+        self.assertEqual(len(without_controls), 466)
+        self.assertEqual(len(selected), 467)
+        self.assertEqual(len({run for run, _ in selected}), 69)
         self.assertIn(("cdtweaks-bg2", 3354), selected)
         controls_ledger = tomllib.loads((self.output / "releases/v0.1.0-alpha.17/ledger.toml").read_text())
         controls_change = next(change for change in controls_ledger["changes"]
@@ -238,7 +240,8 @@ class ExpandedReleaseRecipeTests(unittest.TestCase):
         # October 28: Rebalance 360 is selected by default.
         # October 29: so are Artisan tweak 1010000, Sirene NPC for BG:EE 0, 3 and 6,
         # Rebalance 410 and 411 (v0.8.8 pin) and Artisan tweak 7205 (chriz.5 pin).
-        self.assertEqual(len(baseline), 476)
+        # November 3: BG1 NPC Project's 8 defaults and Modpack 130 are not.
+        self.assertEqual(len(baseline), 467)
         self.assertEqual(self.selected({feature_id: "off"}), baseline)
         baeloth = "feature:chriz-bg-modpack:component-235"
         self.assertEqual(self.features[baeloth]["decision"], "optional")

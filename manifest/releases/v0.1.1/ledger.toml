@@ -1,0 +1,19 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.1"
+# PLACEHOLDER: the release step sets the exact UTC publication time before packaging.
+published_at = "2026-11-03T00:00:00Z"
+# Nothing in this recipe needs a newer app than 0.1.0 yet; raise this if a later 0.1.1
+# recipe change depends on the 0.1.1 engine.
+minimum_app_version = "0.1.0"
+supersedes = "0.1.0"
+
+[[changes]]
+id = "bg1npc-optional"
+title = "BG1 NPC Project is optional"
+summary = "BG1 NPC Project is no longer installed by default; you can still tick it under Customize, where it brings the same banters, quests, interjections and conveniences as before, and the Kivan sea-elf quest guard comes with it. Games you already installed keep it."
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "feature:mod:bg1npc",
+]

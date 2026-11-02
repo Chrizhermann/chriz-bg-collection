@@ -3,7 +3,7 @@
 Generated from `docs/curation/components/` plus `manifest/curation-map.toml`; no WeiDU log is used as an inclusion source.
 The source column records the pinned installer identity, while the status is the engine-equivalent resolved-selection outcome for the recommended preset.
 
-Engine-equivalent resolved-selection summary: 489 default/mandatory rows — conditional inactive: 11, deferred: 4, selected for installation: 474.
+Engine-equivalent resolved-selection summary: 489 default/mandatory rows — conditional inactive: 20, deferred: 4, selected for installation: 465.
 
 | Curated row | Decision | Semantic target | Status | Current source/component identity | Reason |
 |---|---|---|---|---|---|
@@ -114,15 +114,15 @@ Engine-equivalent resolved-selection summary: 489 default/mandatory rows — con
 | `BARDICWONDERS:2006` | default | `feature:bardicwonders:component-2006` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.8 2.9c-balance.8 (v2.9c-balance.8), component 2006 |  |
 | `BARDICWONDERS:3001` | default | `feature:bardicwonders:component-3001` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.8 2.9c-balance.8 (v2.9c-balance.8), component 3001 |  |
 | `BARDICWONDERS:3010` | default | `feature:bardicwonders:component-3010` | selected for installation | bardicwonders → bardicwonders-v2.9c-balance.8 2.9c-balance.8 (v2.9c-balance.8), component 3010 |  |
-| `BG1NPC:0` | default | `feature:bg1npc:component-0` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 0 |  |
-| `BG1NPC:10` | default | `feature:bg1npc:component-10` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 10 |  |
-| `BG1NPC:90` | default | `feature:bg1npc:component-90` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 90 |  |
-| `BG1NPC:111` | default | `feature:bg1npc:component-111` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 111 |  |
-| `BG1NPC:120` | default | `feature:bg1npc:component-120` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 120 |  |
-| `BG1NPC:130` | default | `feature:bg1npc:component-130` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 130 |  |
+| `BG1NPC:0` | default | `feature:bg1npc:component-0` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 0 | Parent mod:bg1npc is inactive. |
+| `BG1NPC:10` | default | `feature:bg1npc:component-10` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 10 | Parent mod:bg1npc is inactive. |
+| `BG1NPC:90` | default | `feature:bg1npc:component-90` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 90 | Parent mod:bg1npc is inactive. |
+| `BG1NPC:111` | default | `feature:bg1npc:component-111` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 111 | Parent mod:bg1npc is inactive. |
+| `BG1NPC:120` | default | `feature:bg1npc:component-120` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 120 | Parent mod:bg1npc is inactive. |
+| `BG1NPC:130` | default | `feature:bg1npc:component-130` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 130 | Parent mod:bg1npc is inactive. |
 | `BG1NPC:160` | default | `feature:bg1npc:component-160` | deferred | bg1npc → bg1npc-32 32 (v32), component 160 | Upstream v32 deprecates this component due to copyright issues; it is unavailable in the public alpha until a distributable replacement is reviewed. |
-| `BG1NPC:200` | default | `feature:bg1npc:component-200` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 200 |  |
-| `BG1NPC:240` | default | `feature:bg1npc:component-240` | selected for installation | bg1npc → bg1npc-32 32 (v32), component 240 |  |
+| `BG1NPC:200` | default | `feature:bg1npc:component-200` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 200 | Parent mod:bg1npc is inactive. |
+| `BG1NPC:240` | default | `feature:bg1npc:component-240` | conditional inactive | bg1npc → bg1npc-32 32 (v32), component 240 | Parent mod:bg1npc is inactive. |
 | `BGGO:0` | default | `feature:bggo:component-0` | selected for installation | bggo → bggo-3.6 3.6 (v3.6), component 0 |  |
 | `BUBB_SPELL_MENU_EXTENDED:0` | default | `feature:bubb-spell-menu-extended:component-0` | selected for installation | bubb-spell-menu → bubb-spell-menu-5.2 5.2 (v5.2), component 0 |  |
 | `BUFFBOT:1` | mandatory | `feature:buffbot:mandatory-components` | selected for installation | buffbot → buffbot-1.12.6 1.12.6 (v1.12.6), component 1 |  |
@@ -210,7 +210,7 @@ Engine-equivalent resolved-selection summary: 489 default/mandatory rows — con
 | `CDTWEAKS:4071` | default | `feature:cdtweaks:component-4071` | selected for installation | cdtweaks → cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729 7649ced6cd25865874d787ec1a9abbc67b068729 (7649ced6cd25865874d787ec1a9abbc67b068729), component 4071 |  |
 | `CHRIZ-BG-MODPACK:236` | default | `feature:chriz-bg-modpack:component-236` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.14 0.2.0-alpha.14 (v0.2.0-alpha.14), component 236 |  |
 | `CHRIZ-BG-MODPACK:110` | default | `feature:chriz-bg-modpack:component-110` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.14 0.2.0-alpha.14 (v0.2.0-alpha.14), component 110 |  |
-| `CHRIZ-BG-MODPACK:130` | mandatory | `feature:chriz-bg-modpack:component-130` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.14 0.2.0-alpha.14 (v0.2.0-alpha.14), component 130 |  |
+| `CHRIZ-BG-MODPACK:130` | mandatory | `feature:chriz-bg-modpack:component-130` | conditional inactive | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.14 0.2.0-alpha.14 (v0.2.0-alpha.14), component 130 | Requires feature:bg1npc:component-10. |
 | `CHRIZ-BG-MODPACK:135` | default | `feature:chriz-bg-modpack:component-135` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.14 0.2.0-alpha.14 (v0.2.0-alpha.14), component 135 |  |
 | `CHRIZ-BG-MODPACK:140` | mandatory | `feature:chriz-bg-modpack:component-140` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.14 0.2.0-alpha.14 (v0.2.0-alpha.14), component 140 |  |
 | `CHRIZ-BG-MODPACK:170` | mandatory | `feature:chriz-bg-modpack:component-170` | selected for installation | chriz-bg-modpack → chriz-bg-modpack-0.2.0-alpha.14 0.2.0-alpha.14 (v0.2.0-alpha.14), component 170 |  |

@@ -112,7 +112,9 @@ The four ✓ marks record the old reference install, not the new default recipe.
 - Kivan quest guard `130` is mandatory with BG1NPC Banters/Quests/Interjections `10`
   and SCS general AI `6000`, after EET import and SCS. It is independent of Kivan's
   Archer choice `198`; never add standalone `KIVAN_QUEST_FIX` alongside it. Its
-  default inclusion was explicitly reconfirmed on 2026-09-09.
+  default inclusion was explicitly reconfirmed on 2026-09-09. Since BG1 NPC Project left the
+  defaults (Christopher, 2026-11-03), `130` installs only when BG1NPC `10` is ticked; the
+  known limitations record that omission.
 - Yoshimo `220` is a default companion conversion. Hexxat `221` (Shadowdancer) is the
   default; `222` and `223` are unchecked alternatives, mutually exclusive with each other
   and with Artisan's Invisible Blade component `7104`.

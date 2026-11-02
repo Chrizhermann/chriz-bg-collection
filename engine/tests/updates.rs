@@ -459,12 +459,7 @@ fn release_0_1_0_supersedes_alpha20_requires_the_0_1_0_app_and_waits_for_the_nex
     assert_eq!(ledger, source);
     assert_eq!(ledger.version, "0.1.0");
     assert_eq!(ledger.published_at, "2026-11-02T00:00:00Z");
-    assert_eq!(
-        bg_engine::cli::recipe_release_version(&curated)
-            .unwrap()
-            .as_deref(),
-        Some("0.1.0")
-    );
+    // The bundled recipe moved on to 0.1.1 (November 3); 0.1.0's ledger stays as published.
     // Alpha.21 was an app-only release that shipped the alpha.20 recipe, and the release
     // prepared as alpha.22 became 0.1.0 (Christopher, 2026-11-01) before publication.
     assert!(!curated.join("releases/v0.1.0-alpha.21").exists());
@@ -543,6 +538,64 @@ fn release_0_1_0_supersedes_alpha20_requires_the_0_1_0_app_and_waits_for_the_nex
 }
 
 #[test]
+fn release_0_1_1_supersedes_0_1_0_and_makes_bg1npc_optional_for_the_next_playthrough() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let curated = root.join("recipes/curated-full-current");
+    let ledger = load_release(&curated.join("releases/v0.1.1/ledger.toml")).unwrap();
+    let source = load_release(&root.join("manifest/releases/v0.1.1/ledger.toml")).unwrap();
+    assert_eq!(ledger, source);
+    assert_eq!(ledger.version, "0.1.1");
+    assert_eq!(
+        bg_engine::cli::recipe_release_version(&curated)
+            .unwrap()
+            .as_deref(),
+        Some("0.1.1")
+    );
+    assert_eq!(ledger.supersedes.as_deref(), Some("0.1.0"));
+    // Nothing in this recipe needs a newer app than 0.1.0 yet.
+    assert_eq!(ledger.minimum_app_version, "0.1.0");
+
+    // A 0.1.0 installation gets the change for its next playthrough, without an app
+    // update; an alpha.20 installation gets 0.1.0 and 0.1.1 once each, in order.
+    let current = classify_updates("0.1.0", "0.1.0", std::slice::from_ref(&ledger)).unwrap();
+    assert_eq!(current.latest_version.as_deref(), Some("0.1.1"));
+    assert_eq!(
+        current.disposition,
+        UpdateDisposition::DeferredForNextPlaythrough
+    );
+    assert_eq!(current.changes, ledger.changes);
+    let v010 = load_release(&curated.join("releases/v0.1.0/ledger.toml")).unwrap();
+    let skipped =
+        classify_updates("0.1.0-alpha.20", "0.1.0", &[ledger.clone(), v010.clone()]).unwrap();
+    assert_eq!(skipped.latest_version.as_deref(), Some("0.1.1"));
+    assert_eq!(
+        skipped.changes,
+        [v010.changes, ledger.changes.clone()].concat()
+    );
+
+    // BG1 NPC Project left the defaults (Christopher, 2026-11-03): the only recorded
+    // difference since the recipe that 0.1.0 shipped is that feature's decision. It was
+    // taken from payloads that chriz-bg-author package-recipe built from the curated trees
+    // of 9bb496a (and of the 0.1.0 build source 50a4239, with the same result) and d8fcade.
+    let snapshot = released_snapshots()
+        .into_iter()
+        .find(|snapshot| snapshot["version"] == "0.1.1")
+        .expect("the 0.1.1 differences are recorded");
+    assert_eq!(snapshot["from_commit"], "9bb496a");
+    let differences = snapshot_differences(&snapshot);
+    assert_eq!(differences.len(), 1);
+    ensure_change_coverage(&differences, &ledger).unwrap();
+    assert_eq!(
+        ledger
+            .changes
+            .iter()
+            .flat_map(|change| change.covers.iter().map(String::as_str))
+            .collect::<BTreeSet<_>>(),
+        BTreeSet::from(["feature:mod:bg1npc"])
+    );
+}
+
+#[test]
 fn coverage_error_names_uncovered_subject() {
     let differences = vec![RecipeDifference {
         subject: "run:missing".to_owned(),
@@ -583,8 +636,9 @@ fn ledger_covers_name_only_subject_kinds_the_recipe_diff_emits() {
                 }
             }
         }
-        // alpha.1, alpha.12 to alpha.20 and 0.1.0; published ledgers are never removed.
-        assert!(ledgers >= 11, "{profile}: only {ledgers} ledgers found");
+        // alpha.1, alpha.12 to alpha.20, 0.1.0 and the next 0.1.1; published ledgers are
+        // never removed.
+        assert!(ledgers >= 12, "{profile}: only {ledgers} ledgers found");
         assert_eq!(
             dead, shipped,
             "{profile}: covers that no recipe difference can match (kinds: {DIFF_SUBJECT_KINDS:?})"

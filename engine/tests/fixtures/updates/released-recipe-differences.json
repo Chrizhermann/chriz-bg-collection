@@ -430,5 +430,13 @@
       "run:voicepack-yeslick-bg2",
       "run:zg-iwd-voices-bg2"
     ]
+  },
+  {
+    "version": "0.1.1",
+    "from_commit": "9bb496a",
+    "to_commit": "d8fcade",
+    "subjects": [
+      "feature:mod:bg1npc"
+    ]
   }
 ]

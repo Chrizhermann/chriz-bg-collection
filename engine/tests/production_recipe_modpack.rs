@@ -35,7 +35,9 @@ const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
     110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234,
 ];
 
-const RECOMMENDED_COMPONENTS: &[u32] = &[130, 135, 410, 440, 450, 460, 611, 660];
+// November 3: BG1 NPC Project left the defaults (Christopher, 2026-11-03), so the Kivan
+// quest guard 130 installs only when it is ticked.
+const RECOMMENDED_COMPONENTS: &[u32] = &[135, 410, 440, 450, 460, 611, 660];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -220,7 +222,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert!(control.selected, "{id}");
     }
 
-    for component in [130, 140, 170, 410, 440, 450] {
+    for component in [140, 170, 410, 440, 450] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
         let control = evaluation
             .view
@@ -230,6 +232,32 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
         assert_eq!(control.readiness, Readiness::Ready, "{id}");
         assert!(control.selected, "{id}");
     }
+
+    // The Kivan quest guard stays mandatory but follows BG1 NPC Project's banters and
+    // quests: shown as unavailable while the mod is unticked, installed once it is ticked.
+    let guard_id = "feature:chriz-bg-modpack:component-130";
+    let guard = evaluation.view.control(guard_id).unwrap();
+    assert_eq!(guard.decision, Decision::Mandatory);
+    assert_eq!(guard.readiness, Readiness::Ready);
+    assert!(!guard.selected);
+    assert!(!guard.interactive);
+    assert_eq!(
+        guard.unavailable_reason.as_deref(),
+        Some("Requires Banters, Quests, and Interjections.")
+    );
+    assert!(!evaluation
+        .findings
+        .iter()
+        .any(|finding| finding.feature_id == guard_id));
+    let mut ticked = evaluation.normalized_selection.to_selection();
+    ticked.set_feature("mod:bg1npc", true);
+    let ticked = bg_engine::recipe_view::evaluate(&manifest, &ticked).unwrap();
+    assert!(ticked.view.control(guard_id).unwrap().selected);
+    assert!(ticked
+        .plan
+        .components_for("chriz-bg-modpack-bg2")
+        .unwrap()
+        .contains(&130));
 
     for component in [222, 223, 235, 610] {
         let id = format!("feature:chriz-bg-modpack:component-{component}");
@@ -305,7 +333,9 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
     // tweak run in both plans, and Sirene NPC for BG:EE 0, 3 and 6 to both plans.
     // Its Rebalance v0.8.8 pin adds default Druid weapons 410 and Alaghor of Clangeddin
     // weapons 411 to both plans, and its Kitpack chriz.5 pin the default katana fix 7205.
-    // This 379-component base plan is distinct from the 476-component curated plan.
+    // November 3: BG1 NPC Project is optional and unselected (Christopher, 2026-11-03),
+    // which removes its 8 defaults and the Kivan quest guard 130 from both plans.
+    // This 370-component base plan is distinct from the 467-component curated plan.
     assert_eq!(
         evaluation
             .plan
@@ -313,7 +343,7 @@ fn recommended_preset_selects_ready_defaults_and_keeps_missing_prerequisites_vis
             .iter()
             .map(|run| run.components.len())
             .sum::<usize>(),
-        379
+        370
     );
 }
 
