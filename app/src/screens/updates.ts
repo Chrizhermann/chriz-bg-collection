@@ -1,13 +1,64 @@
-import type { UpdateSummary } from "../contracts";
+import type { ManagedCopyUpdate, UpdateSummary } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
+import { installPatchesSection, type InstallPatchActions } from "../components/install-patches";
+import { installedUpdateSection, type InstalledUpdateActions } from "../components/installed-update-plan";
 
-export interface UpdateActions {
+export interface UpdateActions extends InstallPatchActions, InstalledUpdateActions {
+  readonly customized?: boolean;
   readonly checkAgain: () => void | Promise<void>;
   readonly installApplication: (version: string) => void | Promise<void>;
   readonly buildUpdatedCopy: (version: string) => void | Promise<void>;
   readonly installRadar?: () => void | Promise<void>;
   readonly installationName?: string;
   readonly radarVersion?: string | null;
+}
+
+/** A single target for every game-specific control on Updates. */
+export function selectedUpdateCopy(copies: readonly ManagedCopyUpdate[], requestedId?: string): ManagedCopyUpdate | undefined {
+  return copies.find(copy => copy.installId === requestedId)
+    ?? copies.find(copy => copy.state !== "stale") ?? copies[0];
+}
+
+function installationSelection(copies: readonly ManagedCopyUpdate[], selected: ManagedCopyUpdate | undefined, actions: UpdateActions, disabled: boolean): HTMLElement {
+  const section = element("section", "update-selection");
+  section.setAttribute("aria-label", "Selected game installation");
+  if (!selected) {
+    section.append(element("p", "update-selection-status", "No game installation yet. App updates are still available below."));
+    return section;
+  }
+  const row = element("div", "update-selection-row");
+  const label = element("label", "update-selection-label", "Game installation");
+  label.htmlFor = "updates-installation";
+  const selector = element("select");
+  selector.id = label.htmlFor;
+  selector.disabled = disabled;
+  const folderName = (path: string): string => path.replace(/[\\/]+$/, "").split(/[\\/]/).at(-1) ?? path;
+  const names = copies.map(copy => / — incomplete installation$/.test(copy.name) ? folderName(copy.path) : copy.name);
+  const usedLabels = new Set<string>();
+  copies.forEach((copy, index) => {
+    const name = names[index];
+    const base = names.filter(value => value === name).length > 1 ? `${name} — ${folderName(copy.path)}` : name;
+    let display = base;
+    for (let suffix = 2; usedLabels.has(display); suffix++) display = `${base} (${suffix})`;
+    usedLabels.add(display);
+    const option = element("option", undefined, display);
+    option.value = copy.installId;
+    option.selected = copy.installId === selected.installId;
+    selector.append(option);
+  });
+  selector.addEventListener("change", () => {
+    if (!disabled) actions.onSelectInstalledUpdate?.(selector.value);
+  });
+  row.append(label, selector);
+  const status = element("p", "update-selection-status", selected.state === "stale"
+    ? "Needs attention. Open My installs to check or remove this entry."
+    : `Collection ${selected.installedRecipeVersion ?? "version not recorded"}`);
+  const details = element("details", "update-selection-details");
+  details.append(element("summary", undefined, "Folder and installation details"),
+    element("p", "path", selected.path), element("p", "path", `ID: ${selected.installId}`));
+  if (selected.detail) details.append(element("p", "update-note", selected.detail));
+  section.append(row, status, details);
+  return section;
 }
 
 const stateLabels: Readonly<Record<string, string>> = {
@@ -25,7 +76,7 @@ function versionRow(
   const row = element("article", "update-row");
   if (["available", "requires-app", "local-available"].includes(state) && availableVersion !== null) row.classList.add("available");
   const installed = element("div", "update-installed");
-  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? "Bundled alpha" : currentVersion}`));
+  installed.append(element("h2", undefined, title), element("p", undefined, currentVersion === null ? "Not installed" : `${currentLabel}: ${currentVersion === "bundled" ? "Bundled with CEBG" : currentVersion}`));
   if (note !== undefined) installed.append(element("p", "update-purpose", note));
   const latest = element("div", "update-latest");
   if (availableVersion !== null) {
@@ -50,12 +101,28 @@ function versionRow(
 }
 
 export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, checking = false, installing = false): HTMLElement {
+  const operationBusy = installing || actions.patchBusy === true || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true;
   const page = element("div", "screen-stack updates-screen");
   const heading = element("div", "updates-heading");
   const check = actionButton(checking ? "Checking…" : "Check for updates", actions.checkAgain, "quiet");
-  check.disabled = checking || installing;
+  check.disabled = checking || operationBusy;
   heading.append(screenIntro("", "Updates", ""), check);
   page.append(heading);
+  const selected = selectedUpdateCopy(updates.managedCopies, actions.installedUpdateInstallId ?? actions.patchInstallId ?? actions.installedUpdatePlan?.installId ?? actions.patches?.installId);
+  // Comparing is read-only and may be superseded; mutations and patch operations
+  // keep the selector locked until their result has been recorded.
+  page.append(installationSelection(updates.managedCopies, selected, actions, installing || actions.patchBusy === true || actions.modUpgradeBusy === true));
+  const gameSections = element("div", "update-game-sections");
+  const selectedCopies = selected ? [selected] : [];
+  if (selected && actions.customized) {
+    gameSections.append(element("p", "manual-mod-warning", "Customized — manual mods added. Game hotpatches and whole-mod updates are disabled for this installation. CEBG app updates and new installations remain available."));
+  }
+  if (selected && !actions.customized && actions.onCheckInstalledUpdate !== undefined) {
+    gameSections.append(installedUpdateSection(selectedCopies, actions, installing || actions.patchBusy === true, true));
+  }
+  if (selected && !actions.customized && actions.onCheckPatches !== undefined) {
+    gameSections.append(installPatchesSection(selectedCopies, actions, installing || actions.installedUpdateBusy === true || actions.modUpgradeBusy === true, true));
+  }
 
   const versions = element("section", "update-versions");
   versions.setAttribute("aria-label", "Installed and available versions");
@@ -77,7 +144,7 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
     recipeNotes.append(item);
   }
   if (updates.recipe.changes.length === 0) recipeNotes.append(element("p", undefined, "No changelog was included with this update."));
-  const localCollectionAvailable = updates.recipe.state === "up-to-date" && updates.managedCopies.some((copy) => copy.state === "update-available");
+  const localCollectionAvailable = updates.recipe.state === "up-to-date" && selected?.state === "update-available";
   const recipeVersion = localCollectionAvailable ? updates.recipe.currentVersion : updates.recipe.availableVersion;
   const recipeState = localCollectionAvailable ? "local-available" : updates.recipe.state;
   versions.append(versionRow("Collection", updates.recipe.currentVersion, recipeVersion, recipeState, recipeNotes,
@@ -88,7 +155,7 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
       ? "For your next playthrough. Included with the CEBG app update; your current game stays unchanged."
       : updates.recipe.state === "available" && updates.recipe.disposition === "deferred-for-next-playthrough"
         ? "For your next playthrough"
-        : localCollectionAvailable ? "For your next playthrough. Creates a new installation; your current game stays unchanged." : undefined,
+        : localCollectionAvailable ? "Creates a separate game. Your selected installation stays unchanged." : undefined,
     "Included in CEBG"));
   if (updates.radar !== undefined) {
     const radar = updates.radar;
@@ -96,44 +163,35 @@ export function updatesScreen(updates: UpdateSummary, actions: UpdateActions, ch
     notes.append(element("h3", undefined, "What's new"), element("p", undefined, radar.releaseNotes ?? "No changelog was included with this release."));
     const currentVersion = actions.radarVersion !== undefined ? actions.radarVersion : radar.currentVersion;
     const state = radar.state === "offline" ? "offline" : currentVersion === null ? "not-installed" : currentVersion === radar.availableVersion ? "up-to-date" : radar.state;
-    versions.append(versionRow("BG Radar Overlay", currentVersion, radar.availableVersion, state, notes,
-      actions.installRadar !== undefined && radar.availableVersion !== null && state !== "up-to-date" && state !== "offline"
+    const overlay = versionRow("BG Radar Overlay", currentVersion, radar.availableVersion, state, notes,
+      selected && selected.state !== "stale" && actions.installRadar !== undefined && radar.availableVersion !== null && state !== "up-to-date" && state !== "offline"
         ? actionButton(currentVersion === null ? "Install overlay" : "Update overlay", actions.installRadar, "quiet compact")
-        : undefined));
+        : undefined);
+    overlay.classList.add("update-overlay");
+    if (selected && selected.state !== "stale") gameSections.append(overlay);
     if (actions.installationName !== undefined) {
       notes.append(element("p", "update-note", `Installs into ${actions.installationName}.`));
     }
   }
-  if (installing) {
-    versions.querySelectorAll<HTMLButtonElement>("button").forEach((button) => { button.disabled = true; });
+  if (operationBusy) {
+    for (const container of [versions, gameSections.querySelector(".update-overlay")]) {
+      container?.querySelectorAll<HTMLButtonElement>("button").forEach((button) => { button.disabled = true; });
+    }
   }
-  page.append(versions);
+  if (gameSections.childElementCount > 0) page.append(gameSections);
+  page.append(element("h2", "update-global-heading", "Installer and collection"), versions);
   if (updates.recipe.state === "available" && updates.recipe.disposition !== "deferred-for-next-playthrough") {
     page.append(element("p", "update-note", "Collection updates create a new installation. Open the changelog for save compatibility."));
   }
   if (updates.radar !== undefined && actions.installRadar === undefined) {
-    page.append(element("p", "update-note", "BG Radar Overlay can be added after your game installation finishes."));
-  }
-
-  if (updates.managedCopies.length > 0) {
-    const installs = element("details", "updates-installs");
-    installs.append(element("summary", undefined, `Your installations (${updates.managedCopies.length})`));
-    const list = element("ul", "update-install-list");
-    for (const copy of updates.managedCopies) {
-      const status = copy.state === "stale" ? "Folder not found" : copy.state === "update-available" ? "New collection available" : copy.state === "up-to-date" ? "Up to date" : "Not checked";
-      const item = element("li");
-      item.append(element("strong", undefined, copy.name), element("span", undefined, `${copy.installedRecipeVersion ?? "Unknown version"} · ${status}`));
-      list.append(item);
-    }
-    installs.append(list);
-    page.append(installs);
+    page.append(element("p", "update-note", "Select a completed, available game installation to add BG Radar Overlay."));
   }
 
   const checkStatus = element("p", "update-note");
   checkStatus.setAttribute("role", "status");
   checkStatus.textContent = installing ? "Installing the update…"
     : checking ? "Checking for updates…"
-    : updates.networkState === "unconfigured" ? "Online updates aren't enabled in this alpha yet."
+    : updates.networkState === "unconfigured" ? "Online updates aren't enabled in this version yet."
     : updates.networkState === "offline" ? "Could not connect. Try checking again when you're online."
     : updates.checkedAt === null ? "Not checked yet." : `Last checked: ${new Date(updates.checkedAt).toLocaleString()}`;
   page.append(checkStatus);

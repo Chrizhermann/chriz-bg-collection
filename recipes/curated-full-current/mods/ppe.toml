@@ -1,0 +1,83 @@
+id = "ppe"
+artifact_id = "ppe-417226ea6642b8c682b2d049d0ec6e86f38b7f47"
+name = "Portraits Portraits Everywhere (DaftHunk fork)"
+tp2 = "PPE/setup-PPE.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Portraits Portraits Everywhere (PPE) - core component"
+
+[[components]]
+id = 100
+name = "Category Portraits (Recommended) -> Sequenced"
+
+[[components]]
+id = 150
+name = "Category Portraits (Recommended) -> Random"
+
+[[components]]
+id = 10
+name = "Isandir's CHARNAME Portraits"
+
+[[components]]
+id = 20
+name = "Replace Low Quality TOB & SOA Portraits"
+
+[[components]]
+id = 25
+name = "Edwin/Edwina"
+
+[[components]]
+id = 300
+name = "Change Imoen portraits -> BG1 Portrait"
+
+[[components]]
+id = 301
+name = "Change Imoen portraits -> SOD Portrait"
+
+[[components]]
+id = 302
+name = "Change Imoen portraits -> BG2 Portrait"
+
+[[components]]
+id = 311
+name = "Change Viconia portraits -> SOD Portrait"
+
+[[components]]
+id = 312
+name = "Change Viconia portraits -> BG2 Portrait"
+
+[[components]]
+id = 322
+name = "Change Jaheira portraits -> BG2 Portrait"
+
+[[components]]
+id = 330
+name = "Change Minsc portraits -> BG1 Portrait"
+
+[[components]]
+id = 332
+name = "Change Minsc portraits -> BG2 Portrait"
+
+[[components]]
+id = 340
+name = "Change Edwin portraits -> BG1 Portrait"
+
+[[components]]
+id = 342
+name = "Change Edwin portraits -> BG2 Portrait"
+
+[[components]]
+id = 350
+name = "Longhair Aerie"
+
+[[components]]
+id = 30
+name = "Ust Natha Drow NPCs"
+
+[[components]]
+id = 40
+name = "Vampire NPCs"

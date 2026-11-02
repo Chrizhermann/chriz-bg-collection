@@ -5,10 +5,14 @@ use std::time::{Duration, SystemTime};
 
 use bg_engine::games::GameRole;
 use bg_engine::stage::{
-    finalize_game_identity, propose_save_identity, read_engine_name, reserve_save_identity,
-    stage_bgee_sod, stage_game_copy, stage_game_copy_with_observer, stage_initial_games,
-    DocumentsLocator, ManagedLayout, StageObserver, SystemDocuments,
+    finalize_game_identity, propose_save_identity, read_engine_name,
+    repair_installed_profile_settings, reserve_save_identity, stage_bgee_sod, stage_game_copy,
+    stage_game_copy_with_observer, stage_initial_games, verify_profile_settings, DocumentsLocator,
+    ManagedLayout, ReservedSaveIdentity, StageObserver, SystemDocuments, TEST_DOCUMENTS_VARIABLE,
 };
+
+mod support;
+use support::environment::ScopedEnvVar;
 
 fn source_tree(root: &Path, name: &str) -> PathBuf {
     let source = root.join(name);
@@ -390,6 +394,217 @@ impl DocumentsLocator for FixedDocuments {
 }
 
 #[test]
+fn missing_documents_reports_parent_check_without_creating_a_guessed_location() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, bg1, bg2) = layout(&temp);
+    let documents = temp.path().join("offline-user-volume/Documents");
+    let source_before = fs::read(bg1.join("engine.lua")).unwrap();
+
+    let error = reserve_save_identity(
+        &FixedDocuments(documents.clone()),
+        &layout,
+        "Fixture",
+        "install-one",
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        error.folder_operation(),
+        Some(("check Documents folder", documents.as_path()))
+    );
+    let bg_engine::error::EngineError::Io { path, source } = error.primary_cause() else {
+        panic!("expected original missing-path error: {error}");
+    };
+    assert_eq!(path, &documents);
+    assert_eq!(source.kind(), io::ErrorKind::NotFound);
+    assert_eq!(error.folder_failure_code(), Some("folder_unavailable"));
+    assert!(!documents.exists());
+    assert!(!documents.parent().unwrap().exists());
+    assert_eq!(fs::read_dir(layout.bg1_root()).unwrap().count(), 0);
+    assert_eq!(fs::read_dir(layout.game_root()).unwrap().count(), 0);
+    assert_eq!(fs::read(bg1.join("engine.lua")).unwrap(), source_before);
+    assert_eq!(fs::read(bg2.join("engine.lua")).unwrap(), source_before);
+}
+
+#[test]
+fn denied_documents_lookup_is_distinct_from_a_missing_folder() {
+    struct DeniedDocuments;
+    impl DocumentsLocator for DeniedDocuments {
+        fn documents_dir(&self) -> io::Result<PathBuf> {
+            #[cfg(windows)]
+            let code = 5;
+            #[cfg(not(windows))]
+            let code = 13;
+            Err(io::Error::from_raw_os_error(code))
+        }
+    }
+
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let error =
+        reserve_save_identity(&DeniedDocuments, &layout, "Fixture", "install-one").unwrap_err();
+    assert_eq!(
+        error.folder_operation(),
+        Some((
+            "resolve Documents folder",
+            Path::new("<Windows Documents folder>")
+        ))
+    );
+    let bg_engine::error::EngineError::Io { source, .. } = error.primary_cause() else {
+        panic!("expected original denied-access error: {error}");
+    };
+    assert_eq!(source.kind(), io::ErrorKind::PermissionDenied);
+    assert_eq!(error.folder_failure_code(), Some("folder_access_denied"));
+    assert!(source.raw_os_error().is_some());
+    assert_eq!(fs::read_dir(layout.bg1_root()).unwrap().count(), 0);
+}
+
+#[test]
+fn documents_path_that_is_a_file_is_not_reported_as_missing() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::write(&documents, b"keep this unrelated file").unwrap();
+
+    let error = reserve_save_identity(
+        &FixedDocuments(documents.clone()),
+        &layout,
+        "Fixture",
+        "install-one",
+    )
+    .unwrap_err();
+    assert_eq!(
+        error.folder_operation(),
+        Some(("check Documents folder", documents.as_path()))
+    );
+    assert!(matches!(
+        error.primary_cause(),
+        bg_engine::error::EngineError::GameIdentity { .. }
+    ));
+    assert!(error.to_string().contains("not a directory"));
+    assert_eq!(error.folder_failure_code(), Some("folder_conflict"));
+    assert_eq!(fs::read(documents).unwrap(), b"keep this unrelated file");
+}
+
+#[test]
+fn relocated_documents_reservation_uses_only_the_configured_parent() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let documents = temp.path().join("relocated-user-data/profile-documents");
+    fs::create_dir_all(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents.clone()),
+        &layout,
+        "Fixture",
+        "install-one",
+    )
+    .unwrap();
+    assert_eq!(identity.save_root.parent(), Some(documents.as_path()));
+    assert!(identity.owner_marker().is_file());
+    assert!(!temp.path().join("Documents").exists());
+    assert_eq!(
+        reserve_save_identity(
+            &FixedDocuments(documents),
+            &layout,
+            "Fixture",
+            "install-one"
+        )
+        .unwrap(),
+        identity
+    );
+}
+
+#[test]
+fn disappearing_reserved_child_reports_revalidation_without_staging_the_games() {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents),
+        &layout,
+        "Fixture",
+        "install-one",
+    )
+    .unwrap();
+    fs::remove_file(identity.owner_marker()).unwrap();
+    fs::remove_dir(&identity.save_root).unwrap();
+
+    let error = stage_bgee_sod(&layout, &identity).unwrap_err();
+    assert_eq!(
+        error.folder_operation(),
+        Some(("revalidate save folder", identity.save_root.as_path()))
+    );
+    let bg_engine::error::EngineError::Io { path, source } = error.primary_cause() else {
+        panic!("expected original missing-child error: {error}");
+    };
+    assert_eq!(path, &identity.save_root);
+    assert_eq!(source.kind(), io::ErrorKind::NotFound);
+    assert_eq!(fs::read_dir(layout.bg1_root()).unwrap().count(), 0);
+    assert_eq!(fs::read_dir(layout.game_root()).unwrap().count(), 0);
+}
+
+#[test]
+fn unavailable_source_is_not_mistaken_for_a_destination_creation_failure() {
+    let temp = tempfile::tempdir().unwrap();
+    let missing_bg1 = temp.path().join("disconnected-source");
+    let bg2 = source_tree(temp.path(), "source-bg2");
+    let managed = temp.path().join("managed");
+
+    let error = ManagedLayout::prepare(&managed, &missing_bg1, &bg2).unwrap_err();
+    assert_eq!(
+        error.folder_operation(),
+        Some(("check BG1 source folder", missing_bg1.as_path()))
+    );
+    assert!(matches!(
+        error.primary_cause(),
+        bg_engine::error::EngineError::Io { source, .. }
+            if source.kind() == io::ErrorKind::NotFound
+    ));
+    assert!(!managed.exists());
+}
+
+#[cfg(windows)]
+#[test]
+fn locked_ownership_marker_preserves_the_actual_windows_read_failure() {
+    use std::fs::OpenOptions;
+    use std::os::windows::fs::OpenOptionsExt;
+
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let locator = FixedDocuments(documents);
+    let identity = reserve_save_identity(&locator, &layout, "Fixture", "install-one").unwrap();
+    let original_marker = fs::read(identity.owner_marker()).unwrap();
+    let lock = OpenOptions::new()
+        .read(true)
+        .share_mode(0)
+        .open(identity.owner_marker())
+        .unwrap();
+
+    let error = reserve_save_identity(&locator, &layout, "Fixture", "install-one").unwrap_err();
+    assert_eq!(
+        error.folder_operation(),
+        Some((
+            "read save-folder ownership marker",
+            identity.owner_marker().as_path()
+        ))
+    );
+    let bg_engine::error::EngineError::Io { source, .. } = error.primary_cause() else {
+        panic!("expected original file-sharing failure: {error}");
+    };
+    assert_eq!(source.raw_os_error(), Some(32));
+    assert_eq!(error.folder_failure_code(), Some("folder_in_use"));
+    drop(lock);
+    assert_eq!(fs::read(identity.owner_marker()).unwrap(), original_marker);
+    assert_eq!(
+        reserve_save_identity(&locator, &layout, "Fixture", "install-one").unwrap(),
+        identity
+    );
+}
+
+#[test]
 fn save_identity_is_normalized_unique_and_reserved_for_one_managed_install() {
     let temp = tempfile::tempdir().unwrap();
     let (layout, _, _) = layout(&temp);
@@ -603,12 +818,396 @@ fn engine_name_patch_preserves_other_lines_and_rejects_ambiguous_assignments() {
     );
 }
 
-#[cfg(windows)]
+/// Test builds look up only the isolated Documents folder that a test names. Without one they
+/// stop before the player's real Documents folder is resolved, let alone changed.
 #[test]
-fn system_documents_uses_the_windows_known_folder() {
-    let documents = SystemDocuments.documents_dir().unwrap();
-    assert!(documents.is_absolute());
-    assert!(documents.is_dir());
+fn system_documents_in_test_builds_is_only_an_isolated_folder() {
+    let temp = tempfile::tempdir().unwrap();
+    {
+        let _documents = ScopedEnvVar::set(TEST_DOCUMENTS_VARIABLE, temp.path().to_str().unwrap());
+        assert_eq!(SystemDocuments.documents_dir().unwrap(), temp.path());
+    }
+    {
+        let _documents = ScopedEnvVar::set(TEST_DOCUMENTS_VARIABLE, "relative/Documents");
+        assert_eq!(
+            SystemDocuments.documents_dir().unwrap_err().kind(),
+            io::ErrorKind::InvalidInput
+        );
+    }
+
+    let _documents = ScopedEnvVar::remove(TEST_DOCUMENTS_VARIABLE);
+    let refused = std::panic::catch_unwind(|| SystemDocuments.documents_dir()).unwrap_err();
+    let message = refused
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| refused.downcast_ref::<&str>().copied())
+        .unwrap_or_default();
+    assert!(
+        message.contains("never use the real Documents folder"),
+        "{message}"
+    );
+}
+
+fn interval_profile_fixture(
+    component: u32,
+) -> (tempfile::TempDir, ManagedLayout, ReservedSaveIdentity) {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents),
+        &layout,
+        "Interval regression",
+        "interval-test",
+    )
+    .unwrap();
+    stage_initial_games(&layout, &identity).unwrap();
+    fs::write(
+        layout.game_root().join("WeiDU.log"),
+        format!("~CDTWEAKS/SETUP-CDTWEAKS.TP2~ #0 #{component} // Installed interval saves\n"),
+    )
+    .unwrap();
+    (temp, layout, identity)
+}
+
+#[test]
+fn final_identity_seeds_interval_settings_in_isolated_profile_not_shared_eet_profile() {
+    let (temp, layout, identity) = interval_profile_fixture(3354);
+    let shared = temp
+        .path()
+        .join("Documents/Baldur's Gate - Enhanced Edition Trilogy");
+    fs::create_dir(&shared).unwrap();
+    let unrelated = b"SetPrivateProfileString('Graphics','Width','1234')\n";
+    fs::write(shared.join("Baldur.lua"), unrelated).unwrap();
+    fs::write(
+        layout.game_root().join("engine.lua"),
+        "engine_name = \"Baldur's Gate - Enhanced Edition Trilogy\"\n",
+    )
+    .unwrap();
+    let log_before = fs::read(layout.game_root().join("WeiDU.log")).unwrap();
+    assert!(verify_profile_settings(&layout, &identity).is_err());
+
+    finalize_game_identity(&layout, &identity).unwrap();
+
+    assert_eq!(
+        read_engine_name(layout.game_root()).unwrap(),
+        identity.engine_name
+    );
+    assert_eq!(fs::read_to_string(identity.save_root.join("Baldur.lua")).unwrap(),
+        "SetPrivateProfileString('Script','IntervalSaveEnabled','1')\nSetPrivateProfileString('Script','IntervalSaveCombat','0')\n");
+    assert_eq!(fs::read(shared.join("Baldur.lua")).unwrap(), unrelated);
+    assert_eq!(
+        fs::read(layout.game_root().join("WeiDU.log")).unwrap(),
+        log_before
+    );
+    verify_profile_settings(&layout, &identity).unwrap();
+}
+
+#[test]
+fn interval_defaults_preserve_preferences_bom_crlf_and_repeated_finalization() {
+    let (_temp, layout, identity) = interval_profile_fixture(3354);
+    let path = identity.save_root.join("Baldur.lua");
+    let original = "\u{feff}SetPrivateProfileString('Graphics','Width','1234')\r\nSetPrivateProfileString( \"Script\", \"IntervalSaveEnabled\", \"0\" ); -- intentional\r\n";
+    fs::write(&path, original).unwrap();
+    finalize_game_identity(&layout, &identity).unwrap();
+    let expected =
+        format!("{original}SetPrivateProfileString('Script','IntervalSaveCombat','0')\r\n");
+    assert_eq!(fs::read(&path).unwrap(), expected.as_bytes());
+    let modified = fs::metadata(&path).unwrap().modified().unwrap();
+    finalize_game_identity(&layout, &identity).unwrap();
+    assert_eq!(fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    assert_eq!(fs::read(&path).unwrap(), expected.as_bytes());
+}
+
+#[test]
+fn interval_defaults_cover_all_fixed_presets_but_not_unselected_or_custom_components() {
+    for component in 3350..=3357 {
+        let (_temp, layout, identity) = interval_profile_fixture(component);
+        finalize_game_identity(&layout, &identity).unwrap();
+        verify_profile_settings(&layout, &identity).unwrap();
+        assert!(identity.save_root.join("Baldur.lua").is_file());
+    }
+    for component in [40, 3358] {
+        let (_temp, layout, identity) = interval_profile_fixture(component);
+        finalize_game_identity(&layout, &identity).unwrap();
+        verify_profile_settings(&layout, &identity).unwrap();
+        assert!(!identity.save_root.join("Baldur.lua").exists());
+    }
+}
+
+#[test]
+fn interval_defaults_ignore_uninstalled_comments_and_other_mod_component_numbers() {
+    let (_temp, layout, identity) = interval_profile_fixture(3354);
+    fs::write(layout.game_root().join("WeiDU.log"),
+        "// Recently Uninstalled: ~CDTWEAKS/SETUP-CDTWEAKS.TP2~ #0 #3354\n~other/other.tp2~ #0 #3354\n").unwrap();
+    finalize_game_identity(&layout, &identity).unwrap();
+    assert!(!identity.save_root.join("Baldur.lua").exists());
+}
+
+#[test]
+fn interval_defaults_do_not_treat_commented_or_other_section_values_as_enabled() {
+    let (_temp, layout, identity) = interval_profile_fixture(3354);
+    let path = identity.save_root.join("Baldur.lua");
+    let original = "-- SetPrivateProfileString('Script','IntervalSaveEnabled','0')\nSetPrivateProfileString('Other','IntervalSaveCombat','1')";
+    fs::write(&path, original).unwrap();
+    finalize_game_identity(&layout, &identity).unwrap();
+    assert_eq!(fs::read_to_string(&path).unwrap(), format!("{original}\nSetPrivateProfileString('Script','IntervalSaveEnabled','1')\nSetPrivateProfileString('Script','IntervalSaveCombat','0')\n"));
+}
+
+#[test]
+fn interval_defaults_report_unrecognized_config_without_overwriting_it() {
+    for original in [
+        "SetPrivateProfileString('Script','IntervalSaveEnabled', unknownValue)\n",
+        "SetPrivateProfileString('Script','IntervalSaveEnabled','maybe')\n",
+    ] {
+        let (_temp, layout, identity) = interval_profile_fixture(3354);
+        let path = identity.save_root.join("Baldur.lua");
+        fs::write(&path, original).unwrap();
+        let error = finalize_game_identity(&layout, &identity).unwrap_err();
+        assert!(
+            error.to_string().contains("interval-save settings"),
+            "{error}"
+        );
+        assert_eq!(fs::read_to_string(&path).unwrap(), original);
+    }
+}
+
+#[test]
+fn final_profile_verification_detects_missing_settings_without_rewriting_preferences() {
+    let (_temp, layout, identity) = interval_profile_fixture(3354);
+    finalize_game_identity(&layout, &identity).unwrap();
+    let path = identity.save_root.join("Baldur.lua");
+    let changed = "SetPrivateProfileString('Script','IntervalSaveEnabled','0')\n";
+    fs::write(&path, changed).unwrap();
+    assert!(verify_profile_settings(&layout, &identity).is_err());
+    assert_eq!(fs::read_to_string(&path).unwrap(), changed);
+}
+
+#[test]
+fn interval_defaults_reject_linked_settings_without_changing_the_other_file() {
+    let (temp, layout, identity) = interval_profile_fixture(3354);
+    let other = temp.path().join("other-profile.lua");
+    fs::write(&other, "-- unrelated profile\n").unwrap();
+    fs::hard_link(&other, identity.save_root.join("Baldur.lua")).unwrap();
+    assert!(finalize_game_identity(&layout, &identity).is_err());
+    assert_eq!(
+        fs::read_to_string(&other).unwrap(),
+        "-- unrelated profile\n"
+    );
+}
+
+const EET_CORE: &str = "~EET/EET.TP2~ #0 #0 // EET core (resource importation): v14.0\n";
+const EET_END: &str =
+    "~EET_END/EET_END.TP2~ #0 #0 // EET end (last mod in install order) -> Standard installation\n";
+const EET_STATE_2: &str = "SetPrivateProfileString('Program Options','EET Installation State','2')";
+
+fn eet_profile_fixture(log: &str) -> (tempfile::TempDir, ManagedLayout, ReservedSaveIdentity) {
+    let temp = tempfile::tempdir().unwrap();
+    let (layout, _, _) = layout(&temp);
+    let documents = temp.path().join("Documents");
+    fs::create_dir(&documents).unwrap();
+    let identity = reserve_save_identity(
+        &FixedDocuments(documents),
+        &layout,
+        "EET state regression",
+        "eet-state-test",
+    )
+    .unwrap();
+    stage_initial_games(&layout, &identity).unwrap();
+    fs::write(layout.game_root().join("WeiDU.log"), log).unwrap();
+    (temp, layout, identity)
+}
+
+#[test]
+fn final_identity_records_eet_state_in_isolated_profile_for_lefreuts_interface() {
+    let (temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
+    let shared = temp
+        .path()
+        .join("Documents/Baldur's Gate - Enhanced Edition Trilogy");
+    fs::create_dir(&shared).unwrap();
+    let eet_written =
+        format!("{EET_STATE_2}\nSetPrivateProfileString('Game Options','Cheats','1')\n");
+    fs::write(shared.join("Baldur.lua"), &eet_written).unwrap();
+    assert!(verify_profile_settings(&layout, &identity).is_err());
+
+    finalize_game_identity(&layout, &identity).unwrap();
+
+    assert_eq!(
+        fs::read_to_string(identity.save_root.join("Baldur.lua")).unwrap(),
+        format!("{EET_STATE_2}\n")
+    );
+    // EET's shared profile is neither copied nor changed; its Cheats setting stays there.
+    assert_eq!(
+        fs::read_to_string(shared.join("Baldur.lua")).unwrap(),
+        eet_written
+    );
+    verify_profile_settings(&layout, &identity).unwrap();
+}
+
+#[test]
+fn eet_state_follows_the_installed_eet_components() {
+    // Without EET_end, EET's own start screens report an incomplete installation (1).
+    for (log, expected) in [
+        (EET_CORE.to_owned(), Some("1")),
+        (
+            format!("{EET_CORE}~EET_END/EET_END.TP2~ #0 #1 // Also update saves\n"),
+            Some("2"),
+        ),
+        (
+            "~CDTWEAKS/SETUP-CDTWEAKS.TP2~ #0 #40 // Unrelated\n".to_owned(),
+            None,
+        ),
+        (format!("// Recently Uninstalled: {EET_CORE}"), None),
+    ] {
+        let (_temp, layout, identity) = eet_profile_fixture(&log);
+        finalize_game_identity(&layout, &identity).unwrap();
+        verify_profile_settings(&layout, &identity).unwrap();
+        let path = identity.save_root.join("Baldur.lua");
+        match expected {
+            Some(value) => assert_eq!(
+                fs::read_to_string(&path).unwrap(),
+                format!(
+                    "SetPrivateProfileString('Program Options','EET Installation State','{value}')\n"
+                ),
+                "{log}"
+            ),
+            None => assert!(!path.exists(), "{log}"),
+        }
+    }
+}
+
+#[test]
+fn eet_state_replaces_an_outdated_value_in_place_and_keeps_everything_else() {
+    let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
+    let path = identity.save_root.join("Baldur.lua");
+    let original = "\u{feff}SetPrivateProfileString('Graphics','Width','1234')\r\nSetPrivateProfileString( \"Program Options\", \"EET Installation State\", \"1\" ); -- earlier\r\nSetPrivateProfileString('Program Options','Active Campaign','3')\r\n";
+    fs::write(&path, original).unwrap();
+    finalize_game_identity(&layout, &identity).unwrap();
+    let expected = format!("\u{feff}SetPrivateProfileString('Graphics','Width','1234')\r\n{EET_STATE_2}\r\nSetPrivateProfileString('Program Options','Active Campaign','3')\r\n");
+    assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    let modified = fs::metadata(&path).unwrap().modified().unwrap();
+    finalize_game_identity(&layout, &identity).unwrap();
+    assert_eq!(fs::metadata(&path).unwrap().modified().unwrap(), modified);
+    assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+}
+
+#[test]
+fn eet_state_and_interval_defaults_are_seeded_together() {
+    let (_temp, layout, identity) = eet_profile_fixture(&format!(
+        "{EET_CORE}~CDTWEAKS/SETUP-CDTWEAKS.TP2~ #0 #3354 // Interval saves\n{EET_END}"
+    ));
+    finalize_game_identity(&layout, &identity).unwrap();
+    assert_eq!(
+        fs::read_to_string(identity.save_root.join("Baldur.lua")).unwrap(),
+        format!("SetPrivateProfileString('Script','IntervalSaveEnabled','1')\nSetPrivateProfileString('Script','IntervalSaveCombat','0')\n{EET_STATE_2}\n")
+    );
+    verify_profile_settings(&layout, &identity).unwrap();
+}
+
+#[test]
+fn eet_state_ignores_comments_other_sections_and_repeated_correct_values() {
+    let repeated = format!("{EET_STATE_2}\n{EET_STATE_2}\n");
+    let commented = "-- SetPrivateProfileString('Program Options','EET Installation State','0')\nSetPrivateProfileString('Other','EET Installation State','0')";
+    for (original, expected) in [
+        (
+            commented.to_owned(),
+            format!("{commented}\n{EET_STATE_2}\n"),
+        ),
+        (repeated.clone(), repeated),
+    ] {
+        let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
+        let path = identity.save_root.join("Baldur.lua");
+        fs::write(&path, &original).unwrap();
+        finalize_game_identity(&layout, &identity).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    }
+}
+
+#[test]
+fn eet_state_reports_unrecognized_or_conflicting_assignments_without_overwriting_them() {
+    for original in [
+        "SetPrivateProfileString('Program Options','EET Installation State',2)\n",
+        "SetPrivateProfileString('Program Options','EET Installation State','1')\nSetPrivateProfileString('Program Options','EET Installation State','2')\n",
+        "--[[\nSetPrivateProfileString('Program Options','EET Installation State','2')\n]]\n",
+    ] {
+        let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
+        let path = identity.save_root.join("Baldur.lua");
+        fs::write(&path, original).unwrap();
+        let error = finalize_game_identity(&layout, &identity).unwrap_err();
+        assert!(
+            error.to_string().contains("EET installation state"),
+            "{error}"
+        );
+        assert_eq!(fs::read_to_string(&path).unwrap(), original);
+    }
+}
+
+#[test]
+fn final_profile_verification_detects_an_outdated_eet_state_without_rewriting_it() {
+    let (_temp, layout, identity) = eet_profile_fixture(&format!("{EET_CORE}{EET_END}"));
+    finalize_game_identity(&layout, &identity).unwrap();
+    let path = identity.save_root.join("Baldur.lua");
+    let changed = "SetPrivateProfileString('Program Options','EET Installation State','0')\n";
+    fs::write(&path, changed).unwrap();
+    assert!(verify_profile_settings(&layout, &identity).is_err());
+    assert_eq!(fs::read_to_string(&path).unwrap(), changed);
+}
+
+#[test]
+fn existing_installation_repair_records_eet_state_once_and_only_in_its_own_save_folder() {
+    // Finalized before CEBG recorded the state; EET is then present in its log.
+    let (_temp, layout, identity) = eet_profile_fixture("");
+    finalize_game_identity(&layout, &identity).unwrap();
+    let path = identity.save_root.join("Baldur.lua");
+    let player = "SetPrivateProfileString('Graphics','Width','1234')\n";
+    fs::write(&path, player).unwrap();
+    fs::write(
+        layout.game_root().join("WeiDU.log"),
+        format!("{EET_CORE}{EET_END}"),
+    )
+    .unwrap();
+
+    for (install_id, engine_name) in [
+        ("another-install", identity.engine_name.as_str()),
+        ("eet-state-test", "Another Game"),
+    ] {
+        assert!(repair_installed_profile_settings(
+            layout.root(),
+            install_id,
+            engine_name,
+            &identity.save_root
+        )
+        .is_err());
+        assert_eq!(fs::read_to_string(&path).unwrap(), player);
+    }
+    let elsewhere = layout.root().join(&identity.engine_name);
+    fs::create_dir(&elsewhere).unwrap();
+    assert!(repair_installed_profile_settings(
+        layout.root(),
+        "eet-state-test",
+        &identity.engine_name,
+        &elsewhere
+    )
+    .is_err());
+    assert!(!elsewhere.join("Baldur.lua").exists());
+
+    let repair = || {
+        repair_installed_profile_settings(
+            layout.root(),
+            "eet-state-test",
+            &identity.engine_name,
+            &identity.save_root,
+        )
+        .unwrap()
+    };
+    assert!(repair());
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        format!("{player}{EET_STATE_2}\n")
+    );
+    assert!(!repair());
+    verify_profile_settings(&layout, &identity).unwrap();
 }
 
 #[cfg(unix)]

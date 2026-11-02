@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -16,9 +16,10 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::acquire::{
-    extract_archive, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
-    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, DownloadRequest,
-    ExtractedArtifact, MaterializationRequest,
+    extract_archive_with_stop, materialize, provide_manual_archive, ArchiveFormat, ArchiveLimits,
+    ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
+    DownloadRequest, ExtractedArtifact, MaterializationRequest, StopSignal,
+    DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
@@ -49,7 +50,9 @@ use crate::receipt::{
     ReceiptOutcome, ReceiptStore, ReceiptVersions, RunAttemptReceipt, RunReceipt, RunTiming,
     SourceGameReceipt, WeiDuToolReceipt, RECEIPT_SCHEMA_VERSION,
 };
-use crate::recipe_view::{evaluate, SelectionEvaluation};
+use crate::recipe_view::{
+    evaluate, feature_group_changes, FeatureGroupState, FeatureGroupTarget, SelectionEvaluation,
+};
 use crate::registry::ManagedInstallRegistry;
 use crate::resolve::{InstallPlan, PlannedRun, Selection};
 use crate::session::{
@@ -58,7 +61,7 @@ use crate::session::{
 };
 use crate::stage::{
     finalize_game_identity, read_engine_name, reserve_save_identity, stage_bgee_sod,
-    stage_game_copy, DocumentsLocator, ManagedLayout, ReservedSaveIdentity, SystemDocuments,
+    stage_game_copy, ManagedLayout, ReservedSaveIdentity, SystemDocuments,
 };
 use crate::validate::{self, Severity};
 use crate::weidu::invocation::{
@@ -76,7 +79,10 @@ use crate::weidu::runner::{
 use crate::weidu::verify::{reconcile as reconcile_weidu, ExpectedRun, Reconciliation};
 use crate::Manifest;
 
+mod installed_update;
 mod recovery;
+pub use installed_update::inspect_installed_update;
+pub(crate) use installed_update::verify_installed_baseline;
 pub use recovery::{
     accept_supervised_recovery, inspect_supervised_recovery, SupervisedRecoveryRequest,
 };
@@ -91,9 +97,18 @@ const LEGACY_DISPLAY_NAME: &str = "Chriz BG Collection";
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
 const LOCKS_DIRECTORY: &str = "locks";
 const EVIDENCE_DIRECTORY: &str = "evidence";
+/// Later, accepted acquisitions of an artifact whose final URL differs from its write-once first
+/// acquisition evidence, or that were downloaded anew. Stored as
+/// `<category>/<artifact-id>/<digest>.json`.
+const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
+/// Damaged download or extraction cache entries that were set aside and rebuilt. Stored as
+/// `<category>/<artifact-id>/<digest>.json`.
+const CACHE_REPAIRS_EVIDENCE: &str = "cache-repairs";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
 const INVOCATION_FILE: &str = "invocation.json";
+/// Recipe-authored configuration files placed before the attempt's WeiDU run.
+const CONFIG_FILES_EVIDENCE_FILE: &str = "config-files.json";
 const PRE_SPAWN_FAILURE_FILE: &str = "pre-spawn-failure.json";
 const PROCESS_RESULT_FILE: &str = "process-result.json";
 const PROCESS_OUTPUT_FILE: &str = "process-output.log";
@@ -102,6 +117,22 @@ const STDERR_FILE: &str = "stderr.log";
 const DEBUG_LOG_FILE: &str = "weidu.debug.log";
 const WEIDU_SILENCE_THRESHOLD: Duration = Duration::from_secs(5 * 60);
 static CAMPAIGN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+/// Which derived cache held a damaged entry.
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum CacheRepairKind {
+    Download,
+    Extraction,
+}
+
+#[derive(Serialize)]
+struct CacheRepairRecord<'a> {
+    cache: CacheRepairKind,
+    artifact_id: &'a str,
+    artifact_sha256: &'a str,
+    reason: &'a str,
+}
 
 type InterruptHandler = Box<dyn FnMut() + Send + 'static>;
 
@@ -177,10 +208,16 @@ pub struct ValidationReport {
 /// Raw semantic overrides parsed from repeatable CLI options.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SelectionOverrides {
+    /// `group-id=on|off` values, expanded into member features after `features` apply; a group
+    /// never overwrites a feature chosen explicitly in `features`, and leaves a variant's choice
+    /// group to `features` when an explicit choice there disagrees with the group.
+    pub groups: Vec<String>,
     /// `feature-id=on|off` values.
     pub features: Vec<String>,
     /// `feature-id/input-id=<typed-value>` values.
     pub inputs: Vec<String>,
+    /// Advanced, opt-in component boundaries frozen with the reviewed recipe.
+    pub manual_breakpoints: Vec<crate::manual_checkpoint::ManualBreakpoint>,
 }
 
 /// Deterministic evaluated-plan result.
@@ -319,6 +356,8 @@ struct FrozenCliRecipe {
     presets: BTreeMap<String, PresetFile>,
     profiles: GameProfiles,
     plan: InstallPlan,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    manual_checkpoints: Vec<crate::manual_checkpoint::FrozenCheckpoint>,
     normalized_selection: crate::recipe_view::NormalizedSelection,
     preset: String,
     bg1: FrozenSource,
@@ -433,7 +472,11 @@ impl CliError {
                 "a paused campaign is resumable and cannot be represented as an error".to_owned(),
             ),
             CampaignStatus::Failed { step_id, reason } => {
-                let code = if step_id == "preflight" && reason.contains("source_not_fresh") {
+                let code = if let Some(code) = folder_step_code(reason) {
+                    code
+                } else if reason == crate::weidu::ui_compat::LEGACY_FAILURE {
+                    "installer_launch_unsupported"
+                } else if step_id == "preflight" && reason.contains("source_not_fresh") {
                     "source_not_fresh"
                 } else if step_id.starts_with("acquire:")
                     || reason.contains("required artifact")
@@ -543,7 +586,7 @@ pub fn plan_recipe(
             ),
         )
     })?;
-    let choices = selection_choices(&manifest, preset_id, overrides)?;
+    let choices = selection_choices(&manifest, preset_id, platform, overrides)?;
     let evaluation = evaluate(
         &manifest,
         &Selection {
@@ -660,7 +703,8 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
 }
 
 fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
-    validate_display_name(&request.display_name)?;
+    let display_name = crate::registry::names::normalize_display_name(&request.display_name)
+        .map_err(|error| CliError::new("invalid_display_name", error.to_string()))?;
     let manifest = load_recipe(&request.recipe)?;
     validate::check(&manifest).map_err(|error| {
         CliError::new(
@@ -671,7 +715,23 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
             ),
         )
     })?;
-    let choices = selection_choices(&manifest, &request.preset, &request.overrides)?;
+    let unsupported = crate::release_validate::validate_production_invocations(&manifest);
+    if !unsupported.is_empty() {
+        return Err(CliError::new(
+            "installer_launch_unsupported",
+            unsupported
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        ));
+    }
+    let choices = selection_choices(
+        &manifest,
+        &request.preset,
+        &request.platform,
+        &request.overrides,
+    )?;
     let evaluation = evaluate(
         &manifest,
         &Selection {
@@ -688,17 +748,29 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
     let managed_root = prospective_direct_path(&request.managed_root, "managed root")?;
     let cache_root = canonical_existing_directory(&request.cache, "cache root")?;
     reject_campaign_path_overlaps(&managed_root, &cache_root, &bg1.root, &bg2.root)?;
+    let (execution_plan, mut manual_checkpoints) = crate::manual_checkpoint::split_plan(
+        &evaluation.plan,
+        &request.overrides.manual_breakpoints,
+    )
+    .map_err(|error| CliError::new("invalid_manual_breakpoint", error))?;
+    for checkpoint in &mut manual_checkpoints {
+        crate::manual_checkpoint::label_component(&mut checkpoint.after, &manifest.mods);
+        if let Some(next) = &mut checkpoint.next {
+            crate::manual_checkpoint::label_component(next, &manifest.mods);
+        }
+    }
     let frozen = FrozenCliRecipe {
         schema: CLI_FROZEN_RECIPE_SCHEMA,
         release_version: recipe_release_version(&manifest.root)?,
         application_version: request.application_version.clone(),
-        display_name: Some(request.display_name.clone()),
+        display_name: Some(display_name),
         collection: manifest.collection.clone(),
         artifacts: manifest.artifacts.clone(),
         mods: manifest.mods.clone(),
         presets: manifest.presets.clone(),
         profiles,
-        plan: evaluation.plan.clone(),
+        plan: execution_plan,
+        manual_checkpoints,
         normalized_selection: evaluation.normalized_selection.clone(),
         preset: request.preset.clone(),
         bg1: frozen_bg1,
@@ -725,7 +797,7 @@ fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, C
         selection_sha256: selection_digest(&evaluation.normalized_selection)
             .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?,
         normalized_selection: evaluation.normalized_selection,
-        plan_sha256: plan_digest(&evaluation.plan)
+        plan_sha256: plan_digest(&frozen.plan)
             .map_err(|error| CliError::new("recipe_freeze_failed", error.to_string()))?,
         source_games: SourceGameFingerprints {
             bg1: frozen.bg1.fingerprint.clone(),
@@ -821,6 +893,7 @@ fn resume_campaign_internal<S: EventSink + Sync>(
             ),
         )
     })?;
+    recreate_deleted_cache_root(&store, &managed_root, expected_install_id)?;
     let replay = store.replay().map_err(|error| {
         CliError::new(
             "resume_unavailable",
@@ -831,6 +904,16 @@ fn resume_campaign_internal<S: EventSink + Sync>(
         )
     })?;
     let created = replay.created().clone();
+    let frozen = resumable_frozen_recipe(&created, &managed_root, expected_install_id)?;
+    execute_frozen_campaign(created, frozen, sink, controls)
+}
+
+/// The frozen recipe of a campaign that this request may resume.
+fn resumable_frozen_recipe(
+    created: &CampaignCreated,
+    managed_root: &Path,
+    expected_install_id: Option<&str>,
+) -> Result<FrozenCliRecipe, CliError> {
     if expected_install_id.is_some_and(|expected| expected != created.install_id) {
         return Err(CliError::new(
             "resume_identity_mismatch",
@@ -847,8 +930,208 @@ fn resume_campaign_internal<S: EventSink + Sync>(
                 format!("frozen recipe payload is not a supported CLI snapshot: {error}"),
             )
         })?;
-    validate_frozen_cli_recipe(&created, &frozen)?;
-    execute_frozen_campaign(created, frozen, sink, controls)
+    validate_frozen_cli_recipe(created, &frozen)?;
+    Ok(frozen)
+}
+
+/// Creates the campaign's download cache again at its recorded path when that folder no longer
+/// exists, for example after it was deleted by hand or by the uninstaller, so that resuming
+/// downloads again whatever is missing. Anything else at that path is left for the usual
+/// campaign checks to report, and nothing is ever removed.
+///
+/// Only a campaign that this request may resume gets its cache back, and nothing is created
+/// unless the recorded path still leads through direct folders to itself, so that no link that
+/// replaced one of its folders is followed, its source games can be inspected, and the campaign
+/// checks would accept a cache there.
+fn recreate_deleted_cache_root(
+    store: &SessionStore,
+    managed_root: &Path,
+    expected_install_id: Option<&str>,
+) -> Result<(), CliError> {
+    // A campaign that cannot be read is reported by the full replay that follows.
+    let Ok(replay) = store.replay_for_inspection() else {
+        return Ok(());
+    };
+    let created = replay.created();
+    let cache_root = &created.cache_root;
+    match fs::symlink_metadata(cache_root) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        _ => return Ok(()),
+    }
+    let frozen = resumable_frozen_recipe(created, managed_root, expected_install_id)?;
+    let unavailable = |reason: String| {
+        CliError::new(
+            "resume_unavailable",
+            format!(
+                "the download cache {} was deleted and cannot be created there again: {reason}",
+                cache_root.display()
+            ),
+        )
+    };
+    if !cache_root.is_absolute()
+        || cache_root
+            .components()
+            .any(|component| matches!(component, Component::ParentDir | Component::CurDir))
+    {
+        return Err(unavailable(
+            "its recorded path is not a full path".to_owned(),
+        ));
+    }
+    let resolved = prospective_direct_path(cache_root, "download cache")
+        .map_err(|error| unavailable(error.to_string()))?;
+    if !crate::preflight::paths_equal(&resolved, cache_root) {
+        return Err(unavailable(format!(
+            "its path now leads to {}",
+            resolved.display()
+        )));
+    }
+    // The source games are checked as recorded and where they are now, as resuming checks them
+    // next: a source folder that moved behind a link must not receive the cache either.
+    let bg1 = inspect_frozen_source(&frozen.profiles, &frozen.bg1)?;
+    let bg2 = inspect_frozen_source(&frozen.profiles, &frozen.bg2)?;
+    for (bg1_root, bg2_root) in [(&frozen.bg1.root, &frozen.bg2.root), (&bg1.root, &bg2.root)] {
+        crate::preflight::check_cache_root_placement(&resolved, bg1_root, bg2_root, managed_root)
+            .map_err(|error| unavailable(error.to_string()))?;
+    }
+    fs::create_dir_all(cache_root).map_err(|error| {
+        CliError::new(
+            "resume_unavailable",
+            format!(
+                "could not create the download cache {} again: {error}",
+                cache_root.display()
+            ),
+        )
+    })
+}
+
+fn open_manual_campaign(
+    managed_root: &Path,
+    expected_install_id: &str,
+) -> Result<(SessionReplay, FrozenCliRecipe), CliError> {
+    // A paused campaign can be checked without its downloads; resuming recreates the cache.
+    let replay = SessionStore::open(managed_root)
+        .and_then(|store| store.replay_for_inspection())
+        .map_err(|error| CliError::new("manual_checkpoint_unavailable", error.to_string()))?;
+    if replay.created().install_id != expected_install_id || replay.fresh_copy_required().is_some()
+    {
+        return Err(CliError::new(
+            "manual_checkpoint_unavailable",
+            "The saved campaign identity is unavailable or requires attention.",
+        ));
+    }
+    let frozen: FrozenCliRecipe = serde_json::from_slice(&replay.created().recipe_payload)
+        .map_err(|error| CliError::new("manual_checkpoint_unavailable", error.to_string()))?;
+    validate_frozen_cli_recipe(replay.created(), &frozen)?;
+    Ok((replay, frozen))
+}
+
+fn pending_manual<'a>(
+    replay: &SessionReplay,
+    frozen: &'a FrozenCliRecipe,
+) -> Option<&'a crate::manual_checkpoint::FrozenCheckpoint> {
+    let step = replay.unresolved_step()?;
+    frozen
+        .manual_checkpoints
+        .iter()
+        .find(|checkpoint| step == format!("checkpoint:{}", checkpoint.checkpoint_id))
+}
+
+/// Read a saved manual pause; fresh changes are inspected only on an explicit check.
+pub fn inspect_manual_checkpoint(
+    managed_root: &Path,
+    expected_install_id: &str,
+    check_changes: bool,
+) -> Result<Option<crate::manual_checkpoint::ManualCheckpointStatus>, CliError> {
+    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
+        .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
+    let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
+    let Some(checkpoint) = pending_manual(&replay, &frozen) else {
+        return Ok(None);
+    };
+    if check_changes {
+        crate::manual_checkpoint::check_manual_processes().map_err(manual_error)?;
+        recheck_target_before_mutation(&replay.created().staged_bg1, "en_US")
+            .map_err(manual_error)?;
+        recheck_target_before_mutation(&replay.created().staged_bg2, "en_US")
+            .map_err(manual_error)?;
+        crate::manual_checkpoint::review(
+            managed_root,
+            checkpoint,
+            &frozen.plan,
+            &frozen.mods,
+            &frozen.artifacts,
+        )
+        .map(|reviewed| Some(reviewed.status))
+        .map_err(manual_error)
+    } else {
+        crate::manual_checkpoint::paused_status(managed_root, checkpoint)
+            .map(Some)
+            .map_err(manual_error)
+    }
+}
+
+/// Bind explicit confirmation to the exact reviewed history under the campaign mutation lock.
+pub fn accept_manual_checkpoint(
+    managed_root: &Path,
+    expected_install_id: &str,
+    review_token: &str,
+    accept_additions: bool,
+) -> Result<(), CliError> {
+    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
+        .map_err(|error| CliError::new("manual_checkpoint_busy", error.to_string()))?;
+    let (replay, frozen) = open_manual_campaign(managed_root, expected_install_id)?;
+    let checkpoint = pending_manual(&replay, &frozen)
+        .ok_or_else(|| manual_error("This campaign is not paused for manual mods."))?;
+    crate::manual_checkpoint::check_manual_processes().map_err(manual_error)?;
+    recheck_target_before_mutation(&replay.created().staged_bg1, "en_US").map_err(manual_error)?;
+    recheck_target_before_mutation(&replay.created().staged_bg2, "en_US").map_err(manual_error)?;
+    let reviewed = crate::manual_checkpoint::review(
+        managed_root,
+        checkpoint,
+        &frozen.plan,
+        &frozen.mods,
+        &frozen.artifacts,
+    )
+    .map_err(manual_error)?;
+    if reviewed.status.review_token != review_token || review_token.is_empty() {
+        return Err(manual_error("Manual installation evidence changed since review. Check changes again before accepting."));
+    }
+    if !accept_additions && !reviewed.status.additions.is_empty() {
+        return Err(manual_error("Manual additions were found. Review and explicitly accept them, or restore the checkpoint backup."));
+    }
+    crate::manual_checkpoint::accept(managed_root, checkpoint, &reviewed).map_err(manual_error)
+}
+
+fn manual_error(error: impl std::fmt::Display) -> CliError {
+    CliError::new("manual_checkpoint_needs_attention", error.to_string())
+}
+
+fn verify_manual_prefix(
+    root: &Path,
+    plan: &InstallPlan,
+    frozen: &FrozenCliRecipe,
+) -> Result<(), String> {
+    let (bg1, bg2) = crate::manual_checkpoint::read_logs(root)?;
+    for (target, log) in [(GameRoot::Bg1, bg1), (GameRoot::Bg2, bg2)] {
+        let entries = parse_active_entries(&log).map_err(|e| e.to_string())?;
+        let expected = crate::manual_checkpoint::expected_components(
+            root,
+            plan,
+            &frozen.mods,
+            &frozen.manual_checkpoints,
+            target,
+        )?;
+        if entries.len() != expected.len()
+            || !entries.iter().zip(&expected).all(|(a, b)| {
+                a.tp2_key == b.tp2 && a.language == b.language && a.component == b.component
+            })
+        {
+            return Err("Game history changed outside a declared manual checkpoint. Preserve WeiDU.log and the installation folder.".into());
+        }
+    }
+    Ok(())
 }
 
 fn execute_frozen_campaign<S: EventSink + Sync>(
@@ -1836,27 +2119,18 @@ struct ReconciledAttemptEvidence<'a> {
     prompts: Vec<PromptReceipt>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-struct CliDocumentsLocator;
-
-impl DocumentsLocator for CliDocumentsLocator {
-    fn documents_dir(&self) -> std::io::Result<PathBuf> {
-        #[cfg(debug_assertions)]
-        if let Some(path) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_DOCUMENTS") {
-            let path = PathBuf::from(path);
-            if !path.is_absolute() {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "CHRIZ_BG_COLLECTION_TEST_DOCUMENTS is not absolute",
-                ));
-            }
-            return Ok(path);
-        }
-        SystemDocuments.documents_dir()
-    }
-}
-
 impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
+    fn reviewed_ui_correction(&self, run: &PlannedRun) -> bool {
+        let (Some(mod_file), Some(artifact), Some(tool)) = (
+            self.frozen.mods.get(&run.mod_id),
+            self.frozen.artifacts.get(&run.artifact_id),
+            self.frozen.artifacts.get(&run.weidu_artifact_id),
+        ) else {
+            return false;
+        };
+        crate::weidu::ui_compat::reviewed(run, mod_file, artifact, tool)
+    }
+
     fn new(
         created: &'a CampaignCreated,
         frozen: &'a FrozenCliRecipe,
@@ -1937,17 +2211,24 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             &self.frozen.bg1.root,
             &self.frozen.bg2.root,
         )
-        .map_err(step_error)
+        .map_err(stage_error)
     }
 
     fn save_identity(&self, layout: &ManagedLayout) -> Result<ReservedSaveIdentity, StepFailure> {
         reserve_save_identity(
-            &CliDocumentsLocator,
+            &SystemDocuments,
             layout,
             self.frozen.effective_display_name(),
             &self.created.install_id,
         )
-        .map_err(step_error)
+        .map_err(stage_error)
+    }
+
+    /// Stop ends waits for another download or extraction of the same cache entry, which may
+    /// belong to a process that hangs or is suspended.
+    fn stop_signal(&self) -> StopSignal {
+        let controls = self.controls.clone();
+        StopSignal::new(move || controls.cancel_requested())
     }
 
     fn artifact(&self, id: &str) -> Result<&Artifact, StepFailure> {
@@ -1973,19 +2254,28 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
                 let acquired = ArtifactCache::open(&self.created.cache_root)
                     .and_then(|cache| {
-                        cache.acquire(
+                        cache.acquire_with_stop(
                             &DownloadRequest {
                                 request_id: artifact.id.clone(),
                                 url: artifact.source.url.clone(),
                                 expected_length,
                                 expected_sha256: artifact.source.sha256.clone(),
                                 redirect_hosts: artifact.source.redirect_hosts.clone(),
-                                max_attempts: 3,
+                                max_attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
                             },
                             self.sink,
+                            &self.stop_signal(),
                         )
                     })
                     .map_err(step_error)?;
+                if let Some(repair) = &acquired.repaired {
+                    self.record_cache_repair(
+                        CacheRepairKind::Download,
+                        &artifact.id,
+                        &acquired.metadata.sha256,
+                        repair,
+                    )?;
+                }
                 let outcome = match acquired.disposition {
                     CacheDisposition::Hit => ArtifactCacheOutcome::Hit,
                     CacheDisposition::Downloaded => ArtifactCacheOutcome::Downloaded,
@@ -2061,7 +2351,15 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             cache_outcome,
         };
         let receipt = match self.load_named_evidence("artifacts", &artifact.id)? {
-            Some(first) => retain_first_acquisition_receipt(&first, &observed_receipt)?,
+            Some(first) => {
+                match retain_first_acquisition_receipt(&first, &observed_receipt)? {
+                    LaterAcquisition::Identical => {}
+                    LaterAcquisition::Reacquired => {
+                        self.record_artifact_reacquisition(&observed_receipt)?;
+                    }
+                }
+                first
+            }
             None => {
                 self.persist_named_evidence("artifacts", &artifact.id, &observed_receipt)?;
                 observed_receipt
@@ -2072,7 +2370,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn extract(&self, artifact: &Artifact) -> Result<ExtractedArtifact, StepFailure> {
         let (archive, _) = self.acquire_archive(artifact)?;
-        let extracted = extract_archive(
+        let (extracted, repair) = extract_archive_with_stop(
             &archive,
             &self.created.cache_root.join("extracted"),
             &ArchiveRequirements {
@@ -2099,8 +2397,17 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 },
                 mode: ArchiveMode::Public,
             },
+            &self.stop_signal(),
         )
         .map_err(step_error)?;
+        if let Some(repair) = &repair {
+            self.record_cache_repair(
+                CacheRepairKind::Extraction,
+                &artifact.id,
+                &extracted.artifact_sha256,
+                repair,
+            )?;
+        }
         let wrapper_ok = match artifact.archive.root_rule {
             ArchiveRootRule::Direct => extracted.wrapper_directory.is_none(),
             ArchiveRootRule::SingleWrapper => extracted.wrapper_directory.is_some(),
@@ -2113,6 +2420,20 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             )));
         }
         Ok(extracted)
+    }
+
+    fn run_tool(&self, run: &PlannedRun) -> Result<VerifiedWeidu, StepFailure> {
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
+        if std::env::var("CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL")
+            .ok()
+            .as_deref()
+            == Some(run.run_id.as_str())
+        {
+            return Err(StepFailure::new(
+                "simulated failure to get the WeiDU executable",
+            ));
+        }
+        self.verified_tool(&run.weidu_artifact_id)
     }
 
     fn verified_tool(&self, id: &str) -> Result<VerifiedWeidu, StepFailure> {
@@ -2148,7 +2469,11 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             .join(EVIDENCE_DIRECTORY)
     }
 
-    fn named_evidence_path(&self, category: &str, id: &str) -> Result<PathBuf, StepFailure> {
+    fn named_evidence_path(
+        &self,
+        category: impl AsRef<Path>,
+        id: &str,
+    ) -> Result<PathBuf, StepFailure> {
         validate_cli_identifier(id, "evidence id").map_err(StepFailure::new)?;
         let directory = self.evidence_root().join(category);
         ensure_directories(&directory)?;
@@ -2157,7 +2482,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn persist_named_evidence<T: Serialize>(
         &self,
-        category: &str,
+        category: impl AsRef<Path>,
         id: &str,
         value: &T,
     ) -> Result<(), StepFailure> {
@@ -2166,10 +2491,50 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 
     fn load_named_evidence<T: for<'de> Deserialize<'de>>(
         &self,
-        category: &str,
+        category: impl AsRef<Path>,
         id: &str,
     ) -> Result<Option<T>, StepFailure> {
         read_optional_json(&self.named_evidence_path(category, id)?)
+    }
+
+    /// Keep the provenance of a later acquisition that was accepted against, but differs
+    /// from, the write-once first acquisition evidence (for example a new single-use signed
+    /// redirect URL after the download cache was lost). The first evidence stays the receipt
+    /// of record; each distinct observation is stored once, named by its own digest, so
+    /// repeated identical observations are idempotent.
+    fn record_artifact_reacquisition(&self, observed: &ArtifactReceipt) -> Result<(), StepFailure> {
+        validate_cli_identifier(&observed.id, "artifact id").map_err(StepFailure::new)?;
+        let digest = sha256_bytes(&serde_json::to_vec(observed).map_err(step_error)?);
+        self.persist_named_evidence(
+            Path::new(ARTIFACT_REACQUISITIONS_EVIDENCE).join(&observed.id),
+            &digest,
+            observed,
+        )
+    }
+
+    /// Keep a record of a damaged download or extraction cache entry that was set aside and
+    /// rebuilt from the verified archive, so a later diagnosis can see it happened. Each
+    /// distinct record is stored once, named by its own digest.
+    fn record_cache_repair(
+        &self,
+        cache: CacheRepairKind,
+        artifact_id: &str,
+        artifact_sha256: &str,
+        repair: &CacheRepair,
+    ) -> Result<(), StepFailure> {
+        validate_cli_identifier(artifact_id, "artifact id").map_err(StepFailure::new)?;
+        let record = CacheRepairRecord {
+            cache,
+            artifact_id,
+            artifact_sha256,
+            reason: &repair.reason,
+        };
+        let digest = sha256_bytes(&serde_json::to_vec(&record).map_err(step_error)?);
+        self.persist_named_evidence(
+            Path::new(CACHE_REPAIRS_EVIDENCE).join(artifact_id),
+            &digest,
+            &record,
+        )
     }
 
     fn run_attempt_path(&self, run_id: &str, attempt: u32) -> Result<PathBuf, StepFailure> {
@@ -2244,7 +2609,9 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
 impl<S: EventSink> CampaignRecorder for GuardedCliDependencies<'_, S> {
     fn record_campaign(&mut self, created: &CampaignCreated) -> Result<(), StepFailure> {
         ManagedInstallRegistry::open_or_create(&self.app_data)
-            .and_then(|registry| registry.publish_campaign(created))
+            .and_then(|registry| {
+                registry.publish_campaign_named(created, self.frozen.effective_display_name())
+            })
             .map(|_| ())
             .map_err(step_error)
     }
@@ -2308,7 +2675,7 @@ impl<S: EventSink> CampaignPreflight for GuardedCliDependencies<'_, S> {
     }
 
     fn recheck_before_mutation(&mut self, check: &MutationCheck) -> Result<(), StepFailure> {
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
         if std::env::var("CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK")
             .ok()
             .as_deref()
@@ -2371,18 +2738,18 @@ impl<S: EventSink> StagingService for GuardedCliDependencies<'_, S> {
                 let identity = self.save_identity(&layout)?;
                 stage_bgee_sod(&layout, &identity)
                     .map(|_| ())
-                    .map_err(step_error)
+                    .map_err(stage_error)
             }
             GameRole::Bg2ee => stage_game_copy(&layout, GameRole::Bg2ee)
                 .map(|_| ())
-                .map_err(step_error),
+                .map_err(stage_error),
         }
     }
 
     fn finalize_identity(&mut self) -> Result<(), StepFailure> {
         let layout = self.layout()?;
         let identity = self.save_identity(&layout)?;
-        finalize_game_identity(&layout, &identity).map_err(step_error)
+        finalize_game_identity(&layout, &identity).map_err(stage_error)
     }
 }
 
@@ -2442,13 +2809,11 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 run.run_id
             )));
         }
-        // The frozen recipe currently carries the invocation mode but no signed evidence that a
-        // particular explicit relative TP2 path was compatibility-tested. Keep production
-        // execution limited to setup-name mode until that schema contract is separately reviewed.
-        if mod_file.invocation_mode == InvocationMode::ExplicitTp2 {
-            return Err(StepFailure::new(
-                "explicit-relative-TP2 invocation is unavailable until the signed recipe schema records separately reviewed compatibility evidence; use setup-name mode",
-            ));
+        // An old, exact Infinity recipe is corrected to the already-supported setup-name
+        // invocation. No explicit-TP2 execution is enabled and its frozen plan is unchanged.
+        let ui_correction = self.reviewed_ui_correction(run) && components == [0];
+        if mod_file.invocation_mode == InvocationMode::ExplicitTp2 && !ui_correction {
+            return Err(StepFailure::new(crate::weidu::ui_compat::LEGACY_FAILURE));
         }
         let authored_prompts = run
             .prompt_scripts
@@ -2484,7 +2849,55 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
                 answer_sha256: sha256_bytes(prompt.answer.as_bytes()),
             })
             .collect();
-        let tool = self.verified_tool(&run.weidu_artifact_id)?;
+        // Nothing for this attempt is prepared before its WeiDU executable, so failing to get it,
+        // for example after a failed download or a Stop while another program unpacks it,
+        // leaves the run retryable.
+        let tool = self
+            .run_tool(run)
+            .map_err(StepFailure::before_preparation)?;
+        // Placing configuration files comes next and is retryable as well: it only creates
+        // complete files and accepts identical ones, and its evidence is written after the last
+        // file, so a failed placement leaves the attempt with its before.log alone.
+        let config_files = mod_file
+            .components
+            .iter()
+            .filter(|component| components.contains(&component.id))
+            .flat_map(|component| {
+                component
+                    .config_files
+                    .iter()
+                    .map(move |file| (component.id, file))
+            })
+            .collect::<Vec<_>>();
+        if !config_files.is_empty() {
+            let evidence =
+                crate::weidu::config_files::place(self.target_root(run.target), &config_files)
+                    .map_err(|error| step_error(error).before_preparation())?;
+            write_json_once(
+                &attempt.evidence_root.join(CONFIG_FILES_EVIDENCE_FILE),
+                &evidence,
+            )?;
+        }
+        if ui_correction {
+            crate::weidu::invocation::validate_setup_name_declarations(
+                self.frozen
+                    .mods
+                    .values()
+                    .filter(|item| {
+                        item.invocation_mode == InvocationMode::SetupName || item.id == run.mod_id
+                    })
+                    .map(|item| item.tp2.as_str()),
+            )
+            .map_err(step_error)?;
+            let evidence = crate::weidu::ui_compat::prepare(self.target_root(run.target))
+                .map_err(step_error)?;
+            write_json_once(
+                &attempt
+                    .evidence_root
+                    .join("ui-invocation-compatibility.json"),
+                &evidence,
+            )?;
+        }
         // Run here, not only during materialization, so retrying an older frozen EET
         // attempt receives the same narrowly hash-guarded Windows compatibility fix.
         let artifact = self.artifact(&run.artifact_id)?;
@@ -2509,7 +2922,11 @@ impl<S: EventSink> InvocationBuilder for GuardedCliDependencies<'_, S> {
             &InvocationInput {
                 target: run.target,
                 tp2: mod_file.tp2.clone(),
-                mode: mod_file.invocation_mode,
+                mode: if ui_correction {
+                    InvocationMode::SetupName
+                } else {
+                    mod_file.invocation_mode
+                },
                 explicit_tp2_tested: false,
                 language: mod_file.language,
                 remaining_components: components.to_vec(),
@@ -2582,7 +2999,7 @@ impl<S: EventSink + Sync> ProcessRunner<Invocation> for GuardedCliDependencies<'
             ensure_empty_file(&path)?;
             sync_direct_file(&path)?;
         }
-        #[cfg(debug_assertions)]
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
         if std::env::var_os("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU").is_some() {
             return Err(StepFailure::new(
                 "simulated interruption after WeiDU exit and durable log synchronization",
@@ -2689,6 +3106,15 @@ impl<S: EventSink> GuardedCliDependencies<'_, S> {
                 }
             }
             marker.components
+        } else if attempt.attempt == 1
+            && detail == crate::weidu::ui_compat::LEGACY_FAILURE
+            && self.reviewed_ui_correction(run)
+        {
+            // The shipped alpha.19 guard returned before tool preparation/invocation.json.
+            // Require its exact failure, first attempt, before.log alone and (below) an
+            // unchanged live log. Missing evidence for any other failure remains unsafe.
+            pre_spawn_file_digests(attempt, MutationKind::InvocationBuild, false)?;
+            run.components.clone()
         } else {
             // Alpha.13 predates the structured guard record. Its synchronized invocation
             // file is a mandatory write barrier before runner entry. Accept only its first
@@ -2985,6 +3411,60 @@ impl<S: EventSink + Sync> EventSink for BorrowedSink<'_, S> {
 }
 
 impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
+    fn manual_checkpoints(&self) -> Vec<crate::manual_checkpoint::FrozenCheckpoint> {
+        self.frozen.manual_checkpoints.clone()
+    }
+
+    fn manual_checkpoint(
+        &mut self,
+        checkpoint: &crate::manual_checkpoint::FrozenCheckpoint,
+    ) -> Result<bool, StepFailure> {
+        let root = &self.created.managed_root;
+        if crate::manual_checkpoint::acceptance(root, checkpoint)
+            .map_err(step_error)?
+            .is_some()
+        {
+            crate::manual_checkpoint::check_manual_processes().map_err(step_error)?;
+            recheck_target_before_mutation(&self.created.staged_bg1, "en_US")
+                .map_err(step_error)?;
+            recheck_target_before_mutation(&self.created.staged_bg2, "en_US")
+                .map_err(step_error)?;
+            crate::manual_checkpoint::verify_accepted_current(
+                root,
+                checkpoint,
+                &self.frozen.plan,
+                &self.frozen.mods,
+                &self.frozen.artifacts,
+            )
+            .map_err(step_error)?;
+            Ok(true)
+        } else {
+            // Validate the complete managed prefix before freezing a hand-over baseline.
+            let through = self
+                .frozen
+                .plan
+                .runs
+                .iter()
+                .position(|run| run.run_id == checkpoint.after_run_id)
+                .ok_or_else(|| StepFailure::new("Frozen checkpoint run is absent."))?;
+            let prefix = InstallPlan {
+                runs: self.frozen.plan.runs[..=through].to_vec(),
+            };
+            if !crate::manual_checkpoint::has_baseline(root, checkpoint).map_err(step_error)? {
+                verify_manual_prefix(root, &prefix, self.frozen).map_err(step_error)?;
+            }
+            crate::manual_checkpoint::begin(
+                root,
+                checkpoint,
+                &self.frozen.plan,
+                &self.frozen.mods,
+                &self.frozen.artifacts,
+            )
+            .map_err(step_error)?;
+            Ok(false)
+        }
+    }
+
     fn recover(
         &mut self,
         run: &PlannedRun,
@@ -3069,6 +3549,7 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
         let identity = self.save_identity(&layout)?;
         let bg1_engine_name = read_engine_name(layout.bg1_root()).map_err(step_error)?;
         let bg2_engine_name = read_engine_name(layout.game_root()).map_err(step_error)?;
+        crate::stage::verify_profile_settings(&layout, &identity).map_err(step_error)?;
         if bg1_engine_name != identity.engine_name || bg2_engine_name != identity.engine_name {
             return Err(StepFailure::new(
                 "staged game identities differ from the reserved managed save identity",
@@ -3079,7 +3560,14 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
             let bytes = read_optional_weidu_log(self.target_root(target))?;
             let entries =
                 parse_active_entries(&String::from_utf8_lossy(&bytes)).map_err(step_error)?;
-            let expected = expected_log_components(plan, &self.frozen.mods, target)?;
+            let expected = crate::manual_checkpoint::expected_components(
+                &self.created.managed_root,
+                plan,
+                &self.frozen.mods,
+                &self.frozen.manual_checkpoints,
+                target,
+            )
+            .map_err(step_error)?;
             if entries.len() != expected.len()
                 || !entries.iter().zip(&expected).all(|(actual, expected)| {
                     actual.tp2_key == expected.tp2.replace('\\', "/").to_ascii_lowercase()
@@ -3105,10 +3593,18 @@ impl<S: EventSink> InstallLogVerifier for GuardedCliDependencies<'_, S> {
             bg2_engine_name,
             managed_save_root: identity.save_root,
             launch_path,
-            verification_summary: format!(
-                "exact frozen stack matched across {} planned WeiDU runs",
-                plan.runs.len()
-            ),
+            verification_summary: if crate::manual_checkpoint::is_customized(
+                &self.created.managed_root,
+            )
+            .map_err(step_error)?
+            {
+                format!("Frozen managed stack and explicitly accepted manual WeiDU additions matched across {} planned runs. Manual compatibility is unverified; game updates are disabled.", plan.runs.len())
+            } else {
+                format!(
+                    "exact frozen stack matched across {} planned WeiDU runs",
+                    plan.runs.len()
+                )
+            },
         };
         self.persist_named_evidence("final", "state", &final_state)
     }
@@ -3182,6 +3678,27 @@ impl<S: EventSink> CampaignClock for GuardedCliDependencies<'_, S> {
 
 fn step_error(error: impl std::fmt::Display) -> StepFailure {
     StepFailure::new(error.to_string())
+}
+
+// Preserve a stable folder category through the existing string-only campaign ledger.
+// This affects explanation only; retry eligibility still comes from the durable checks.
+fn stage_error(error: crate::error::EngineError) -> StepFailure {
+    match error.folder_failure_code() {
+        Some(code) => StepFailure::new(format!("[{code}] {error}")),
+        None => step_error(error),
+    }
+}
+
+fn folder_step_code(reason: &str) -> Option<&'static str> {
+    [
+        "folder_access_denied",
+        "folder_unavailable",
+        "folder_in_use",
+        "folder_conflict",
+        "folder_failed",
+    ]
+    .into_iter()
+    .find(|code| reason.starts_with(&format!("[{code}] ")))
 }
 
 fn unix_millis() -> Result<u64, StepFailure> {
@@ -3281,7 +3798,11 @@ fn pre_spawn_file_digests(
             && !(prepared
                 && matches!(
                     name.as_str(),
-                    INVOCATION_FILE | DEBUG_LOG_FILE | "eet-compatibility.json"
+                    INVOCATION_FILE
+                        | DEBUG_LOG_FILE
+                        | CONFIG_FILES_EVIDENCE_FILE
+                        | "eet-compatibility.json"
+                        | "ui-invocation-compatibility.json"
                 ))
         {
             return Err(StepFailure::new(format!(
@@ -3507,34 +4028,62 @@ fn non_prefix_component_diagnostic(
         return None;
     }
 
+    // This is explanatory evidence only, never permission to resume. A missing
+    // component and a different order can occur together; do not lose either
+    // diagnosis by requiring the recorded subset to be an ordered subsequence.
+    let requested_set = requested.iter().copied().collect::<BTreeSet<_>>();
+    if requested_set.len() != requested.len() {
+        return None;
+    }
     let mut installed = Vec::with_capacity(appended.len());
-    let mut requested_cursor = 0;
+    let mut installed_set = BTreeSet::new();
     for entry in appended {
-        let offset = requested[requested_cursor..]
-            .iter()
-            .position(|component| *component == entry.component)?;
-        requested_cursor += offset + 1;
+        if !requested_set.contains(&entry.component)
+            || !installed_set.insert(entry.component)
+            || before_entries
+                .iter()
+                .any(|previous| same_log_entry(previous, entry))
+        {
+            return None;
+        }
         installed.push(entry.component);
     }
     let missing = requested
         .iter()
         .copied()
-        .filter(|component| !installed.contains(component))
+        .filter(|component| !installed_set.contains(component))
         .collect::<Vec<_>>();
-    if missing.is_empty() {
+    let expected_installed = requested
+        .iter()
+        .copied()
+        .filter(|component| installed_set.contains(component))
+        .collect::<Vec<_>>();
+    let order_differs = installed != expected_installed;
+    if missing.is_empty() && !order_differs {
         return None;
     }
-    let missing = missing
-        .iter()
-        .map(u32::to_string)
-        .collect::<Vec<_>>()
-        .join(", ");
 
-    Some(format!(
-        "For run {run_id:?} (mod {mod_id:?}), {} of {} requested components are recorded. Components {missing} are not recorded as installed. Missing rows do not identify the cause; see the attempt diagnostics.",
+    let mut detail = format!(
+        "For run {run_id:?} (mod {mod_id:?}), {} of {} requested components are recorded. Previously installed components are still recorded in the same order.",
         installed.len(),
         requested.len(),
-    ))
+    );
+    if !missing.is_empty() {
+        let missing = missing
+            .iter()
+            .map(u32::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        detail.push_str(&format!(
+            " Components {missing} are not recorded as installed. Missing rows do not identify the cause; see the attempt diagnostics."
+        ));
+    }
+    if order_differs {
+        detail.push_str(&format!(
+            " Component order differs from the recipe: expected the recorded components in order {expected_installed:?}, found {installed:?}."
+        ));
+    }
+    Some(detail)
 }
 
 fn stack_disturbed_reconciliation(
@@ -3546,14 +4095,15 @@ fn stack_disturbed_reconciliation(
     language: u32,
     requested: &[u32],
 ) -> InstallReconciliation {
-    let reason =
-        non_prefix_component_diagnostic(before, after, run_id, mod_id, tp2, language, requested)
-            .map_or_else(
-                || "WeiDU.log changed outside the exact frozen component suffix".to_owned(),
-                |detail| {
-                    format!("WeiDU.log changed outside the exact frozen component suffix. {detail}")
-                },
-            );
+    let reason = non_prefix_component_diagnostic(
+        before, after, run_id, mod_id, tp2, language, requested,
+    )
+    .map_or_else(
+        || "WeiDU.log changed outside the exact frozen component suffix".to_owned(),
+        |detail| {
+            format!("The mod's recorded result does not match the installation recipe. {detail}")
+        },
+    );
     InstallReconciliation::FreshCopyRequired { reason }
 }
 
@@ -3603,19 +4153,47 @@ fn inferred_success_exit_code(statuses: &[DebugStatus]) -> Option<i32> {
     }
 }
 
+/// How a later acquisition of an artifact relates to its accepted first acquisition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LaterAcquisition {
+    /// The first acquisition evidence itself, or a cache hit on that same download: routine
+    /// reuse that adds no provenance and is not recorded.
+    Identical,
+    /// The same pinned archive from the same authored source, observed with a different final
+    /// URL (signed single-use redirects) or acquired anew (a re-download after the download
+    /// cache was lost).
+    Reacquired,
+}
+
+/// Decide whether `observed` may stand in for the write-once `first` acquisition.
+///
+/// The first acquisition always remains the receipt of record. A later acquisition is
+/// accepted when it names the same artifact, version and authored source URL and its
+/// verified bytes have the same length and SHA-256; its final URL and Hit/Downloaded outcome
+/// are transport details. Manual import versus download is not: the acquisition policy is
+/// frozen, so such a switch means the recipe changed.
 fn retain_first_acquisition_receipt(
     first: &ArtifactReceipt,
     observed: &ArtifactReceipt,
-) -> Result<ArtifactReceipt, StepFailure> {
-    if first == observed {
-        return Ok(first.clone());
+) -> Result<LaterAcquisition, StepFailure> {
+    let cache_hit_on_first_download = first.cache_outcome == ArtifactCacheOutcome::Downloaded
+        && observed.cache_outcome == ArtifactCacheOutcome::Hit
+        && ArtifactReceipt {
+            cache_outcome: ArtifactCacheOutcome::Downloaded,
+            ..observed.clone()
+        } == *first;
+    if first == observed || cache_hit_on_first_download {
+        return Ok(LaterAcquisition::Identical);
     }
-    let mut later_hit = observed.clone();
-    let downloaded_then_hit = first.cache_outcome == ArtifactCacheOutcome::Downloaded
-        && later_hit.cache_outcome == ArtifactCacheOutcome::Hit;
-    later_hit.cache_outcome = first.cache_outcome;
-    if downloaded_then_hit && &later_hit == first {
-        return Ok(first.clone());
+    let same_archive = first.id == observed.id
+        && first.version == observed.version
+        && first.original_url == observed.original_url
+        && first.length == observed.length
+        && first.sha256 == observed.sha256;
+    let same_policy = (first.cache_outcome == ArtifactCacheOutcome::Manual)
+        == (observed.cache_outcome == ArtifactCacheOutcome::Manual);
+    if same_archive && same_policy {
+        return Ok(LaterAcquisition::Reacquired);
     }
     Err(StepFailure::new(format!(
         "artifact {:?} differs from its first acquisition evidence",
@@ -3759,7 +4337,44 @@ fn validate_direct_directory(path: &Path, label: &str) -> Result<(), CliError> {
 
 /// Stable phase labels used by human CLI output.
 pub fn human_plan_lines(report: &PlanReport) -> Vec<String> {
-    report
+    let groups = report.evaluation.groups.iter().map(|group| {
+        let title = report
+            .evaluation
+            .view
+            .groups
+            .iter()
+            .find(|view| view.id == group.id)
+            .map_or(group.id.as_str(), |view| view.title.as_str());
+        let state = match group.state {
+            FeatureGroupState::On => "on",
+            FeatureGroupState::Off => "off",
+            FeatureGroupState::Mixed => "mixed",
+        };
+        let variants = if group.variants.is_empty() {
+            String::new()
+        } else {
+            format!(
+                ", {} of {} available variants picked",
+                group
+                    .variants
+                    .iter()
+                    .filter(|variant| variant.selected)
+                    .count(),
+                group
+                    .variants
+                    .iter()
+                    .filter(|variant| variant.available)
+                    .count()
+            )
+        };
+        format!(
+            "Group {} ({title}): {state}, {} of {} available selected{variants}",
+            group.id,
+            group.selected_members.len(),
+            group.available_members.len()
+        )
+    });
+    let runs = report
         .evaluation
         .plan
         .runs
@@ -3781,20 +4396,24 @@ pub fn human_plan_lines(report: &PlanReport) -> Vec<String> {
                 run.mod_id,
                 components
             )
-        })
-        .collect()
+        });
+    groups.chain(runs).collect()
 }
 
 /// Return preset choices with CLI overrides applied; useful to freeze new campaigns.
 fn selection_choices(
     manifest: &Manifest,
     preset_id: &str,
+    platform: &str,
     overrides: &SelectionOverrides,
 ) -> Result<BTreeMap<String, String>, CliError> {
     let preset = manifest.presets.get(preset_id).ok_or_else(|| {
         CliError::new("invalid_selection", format!("unknown preset {preset_id:?}"))
     })?;
     let mut choices = preset.selections.clone();
+    // Explicit `--feature` overrides apply first, so group expansion sees them: a prerequisite
+    // switched on by `--feature` makes a dependent member available to `--group ...=on`.
+    let mut explicit_features = BTreeMap::new();
     for authored in &overrides.features {
         let (id, value) = split_assignment(authored, "feature override")?;
         if !matches!(value, "on" | "off" | "true" | "false") {
@@ -3806,6 +4425,59 @@ fn selection_choices(
             ));
         }
         choices.insert(id.to_owned(), value.to_owned());
+        explicit_features.insert(id.to_owned(), matches!(value, "on" | "true"));
+    }
+    // Groups then expand in command-line order against that state plus earlier groups. A group
+    // never overwrites a feature chosen explicitly, so `--feature` always wins for a member. In a
+    // variant's choice group, an explicit choice that disagrees with the group leaves the whole
+    // choice to the explicit choices; one that agrees, such as the variant option itself, still
+    // lets the group deselect the other options, so they never both stay requested.
+    let choice_group_of = manifest
+        .collection
+        .features
+        .iter()
+        .filter_map(|feature| Some((feature.id.as_str(), feature.choice_group.as_deref()?)))
+        .collect::<BTreeMap<_, _>>();
+    for authored in &overrides.groups {
+        let (id, value) = split_assignment(authored, "group override")?;
+        let target = match value {
+            "on" => FeatureGroupTarget::On,
+            "off" => FeatureGroupTarget::Off,
+            _ => {
+                return Err(CliError::new(
+                    "invalid_selection",
+                    format!("group override {authored:?} must use on or off"),
+                ))
+            }
+        };
+        let changes = feature_group_changes(
+            manifest,
+            &Selection {
+                platform: platform.to_owned(),
+                choices: choices.clone(),
+            },
+            id,
+            target,
+        )
+        .map_err(|error| CliError::new("invalid_selection", error.to_string()))?;
+        let overridden_choices = changes
+            .iter()
+            .filter(|(feature_id, selected)| {
+                explicit_features
+                    .get(feature_id.as_str())
+                    .is_some_and(|explicit| explicit != *selected)
+            })
+            .filter_map(|(feature_id, _)| choice_group_of.get(feature_id.as_str()).copied())
+            .collect::<BTreeSet<_>>();
+        for (feature_id, selected) in changes {
+            let left_to_explicit = explicit_features.contains_key(&feature_id)
+                || choice_group_of
+                    .get(feature_id.as_str())
+                    .is_some_and(|choice| overridden_choices.contains(choice));
+            if !left_to_explicit {
+                choices.insert(feature_id, if selected { "on" } else { "off" }.to_owned());
+            }
+        }
     }
     for authored in &overrides.inputs {
         let (id, value) = split_assignment(authored, "input override")?;
@@ -3846,7 +4518,7 @@ mod tests {
         install_interrupt_handler_with, non_prefix_component_diagnostic,
         retain_first_acquisition_receipt, select_terminal_evidence, selection_choices,
         stack_disturbed_reconciliation, validate_frozen_cli_recipe, FrozenCliRecipe, FrozenSource,
-        InstallReconciliation, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
+        InstallReconciliation, LaterAcquisition, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
     };
 
     fn downloaded_artifact_receipt() -> ArtifactReceipt {
@@ -3861,11 +4533,168 @@ mod tests {
         }
     }
 
+    #[test]
+    fn frozen_infinity_retry_requires_exact_terminal_failure_and_unchanged_unstarted_evidence() {
+        use super::{GuardedCliDependencies, StepAttempt};
+        use crate::events::ChannelSink;
+        use crate::games::{Eligibility, GameCandidate};
+        use crate::manifest::InvocationMode;
+        use crate::session::{SessionEvent, SessionStore};
+
+        for case in [
+            "valid",
+            "wrong-reason",
+            "wrong-pin",
+            "wrong-run",
+            "changed-log",
+            "runner-output",
+            "debug-output",
+            "prepared-invocation",
+            "wrong-attempt",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = temp.path().canonicalize().unwrap();
+            let manifest =
+                Manifest::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../manifest")).unwrap();
+            let authored = manifest
+                .collection
+                .runs
+                .iter()
+                .find(|run| run.run_id == "game-interface-infinity-bg2")
+                .unwrap();
+            let mut run = crate::resolve::PlannedRun {
+                run_id: authored.run_id.clone(),
+                mod_id: authored.mod_id.clone(),
+                target: authored.phase.game_root(),
+                phase: authored.phase,
+                components: authored.components.clone(),
+                args: authored.args.clone(),
+                postconditions: authored.postconditions.clone(),
+                artifact_id: "infinity-ui-1.28".into(),
+                weidu_artifact_id: "weidu-249-amd64".into(),
+                prompt_scripts: vec![],
+            };
+            if case == "wrong-run" {
+                run.run_id = "other-run".into();
+            }
+            let mut frozen = frozen_recipe_fixture();
+            frozen.mods = manifest.mods;
+            frozen.artifacts = manifest.artifacts;
+            frozen.mods.get_mut("infinity-ui").unwrap().invocation_mode =
+                InvocationMode::ExplicitTp2;
+            if case == "wrong-pin" {
+                frozen
+                    .artifacts
+                    .get_mut("infinity-ui-1.28")
+                    .unwrap()
+                    .source
+                    .sha256 = "00".repeat(32);
+            }
+            frozen.plan.runs = vec![run.clone()];
+            let mut created =
+                created_for_frozen_recipe(&frozen, serde_json::to_vec(&frozen).unwrap());
+            created.managed_root = root.clone();
+            created.cache_root = root.join("cache");
+            created.staged_bg1 = root.join("bg1");
+            created.staged_bg2 = root.join("game");
+            for path in [
+                &created.cache_root,
+                &created.staged_bg1,
+                &created.staged_bg2,
+            ] {
+                std::fs::create_dir(path).unwrap();
+            }
+            let store =
+                SessionStore::create(&root, SessionEvent::Created(Box::new(created.clone())))
+                    .unwrap();
+            let step_id = format!("install:{}", run.run_id);
+            store
+                .append(SessionEvent::StepStarted {
+                    step_id: step_id.clone(),
+                    attempt: 1,
+                })
+                .unwrap();
+            store
+                .append(SessionEvent::StepFailed {
+                    step_id: step_id.clone(),
+                    attempt: 1,
+                    detail: if case == "wrong-reason" {
+                        "some unrelated build error".into()
+                    } else {
+                        crate::weidu::ui_compat::LEGACY_FAILURE.into()
+                    },
+                })
+                .unwrap();
+            let evidence_root = root.join("evidence");
+            std::fs::create_dir(&evidence_root).unwrap();
+            std::fs::write(evidence_root.join("before.log"), b"").unwrap();
+            if case == "changed-log" {
+                std::fs::write(created.staged_bg2.join("WeiDU.log"), b"changed").unwrap();
+            }
+            if case == "runner-output" {
+                std::fs::write(evidence_root.join("stdout.log"), b"possible execution").unwrap();
+            }
+            if case == "debug-output" {
+                std::fs::write(evidence_root.join("weidu.debug.log"), b"possible execution")
+                    .unwrap();
+            }
+            if case == "prepared-invocation" {
+                std::fs::write(evidence_root.join("invocation.json"), b"{}").unwrap();
+            }
+            let attempt = StepAttempt {
+                step_id,
+                attempt: if case == "wrong-attempt" { 2 } else { 1 },
+                evidence_root,
+            };
+            let candidate = GameCandidate {
+                role: GameRole::Bg2ee,
+                storefront: Storefront::Steam,
+                root: root.clone(),
+                build: None,
+                eligibility: Eligibility::Eligible,
+                findings: vec![],
+                fingerprint: None,
+            };
+            let (sink, _events) = ChannelSink::unbounded();
+            let dependencies = GuardedCliDependencies::new(
+                &created,
+                &frozen,
+                candidate.clone(),
+                candidate,
+                root.join("app-data"),
+                &sink,
+                RunnerControlHandle::default(),
+            );
+            let result = dependencies.recover_before_spawn(&run, &attempt);
+            if case == "valid" {
+                assert_eq!(
+                    result.unwrap(),
+                    Some(InstallReconciliation::Retry { remaining: vec![0] })
+                );
+            } else {
+                assert!(
+                    !matches!(result, Ok(Some(InstallReconciliation::Retry { .. }))),
+                    "unsafe retry for {case}"
+                );
+            }
+            assert_eq!(
+                store.replay().unwrap().records.len(),
+                3,
+                "inspection must not rewrite history"
+            );
+        }
+    }
+
     fn frozen_recipe_fixture() -> FrozenCliRecipe {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/manifest");
         let manifest = Manifest::load(&root).expect("load frozen-recipe manifest fixture");
-        let choices = selection_choices(&manifest, "recommended", &SelectionOverrides::default())
-            .expect("select frozen-recipe fixture");
+        let choices = selection_choices(
+            &manifest,
+            "recommended",
+            "windows",
+            &SelectionOverrides::default(),
+        )
+        .expect("select frozen-recipe fixture");
         let evaluation = evaluate(
             &manifest,
             &Selection {
@@ -3880,6 +4709,7 @@ mod tests {
         .expect("load game-profile fixtures");
         FrozenCliRecipe {
             release_version: None,
+            manual_checkpoints: Vec::new(),
             application_version: None,
             schema: CLI_FROZEN_RECIPE_SCHEMA,
             display_name: Some("Chriz Easy BG".to_owned()),
@@ -3965,6 +4795,110 @@ mod tests {
         }
     }
 
+    /// A deleted download cache is created again only for a campaign that this request may
+    /// resume, only where its recorded path still leads to itself, and only where the campaign
+    /// checks accept a cache, also next to source games that moved behind a link. Refusals
+    /// create nothing, also not where a link points.
+    #[cfg(windows)]
+    #[test]
+    fn a_deleted_download_cache_is_created_again_only_where_the_campaign_may_use_it() {
+        use crate::session::{SessionEvent, SessionStore};
+
+        let link = |link: &Path, target: &Path| {
+            let output = std::process::Command::new("cmd.exe")
+                .args(["/c", "mklink", "/J"])
+                .arg(link)
+                .arg(target)
+                .output()
+                .unwrap();
+            assert!(output.status.success(), "{output:?}");
+        };
+        for case in [
+            "valid",
+            "linked-parent",
+            "linked-ancestor",
+            "other-install",
+            "inside-source",
+            "inside-managed",
+            "linked-source",
+            "source-behind-link",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = std::fs::canonicalize(temp.path()).unwrap();
+            let managed = root.join("managed");
+            let elsewhere = root.join("elsewhere");
+            let mut frozen = frozen_recipe_fixture();
+            frozen.bg1.root = match case {
+                "linked-source" => root.join("old-bg1"),
+                "source-behind-link" => root.join("games").join("bg1"),
+                _ => root.join("bg1-source"),
+            };
+            frozen.bg2.root = root.join("bg2-source");
+            let parent = match case {
+                "inside-source" => frozen.bg1.root.clone(),
+                "inside-managed" => managed.clone(),
+                "linked-ancestor" => root.join("downloads").join("nested"),
+                "source-behind-link" => root.join("downloads").join("bg1"),
+                _ => root.join("downloads"),
+            };
+            std::fs::create_dir_all(&managed).unwrap();
+            std::fs::create_dir_all(&frozen.bg2.root).unwrap();
+            if !matches!(case, "linked-source" | "source-behind-link") {
+                std::fs::create_dir_all(&frozen.bg1.root).unwrap();
+            }
+            std::fs::create_dir_all(parent.join("cache")).unwrap();
+            let mut created =
+                created_for_frozen_recipe(&frozen, serde_json::to_vec(&frozen).unwrap());
+            created.managed_root = managed.clone();
+            created.cache_root = parent.join("cache");
+            created.staged_bg1 = managed.join("bg1");
+            created.staged_bg2 = managed.join("game");
+            let store =
+                SessionStore::create(&managed, SessionEvent::Created(Box::new(created.clone())))
+                    .unwrap();
+            // The cache is deleted; this test moves it away instead.
+            std::fs::rename(&created.cache_root, root.join("deleted-cache")).unwrap();
+            match case {
+                "linked-parent" | "linked-ancestor" => {
+                    // A folder on the cache's path is replaced with a link that leads elsewhere.
+                    std::fs::create_dir_all(elsewhere.join("nested")).unwrap();
+                    std::fs::rename(root.join("downloads"), root.join("old-downloads")).unwrap();
+                    link(&root.join("downloads"), &elsewhere);
+                }
+                // The BG1 game moved to the folder that held the cache, and its recorded folder
+                // now links there.
+                "linked-source" => link(&frozen.bg1.root, &root.join("downloads")),
+                // A folder above the BG1 game links to the folder that holds it and the cache.
+                "source-behind-link" => link(&root.join("games"), &root.join("downloads")),
+                _ => {}
+            }
+            let expected_install_id = if case == "other-install" {
+                "install-other"
+            } else {
+                created.install_id.as_str()
+            };
+
+            let result =
+                super::recreate_deleted_cache_root(&store, &managed, Some(expected_install_id));
+
+            if case == "valid" {
+                result.expect("create the deleted cache again");
+                assert!(created.cache_root.is_dir());
+                continue;
+            }
+            let error = result.expect_err(case);
+            let code = match case {
+                "other-install" => "resume_identity_mismatch",
+                "linked-source" => "game_inspection_failed",
+                _ => "resume_unavailable",
+            };
+            assert_eq!(error.code(), code, "{case}: {error}");
+            assert!(!created.cache_root.exists(), "{case}");
+            assert!(!elsewhere.join("cache").exists(), "{case}");
+            assert!(!elsewhere.join("nested").join("cache").exists(), "{case}");
+        }
+    }
+
     #[test]
     fn schema_two_frozen_recipe_rejects_a_missing_display_name() {
         let current = frozen_recipe_fixture();
@@ -3986,29 +4920,143 @@ mod tests {
     }
 
     #[test]
-    fn later_cache_hit_retains_the_first_download_acquisition_receipt() {
-        let first = downloaded_artifact_receipt();
-        let mut revalidated = first.clone();
-        revalidated.cache_outcome = ArtifactCacheOutcome::Hit;
+    fn identical_later_acquisition_is_not_a_reacquisition() {
+        for outcome in [
+            ArtifactCacheOutcome::Downloaded,
+            ArtifactCacheOutcome::Hit,
+            ArtifactCacheOutcome::Manual,
+        ] {
+            let first = ArtifactReceipt {
+                cache_outcome: outcome,
+                ..downloaded_artifact_receipt()
+            };
 
-        let retained = retain_first_acquisition_receipt(&first, &revalidated)
-            .expect("same immutable archive may become a cache hit later in the campaign");
-
-        assert_eq!(retained, first);
+            assert_eq!(
+                retain_first_acquisition_receipt(&first, &first.clone()).unwrap(),
+                LaterAcquisition::Identical
+            );
+        }
     }
 
     #[test]
-    fn later_cache_observation_cannot_change_acquisition_provenance() {
+    fn cache_hit_on_the_first_download_is_routine_reuse() {
         let first = downloaded_artifact_receipt();
-        let mut changed = first.clone();
-        changed.cache_outcome = ArtifactCacheOutcome::Hit;
-        changed.final_url = "https://other.invalid/test-mod.zip".to_owned();
+        let reused = ArtifactReceipt {
+            cache_outcome: ArtifactCacheOutcome::Hit,
+            ..first.clone()
+        };
 
-        let error = retain_first_acquisition_receipt(&first, &changed).unwrap_err();
+        assert_eq!(
+            retain_first_acquisition_receipt(&first, &reused).unwrap(),
+            LaterAcquisition::Identical
+        );
+    }
 
-        assert!(error
-            .to_string()
-            .contains("differs from its first acquisition evidence"));
+    #[test]
+    fn same_archive_from_the_same_source_is_accepted_whatever_its_final_url_or_cache_outcome() {
+        use ArtifactCacheOutcome::{Downloaded, Hit};
+        let signed = "https://release-assets.githubusercontent.invalid/test-mod.zip?sig=2";
+        for (first_outcome, later_outcome, later_final_url) in [
+            // Cache lost and re-downloaded through a new single-use signed redirect.
+            (Downloaded, Downloaded, Some(signed)),
+            (Hit, Downloaded, None),
+            (Hit, Downloaded, Some(signed)),
+            // Cache entry re-populated through another redirect, then reused.
+            (Downloaded, Hit, Some(signed)),
+            (Hit, Hit, Some(signed)),
+        ] {
+            let first = ArtifactReceipt {
+                cache_outcome: first_outcome,
+                ..downloaded_artifact_receipt()
+            };
+            let mut later = first.clone();
+            later.cache_outcome = later_outcome;
+            if let Some(final_url) = later_final_url {
+                later.final_url = final_url.to_owned();
+            }
+
+            assert_eq!(
+                retain_first_acquisition_receipt(&first, &later).unwrap_or_else(|error| panic!(
+                    "{first_outcome:?} -> {later_outcome:?} via {later_final_url:?}: {error}"
+                )),
+                LaterAcquisition::Reacquired,
+                "{first_outcome:?} -> {later_outcome:?} via {later_final_url:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn later_acquisition_cannot_change_archive_identity_source_or_acquisition_policy() {
+        type Change = fn(&mut ArtifactReceipt);
+        let changes: [(&str, Change); 6] = [
+            ("sha256", |receipt| receipt.sha256 = "cd".repeat(32)),
+            ("length", |receipt| receipt.length += 1),
+            ("original_url", |receipt| {
+                receipt.original_url = "https://example.invalid/other-test-mod.zip".to_owned();
+            }),
+            ("version", |receipt| receipt.version = "1.1".to_owned()),
+            ("id", |receipt| receipt.id = "other-mod".to_owned()),
+            ("final_url and sha256", |receipt| {
+                receipt.final_url = "https://other.invalid/test-mod.zip".to_owned();
+                receipt.sha256 = "cd".repeat(32);
+            }),
+        ];
+        for (outcome, later_outcome) in [
+            (
+                ArtifactCacheOutcome::Downloaded,
+                ArtifactCacheOutcome::Downloaded,
+            ),
+            (ArtifactCacheOutcome::Downloaded, ArtifactCacheOutcome::Hit),
+            (ArtifactCacheOutcome::Hit, ArtifactCacheOutcome::Downloaded),
+            (ArtifactCacheOutcome::Manual, ArtifactCacheOutcome::Manual),
+        ] {
+            for (field, change) in changes {
+                let first = ArtifactReceipt {
+                    cache_outcome: outcome,
+                    ..downloaded_artifact_receipt()
+                };
+                let mut changed = first.clone();
+                changed.cache_outcome = later_outcome;
+                change(&mut changed);
+
+                let error = retain_first_acquisition_receipt(&first, &changed)
+                    .expect_err(&format!("changed {field} must be refused"));
+
+                assert_eq!(
+                    error.to_string(),
+                    "artifact \"test-mod\" differs from its first acquisition evidence",
+                    "{field}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn later_acquisition_cannot_switch_between_manual_import_and_download() {
+        use ArtifactCacheOutcome::{Downloaded, Hit, Manual};
+        for (first_outcome, later_outcome) in [
+            (Manual, Downloaded),
+            (Manual, Hit),
+            (Downloaded, Manual),
+            (Hit, Manual),
+        ] {
+            let first = ArtifactReceipt {
+                cache_outcome: first_outcome,
+                ..downloaded_artifact_receipt()
+            };
+            let mut later = first.clone();
+            later.cache_outcome = later_outcome;
+
+            let error = retain_first_acquisition_receipt(&first, &later)
+                .expect_err("acquisition policy is frozen");
+
+            assert!(
+                error
+                    .to_string()
+                    .contains("differs from its first acquisition evidence"),
+                "{first_outcome:?} -> {later_outcome:?}"
+            );
+        }
     }
 
     #[test]
@@ -4078,6 +5126,238 @@ mod tests {
         ));
     }
 
+    fn diagnostic_log(before: &str, components: &[u32]) -> String {
+        let mut after = before.to_owned();
+        for component in components {
+            after.push_str(&format!(
+                "~SETUP-CHRIZ-BG-REBALANCE.TP2~ #0 #{component} // selected\n"
+            ));
+        }
+        after
+    }
+
+    #[test]
+    fn non_prefix_diagnostic_reports_missing_components_and_reordered_subset_separately() {
+        let requested = [
+            100, 101, 110, 111, 120, 121, 301, 302, 400, 401, 404, 405, 407, 408,
+        ];
+        let installed = [
+            100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302,
+        ];
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let after = diagnostic_log(before, &installed);
+
+        let detail = non_prefix_component_diagnostic(
+            before,
+            &after,
+            "chriz-bg-rebalance-bg2",
+            "chriz-bg-rebalance",
+            "setup-chriz-bg-rebalance.tp2",
+            0,
+            &requested,
+        )
+        .expect("missing component and reordered tail should both be explained");
+
+        assert!(detail.contains("13 of 14 requested components"));
+        assert!(detail.contains("Components 110 are not recorded as installed"));
+        assert!(
+            detail.contains("Previously installed components are still recorded in the same order")
+        );
+        assert!(detail.contains("Component order differs from the recipe"));
+        assert!(
+            detail.contains("[100, 101, 111, 120, 121, 301, 302, 400, 401, 404, 405, 407, 408]")
+        );
+        assert!(
+            detail.contains("[100, 101, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408, 302]")
+        );
+        assert!(matches!(
+            stack_disturbed_reconciliation(
+                before,
+                &after,
+                "chriz-bg-rebalance-bg2",
+                "chriz-bg-rebalance",
+                "setup-chriz-bg-rebalance.tp2",
+                0,
+                &requested,
+            ),
+            InstallReconciliation::FreshCopyRequired { reason }
+                if reason.contains("Components 110")
+                    && reason.contains("Component order differs")
+                    && !reason.contains("changed outside")
+        ));
+    }
+
+    #[test]
+    fn non_prefix_diagnostic_explains_complete_but_reordered_run_without_permitting_resume() {
+        use crate::weidu::verify::{reconcile, ExpectedRun, Reconciliation};
+
+        let requested = [301, 302, 400];
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let after = diagnostic_log(before, &[301, 400, 302]);
+        let detail = non_prefix_component_diagnostic(
+            before,
+            &after,
+            "rebalance",
+            "chriz-bg-rebalance",
+            "setup-chriz-bg-rebalance.tp2",
+            0,
+            &requested,
+        )
+        .expect("full but reordered result should explain the order discrepancy");
+
+        assert!(detail.contains("3 of 3 requested components"));
+        assert!(detail.contains("Component order differs from the recipe"));
+        assert!(!detail.contains("not recorded as installed"));
+        let debug = "SUCCESSFULLY INSTALLED component\n".repeat(3);
+        assert_eq!(
+            reconcile(
+                before,
+                &after,
+                &debug,
+                &ExpectedRun {
+                    tp2: "setup-chriz-bg-rebalance.tp2".into(),
+                    language: 0,
+                    components: requested.into(),
+                    exit_code: 0,
+                },
+            ),
+            Reconciliation::StackDisturbed,
+        );
+        assert!(matches!(
+            stack_disturbed_reconciliation(
+                before,
+                &after,
+                "rebalance",
+                "chriz-bg-rebalance",
+                "setup-chriz-bg-rebalance.tp2",
+                0,
+                &requested,
+            ),
+            InstallReconciliation::FreshCopyRequired { .. }
+        ));
+    }
+
+    #[test]
+    fn non_prefix_diagnostic_does_not_explain_untrusted_or_unchanged_results_as_partial_success() {
+        let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
+        let tail = diagnostic_log("", &[301, 400]);
+        let changed_prefix = "~EARLIER/SETUP-EARLIER.TP2~ #0 #2 // changed\n";
+        let earlier_same_component = diagnostic_log(before, &[301]);
+        let cases = [
+            (
+                "empty result",
+                before.to_owned(),
+                before.to_owned(),
+                vec![301, 302, 400],
+            ),
+            (
+                "exact result",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 302, 400]),
+                vec![301, 302, 400],
+            ),
+            (
+                "duplicate requested",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 400]),
+                vec![301, 302, 400, 301],
+            ),
+            (
+                "duplicate recorded",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 400, 301]),
+                vec![301, 302, 400],
+            ),
+            (
+                "duplicate earlier component",
+                earlier_same_component.clone(),
+                diagnostic_log(&earlier_same_component, &[301, 400]),
+                vec![301, 302, 400],
+            ),
+            (
+                "unrequested component",
+                before.to_owned(),
+                diagnostic_log(before, &[301, 999]),
+                vec![301, 302, 400],
+            ),
+            (
+                "changed earlier component",
+                before.to_owned(),
+                format!("{changed_prefix}{tail}"),
+                vec![301, 302, 400],
+            ),
+            (
+                "removed earlier component",
+                before.to_owned(),
+                tail.clone(),
+                vec![301, 302, 400],
+            ),
+            (
+                "wrong mod",
+                before.to_owned(),
+                format!(
+                    "{before}{}",
+                    tail.replace("SETUP-CHRIZ-BG-REBALANCE", "SETUP-OTHER")
+                ),
+                vec![301, 302, 400],
+            ),
+            (
+                "wrong path",
+                before.to_owned(),
+                format!("{before}{}", tail.replace("~SETUP-", "~OTHER/SETUP-")),
+                vec![301, 302, 400],
+            ),
+            (
+                "wrong language",
+                before.to_owned(),
+                format!("{before}{}", tail.replace("#0", "#1")),
+                vec![301, 302, 400],
+            ),
+            (
+                "new uninstall",
+                before.to_owned(),
+                format!(
+                    "{before}{tail}// Recently Uninstalled: ~EARLIER/SETUP-EARLIER.TP2~ #0 #1\n"
+                ),
+                vec![301, 302, 400],
+            ),
+            (
+                "malformed result",
+                before.to_owned(),
+                format!("{before}{tail}~BROKEN\n"),
+                vec![301, 302, 400],
+            ),
+            (
+                "malformed before",
+                "~BROKEN\n".to_owned(),
+                format!("{before}{tail}"),
+                vec![301, 302, 400],
+            ),
+            (
+                "empty request",
+                before.to_owned(),
+                format!("{before}{tail}"),
+                vec![],
+            ),
+        ];
+
+        for (name, before, after, requested) in cases {
+            assert!(
+                non_prefix_component_diagnostic(
+                    &before,
+                    &after,
+                    "rebalance",
+                    "chriz-bg-rebalance",
+                    "setup-chriz-bg-rebalance.tp2",
+                    0,
+                    &requested,
+                )
+                .is_none(),
+                "unexpected bounded diagnosis for {name}"
+            );
+        }
+    }
+
     #[test]
     fn unrelated_stack_addition_is_not_attributed_to_missing_requested_components() {
         let before = "~EARLIER/SETUP-EARLIER.TP2~ #0 #1 // earlier\n";
@@ -4142,5 +5422,147 @@ mod tests {
                 .expect("cancel was not forwarded"),
             RunnerControl::Cancel
         );
+    }
+
+    /// A one-entry ZIP holding `mod/setup-mod.tp2`, and a fetch-only artifact pinned to it.
+    fn pinned_test_archive(frozen: &FrozenCliRecipe) -> (Vec<u8>, crate::manifest::Artifact) {
+        use std::io::Write;
+
+        let mut writer = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        writer
+            .start_file(
+                "mod/setup-mod.tp2",
+                zip::write::SimpleFileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored),
+            )
+            .unwrap();
+        writer.write_all(b"BACKUP ~mod/backup~\n").unwrap();
+        let bytes = writer.finish().unwrap().into_inner();
+        let mut artifact = frozen.artifacts["eefixpack"].clone();
+        artifact.acquisition = crate::manifest::AcquisitionPolicy::FetchOnly;
+        artifact.source.url = "https://example.invalid/stop-test.zip".to_owned();
+        artifact.source.expected_length = Some(bytes.len() as u64);
+        artifact.source.sha256 = sha256_bytes(&bytes);
+        artifact.archive.kind = crate::manifest::ArchiveKind::Zip;
+        artifact.archive.root_rule = crate::manifest::ArchiveRootRule::Direct;
+        artifact.archive.publish_roots = vec!["mod".to_owned()];
+        artifact.archive.tp2_paths = vec!["mod/setup-mod.tp2".to_owned()];
+        artifact.archive.limits = crate::manifest::ArchiveLimitsSpec {
+            max_depth: 8,
+            max_entries: 8,
+            max_entry_uncompressed_bytes: 1024,
+            max_total_uncompressed_bytes: 1024,
+            max_compression_ratio: 100,
+        };
+        (bytes, artifact)
+    }
+
+    /// Stop ends a wait for a download or unpacked mod whose cache lock another process holds
+    /// and never releases, for example because it hangs or is suspended. Without a stop, the
+    /// wait continues, because the other process may still be working.
+    #[test]
+    fn stop_ends_waits_for_cache_entries_another_process_never_releases() {
+        use fs4::fs_std::FileExt;
+
+        use super::GuardedCliDependencies;
+        use crate::acquire::ArtifactMetadata;
+        use crate::events::ChannelSink;
+        use crate::games::{Eligibility, GameCandidate};
+
+        let temp = tempfile::tempdir().unwrap();
+        let root = std::fs::canonicalize(temp.path()).unwrap();
+        let frozen = frozen_recipe_fixture();
+        let (bytes, artifact) = pinned_test_archive(&frozen);
+        let digest = sha256_bytes(&bytes);
+        // The verified download, published the way a finished download publishes it.
+        let downloads = root.join("cache/sha256").join(&digest[..2]);
+        std::fs::create_dir_all(&downloads).unwrap();
+        std::fs::write(downloads.join(format!("{digest}.archive")), &bytes).unwrap();
+        let metadata = ArtifactMetadata {
+            original_url: artifact.source.url.clone(),
+            final_url: artifact.source.url.clone(),
+            etag: None,
+            last_modified: None,
+            length: bytes.len() as u64,
+            sha256: digest.clone(),
+            completed_at_unix_seconds: 1,
+        };
+        std::fs::write(
+            downloads.join(format!("{digest}.json")),
+            serde_json::to_vec(&metadata).unwrap(),
+        )
+        .unwrap();
+        let mut created = created_for_frozen_recipe(&frozen, Vec::new());
+        created.cache_root = root.join("cache");
+        created.managed_root = root.join("managed");
+        std::fs::create_dir(&created.managed_root).unwrap();
+        let candidate = GameCandidate {
+            role: GameRole::Bg2ee,
+            storefront: Storefront::Steam,
+            root: root.join("game"),
+            build: None,
+            eligibility: Eligibility::Eligible,
+            findings: vec![],
+            fingerprint: None,
+        };
+        let (sink, _events) = ChannelSink::unbounded();
+        let dependencies = |controls: &RunnerControlHandle| {
+            GuardedCliDependencies::new(
+                &created,
+                &frozen,
+                candidate.clone(),
+                candidate.clone(),
+                root.join("app-data"),
+                &sink,
+                controls.clone(),
+            )
+        };
+        let contract = dependencies(&RunnerControlHandle::new())
+            .extract(&artifact)
+            .expect("unpack the verified download once")
+            .extraction_contract_sha256;
+
+        for lock in [
+            root.join("cache/locks").join(format!("{digest}.lock")),
+            root.join("cache/extracted/locks")
+                .join(format!("{digest}.{contract}.lock")),
+        ] {
+            let holder = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&lock)
+                .unwrap();
+            holder.lock_exclusive().unwrap();
+            let controls = RunnerControlHandle::new();
+            let worker = dependencies(&controls);
+            std::thread::scope(|scope| {
+                let waiting = scope.spawn(|| worker.extract(&artifact));
+                std::thread::sleep(Duration::from_millis(400));
+                assert!(
+                    !waiting.is_finished(),
+                    "{} must be waited for",
+                    lock.display()
+                );
+
+                controls.cancel();
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
+                while !waiting.is_finished() && std::time::Instant::now() < deadline {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                let stopped = waiting.is_finished();
+                // Release the lock so that a wait that ignored Stop still ends this test.
+                FileExt::unlock(&holder).unwrap();
+                assert!(stopped, "Stop did not end the wait for {}", lock.display());
+                let error = waiting.join().unwrap().unwrap_err().to_string();
+                assert!(error.contains("stopped by the user"), "{error}");
+            });
+        }
+        let extracted = root
+            .join("cache/extracted/sha256-v3")
+            .join(&digest[..2])
+            .join(&digest)
+            .join(&contract);
+        assert!(extracted.join("mod/setup-mod.tp2").is_file());
+        assert!(!root.join("cache/damaged").exists());
     }
 }

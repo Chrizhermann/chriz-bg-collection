@@ -1,0 +1,32 @@
+id = "cdtweaks-7649ced6cd25865874d787ec1a9abbc67b068729"
+name = "The Tweaks Anthology"
+version = "7649ced6cd25865874d787ec1a9abbc67b068729"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Gibberlings3/Tweaks-Anthology/zip/7649ced6cd25865874d787ec1a9abbc67b068729"
+reference = "7649ced6cd25865874d787ec1a9abbc67b068729"
+expected_filename = "Tweaks-Anthology-7649ced6cd25865874d787ec1a9abbc67b068729.zip"
+expected_length = 23871463
+sha256 = "117cd79cb5187640a5efd6c1d19181b43bcfa7381161df2f88db055d3af075f7"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["cdtweaks"]
+tp2_paths = ["cdtweaks/setup-cdtweaks.tp2"]
+
+[archive.limits]
+max_depth = 10
+max_entries = 4096
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 256
+
+[provenance]
+homepage = "https://github.com/Gibberlings3/Tweaks-Anthology"
+license = "Fetch-only official upstream commit archive; the collection does not redistribute it"
+url = "https://github.com/Gibberlings3/Tweaks-Anthology/commit/7649ced6cd25865874d787ec1a9abbc67b068729"
+reviewed_on = "2026-10-14"

@@ -27,7 +27,7 @@ use bg_engine::preflight::is_creator_protected_destination;
 use bg_engine::recipe_view::{FeatureControl, NormalizedSelection, RecipeView, SelectionFinding};
 use bg_engine::registry::{
     CampaignAvailability, InstallAvailability, ManagedCampaignCard, ManagedInstallCard,
-    ManagedInstallRegistry,
+    ManagedInstallRecord, ManagedInstallRegistry,
 };
 use bg_engine::resolve::InstallPlan;
 use bg_engine::weidu::runner::RunnerControlHandle;
@@ -38,6 +38,17 @@ use crate::shortcut::{self, ShortcutRequest};
 use crate::updates::{
     ApplicationUpdateResponse, ManagedCopyUpdateResponse, RecipeUpdateResponse, RecipeUpdateState,
     UpdateCenterResponse,
+};
+
+mod game_log;
+mod game_settings;
+mod radar_launch;
+pub use game_log::{
+    GameLogFileResponse, GameLogLaunchResponse, GameLogLaunchState, GameLogStatusResponse,
+};
+pub use game_settings::{GameSettingsResponse, GameSettingsState};
+pub use radar_launch::{
+    LaunchInstallResponse, RadarLaunchResponse, RadarLaunchState, RadarProcessOutcome,
 };
 
 type Discoverer = dyn Fn(&Path) -> Result<Vec<GameCandidate>, CliError> + Send + Sync;
@@ -54,6 +65,11 @@ fn radar_error(error: impl std::fmt::Display) -> CommandError {
 const REVIEW_LIFETIME: Duration = Duration::from_secs(10 * 60);
 const SNAPSHOT_EVENT_LIMIT: usize = 2_000;
 const APPLICATION_DATA_DIRECTORY: &str = "Chriz BG Collection";
+
+include!("patch_bridge.rs");
+include!("installed_update_bridge.rs");
+include!("mod_upgrade_bridge.rs");
+include!("install_names.rs");
 
 /// Engine services used by the native bridge. The test-only seam exercises the same stateful
 /// review and worker boundary without launching WeiDU.
@@ -86,12 +102,20 @@ pub trait BridgeEngine: Send + Sync {
         sink: &SequencedEventSink,
         controls: &RunnerControlHandle,
     ) -> Result<CampaignReport, CliError>;
+    /// Brings a completed installation's isolated game profile up to date with the
+    /// settings its installed components need. Returns whether the profile changed.
+    fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String>;
 }
 
 /// Operating-system actions kept behind the native bridge's validated identity boundary.
 #[doc(hidden)]
 pub trait BridgeSystem: Send + Sync {
     fn launch(&self, executable: &Path, working_directory: &Path) -> Result<(), String>;
+    fn launch_radar(
+        &self,
+        executable: &Path,
+        working_directory: &Path,
+    ) -> Result<RadarProcessOutcome, String>;
     fn open_folder(&self, path: &Path) -> Result<(), String>;
     fn open_https(&self, url: &str) -> Result<(), String>;
     fn export_diagnostics(&self, managed_root: &Path, output: &Path) -> Result<PathBuf, String>;
@@ -109,6 +133,14 @@ impl BridgeSystem for SystemBridgeSystem {
             .spawn()
             .map(|_| ())
             .map_err(|error| error.to_string())
+    }
+
+    fn launch_radar(
+        &self,
+        executable: &Path,
+        working_directory: &Path,
+    ) -> Result<RadarProcessOutcome, String> {
+        radar_launch::launch_with_consent(executable, working_directory)
     }
 
     fn open_folder(&self, path: &Path) -> Result<(), String> {
@@ -201,6 +233,16 @@ impl BridgeEngine for SystemBridgeEngine {
     ) -> Result<CampaignReport, CliError> {
         resume_campaign_controlled_expected(managed_root, expected_install_id, sink, controls)
     }
+
+    fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
+        bg_engine::stage::repair_installed_profile_settings(
+            &record.managed_root,
+            &record.install_id,
+            &record.engine_name,
+            &record.managed_save_root,
+        )
+        .map_err(|error| error.to_string())
+    }
 }
 
 struct DiscovererBridgeEngine {
@@ -254,11 +296,17 @@ impl BridgeEngine for DiscovererBridgeEngine {
         self.system
             .resume(managed_root, expected_install_id, sink, controls)
     }
+
+    fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
+        self.system.repair_profile_settings(record)
+    }
 }
 
 #[derive(Default)]
 struct BridgeRuntime {
     app_update_active: bool,
+    removal_active: bool,
+    removal_previews: HashMap<String, (Instant, bg_engine::removal::RemovalPlan)>,
     candidates: HashMap<String, GameCandidate>,
     reviews: HashMap<String, ReviewSnapshot>,
     active_runs: HashMap<String, RunnerControlHandle>,
@@ -296,6 +344,41 @@ pub struct NativeBridge {
 }
 
 pub struct AppUpdateGuard(Arc<Mutex<BridgeRuntime>>);
+
+struct RemovalGuard(Arc<Mutex<BridgeRuntime>>);
+
+impl Drop for RemovalGuard {
+    fn drop(&mut self) {
+        self.0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .removal_active = false;
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallationRemovalPreview {
+    pub install_id: String,
+    pub display_name: String,
+    pub managed_root: String,
+    pub action: bg_engine::removal::RemovalAction,
+    /// Why the folder will not be deleted, only when the action removes just the entry.
+    pub reason: Option<String>,
+    /// Advisory only: never part of the removal plan, token identity or journal.
+    pub approximate_size_bytes: Option<String>,
+    pub preserved_save_path: Option<String>,
+    /// The saved-game profile the game never used, which removal deletes too.
+    pub unused_save_path: Option<String>,
+    pub confirmation_token: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallationRemovalResult {
+    /// The unused saved-game profile the preview named, when it stays after all.
+    pub unused_save_path_kept: Option<String>,
+}
 
 impl Drop for AppUpdateGuard {
     fn drop(&mut self) {
@@ -439,10 +522,12 @@ pub struct ManagedInstallationResponse {
     /// Successful receipt completion time used only for launcher display and ordering.
     pub completed_at_millis: Option<u64>,
     pub available: bool,
+    pub patch_recovery_needed: bool,
     pub resumable: bool,
     pub recipe_version: Option<String>,
     pub consistency: Option<crate::consistency::ConsistencySummary>,
     pub radar_version: Option<String>,
+    pub customized: bool,
 }
 
 /// Process-local run snapshot. Durable restart recovery remains an explicit post-v0 slice.
@@ -592,6 +677,9 @@ pub struct EvaluateBuildResponse {
     pub plan: PlanSummaryResponse,
     /// Number of currently selected visible controls.
     pub selected_choice_count: usize,
+    pub manual_checkpoint_options: Vec<bg_engine::manual_checkpoint::CheckpointComponent>,
+    /// Derived feature-group states (on/off/mixed); the authored groups are in `view.groups`.
+    pub groups: Vec<bg_engine::recipe_view::FeatureGroupEvaluation>,
 }
 
 impl NativeBridge {
@@ -662,7 +750,7 @@ impl NativeBridge {
         }
         profiles.push(InstallProfileResponse {
             id: "public-alpha".to_owned(),
-            label: "Smaller downloadable alpha".to_owned(),
+            label: "Smaller downloadable setup".to_owned(),
             description: "Limited setup using automatically downloadable mods only.".to_owned(),
         });
         profiles
@@ -670,7 +758,7 @@ impl NativeBridge {
 
     pub fn select_profile(&self, id: &str) -> Result<Self, CommandError> {
         let mut runtime = self.runtime_lock();
-        if !runtime.active_runs.is_empty() || runtime.app_update_active {
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
             return Err(CommandError::new(
                 "build_active",
                 "Wait for the installation to finish.",
@@ -905,7 +993,9 @@ impl NativeBridge {
             &selection_overrides(selection),
         )
         .map_err(CommandError::from_cli)?;
-        Ok(project_evaluation(report.evaluation))
+        let manifest = Manifest::load(&self.recipe)
+            .map_err(|error| checkpoint_command_error("recipe_load_failed", error))?;
+        Ok(project_evaluation(report.evaluation, &manifest))
     }
 
     /// Lists selected manual artifacts and verifies only their exact installer-owned cache paths.
@@ -1221,29 +1311,53 @@ impl NativeBridge {
     pub fn list_managed_installations(
         &self,
     ) -> Result<Vec<ManagedInstallationResponse>, CommandError> {
-        let completed = self.registry_cards()?;
-        let completed_ids = completed
-            .iter()
-            .map(|card| card.record.install_id.clone())
-            .collect::<BTreeSet<_>>();
-        let mut responses = completed
-            .into_iter()
-            .map(project_managed_install)
-            .collect::<Result<Vec<_>, _>>()?;
-        responses.extend(
-            self.campaign_cards()?
-                .into_iter()
-                .filter(|card| !completed_ids.contains(&card.record.install_id))
-                .map(project_managed_campaign)
-                .collect::<Result<Vec<_>, _>>()?,
+        let mut trace = crate::installation_lookup_trace::LookupTrace::new(
+            self.app_data.as_deref(),
+            &self.recipe,
+            self.resource_root.as_deref(),
         );
-        responses.sort_by(|left, right| left.id.cmp(&right.id));
-        Ok(responses)
+        let result = (|| {
+            let completed = self.registry_cards()?;
+            trace.completed(&completed);
+            let completed_ids = completed
+                .iter()
+                .map(|card| card.record.install_id.clone())
+                .collect::<BTreeSet<_>>();
+            let mut responses = completed
+                .into_iter()
+                .map(project_managed_install)
+                .collect::<Result<Vec<_>, _>>()?;
+            let campaigns = self.campaign_cards()?;
+            trace.campaigns(&campaigns, &completed_ids);
+            responses.extend(
+                campaigns
+                    .into_iter()
+                    .filter(|card| !completed_ids.contains(&card.record.install_id))
+                    .map(project_managed_campaign)
+                    .collect::<Result<Vec<_>, _>>()?,
+            );
+            responses.sort_by(|left, right| left.id.cmp(&right.id));
+            let registry = self.registry()?;
+            for response in &mut responses {
+                response.name = registry
+                    .display_name(&response.id)
+                    .map_err(installation_name_error)?;
+            }
+            Ok(responses)
+        })();
+        trace.finish(&result);
+        result
     }
 
     /// Launches the exact verified InfinityLoader path owned by one available registry id.
-    pub fn launch_install(&self, install_id: &str) -> Result<(), CommandError> {
-        if !self.runtime_lock().active_runs.is_empty() {
+    pub fn launch_install(
+        &self,
+        install_id: &str,
+        start_radar: bool,
+    ) -> Result<LaunchInstallResponse, CommandError> {
+        // Serialize launch with local removal from the check through process creation.
+        let runtime = self.runtime_lock();
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
             return Err(CommandError::new(
                 "build_active",
                 "The game cannot be launched while an installer build is running.",
@@ -1252,6 +1366,22 @@ impl NativeBridge {
             ));
         }
         let record = self.available_managed_install(install_id)?.record;
+        let app_data = self
+            .app_data
+            .as_ref()
+            .ok_or_else(|| removal_error("Application data is unavailable."))?;
+        let _target_lock =
+            bg_engine::lock::TargetLock::try_acquire(app_data.join("locks"), &record.managed_root)
+                .map_err(|error| {
+                    CommandError::new(
+                        "managed_install_busy",
+                        "This installation is in use.",
+                        "Wait for its installation or removal to finish before launching it.",
+                        error.to_string(),
+                    )
+                })?;
+        bg_engine::patches::launch_guard(&record.managed_root).map_err(patch_error)?;
+        bg_engine::mod_upgrades::launch_guard(&record.managed_root).map_err(mod_upgrade_error)?;
         let launch_name = record
             .launch_path
             .file_name()
@@ -1276,6 +1406,14 @@ impl NativeBridge {
                 ),
             )
         })?;
+        // Installations made before the installer seeded a setting get it before the
+        // game reads its profile. Playing never depends on it.
+        let game_settings =
+            GameSettingsResponse::from_repair(self.engine.repair_profile_settings(&record));
+        // The game empties its log when it starts, so the last session's log is kept first.
+        let game_log = GameLogLaunchResponse::from_kept(bg_engine::game_log::keep_previous(
+            &record.managed_root,
+        ));
         self.system
             .launch(&record.launch_path, working_directory)
             .map_err(|error| {
@@ -1286,18 +1424,22 @@ impl NativeBridge {
                     error,
                 )
             })?;
-        if let Ok(overlay) = bg_engine::radar::status(&record.managed_root, working_directory, None)
-        {
-            if overlay.state == bg_engine::radar::RadarState::UpToDate {
-                if let Some(executable) = overlay.executable {
-                    if let Some(directory) = executable.parent() {
-                        // The optional overlay must not prevent the game from launching.
-                        let _ = self.system.launch(&executable, directory);
-                    }
-                }
-            }
-        }
-        Ok(())
+        // An unchecked option must not even read/hash the optional add-on's files.
+        let radar = if start_radar {
+            radar_launch::launch_checked(
+                self.system.as_ref(),
+                &record.managed_root,
+                working_directory,
+            )
+        } else {
+            RadarLaunchResponse::not_requested()
+        };
+        Ok(LaunchInstallResponse {
+            install_id: install_id.to_owned(),
+            radar,
+            game_settings,
+            game_log,
+        })
     }
 
     pub fn install_radar(
@@ -1412,7 +1554,10 @@ impl NativeBridge {
             .to_path_buf();
         let request = ShortcutRequest {
             install_id: record.install_id.clone(),
-            display_name: record.display_name,
+            display_name: self
+                .registry()?
+                .display_name(&record.install_id)
+                .map_err(installation_name_error)?,
             target,
             arguments: format!("--install-id={}", record.install_id),
             working_directory,
@@ -1474,9 +1619,31 @@ impl NativeBridge {
         bg1_candidate_id: &str,
         bg2_candidate_id: &str,
     ) -> Result<FrozenReviewResponse, CommandError> {
+        self.freeze_review_with_breakpoints(
+            display_name,
+            selection,
+            destination,
+            bg1_candidate_id,
+            bg2_candidate_id,
+            &[],
+        )
+    }
+
+    pub fn freeze_review_with_breakpoints(
+        &self,
+        display_name: &str,
+        selection: &NormalizedSelection,
+        destination: &Path,
+        bg1_candidate_id: &str,
+        bg2_candidate_id: &str,
+        manual_breakpoints: &[bg_engine::manual_checkpoint::ManualBreakpoint],
+    ) -> Result<FrozenReviewResponse, CommandError> {
+        let display_name = self.validate_installation_name(display_name, None)?.name;
         let overrides = selection_overrides(selection);
         let plan_report = plan_recipe(&self.recipe, &self.preset, &selection.platform, &overrides)
             .map_err(CommandError::from_cli)?;
+        bg_engine::manual_checkpoint::split_plan(&plan_report.evaluation.plan, manual_breakpoints)
+            .map_err(|error| checkpoint_command_error("invalid_manual_breakpoint", error))?;
         self.ensure_manual_downloads_ready(&plan_report.evaluation.plan)?;
         let (registered_bg1, registered_bg2) =
             self.registered_sources(bg1_candidate_id, bg2_candidate_id)?;
@@ -1504,7 +1671,7 @@ impl NativeBridge {
         let recipe_digest = recipe_directory_digest(&plan_report.recipe)?;
         let selection_digest = selection_digest(normalized_selection).map_err(digest_error)?;
         let plan_digest = plan_digest(&plan_report.evaluation.plan).map_err(digest_error)?;
-        let request = InstallCommandRequest {
+        let mut request = InstallCommandRequest {
             application_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
             display_name: display_name.to_owned(),
             recipe: plan_report.recipe.clone(),
@@ -1516,6 +1683,7 @@ impl NativeBridge {
             managed_root: destination_path,
             cache,
         };
+        request.overrides.manual_breakpoints = manual_breakpoints.to_vec();
         let engine_identity = self
             .engine
             .review(&request)
@@ -1557,8 +1725,59 @@ impl NativeBridge {
             display_name: frozen_display_name,
             destination: display_windows_path(Path::new(&destination.path))?,
             game_labels,
-            evaluation: project_evaluation(plan_report.evaluation),
+            evaluation: project_evaluation(
+                plan_report.evaluation,
+                &Manifest::load(&self.recipe)
+                    .map_err(|error| checkpoint_command_error("recipe_load_failed", error))?,
+            ),
         })
+    }
+
+    pub fn inspect_manual_checkpoint(
+        &self,
+        install_id: &str,
+        check_changes: bool,
+    ) -> Result<Option<bg_engine::manual_checkpoint::ManualCheckpointStatus>, CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        let mut result =
+            bg_engine::cli::inspect_manual_checkpoint(&root, install_id, check_changes)
+                .map_err(CommandError::from_cli)?;
+        if let Some(status) = &mut result {
+            status.target_path = PathBuf::from(display_windows_path(&status.target_path)?);
+        }
+        Ok(result)
+    }
+
+    pub fn open_manual_checkpoint_folder(&self, install_id: &str) -> Result<(), CommandError> {
+        let status = self
+            .inspect_manual_checkpoint(install_id, false)?
+            .ok_or_else(|| {
+                checkpoint_command_error(
+                    "manual_checkpoint_unavailable",
+                    "This installation is not paused for manual mods.",
+                )
+            })?;
+        self.system
+            .open_folder(&status.target_path)
+            .map_err(|error| {
+                CommandError::new(
+                    "managed_folder_open_failed",
+                    "The manual installation folder could not be opened.",
+                    "Check that the folder is still available, then try again.",
+                    error,
+                )
+            })
+    }
+
+    pub fn accept_manual_checkpoint(
+        &self,
+        install_id: &str,
+        review_token: &str,
+        accept_additions: bool,
+    ) -> Result<(), CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        bg_engine::cli::accept_manual_checkpoint(&root, install_id, review_token, accept_additions)
+            .map_err(CommandError::from_cli)
     }
 
     /// Starts a reviewed install on a retained worker and returns immediately.
@@ -1664,7 +1883,7 @@ impl NativeBridge {
 
     pub fn begin_app_update(&self) -> Result<AppUpdateGuard, CommandError> {
         let mut state = self.runtime_lock();
-        if !state.active_runs.is_empty() || state.app_update_active {
+        if !state.active_runs.is_empty() || state.app_update_active || state.removal_active {
             return Err(CommandError::new(
                 "update_busy",
                 "An installation or update is already running.",
@@ -1704,6 +1923,7 @@ impl NativeBridge {
             })
             .collect();
         Ok(UpdateCenterResponse {
+            lookup_trace_enabled: cfg!(feature = "installation-lookup-diagnostics").then_some(true),
             checked_at: None,
             network_state: "unconfigured".to_owned(),
             application: ApplicationUpdateResponse {
@@ -1756,6 +1976,109 @@ impl NativeBridge {
 
     fn registry_cards(&self) -> Result<Vec<ManagedInstallCard>, CommandError> {
         self.registry()?.list().map_err(registry_error)
+    }
+
+    pub fn preview_installation_removal(
+        &self,
+        install_id: &str,
+    ) -> Result<InstallationRemovalPreview, CommandError> {
+        let mut runtime = self.runtime_lock();
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
+            return Err(removal_error(
+                "Wait for the active installation or update to finish.",
+            ));
+        }
+        let app_data = self
+            .app_data
+            .as_ref()
+            .ok_or_else(|| removal_error("Application data is unavailable."))?;
+        let plan = bg_engine::removal::preview(app_data, install_id).map_err(removal_error)?;
+        let token = sha256_bytes(
+            format!(
+                "remove\0{}\0{:?}\0{}\0{:?}",
+                install_id,
+                plan,
+                self.sequence.fetch_add(1, Ordering::Relaxed),
+                SystemTime::now()
+            )
+            .as_bytes(),
+        );
+        let mut response = InstallationRemovalPreview {
+            install_id: plan.install_id.clone(),
+            display_name: self
+                .registry()?
+                .display_name(install_id)
+                .map_err(installation_name_error)?,
+            managed_root: display_windows_path(&plan.managed_root)?,
+            action: plan.action,
+            reason: plan.reason.clone(),
+            approximate_size_bytes: None,
+            preserved_save_path: plan
+                .preserved_save_path
+                .as_ref()
+                .map(|path| display_windows_path(path))
+                .transpose()?,
+            unused_save_path: plan
+                .unused_save_path
+                .as_ref()
+                .map(|path| display_windows_path(path))
+                .transpose()?,
+            confirmation_token: token.clone(),
+        };
+        runtime
+            .removal_previews
+            .retain(|_, (expires, _)| *expires > Instant::now());
+        runtime
+            .removal_previews
+            .insert(token, (Instant::now() + REVIEW_LIFETIME, plan.clone()));
+        drop(runtime);
+        // The command already runs on a background worker. Do not retain the runtime
+        // lock during the advisory scan; execution still revalidates the original plan.
+        if plan.action == bg_engine::removal::RemovalAction::Delete {
+            response.approximate_size_bytes =
+                crate::removal_size::estimate(&plan.managed_root).map(|bytes| bytes.to_string());
+        }
+        Ok(response)
+    }
+
+    pub fn remove_installation(
+        &self,
+        install_id: &str,
+        token: &str,
+    ) -> Result<InstallationRemovalResult, CommandError> {
+        let (plan, _guard) = {
+            let mut runtime = self.runtime_lock();
+            if !runtime.active_runs.is_empty()
+                || runtime.app_update_active
+                || runtime.removal_active
+            {
+                return Err(removal_error(
+                    "Wait for the active installation or update to finish.",
+                ));
+            }
+            let (expires, plan) = runtime.removal_previews.remove(token).ok_or_else(|| {
+                removal_error("Removal confirmation expired or is invalid. Review it again.")
+            })?;
+            if expires < Instant::now() || plan.install_id != install_id {
+                return Err(removal_error(
+                    "Removal confirmation does not match this installation.",
+                ));
+            }
+            runtime.removal_active = true;
+            (plan, RemovalGuard(Arc::clone(&self.runtime)))
+        };
+        let app_data = self
+            .app_data
+            .as_ref()
+            .ok_or_else(|| removal_error("Application data is unavailable."))?;
+        let outcome = bg_engine::removal::execute(app_data, &plan).map_err(removal_error)?;
+        self.runtime_lock().known_installs.remove(install_id);
+        Ok(InstallationRemovalResult {
+            // The preview showed this path already, so it is text.
+            unused_save_path_kept: outcome
+                .unused_save_path_kept
+                .map(|path| display_windows_path_text(&path.to_string_lossy())),
+        })
     }
 
     fn campaign_cards(&self) -> Result<Vec<ManagedCampaignCard>, CommandError> {
@@ -2049,12 +2372,12 @@ impl NativeBridge {
         );
         let controls = RunnerControlHandle::new();
         let mut runtime = self.runtime_lock();
-        if !runtime.active_runs.is_empty() || runtime.app_update_active {
+        if !runtime.active_runs.is_empty() || runtime.app_update_active || runtime.removal_active {
             return Err(CommandError::new(
                 "build_already_running",
                 "Another installer build is already running.",
                 "Wait for the current build to finish or cancel it first.",
-                "the private alpha permits one active WeiDU campaign per process",
+                "CEBG permits one active WeiDU campaign per process",
             ));
         }
         runtime.active_runs.insert(run_id.clone(), controls);
@@ -2206,14 +2529,33 @@ fn default_application_data_root() -> Option<PathBuf> {
 /// This is intentionally a pure projection. The destination is not created or trusted;
 /// the existing destination inspection and frozen-review boundaries re-resolve it before use.
 pub fn installation_defaults(home: &Path) -> Result<InstallationDefaultsResponse, CommandError> {
-    let name = "Chriz Easy BG".to_owned();
+    installation_defaults_named(home, "Chriz Easy BG")
+}
+
+pub fn installation_defaults_named(
+    home: &Path,
+    name: &str,
+) -> Result<InstallationDefaultsResponse, CommandError> {
+    let name = name.to_owned();
     let path = display_windows_path(&home.join("Games").join(&name))?;
     Ok(InstallationDefaultsResponse { name, path })
 }
 
+fn checkpoint_command_error(code: &str, error: impl std::fmt::Display) -> CommandError {
+    CommandError::new(code, error.to_string(), "Keep the installation history intact. Correct the pause or manual installation, then check again.", error.to_string())
+}
+
 fn project_evaluation(
     evaluation: bg_engine::recipe_view::SelectionEvaluation,
+    manifest: &Manifest,
 ) -> EvaluateBuildResponse {
+    let manual_checkpoint_options = bg_engine::manual_checkpoint::options(&evaluation.plan)
+        .into_iter()
+        .map(|mut component| {
+            bg_engine::manual_checkpoint::label_component(&mut component, &manifest.mods);
+            component
+        })
+        .collect();
     let selected_choice_count = evaluation
         .view
         .controls
@@ -2229,6 +2571,8 @@ fn project_evaluation(
         findings: evaluation.findings,
         plan,
         selected_choice_count,
+        manual_checkpoint_options,
+        groups: evaluation.groups,
     }
 }
 
@@ -2773,6 +3117,11 @@ fn registry_error(error: bg_engine::registry::RegistryError) -> CommandError {
     )
 }
 
+fn removal_error(error: impl std::fmt::Display) -> CommandError {
+    CommandError::new("installation_removal_failed", "The installation could not be removed.",
+        "Close the game and other installer windows, then try again. Your installation stays listed if removal is incomplete.", error.to_string())
+}
+
 fn encode_input_value(value: &InputValue) -> String {
     match value {
         InputValue::Boolean(value) => format!("boolean:{value}"),
@@ -2875,7 +3224,12 @@ fn project_managed_install(
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let available = card.availability == InstallAvailability::Available;
     let record = card.record;
+    let customized =
+        bg_engine::manual_checkpoint::is_customized(&record.managed_root).unwrap_or(true);
     let consistency = available.then(|| crate::consistency::inspect(&record.managed_root));
+    let patch_recovery_needed = available
+        && (bg_engine::patches::launch_guard(&record.managed_root).is_err()
+            || bg_engine::mod_upgrades::launch_guard(&record.managed_root).is_err());
     let radar_version = if available {
         bg_engine::radar::status(&record.managed_root, record.managed_root.join("game"), None)
             .ok()
@@ -2891,7 +3245,11 @@ fn project_managed_install(
         id: record.install_id,
         name: record.display_name,
         path,
-        status: if available {
+        status: if patch_recovery_needed {
+            "Update recovery needed — open Updates".to_owned()
+        } else if available && customized {
+            "Customized — manual mods added".to_owned()
+        } else if available {
             "Ready to play".to_owned()
         } else {
             "Unavailable — folder moved or changed".to_owned()
@@ -2900,10 +3258,12 @@ fn project_managed_install(
         launch_path: Some(launch_path),
         completed_at_millis: Some(record.completed_at_millis),
         available,
+        patch_recovery_needed,
         resumable: false,
         recipe_version: Some(record.recipe_version),
         consistency,
         radar_version,
+        customized,
     })
 }
 
@@ -2911,7 +3271,18 @@ fn project_managed_campaign(
     card: ManagedCampaignCard,
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let path = display_windows_path(&card.record.managed_root)?;
+    let manual_pause = bg_engine::session::SessionStore::open(&card.record.managed_root)
+        .and_then(|store| store.replay_for_inspection())
+        .ok()
+        .is_some_and(|replay| {
+            replay
+                .unresolved_step()
+                .is_some_and(|step| step.starts_with("checkpoint:manual-"))
+        });
+    let customized =
+        bg_engine::manual_checkpoint::is_customized(&card.record.managed_root).unwrap_or(true);
     let (status, resumable) = match card.availability {
+        CampaignAvailability::Resumable if manual_pause => ("Paused for your mods", true),
         CampaignAvailability::Resumable => ("Build interrupted — ready to resume", true),
         CampaignAvailability::FreshCopyRequired => {
             ("Needs attention — automatic resume unavailable", false)
@@ -2927,10 +3298,12 @@ fn project_managed_campaign(
         launch_path: None,
         completed_at_millis: None,
         consistency: None,
+        patch_recovery_needed: false,
         radar_version: None,
         available: false,
         resumable,
         recipe_version: None,
+        customized,
     })
 }
 

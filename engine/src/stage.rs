@@ -14,6 +14,13 @@ use crate::error::{EngineError, Result};
 use crate::fs_retry;
 use crate::games::GameRole;
 
+mod documents;
+mod folder_diagnostics;
+mod profile_settings;
+pub use documents::{DocumentsLocator, SystemDocuments, TEST_DOCUMENTS_VARIABLE};
+use folder_diagnostics::{context as folder_context, io_failure, with_cleanup_failure};
+pub use profile_settings::{repair_installed_profile_settings, verify_profile_settings};
+
 /// The fixed on-disk roots owned by one managed EET installation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManagedLayout {
@@ -36,18 +43,30 @@ impl ManagedLayout {
         bg1_source: impl AsRef<Path>,
         bg2_source: impl AsRef<Path>,
     ) -> Result<Self> {
-        let bg1_source = canonical_direct_directory(bg1_source.as_ref())?;
-        let bg2_source = canonical_direct_directory(bg2_source.as_ref())?;
+        let bg1_source = canonical_direct_directory(bg1_source.as_ref()).map_err(|error| {
+            folder_context("check BG1 source folder", bg1_source.as_ref(), error)
+        })?;
+        let bg2_source = canonical_direct_directory(bg2_source.as_ref()).map_err(|error| {
+            folder_context("check BG2 source folder", bg2_source.as_ref(), error)
+        })?;
         reject_overlapping_roots(&bg1_source, &bg2_source)?;
 
-        let requested_root = absolute_path(managed_root.as_ref())?;
-        let prospective_root = canonicalize_for_creation(&requested_root)?;
+        let requested_root = absolute_path(managed_root.as_ref()).map_err(|error| {
+            folder_context("resolve installation folder", managed_root.as_ref(), error)
+        })?;
+        let prospective_root = canonicalize_for_creation(&requested_root)
+            .map_err(|error| folder_context("check installation folder", &requested_root, error))?;
         reject_overlapping_roots(&bg1_source, &prospective_root)?;
         reject_overlapping_roots(&bg2_source, &prospective_root)?;
 
-        inspect_existing_managed_root(&requested_root)?;
-        create_directories(&requested_root)?;
-        let root = canonical_direct_directory(&requested_root)?;
+        inspect_existing_managed_root(&requested_root)
+            .map_err(|error| folder_context("check installation folder", &requested_root, error))?;
+        create_directories(&requested_root).map_err(|error| {
+            folder_context("create installation folder", &requested_root, error)
+        })?;
+        let root = canonical_direct_directory(&requested_root).map_err(|error| {
+            folder_context("revalidate installation folder", &requested_root, error)
+        })?;
         reject_overlapping_roots(&bg1_source, &root)?;
         reject_overlapping_roots(&bg2_source, &root)?;
 
@@ -55,8 +74,10 @@ impl ManagedLayout {
         let bg1_root = root.join("bg1");
         let game_root = root.join("game");
         for path in [&state_root, &bg1_root, &game_root] {
-            create_directories(path)?;
-            ensure_direct_directory(path)?;
+            create_directories(path)
+                .map_err(|error| folder_context("create installation folder", path, error))?;
+            ensure_direct_directory(path)
+                .map_err(|error| folder_context("revalidate installation folder", path, error))?;
         }
 
         Ok(Self {
@@ -115,7 +136,7 @@ impl ManagedLayout {
     }
 }
 
-const SAVE_OWNER_MARKER: &str = ".chriz-managed-install.json";
+pub(crate) const SAVE_OWNER_MARKER: &str = ".chriz-managed-install.json";
 const SAVE_OWNER_SCHEMA: u32 = 1;
 
 /// The isolated save identity assigned to one managed installation.
@@ -164,98 +185,6 @@ struct SaveOwner {
     engine_name: String,
 }
 
-/// Resolves the current user's Documents directory without assuming its location.
-pub trait DocumentsLocator {
-    /// Returns the user-configured Documents known folder.
-    fn documents_dir(&self) -> io::Result<PathBuf>;
-}
-
-/// Production Documents resolver.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct SystemDocuments;
-
-#[cfg(windows)]
-impl DocumentsLocator for SystemDocuments {
-    fn documents_dir(&self) -> io::Result<PathBuf> {
-        use std::ffi::c_void;
-        use std::os::windows::ffi::OsStringExt;
-        use std::ptr;
-        use windows_sys::Win32::Foundation::RPC_E_CHANGED_MODE;
-        use windows_sys::Win32::System::Com::{
-            CoInitializeEx, CoTaskMemFree, COINIT_APARTMENTTHREADED,
-        };
-        use windows_sys::Win32::UI::Shell::{FOLDERID_Documents, SHGetKnownFolderPath};
-
-        let initialization =
-            unsafe { CoInitializeEx(ptr::null(), COINIT_APARTMENTTHREADED as u32) };
-        let _com_guard = if initialization >= 0 {
-            ComInitializationGuard { balance: true }
-        } else if initialization == RPC_E_CHANGED_MODE {
-            ComInitializationGuard { balance: false }
-        } else {
-            return Err(io::Error::other(format!(
-                "CoInitializeEx failed with HRESULT 0x{:08X}",
-                initialization as u32
-            )));
-        };
-
-        let mut raw = ptr::null_mut();
-        let result =
-            unsafe { SHGetKnownFolderPath(&FOLDERID_Documents, 0, ptr::null_mut(), &mut raw) };
-        if result < 0 {
-            if !raw.is_null() {
-                unsafe { CoTaskMemFree(raw.cast::<c_void>()) };
-            }
-            return Err(io::Error::other(format!(
-                "SHGetKnownFolderPath(FOLDERID_Documents) failed with HRESULT 0x{:08X}",
-                result as u32
-            )));
-        }
-        if raw.is_null() {
-            return Err(io::Error::other(
-                "SHGetKnownFolderPath(FOLDERID_Documents) returned a null path",
-            ));
-        }
-
-        let length = unsafe {
-            let mut length = 0_usize;
-            while *raw.add(length) != 0 {
-                length += 1;
-            }
-            length
-        };
-        let path = PathBuf::from(OsString::from_wide(unsafe {
-            std::slice::from_raw_parts(raw, length)
-        }));
-        unsafe { CoTaskMemFree(raw.cast::<c_void>()) };
-        Ok(path)
-    }
-}
-
-#[cfg(windows)]
-struct ComInitializationGuard {
-    balance: bool,
-}
-
-#[cfg(windows)]
-impl Drop for ComInitializationGuard {
-    fn drop(&mut self) {
-        if self.balance {
-            unsafe { windows_sys::Win32::System::Com::CoUninitialize() };
-        }
-    }
-}
-
-#[cfg(not(windows))]
-impl DocumentsLocator for SystemDocuments {
-    fn documents_dir(&self) -> io::Result<PathBuf> {
-        Err(io::Error::new(
-            io::ErrorKind::Unsupported,
-            "the system Documents resolver is available only on Windows",
-        ))
-    }
-}
-
 /// The reports produced while staging both pristine game copies.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InitialStageReports {
@@ -285,15 +214,17 @@ pub fn propose_save_identity(
             reason: "Documents path must be absolute".to_owned(),
         });
     }
-    let metadata = fs::metadata(documents_root).map_err(|source| EngineError::Io {
-        path: documents_root.to_path_buf(),
-        source,
-    })?;
+    let metadata = fs::metadata(documents_root)
+        .map_err(|source| io_failure("check Documents folder", documents_root, source))?;
     if !metadata.is_dir() {
-        return Err(EngineError::GameIdentity {
-            path: documents_root.to_path_buf(),
-            reason: "Documents path is not a directory".to_owned(),
-        });
+        return Err(folder_context(
+            "check Documents folder",
+            documents_root,
+            EngineError::GameIdentity {
+                path: documents_root.to_path_buf(),
+                reason: "Documents path is not a directory".to_owned(),
+            },
+        ));
     }
 
     let normalized_name = normalize_display_name(display_name);
@@ -325,34 +256,44 @@ pub fn reserve_save_identity<L: DocumentsLocator>(
     display_name: &str,
     install_id: &str,
 ) -> Result<ReservedSaveIdentity> {
-    let documents = locator.documents_dir().map_err(|source| EngineError::Io {
-        path: PathBuf::from("<Documents known folder>"),
-        source,
+    let documents = locator.documents_dir().map_err(|source| {
+        io_failure(
+            "resolve Documents folder",
+            Path::new("<Windows Documents folder>"),
+            source,
+        )
     })?;
     let identity = propose_save_identity(documents, layout, display_name, install_id)?;
     let newly_created = match fs::create_dir(&identity.save_root) {
         Ok(()) => true,
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => false,
         Err(source) => {
-            return Err(EngineError::Io {
-                path: identity.save_root.clone(),
+            return Err(io_failure(
+                "create save folder",
+                &identity.save_root,
                 source,
-            })
+            ))
         }
     };
 
     if newly_created {
         if let Err(error) = write_save_owner(&identity) {
-            cleanup_failed_save_reservation(&identity)?;
-            return Err(error);
+            return Err(with_cleanup_failure(
+                error,
+                cleanup_failed_save_reservation(&identity).map_err(|error| {
+                    folder_context(
+                        "clean up incomplete save folder",
+                        &identity.save_root,
+                        error,
+                    )
+                }),
+            ));
         }
         return Ok(reserved_identity(identity));
     }
 
-    let metadata = fs::symlink_metadata(&identity.save_root).map_err(|source| EngineError::Io {
-        path: identity.save_root.clone(),
-        source,
-    })?;
+    let metadata = fs::symlink_metadata(&identity.save_root)
+        .map_err(|source| io_failure("revalidate save folder", &identity.save_root, source))?;
     if metadata.file_type().is_symlink()
         || has_windows_reparse_attribute(&metadata)
         || !metadata.is_dir()
@@ -399,8 +340,11 @@ pub fn stage_bgee_sod(
         .and_then(|()| patch_engine_name(layout.bg1_root(), identity));
     if let Err(error) = isolate_bg1 {
         let (_, target, scratch) = layout.paths_for(GameRole::BgeeSod);
-        discard_role_stage(layout, target, &scratch)?;
-        return Err(error);
+        return Err(with_cleanup_failure(
+            error,
+            discard_role_stage(layout, target, &scratch)
+                .map_err(|error| folder_context("clean up incomplete BG1 copy", target, error)),
+        ));
     }
     Ok(bg1)
 }
@@ -411,7 +355,8 @@ pub fn finalize_game_identity(
     identity: &ReservedSaveIdentity,
 ) -> Result<()> {
     verify_reserved_save_identity(layout, identity)?;
-    patch_engine_name(layout.game_root(), identity)
+    patch_engine_name(layout.game_root(), identity)?;
+    profile_settings::ensure_profile_settings(layout, identity)
 }
 
 /// Reads the one effective `engine_name` assignment from a game root.
@@ -491,17 +436,15 @@ fn write_save_owner(identity: &SaveIdentity) -> Result<()> {
         .create_new(true)
         .write(true)
         .open(&marker_path)
-        .map_err(|source| EngineError::Io {
-            path: marker_path.clone(),
-            source,
+        .map_err(|source| {
+            io_failure("create save-folder ownership marker", &marker_path, source)
         })?;
     marker
         .write_all(&payload)
-        .and_then(|()| marker.sync_all())
-        .map_err(|source| EngineError::Io {
-            path: marker_path,
-            source,
-        })
+        .map_err(|source| io_failure("write save-folder ownership marker", &marker_path, source))?;
+    marker
+        .sync_all()
+        .map_err(|source| io_failure("flush save-folder ownership marker", &marker_path, source))
 }
 
 fn read_save_owner(identity: &SaveIdentity) -> Result<SaveOwner> {
@@ -515,10 +458,11 @@ fn read_save_owner(identity: &SaveIdentity) -> Result<SaveOwner> {
             ))
         }
         Err(source) => {
-            return Err(EngineError::Io {
-                path: marker_path,
+            return Err(io_failure(
+                "read save-folder ownership marker",
+                &marker_path,
                 source,
-            })
+            ))
         }
     };
     if metadata.file_type().is_symlink()
@@ -530,20 +474,39 @@ fn read_save_owner(identity: &SaveIdentity) -> Result<SaveOwner> {
             "ownership marker is not a direct regular file",
         ));
     }
-    let payload = fs::read(&marker_path).map_err(|source| EngineError::Io {
-        path: marker_path,
-        source,
-    })?;
+    let payload = fs::read(&marker_path)
+        .map_err(|source| io_failure("read save-folder ownership marker", &marker_path, source))?;
     serde_json::from_slice(&payload).map_err(|source| {
         save_root_collision(identity, format!("ownership marker is invalid: {source}"))
     })
 }
 
+/// Whether `payload`, read from the ownership marker of the save root `engine_name`, records
+/// that the installation `install_id` in `managed_root` reserved it.
+pub(crate) fn save_owner_records(
+    payload: &[u8],
+    install_id: &str,
+    managed_root: &Path,
+    engine_name: &str,
+) -> bool {
+    let Ok(owner) = serde_json::from_slice::<SaveOwner>(payload) else {
+        return false;
+    };
+    owner.schema == SAVE_OWNER_SCHEMA
+        && owner.install_id == install_id
+        && owner.engine_name == engine_name
+        && identity_path(managed_root).is_ok_and(|root| root == owner.managed_root)
+}
+
 fn save_root_collision(identity: &SaveIdentity, reason: impl Into<String>) -> EngineError {
-    EngineError::SaveRootCollision {
-        path: identity.save_root.clone(),
-        reason: reason.into(),
-    }
+    folder_context(
+        "check save-folder ownership",
+        &identity.save_root,
+        EngineError::SaveRootCollision {
+            path: identity.save_root.clone(),
+            reason: reason.into(),
+        },
+    )
 }
 
 fn reserved_identity(identity: SaveIdentity) -> ReservedSaveIdentity {
@@ -555,6 +518,14 @@ fn reserved_identity(identity: SaveIdentity) -> ReservedSaveIdentity {
 }
 
 fn verify_reserved_save_identity(
+    layout: &ManagedLayout,
+    identity: &ReservedSaveIdentity,
+) -> Result<()> {
+    verify_reserved_save_identity_inner(layout, identity)
+        .map_err(|error| folder_context("revalidate save folder", &identity.save_root, error))
+}
+
+fn verify_reserved_save_identity_inner(
     layout: &ManagedLayout,
     identity: &ReservedSaveIdentity,
 ) -> Result<()> {

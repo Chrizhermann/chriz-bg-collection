@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "domain": "chriz-easy-bg-existing-install-patches",
+  "version": "1.0.0",
+  "minimum_app_version": "0.1.0-alpha.18",
+  "patch_id": "artisan-campaign-description-links-1.0",
+  "title": "Correct Artisan kit descriptions in character creation",
+  "change_ids": ["artisan-accepted-update"],
+  "supported_versions": ["chriz-v1.3.0"],
+  "summary": "Use the kit descriptions already installed in this game when creating characters in BG1 and SoD. This does not upgrade kit abilities, replace description text, or change saves."
+}

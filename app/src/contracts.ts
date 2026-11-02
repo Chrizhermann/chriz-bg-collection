@@ -107,6 +107,7 @@ export interface FeatureControl {
   readonly readiness: "ready" | "experimental" | "blocked";
   readonly parent: string | null;
   readonly requires?: readonly string[];
+  readonly requiresAny?: readonly string[];
   readonly conflicts?: readonly string[];
   readonly selected: boolean;
   readonly interactive: boolean;
@@ -137,7 +138,46 @@ export interface PhaseSummary {
   readonly detail: string;
 }
 
+export type FeatureGroupState = "on" | "off" | "mixed";
+
+export interface UnavailableGroupMember {
+  readonly featureId: string;
+  readonly reason: string;
+}
+
+/**
+ * A choice-group alternative the group picks while it is on. Switching the group off restores
+ * `recipeDefault`; `selected` and `available` are derived by the engine like member state.
+ */
+export interface FeatureGroupVariant {
+  readonly choiceGroup: string;
+  readonly option: string;
+  readonly label: string;
+  readonly options: readonly string[];
+  readonly recipeDefault: readonly string[];
+  readonly selected: boolean;
+  readonly available: boolean;
+  readonly unavailableReason: string | null;
+}
+
+/** An authored feature group plus its state, derived by the engine from member selections. */
+export interface FeatureGroup {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly members: readonly string[];
+  readonly state: FeatureGroupState;
+  readonly selectedMembers: readonly string[];
+  readonly availableMembers: readonly string[];
+  readonly unavailableMembers: readonly UnavailableGroupMember[];
+  readonly disabledReason: string | null;
+  /** Omitted when the group has no variants. */
+  readonly variants?: readonly FeatureGroupVariant[];
+}
+
 export interface SelectionEvaluation {
+  readonly manualCheckpointOptions?: readonly ManualCheckpointOption[];
+  readonly featureGroups?: readonly FeatureGroup[];
   readonly view: RecipeView;
   readonly normalizedSelection: NormalizedSelection;
   readonly findings: readonly SelectionFinding[];
@@ -145,6 +185,32 @@ export interface SelectionEvaluation {
     readonly phases: readonly PhaseSummary[];
   };
   readonly selectedChoiceCount: number;
+}
+
+export interface ManualBreakpoint {
+  readonly runId: string;
+  readonly component: number;
+}
+
+export interface ManualCheckpointOption extends ManualBreakpoint {
+  readonly modId: string;
+  readonly modLabel: string;
+  readonly componentLabel: string;
+  readonly phase: string;
+  readonly target: "bg1" | "bg2";
+  readonly unavailableReason: string | null;
+}
+
+export interface ManualCheckpointStatus {
+  readonly checkpointId: string;
+  readonly target: "bg1" | "bg2";
+  readonly targetPath: string;
+  readonly after: ManualCheckpointOption;
+  readonly next: ManualCheckpointOption | null;
+  readonly additions: readonly { readonly tp2: string; readonly language: number; readonly component: number; readonly description: string | null }[];
+  readonly diagnostics: readonly string[];
+  readonly reviewToken: string;
+  readonly customized: boolean;
 }
 
 export interface FrozenReview {
@@ -226,7 +292,15 @@ export interface BuildPhase extends PhaseSummary {
   readonly state: PhaseState;
 }
 
+export interface OperationProgress {
+  readonly stage: string;
+  readonly completed?: string | null;
+  readonly total?: string | null;
+  readonly unit?: "bytes" | "items" | null;
+}
+
 export interface BuildSnapshot {
+  readonly progress?: OperationProgress;
   readonly state: BuildState;
   readonly headline: string;
   readonly detail: string;
@@ -240,6 +314,7 @@ export interface BuildSnapshot {
 }
 
 export interface ManagedInstallation {
+  readonly customized?: boolean;
   readonly id: string;
   readonly name: string;
   readonly path: string;
@@ -249,6 +324,7 @@ export interface ManagedInstallation {
   readonly completedAtMillis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
+  readonly patchRecoveryNeeded?: boolean;
   readonly recipeVersion?: string | null;
   readonly radarVersion?: string | null;
   readonly consistency?: {
@@ -258,6 +334,69 @@ export interface ManagedInstallation {
     readonly modCount: number;
     readonly components?: readonly InstalledComponent[];
   };
+}
+
+export interface LaunchInstallResult {
+  readonly installId: string;
+  readonly radar: {
+    readonly state: "not-requested" | "started" | "cancelled" | "failed";
+    readonly detail: string | null;
+    readonly technicalDetail: string | null;
+  };
+  /** Installer-owned profile settings checked before the launch; never blocks playing. */
+  readonly gameSettings: {
+    readonly state: "unchanged" | "updated" | "failed";
+    readonly technicalDetail: string | null;
+  };
+  /** The last session's game log, kept before the game starts a new one; never blocks playing. */
+  readonly gameLog: {
+    readonly state: "not-enabled" | "nothing-to-keep" | "kept" | "failed";
+    readonly technicalDetail: string | null;
+  };
+}
+
+/** One file of the game log's evidence, as last seen. */
+export interface GameLogFile {
+  readonly path: string;
+  readonly state: "missing" | "present" | "not-a-file" | "unreadable";
+  /** Decimal byte counts remain strings across the native boundary. */
+  readonly sizeBytes: string | null;
+  readonly modifiedAtMillis: number | null;
+  readonly detail: string | null;
+}
+
+/** Whether the game writes its own log for crash reports, and where that evidence is. */
+export interface GameLogStatus {
+  readonly installId: string;
+  /** `other` names a log file set outside CEBG in `detail`; `unavailable` says why in `detail`. */
+  readonly setting: "off" | "on" | "other" | "unavailable";
+  readonly detail: string | null;
+  readonly log: GameLogFile;
+  readonly previousLog: GameLogFile;
+  readonly crashFolder: string;
+  /** Crashes with a report in the crash folder; null when it cannot be looked into. */
+  readonly crashReports: number | null;
+}
+
+export interface InstallationRemovalPreview {
+  readonly installId: string;
+  readonly displayName: string;
+  readonly managedRoot: string;
+  /** `unlist` removes only the entry: the folder exists but cannot be proven to be this installation. */
+  readonly action: "delete" | "forget" | "unlist";
+  /** Why the folder will not be deleted, only for `unlist`. */
+  readonly reason?: string | null;
+  /** Advisory logical file bytes; absent when the bounded scan cannot finish. */
+  readonly approximateSizeBytes?: string | null;
+  readonly preservedSavePath: string | null;
+  /** The saved-game profile the game never used, which removal deletes too. */
+  readonly unusedSavePath?: string | null;
+  readonly confirmationToken: string;
+}
+
+export interface InstallationRemovalResult {
+  /** The unused saved-game profile the preview named, when it stays after all. */
+  readonly unusedSavePathKept?: string | null;
 }
 
 export interface InstalledComponent {
@@ -305,6 +444,75 @@ export interface ManagedCopyUpdate {
   readonly installedRecipeVersion: string | null;
   readonly state: ManagedCopyUpdateState;
   readonly detail: string;
+}
+
+/** Read-only comparison; no state in this contract authorizes applying an update. */
+export interface InstalledUpdatePlan {
+  readonly installId: string;
+  readonly baseRecipeVersion: string;
+  readonly targetRecipeVersion: string;
+  readonly state: "comparison-ready" | "blocked";
+  readonly detail: string;
+  readonly choicesPreserved: boolean;
+  readonly issues: readonly {
+    readonly rule: string;
+    readonly featureId: string | null;
+    readonly message: string;
+  }[];
+  readonly runs: readonly {
+    readonly runId: string;
+    readonly modName: string;
+    readonly installedVersion: string;
+    readonly targetVersion: string | null;
+    readonly components: readonly number[];
+    readonly state: "unchanged" | "unassessed" | "requires-migration";
+    readonly detail: string;
+  }[];
+}
+
+/** One explicitly supported whole-mod transition, not an entire collection upgrade. */
+export interface ModUpgradePreview {
+  readonly installId: string;
+  readonly upgradeId: string;
+  readonly title: string;
+  readonly state: "available" | "already-current" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
+  readonly detail: string;
+  readonly baseRecipeVersion: string;
+  readonly installedVersion: string | null;
+  readonly targetVersion: string;
+  readonly reviewToken: string | null;
+  readonly canUndo: boolean;
+  readonly canRestore: boolean;
+  readonly fullBackupBytes: string;
+  readonly saveBackupBytes: string;
+  readonly availableBytes: string;
+  readonly backupPath: string;
+  readonly saveCompatibility: string;
+  readonly history: readonly {
+    readonly transactionId: string;
+    readonly fromVersion: string;
+    readonly toVersion: string;
+    readonly state: string;
+  }[];
+}
+
+/** One independently verified fix, not a whole-mod or collection upgrade. */
+export interface PatchPreview {
+  readonly installId: string;
+  readonly patchId: string;
+  readonly title: string;
+  readonly state: "available" | "already-fixed" | "not-selected" | "unsupported" | "applied" | "needs-recovery";
+  readonly detail: string;
+  readonly baseRecipeVersion: string;
+  readonly appliedPatchIds: readonly string[];
+  readonly reviewToken: string | null;
+  readonly canUndo: boolean;
+  readonly canRestore: boolean;
+  /** Decimal byte counts remain strings across the native boundary. */
+  readonly fullBackupBytes: string;
+  readonly saveBackupBytes: string;
+  readonly availableBytes: string;
+  readonly backupPath: string;
 }
 
 export interface UpdateSummary {

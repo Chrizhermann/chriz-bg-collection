@@ -1,0 +1,28 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-18"
+command = "chriz-bg-author artifact verify manifest/artifacts/eeex-1.3.1.toml --cache-root <fresh cache>; source audit of EEex/EEex.tp2 declaration order (see below)"
+scope = "EEex v1.3.1 (published 2026-10-07 by Bubb13) replaces v1.2.0 in both recipe profiles. The release ZIP was downloaded anonymously into a fresh cache and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset, and its EEex/ payload equals the v1.3.1 tag tree apart from line endings. This is automated source/package verification; the disposable-lab install and launch smoke tests are recorded in the pull request, not here."
+
+# tools/check_native_component_order.py refuses this TP2 by design: component 0 (Quick
+# Menu Core) is declared without DESIGNATED, and nested action blocks contain
+# `BEGIN ~...~` arrays. The order below is a source audit with that checker's masking:
+# only line-start `BEGIN @n` declarations count, every one except the first carries a
+# single literal DESIGNATED, and WeiDU numbers the undesignated first component 0.
+# Against v1.2.0 the TP2 changes only VERSION and the new component 9 (Attack Info),
+# declared after 1; the recipe runs install 0-8 and keep that order.
+[[artifacts]]
+mod_id = "eeex"
+artifact_id = "eeex-1.3.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.3.1"
+source_commit = "a6d21abe44e20509f5d0259ccc6c7e7f9d12b285"
+immutable_source_url = "https://github.com/Bubb13/EEex/releases/download/v1.3.1/eeex-v1.3.1.zip"
+actual_length = 10390181
+actual_sha256 = "9c8104bd63fe7e7dfff889d89ab2d98e158b6e552846370a924ed7eacea4ecf3"
+tp2_sha256 = "37653c8188f8fbaf166eea8953f81013c9db9e8466b1e92cc90c18e8078a834f"
+native_components = [0, 1, 9, 2, 3, 4, 5, 6, 7, 8]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

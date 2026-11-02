@@ -64,7 +64,9 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "xan" => "XAN",
         "yeslicknpc" => "YESLICKNPC",
         "sirene-bg2" => "SIRENE_BG2",
+        "sirene-bg1" => "SIRENE_BG1",
         "spell-rev" => "SPELL_REV",
+        "srcb-rr-compat" => "SRCB_RR_COMPAT",
         "ascension" => "ASCENSION",
         "artisanskitpack" => "ARTISANSKITPACK",
         "artisanskitpack-npc" => "ARTISANSKITPACK_NPC",
@@ -77,6 +79,31 @@ fn catalog_for_mod(mod_id: &str) -> &'static str {
         "hidden-gameplay-options" => "HIDDENGAMEPLAYOPTIONS",
         "hq-soundclips-bg2ee" => "HQ_SOUNDCLIPS_BG2EE",
         "iepbanters" => "IEPBANTERS",
+        "safana" => "SAFANA",
+        "voicepack-neera" => "CD_NEERA",
+        "voicepack-safana-bg1" => "CD_SAFANA",
+        "voicepack-safana-sod" => "CD_SAFSOD",
+        "voicepack-jaheira-bg1" => "CD_JAHEBG1",
+        "voicepack-jaheira-bg2" => "CD_JAHEBG2",
+        "voicepack-yeslick" => "CD_YESLICK",
+        "voicepack-edwin-bg1" => "CD_EDWNBG1",
+        "voicepack-edwin-bg2" => "CD_EDWNBG2",
+        "voicepack-aerie" => "CD_AERIE",
+        "voicepack-imoen-bg1" => "CD_IMOBG1",
+        "voicepack-imoen-bg2" => "CD_IMOBG2",
+        "voicepack-sarevok" => "CD_SAREVOK",
+        "voicepack-amelyssan" => "CD_AMELY",
+        "voicepack-gromnir-il-khan" => "CD_GROMN",
+        "voicepack-ajantis" => "CD_AJANTI",
+        "voicepack-viconia-bg1" => "CD_VICBG1",
+        "voicepack-viconia-bg2" => "CD_VICBG2",
+        "voicepack-garithos" => "CD_GARITH",
+        "ntotsc" => "NTOTSC",
+        "ac-quest" => "AC_QUEST",
+        "blackhearts" => "BLACKHEARTS",
+        "thalan" => "THALAN",
+        "zg-iwd-voices" => "ZG_IWD_VOICES",
+        "ppe" => "PPE",
         other => panic!("production run has unknown curation catalog: {other}"),
     }
 }
@@ -115,6 +142,57 @@ fn every_resolved_component_maps_to_a_nonblank_curated_row() {
 }
 
 #[test]
+fn every_offered_quest_mod_and_bg1ub_component_maps_to_a_nonblank_curated_row() {
+    // October 23: the quest mods and BG1 Unfinished Business are optional and unchecked
+    // in Recommended, so the resolved-plan check above does not reach their components.
+    let root = repo_root();
+    let map_text = std::fs::read_to_string(root.join("manifest/curation-map.toml")).unwrap();
+    let curation_map: CurationMap = toml::from_str(&map_text).unwrap();
+    let mapped_rows = curation_map
+        .targets
+        .into_iter()
+        .flat_map(|target| target.rows)
+        .collect::<BTreeSet<_>>();
+    let manifest = recipe();
+    let run_mods = manifest
+        .collection
+        .runs
+        .iter()
+        .map(|run| (run.run_id.as_str(), run.mod_id.as_str()))
+        .collect::<BTreeMap<_, _>>();
+    let offered = [
+        "ntotsc",
+        "ac-quest",
+        "blackhearts",
+        "thalan",
+        "zg-iwd-voices",
+        "ppe",
+        "bg1ub",
+    ];
+    let mut checked = BTreeSet::new();
+    for feature in &manifest.collection.features {
+        for component in &feature.components {
+            let mod_id = run_mods[component.run_id.as_str()];
+            if !offered.contains(&mod_id) {
+                continue;
+            }
+            let catalog = catalog_for_mod(mod_id);
+            let row = format!("{catalog}:{}", component.component);
+            assert!(
+                mapped_rows.contains(&row),
+                "offered row {row} is not mapped"
+            );
+            let decision = decision_for(catalog, component.component);
+            assert!(!decision.is_empty(), "offered blank curation row {row}");
+            checked.insert(row);
+        }
+    }
+    // 52 offered quest-mod rows (PPE 310/320 and Black Hearts 20005 are not offered)
+    // and the 16 BG1UB rows.
+    assert_eq!(checked.len(), 68);
+}
+
+#[test]
 fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present() {
     let manifest = recipe();
     let evaluation = evaluate_preset(&manifest, "chris-recommended", "windows").unwrap();
@@ -144,6 +222,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
     assert_eq!(
         manifest.mods.keys().cloned().collect::<Vec<_>>(),
         [
+            "ac-quest",
             "artisanskitpack",
             "artisanskitpack-npc",
             "artisanskitpack-tweak",
@@ -151,6 +230,7 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "bg1npc",
             "bg1ub",
             "bggo",
+            "blackhearts",
             "bubb-spell-menu",
             "buffbot",
             "chriz-bg-modpack",
@@ -158,25 +238,56 @@ fn blocked_and_blank_rows_never_resolve_and_no_legacy_fix_installer_is_present()
             "chriz-sod-remix",
             "crossmodbg2",
             "dlcmerger",
+            "dragonspear-ui",
             "eeex",
             "eeexremote",
             "eefixpack",
             "eet",
             "eet-end",
+            "eet-gui",
             "fade",
             "hidden-gameplay-options",
             "hq-soundclips-bg2ee",
             "iepbanters",
+            "infinity-ui",
+            "leui",
+            "leui-bg1ee",
+            "leui-sod",
+            "ntotsc",
             "paina",
+            "ppe",
             "randomiser",
             "rr",
+            "safana",
             "sarahtob",
+            "sirene-bg1",
             "sirene-bg2",
             "spell-rev",
+            "srcb-rr-compat",
             "stratagems",
+            "thalan",
             "ub",
+            "voicepack-aerie",
+            "voicepack-ajantis",
+            "voicepack-amelyssan",
+            "voicepack-edwin-bg1",
+            "voicepack-edwin-bg2",
+            "voicepack-garithos",
+            "voicepack-gromnir-il-khan",
+            "voicepack-imoen-bg1",
+            "voicepack-imoen-bg2",
+            "voicepack-jaheira-bg1",
+            "voicepack-jaheira-bg2",
+            "voicepack-neera",
+            "voicepack-safana-bg1",
+            "voicepack-safana-sod",
+            "voicepack-sarevok",
+            "voicepack-viconia-bg1",
+            "voicepack-viconia-bg2",
+            "voicepack-yeslick",
             "xan",
             "yeslicknpc",
+            "zg-iwd-voices",
         ]
     );
     let collection = std::fs::read_to_string(repo_root().join("manifest/collection.toml")).unwrap();
@@ -208,7 +319,7 @@ fn recommended_preset_explicitly_keeps_every_default_core_control_desired() {
 }
 
 #[test]
-fn eet_end_is_the_core_tail_anchor_and_buffbot_is_absolute_last() {
+fn eet_end_is_the_core_tail_anchor_and_only_the_scroll_policy_follows_buffbot() {
     let manifest = recipe();
     let last_before_post_eet = manifest
         .collection
@@ -218,9 +329,14 @@ fn eet_end_is_the_core_tail_anchor_and_buffbot_is_absolute_last() {
         .expect("one run before post-EET tail");
     assert_eq!(last_before_post_eet.run_id, "eet-end-bg2");
     assert_eq!(last_before_post_eet.mod_id, "eet-end");
-    let last = manifest.collection.runs.last().expect("one run");
-    assert_eq!(last.run_id, "buffbot-bg2");
-    assert_eq!(last.mod_id, "buffbot");
+    // Modpack scroll policy 430 hashes the final scrolls and the spells they cast,
+    // so its own run follows BuffBot and every other spell/item writer (October 13).
+    let (last, rest) = manifest.collection.runs.split_last().expect("one run");
+    assert_eq!(last.run_id, "chriz-bg-modpack-scrolls-bg2");
+    assert_eq!(last.components, [430]);
+    let buffbot = rest.last().expect("BuffBot before the scroll policy");
+    assert_eq!(buffbot.run_id, "buffbot-bg2");
+    assert_eq!(buffbot.mod_id, "buffbot");
 }
 
 #[test]

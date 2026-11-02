@@ -23,3 +23,15 @@ Listed at installed and target version **v30**.
 
 Recheck the final resolved install order against Crossmod's actual detection blocks when
 the manifest is generated.
+
+## Sirene detection (audited 2026-10-18)
+
+Crossmod v30 detects Sirene by `bc0siren.dlg`, but Sirene NPC for BG2:EE (pinned commit
+`00beda90`, still the upstream head) ships its banter files as `BC0SIRE2` and `BC0SIR25`.
+Detection therefore fails; the Crossmod logs of the reference install and of a collection
+install both report "Mod not detected" for Sirene.
+
+Crossmod's only Sirene content is one Shadows of Amn banter pair with Lava's Will NPC
+(`files/will_sirene/soa_will_sirene.d`), which also addresses `BC0SIREN`. The collection
+does not include Will, so it loses nothing. The fix belongs upstream in Crossmod: detect
+`bc0sire2.dlg` and address `BC0SIRE2`. Revisit if Will joins the collection.

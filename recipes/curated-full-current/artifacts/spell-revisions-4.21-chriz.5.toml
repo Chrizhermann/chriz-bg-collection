@@ -1,0 +1,32 @@
+id = "spell-revisions-4.21-chriz.5"
+name = "Spell Revisions"
+version = "4.21-chriz.5"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/download/v4.21-chriz.5/spell_rev-v4-21-chriz-5.zip"
+reference = "v4.21-chriz.5"
+expected_filename = "spell_rev-v4-21-chriz-5.zip"
+expected_length = 10244415
+sha256 = "fdbb5cf9c48ece39f051b7120c537f530eb21ecedb780aa65e5ebda2e1191075"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["spell_rev"]
+tp2_paths = ["spell_rev/setup-spell_rev.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 2097152
+max_total_uncompressed_bytes = 33554432
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-spell-revisions-patch"
+license = "Fetch-only maintained fork release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-spell-revisions-patch/releases/tag/v4.21-chriz.5"
+reviewed_on = "2026-09-16"

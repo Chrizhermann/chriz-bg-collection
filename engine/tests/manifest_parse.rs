@@ -144,6 +144,39 @@ answer = { kind = "literal", value = { kind = "boolean", value = true } }"#,
 }
 
 #[test]
+fn parses_component_config_files_and_omits_them_when_absent() {
+    let text = installer("cdtweaks", "cdtweaks", "cdtweaks/setup-cdtweaks.tp2").replace(
+        "name = \"Core\"",
+        "name = \"Core\"\nconfig_files = [{ path = \"cdtweaks/cdtweaks.txt\", content = \"OUTER_SET a = 1\\n\" }]",
+    );
+    let parsed: ModFile = toml::from_str(&text).unwrap();
+
+    let file = &parsed.components[0].config_files[0];
+    assert_eq!(file.path, "cdtweaks/cdtweaks.txt");
+    assert_eq!(file.content, "OUTER_SET a = 1\n");
+
+    let legacy: ModFile = toml::from_str(&mod_fixture("eefixpack.toml")).unwrap();
+    assert!(legacy
+        .components
+        .iter()
+        .all(|component| component.config_files.is_empty()));
+    assert!(!serde_json::to_string(&legacy)
+        .unwrap()
+        .contains("config_files"));
+}
+
+#[test]
+fn config_file_rejects_unknown_fields() {
+    let text = installer("cdtweaks", "cdtweaks", "cdtweaks/setup-cdtweaks.tp2").replace(
+        "name = \"Core\"",
+        "name = \"Core\"\nconfig_files = [{ path = \"cdtweaks/cdtweaks.txt\", content = \"x\", mode = \"append\" }]",
+    );
+    let error = toml::from_str::<ModFile>(&text).unwrap_err();
+
+    assert!(error.to_string().contains("mode"), "{error}");
+}
+
+#[test]
 fn parses_artifact_acquisition_and_provenance_independently() {
     let artifact: Artifact = toml::from_str(&artifact_fixture("eefixpack.toml")).unwrap();
 

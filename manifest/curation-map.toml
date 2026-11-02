@@ -1,10 +1,10 @@
 # Authored bridge from Christopher's component catalogs to Task 18 recipe targets.
 # Decisions stay authoritative in docs/curation/components; this file never infers them.
 schema = 1
-expected_rows = 1189
-expected_choice_groups = 61
-expected_optional_none_groups = 13
-expected_fixed_groups = 10
+expected_rows = 1351
+expected_choice_groups = 88
+expected_optional_none_groups = 31
+expected_fixed_groups = 12
 
 parents = [
   "mod:artisanskitpack",
@@ -28,6 +28,7 @@ parents = [
   "mod:safana",
   "mod:sarahtob",
   "mod:spell-rev",
+  "mod:srcb-rr-compat",
   "mod:stratagems",
   "mod:xan",
 ]
@@ -35,6 +36,10 @@ parents = [
 [[catalogs]]
 id = "ABETTORHLAREBALANCE"
 excluded = [0]
+
+[[catalogs]]
+id = "AC_QUEST"
+excluded = []
 
 [[catalogs]]
 id = "AJANTISBG2"
@@ -58,7 +63,7 @@ excluded = [1102, 1103, 1104]
 
 [[catalogs]]
 id = "ARTISANSKITPACK_TWEAK"
-excluded = [20021, 3210, 1110, 110000, 1, 2, 300010, 1010000, 1020000, 2000001]
+excluded = [20021, 3210, 1110, 110000, 1, 2, 300010, 1020000, 2000001]
 
 [[catalogs]]
 id = "ASCENSION"
@@ -93,6 +98,10 @@ id = "BGGO"
 excluded = [1, 2, 4]
 
 [[catalogs]]
+id = "BLACKHEARTS"
+excluded = [20005]
+
+[[catalogs]]
 id = "BRANWEN"
 excluded = []
 
@@ -110,7 +119,79 @@ excluded = []
 
 [[catalogs]]
 id = "CDTWEAKS"
-excluded = [0, 70, 72, 80, 82, 90, 140, 150, 160, 171, 3150, 3151, 220, 230, 240, 241, 250, 251, 252, 253, 254, 255, 260, 270, 271, 1030, 1035, 1036, 1050, 1060, 1061, 1062, 1070, 1075, 1085, 1100, 1101, 1110, 1130, 1140, 1141, 1150, 1170, 1190, 1200, 1210, 1240, 1251, 1252, 1253, 1254, 1255, 1256, 1260, 1270, 1280, 1290, 1300, 1310, 1330, 1350, 1351, 1352, 1353, 1354, 1360, 1361, 1370, 2040, 2060, 2080, 2091, 2092, 2100, 2120, 2140, 2150, 2151, 2160, 2161, 2162, 2163, 2164, 2190, 2191, 2200, 2211, 2220, 2230, 2240, 2261, 2271, 2281, 2288, 2289, 2290, 2291, 2293, 2294, 2295, 2296, 2730, 2731, 2732, 2733, 2734, 2735, 2736, 2737, 2738, 2739, 2297, 2580, 2581, 2300, 2310, 2311, 2320, 2330, 2339, 2340, 2360, 2380, 2371, 2370, 2372, 2350, 2351, 2353, 2357, 2358, 2550, 2551, 2552, 2390, 2401, 2431, 2440, 2450, 2510, 2530, 2560, 2561, 2562, 2620, 2630, 2640, 2650, 2660, 2670, 2680, 2690, 2691, 2692, 2693, 2700, 2710, 2740, 3020, 3030, 3031, 3050, 3060, 3070, 3071, 3072, 3073, 3131, 3132, 3140, 3141, 3160, 3170, 3175, 3176, 3183, 3190, 3191, 3194, 3195, 3196, 3197, 3198, 3200, 3205, 3210, 3220, 3230, 3240, 3241, 3242, 3250, 3260, 3261, 3262, 3263, 3264, 3265, 3266, 3267, 3270, 3271, 3272, 3273, 3274, 3275, 3276, 3277, 3280, 3320, 3330, 3358, 3360, 3370, 3380, 3400, 3410, 3411, 3412, 3490, 3491, 3492, 3493, 3494, 3495, 3496, 3497, 3420, 3430, 3450, 3460, 3470, 3480, 4000, 4010, 4020, 4025, 4030, 4040, 4060, 4070, 4080, 4090, 4100, 4110, 4120, 4130, 4131, 4132, 4133, 4150, 4160, 4170, 4140, 4180, 4200, 4210, 4211, 4212, 4213, 4220, 4221, 4230, 6000, 6010, 6020, 6030, 6040, 6050, 6060, 6070, 6080, 6090, 6100, 6110, 6120, 6130, 6140, 6150, 6160, 6170, 6180, 6190, 6200, 6210, 6220, 6230, 6240, 6250, 6260, 6270, 6280, 6290, 6300, 6310, 6320, 6330, 6340, 6350]
+excluded = [0, 72, 80, 82, 230, 250, 251, 252, 253, 254, 255, 270, 271, 1050, 1060, 1061, 1062, 1070, 1075, 1085, 1110, 1130, 1150, 1170, 1190, 1200, 1210, 1240, 1258, 1251, 1252, 1253, 1254, 1255, 1256, 1260, 1270, 1280, 1290, 1300, 1310, 1330, 1350, 1351, 1352, 1353, 1354, 1360, 1361, 1370, 2040, 2060, 2080, 2091, 2092, 2100, 2120, 2140, 2150, 2160, 2161, 2162, 2163, 2164, 2200, 2213, 2212, 2211, 2230, 2240, 2261, 2271, 2281, 2288, 2289, 2290, 2291, 2293, 2294, 2295, 2296, 2730, 2731, 2732, 2733, 2734, 2735, 2736, 2737, 2738, 2739, 2297, 2580, 2581, 2300, 2320, 2330, 2339, 2340, 2360, 2371, 2370, 2372, 2350, 2351, 2353, 2357, 2358, 2550, 2551, 2552, 2390, 2401, 2431, 2440, 2450, 2510, 2530, 2560, 2561, 2562, 2620, 2630, 2640, 2650, 2660, 2670, 2680, 2690, 2691, 2692, 2693, 2700, 2710, 2740, 2750, 2770, 2780, 3020, 3050, 3140, 3141, 3160, 3170, 3175, 3176, 3183, 3190, 3210, 3240, 3241, 3242, 3250, 3260, 3261, 3262, 3263, 3264, 3265, 3266, 3267, 3270, 3271, 3272, 3273, 3274, 3275, 3276, 3277, 3280, 3330, 3358, 3360, 3370, 3380, 3400, 3410, 3411, 3412, 3490, 3491, 3492, 3493, 3494, 3495, 3496, 3497, 3420, 3430, 3450, 3460, 3480, 3520, 3530, 3531, 4000, 4010, 4020, 4025, 4030, 4040, 4060, 4070, 4080, 4090, 4100, 4110, 4120, 4130, 4131, 4132, 4133, 4150, 4160, 4170, 4180, 4200, 4210, 4211, 4212, 4213, 4220, 4221, 4230, 4240, 6000, 6010, 6020, 6030, 6040, 6050, 6060, 6070, 6080, 6090, 6100, 6110, 6120, 6130, 6140, 6150, 6160, 6170, 6180, 6190, 6200, 6210, 6220, 6230, 6240, 6250, 6260, 6270, 6280, 6290, 6300, 6310, 6320, 6330, 6340, 6350, 6360]
+
+[[catalogs]]
+id = "CD_AERIE"
+excluded = []
+
+[[catalogs]]
+id = "CD_AJANTI"
+excluded = []
+
+[[catalogs]]
+id = "CD_AMELY"
+excluded = []
+
+[[catalogs]]
+id = "CD_EDWNBG1"
+excluded = []
+
+[[catalogs]]
+id = "CD_EDWNBG2"
+excluded = []
+
+[[catalogs]]
+id = "CD_GARITH"
+excluded = []
+
+[[catalogs]]
+id = "CD_GROMN"
+excluded = []
+
+[[catalogs]]
+id = "CD_IMOBG1"
+excluded = []
+
+[[catalogs]]
+id = "CD_IMOBG2"
+excluded = []
+
+[[catalogs]]
+id = "CD_JAHEBG1"
+excluded = []
+
+[[catalogs]]
+id = "CD_JAHEBG2"
+excluded = []
+
+[[catalogs]]
+id = "CD_NEERA"
+excluded = []
+
+[[catalogs]]
+id = "CD_SAFANA"
+excluded = []
+
+[[catalogs]]
+id = "CD_SAFSOD"
+excluded = []
+
+[[catalogs]]
+id = "CD_SAREVOK"
+excluded = []
+
+[[catalogs]]
+id = "CD_VICBG1"
+excluded = []
+
+[[catalogs]]
+id = "CD_VICBG2"
+excluded = []
+
+[[catalogs]]
+id = "CD_YESLICK"
+excluded = []
 
 [[catalogs]]
 id = "CHRIZ-BG-MODPACK"
@@ -181,8 +262,20 @@ id = "IWDIFICATION"
 excluded = [20, 141, 50, 180, 150, 70, 71, 100, 160, 110, 111, 170, 121, 80]
 
 [[catalogs]]
+id = "KLATU"
+excluded = []
+
+[[catalogs]]
+id = "NTOTSC"
+excluded = []
+
+[[catalogs]]
 id = "PAINA"
 excluded = []
+
+[[catalogs]]
+id = "PPE"
+excluded = [310, 320]
 
 [[catalogs]]
 id = "RANDOMISER"
@@ -201,6 +294,10 @@ id = "SARAHTOB"
 excluded = [0]
 
 [[catalogs]]
+id = "SIRENE_BG1"
+excluded = [1, 2, 4, 5]
+
+[[catalogs]]
 id = "SIRENE_BG2"
 excluded = [1, 3, 4]
 
@@ -209,8 +306,16 @@ id = "SPELL_REV"
 excluded = [70]
 
 [[catalogs]]
+id = "SRCB_RR_COMPAT"
+excluded = []
+
+[[catalogs]]
 id = "STRATAGEMS"
-excluded = [100, 1500, 1510, 1520, 1600, 1610, 2010, 2020, 2030, 2040, 2050, 2060, 2070, 2080, 2520, 2900, 3010, 3015, 3017, 3020, 3021, 3022, 3500, 3501, 3510, 3551, 3552, 4020, 4030, 4050, 4051, 4052, 4093, 4099, 4100, 4130, 4135, 4140, 4145, 4146, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173, 4174, 4190, 4216, 4217, 4230, 5070, 5080, 6020, 6700]
+excluded = [100, 1500, 1510, 1520, 1600, 1610, 2010, 2020, 2030, 2040, 2050, 2060, 2070, 2080, 2520, 2900, 3017, 3020, 3022, 3500, 3501, 3510, 3551, 3552, 4030, 4099, 4100, 4146, 4190, 5070, 5080, 6020, 6700]
+
+[[catalogs]]
+id = "THALAN"
+excluded = []
 
 [[catalogs]]
 id = "UB"
@@ -222,6 +327,10 @@ excluded = [5, 6]
 
 [[catalogs]]
 id = "YESLICKNPC"
+excluded = []
+
+[[catalogs]]
+id = "ZG_IWD_VOICES"
 excluded = []
 
 [[targets]]
@@ -261,11 +370,10 @@ rows = ["IWDIFICATION:120"]
 reason = "The required Arcane Trickster level-7 Evasion tail patch has not yet been implemented and fixture-tested."
 
 [[targets]]
-id = "omission:safana-inventory-cleanup"
-kind = "omission"
+id = "feature:safana:mandatory-components"
+kind = "feature"
 rows = ["SAFANA:0"]
 parent = "mod:safana"
-reason = "Safana is not fresh-stack ready until a semantic cleanup removes the SoD-only inventory carried into SoA."
 
 [[targets]]
 id = "feature:chriz-bg-rebalance:tempus-bundle"
@@ -293,7 +401,31 @@ parent = "mod:chriz-bg-rebalance"
 [[targets]]
 id = "feature:chriz-sod-remix:mandatory-components"
 kind = "feature"
-rows = ["CHRIZ-SOD-REMIX:100", "CHRIZ-SOD-REMIX:110", "CHRIZ-SOD-REMIX:120", "CHRIZ-SOD-REMIX:130", "CHRIZ-SOD-REMIX:140", "CHRIZ-SOD-REMIX:150", "CHRIZ-SOD-REMIX:145", "CHRIZ-SOD-REMIX:160", "CHRIZ-SOD-REMIX:170", "CHRIZ-SOD-REMIX:180", "CHRIZ-SOD-REMIX:175", "CHRIZ-SOD-REMIX:185", "CHRIZ-SOD-REMIX:190", "CHRIZ-SOD-REMIX:195", "CHRIZ-SOD-REMIX:210", "CHRIZ-SOD-REMIX:197", "CHRIZ-SOD-REMIX:187", "CHRIZ-SOD-REMIX:200", "CHRIZ-SOD-REMIX:215", "CHRIZ-SOD-REMIX:220", "CHRIZ-SOD-REMIX:225", "CHRIZ-SOD-REMIX:245", "CHRIZ-SOD-REMIX:230", "CHRIZ-SOD-REMIX:240", "CHRIZ-SOD-REMIX:250", "CHRIZ-SOD-REMIX:255", "CHRIZ-SOD-REMIX:260", "CHRIZ-SOD-REMIX:270", "CHRIZ-SOD-REMIX:280", "CHRIZ-SOD-REMIX:290", "CHRIZ-SOD-REMIX:900", "CHRIZ-SOD-REMIX:910"]
+rows = ["CHRIZ-SOD-REMIX:100", "CHRIZ-SOD-REMIX:110", "CHRIZ-SOD-REMIX:115", "CHRIZ-SOD-REMIX:120", "CHRIZ-SOD-REMIX:130", "CHRIZ-SOD-REMIX:135", "CHRIZ-SOD-REMIX:140", "CHRIZ-SOD-REMIX:150", "CHRIZ-SOD-REMIX:145", "CHRIZ-SOD-REMIX:160", "CHRIZ-SOD-REMIX:170", "CHRIZ-SOD-REMIX:180", "CHRIZ-SOD-REMIX:175", "CHRIZ-SOD-REMIX:177", "CHRIZ-SOD-REMIX:185", "CHRIZ-SOD-REMIX:190", "CHRIZ-SOD-REMIX:195", "CHRIZ-SOD-REMIX:210", "CHRIZ-SOD-REMIX:197", "CHRIZ-SOD-REMIX:198", "CHRIZ-SOD-REMIX:187", "CHRIZ-SOD-REMIX:200", "CHRIZ-SOD-REMIX:215", "CHRIZ-SOD-REMIX:220", "CHRIZ-SOD-REMIX:225", "CHRIZ-SOD-REMIX:245", "CHRIZ-SOD-REMIX:230", "CHRIZ-SOD-REMIX:240", "CHRIZ-SOD-REMIX:250", "CHRIZ-SOD-REMIX:255", "CHRIZ-SOD-REMIX:256", "CHRIZ-SOD-REMIX:260", "CHRIZ-SOD-REMIX:265", "CHRIZ-SOD-REMIX:266", "CHRIZ-SOD-REMIX:270", "CHRIZ-SOD-REMIX:280", "CHRIZ-SOD-REMIX:285", "CHRIZ-SOD-REMIX:290", "CHRIZ-SOD-REMIX:900", "CHRIZ-SOD-REMIX:910"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-257"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:257"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-292"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:292"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-293"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:293"]
+parent = "mod:chriz-sod-remix"
+
+[[targets]]
+id = "feature:chriz-sod-remix:component-294"
+kind = "feature"
+rows = ["CHRIZ-SOD-REMIX:294"]
 parent = "mod:chriz-sod-remix"
 
 [[targets]]
@@ -306,6 +438,12 @@ parent = "mod:dlcmerger"
 id = "feature:eeex:mandatory-components"
 kind = "feature"
 rows = ["EEEX:0", "EEEX:1", "EEEX:2", "EEEX:3", "EEEX:4", "EEEX:5", "EEEX:6", "EEEX:7", "EEEX:8"]
+parent = "mod:eeex"
+
+[[targets]]
+id = "feature:eeex:component-9"
+kind = "feature"
+rows = ["EEEX:9"]
 parent = "mod:eeex"
 
 [[targets]]
@@ -718,9 +856,24 @@ kind = "feature"
 rows = ["ARTISANSKITPACK_TWEAK:7203"]
 
 [[targets]]
+id = "feature:artisanskitpack-tweak:component-7205"
+kind = "feature"
+rows = ["ARTISANSKITPACK_TWEAK:7205"]
+
+[[targets]]
 id = "feature:artisanskitpack-tweak:component-8204"
 kind = "feature"
 rows = ["ARTISANSKITPACK_TWEAK:8204"]
+
+[[targets]]
+id = "feature:artisanskitpack-tweak:component-1010000"
+kind = "feature"
+rows = ["ARTISANSKITPACK_TWEAK:1010000"]
+
+[[targets]]
+id = "feature:artisanskitpack-tweak:component-51010"
+kind = "feature"
+rows = ["ARTISANSKITPACK_TWEAK:51010"]
 
 [[targets]]
 id = "feature:ascension:component-0"
@@ -871,6 +1024,11 @@ rows = ["BARDICWONDERS:2006"]
 id = "feature:bardicwonders:component-3001"
 kind = "feature"
 rows = ["BARDICWONDERS:3001"]
+
+[[targets]]
+id = "feature:bardicwonders:component-3010"
+kind = "feature"
+rows = ["BARDICWONDERS:3010"]
 
 [[targets]]
 id = "feature:bg1npc:component-0"
@@ -1458,6 +1616,26 @@ kind = "feature"
 rows = ["CDTWEAKS:2210"]
 
 [[targets]]
+id = "feature:cdtweaks:component-2760"
+kind = "feature"
+rows = ["CDTWEAKS:2760"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3220"
+kind = "feature"
+rows = ["CDTWEAKS:3220"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3500"
+kind = "feature"
+rows = ["CDTWEAKS:3500"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3510"
+kind = "feature"
+rows = ["CDTWEAKS:3510"]
+
+[[targets]]
 id = "feature:cdtweaks:component-2250"
 kind = "feature"
 rows = ["CDTWEAKS:2250"]
@@ -1486,6 +1664,11 @@ rows = ["CDTWEAKS:2292"]
 id = "feature:cdtweaks:component-2312"
 kind = "feature"
 rows = ["CDTWEAKS:2312"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2380"
+kind = "feature"
+rows = ["CDTWEAKS:2380"]
 
 [[targets]]
 id = "feature:cdtweaks:component-2391"
@@ -1853,6 +2036,29 @@ kind = "feature"
 rows = ["CHRIZ-BG-REBALANCE:121"]
 
 [[targets]]
+id = "feature:chriz-bg-rebalance:component-301"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:301"]
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-302"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:302"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-110"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:110"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-111"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:111"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
 id = "feature:crossmodbg2:component-0"
 kind = "feature"
 rows = ["CROSSMODBG2:0"]
@@ -1894,6 +2100,18 @@ parent = "mod:chriz-bg-modpack"
 id = "feature:chriz-bg-modpack:component-170"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:170"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-188"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:188"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-189"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:189"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
@@ -1942,6 +2160,12 @@ parent = "mod:chriz-bg-modpack"
 id = "feature:chriz-bg-modpack:component-198"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:198"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-199"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:199"]
 parent = "mod:chriz-bg-modpack"
 
 [[targets]]
@@ -2003,6 +2227,42 @@ id = "feature:chriz-bg-modpack:component-610"
 kind = "feature"
 rows = ["CHRIZ-BG-MODPACK:610"]
 parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-620"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:620"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-224"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:224"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-225"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:225"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-611"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:611"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-630"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:630"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-640"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:640"]
+collection_root = true
 
 [[targets]]
 id = "feature:eet:component-100"
@@ -2194,6 +2454,101 @@ rows = ["HIDDENGAMEPLAYOPTIONS:103"]
 id = "feature:hq-soundclips-bg2ee:component-0"
 kind = "feature"
 rows = ["HQ_SOUNDCLIPS_BG2EE:0"]
+
+[[targets]]
+id = "feature:voicepack-neera:component-0"
+kind = "feature"
+rows = ["CD_NEERA:0"]
+
+[[targets]]
+id = "feature:voicepack-safana-bg1:component-0"
+kind = "feature"
+rows = ["CD_SAFANA:0"]
+
+[[targets]]
+id = "feature:voicepack-safana-sod:component-0"
+kind = "feature"
+rows = ["CD_SAFSOD:0"]
+
+[[targets]]
+id = "feature:voicepack-jaheira-bg1:component-0"
+kind = "feature"
+rows = ["CD_JAHEBG1:0"]
+
+[[targets]]
+id = "feature:voicepack-jaheira-bg2:component-0"
+kind = "feature"
+rows = ["CD_JAHEBG2:0"]
+
+[[targets]]
+id = "feature:voicepack-yeslick:component-0"
+kind = "feature"
+rows = ["CD_YESLICK:0"]
+
+[[targets]]
+id = "feature:voicepack-edwin-bg1:component-0"
+kind = "feature"
+rows = ["CD_EDWNBG1:0"]
+
+[[targets]]
+id = "feature:voicepack-edwin-bg2:component-0"
+kind = "feature"
+rows = ["CD_EDWNBG2:0"]
+
+[[targets]]
+id = "feature:voicepack-aerie:component-0"
+kind = "feature"
+rows = ["CD_AERIE:0"]
+
+[[targets]]
+id = "feature:voicepack-imoen-bg1:component-0"
+kind = "feature"
+rows = ["CD_IMOBG1:0"]
+
+[[targets]]
+id = "feature:voicepack-imoen-bg2:component-0"
+kind = "feature"
+rows = ["CD_IMOBG2:0"]
+
+[[targets]]
+id = "feature:voicepack-sarevok:component-0"
+kind = "feature"
+rows = ["CD_SAREVOK:0"]
+
+[[targets]]
+id = "feature:voicepack-amelyssan:component-0"
+kind = "feature"
+rows = ["CD_AMELY:0"]
+
+[[targets]]
+id = "feature:voicepack-gromnir-il-khan:component-0"
+kind = "feature"
+rows = ["CD_GROMN:0"]
+
+[[targets]]
+id = "feature:voicepack-ajantis:component-0"
+kind = "feature"
+rows = ["CD_AJANTI:0"]
+
+[[targets]]
+id = "feature:voicepack-viconia-bg1:component-0"
+kind = "feature"
+rows = ["CD_VICBG1:0"]
+
+[[targets]]
+id = "feature:voicepack-viconia-bg2:component-0"
+kind = "feature"
+rows = ["CD_VICBG2:0"]
+
+[[targets]]
+id = "feature:voicepack-garithos:component-0"
+kind = "feature"
+rows = ["CD_GARITH:0"]
+
+[[targets]]
+id = "feature:klatu:component-2150"
+kind = "feature"
+rows = ["KLATU:2150"]
 
 [[targets]]
 id = "feature:iepbanters:component-0"
@@ -2406,6 +2761,36 @@ kind = "feature"
 rows = ["RR:999"]
 
 [[targets]]
+id = "feature:sirene-bg1:component-0"
+kind = "feature"
+rows = ["SIRENE_BG1:0"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-3"
+kind = "feature"
+rows = ["SIRENE_BG1:3"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-6"
+kind = "feature"
+rows = ["SIRENE_BG1:6"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-7"
+kind = "feature"
+rows = ["SIRENE_BG1:7"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-8"
+kind = "feature"
+rows = ["SIRENE_BG1:8"]
+
+[[targets]]
+id = "feature:sirene-bg1:component-9"
+kind = "feature"
+rows = ["SIRENE_BG1:9"]
+
+[[targets]]
 id = "feature:sirene-bg2:component-0"
 kind = "feature"
 rows = ["SIRENE_BG2:0"]
@@ -2472,6 +2857,24 @@ rows = ["SPELL_REV:65"]
 parent = "mod:spell-rev"
 
 [[targets]]
+id = "feature:spell-rev:component-80"
+kind = "feature"
+rows = ["SPELL_REV:80"]
+parent = "mod:spell-rev"
+
+[[targets]]
+id = "feature:spell-rev:component-81"
+kind = "feature"
+rows = ["SPELL_REV:81"]
+parent = "mod:spell-rev"
+
+[[targets]]
+id = "feature:srcb-rr-compat:component-0"
+kind = "feature"
+rows = ["SRCB_RR_COMPAT:0"]
+parent = "mod:srcb-rr-compat"
+
+[[targets]]
 id = "feature:stratagems:component-3040"
 kind = "feature"
 rows = ["STRATAGEMS:3040"]
@@ -2495,6 +2898,21 @@ rows = ["STRATAGEMS:3541"]
 id = "feature:stratagems:component-4115"
 kind = "feature"
 rows = ["STRATAGEMS:4115"]
+
+[[targets]]
+id = "feature:stratagems:component-4130"
+kind = "feature"
+rows = ["STRATAGEMS:4130"]
+
+[[targets]]
+id = "feature:stratagems:component-4135"
+kind = "feature"
+rows = ["STRATAGEMS:4135"]
+
+[[targets]]
+id = "feature:stratagems:component-4140"
+kind = "feature"
+rows = ["STRATAGEMS:4140"]
 
 [[targets]]
 id = "feature:stratagems:component-4210"
@@ -2676,6 +3094,418 @@ id = "feature:yeslicknpc:component-1"
 kind = "feature"
 rows = ["YESLICKNPC:1"]
 
+[[targets]]
+id = "feature:cdtweaks:component-70"
+kind = "feature"
+rows = ["CDTWEAKS:70"]
+
+[[targets]]
+id = "feature:cdtweaks:component-90"
+kind = "feature"
+rows = ["CDTWEAKS:90"]
+
+[[targets]]
+id = "feature:cdtweaks:component-140"
+kind = "feature"
+rows = ["CDTWEAKS:140"]
+
+[[targets]]
+id = "feature:cdtweaks:component-150"
+kind = "feature"
+rows = ["CDTWEAKS:150"]
+
+[[targets]]
+id = "feature:cdtweaks:component-160"
+kind = "feature"
+rows = ["CDTWEAKS:160"]
+
+[[targets]]
+id = "feature:cdtweaks:component-171"
+kind = "feature"
+rows = ["CDTWEAKS:171"]
+
+[[targets]]
+id = "feature:cdtweaks:component-220"
+kind = "feature"
+rows = ["CDTWEAKS:220"]
+
+[[targets]]
+id = "feature:cdtweaks:component-240"
+kind = "feature"
+rows = ["CDTWEAKS:240"]
+
+[[targets]]
+id = "feature:cdtweaks:component-241"
+kind = "feature"
+rows = ["CDTWEAKS:241"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1030"
+kind = "feature"
+rows = ["CDTWEAKS:1030"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1035"
+kind = "feature"
+rows = ["CDTWEAKS:1035"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1036"
+kind = "feature"
+rows = ["CDTWEAKS:1036"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1100"
+kind = "feature"
+rows = ["CDTWEAKS:1100"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1101"
+kind = "feature"
+rows = ["CDTWEAKS:1101"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1140"
+kind = "feature"
+rows = ["CDTWEAKS:1140"]
+
+[[targets]]
+id = "feature:cdtweaks:component-1141"
+kind = "feature"
+rows = ["CDTWEAKS:1141"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2151"
+kind = "feature"
+rows = ["CDTWEAKS:2151"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2190"
+kind = "feature"
+rows = ["CDTWEAKS:2190"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2191"
+kind = "feature"
+rows = ["CDTWEAKS:2191"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2220"
+kind = "feature"
+rows = ["CDTWEAKS:2220"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2310"
+kind = "feature"
+rows = ["CDTWEAKS:2310"]
+
+[[targets]]
+id = "feature:cdtweaks:component-2311"
+kind = "feature"
+rows = ["CDTWEAKS:2311"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3030"
+kind = "feature"
+rows = ["CDTWEAKS:3030"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3031"
+kind = "feature"
+rows = ["CDTWEAKS:3031"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3060"
+kind = "feature"
+rows = ["CDTWEAKS:3060"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3070"
+kind = "feature"
+rows = ["CDTWEAKS:3070"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3071"
+kind = "feature"
+rows = ["CDTWEAKS:3071"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3072"
+kind = "feature"
+rows = ["CDTWEAKS:3072"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3073"
+kind = "feature"
+rows = ["CDTWEAKS:3073"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3131"
+kind = "feature"
+rows = ["CDTWEAKS:3131"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3132"
+kind = "feature"
+rows = ["CDTWEAKS:3132"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3150"
+kind = "feature"
+rows = ["CDTWEAKS:3150"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3151"
+kind = "feature"
+rows = ["CDTWEAKS:3151"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3191"
+kind = "feature"
+rows = ["CDTWEAKS:3191"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3194"
+kind = "feature"
+rows = ["CDTWEAKS:3194"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3195"
+kind = "feature"
+rows = ["CDTWEAKS:3195"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3196"
+kind = "feature"
+rows = ["CDTWEAKS:3196"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3197"
+kind = "feature"
+rows = ["CDTWEAKS:3197"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3198"
+kind = "feature"
+rows = ["CDTWEAKS:3198"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3200"
+kind = "feature"
+rows = ["CDTWEAKS:3200"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3205"
+kind = "feature"
+rows = ["CDTWEAKS:3205"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3230"
+kind = "feature"
+rows = ["CDTWEAKS:3230"]
+
+[[targets]]
+id = "feature:cdtweaks:component-3320"
+kind = "feature"
+rows = ["CDTWEAKS:3320"]
+
+[[targets]]
+id = "feature:cdtweaks:component-4140"
+kind = "feature"
+rows = ["CDTWEAKS:4140"]
+
+[[targets]]
+id = "feature:stratagems:component-3010"
+kind = "feature"
+rows = ["STRATAGEMS:3010"]
+
+[[targets]]
+id = "feature:stratagems:component-3015"
+kind = "feature"
+rows = ["STRATAGEMS:3015"]
+
+[[targets]]
+id = "feature:stratagems:component-3021"
+kind = "feature"
+rows = ["STRATAGEMS:3021"]
+
+[[targets]]
+id = "feature:stratagems:component-4020"
+kind = "feature"
+rows = ["STRATAGEMS:4020"]
+
+[[targets]]
+id = "feature:stratagems:component-4050"
+kind = "feature"
+rows = ["STRATAGEMS:4050"]
+
+[[targets]]
+id = "feature:stratagems:component-4051"
+kind = "feature"
+rows = ["STRATAGEMS:4051"]
+
+[[targets]]
+id = "feature:stratagems:component-4052"
+kind = "feature"
+rows = ["STRATAGEMS:4052"]
+
+[[targets]]
+id = "feature:stratagems:component-4093"
+kind = "feature"
+rows = ["STRATAGEMS:4093"]
+
+[[targets]]
+id = "feature:stratagems:component-4145"
+kind = "feature"
+rows = ["STRATAGEMS:4145"]
+
+[[targets]]
+id = "feature:stratagems:component-4150"
+kind = "feature"
+rows = ["STRATAGEMS:4150"]
+
+[[targets]]
+id = "feature:stratagems:component-4160"
+kind = "feature"
+rows = ["STRATAGEMS:4160"]
+
+[[targets]]
+id = "feature:stratagems:component-4161"
+kind = "feature"
+rows = ["STRATAGEMS:4161"]
+
+[[targets]]
+id = "feature:stratagems:component-4162"
+kind = "feature"
+rows = ["STRATAGEMS:4162"]
+
+[[targets]]
+id = "feature:stratagems:component-4163"
+kind = "feature"
+rows = ["STRATAGEMS:4163"]
+
+[[targets]]
+id = "feature:stratagems:component-4164"
+kind = "feature"
+rows = ["STRATAGEMS:4164"]
+
+[[targets]]
+id = "feature:stratagems:component-4170"
+kind = "feature"
+rows = ["STRATAGEMS:4170"]
+
+[[targets]]
+id = "feature:stratagems:component-4171"
+kind = "feature"
+rows = ["STRATAGEMS:4171"]
+
+[[targets]]
+id = "feature:stratagems:component-4172"
+kind = "feature"
+rows = ["STRATAGEMS:4172"]
+
+[[targets]]
+id = "feature:stratagems:component-4173"
+kind = "feature"
+rows = ["STRATAGEMS:4173"]
+
+[[targets]]
+id = "feature:stratagems:component-4174"
+kind = "feature"
+rows = ["STRATAGEMS:4174"]
+
+[[targets]]
+id = "feature:stratagems:component-4216"
+kind = "feature"
+rows = ["STRATAGEMS:4216"]
+
+[[targets]]
+id = "feature:stratagems:component-4217"
+kind = "feature"
+rows = ["STRATAGEMS:4217"]
+
+[[targets]]
+id = "feature:stratagems:component-4230"
+kind = "feature"
+rows = ["STRATAGEMS:4230"]
+
+[[choice_groups]]
+id = "choice:chriz-bg-modpack:utility-xp-mode"
+catalog = "CHRIZ-BG-MODPACK"
+subgroup = "Utility XP scaling"
+options = ["CHRIZ-BG-MODPACK:610", "CHRIZ-BG-MODPACK:611"]
+default = "CHRIZ-BG-MODPACK:611"
+
+[[choice_groups]]
+id = "choice:cdtweaks:outline-white-spell-icons-for-accessibility"
+catalog = "CDTWEAKS"
+subgroup = "Outline White Spell Icons for Accessibility"
+options = ["CDTWEAKS:240", "CDTWEAKS:241"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:make-cloakwood-areas-available-before-completing-the-bandit-camp"
+catalog = "CDTWEAKS"
+subgroup = "Make Cloakwood Areas Available Before Completing the Bandit Camp"
+options = ["CDTWEAKS:1035", "CDTWEAKS:1036"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:city-map-exploration"
+catalog = "CDTWEAKS"
+subgroup = "City Map Exploration"
+options = ["CDTWEAKS:1100", "CDTWEAKS:1101"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:easy-spell-learning"
+catalog = "CDTWEAKS"
+subgroup = "Easy Spell Learning"
+options = ["CDTWEAKS:3030", "CDTWEAKS:3031"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:change-effect-of-reputation-on-store-prices"
+catalog = "CDTWEAKS"
+subgroup = "Change Effect of Reputation on Store Prices"
+options = ["CDTWEAKS:3070", "CDTWEAKS:3071", "CDTWEAKS:3072", "CDTWEAKS:3073"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:cdtweaks:alter-hostile-rest-spawns"
+catalog = "CDTWEAKS"
+subgroup = "Alter Hostile Rest Spawns"
+options = ["CDTWEAKS:3194", "CDTWEAKS:3195", "CDTWEAKS:3196", "CDTWEAKS:3197", "CDTWEAKS:3198"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:decrease-the-rate-at-which-reputation-improves"
+catalog = "STRATAGEMS"
+subgroup = "Decrease the rate at which reputation improves"
+options = ["STRATAGEMS:4050", "STRATAGEMS:4051", "STRATAGEMS:4052", "STRATAGEMS:4093"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:increase-the-price-of-a-license-to-practise-magic-in-athkatla"
+catalog = "STRATAGEMS"
+subgroup = "Increase the price of a license to practise magic in Athkatla"
+options = ["STRATAGEMS:4160", "STRATAGEMS:4161", "STRATAGEMS:4162", "STRATAGEMS:4163", "STRATAGEMS:4164"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:increase-the-price-asked-by-gaelan-bayle"
+catalog = "STRATAGEMS"
+subgroup = "Increase the price asked by Gaelan Bayle"
+options = ["STRATAGEMS:4170", "STRATAGEMS:4171", "STRATAGEMS:4172", "STRATAGEMS:4173", "STRATAGEMS:4174"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:stratagems:skip-the-candlekeep-tutorial-sections"
+catalog = "STRATAGEMS"
+subgroup = "Skip the Candlekeep tutorial sections"
+options = ["STRATAGEMS:4145"]
+default = "none"
+
 [[choice_groups]]
 id = "choice:artisanskitpack-npc:artisan-s-kitpack-make-imoen-a"
 catalog = "ARTISANSKITPACK_NPC"
@@ -2778,7 +3608,7 @@ default = "none"
 id = "choice:cdtweaks:add-save-penalties-for-spells-cast-by-high-level-casters"
 catalog = "CDTWEAKS"
 subgroup = "Add Save Penalties for Spells Cast by High-Level Casters"
-options = ["CDTWEAKS:2312"]
+options = ["CDTWEAKS:2310", "CDTWEAKS:2311", "CDTWEAKS:2312"]
 default = "CDTWEAKS:2312"
 
 [[choice_groups]]
@@ -2787,6 +3617,13 @@ catalog = "CHRIZ-BG-MODPACK"
 subgroup = "Hexxat: choose a class or kit"
 options = ["CHRIZ-BG-MODPACK:221", "CHRIZ-BG-MODPACK:222", "CHRIZ-BG-MODPACK:223"]
 default = "CHRIZ-BG-MODPACK:221"
+
+[[choice_groups]]
+id = "spell-rev-lightning-bolt"
+catalog = "SPELL_REV"
+subgroup = "Lightning Bolt behavior"
+options = ["SPELL_REV:80", "SPELL_REV:81"]
+default = "SPELL_REV:80"
 
 [[choice_groups]]
 id = "choice:cdtweaks:adjust-cromwell-s-forging-time"
@@ -2814,7 +3651,7 @@ id = "choice:cdtweaks:alter-druid-spell-and-level-progression-tables"
 catalog = "CDTWEAKS"
 subgroup = "Alter Druid Spell and Level Progression Tables"
 options = ["CDTWEAKS:2292"]
-default = "CDTWEAKS:2292"
+default = "none"
 
 [[choice_groups]]
 id = "choice:cdtweaks:alter-mage-spell-progression-table"
@@ -2897,7 +3734,7 @@ default = "CDTWEAKS:3354"
 id = "choice:cdtweaks:gems-and-potions-require-identification"
 catalog = "CDTWEAKS"
 subgroup = "Gems and Potions Require Identification"
-options = ["CDTWEAKS:1142"]
+options = ["CDTWEAKS:1140", "CDTWEAKS:1141", "CDTWEAKS:1142"]
 default = "CDTWEAKS:1142"
 
 [[choice_groups]]
@@ -2953,7 +3790,7 @@ default = "CDTWEAKS:3110"
 id = "choice:cdtweaks:limit-ability-of-storekeepers-to-identify-items"
 catalog = "CDTWEAKS"
 subgroup = "Limit Ability of Storekeepers to Identify Items"
-options = ["CDTWEAKS:2192"]
+options = ["CDTWEAKS:2190", "CDTWEAKS:2191", "CDTWEAKS:2192"]
 default = "CDTWEAKS:2192"
 
 [[choice_groups]]
@@ -2974,7 +3811,7 @@ default = "CDTWEAKS:1161"
 id = "choice:cdtweaks:no-traps-or-locks-weimer-argent77"
 catalog = "CDTWEAKS"
 subgroup = "No Traps or Locks [Weimer, argent77]"
-options = ["CDTWEAKS:3130"]
+options = ["CDTWEAKS:3130", "CDTWEAKS:3131", "CDTWEAKS:3132"]
 default = "none"
 
 [[choice_groups]]
@@ -2988,7 +3825,7 @@ default = "CDTWEAKS:3290"
 id = "choice:cdtweaks:remove-annoying-visual-effects-from-equipped-items"
 catalog = "CDTWEAKS"
 subgroup = "Remove Annoying Visual Effects from Equipped Items"
-options = ["CDTWEAKS:200"]
+options = ["CDTWEAKS:200", "CDTWEAKS:3150", "CDTWEAKS:3151"]
 default = "none"
 
 [[choice_groups]]
@@ -3002,7 +3839,7 @@ default = "CDTWEAKS:180"
 id = "choice:cdtweaks:unique-icons-lava"
 catalog = "CDTWEAKS"
 subgroup = "Unique Icons [Lava]"
-options = ["CDTWEAKS:170"]
+options = ["CDTWEAKS:170", "CDTWEAKS:171"]
 default = "CDTWEAKS:170"
 
 [[choice_groups]]
@@ -3016,7 +3853,7 @@ default = "none"
 id = "choice:cdtweaks:wear-multiple-protection-items"
 catalog = "CDTWEAKS"
 subgroup = "Wear Multiple Protection Items"
-options = ["CDTWEAKS:2152"]
+options = ["CDTWEAKS:2151", "CDTWEAKS:2152"]
 default = "CDTWEAKS:2152"
 
 [[choice_groups]]
@@ -3062,6 +3899,13 @@ options = ["RR:9", "RR:10"]
 default = "none"
 
 [[choice_groups]]
+id = "choice:sirene-bg1:choose-an-alternate-class-for-sirene"
+catalog = "SIRENE_BG1"
+subgroup = "Choose an alternate class for Sirene?"
+options = ["SIRENE_BG1:6", "SIRENE_BG1:7", "SIRENE_BG1:8", "SIRENE_BG1:9"]
+default = "SIRENE_BG1:6"
+
+[[choice_groups]]
 id = "choice:sirene-bg2:choose-an-alternate-class-for-sirene"
 catalog = "SIRENE_BG2"
 subgroup = "Choose an alternate class for Sirene?"
@@ -3086,7 +3930,7 @@ default = "STRATAGEMS:3540"
 id = "choice:stratagems:remove-unrealistically-convenient-ammunition-from-the-game"
 catalog = "STRATAGEMS"
 subgroup = "Remove unrealistically convenient ammunition from the game"
-options = ["STRATAGEMS:4218"]
+options = ["STRATAGEMS:4216", "STRATAGEMS:4217", "STRATAGEMS:4218"]
 default = "STRATAGEMS:4218"
 
 [[choice_groups]]
@@ -3167,8 +4011,582 @@ options = ["SARAHTOB:1"]
 reason = "Sarah's revised-audio full install is fixed and the original-audio alternative is excluded."
 
 [[fixed_groups]]
+id = "fixed:sirene-bg1-portrait"
+catalog = "SIRENE_BG1"
+subgroup = "Choose an alternate portrait for Sirene?"
+options = ["SIRENE_BG1:3"]
+reason = "Only Christopher's curated portrait component remains exposed, so it is a fixed child rather than a choice."
+
+[[fixed_groups]]
 id = "fixed:sirene-portrait"
 catalog = "SIRENE_BG2"
 subgroup = "Choose an alternate portrait for Sirene?"
 options = ["SIRENE_BG2:2"]
 reason = "Only Christopher's curated portrait component remains exposed, so it is a fixed child rather than a choice."
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-130"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:130"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-200"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:200"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-201"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:201"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-202"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:202"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-210"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:210"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-211"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:211"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-220"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:220"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-310"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:310"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-320"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:320"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-330"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:330"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-331"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:331"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-332"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:332"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-340"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:340"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-360"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:360"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-410"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:410"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:component-411"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:411"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-rebalance:bard-spell-ceilings"
+kind = "feature"
+rows = ["CHRIZ-BG-REBALANCE:420", "CHRIZ-BG-REBALANCE:421"]
+parent = "mod:chriz-bg-rebalance"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-235"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:235"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-236"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:236"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-230"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:230"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-231"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:231"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-232"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:232"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-233"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:233"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-234"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:234"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-237"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:237"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-238"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:238"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-239"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:239"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-135"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:135"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-460"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:460"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-652"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:652"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-660"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:660"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-650"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:650"]
+parent = "mod:chriz-bg-modpack"
+
+[[targets]]
+id = "feature:chriz-bg-modpack:component-651"
+kind = "feature"
+rows = ["CHRIZ-BG-MODPACK:651"]
+parent = "mod:chriz-bg-modpack"
+
+[[choice_groups]]
+id = "potion-uniqueness"
+catalog = "CHRIZ-BG-REBALANCE"
+subgroup = "Potion uniqueness"
+options = ["CHRIZ-BG-REBALANCE:330", "CHRIZ-BG-REBALANCE:331"]
+default = "CHRIZ-BG-REBALANCE:331"
+
+# Christopher, 2026-10-16: three choices, the vanilla BG2 thief-to-mage dual (292) by default.
+[[choice_groups]]
+id = "sod-remix-imoen-soa"
+catalog = "CHRIZ-SOD-REMIX"
+subgroup = "SoD remix: Imoen in Shadows of Amn (EET; her SoD gear is handed over like the party's)"
+options = ["CHRIZ-SOD-REMIX:292", "CHRIZ-SOD-REMIX:293", "CHRIZ-SOD-REMIX:294"]
+default = "CHRIZ-SOD-REMIX:292"
+
+[[choice_groups]]
+id = "choice:stratagems:replace-many-1-magic-weapons-with-nonmagical-fine-ones"
+catalog = "STRATAGEMS"
+subgroup = 'Replace many +1 magic weapons with nonmagical "fine" ones'
+options = ["STRATAGEMS:3021"]
+default = "STRATAGEMS:3021"
+
+[[choice_groups]]
+id = "sr-hardiness-physical-resistance"
+catalog = "CHRIZ-BG-REBALANCE"
+subgroup = "Hardiness physical resistance"
+options = ["CHRIZ-BG-REBALANCE:200", "CHRIZ-BG-REBALANCE:201"]
+default = "CHRIZ-BG-REBALANCE:200"
+
+# Christopher, 2026-10-23: optional third-party quest mods, off in Recommended. Main
+# components (NTotSC 0, PPE 0) and Ascalon's first variants (2, 5, 10) are the
+# provisional defaults inside each mod; PPE 310 and 320 and Black Hearts 20005 are not offered.
+[[targets]]
+id = "feature:ntotsc:component-0"
+kind = "feature"
+rows = ["NTOTSC:0"]
+
+[[targets]]
+id = "feature:ntotsc:component-1"
+kind = "feature"
+rows = ["NTOTSC:1"]
+
+[[targets]]
+id = "feature:ntotsc:component-2"
+kind = "feature"
+rows = ["NTOTSC:2"]
+
+[[targets]]
+id = "feature:ntotsc:component-3"
+kind = "feature"
+rows = ["NTOTSC:3"]
+
+[[targets]]
+id = "feature:ntotsc:component-4"
+kind = "feature"
+rows = ["NTOTSC:4"]
+
+[[targets]]
+id = "feature:ntotsc:component-5"
+kind = "feature"
+rows = ["NTOTSC:5"]
+
+[[targets]]
+id = "feature:ntotsc:component-6"
+kind = "feature"
+rows = ["NTOTSC:6"]
+
+[[targets]]
+id = "feature:ntotsc:component-7"
+kind = "feature"
+rows = ["NTOTSC:7"]
+
+[[targets]]
+id = "feature:ntotsc:component-8"
+kind = "feature"
+rows = ["NTOTSC:8"]
+
+[[targets]]
+id = "feature:ntotsc:component-9"
+kind = "feature"
+rows = ["NTOTSC:9"]
+
+[[targets]]
+id = "feature:ntotsc:component-10"
+kind = "feature"
+rows = ["NTOTSC:10"]
+
+[[targets]]
+id = "feature:ntotsc:component-11"
+kind = "feature"
+rows = ["NTOTSC:11"]
+
+[[targets]]
+id = "feature:ntotsc:component-12"
+kind = "feature"
+rows = ["NTOTSC:12"]
+
+[[targets]]
+id = "feature:ntotsc:component-13"
+kind = "feature"
+rows = ["NTOTSC:13"]
+
+[[targets]]
+id = "feature:ntotsc:component-14"
+kind = "feature"
+rows = ["NTOTSC:14"]
+
+[[targets]]
+id = "feature:ntotsc:component-15"
+kind = "feature"
+rows = ["NTOTSC:15"]
+
+[[targets]]
+id = "feature:ntotsc:component-16"
+kind = "feature"
+rows = ["NTOTSC:16"]
+
+[[targets]]
+id = "feature:ac-quest:component-0"
+kind = "feature"
+rows = ["AC_QUEST:0"]
+
+[[targets]]
+id = "feature:ac-quest:component-1"
+kind = "feature"
+rows = ["AC_QUEST:1"]
+
+[[targets]]
+id = "feature:ac-quest:component-2"
+kind = "feature"
+rows = ["AC_QUEST:2"]
+
+[[targets]]
+id = "feature:ac-quest:component-3"
+kind = "feature"
+rows = ["AC_QUEST:3"]
+
+[[targets]]
+id = "feature:ac-quest:component-4"
+kind = "feature"
+rows = ["AC_QUEST:4"]
+
+[[targets]]
+id = "feature:ac-quest:component-5"
+kind = "feature"
+rows = ["AC_QUEST:5"]
+
+[[targets]]
+id = "feature:ac-quest:component-6"
+kind = "feature"
+rows = ["AC_QUEST:6"]
+
+[[targets]]
+id = "feature:ac-quest:component-7"
+kind = "feature"
+rows = ["AC_QUEST:7"]
+
+[[targets]]
+id = "feature:ac-quest:component-8"
+kind = "feature"
+rows = ["AC_QUEST:8"]
+
+[[targets]]
+id = "feature:ac-quest:component-9"
+kind = "feature"
+rows = ["AC_QUEST:9"]
+
+[[targets]]
+id = "feature:ac-quest:component-10"
+kind = "feature"
+rows = ["AC_QUEST:10"]
+
+[[targets]]
+id = "feature:ac-quest:component-11"
+kind = "feature"
+rows = ["AC_QUEST:11"]
+
+[[targets]]
+id = "feature:ac-quest:component-12"
+kind = "feature"
+rows = ["AC_QUEST:12"]
+
+[[targets]]
+id = "feature:blackhearts:component-1"
+kind = "feature"
+rows = ["BLACKHEARTS:1"]
+
+[[targets]]
+id = "feature:thalan:component-0"
+kind = "feature"
+rows = ["THALAN:0"]
+
+[[targets]]
+id = "feature:zg-iwd-voices:component-0"
+kind = "feature"
+rows = ["ZG_IWD_VOICES:0"]
+
+[[targets]]
+id = "feature:ppe:component-0"
+kind = "feature"
+rows = ["PPE:0"]
+
+[[targets]]
+id = "feature:ppe:component-100"
+kind = "feature"
+rows = ["PPE:100"]
+
+[[targets]]
+id = "feature:ppe:component-150"
+kind = "feature"
+rows = ["PPE:150"]
+
+[[targets]]
+id = "feature:ppe:component-10"
+kind = "feature"
+rows = ["PPE:10"]
+
+[[targets]]
+id = "feature:ppe:component-20"
+kind = "feature"
+rows = ["PPE:20"]
+
+[[targets]]
+id = "feature:ppe:component-25"
+kind = "feature"
+rows = ["PPE:25"]
+
+[[targets]]
+id = "feature:ppe:component-300"
+kind = "feature"
+rows = ["PPE:300"]
+
+[[targets]]
+id = "feature:ppe:component-301"
+kind = "feature"
+rows = ["PPE:301"]
+
+[[targets]]
+id = "feature:ppe:component-302"
+kind = "feature"
+rows = ["PPE:302"]
+
+[[targets]]
+id = "feature:ppe:component-311"
+kind = "feature"
+rows = ["PPE:311"]
+
+[[targets]]
+id = "feature:ppe:component-312"
+kind = "feature"
+rows = ["PPE:312"]
+
+[[targets]]
+id = "feature:ppe:component-322"
+kind = "feature"
+rows = ["PPE:322"]
+
+[[targets]]
+id = "feature:ppe:component-330"
+kind = "feature"
+rows = ["PPE:330"]
+
+[[targets]]
+id = "feature:ppe:component-332"
+kind = "feature"
+rows = ["PPE:332"]
+
+[[targets]]
+id = "feature:ppe:component-340"
+kind = "feature"
+rows = ["PPE:340"]
+
+[[targets]]
+id = "feature:ppe:component-342"
+kind = "feature"
+rows = ["PPE:342"]
+
+[[targets]]
+id = "feature:ppe:component-350"
+kind = "feature"
+rows = ["PPE:350"]
+
+[[targets]]
+id = "feature:ppe:component-30"
+kind = "feature"
+rows = ["PPE:30"]
+
+[[targets]]
+id = "feature:ppe:component-40"
+kind = "feature"
+rows = ["PPE:40"]
+
+[[choice_groups]]
+id = "choice:ntotsc:reduce-number-of-shaman-cloaks"
+catalog = "NTOTSC"
+subgroup = "Reduce Number of Shaman Cloaks"
+options = ["NTOTSC:13", "NTOTSC:14"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ntotsc:spell-scrolls"
+catalog = "NTOTSC"
+subgroup = "Spell Scrolls"
+options = ["NTOTSC:15", "NTOTSC:16"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ac-quest:jumper"
+catalog = "AC_QUEST"
+subgroup = "Jumper"
+options = ["AC_QUEST:2", "AC_QUEST:3"]
+default = "AC_QUEST:2"
+
+[[choice_groups]]
+id = "choice:ac-quest:of-wolves-and-men"
+catalog = "AC_QUEST"
+subgroup = "Of Wolves and Men"
+options = ["AC_QUEST:5", "AC_QUEST:6"]
+default = "AC_QUEST:5"
+
+[[choice_groups]]
+id = "choice:ac-quest:the-serpents-of-abbathor"
+catalog = "AC_QUEST"
+subgroup = "The Serpents of Abbathor"
+options = ["AC_QUEST:10", "AC_QUEST:11"]
+default = "AC_QUEST:10"
+
+[[choice_groups]]
+id = "choice:ppe:category-portraits"
+catalog = "PPE"
+subgroup = "Category portraits"
+options = ["PPE:100", "PPE:150"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-imoen-portraits"
+catalog = "PPE"
+subgroup = "Change Imoen portraits"
+options = ["PPE:300", "PPE:301", "PPE:302"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-viconia-portraits"
+catalog = "PPE"
+subgroup = "Change Viconia portraits"
+options = ["PPE:311", "PPE:312"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-minsc-portraits"
+catalog = "PPE"
+subgroup = "Change Minsc portraits"
+options = ["PPE:330", "PPE:332"]
+default = "none"
+
+[[choice_groups]]
+id = "choice:ppe:change-edwin-portraits"
+catalog = "PPE"
+subgroup = "Change Edwin portraits"
+options = ["PPE:340", "PPE:342"]
+default = "none"
+
+[[fixed_groups]]
+id = "fixed:ppe-jaheira-portrait"
+catalog = "PPE"
+subgroup = "Change Jaheira portraits"
+options = ["PPE:322"]
+reason = "PPE's BG1-style Jaheira option 320 is not offered because it is expected to fail on EET, so the BG2-style 322 is a single optional component rather than a choice."

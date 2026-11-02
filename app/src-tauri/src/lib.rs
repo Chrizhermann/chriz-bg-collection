@@ -1,7 +1,10 @@
+pub mod application_data;
 pub mod bridge;
 mod commands;
 pub mod consistency;
 pub mod error;
+mod installation_lookup_trace;
+mod removal_size;
 pub mod shortcut;
 pub mod updates;
 
@@ -19,6 +22,11 @@ pub fn run() -> tauri::Result<()> {
         .setup(move |app| {
             let resource_dir = app.path().resource_dir()?;
             let cache_dir = app.path().app_cache_dir()?;
+            if cfg!(feature = "installation-lookup-diagnostics") {
+                if let Some(window) = app.get_webview_window("main") {
+                    window.set_title("Chriz Easy BG — Diagnostics")?;
+                }
+            }
             app.manage(BridgeState::new(
                 NativeBridge::from_resource_dir_with_cache(&resource_dir, &cache_dir)
                     .with_startup_install_id(startup_install_id.clone()),
@@ -29,6 +37,7 @@ pub fn run() -> tauri::Result<()> {
             commands::bootstrap,
             commands::select_profile,
             commands::installation_defaults,
+            commands::rename_installation,
             commands::discover_games,
             commands::choose_game_folder,
             commands::inspect_game_path,
@@ -39,6 +48,10 @@ pub fn run() -> tauri::Result<()> {
             commands::freeze_review,
             commands::start_build,
             commands::resume_build,
+            commands::get_manual_checkpoint,
+            commands::check_manual_checkpoint,
+            commands::accept_manual_checkpoint,
+            commands::open_manual_checkpoint_folder,
             commands::supply_manual_archive,
             commands::open_manual_source,
             commands::get_run_snapshot,
@@ -46,12 +59,25 @@ pub fn run() -> tauri::Result<()> {
             commands::pause_run,
             commands::cancel_run,
             commands::list_managed_installations,
+            commands::preview_installation_removal,
+            commands::remove_installation,
             commands::export_diagnostics,
             commands::launch_install,
+            commands::game_log_status,
+            commands::set_game_log,
             commands::install_radar,
             commands::open_install_folder,
             commands::create_desktop_shortcut,
             commands::check_updates,
+            commands::record_install_lookup_client,
+            commands::inspect_installed_update,
+            commands::inspect_mod_upgrade,
+            commands::apply_mod_upgrade,
+            commands::restore_mod_upgrade,
+            commands::inspect_install_patches,
+            commands::apply_install_patch,
+            commands::undo_install_patch,
+            commands::restore_install_patch,
             commands::install_app_update,
             commands::activate_recipe_update,
         ])
@@ -65,6 +91,11 @@ pub fn run() -> tauri::Result<()> {
             return;
         };
         let state = app.state::<BridgeState>();
+        if state.file_update_active() {
+            api.prevent_close();
+            app.dialog().message("A file update or backup is still running. Keep CEBG open until it finishes.").title("Update in progress").show(|_| {});
+            return;
+        }
         let Some(run_id) = state.active_run_id() else {
             return;
         };

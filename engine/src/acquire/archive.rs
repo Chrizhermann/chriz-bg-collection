@@ -14,16 +14,18 @@ use widestring::WideCString;
 
 use crate::fs_retry;
 
-use super::AcquireError;
+use super::damaged::{damaged_entry_reason, entry_is_present, set_aside, CacheRepair};
+use super::entry_lock::lock_entry;
+use super::{AcquireError, StopSignal};
 
 const BUFFER_SIZE: usize = 64 * 1024;
 const EXTRACTION_MARKER: &str = ".chriz-bg-extraction.json";
-const EXTRACTION_MARKER_VERSION: u32 = 2;
-const EXTRACTION_CACHE_NAMESPACE: &str = "sha256-v2";
+const EXTRACTION_MARKER_VERSION: u32 = 3;
+const EXTRACTION_CACHE_NAMESPACE: &str = "sha256-v3";
 static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Resource limits applied before any archive entry is written.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ArchiveLimits {
     /// Maximum number of path components in one entry.
     pub max_depth: usize,
@@ -50,7 +52,8 @@ impl Default for ArchiveLimits {
 }
 
 /// Extraction policy selected by the recipe source.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum ArchiveMode {
     /// A redistributable recipe with a mandatory immutable digest and ZIP-compatible framing.
     Public,
@@ -59,7 +62,8 @@ pub enum ArchiveMode {
 }
 
 /// ZIP-compatible archive framing declared by the recipe.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum ArchiveFormat {
     /// A standard `.zip` artifact.
     Zip,
@@ -93,6 +97,8 @@ pub struct ExtractedArtifact {
     pub root: PathBuf,
     /// Verified archive SHA-256 used as the cache key.
     pub artifact_sha256: String,
+    /// Digest of the canonical extraction layout, policy, format, and limits.
+    pub extraction_contract_sha256: String,
     /// Single stripped wrapper directory, when present.
     pub wrapper_directory: Option<String>,
     /// Recipe-approved materialization roots.
@@ -114,6 +120,7 @@ struct ValidatedEntry {
 struct ExtractionMarker {
     version: u32,
     artifact_sha256: String,
+    contract_sha256: String,
     wrapper_directory: Option<String>,
     expected_roots: Vec<String>,
     expected_tp2_paths: Vec<String>,
@@ -127,13 +134,62 @@ struct ExtractedFile {
     sha256: String,
 }
 
+#[derive(Serialize)]
+struct ExtractionContract<'a> {
+    version: u32,
+    format: ArchiveFormat,
+    mode: ArchiveMode,
+    expected_roots: &'a [String],
+    expected_tp2_paths: &'a [String],
+    limits: &'a ArchiveLimits,
+}
+
+struct ExtractionIdentity<'a> {
+    digest: &'a str,
+    contract_sha256: &'a str,
+    expected_roots: &'a [String],
+    expected_tp2_paths: &'a [String],
+}
+
 /// Validate a complete ZIP central directory, extract only approved payload roots into a
-/// private temporary, and publish them under the verified archive digest.
+/// private temporary, and publish them under the archive and extraction-contract digests.
 pub fn extract_archive(
     archive_path: &Path,
     extraction_cache: &Path,
     requirements: &ArchiveRequirements,
 ) -> Result<ExtractedArtifact, AcquireError> {
+    extract_archive_reporting_repair(archive_path, extraction_cache, requirements)
+        .map(|(extracted, _repair)| extracted)
+}
+
+/// [`extract_archive`], also reporting a damaged published extraction that was replaced.
+///
+/// A published extraction that no longer validates (missing or unreadable marker, changed,
+/// missing or added files) is never used. It is set aside and the verified archive is
+/// extracted again under the same identity. Validation, repair and publication of one
+/// identity are serialized across processes by a lock in `<extraction_cache>/locks`.
+pub fn extract_archive_reporting_repair(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
+    extract_archive_with_stop(
+        archive_path,
+        extraction_cache,
+        requirements,
+        &StopSignal::never(),
+    )
+}
+
+/// [`extract_archive_reporting_repair`], giving up with [`AcquireError::Stopped`] instead of
+/// extracting once `stop` reports that the user stopped, also while another extraction of the
+/// same identity holds its lock.
+pub fn extract_archive_with_stop(
+    archive_path: &Path,
+    extraction_cache: &Path,
+    requirements: &ArchiveRequirements,
+    stop: &StopSignal,
+) -> Result<(ExtractedArtifact, Option<CacheRepair>), AcquireError> {
     validate_limits(&requirements.limits)?;
     let expected_roots = normalize_expected_paths(&requirements.expected_roots, "root")?;
     let expected_tp2_paths =
@@ -212,17 +268,47 @@ pub fn extract_archive(
     }
 
     let digest = actual_digest;
+    // The same immutable archive can be used by recipes with different publish roots or
+    // safety policies. A stricter policy must validate the archive anew, not reuse a tree
+    // accepted under broader limits. Legacy digest-only namespaces remain untouched.
+    let contract_sha256 =
+        extraction_contract_sha256(requirements, &expected_roots, &expected_tp2_paths)?;
+    let identity = ExtractionIdentity {
+        digest: &digest,
+        contract_sha256: &contract_sha256,
+        expected_roots: &expected_roots,
+        expected_tp2_paths: &expected_tp2_paths,
+    };
     let final_root = extraction_cache
         .join(EXTRACTION_CACHE_NAMESPACE)
         .join(&digest[..2])
-        .join(&digest);
-    if final_root.exists() {
-        return validate_published_extraction(
-            final_root,
-            &digest,
-            &expected_roots,
-            &expected_tp2_paths,
-        );
+        .join(&digest)
+        .join(&contract_sha256);
+    let locks = extraction_cache.join("locks");
+    fs::create_dir_all(&locks).map_err(|source| AcquireError::Io {
+        action: "create extraction lock directory",
+        path: locks.clone(),
+        source,
+    })?;
+    // Held until this identity is validated or republished. A request that finds the entry
+    // damaged has validated it under the lock, so it can never set aside a replacement that
+    // another request published in the meantime, and identical requests extract only once.
+    let _lock = lock_entry(
+        &locks.join(format!("{digest}.{contract_sha256}.lock")),
+        stop,
+    )?;
+    let mut repair = None;
+    if entry_is_present(&final_root)? {
+        match validate_published_extraction(final_root.clone(), &identity) {
+            Ok(extracted) => return Ok((extracted, None)),
+            Err(error) => {
+                let Some(reason) = damaged_entry_reason(&error, &[final_root.as_path()]) else {
+                    return Err(error);
+                };
+                set_aside(extraction_cache, &final_root, &digest)?;
+                repair = Some(CacheRepair { reason });
+            }
+        }
     }
 
     let (entries, wrapper_directory) = match requirements.format {
@@ -265,19 +351,15 @@ pub fn extract_archive(
             snapshot.path(),
             &entries,
             &temporary,
-            &digest,
             wrapper_directory.clone(),
-            &expected_roots,
-            &expected_tp2_paths,
+            &identity,
         ),
         ArchiveFormat::SelfExtractingRar => extract_rar_entries(
             snapshot.path(),
             &entries,
             &temporary,
-            &digest,
             wrapper_directory.clone(),
-            &expected_roots,
-            &expected_tp2_paths,
+            &identity,
         ),
     };
     if let Err(error) = result {
@@ -295,14 +377,12 @@ pub fn extract_archive(
     })?;
     match fs_retry::rename(&temporary, &final_root) {
         Ok(()) => {}
+        // Another publisher that does not take the identity lock, such as an older CEBG
+        // version sharing this cache, published first; its entry is validated, never repaired.
         Err(_source) if final_root.exists() => {
             let _ = fs::remove_dir_all(&temporary);
-            return validate_published_extraction(
-                final_root,
-                &digest,
-                &expected_roots,
-                &expected_tp2_paths,
-            );
+            return validate_published_extraction(final_root, &identity)
+                .map(|extracted| (extracted, repair));
         }
         Err(source) => {
             let _ = fs::remove_dir_all(&temporary);
@@ -314,13 +394,38 @@ pub fn extract_archive(
         }
     }
 
-    Ok(ExtractedArtifact {
-        root: final_root,
-        artifact_sha256: digest,
-        wrapper_directory,
+    Ok((
+        ExtractedArtifact {
+            root: final_root,
+            artifact_sha256: digest,
+            extraction_contract_sha256: contract_sha256,
+            wrapper_directory,
+            expected_roots,
+            expected_tp2_paths,
+        },
+        repair,
+    ))
+}
+
+fn extraction_contract_sha256(
+    requirements: &ArchiveRequirements,
+    expected_roots: &[String],
+    expected_tp2_paths: &[String],
+) -> Result<String, AcquireError> {
+    // Named, fixed-order fields and JSON string/array framing avoid ambiguous concatenation.
+    // Paths have already been validated, case-folded, separator-normalized, and sorted.
+    let contract = ExtractionContract {
+        version: EXTRACTION_MARKER_VERSION,
+        format: requirements.format,
+        mode: requirements.mode,
         expected_roots,
         expected_tp2_paths,
-    })
+        limits: &requirements.limits,
+    };
+    let bytes = serde_json::to_vec(&contract).map_err(|error| {
+        AcquireError::InvalidRequest(format!("could not encode extraction contract: {error}"))
+    })?;
+    Ok(hex::encode(Sha256::digest(bytes)))
 }
 
 fn validate_limits(limits: &ArchiveLimits) -> Result<(), AcquireError> {
@@ -343,14 +448,14 @@ fn normalize_expected_paths(values: &[String], label: &str) -> Result<Vec<String
     for value in values {
         let path = normalize_relative_path(value, false)?;
         let key = casefold(&path);
-        if !seen.insert(key) {
+        if !seen.insert(key.clone()) {
             return Err(AcquireError::InvalidRequest(format!(
                 "duplicate case-insensitive expected {label}: {value}"
             )));
         }
-        normalized.push(path);
+        normalized.push(key);
     }
-    normalized.sort_by_key(|path| casefold(path));
+    normalized.sort();
     Ok(normalized)
 }
 
@@ -940,10 +1045,8 @@ fn extract_zip_entries(
     archive_path: &Path,
     entries: &[ValidatedEntry],
     temporary: &Path,
-    digest: &str,
     wrapper_directory: Option<String>,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
     let file = File::open(archive_path).map_err(|source| AcquireError::Io {
         action: "open archive",
@@ -1024,14 +1127,7 @@ fn extract_zip_entries(
             sha256: hex::encode(hash.finalize()),
         });
     }
-    write_extraction_marker(
-        temporary,
-        digest,
-        wrapper_directory,
-        expected_roots,
-        expected_tp2_paths,
-        records,
-    )
+    write_extraction_marker(temporary, wrapper_directory, identity, records)
 }
 
 #[cfg(not(windows))]
@@ -1039,10 +1135,8 @@ fn extract_rar_entries(
     archive_path: &Path,
     _entries: &[ValidatedEntry],
     _temporary: &Path,
-    _digest: &str,
     _wrapper_directory: Option<String>,
-    _expected_roots: &[String],
-    _expected_tp2_paths: &[String],
+    _identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
     Err(AcquireError::ArchiveFormat {
         path: archive_path.to_path_buf(),
@@ -1117,10 +1211,8 @@ fn extract_rar_entries(
     archive_path: &Path,
     entries: &[ValidatedEntry],
     temporary: &Path,
-    digest: &str,
     wrapper_directory: Option<String>,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
 ) -> Result<(), AcquireError> {
     let path = WideCString::from_os_str(archive_path).map_err(|_| {
         AcquireError::InvalidRequest("RAR archive path contains a NUL character".to_owned())
@@ -1324,31 +1416,23 @@ fn extract_rar_entries(
             message: "not every validated RAR entry was extracted".to_owned(),
         });
     }
-    write_extraction_marker(
-        temporary,
-        digest,
-        wrapper_directory,
-        expected_roots,
-        expected_tp2_paths,
-        records,
-    )
+    write_extraction_marker(temporary, wrapper_directory, identity, records)
 }
 
 fn write_extraction_marker(
     temporary: &Path,
-    digest: &str,
     wrapper_directory: Option<String>,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
     mut records: Vec<ExtractedFile>,
 ) -> Result<(), AcquireError> {
     records.sort_by_key(|record| casefold(&record.relative_path));
     let marker = ExtractionMarker {
         version: EXTRACTION_MARKER_VERSION,
-        artifact_sha256: digest.to_owned(),
+        artifact_sha256: identity.digest.to_owned(),
+        contract_sha256: identity.contract_sha256.to_owned(),
         wrapper_directory,
-        expected_roots: expected_roots.to_vec(),
-        expected_tp2_paths: expected_tp2_paths.to_vec(),
+        expected_roots: identity.expected_roots.to_vec(),
+        expected_tp2_paths: identity.expected_tp2_paths.to_vec(),
         files: records,
     };
     let marker_path = temporary.join(EXTRACTION_MARKER);
@@ -1377,10 +1461,14 @@ fn write_extraction_marker(
 
 fn validate_published_extraction(
     root: PathBuf,
-    digest: &str,
-    expected_roots: &[String],
-    expected_tp2_paths: &[String],
+    identity: &ExtractionIdentity<'_>,
 ) -> Result<ExtractedArtifact, AcquireError> {
+    let ExtractionIdentity {
+        digest,
+        contract_sha256,
+        expected_roots,
+        expected_tp2_paths,
+    } = *identity;
     let metadata = fs::symlink_metadata(&root).map_err(|source| AcquireError::Io {
         action: "inspect published extraction",
         path: root.clone(),
@@ -1405,18 +1493,21 @@ fn validate_published_extraction(
             message: "extraction marker is not a regular file".to_owned(),
         });
     }
-    let marker_file = File::open(&marker_path).map_err(|source| AcquireError::Io {
-        action: "open extraction marker",
+    // Read before parsing so that a read failure keeps its I/O kind: only a marker that was
+    // read completely and does not parse proves damage.
+    let marker_bytes = fs::read(&marker_path).map_err(|source| AcquireError::Io {
+        action: "read extraction marker",
         path: marker_path.clone(),
         source,
     })?;
     let marker: ExtractionMarker =
-        serde_json::from_reader(marker_file).map_err(|source| AcquireError::Metadata {
+        serde_json::from_slice(&marker_bytes).map_err(|source| AcquireError::Metadata {
             path: marker_path,
             message: source.to_string(),
         })?;
     if marker.version != EXTRACTION_MARKER_VERSION
         || marker.artifact_sha256 != digest
+        || marker.contract_sha256 != contract_sha256
         || marker.expected_roots != expected_roots
         || marker.expected_tp2_paths != expected_tp2_paths
     {
@@ -1492,16 +1583,16 @@ fn validate_published_extraction(
         });
     }
     for entry in WalkDir::new(&root).min_depth(1).follow_links(false) {
-        let entry = entry.map_err(|error| AcquireError::CorruptCache {
-            digest: digest.to_owned(),
-            message: error.to_string(),
-        })?;
+        let entry = entry.map_err(|error| listing_error(&root, digest, error))?;
         if entry.file_type().is_symlink()
             || (!entry.file_type().is_file() && !entry.file_type().is_dir())
         {
             return Err(AcquireError::CorruptCache {
                 digest: digest.to_owned(),
-                message: format!("non-regular extracted path `{}`", entry.path().display()),
+                message: format!(
+                    "non-regular extracted path `{}`",
+                    display_relative(&root, entry.path())
+                ),
             });
         }
         if entry.file_type().is_dir() {
@@ -1553,6 +1644,7 @@ fn validate_published_extraction(
     Ok(ExtractedArtifact {
         root,
         artifact_sha256: digest.to_owned(),
+        extraction_contract_sha256: contract_sha256.to_owned(),
         wrapper_directory: marker.wrapper_directory,
         expected_roots: expected_roots.to_vec(),
         expected_tp2_paths: expected_tp2_paths.to_vec(),
@@ -1562,9 +1654,12 @@ fn validate_published_extraction(
 pub(super) fn verify_extracted_artifact(artifact: &ExtractedArtifact) -> Result<(), AcquireError> {
     let verified = validate_published_extraction(
         artifact.root.clone(),
-        &artifact.artifact_sha256,
-        &artifact.expected_roots,
-        &artifact.expected_tp2_paths,
+        &ExtractionIdentity {
+            digest: &artifact.artifact_sha256,
+            contract_sha256: &artifact.extraction_contract_sha256,
+            expected_roots: &artifact.expected_roots,
+            expected_tp2_paths: &artifact.expected_tp2_paths,
+        },
     )?;
     if verified.wrapper_directory != artifact.wrapper_directory {
         return Err(AcquireError::CorruptCache {
@@ -1573,6 +1668,35 @@ pub(super) fn verify_extracted_artifact(artifact: &ExtractedArtifact) -> Result<
         });
     }
     Ok(())
+}
+
+/// A failure to list a published extraction keeps its I/O kind, so that only a path of the
+/// extraction that no longer exists can prove damage. Without link following, walkdir has no
+/// other kind of failure.
+fn listing_error(root: &Path, digest: &str, error: walkdir::Error) -> AcquireError {
+    let path = error
+        .path()
+        .map_or_else(|| root.to_path_buf(), Path::to_path_buf);
+    match error.into_io_error() {
+        Some(source) => AcquireError::Io {
+            action: "list published extraction",
+            path,
+            source,
+        },
+        None => AcquireError::CorruptCache {
+            digest: digest.to_owned(),
+            message: "published extraction contains a link loop".to_owned(),
+        },
+    }
+}
+
+/// `path` relative to the extraction root, for messages that must not reveal the cache location.
+fn display_relative(root: &Path, path: &Path) -> String {
+    match path.strip_prefix(root) {
+        Ok(relative) => portable_path(relative)
+            .unwrap_or_else(|_| relative.to_string_lossy().replace('\\', "/")),
+        Err(_) => "a path outside the extraction".to_owned(),
+    }
 }
 
 fn portable_path(path: &Path) -> Result<String, String> {

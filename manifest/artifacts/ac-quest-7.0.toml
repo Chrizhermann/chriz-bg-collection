@@ -1,0 +1,32 @@
+id = "ac-quest-7.0"
+name = "Ascalon's Questpack"
+version = "7.0"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Gitjas/Ascalons_Questpack/releases/download/v7.0/ascalons-questpack-7.0.iemod"
+reference = "v7.0"
+expected_filename = "ascalons-questpack-7.0.iemod"
+expected_length = 20936689
+sha256 = "87c2feb30c8968c7097913cb540eb1dd5025f311186c01b1100151af02447564"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["AC_QUEST"]
+tp2_paths = ["AC_QUEST/ac_quest.TP2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 2048
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Gitjas/Ascalons_Questpack"
+license = "Fetch-only from the author's official release; no redistribution by CEBG"
+url = "https://github.com/Gitjas/Ascalons_Questpack/releases/tag/v7.0"
+reviewed_on = "2026-10-22"

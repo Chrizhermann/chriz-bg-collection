@@ -18,3 +18,5 @@ Read `docs/handover.md` first — it is the live entry point (status, guardrails
 - `gh auth status` before any gh operation (shared CLI state across concurrent sessions);
   this repo lives on the `Chrizhermann` account.
 - Domain knowledge (WeiDU, EET quirks, install gotchas) lives in the `bg-modding` skill.
+- A session deletes its worktree's `target/` (`cargo clean`) once its work is merged;
+  Rust build output is 15–35 GB per worktree.

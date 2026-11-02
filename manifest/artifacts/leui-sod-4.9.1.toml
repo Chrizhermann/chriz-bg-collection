@@ -1,0 +1,32 @@
+id = "leui-sod-4.9.1"
+name = "Lefreut's Enhanced UI: SoD style"
+version = "4.9.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/r-e-d/LeUI-SoD/releases/download/v4.9.1/lefreuts-enhanced-ui-sod-skin-4.9.1.iemod"
+reference = "v4.9.1"
+expected_filename = "lefreuts-enhanced-ui-sod-skin-4.9.1.iemod"
+expected_length = 19539697
+sha256 = "09de7721be81fc0df25564ec050d0f9187708fa061a3d69ac846f5f9bacfbbc0"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "iemod"
+root_rule = "direct"
+publish_roots = ["LeUI-SoD"]
+tp2_paths = ["LeUI-SoD/LeUI-SoD.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 4096
+max_entry_uncompressed_bytes = 8388608
+max_total_uncompressed_bytes = 134217728
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://github.com/r-e-d/LeUI-SoD"
+license = "Fetch-only from the author's official release; no redistribution by CEBG"
+url = "https://github.com/r-e-d/LeUI-SoD/releases/tag/v4.9.1"
+reviewed_on = "2026-09-29"

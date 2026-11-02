@@ -4,16 +4,19 @@ import type {
   GameCandidate,
   GameDiscovery,
   ManualDownloadRequirement,
+  ManualBreakpoint,
   SelectionEvaluation,
 } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
 import { installationReadiness, validateInstallationName } from "../state";
+import { invalidBreakpoints } from "../components/manual-checkpoints";
 
 export interface InstallScreenModel {
   readonly discovery: GameDiscovery;
   readonly selectedBg1Id: string;
   readonly selectedBg2Id: string;
   readonly installationName: string;
+  readonly installationNameError?: string | null;
   readonly destination: DestinationEvaluation;
   readonly evaluation: SelectionEvaluation | null;
   readonly evaluationPending: boolean;
@@ -26,6 +29,7 @@ export interface InstallScreenModel {
   readonly manualDownloadGateVisible: boolean;
   readonly manualDownloadCheckingArtifactId: string | null;
   readonly manualDownloadError: { readonly artifactId: string; readonly message: string } | null;
+  readonly manualBreakpoints?: readonly ManualBreakpoint[];
 }
 
 export interface InstallScreenActions {
@@ -196,7 +200,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
   const location = field("Install location", "install-location", model.destination.path);
   name.input.disabled = model.starting;
   location.input.disabled = model.starting;
-  const nameError = validateInstallationName(model.installationName);
+  const nameError = model.installationNameError ?? validateInstallationName(model.installationName);
   const nameHelp = element("p", nameError === null ? "field-help" : "field-error", nameError ?? "This name also labels your installation in CEBG.");
   nameHelp.id = "install-name-help";
   name.input.setAttribute("aria-describedby", nameHelp.id);
@@ -254,6 +258,14 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     recipe.append(label, select);
   }
   recipe.append(customize);
+  if (model.manualBreakpoints?.length) {
+    const invalid = invalidBreakpoints(model.manualBreakpoints, model.evaluation?.manualCheckpointOptions ?? []);
+    const note = element("p", invalid.length ? "unavailable-reason" : "muted", invalid.length
+      ? "A manual-mod pause no longer matches this setup. Open Customize and correct it before installing."
+      : `${model.manualBreakpoints.length} manual-mod ${model.manualBreakpoints.length === 1 ? "pause" : "pauses"} selected. Installation will stop at these points for your additions.`);
+    if (invalid.length) note.setAttribute("role", "alert");
+    recipe.append(note);
+  }
   if (model.evaluation !== null && model.evaluation.findings.length > 0) {
     const notices = element("details", "recipe-notices");
     notices.append(element("summary", undefined, `${model.evaluation.findings.length} setup ${model.evaluation.findings.length === 1 ? "note" : "notes"}`));
@@ -265,7 +277,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
 
   const bg1 = selectedCandidate(model.discovery.bg1Candidates, model.selectedBg1Id);
   const bg2 = selectedCandidate(model.discovery.bg2Candidates, model.selectedBg2Id);
-  const selectionReady = installationReadiness({
+  const selectionReady = nameError === null && installationReadiness({
     starting: model.starting,
     name: model.installationName,
     bg1,
@@ -273,6 +285,7 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     destination: model.destination,
     evaluation: model.evaluation,
     evaluationPending: model.evaluationPending,
+    manualBreakpoints: model.manualBreakpoints,
   });
   const manualDownloadPending = model.manualDownloadGateVisible
     && (model.manualDownloadCheckingArtifactId !== null || model.manualDownloads.some((requirement) => !requirement.ready));

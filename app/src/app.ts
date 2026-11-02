@@ -1,16 +1,19 @@
 import { BackendCommandError, type Backend } from "./backend";
 import { createAppShell } from "./components/app-shell";
 import type { TechnicalLogState } from "./components/technical-log";
-import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, ManagedInstallation, ManualDownloadRequirement, Route, RunEventEnvelope, UpdateSummary } from "./contracts";
+import type { BackendStatus, BuildSnapshot, DestinationEvaluation, GameCandidate, GameDiscovery, InstallationRemovalPreview, InstalledUpdatePlan, ManagedInstallation, ManualDownloadRequirement, ModUpgradePreview, Route, RunEventEnvelope, UpdateSummary, PatchPreview } from "./contracts";
 import { buildScreen } from "./screens/build";
+import { updateBuildPhase } from "./build-progress";
 import { destinationScreen } from "./screens/destination";
 import { gamesScreen } from "./screens/games";
 import { homeScreen, type AddonFeedback, type ShortcutFeedback } from "./screens/home";
 import { reviewScreen } from "./screens/review";
 import { installScreen } from "./screens/install";
+import { loadingScreen, startupFailureScreen } from "./screens/loading";
 import { setupScreen, type SetupViewState } from "./screens/setup";
-import { updatesScreen } from "./screens/updates";
+import { selectedUpdateCopy, updatesScreen } from "./screens/updates";
 import { updateUpdatesControl } from "./components/update-notification";
+import { appendPatchAvailability } from "./components/install-patches";
 import {
   automaticInstallationPath,
   initialState,
@@ -23,6 +26,16 @@ import {
 import { statusCard } from "./components/status-card";
 import { errorDetails } from "./components/error-details";
 import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from "./setup-draft";
+import { installationRemovalDialog, installationRemovalNotice } from "./components/installation-removal";
+import { operationFeedback } from "./components/operation-feedback";
+import { clearAppUpdate, completedAppUpdate, rememberAppUpdate, type OperationFeedback } from "./operation-feedback";
+import type { OperationProgress } from "./contracts";
+import type { InputValue } from "./contracts";
+import { installationNameError } from "./components/installation-name";
+import type { ManualBreakpoint, ManualCheckpointStatus } from "./contracts";
+import type { GameLogStatus, LaunchInstallResult } from "./contracts";
+import type { GameLogView } from "./components/game-log";
+import { RadarLaunchPreferences } from "./radar-launch-preference";
 
 export interface AppHandle {
   navigate(route: Route): Promise<void>;
@@ -97,10 +110,19 @@ class AppController implements AppHandle {
   #identityRevision = 0;
   #manualDownloadRevision = 0;
   #starting = false;
+  #resuming = false;
+  #runRevision = 0;
+  #activeStepId: string | null = null;
+  #stepProgressFinished = false;
   #manualDownloads: readonly ManualDownloadRequirement[] = [];
   #manualDownloadGateVisible = false;
   #manualDownloadCheckingArtifactId: string | null = null;
   #manualDownloadError: { readonly artifactId: string; readonly message: string } | null = null;
+  #manualCheckpoint: ManualCheckpointStatus | null = null;
+  #manualCheckpointExpected = false;
+  #manualCheckpointBusy = false;
+  #manualCheckpointError: string | undefined;
+  #manualCheckpointRevision = 0;
   #runId: string | null = null;
   #installId: string | null = null;
   #retryAvailable = false;
@@ -110,20 +132,52 @@ class AppController implements AppHandle {
   #shortcutFeedback: ShortcutFeedback | null = null;
   #checkingUpdates = false;
   #installingUpdate = false;
+  #operationFeedback: OperationFeedback | null = null;
+  #operationRevision = 0;
   #setupView: SetupViewState = { search: "", category: "" };
   #changingProfile = false;
   #radarAttempts = new Set<string>();
   #addonFeedback: AddonFeedback | null = null;
+  readonly #radarLaunchPreferences = new RadarLaunchPreferences();
+  readonly #launchPending = new Set<string>();
+  readonly #launchFeedback = new Map<string, LaunchInstallResult>();
+  // The game log in the collapsed Troubleshooting section: read only when the player opens it.
+  readonly #gameLogStatus = new Map<string, GameLogStatus>();
+  readonly #gameLogBusy = new Set<string>();
+  readonly #gameLogErrors = new Map<string, NonNullable<GameLogView["error"]>>();
+  #troubleshootingOpen = false;
   #logRenderTimer: number | null = null;
+  #removalPreview: InstallationRemovalPreview | null = null;
+  #removalBusy = false;
+  #removalError: string | null = null;
+  #removalNotice: string | null = null;
+  #patchPreview: PatchPreview | null = null;
+  #patchInstallId = "";
+  #patchBusy = false;
+  #patchError: string | undefined;
+  #installedUpdatePlan: InstalledUpdatePlan | null = null;
+  #installedUpdateInstallId = "";
+  #installedUpdateBusy = false;
+  #installedUpdateError: string | undefined;
+  #installedUpdateErrorDetail: string | undefined;
+  #installedUpdateRevision = 0;
+  #modUpgrade: ModUpgradePreview | null = null;
+  #modUpgradeBusy = false;
+  #modUpgradeError: string | undefined;
+  #modUpgradeErrorDetail: string | undefined;
+  // Session-only results of explicit checks, never a reason to scan games at startup.
+  readonly #checkedPatches = new Map<string, PatchPreview>();
 
   constructor(private readonly root: HTMLElement, private readonly backend: Backend) {}
 
   async initialize(): Promise<void> {
+    this.root.replaceChildren(loadingScreen("startup"));
     const [status, installations] = await Promise.all([
       this.backend.getStatus(),
       this.backend.listManagedInstallations(),
     ]);
     this.#status = status;
+    this.#operationFeedback = completedAppUpdate(status.applicationVersion ?? status.engineVersion);
     this.#updates = { ...this.#updates,
       application: { ...this.#updates.application, currentVersion: status.applicationVersion ?? status.engineVersion },
       recipe: { ...this.#updates.recipe, currentVersion: status.recipeVersion ?? "bundled" },
@@ -133,6 +187,11 @@ class AppController implements AppHandle {
     this.#installId = selected?.id ?? null;
     if (installations.length > 0) {
       this.#dispatch({ type: "navigate", route: "home", remember: false });
+      if (selected?.resumable && selected.status === "Paused for your mods") {
+        this.#showManualPause();
+        this.#dispatch({ type: "navigate", route: "build", remember: false });
+        await this.#loadManualCheckpoint(selected.id);
+      }
     } else {
       await this.#prepareInstallFlow();
     }
@@ -145,6 +204,7 @@ class AppController implements AppHandle {
   async #prepareInstallFlow(): Promise<void> {
     if (this.#discovery !== null && this.#state.evaluation !== null) return;
     if (this.#installPreparation === null) {
+      this.root.replaceChildren(loadingScreen("games"));
       this.#installPreparation = (async () => {
         const loaded = this.#status.mode === "native" ? loadSetupDraft(this.#status) : { draft: null, notice: null };
         let draft = loaded.draft;
@@ -166,6 +226,7 @@ class AppController implements AppHandle {
           this.backend.getInstallationDefaults(),
         ]);
         this.#discovery = discovery;
+        this.root.replaceChildren(loadingScreen("setup"));
         this.#defaultInstallationPath = defaults.path;
         this.#dispatch({ type: "select-game", game: "bg1", id: discovery.selectedBg1Id });
         this.#dispatch({ type: "select-game", game: "bg2", id: discovery.selectedBg2Id });
@@ -174,6 +235,7 @@ class AppController implements AppHandle {
           this.#dispatch({ type: "set-installation-name", name: draft.installationName });
           this.#dispatch({ type: "set-destination", path: draft.destinationPath, automatic: draft.destinationAutomatic });
           this.#dispatch({ type: "restore-selection", selection: draft.selection });
+          this.#dispatch({ type: "set-manual-breakpoints", breakpoints: draft.manualBreakpoints ?? [] });
           this.#createDesktopShortcutAfterInstall = draft.createDesktopShortcut;
           this.#savedSourcePaths = { ...draft.sourcePaths };
           await Promise.all([
@@ -230,12 +292,15 @@ class AppController implements AppHandle {
       installationName: this.#state.installationName, destinationPath: this.#state.destinationPath,
       destinationAutomatic: this.#state.destinationAutomatic, sourcePaths: this.#savedSourcePaths,
       selection: this.#state.selection, createDesktopShortcut: this.#createDesktopShortcutAfterInstall,
+      manualBreakpoints: this.#state.manualBreakpoints,
     });
   }
 
   async navigate(route: Route): Promise<void> {
+    if ((this.#manualCheckpointBusy || this.#resuming) && route !== "build") return;
+    if (this.#modUpgradeBusy && route !== "updates") return;
     const buildNeedsControls = this.#state.build !== null
-      && (["running", "attention", "waiting-manual"].includes(this.#state.build.state)
+      && (["running", "attention", "waiting-manual", "pausing"].includes(this.#state.build.state)
         || (this.#state.build.state === "failed" && this.#retryAvailable));
     if (this.#status.mode === "native"
       && route !== "build"
@@ -260,12 +325,13 @@ class AppController implements AppHandle {
   #dispatch(action: AppAction): void {
     this.#state = reduce(this.#state, action);
     if (action.type === "select-game" && action.id !== "") delete this.#sourceRestoreNotices[action.game];
-    if (["select-game", "set-installation-name", "set-destination", "set-feature", "set-features", "reset-selection", "evaluation-resolved"].includes(action.type)) {
+    if (["select-game", "set-installation-name", "set-destination", "set-feature", "set-features", "set-input", "set-manual-breakpoints", "reset-selection", "evaluation-resolved"].includes(action.type)) {
       this.#saveDraft();
     }
   }
 
   #back(): void {
+    if (this.#modUpgradeBusy) return;
     this.#dispatch({ type: "back" });
     this.#render();
   }
@@ -280,6 +346,12 @@ class AppController implements AppHandle {
 
   async #toggleFeature(id: string, selected: boolean): Promise<void> {
     await this.#changeFeatures({ [id]: selected }, `feature-${id}`);
+  }
+
+  async #changeInput(featureId: string, inputId: string, value: InputValue, focusId: string): Promise<void> {
+    if (!this.#beginIdentityEdit()) return;
+    this.#dispatch({ type: "set-input", featureId, inputId, value });
+    await this.#evaluate(true, focusId);
   }
 
   async #changeFeatures(changes: Record<string, boolean>, focusId: string): Promise<void> {
@@ -319,6 +391,7 @@ class AppController implements AppHandle {
   }
 
   async #backFromSecondary(): Promise<void> {
+    if (this.#modUpgradeBusy) return;
     const route = this.#state.history.at(-1) ?? "welcome";
     if (route === "welcome") await this.#prepareInstallFlow();
     if (this.#state.history.length > 0) this.#dispatch({ type: "back" });
@@ -339,9 +412,204 @@ class AppController implements AppHandle {
     }
   }
 
+  #selectInstalledUpdate(installId: string): void {
+    if (this.#modUpgradeBusy || this.#patchBusy || this.#installingUpdate) return;
+    if (!this.#updates.managedCopies.some(copy => copy.installId === installId)) return;
+    ++this.#installedUpdateRevision;
+    this.#installedUpdateInstallId = installId;
+    this.#installedUpdatePlan = null;
+    this.#installedUpdateError = undefined;
+    this.#installedUpdateErrorDetail = undefined;
+    this.#installedUpdateBusy = false;
+    this.#modUpgrade = null;
+    this.#modUpgradeError = undefined;
+    this.#modUpgradeErrorDetail = undefined;
+    this.#patchInstallId = installId;
+    this.#patchPreview = null;
+    this.#patchError = undefined;
+    this.#render("updates-installation");
+  }
+
+  async #checkInstalledUpdate(installId: string): Promise<void> {
+    if (this.#installedUpdateBusy || this.#modUpgradeBusy || this.#patchBusy || this.#installingUpdate || !this.backend.inspectInstalledUpdate) return;
+    if (!this.#updates.managedCopies.some(copy => copy.installId === installId && copy.state !== "stale")) return;
+    const revision = ++this.#installedUpdateRevision;
+    this.#installedUpdateInstallId = installId;
+    this.#installedUpdatePlan = null;
+    this.#installedUpdateError = undefined;
+    this.#installedUpdateErrorDetail = undefined;
+    this.#modUpgrade = null;
+    this.#modUpgradeError = undefined;
+    this.#modUpgradeErrorDetail = undefined;
+    this.#installedUpdateBusy = true;
+    this.#render();
+    try {
+      const plan = await this.backend.inspectInstalledUpdate(installId);
+      if (revision !== this.#installedUpdateRevision) return;
+      if (plan.installId !== installId) throw new Error("The comparison belongs to a different installation. Check installed mods again.");
+      this.#installedUpdatePlan = plan;
+    } catch (error: unknown) {
+      if (revision !== this.#installedUpdateRevision) return;
+      this.#installedUpdateError = error instanceof BackendCommandError
+        ? `${error.message} ${error.recoveryAction}`
+        : error instanceof Error ? error.message : "The installed mods could not be compared. Try checking again.";
+      this.#installedUpdateErrorDetail = error instanceof BackendCommandError ? error.technicalDetail : undefined;
+    } finally {
+      // Inspect supported upgrades even if the whole-collection comparison failed:
+      // an interrupted update must still offer its explicit recovery action.
+      // Sequential calls also avoid competing for the same native target lock.
+      if (revision === this.#installedUpdateRevision && this.backend.inspectModUpgrade) {
+        try {
+          const upgrade = await this.backend.inspectModUpgrade(installId);
+          if (revision === this.#installedUpdateRevision) {
+            if (upgrade.installId !== installId) throw new Error("The BuffBot update belongs to another installation. Check installed mods again.");
+            this.#modUpgrade = upgrade;
+          }
+        } catch (error: unknown) {
+          if (revision === this.#installedUpdateRevision) this.#setModUpgradeError(error);
+        }
+      }
+      if (revision === this.#installedUpdateRevision) {
+        this.#installedUpdateBusy = false;
+        this.#render();
+      }
+    }
+  }
+
+  #setModUpgradeError(error: unknown): void {
+    this.#modUpgradeError = error instanceof BackendCommandError
+      ? `${error.message} ${error.recoveryAction}`
+      : error instanceof Error ? error.message : "The BuffBot update could not finish. Check this installation again.";
+    this.#modUpgradeErrorDetail = error instanceof BackendCommandError ? error.technicalDetail : undefined;
+  }
+
+  #beginOperation(title: string, installId?: string): (progress: OperationProgress) => void {
+    const revision = ++this.#operationRevision;
+    this.#operationFeedback = { title, installId, state: "working", detail: "Keep CEBG open and the game closed." };
+    return (progress) => {
+      if (revision !== this.#operationRevision || this.#operationFeedback?.state !== "working") return;
+      this.#operationFeedback = { ...this.#operationFeedback, progress };
+      this.#render();
+    };
+  }
+
+  #finishOperation(title: string, detail: string, success: boolean, installId?: string): void {
+    ++this.#operationRevision;
+    this.#operationFeedback = { title, detail, installId, state: success ? "success" : "error" };
+  }
+
+  async #modUpgradeOperation(kind: "apply" | "undo" | "restore", fullBackup = true, backupSaves = false): Promise<void> {
+    if (this.#modUpgradeBusy || this.#installedUpdateBusy || this.#patchBusy || this.#installingUpdate || this.#installationActive()) return;
+    const preview = this.#modUpgrade;
+    const installId = this.#installedUpdateInstallId;
+    if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
+    if (!preview || preview.installId !== installId) return;
+    if (kind === "apply" && (preview.state !== "available" || !preview.reviewToken || !this.backend.applyModUpgrade)) return;
+    if (kind === "undo" && (preview.state !== "applied" || !preview.canUndo || !this.backend.restoreModUpgrade)) return;
+    if (kind === "restore" && (preview.state !== "needs-recovery" || !preview.canRestore || !this.backend.restoreModUpgrade)) return;
+    ++this.#installedUpdateRevision;
+    this.#modUpgradeBusy = true;
+    this.#modUpgradeError = undefined;
+    this.#modUpgradeErrorDetail = undefined;
+    this.#installedUpdatePlan = null;
+    this.#installedUpdateError = undefined;
+    this.#installedUpdateErrorDetail = undefined;
+    // All earlier mutation previews are stale once an update starts.
+    this.#patchPreview = null;
+    this.#checkedPatches.delete(installId);
+    const progress = this.#beginOperation(kind === "apply" ? "Updating BuffBot" : "Restoring BuffBot", installId);
+    this.#render();
+    try {
+      const result = kind === "apply"
+        ? await this.backend.applyModUpgrade!(installId, preview.reviewToken!, fullBackup, backupSaves, progress)
+        : await this.backend.restoreModUpgrade!(installId, kind === "undo", progress);
+      if (result.installId !== installId) throw new Error("The BuffBot update returned another installation. Check installed mods again.");
+      this.#modUpgrade = result;
+      const complete = kind === "apply" ? ["applied", "already-current"].includes(result.state) : result.state === "available";
+      this.#finishOperation(complete ? kind === "apply" ? "BuffBot update complete" : kind === "undo" ? "BuffBot update undone" : "BuffBot backup restored" : "BuffBot update needs attention",
+        complete ? `BuffBot ${result.installedVersion ?? ""} is installed. Your other mods and saves are unchanged.` : "Keep the game closed. Review the recovery options below.", complete, installId);
+    } catch (error: unknown) {
+      this.#modUpgrade = null;
+      this.#setModUpgradeError(error);
+      this.#finishOperation("BuffBot update could not finish", "Keep the game closed and check the error below before trying again.", false, installId);
+    } finally {
+      // Consume old Apply authority on every attempt, including failures. A new
+      // inspection supplies recovery state or a newly checked review token.
+      if (this.backend.inspectModUpgrade) {
+        try {
+          const result = await this.backend.inspectModUpgrade(installId);
+          if (result.installId !== installId) throw new Error("The BuffBot update belongs to another installation. Check installed mods again.");
+          this.#modUpgrade = result;
+        } catch (error: unknown) {
+          this.#modUpgrade = null;
+          if (!this.#modUpgradeError) this.#setModUpgradeError(error);
+        }
+      }
+      if (this.backend.inspectInstalledUpdate) {
+        try {
+          const result = await this.backend.inspectInstalledUpdate(installId);
+          if (result.installId !== installId) throw new Error("The comparison belongs to another installation.");
+          this.#installedUpdatePlan = result;
+        } catch (error: unknown) {
+          this.#installedUpdateError = error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}` : String(error);
+          this.#installedUpdateErrorDetail = error instanceof BackendCommandError ? error.technicalDetail : undefined;
+        }
+      }
+      try { this.#installations = await this.backend.listManagedInstallations(); }
+      catch { /* Preserve update/recovery controls when the launcher cannot refresh. */ }
+      this.#modUpgradeBusy = false;
+      this.#render();
+    }
+  }
+
+  async #patchOperation(kind: "check" | "apply" | "undo" | "restore", installId = this.#patchInstallId, fullBackup = true, saveBackup = false): Promise<void> {
+    if (this.#installations.some(copy => copy.id === installId && copy.customized)) return;
+    if (this.#patchBusy || this.#installingUpdate || this.#installedUpdateBusy || this.#modUpgradeBusy) return;
+    if (kind !== "check") {
+      this.#installedUpdatePlan = null;
+      this.#modUpgrade = null;
+      this.#modUpgradeError = undefined;
+      this.#modUpgradeErrorDetail = undefined;
+    }
+    this.#patchInstallId = installId;
+    this.#patchBusy = true;
+    this.#patchError = undefined;
+    const progress = kind === "check" ? undefined : this.#beginOperation(kind === "apply" ? "Applying game fix" : "Restoring game fix", installId);
+    this.#render();
+    try {
+      if (kind === "check") this.#patchPreview = await this.backend.inspectInstallPatches!(installId);
+      else if (kind === "apply" && this.#patchPreview?.installId === installId && this.#patchPreview.reviewToken) {
+        this.#patchPreview = await this.backend.applyInstallPatch!(installId, this.#patchPreview.reviewToken, fullBackup, saveBackup, progress);
+      } else if (kind === "undo") this.#patchPreview = await this.backend.undoInstallPatch!(installId, progress);
+      else if (kind === "restore") this.#patchPreview = await this.backend.restoreInstallPatch!(installId, progress);
+      else throw new Error("Check this installation again before applying a fix.");
+      if (this.#patchPreview?.installId !== installId) throw new Error("The fix result belongs to another installation.");
+      if (kind !== "check") {
+        const complete = kind === "apply" ? ["applied", "already-fixed"].includes(this.#patchPreview.state) : this.#patchPreview.state === "available";
+        this.#finishOperation(complete ? kind === "apply" ? "Game fix applied" : kind === "undo" ? "Game fix undone" : "Game fix backup restored" : "Game fix needs attention",
+          complete ? "The selected fix finished. Saved games were not edited." : "Keep the game closed. Review the recovery options below.", complete, installId);
+      }
+      try { this.#installations = await this.backend.listManagedInstallations(); } catch { /* The verified result remains visible. */ }
+    } catch (error) {
+      this.#patchError = error instanceof BackendCommandError ? `${error.message} ${error.technicalDetail}` : String(error);
+      if (kind !== "check") this.#finishOperation("Game fix could not finish", "Keep the game closed and check the error below before trying again.", false, installId);
+      // A failed apply may have entered durable recovery. Never leave its old Apply button active.
+      this.#patchPreview = null;
+      try { this.#patchPreview = await this.backend.inspectInstallPatches!(installId); } catch { /* Keep the diagnostic and explicit Check action. */ }
+    } finally {
+      this.#patchBusy = false;
+      if (this.#patchPreview?.installId === installId) this.#checkedPatches.set(installId, this.#patchPreview);
+      else this.#checkedPatches.delete(installId);
+      this.#render();
+    }
+  }
+
   #updateBadge(): void {
     const button = this.root.querySelector<HTMLButtonElement>('[data-action="updates"]');
-    if (button) updateUpdatesControl(button, this.#updates);
+    if (button) {
+      updateUpdatesControl(button, this.#updates);
+      appendPatchAvailability(button, [...this.#checkedPatches.values()]);
+    }
   }
 
   async #backToSetup(): Promise<void> {
@@ -412,6 +680,7 @@ class AppController implements AppHandle {
         this.#destination.path,
         this.#state.selectedBg1Id,
         this.#state.selectedBg2Id,
+        this.#state.manualBreakpoints,
       );
       if (identityRevision !== this.#identityRevision) {
         throw new BackendCommandError({
@@ -437,7 +706,7 @@ class AppController implements AppHandle {
       this.#dispatch({ type: "review-frozen", review });
       this.#retryAvailable = false;
       this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
-      const started = await this.backend.startBuild(review.reviewToken, (event) => this.#handleRunEvent(event));
+      const started = await this.backend.startBuild(review.reviewToken, this.#runEventListener());
       this.#runId = started.runId;
       if (this.#status.mode === "fixture" && this.#installId === null) this.#installId = "fixture-install";
       if (render && this.#state.build?.state !== "complete") await this.navigate("build");
@@ -470,14 +739,20 @@ class AppController implements AppHandle {
 
   async #retryBuild(): Promise<void> {
     if (this.#status.mode === "native") {
-      if (this.#installId === null) return;
-      const started = await this.backend.resumeBuild(this.#installId, (event) => this.#handleRunEvent(event));
-      this.#runId = started.runId;
-      this.#retryAvailable = false;
-      if (this.#state.build?.state === "failed" || this.#state.build?.state === "waiting-manual") {
-        this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
-      }
+      if (this.#installId === null || this.#resumeBlocked()) return;
+      const installId = this.#installId;
+      this.#resuming = true;
       this.#render();
+      try {
+        if (this.#manualCheckpointExpected || this.#manualCheckpoint) {
+          await this.#loadManualCheckpoint(installId);
+          return;
+        }
+        await this.#launchResume(installId);
+      } finally {
+        this.#resuming = false;
+        this.#render();
+      }
       return;
     }
     this.#dispatch({ type: "build-updated", build: await this.backend.retryBuild() });
@@ -636,6 +911,7 @@ class AppController implements AppHandle {
 
   #canInstall(): boolean {
     if (this.#changingProfile) return false;
+    if (this.#newInstallationNameError() !== null) return false;
     const bg1 = this.#discovery?.bg1Candidates.find((candidate) => candidate.id === this.#state.selectedBg1Id);
     const bg2 = this.#discovery?.bg2Candidates.find((candidate) => candidate.id === this.#state.selectedBg2Id);
     return installationReadiness({
@@ -646,11 +922,27 @@ class AppController implements AppHandle {
       destination: this.#destination,
       evaluation: this.#state.evaluation,
       evaluationPending: this.#state.evaluationPending,
+      manualBreakpoints: this.#state.manualBreakpoints,
     });
   }
 
+  #newInstallationNameError(): string | null {
+    return installationNameError(this.#state.installationName, this.#installations.map(copy => ({ installId: copy.id, name: copy.name })));
+  }
+
+  async #renameInstallation(installId: string, name: string): Promise<void> {
+    if (!this.backend.renameInstallation || this.#installationActive() || this.#installingUpdate || this.#patchBusy || this.#modUpgradeBusy || this.#removalBusy) {
+      throw new Error("Wait for the current operation to finish before renaming.");
+    }
+    const result = await this.backend.renameInstallation(installId, name);
+    this.#installations = this.#installations.map(copy => copy.id === installId ? { ...copy, name: result.name } : copy);
+    this.#updates = { ...this.#updates, managedCopies: this.#updates.managedCopies.map(copy => copy.installId === installId ? { ...copy, name: result.name } : copy) };
+    this.#finishOperation("Installation renamed", `Now called “${result.name}”. Game and save folders are unchanged.`, true, installId);
+    this.#render();
+  }
+
   async #startInstallation(): Promise<void> {
-    if (!this.#canInstall()) return;
+    if (!this.#canInstall() || this.#resuming || this.#campaignRunning()) return;
     this.#saveDraft();
     const identityRevision = this.#identityRevision;
     this.#starting = true;
@@ -683,10 +975,12 @@ class AppController implements AppHandle {
   }
 
   async #cancelBuild(): Promise<void> {
+    if (this.#resuming || this.#manualCheckpointBusy) return;
     if (this.#runId !== null) await this.backend.cancelRun(this.#runId);
   }
 
   async #pauseBuild(): Promise<void> {
+    if (this.#resuming || this.#manualCheckpointBusy) return;
     if (this.#runId === null || this.#state.build === null) return;
     const runId = this.#runId;
     const current = this.#state.build;
@@ -702,8 +996,13 @@ class AppController implements AppHandle {
   }
 
   async #waitForPause(runId: string): Promise<void> {
-    while (runId === this.#runId) {
-      const snapshot = await this.backend.getRunSnapshot(runId);
+    const revision = this.#runRevision;
+    while (runId === this.#runId && revision === this.#runRevision) {
+      const snapshot = await this.backend.getRunSnapshot(runId).catch(error => {
+        if (runId !== this.#runId || revision !== this.#runRevision) return null;
+        throw error;
+      });
+      if (snapshot === null || runId !== this.#runId || revision !== this.#runRevision) return;
       if (snapshot.status === "paused") {
         if (snapshot.report !== null) this.#installId = snapshot.report.install_id;
         this.#retryAvailable = true;
@@ -714,6 +1013,7 @@ class AppController implements AppHandle {
           headline: "Paused — safe to close CEBG",
           detail: "The completed work is recorded. Resume this installation to continue with the next pipeline step.",
         } });
+        if (this.#installId !== null && this.backend.getManualCheckpoint) await this.#loadManualCheckpoint(this.#installId);
         this.#render();
         return;
       }
@@ -752,6 +1052,61 @@ class AppController implements AppHandle {
     };
   }
 
+  #campaignRunning(): boolean {
+    const state = this.#state.build?.state;
+    return this.#runId !== null && (state === "running" || state === "attention" || state === "pausing"
+      || (state === "waiting-manual" && !this.#retryAvailable));
+  }
+
+  #resumeBlocked(): boolean {
+    return this.#starting || this.#resuming || this.#manualCheckpointBusy || this.#modUpgradeBusy || this.#campaignRunning();
+  }
+
+  #runEventListener(): (event: RunEventEnvelope) => void {
+    const revision = ++this.#runRevision;
+    this.#activeStepId = null;
+    this.#stepProgressFinished = false;
+    return event => {
+      if (revision === this.#runRevision) this.#handleRunEvent(event);
+    };
+  }
+
+  // Callers hold either the resume or manual-checkpoint guard before their first await.
+  async #launchResume(installId: string): Promise<void> {
+    const previous = this.#state.build;
+    const previousRunId = this.#runId;
+    const previousRetry = this.#retryAvailable;
+    this.#runId = null;
+    this.#retryAvailable = false;
+    this.#commandError = null;
+    const onEvent = this.#runEventListener();
+    let receivedEvent = false;
+    this.#dispatch({ type: "build-updated", build: {
+      ...this.#initialNativeBuild(),
+      phases: previous?.phases ?? [],
+      logTail: previous?.logTail ?? [],
+      headline: "Resuming installation",
+      detail: "Preparing to continue…",
+    } });
+    this.#render();
+    try {
+      const started = await this.backend.resumeBuild(installId, event => {
+        receivedEvent = true;
+        onEvent(event);
+      });
+      this.#runId = started.runId;
+      // Events can arrive before the command response, including failure or completion.
+      // Never replace their newer snapshot or retry decision with a starting state.
+    } catch (error) {
+      if (!receivedEvent) {
+        this.#runId = previousRunId;
+        this.#retryAvailable = previousRetry;
+        if (previous !== null) this.#dispatch({ type: "build-updated", build: previous });
+      }
+      throw error;
+    }
+  }
+
   #handleRunEvent(envelope: RunEventEnvelope): void {
     this.#runId = envelope.runId;
     const current = this.#state.build ?? this.#initialNativeBuild();
@@ -761,32 +1116,30 @@ class AppController implements AppHandle {
     const log = (line: string): readonly string[] => [...current.logTail, line].slice(-200);
     switch (event.type) {
       case "campaign_started":
+        this.#activeStepId = null;
+        this.#stepProgressFinished = false;
+        this.#manualCheckpoint = null;
+        this.#manualCheckpointExpected = false;
         this.#installId = event.install_id;
-        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "Setting up your selected mods…", logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
+        next = { ...current, state: "running", headline: event.resumed ? "Resuming installation" : "Installation in progress", detail: "Setting up your selected mods…", progress: undefined, failureReason: undefined, commandError: undefined, recoveryAction: undefined, freshCopyRequired: undefined, logTail: log(`${envelope.sequenceAsString}: installation ${event.install_id} started`), manualArchiveName: null };
         break;
       case "phase_started": {
-        const phaseIds: Readonly<Record<string, string>> = {
-          "Prepare Baldur's Gate: Enhanced Edition": "bg1-preparation",
-          "Prepare Baldur's Gate II: Enhanced Edition": "bg2-preparation",
-          "Build the EET campaign": "eet-initialization",
-          "Install the curated collection": "main",
-          "Finalize EET": "eet-finalization",
-          "Apply reviewed final compatibility fixes": "post-eet-end",
-        };
-        const matchedIndex = current.phases.findIndex((phase) => phase.id === phaseIds[event.name]);
-        const currentIndex = matchedIndex >= 0
-          ? matchedIndex
-          : Math.max(0, current.phases.findIndex((phase) => phase.state === "pending"));
-        next = { ...current, phases: current.phases.map((phase, index) => ({ ...phase, state: index < currentIndex ? "done" : index === currentIndex ? "current" : "pending" })), logTail: log(`${envelope.sequenceAsString}: ${event.name}`) };
+        next = { ...current, phases: updateBuildPhase(current.phases, event.name), logTail: log(`${envelope.sequenceAsString}: ${event.name}`) };
         break;
       }
       case "step_started":
+        this.#activeStepId = event.id;
+        this.#stepProgressFinished = false;
+        next = { ...current, progress: undefined };
         next = attentionWasActive
-          ? { ...current, state: "running", headline: "Installation in progress", detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) }
-          : { ...current, detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
+          ? { ...next, state: "running", headline: "Installation in progress", detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) }
+          : { ...next, detail: event.label, logTail: log(`${envelope.sequenceAsString}: ${event.label}`) };
         break;
       case "step_progress":
-        next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.id} ${event.done}/${event.total}`) };
+        // Archive downloads identify the artifact; the pipeline prefixes it with acquire:.
+        if (this.#stepProgressFinished || (this.#activeStepId !== null
+          && event.id !== this.#activeStepId && `acquire:${event.id}` !== this.#activeStepId)) return;
+        next = { ...current, progress: { stage: "applying", completed: String(event.done), total: String(event.total), unit: "items" }, logTail: log(`${envelope.sequenceAsString}: ${event.id} ${event.done}/${event.total}`) };
         break;
       case "console_line":
         next = attentionWasActive
@@ -804,6 +1157,11 @@ class AppController implements AppHandle {
           : attentionWasActive
           ? { ...current, state: "running", headline: "Installation in progress", detail: "The previous installation step finished.", logTail: log(`${event.id}: ${event.outcome}`) }
           : { ...current, logTail: log(`${event.id}: ${event.outcome}`) };
+        if (this.#activeStepId === event.id) {
+          next = { ...next, progress: undefined };
+          this.#activeStepId = null;
+          this.#stepProgressFinished = true;
+        }
         break;
       case "manual_download_needed":
         next = { ...current, state: "waiting-manual", headline: "Manual archive needed", detail: `Download ${event.mod_id} from ${event.page}. Then choose the downloaded archive; the installer will verify it before resuming.`, manualArchiveName: event.mod_id, logTail: log(`Expected SHA-256: ${event.expected_sha256}`) };
@@ -826,23 +1184,28 @@ class AppController implements AppHandle {
         this.#installId = event.install_id;
         this.#retryAvailable = true;
         next = { ...current, state: "paused", headline: "Paused — safe to close CEBG", detail: "The completed work is recorded. Resume this installation to continue with the next pipeline step.", logTail: log(`${envelope.sequenceAsString}: paused after ${event.after_step_id}`) };
+        this.#manualCheckpointExpected = event.after_step_id.startsWith("checkpoint:manual-");
         break;
     }
     this.#dispatch({ type: "build-updated", build: next });
+    if (event.type === "campaign_paused" && this.#manualCheckpointExpected) {
+      this.#showManualPause();
+      void this.#loadManualCheckpoint(event.install_id);
+    }
     if (event.type === "campaign_finished") {
       this.#render();
       void this.#finishInstallation(event.install_id);
       return;
     }
     if (event.type === "step_progress" || (event.type === "console_line" && !attentionWasActive)) {
-      this.#scheduleLogRender();
+      this.#scheduleLogRender(event.type === "step_progress");
       return;
     }
     this.#render();
   }
 
-  #scheduleLogRender(): void {
-    if (!this.#logState.open || this.#logRenderTimer !== null) return;
+  #scheduleLogRender(progressChanged = false): void {
+    if ((!this.#logState.open && !progressChanged) || this.#logRenderTimer !== null) return;
     this.#logRenderTimer = window.setTimeout(() => {
       this.#logRenderTimer = null;
       this.#render();
@@ -859,13 +1222,17 @@ class AppController implements AppHandle {
       this.#installId = selected?.id ?? null;
       if (selected !== null) rememberInstallId(selected.id);
       this.#dispatch({ type: "navigate", route: "home", remember: false });
-      if (completed?.available === true) await this.#installCompletionRadar(completed);
-      if (completed?.available === true && this.#createDesktopShortcutAfterInstall) {
-        this.#render();
-        await this.#createDesktopShortcut(completed.id);
-        return;
+      if (completed?.available === true) {
+        const progress = this.#beginOperation("Finishing installation", completed.id);
+        progress({ stage: "finishing" });
+        await this.#installCompletionRadar(completed);
+        if (this.#createDesktopShortcutAfterInstall) await this.#createDesktopShortcut(completed.id);
+        const extrasFailed = this.#addonFeedback?.state === "failed" || this.#shortcutFeedback?.state === "failed";
+        this.#finishOperation("Installation complete", `${completed.name} is ready to play.${extrasFailed ? " An optional finishing step needs attention below." : ""}`, true, completed.id);
       }
     } catch (error: unknown) {
+      ++this.#operationRevision;
+      this.#operationFeedback = null; // The persistent launcher error below supplies this result.
       this.#commandError = error instanceof BackendCommandError
         ? error
         : new BackendCommandError({
@@ -894,9 +1261,10 @@ class AppController implements AppHandle {
   }
 
   async #refreshRetryAvailability(runId: string): Promise<void> {
+    const revision = this.#runRevision;
     try {
       const snapshot = await this.backend.getRunSnapshot(runId);
-      if (runId !== this.#runId) return;
+      if (runId !== this.#runId || revision !== this.#runRevision) return;
       const freshCopyRequired = snapshot.status === "failed"
         && snapshot.report?.status.status === "fresh_copy_required";
       this.#retryAvailable = snapshot.status === "failed"
@@ -932,6 +1300,7 @@ class AppController implements AppHandle {
       }
       this.#render();
     } catch (error: unknown) {
+      if (runId !== this.#runId || revision !== this.#runRevision) return;
       this.#commandError = error instanceof BackendCommandError ? error : null;
       this.#render();
     }
@@ -949,8 +1318,78 @@ class AppController implements AppHandle {
     announcement.focus();
   }
 
-  async #launchInstall(installId: string): Promise<void> {
-    await this.backend.launchInstall(installId);
+  async #launchInstall(installId: string, startRadar: boolean): Promise<void> {
+    if (this.#modUpgradeBusy || this.#launchPending.has(installId)) return;
+    const installation = this.#installations.find(copy => copy.id === installId);
+    if (!installation?.available || installation.patchRecoveryNeeded) return;
+    this.#launchPending.add(installId);
+    this.#launchFeedback.delete(installId);
+    this.#render();
+    try {
+      const result = await this.backend.launchInstall(installId, Boolean(installation.radarVersion) && startRadar);
+      this.#launchFeedback.set(installId, result);
+    } finally {
+      this.#launchPending.delete(installId);
+      this.#render();
+    }
+  }
+
+  #toggleTroubleshooting(installId: string, open: boolean): void {
+    if (open === this.#troubleshootingOpen) return;
+    this.#troubleshootingOpen = open;
+    if (open) void this.#gameLogOperation(installId, undefined, "troubleshooting");
+    else this.#render("troubleshooting");
+  }
+
+  /**
+   * Check the game log of one installation, or turn it on or off when `enabled` is given. Focus
+   * returns to the control that started it, which is disabled meanwhile, unless another
+   * installation is shown by then.
+   */
+  async #gameLogOperation(installId: string, enabled?: boolean, focusTarget = this.#focusedId()): Promise<void> {
+    const { gameLogStatus, setGameLog } = this.backend;
+    if (this.#gameLogBusy.has(installId) || !gameLogStatus || !setGameLog) return;
+    this.#gameLogBusy.add(installId);
+    this.#render(focusTarget);
+    try {
+      const status = enabled === undefined
+        ? await gameLogStatus.call(this.backend, installId)
+        : await setGameLog.call(this.backend, installId, enabled);
+      this.#gameLogStatus.set(installId, status);
+      this.#gameLogErrors.delete(installId);
+    } catch (error: unknown) {
+      const failure = error instanceof BackendCommandError ? error : null;
+      this.#gameLogErrors.set(installId, {
+        message: failure?.message ?? (enabled === undefined ? "The game log couldn't be checked." : "The game log setting wasn't changed."),
+        recoveryAction: failure?.recoveryAction ?? "Try again.",
+        technicalDetail: failure?.technicalDetail ?? (error instanceof Error ? error.message : String(error)),
+      });
+    } finally {
+      this.#gameLogBusy.delete(installId);
+      this.#render(this.#installId === installId ? focusTarget : this.#focusedId());
+    }
+  }
+
+  #focusedId(): string | undefined {
+    const active = document.activeElement;
+    return active instanceof HTMLElement && this.root.contains(active) && active.id ? active.id : undefined;
+  }
+
+  #gameLogView(installation: ManagedInstallation | undefined): GameLogView | null {
+    if (installation === undefined || !installation.available || !this.backend.gameLogStatus || !this.backend.setGameLog) return null;
+    return {
+      open: this.#troubleshootingOpen,
+      status: this.#gameLogStatus.get(installation.id) ?? null,
+      busy: this.#gameLogBusy.has(installation.id),
+      error: this.#gameLogErrors.get(installation.id) ?? null,
+      blockedReason: installation.patchRecoveryNeeded
+        ? "Finish patch recovery in Updates before changing the game log."
+        : this.#launchPending.has(installation.id)
+          ? "Wait until the game has started."
+          : this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy
+            ? "Wait until the current installation task has finished."
+            : null,
+    };
   }
 
   async #openInstallFolder(installId: string): Promise<void> {
@@ -971,27 +1410,39 @@ class AppController implements AppHandle {
   }
 
   async #installAppUpdate(version: string): Promise<void> {
-    if (this.#installingUpdate) return;
+    if (this.#installingUpdate || this.#modUpgradeBusy) return;
     this.#installingUpdate = true;
+    const progress = this.#beginOperation("Updating CEBG");
+    rememberAppUpdate(this.#status.applicationVersion ?? this.#status.engineVersion, version);
     this.#render();
     try {
-      await this.backend.installAppUpdate(version);
+      await this.backend.installAppUpdate(version, progress);
+      this.#operationFeedback = { title: "Restart CEBG to finish", detail: "Close and reopen CEBG to use the downloaded version.", state: "notice" };
+    } catch (error) {
+      clearAppUpdate();
+      this.#finishOperation("CEBG update could not finish", "Your game installations are unchanged. Check the error below and try again.", false);
+      throw error;
     } finally {
       this.#installingUpdate = false;
       this.#render();
     }
   }
 
-  async #installRadar(): Promise<void> {
-    const installation = this.#installations.find((item) => item.id === this.#installId && item.available);
-    if (installation === undefined || this.#installingUpdate) return;
+  async #installRadar(installId: string): Promise<void> {
+    const installation = this.#installations.find((item) => item.id === installId && item.available);
+    if (installation === undefined || this.#installingUpdate || this.#modUpgradeBusy || this.#patchBusy || this.#installedUpdateBusy) return;
     this.#installingUpdate = true;
+    this.#beginOperation("Updating BG Radar Overlay", installId);
     this.#render();
     try {
       await this.backend.installRadar(installation.id);
-      this.#installations = await this.backend.listManagedInstallations();
+      this.#finishOperation("BG Radar Overlay update complete", `BG Radar Overlay is ready for ${installation.name}.`, true, installId);
+      try { this.#installations = await this.backend.listManagedInstallations(); } catch { /* Preserve the completed result. */ }
       if (this.#addonFeedback?.installId === installation.id) this.#addonFeedback = null;
-      await this.#checkUpdates();
+      await this.#checkUpdates().catch(() => { /* A feed refresh failure does not undo the update. */ });
+    } catch (error) {
+      this.#finishOperation("BG Radar Overlay update could not finish", "Check the error below and try again.", false, installId);
+      throw error;
     } finally {
       this.#installingUpdate = false;
       this.#render();
@@ -999,6 +1450,7 @@ class AppController implements AppHandle {
   }
 
   async #buildUpdatedCopy(version: string): Promise<void> {
+    if (this.#modUpgradeBusy) return;
     const usesCurrentRecipe = version === this.#updates.recipe.currentVersion
       && this.#updates.managedCopies.some((copy) => copy.state === "update-available");
     if (!usesCurrentRecipe) await this.backend.activateRecipeUpdate(version);
@@ -1006,6 +1458,8 @@ class AppController implements AppHandle {
   }
 
   async #beginNewInstallation(): Promise<void> {
+    if (this.#modUpgradeBusy) return;
+    this.#removalNotice = null;
     this.#dispatch({ type: "review-cleared" });
     this.#dispatch({ type: "build-cleared" });
     this.#clearManualDownloadGate();
@@ -1013,6 +1467,13 @@ class AppController implements AppHandle {
     this.#shortcutFeedback = null;
     this.#addonFeedback = null;
     await this.#prepareInstallFlow();
+    const samePath = (a: string, b: string) => a.replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase() === b.replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase();
+    if (this.#installations.some(copy => samePath(copy.path, this.#state.destinationPath))) {
+      const defaults = await this.backend.getInstallationDefaults();
+      this.#defaultInstallationPath = defaults.path;
+      this.#dispatch({ type: "set-installation-defaults", name: defaults.name, path: defaults.path });
+      await this.#inspectDestination(defaults.path, true, false);
+    }
     this.#dispatch({ type: "navigate", route: "welcome" });
     this.#render();
   }
@@ -1020,17 +1481,218 @@ class AppController implements AppHandle {
   #selectManagedInstallation(installId: string): void {
     if (!this.#installations.some((installation) => installation.id === installId)) return;
     this.#installId = installId;
+    this.#troubleshootingOpen = false;
     rememberInstallId(installId);
     this.#render();
   }
 
   async #resumeManagedInstall(installId: string): Promise<void> {
+    if (this.#resumeBlocked()) return;
+    this.#resuming = true;
     this.#installId = installId;
+    this.#runId = null;
     this.#retryAvailable = false;
-    this.#dispatch({ type: "build-updated", build: this.#initialNativeBuild() });
+    this.#manualCheckpoint = null;
+    this.#manualCheckpointExpected = false;
+    this.#dispatch({ type: "build-updated", build: {
+      ...this.#initialNativeBuild(), phases: [], state: "paused", headline: "Ready to resume",
+      detail: "Your previous progress is saved.",
+    } });
     this.#dispatch({ type: "navigate", route: "build" });
     this.#render();
-    await this.#retryBuild();
+    try {
+      if (this.backend.getManualCheckpoint && await this.#loadManualCheckpoint(installId)) return;
+      await this.#launchResume(installId);
+    } finally {
+      this.#resuming = false;
+      this.#render();
+    }
+  }
+
+  #showManualPause(): void {
+    this.#manualCheckpointExpected = true;
+    this.#dispatch({ type: "build-updated", build: {
+      ...(this.#state.build ?? this.#initialNativeBuild()), state: "paused", headline: "Paused for your mods",
+      detail: "Your progress is saved. Check and explicitly accept any manual additions before continuing.",
+    } });
+  }
+
+  async #loadManualCheckpoint(installId: string): Promise<boolean> {
+    if (!this.backend.getManualCheckpoint) return false;
+    const revision = ++this.#manualCheckpointRevision;
+    this.#manualCheckpointBusy = true;
+    this.#manualCheckpointError = undefined;
+    this.#manualCheckpoint = null;
+    this.#render();
+    try {
+      const status = await this.backend.getManualCheckpoint(installId);
+      if (revision !== this.#manualCheckpointRevision || installId !== this.#installId) return true;
+      this.#manualCheckpoint = status;
+      this.#manualCheckpointExpected = status !== null;
+      if (status) this.#showManualPause();
+      else if (this.#state.build?.state === "paused") this.#dispatch({ type: "build-updated", build: {
+        ...this.#state.build, headline: "Paused — safe to close CEBG",
+        detail: "Resume this installation to continue with the next pipeline step.",
+      } });
+      return status !== null;
+    } catch (error) {
+      if (revision === this.#manualCheckpointRevision) {
+        this.#showManualPause();
+        this.#manualCheckpointError = this.#checkpointError(error);
+      }
+      return true;
+    } finally {
+      if (revision === this.#manualCheckpointRevision) {
+        this.#manualCheckpointBusy = false;
+        this.#render();
+      }
+    }
+  }
+
+  #checkpointError(error: unknown): string {
+    return error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}`
+      : error instanceof Error ? error.message : "The checkpoint could not be checked. Keep the installation paused and try again.";
+  }
+
+  async #checkManualCheckpoint(expectUnchanged = false): Promise<void> {
+    const installId = this.#installId;
+    if (!installId || this.#manualCheckpointBusy || !this.backend.checkManualCheckpoint) return;
+    this.#manualCheckpointBusy = true;
+    this.#manualCheckpointError = undefined;
+    if (this.#manualCheckpoint) this.#manualCheckpoint = { ...this.#manualCheckpoint, reviewToken: "", additions: [] };
+    this.#render();
+    try {
+      const status = await this.backend.checkManualCheckpoint(installId);
+      if (installId !== this.#installId) return;
+      this.#manualCheckpoint = status;
+      if (expectUnchanged && status.additions.length) this.#manualCheckpointError = "Manual additions were found. Review and accept them explicitly before continuing.";
+    } catch (error) {
+      this.#manualCheckpointError = this.#checkpointError(error);
+    } finally {
+      this.#manualCheckpointBusy = false;
+      this.#render(this.#manualCheckpointError ? "manual-checkpoint-error" : "manual-checkpoint-review");
+    }
+  }
+
+  async #acceptManualCheckpoint(): Promise<void> {
+    const installId = this.#installId;
+    const status = this.#manualCheckpoint;
+    if (!installId || !status?.reviewToken || this.#resumeBlocked() || !this.backend.acceptManualCheckpoint) return;
+    this.#manualCheckpointBusy = true;
+    this.#manualCheckpointError = undefined;
+    // Every attempt consumes the displayed authority; a failure requires a fresh check.
+    this.#manualCheckpoint = { ...status, reviewToken: "" };
+    this.#render();
+    try {
+      await this.backend.acceptManualCheckpoint(installId, status.reviewToken, status.additions.length > 0);
+      this.#manualCheckpoint = null;
+      this.#manualCheckpointExpected = false;
+      if (status.additions.length) this.#installations = this.#installations.map(copy => copy.id === installId ? { ...copy, customized: true } : copy);
+      await this.#launchResume(installId);
+    } catch (error) {
+      this.#manualCheckpointError = this.#checkpointError(error);
+      this.#showManualPause();
+    } finally {
+      this.#manualCheckpointBusy = false;
+      this.#render(this.#manualCheckpointError ? "manual-checkpoint-error" : undefined);
+    }
+  }
+
+  #changeManualBreakpoints(breakpoints: readonly ManualBreakpoint[]): void {
+    if (!this.#beginIdentityEdit()) return;
+    this.#dispatch({ type: "set-manual-breakpoints", breakpoints });
+    this.#render("manual-breakpoint-search");
+  }
+
+  #installationActive(): boolean {
+    return this.#manualCheckpointBusy || this.#modUpgradeBusy || this.#starting || this.#resuming || (this.#state.build !== null && ["running", "attention", "waiting-manual", "pausing"].includes(this.#state.build.state));
+  }
+
+  async #previewInstallationRemoval(installId: string): Promise<void> {
+    if (this.#removalBusy || this.#installationActive()) return;
+    this.#removalBusy = true;
+    this.#removalError = null;
+    this.#render();
+    try {
+      this.#removalPreview = await this.backend.previewInstallationRemoval(installId);
+    } finally {
+      this.#removalBusy = false;
+      this.#render();
+    }
+  }
+
+  async #confirmInstallationRemoval(): Promise<void> {
+    const preview = this.#removalPreview;
+    if (preview === null || this.#removalBusy || this.#installationActive()) return;
+    if (this.#removalError !== null) {
+      // Every execution consumes its token. Recheck and visibly confirm again, never retry
+      // destructive work using authority from before a failed or partial removal.
+      this.#removalBusy = true;
+      this.#render();
+      try {
+        this.#removalPreview = await this.backend.previewInstallationRemoval(preview.installId);
+        this.#removalError = null;
+      } catch (error: unknown) {
+        this.#removalError = error instanceof BackendCommandError ? `${error.message} ${error.recoveryAction}`
+          : error instanceof Error ? error.message : "The remaining installation could not be checked. Try again later.";
+      } finally {
+        this.#removalBusy = false;
+        this.#render();
+      }
+      return;
+    }
+    this.#removalBusy = true;
+    this.#removalError = null;
+    this.#render();
+    let result;
+    try {
+      result = await this.backend.removeInstallation(preview.installId, preview.confirmationToken);
+    } catch (error: unknown) {
+      this.#removalError = error instanceof BackendCommandError
+        ? `${error.message} ${error.recoveryAction}`
+        : error instanceof Error ? error.message : "The installation could not be removed. Close the game and try again.";
+      this.#removalBusy = false;
+      this.#render();
+      return;
+    }
+    this.#removalPreview = null;
+    this.#removalBusy = false;
+    this.#removalNotice = installationRemovalNotice(preview, result);
+    this.#checkedPatches.delete(preview.installId);
+    if (this.#patchPreview?.installId === preview.installId) this.#patchPreview = null;
+    if (this.#installedUpdateInstallId === preview.installId) {
+      ++this.#installedUpdateRevision;
+      this.#installedUpdateInstallId = "";
+      this.#installedUpdatePlan = null;
+      this.#installedUpdateError = undefined;
+      this.#installedUpdateErrorDetail = undefined;
+      this.#installedUpdateBusy = false;
+      this.#modUpgrade = null;
+      this.#modUpgradeError = undefined;
+      this.#modUpgradeErrorDetail = undefined;
+    }
+    this.#commandError = null;
+    this.#installations = this.#installations.filter((item) => item.id !== preview.installId);
+    this.#updates = { ...this.#updates, managedCopies: this.#updates.managedCopies.filter((item) => item.installId !== preview.installId) };
+    clearSetupDraft(preview.managedRoot);
+    this.#dispatch({ type: "build-cleared" });
+    this.#dispatch({ type: "review-cleared" });
+    this.#runId = null;
+    this.#retryAvailable = false;
+    this.#shortcutFeedback = null;
+    this.#addonFeedback = null;
+    this.#logState = { paused: false, open: false };
+    try {
+      this.#installations = await this.backend.listManagedInstallations();
+    } catch {
+      this.#removalNotice += " Reopen My installs if another installation is missing from the list.";
+    }
+    const selected = preferredInstallation(this.#installations, null, null);
+    this.#installId = selected?.id ?? null;
+    try { window.localStorage.removeItem(LAST_INSTALL_STORAGE_KEY); } catch { /* Optional preference. */ }
+    if (selected !== null) rememberInstallId(selected.id);
+    this.#state = { ...this.#state, route: "home", history: [] };
+    this.#render();
   }
 
   #render(focusTargetId?: string): void {
@@ -1041,6 +1703,8 @@ class AppController implements AppHandle {
     const previousRoute = this.root.querySelector<HTMLElement>(".app-shell")?.dataset.route;
     const sameRoute = previousRoute === this.#state.route;
     const scrollTop = sameRoute ? this.root.querySelector("main")?.scrollTop ?? 0 : 0;
+    const liveLog = this.root.querySelector<HTMLDetailsElement>(".technical-log");
+    if (sameRoute && liveLog) this.#logState = { ...this.#logState, open: liveLog.open };
     const evaluation = this.#state.evaluation;
     const navigate = (route: Route): Promise<void> => this.navigate(route);
     const safely = (operation: () => Promise<void>): void => this.#safely(operation);
@@ -1049,31 +1713,72 @@ class AppController implements AppHandle {
       this.#installations.find((installation) => installation.id === this.#installId) ?? null,
       {
         begin: () => safely(() => this.#beginNewInstallation()),
-        launch: (installId) => safely(() => this.#launchInstall(installId)),
+        launch: (installId, startRadar) => safely(() => this.#launchInstall(installId, startRadar)),
+        setStartRadar: (installId, enabled) => this.#radarLaunchPreferences.set(installId, enabled),
         openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
         resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
         select: (installId) => this.#selectManagedInstallation(installId),
         createShortcut: (installId) => this.#createDesktopShortcut(installId),
         diagnostics: (installId) => safely(() => this.#exportDiagnostics(installId)),
+        remove: (installId) => safely(() => this.#previewInstallationRemoval(installId)),
+        rename: this.backend.renameInstallation ? (installId, name) => this.#renameInstallation(installId, name) : undefined,
+        removalDisabled: this.#removalBusy || this.#installationActive() || this.#installingUpdate || this.#patchBusy,
+        gameLog: {
+          toggle: (installId, open) => this.#toggleTroubleshooting(installId, open),
+          set: (installId, enabled) => this.#gameLogOperation(installId, enabled),
+          refresh: (installId) => this.#gameLogOperation(installId),
+        },
       },
       this.#shortcutFeedback,
       this.#addonFeedback,
+      {
+        startRadar: this.#installId !== null && this.#radarLaunchPreferences.get(this.#installId),
+        pending: this.#installId !== null && this.#launchPending.has(this.#installId),
+        feedback: this.#installId === null ? undefined : this.#launchFeedback.get(this.#installId),
+      },
+      this.#gameLogView(this.#installations.find((installation) => installation.id === this.#installId)),
     );
     let content: HTMLElement;
     switch (this.#state.route) {
       case "home":
         content = renderHome();
         break;
-      case "updates":
+      case "updates": {
+        const selected = selectedUpdateCopy(this.#updates.managedCopies, this.#installedUpdateInstallId || this.#installId || undefined);
+        const selectedInstallation = this.#installations.find(item => item.id === selected?.installId && item.available);
         content = updatesScreen(this.#updates, {
+          installedUpdatePlan: this.#installedUpdatePlan,
+          installedUpdateInstallId: selected?.installId,
+          installedUpdateBusy: this.#installedUpdateBusy,
+          installedUpdateError: this.#installedUpdateInstallId === selected?.installId ? this.#installedUpdateError : undefined,
+          installedUpdateErrorDetail: this.#installedUpdateInstallId === selected?.installId ? this.#installedUpdateErrorDetail : undefined,
+          modUpgrade: this.#modUpgrade,
+          modUpgradeBusy: this.#modUpgradeBusy,
+          modUpgradeError: this.#installedUpdateInstallId === selected?.installId ? this.#modUpgradeError : undefined,
+          modUpgradeErrorDetail: this.#installedUpdateInstallId === selected?.installId ? this.#modUpgradeErrorDetail : undefined,
+          onApplyModUpgrade: this.backend.applyModUpgrade ? (full, saves) => this.#modUpgradeOperation("apply", full, saves) : undefined,
+          onUndoModUpgrade: this.backend.restoreModUpgrade ? () => this.#modUpgradeOperation("undo") : undefined,
+          onRestoreModUpgrade: this.backend.restoreModUpgrade ? () => this.#modUpgradeOperation("restore") : undefined,
+          onCheckInstalledUpdate: this.backend.inspectInstalledUpdate ? (id) => this.#checkInstalledUpdate(id) : undefined,
+          onSelectInstalledUpdate: (id) => this.#selectInstalledUpdate(id),
+          patches: this.#patchPreview,
+          patchInstallId: selected?.installId,
+          patchBusy: this.#patchBusy,
+          patchError: this.#patchInstallId === selected?.installId ? this.#patchError : undefined,
+          onCheckPatches: this.backend.inspectInstallPatches ? (id) => this.#patchOperation("check", id) : undefined,
+          onApplyPatch: this.backend.applyInstallPatch ? (full, saves) => this.#patchOperation("apply", this.#patchInstallId, full, saves) : undefined,
+          onUndoPatch: this.backend.undoInstallPatch ? () => this.#patchOperation("undo") : undefined,
+          onRestorePatch: this.backend.restoreInstallPatch ? () => this.#patchOperation("restore") : undefined,
           checkAgain: () => safely(() => this.#checkUpdates()),
           installApplication: (version) => safely(() => this.#installAppUpdate(version)),
           buildUpdatedCopy: (version) => safely(() => this.#buildUpdatedCopy(version)),
-          installRadar: this.#installations.some((item) => item.id === this.#installId && item.available) ? () => safely(() => this.#installRadar()) : undefined,
-          installationName: this.#installations.find((item) => item.id === this.#installId && item.available)?.name,
-          radarVersion: this.#installations.find((item) => item.id === this.#installId && item.available)?.radarVersion,
+          installRadar: selectedInstallation && selected?.state !== "stale" ? () => safely(() => this.#installRadar(selectedInstallation.id)) : undefined,
+          installationName: selectedInstallation?.name,
+          radarVersion: selectedInstallation?.radarVersion ?? null,
+          customized: this.#installations.find(item => item.id === selected?.installId)?.customized,
         }, this.#checkingUpdates, this.#installingUpdate);
         break;
+      }
       case "welcome":
         if (this.#discovery === null || evaluation === null) {
           content = statusCard("Preparing your installation", "CEBG is finding your games and recommended setup.", "ok");
@@ -1084,6 +1789,7 @@ class AppController implements AppHandle {
           selectedBg1Id: this.#state.selectedBg1Id,
           selectedBg2Id: this.#state.selectedBg2Id,
           installationName: this.#state.installationName,
+          installationNameError: this.#newInstallationNameError(),
           destination: this.#destination,
           evaluation,
           evaluationPending: this.#state.evaluationPending || this.#changingProfile,
@@ -1096,6 +1802,7 @@ class AppController implements AppHandle {
           manualDownloadGateVisible: this.#manualDownloadGateVisible,
           manualDownloadCheckingArtifactId: this.#manualDownloadCheckingArtifactId,
           manualDownloadError: this.#manualDownloadError,
+          manualBreakpoints: this.#state.manualBreakpoints,
         }, {
           selectSource: (game, id) => safely(() => this.#selectGame(game, id)),
           browseSource: (game) => safely(() => this.#chooseGameFolder(game)),
@@ -1148,6 +1855,11 @@ class AppController implements AppHandle {
         content = setupScreen(evaluation, (id, selected) => safely(() => this.#toggleFeature(id, selected)), () => safely(() => navigate("welcome")), () => safely(() => navigate("welcome")), this.#setupView, {
           change: (changes, focusId) => safely(() => this.#changeFeatures(changes, focusId)),
           reset: () => safely(() => this.#resetChoices()),
+          input: (featureId, inputId, value, focusId) => safely(() => this.#changeInput(featureId, inputId, value, focusId)),
+          manualBreakpoints: evaluation.manualCheckpointOptions || this.#state.manualBreakpoints.length ? {
+            options: evaluation.manualCheckpointOptions ?? [], selected: this.#state.manualBreakpoints,
+            disabled: this.#state.evaluationPending, onChange: anchors => this.#changeManualBreakpoints(anchors),
+          } : undefined,
         });
         break;
       case "review":
@@ -1170,8 +1882,19 @@ class AppController implements AppHandle {
           diagnosticsAvailable: this.#installId !== null,
           fixture: this.#status.mode === "fixture",
           retryAvailable: this.#status.mode === "fixture" || this.#retryAvailable,
+          resuming: this.#resuming || this.#manualCheckpointBusy,
           logState: this.#logState,
           updateLogState: (state) => { this.#logState = state; },
+          remove: this.#installId === null ? undefined : () => safely(() => this.#previewInstallationRemoval(this.#installId!)),
+          removalDisabled: this.#removalBusy || this.#installationActive(),
+          manualCheckpoint: this.#manualCheckpointExpected || this.#manualCheckpoint ? {
+            status: this.#manualCheckpoint, busy: this.#manualCheckpointBusy, error: this.#manualCheckpointError,
+            openFolder: () => { if (this.#installId && this.backend.openManualCheckpointFolder) safely(() => this.backend.openManualCheckpointFolder!(this.#installId!)); },
+            reload: () => { if (this.#installId) void this.#loadManualCheckpoint(this.#installId); },
+            check: () => { void this.#checkManualCheckpoint(); },
+            continueUnchanged: () => { void this.#checkManualCheckpoint(true); },
+            accept: () => { void this.#acceptManualCheckpoint(); },
+          } : undefined,
         });
         break;
       case "complete": {
@@ -1194,6 +1917,24 @@ class AppController implements AppHandle {
       }
       content.prepend(alert);
     }
+    if (this.#removalNotice !== null && this.#state.route === "home") {
+      const notice = document.createElement("p");
+      notice.className = "removal-notice";
+      notice.setAttribute("role", "status");
+      notice.textContent = this.#removalNotice;
+      content.prepend(notice);
+    }
+    const feedback = this.#operationFeedback;
+    const selectedFeedbackId = this.#state.route === "updates"
+      ? selectedUpdateCopy(this.#updates.managedCopies, this.#installedUpdateInstallId || this.#installId || undefined)?.installId
+      : this.#installId;
+    if (feedback && (!feedback.installId || feedback.installId === selectedFeedbackId)) {
+      content.prepend(operationFeedback(feedback, () => {
+        this.#operationFeedback = null;
+        clearAppUpdate();
+        this.#render();
+      }));
+    }
     this.root.replaceChildren(createAppShell(
       this.#state.route,
       content,
@@ -1202,17 +1943,41 @@ class AppController implements AppHandle {
       ["home", "updates"].includes(this.#state.route) ? () => safely(() => this.#backFromSecondary()) : undefined,
       this.#status.applicationVersion ?? this.#status.engineVersion,
     ));
+    if (this.#modUpgradeBusy) {
+      this.root.querySelectorAll<HTMLButtonElement>(".header-actions button, .screen-navigation button")
+        .forEach(button => { button.disabled = true; });
+    }
     this.#updateBadge();
     const main = this.root.querySelector("main");
     if (main !== null) main.scrollTop = scrollTop;
     if (focusTargetId || !sameRoute) {
-      (focusTargetId ? this.root.querySelector<HTMLElement>(`#${focusTargetId}`) : this.root.querySelector<HTMLElement>("h1"))?.focus({ preventScroll: true });
+      // Recipe IDs contain CSS punctuation. Match the literal ID inside this
+      // app root instead of interpreting it as a selector or searching globally.
+      const target = focusTargetId
+        ? Array.from(this.root.querySelectorAll<HTMLElement>("[id]")).find(element => element.id === focusTargetId)
+        : this.root.querySelector<HTMLElement>("h1");
+      target?.focus({ preventScroll: true });
+    }
+    if (this.#removalPreview !== null) {
+      this.root.querySelector<HTMLElement>(".app-shell")!.inert = true;
+      this.root.append(installationRemovalDialog(this.#removalPreview, this.#removalBusy, this.#removalError,
+        () => { void this.#confirmInstallationRemoval(); },
+        () => { this.#removalPreview = null; this.#removalError = null; this.#render("remove-installation"); }));
+      this.root.querySelector<HTMLButtonElement>('[data-action="cancel-removal"]')?.focus({ preventScroll: true });
     }
   }
 }
 
 export async function mountApp(root: HTMLElement, backend: Backend): Promise<AppHandle> {
   const controller = new AppController(root, backend);
-  await controller.initialize();
+  try {
+    await controller.initialize();
+  } catch (error) {
+    root.replaceChildren(startupFailureScreen(error, () => {
+      // Each failure renders its own recovery controls; no unhandled retry rejection.
+      void mountApp(root, backend).catch(() => {});
+    }));
+    throw error;
+  }
   return controller;
 }

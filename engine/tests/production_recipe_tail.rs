@@ -7,27 +7,32 @@ use bg_engine::recipe_view::{evaluate, evaluate_preset};
 use bg_engine::resolve::Selection;
 use bg_engine::Manifest;
 
+// October 14: fine ammunition 3010 (optional) and fine weapons that never break
+// 3021 (default) join in SCS TP2 order; 3021 and its alternative 3022 form a choice.
 const SCS_AUTHORED: &[u32] = &[
-    2000, 2500, 2510, 3040, 3041, 3505, 3540, 3541, 4000, 4115, 4210, 4215, 4218, 4240, 4250, 5000,
-    5900, 6000, 6010, 6030, 6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560,
-    6570, 6580, 6590, 6800, 6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060,
-    7070, 7080, 7090, 7100, 7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010,
-    8020, 8040, 8050, 8060, 8070, 8080, 8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170,
-    8180, 8190,
+    2000, 2500, 2510, 3010, 3015, 3021, 3040, 3041, 3505, 3540, 3541, 4000, 4020, 4050, 4051, 4052,
+    4093, 4115, 4130, 4135, 4140, 4145, 4150, 4160, 4161, 4162, 4163, 4164, 4170, 4171, 4172, 4173,
+    4174, 4210, 4215, 4216, 4217, 4218, 4230, 4240, 4250, 5000, 5900, 6000, 6010, 6030, 6040, 6100,
+    6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810, 6820,
+    6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110, 7130,
+    7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8000, 8010, 8020, 8040, 8050, 8060, 8070, 8080,
+    8085, 8090, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190,
 ];
 
 const SCS_RECOMMENDED: &[u32] = &[
-    2000, 2500, 2510, 3041, 3505, 3540, 4000, 4115, 4215, 4218, 4250, 5900, 6000, 6010, 6030, 6040,
-    6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800, 6810,
-    6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100, 7110,
-    7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8010, 8020, 8040, 8050, 8060, 8070, 8080,
-    8085, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190,
+    2000, 2500, 2510, 3021, 3041, 3505, 3540, 4000, 4115, 4215, 4218, 4250, 5900, 6000, 6010, 6030,
+    6040, 6100, 6200, 6300, 6310, 6320, 6500, 6510, 6520, 6540, 6550, 6560, 6570, 6580, 6590, 6800,
+    6810, 6820, 6830, 6840, 6850, 7000, 7010, 7020, 7030, 7040, 7050, 7060, 7070, 7080, 7090, 7100,
+    7110, 7130, 7140, 7150, 7200, 7210, 7220, 7230, 7250, 7900, 8010, 8020, 8040, 8050, 8060, 8070,
+    8080, 8085, 8100, 8110, 8120, 8130, 8140, 8150, 8160, 8170, 8180, 8190,
 ];
 
+// The v8.1.1 TP2 declares 1100 after 570 (found with issue 77); WeiDU installs a batch in
+// TP2 order, so the run requests it there.
 const RANDOMISER_AUTHORED: &[u32] = &[
-    500, 510, 530, 540, 560, 570, 9000, 10200, 10210, 10300, 1100,
+    500, 510, 530, 540, 560, 570, 1100, 9000, 10200, 10210, 10300,
 ];
-const RANDOMISER_RECOMMENDED: &[u32] = &[500, 530, 540, 560, 570, 9000, 10200, 10210, 1100];
+const RANDOMISER_RECOMMENDED: &[u32] = &[500, 530, 540, 560, 570, 1100, 9000, 10200, 10210];
 
 fn recipe_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../manifest")
@@ -40,6 +45,7 @@ fn recipe() -> Manifest {
 #[test]
 fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
     let manifest = recipe();
+    assert_eq!(manifest.mods["buffbot"].artifact_id, "buffbot-1.12.6");
     let expected = [
         (
             "stratagems-35.21",
@@ -64,13 +70,13 @@ fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
             "randomiser/randomiser.tp2",
         ),
         (
-            "buffbot-1.8.3-alpha",
-            "1.8.3-alpha",
-            "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.8.3-alpha/buffbot-v1.8.3-alpha.zip",
-            "v1.8.3-alpha",
-            "buffbot-v1.8.3-alpha.zip",
-            4_240_743,
-            "fe6e0b4cd393a608d8c3df75f26993106f3550e954030a7b66dbfd28956820a7",
+            "buffbot-1.12.6",
+            "1.12.6",
+            "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.6/buffbot-v1.12.6.zip",
+            "v1.12.6",
+            "buffbot-v1.12.6.zip",
+            5_713_218,
+            "f99781368d64a419a567f48767728a600b8e81e203946217228ee9d61bc8b534",
             "buffbot",
             "buffbot/setup-buffbot.tp2",
         ),
@@ -96,7 +102,7 @@ fn freezes_the_reviewed_scs_randomiser_and_buffbot_artifacts() {
 }
 
 #[test]
-fn authors_the_tail_in_dependency_order_and_keeps_buffbot_absolute_last() {
+fn authors_the_tail_in_dependency_order_with_only_the_scroll_policy_after_buffbot() {
     let manifest = recipe();
     let run_ids = manifest
         .collection
@@ -115,7 +121,10 @@ fn authors_the_tail_in_dependency_order_and_keeps_buffbot_absolute_last() {
     let eet_end = run_ids.iter().position(|id| *id == "eet-end-bg2").unwrap();
     let buffbot = run_ids.iter().position(|id| *id == "buffbot-bg2").unwrap();
     assert!(randomiser < scs && scs < eet_end && eet_end < buffbot);
-    assert_eq!(buffbot, run_ids.len() - 1);
+    // October 13: Modpack scroll policy 430 hashes the final scrolls and spells,
+    // so its own run is the only one after BuffBot.
+    assert_eq!(buffbot + 1, run_ids.len() - 1);
+    assert_eq!(run_ids[buffbot + 1], "chriz-bg-modpack-scrolls-bg2");
 
     let runs = &manifest.collection.runs;
     assert_eq!(runs[scs].phase, Phase::Main);

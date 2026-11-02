@@ -1,0 +1,59 @@
+id = "ac-quest"
+artifact_id = "ac-quest-7.0"
+name = "Ascalon's Questpack"
+tp2 = "AC_QUEST/ac_quest.TP2"
+language = 1
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "A Job Well-Paid"
+
+[[components]]
+id = 1
+name = "A Feast for the Gnolls"
+
+[[components]]
+id = 2
+name = "Jumper -> Original version: Ugh and Jumper are inside the cave."
+
+[[components]]
+id = 3
+name = "Jumper -> Alternative for compatibility: Ugh and Jumper are outside."
+
+[[components]]
+id = 4
+name = "The Lost Son"
+
+[[components]]
+id = 5
+name = "Of Wolves and Men -> Quest uses hut near Thalantyr in High Hedge."
+
+[[components]]
+id = 6
+name = "Of Wolves and Men -> Quest uses house in Beregost."
+
+[[components]]
+id = 7
+name = "The Great Carlini"
+
+[[components]]
+id = 8
+name = "A Home for the Gibberlings"
+
+[[components]]
+id = 9
+name = "Fangirls"
+
+[[components]]
+id = 10
+name = "The Serpents of Abbathor -> Original version"
+
+[[components]]
+id = 11
+name = "The Serpents of Abbathor -> Tweaked version: quest can be finished in BG1."
+
+[[components]]
+id = 12
+name = "A Halfling among the Eyeless"

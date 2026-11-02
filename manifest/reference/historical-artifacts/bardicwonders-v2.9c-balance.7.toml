@@ -1,0 +1,33 @@
+# Historical verification reference only; not an operational candidate download.
+id = "bardicwonders-v2.9c-balance.7"
+name = "Bardic Wonders — Christopher's balance fork"
+version = "2.9c-balance.7"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/download/v2.9c-balance.7/Bardic-Wonders-v2.9c-balance.7.zip"
+reference = "v2.9c-balance.7"
+expected_filename = "Bardic-Wonders-v2.9c-balance.7.zip"
+expected_length = 5189060
+sha256 = "f1c83c3fd35643b913fd300ada2b218b17ef46fb29e3c43344fc183f3617e46c"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["BardicWonders"]
+tp2_paths = ["BardicWonders/Setup-BardicWonders.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 1024
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 67108864
+max_compression_ratio = 512
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch"
+license = "Fetch-only Christopher Hermann fork; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/Bardic-Wonders-Chriz-Balance-Patch/releases/tag/v2.9c-balance.7"
+reviewed_on = "2026-10-13"

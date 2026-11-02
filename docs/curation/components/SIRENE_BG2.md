@@ -11,9 +11,28 @@ Listed at installed version **—**.
   reference Cavalier (`6`) choice.
 - Pin the unversioned BG2 source to exact commit
   `00beda909a4a791a35016069b4ebb77f27279723`.
-- Sirene BG1 is a separate mod, not a component of this package. Add its own catalog and
-  choose between published v3.1 and later unreleased `master`; do not attach the BG1
-  archive to the BG2 source row.
+- Sirene BG1 is a separate mod, not a component of this package. It has its own catalog,
+  [SIRENE_BG1](SIRENE_BG1.md), and its own source row: Christopher included it as a
+  default on 2026-10-29, pinned to unreleased `master` commit `1c86000` because release
+  v3.1 supports BG:EE only. On EET this mod continues a Sirene who travelled with the
+  party from SoD into SoA (`AR0903_e.baf`) only when Sirene BG1 is installed first.
+- Since 2026-10-29 both Sirene mods install after Artisan's Kitpack's main run, so the
+  Martyr kit comes from the Kitpack (`3005`): each Sirene mod skips its own copy of the
+  kit when `3005` is installed. See SIRENE_BG1's install-order notes.
+- The move puts this mod after Spell Revisions' main component, Bardic Wonders' main run
+  and the Kitpack's main run, so their global passes no longer reach its files. In the
+  October 18 Recommended lab (WeiDU backups) they changed 11 of them: Spell Revisions `0`
+  `C0ILMN4.SPL`, `C0SBLIND.SPL` and `C0SRING2.ITM`; Bardic Wonders `2003` the armor
+  `C02PLAT`/`C0SLEAT` and `2005` the robe `C0SROBE`; Kitpack `20000` `C02PLAT`, `C0SLEAT`,
+  `C0SBLUN`, `C0SS1H1` and `C0SS1H2`, `10001`/`10003` `C0SW2H`/`C0SW2H2`, `1006`
+  `C0SRING2`, `7005` `C02PLAT`/`C0SLEAT` and `7006` `C02PLAT`. Spell Revisions' NPC
+  spellbooks `60` runs after EET_end and still reaches Sirene.
+- Known name clash, no in-game effect in the tested Recommended install: this mod's
+  `spells/c0ilms2a.spl` replaces the Kitpack Martyr's (`3005`) file of the same name.
+  Both files are unused: nothing casts `C0ILMS2A` or applies the Kitpack's
+  `c0ilms2a.eff`. It would matter only if a later Kitpack version wired up that hit
+  effect, and then for Martyrs only, Sirene included in a Custom setup without a class
+  option.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|

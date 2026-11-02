@@ -1,0 +1,75 @@
+id = "ntotsc"
+artifact_id = "ntotsc-f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+name = "Northern Tales of the Sword Coast"
+tp2 = "ntotsc/ntotsc.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Northern Tales of the Sword Coast (NTotSC) for BGT-Weidu, BG:EE, and EET"
+
+[[components]]
+id = 1
+name = "Spawn less Monsters depending on Game Difficulty"
+
+[[components]]
+id = 2
+name = "Keelor the Dwarf"
+
+[[components]]
+id = 3
+name = "Llindellyn's Lucky Arrow"
+
+[[components]]
+id = 4
+name = "Nim Furlwing's Hunting Hounds"
+
+[[components]]
+id = 5
+name = "Pilar and Gheldehar"
+
+[[components]]
+id = 6
+name = "Svlast's Torment"
+
+[[components]]
+id = 7
+name = "Will O'Hara NPC"
+
+[[components]]
+id = 8
+name = "Will O'Hara: Install English Soundset"
+
+[[components]]
+id = 9
+name = "Fighting Encounters"
+
+[[components]]
+id = 10
+name = "Improved Lesser Fiends"
+
+[[components]]
+id = 11
+name = "Improved Haeball"
+
+[[components]]
+id = 12
+name = "Improved Ghotal"
+
+[[components]]
+id = 13
+name = "Reduce Number of Shaman Cloaks -> Remove Cloaks from generic Orc Priests"
+
+[[components]]
+id = 14
+name = "Reduce Number of Shaman Cloaks -> Make Cloaks Undroppable"
+
+[[components]]
+id = 15
+name = "Spell Scrolls -> Revised Version (level 6 spells)"
+
+[[components]]
+id = 16
+name = "Spell Scrolls -> Original Version (level 7/8 spells)"

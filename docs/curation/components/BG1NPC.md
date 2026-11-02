@@ -63,7 +63,9 @@ Subgroup = choose at most one; `none by default` is an explicit valid choice.
 ## Collection behavior
 
 - Component `0` is required by the later BG1NPC components. The default route includes it;
-  any custom selection of a child must also resolve it.
+  any custom selection of a child must also resolve it. September 28 source fix:
+  the 36 generator-added optional choices now carry the same explicit core
+  requirement as the base choices, verified against the v32 installer.
 - Romance-speed groups explicitly default to no romance component. Components `110`–`114`,
   `130`/`131`, and `240`/`241` are mutually exclusive choice groups.
 - Install BG1NPC on staged BGEE+SoD before EET. Its installer forbids running after

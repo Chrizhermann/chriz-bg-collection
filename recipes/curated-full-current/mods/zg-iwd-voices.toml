@@ -1,0 +1,11 @@
+id = "zg-iwd-voices"
+artifact_id = "zg-iwd-voices-1.2.0"
+name = "Icewind Dale Voice Pack for EE 2.6+"
+tp2 = "zg_iwd_voices/zg_iwd_voices.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Icewind Dale Voice Pack for EE 2.6+"

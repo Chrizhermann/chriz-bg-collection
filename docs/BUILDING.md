@@ -62,6 +62,33 @@ signed setup. Do not run all ignored tests as part of a routine source build. A 
 normal suite does not establish full installation, gameplay, save/reload, or native updater
 apply/restart acceptance.
 
+Test builds never resolve the player's real Documents folder, where every installation
+reserves its saved-game folder. The engine's `test-documents` feature, which only the engine's
+and the app's dev-dependencies enable, makes every Documents lookup use the folder a test
+names in `CHRIZ_BG_COLLECTION_TEST_DOCUMENTS` and stops a test that names none, in debug and
+`--release` test runs alike.
+
+The engine's CLI tests declare which programs run and simulate failures and interruptions
+through environment variables (`CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES`,
+`CHRIZ_BG_COLLECTION_TEST_FAIL_TOOL`, `CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK` and
+`CHRIZ_BG_COLLECTION_TEST_INTERRUPT_AFTER_WEIDU`). The engine's `test-hooks` feature, which
+only the engine's dev-dependency enables, compiles these hooks into every test build, so
+`--release` test runs check the same paths as debug runs. Other builds honor these variables
+only with debug assertions.
+
+Test builds never remove the player's real application data either. When the uninstaller asks
+the app to remove it (`--remove-application-data`), the app's `test-application-data` feature,
+which only the app's own dev-dependency enables, makes the app remove only the folders a test
+names in `CHRIZ_BG_COLLECTION_TEST_APPLICATION_DATA_PARENTS` and refuse when a test names
+none, in debug and `--release` test runs alike. Other builds honor this variable only with
+debug assertions. A later release build of the app replaces `target/release/chriz-bg-app.exe`,
+so the tests run a copy of it, and only a copy that contains this variable's name.
+
+A binary from a build that also compiles tests (`cargo test`, `--all-targets`) carries these
+features; build the app, installer or CLI for real use with a plain `cargo build` or
+`tauri build`. Such a build contains none of the variable names above, and
+`cargo tree --locked -e normal,build -f "{p} {f}"` shows none of these features.
+
 The app's development dependencies enable Tauri's mock runtime, and `build.rs` embeds
 the Common Controls v6 manifest into Windows MSVC integration-test executables. No
 external `.exe.manifest` or ad hoc linker flags are needed for a fresh checkout.
@@ -153,6 +180,38 @@ The production build enables Tauri updater artifacts. An authorized release buil
 `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` through external secret
 storage; no contributor needs those credentials to compile or run normal tests. The public
 verification key in `tauri.conf.json` is deliberately public. It is not a private signing key.
+
+On Windows, an intentionally empty signing password can be lost through PowerShell's
+environment/native argument handling, leaving an unattended signer at a password prompt.
+If the setup was already built successfully, sign those existing bytes without rebuilding.
+For an empty-password key, this Node argument-array pattern preserves the explicit empty
+argument; it is also used by `tools/sign-patch-catalog.ps1`. From the repository root,
+replace the example paths with the external private-key file and completed setup:
+
+```powershell
+$cebgSigner = (Resolve-Path 'app/node_modules/@tauri-apps/cli/tauri.js').Path
+$cebgSigningKey = (Resolve-Path 'C:\ExternalSigning\cebg-updater.key').Path
+$cebgSetup = (Resolve-Path 'C:\BuildOutputs\Chriz Easy BG-setup.exe').Path
+$cebgSign = @'
+const { spawnSync } = require('node:child_process');
+const [cli, key, setup] = process.argv.slice(1);
+const child = spawnSync(process.execPath,
+  [cli, 'signer', 'sign', '--private-key-path', key, '--password', '', setup],
+  { stdio: 'inherit', windowsHide: true });
+if (child.error) { process.stderr.write(child.error.message); process.exit(1); }
+process.exit(child.status === null ? 1 : child.status);
+'@
+& node -e $cebgSign $cebgSigner $cebgSigningKey $cebgSetup
+if ($LASTEXITCODE -ne 0) { throw 'Tauri setup signing failed.' }
+```
+
+Pass only the key path, never its contents. Before distributing the setup, cryptographically
+verify its `.sig` against `plugins.updater.pubkey` in `app/src-tauri/tauri.conf.json`.
+The existing `package_config` test executable does this with
+`--ignored --exact built_update_signature_matches_the_bundled_public_key` and
+`CEBG_SIGNED_SETUP` pointing to the exact setup.
+Keep those setup bytes unchanged after signing. This creates a Tauri updater signature,
+not a Windows Authenticode signature.
 
 Three signing concerns are separate:
 

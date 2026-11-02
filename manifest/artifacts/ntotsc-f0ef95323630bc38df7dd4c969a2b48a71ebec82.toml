@@ -1,0 +1,32 @@
+id = "ntotsc-f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+name = "Northern Tales of the Sword Coast"
+version = "f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-commit-zip"
+url = "https://codeload.github.com/Spellhold-Studios/NTotSC/zip/f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+reference = "f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+expected_filename = "NTotSC-f0ef95323630bc38df7dd4c969a2b48a71ebec82.zip"
+expected_length = 135854624
+sha256 = "b507d4b833676c5d8924f549bb8cfef408c18cd21ea61612dd93290773b48e9d"
+redirect_hosts = []
+
+[archive]
+kind = "zip"
+root_rule = "single-wrapper"
+publish_roots = ["ntotsc"]
+tp2_paths = ["ntotsc/ntotsc.tp2"]
+
+[archive.limits]
+max_depth = 10
+max_entries = 8192
+max_entry_uncompressed_bytes = 67108864
+max_total_uncompressed_bytes = 536870912
+max_compression_ratio = 1000
+
+[provenance]
+homepage = "https://github.com/Spellhold-Studios/NTotSC"
+license = "Fetch-only official upstream commit archive; no redistribution by CEBG"
+url = "https://github.com/Spellhold-Studios/NTotSC/commit/f0ef95323630bc38df7dd4c969a2b48a71ebec82"
+reviewed_on = "2026-10-23"
