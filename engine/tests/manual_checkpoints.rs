@@ -223,6 +223,7 @@ fn manual_dragonspear_addition_is_interleaved_and_permanently_blocks_game_update
     let expected = expected_components(
         fixture.root(),
         &fixture.plan,
+        &fixture.plan,
         &fixture.manifest.mods,
         &fixture.checkpoints,
         GameRoot::Bg2,
@@ -231,6 +232,23 @@ fn manual_dragonspear_addition_is_interleaved_and_permanently_blocks_game_update
     assert_eq!(expected.len(), 3);
     assert_eq!(expected[1].tp2, "dragonspearui/setup-dragonspearui.tp2");
     assert_eq!(expected[2].component, 2);
+    // When the run before the pause is left out, the accepted additions keep their place
+    // between the installed runs around it.
+    let without_first = InstallPlan {
+        runs: fixture.plan.runs[1..].to_vec(),
+    };
+    let expected = expected_components(
+        fixture.root(),
+        &fixture.plan,
+        &without_first,
+        &fixture.manifest.mods,
+        &fixture.checkpoints,
+        GameRoot::Bg2,
+    )
+    .unwrap();
+    assert_eq!(expected.len(), 2);
+    assert_eq!(expected[0].tp2, "dragonspearui/setup-dragonspearui.tp2");
+    assert_eq!(expected[1].component, 2);
     fs::write(fixture.root().join("game/WeiDU.log"), "").unwrap();
     assert!(is_customized(fixture.root()).unwrap());
     assert!(game_update_guard(fixture.root())

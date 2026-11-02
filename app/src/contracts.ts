@@ -233,6 +233,8 @@ export type EngineEvent =
   | { readonly type: "campaign_finished"; readonly install_id: string }
   | { readonly type: "campaign_paused"; readonly install_id: string; readonly after_step_id: string }
   | { readonly type: "manual_download_needed"; readonly mod_id: string; readonly page: string; readonly expected_sha256: string; readonly drop_dir: string }
+  /** A mod's changed download cannot be used: the installation continues without it and what needs it. */
+  | { readonly type: "artifact_left_out"; readonly artifact_id: string; readonly reason: string; readonly runs: readonly string[]; readonly changed_runs: readonly string[] }
   | { readonly type: "error"; readonly step_id: string | null; readonly message: string };
 
 export interface RunEventEnvelope {

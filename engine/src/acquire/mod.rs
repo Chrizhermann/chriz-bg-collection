@@ -17,17 +17,22 @@ mod manual;
 mod materialize;
 
 pub use archive::{
-    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop, ArchiveFormat,
-    ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact,
+    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop,
+    extract_served_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
+    ExtractedArtifact,
 };
-pub use cache::ArtifactCache;
+pub(crate) use cache::announce_and_wait_before_asking_again;
+pub use cache::{
+    served_length_limit, AcceptedContent, ArtifactCache, ServedArtifact, ServedRedirects,
+    ServedRules,
+};
 pub use damaged::CacheRepair;
 pub use http::validate_redirect_target;
 pub use inspect::{download_for_inspection, QuarantinedDownload};
 pub use manual::{provide_manual_archive, publish_manual_archive, VerifiedManualArchive};
 pub use materialize::{
-    materialize, MaterializationRequest, MaterializationResult, PublicationManifest, PublishedPath,
-    SignedCollisionRule,
+    materialize, plan_materialization, MaterializationRequest, MaterializationResult,
+    PlannedMaterialization, PublicationManifest, PublishedPath, SignedCollisionRule,
 };
 
 /// Standard archive budget: initial attempt, then retries after 0, 2, 10 and 30 seconds.
@@ -152,6 +157,16 @@ pub enum AcquireError {
     /// An archive exceeded a recipe-authored extraction bound.
     #[error("archive limit exceeded: {0}")]
     ArchiveLimitExceeded(String),
+    /// The data of an archive entry is damaged: it fails its checksum or does not decompress.
+    /// Reading the archive file itself worked, so this is the archive's content, not this
+    /// computer's disk.
+    #[error("archive entry `{entry}` is damaged: {message}")]
+    CorruptArchiveData {
+        /// Entry path inside the archive.
+        entry: String,
+        /// Decoder or checksum detail.
+        message: String,
+    },
     /// The archive did not contain one exact recipe-declared payload layout.
     #[error("archive payload layout is invalid: {0}")]
     ArchiveLayout(String),
@@ -187,6 +202,26 @@ pub enum AcquireError {
         from: String,
         /// Redirect target on an undeclared host.
         to: String,
+    },
+    /// A download that differs from its pin came, at least in part, through hosts that neither
+    /// its link nor its reviewed redirect hosts name, where a changed file may come only from
+    /// those. Every segment of a resumed download counts. The refused file is not kept.
+    #[error(
+        "the changed download from `{url}` came, at least in part, through hosts its recipe did not review: {}",
+        .unreviewed_hosts.join(", ")
+    )]
+    UnreviewedSource {
+        /// The download's link.
+        url: String,
+        /// Length of the refused download.
+        length: u64,
+        /// Lowercase SHA-256 of the refused download.
+        sha256: String,
+        /// Every host that the requests which wrote the download reached, in every segment,
+        /// in the order first reached.
+        hosts: Vec<String>,
+        /// Those among `hosts` outside the link's own and its reviewed redirect hosts.
+        unreviewed_hosts: Vec<String>,
     },
     /// A redirect omitted its target.
     #[error("redirect from `{url}` did not include a valid Location header")]
@@ -248,11 +283,40 @@ pub enum AcquireError {
         /// Observed lowercase digest.
         actual: String,
     },
+    /// A download that differs from its pin grew past the size that protects the disk.
+    #[error(
+        "the download is at least {length} bytes, more than the {limit} bytes allowed for a changed download"
+    )]
+    ServedDownloadTooLarge {
+        /// Announced or received length so far.
+        length: u64,
+        /// Largest accepted changed download.
+        limit: u64,
+    },
+    /// A download that differs from its pin is clearly not the archive the recipe declares,
+    /// for example an error page or a transfer that ended early, on the last attempt too.
+    #[error("`{url}` did not serve the archive: {problem}")]
+    ServedNotArchive {
+        /// Final response URL.
+        url: String,
+        /// What the served file is instead.
+        problem: String,
+    },
     /// A destination file exists with bytes that no signed rule permits replacing.
     #[error("undeclared overwrite of `{path}`")]
     UndeclaredOverwrite {
         /// Destination-relative path.
         path: String,
+    },
+    /// A payload path is taken by the other kind of entry: an ordinary folder where the payload
+    /// has a file, or an ordinary file where the payload needs a folder. Links and other
+    /// reparse points are refused as [`AcquireError::InvalidMaterialization`] instead.
+    #[error("`{path}` cannot be placed: {message}")]
+    DestinationKindConflict {
+        /// Destination-relative payload path.
+        path: String,
+        /// What is in the way.
+        message: String,
     },
     /// A collision rule exists but does not match both owners and exact byte hashes.
     #[error("signed collision rule rejected for `{path}`: {message}")]
@@ -309,5 +373,12 @@ pub enum AcquireError {
     Stopped {
         /// Lock file of the cache entry that was being waited for.
         lock: PathBuf,
+    },
+    /// The user stopped while a downloaded file was being checked, as while every file of a
+    /// self-extracting RAR archive is test-read.
+    #[error("stopped by the user while checking the download `{path}`")]
+    StoppedWhileChecking {
+        /// The downloaded file being checked.
+        path: PathBuf,
     },
 }

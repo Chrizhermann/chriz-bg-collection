@@ -63,6 +63,11 @@ Not in 0.1.0: the open PRs against the next-release branch, #69 (install what a 
 official link serves when it differs from the pin) and #53 (own-mod pin check). The
 next-release branch has not been merged back into `main` yet; Christopher decides when.
 
+## November 1 — download drift fixes (PR 69)
+
+Campaigns started with a build of PR 69 from before ba32684 are unsupported: those builds
+were never merged or released, so no player has one.
+
 ## October 14 — app alpha.21 and its website published (installer fixes)
 
 **App alpha.21 is public** as a prerelease and on the alpha updater channel; the
