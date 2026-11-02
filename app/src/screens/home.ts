@@ -257,7 +257,8 @@ export function homeScreen(
     }
   } else if (selected.resumable && !patchRecoveryNeeded) {
     controls.append(
-      actionButton(selected.status === "Paused for your mods" ? "Review manual-mod pause" : "Continue installation", () => actions.resume(selected.id)),
+      actionButton(selected.status === "Paused for your mods" ? "Review manual-mod pause"
+        : selected.status === "Waiting for your answer" ? "Answer the question" : "Continue installation", () => actions.resume(selected.id)),
       actionButton("Export diagnostics", () => actions.diagnostics(selected.id), "quiet"),
     );
   } else {

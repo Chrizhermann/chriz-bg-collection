@@ -25,12 +25,22 @@ export interface BuildActions {
   readonly remove?: () => void | Promise<void>;
   readonly removalDisabled?: boolean;
   readonly manualCheckpoint?: ManualCheckpointActions;
+  readonly decision?: DecisionWaitActions;
+}
+
+/** The card behind the question about a download, which the app shows as a modal dialog. */
+export interface DecisionWaitActions {
+  readonly busy: boolean;
+  /** Whether the dialog with the question is open. */
+  readonly shown: boolean;
+  readonly error?: string;
+  readonly reload: () => void;
 }
 
 export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTMLElement {
   const page = element("div", "screen-stack build-screen");
   page.append(screenIntro("", "Installation progress", ""));
-  const tone = snapshot.state === "failed" ? "danger" : snapshot.state === "running" || snapshot.state === "complete" ? "ok" : "warning";
+  const tone = snapshot.state === "failed" && !snapshot.stoppedByAnswer ? "danger" : snapshot.state === "running" || snapshot.state === "complete" ? "ok" : "warning";
   const preparingResume = actions.resuming && snapshot.state === "paused" && !actions.manualCheckpoint;
   const stateCard = statusCard(preparingResume ? "Resuming installation" : snapshot.headline,
     preparingResume ? "Checking saved progress…" : snapshot.state === "running" ? "" : snapshot.detail, tone);
@@ -49,10 +59,26 @@ export function buildScreen(snapshot: BuildSnapshot, actions: BuildActions): HTM
     controls.append(actionButton("Open download page", actions.openManualSource, "quiet"));
     if (actions.fixture) controls.append(actionButton("I added the archive", actions.advance));
     else if (actions.retryAvailable) controls.append(actionButton("Choose downloaded archive", actions.supplyManual));
+  } else if (snapshot.state === "decision") {
+    const decision = actions.decision;
+    if (decision?.error) {
+      const error = element("p", "unavailable-reason", decision.error);
+      error.id = "decision-load-error";
+      error.tabIndex = -1;
+      error.setAttribute("role", "alert");
+      stateCard.append(error);
+    }
+    if (decision && !decision.shown) {
+      const show = actionButton(decision.busy ? "Loading the question…" : "Show the question", decision.reload);
+      show.id = "decision-reload";
+      show.disabled = decision.busy;
+      controls.append(show);
+    }
   } else if (snapshot.state === "attention") {
     controls.append(actionButton("Keep waiting", actions.advance));
   } else if (snapshot.state === "failed") {
     if (snapshot.freshCopyRequired) controls.append(actionButton("Start new installation", actions.backToSetup));
+    else if (actions.retryAvailable && snapshot.stoppedByAnswer) controls.append(actionButton("Resume installation", actions.retry));
     else if (actions.retryAvailable) controls.append(actionButton("Retry failed step", actions.retry));
     else controls.append(actionButton("Back to setup", actions.backToSetup));
     if (actions.diagnosticsAvailable) controls.append(actionButton("Export diagnostics", actions.diagnostics, "quiet"));

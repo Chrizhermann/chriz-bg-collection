@@ -115,7 +115,8 @@ describe("Chriz Easy BG application flow", () => {
     );
 
     emit({ runId: "left-out-run", sequenceAsString: "3", event: { type: "campaign_finished", install_id: "completed" } });
-    await waitFor(() => expect(getByText(root, "Chriz Easy BG is ready to play. Left out: Snowytoes. Its download could not be used. If something does not work as expected, please report it so the collection can be fixed.")).toBeTruthy());
+    // The engine's closing hint becomes the app's own: it says where diagnostics come from.
+    await waitFor(() => expect(getByText(root, "Chriz Easy BG is ready to play. Left out: Snowytoes. Its download could not be used. If something does not work as expected, please report it so the collection can be fixed; export diagnostics from My installs and attach them.")).toBeTruthy());
     expect(backend.summaryCalls).toEqual(["completed"]);
   });
 
