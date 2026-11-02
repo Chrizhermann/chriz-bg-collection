@@ -1305,17 +1305,21 @@ impl NativeBridge {
             )
         })?;
         let destination = self.cache.join("manual").join(filename);
-        let published = bg_engine::acquire::publish_manual_archive(
+        // A newer or different file than the reviewed one is accepted as chosen, as a newer
+        // file under a mod's official link is; only its size is bounded here.
+        let published = bg_engine::acquire::publish_chosen_manual_archive(
             &selected,
             &destination,
             &artifact.source.sha256,
             expected_length,
+            bg_engine::acquire::served_length_limit(expected_length),
         )
+        .map(|chosen| chosen.archive)
         .map_err(|error| {
             CommandError::new(
                 "manual_archive_invalid",
-                "That file does not match the archive required by this recipe.",
-                "Choose the exact published archive named on the build screen.",
+                "That file cannot be used for this mod.",
+                "Choose the archive you downloaded from the mod's page named on the install screen.",
                 error.to_string(),
             )
         })?;
@@ -3213,33 +3217,39 @@ fn inspect_manual_cache_file(
             Some(format!("{filename} is not a regular cache file")),
         );
     }
-    if metadata.len() != expected_length {
-        return (
+    match bg_engine::acquire::inspect_manual_archive(path) {
+        Ok(chosen)
+            if chosen.length == expected_length
+                && chosen.sha256.eq_ignore_ascii_case(expected_sha256) =>
+        {
+            (true, None)
+        }
+        // A newer or different file is installed as chosen, like a newer file under a mod's
+        // official link; the installation records it under its own checksum.
+        Ok(chosen)
+            if chosen.length <= bg_engine::acquire::served_length_limit(expected_length) =>
+        {
+            (
+                true,
+                Some(format!(
+                    "The file you chose differs from the reviewed version, for example because it is newer. CEBG installs it as chosen and records it; if something does not work, please report it. ({} bytes, SHA-256 {})",
+                    chosen.length, chosen.sha256
+                )),
+            )
+        }
+        Ok(chosen) => (
             false,
             Some(format!(
-                "{filename} has length {}; expected {expected_length}",
-                metadata.len()
-            )),
-        );
-    }
-    match bg_engine::acquire::provide_manual_archive(path, expected_sha256) {
-        Ok(verified) if verified.length == expected_length => (true, None),
-        Ok(verified) => (
-            false,
-            Some(format!(
-                "{filename} has length {}; expected {expected_length}",
-                verified.length
+                "{filename} has {} bytes, more than a newer version of this archive may have",
+                chosen.length
             )),
         ),
-        Err(_) => (
+        Err(error) => (
             false,
-            Some(format!(
-                "{filename} does not match the exact archive required by this recipe"
-            )),
+            Some(format!("could not inspect {filename}: {error}")),
         ),
     }
 }
-
 fn changed_review(reason: &str) -> CommandError {
     CommandError::new(
         "review_changed",
