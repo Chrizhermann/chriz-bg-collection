@@ -238,6 +238,8 @@ struct FakeDeps {
     failed_dependents: BTreeMap<String, Vec<String>>,
     /// Every `plan_without_parts` request, to see replays not recompute it.
     plan_without_parts_calls: Vec<Vec<(String, Vec<u32>)>>,
+    /// Source games that look modded, with the question to ask before copying them.
+    source_questions: BTreeMap<GameRole, Question>,
 }
 
 impl CampaignRecorder for FakeDeps {
@@ -460,6 +462,10 @@ impl StagingService for FakeDeps {
             std::fs::write(path, contents).map_err(|error| StepFailure::new(error.to_string()))?;
         }
         Ok(())
+    }
+
+    fn source_question(&mut self, role: GameRole) -> Result<Option<Question>, StepFailure> {
+        Ok(self.source_questions.get(&role).cloned())
     }
 
     fn finalize_identity(&mut self) -> Result<(), StepFailure> {
@@ -3331,4 +3337,95 @@ fn a_failed_run_the_collection_cannot_do_without_still_stops() {
             EngineEvent::ConsoleLine { line, .. } if line.contains("cannot continue without")
         )));
     }
+}
+
+fn modded_bg1_question() -> Question {
+    Question {
+        kind: QuestionKind::ModdedSource,
+        artifact_id: "source-bg1".to_owned(),
+        artifact_kind: ArtifactKind::Payload,
+        reviewed: FrozenIdentity {
+            id: "source-bg1".to_owned(),
+            version: "2.7.3.0".to_owned(),
+            sha256: "11".repeat(32),
+            length: 0,
+        },
+        served: None,
+        reason: None,
+        leave_out: None,
+    }
+}
+
+/// A source game that looks modded asks once, at its staging step and before anything is
+/// copied. No stops; Yes copies it and continues, and the answer stands for later attempts.
+#[test]
+fn a_modded_source_game_asks_before_it_is_copied() {
+    let fixture = Fixture::new();
+    let sink = RecordingSink::default();
+    let modded = || FakeDeps {
+        source_questions: BTreeMap::from([(GameRole::BgeeSod, modded_bg1_question())]),
+        ..FakeDeps::default()
+    };
+
+    // Without an answer it waits, and nothing is copied.
+    let mut waiting = modded();
+    let outcome = run_campaign(&fixture.request, &mut waiting, &sink).unwrap();
+    assert!(
+        matches!(&outcome, CampaignOutcome::DecisionRequired { step_id, .. } if step_id == "stage:bg1"),
+        "{outcome:?}"
+    );
+    assert!(!waiting
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("stage:")));
+    let root = &fixture.request.created.managed_root;
+    assert_eq!(asked(root).len(), 1);
+
+    // No stops this attempt.
+    let mut stopped = FakeDeps {
+        answers: BTreeMap::from([(
+            QuestionKind::ModdedSource,
+            (Answer::No, AnswerSource::Player),
+        )]),
+        ..modded()
+    };
+    let outcome = run_campaign(&fixture.request, &mut stopped, &sink).unwrap();
+    assert!(
+        matches!(&outcome, CampaignOutcome::Failed { step_id, reason } if step_id == "stage:bg1" && reason.starts_with("You chose to stop")),
+        "{outcome:?}"
+    );
+    assert!(!stopped
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("stage:")));
+
+    // The next attempt asks anew; Yes copies the game and the installation completes.
+    let mut accepted = FakeDeps {
+        answers: BTreeMap::from([(
+            QuestionKind::ModdedSource,
+            (Answer::Yes, AnswerSource::Preset),
+        )]),
+        fail_once: Some("stage:bg2".to_owned()),
+        ..modded()
+    };
+    let outcome = run_campaign(&fixture.request, &mut accepted, &sink).unwrap();
+    assert!(
+        matches!(&outcome, CampaignOutcome::Failed { step_id, .. } if step_id == "stage:bg2"),
+        "{outcome:?}"
+    );
+    assert!(accepted.trace.iter().any(|entry| entry == "stage:bg1"));
+    assert_eq!(asked(root).len(), 2);
+
+    // The answer stands: a resume asks no more and completes.
+    let mut resumed = modded();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.answer_requests, 0);
+    assert_eq!(asked(root).len(), 2);
+    let decisions = &resumed.receipts.last().unwrap().decisions;
+    assert_eq!(decisions.len(), 2);
+    assert_eq!(decisions[1].question.kind, QuestionKind::ModdedSource);
+    assert_eq!(decisions[1].answer.answer, Answer::Yes);
 }

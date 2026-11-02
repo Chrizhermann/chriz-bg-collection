@@ -8,6 +8,8 @@
 //!   needs it would be left out.
 //! - **unreviewed tool**: a changed installer tool came, at least in part, from a host the
 //!   recipe did not review, and the download folder holds no reviewed copy to use instead.
+//! - **modded source**: a source game looks modded already, so installing on top of it may
+//!   fail later. It is asked once at that game's staging step, before anything is copied.
 //!
 //! The campaign worker records the question in the ledger ([`crate::session::SessionEvent`])
 //! and stops. An answer reaches it as a create-once answer file, written under the target lock
@@ -33,14 +35,17 @@ pub enum QuestionKind {
     UnusableDownload,
     /// A changed installer tool came from a host the recipe did not review: use it anyway?
     UnreviewedTool,
+    /// A source game looks modded already: install on top of it anyway?
+    ModdedSource,
 }
 
 impl QuestionKind {
     /// Every kind, in a stable order.
-    pub const ALL: [Self; 3] = [
+    pub const ALL: [Self; 4] = [
         Self::ChangedDownload,
         Self::UnusableDownload,
         Self::UnreviewedTool,
+        Self::ModdedSource,
     ];
 
     /// Stable ledger and JSON spelling.
@@ -49,6 +54,7 @@ impl QuestionKind {
             Self::ChangedDownload => "changed_download",
             Self::UnusableDownload => "unusable_download",
             Self::UnreviewedTool => "unreviewed_tool",
+            Self::ModdedSource => "modded_source",
         }
     }
 
@@ -58,6 +64,7 @@ impl QuestionKind {
             Self::ChangedDownload => "changed-download",
             Self::UnusableDownload => "unusable-download",
             Self::UnreviewedTool => "unreviewed-tool",
+            Self::ModdedSource => "modded-source",
         }
     }
 }
@@ -290,7 +297,9 @@ impl Question {
     pub fn offers(&self, answer: Answer) -> bool {
         match (self.kind, answer) {
             (_, Answer::Yes | Answer::No) => true,
-            (QuestionKind::UnusableDownload, Answer::LeaveOut) => false,
+            (QuestionKind::UnusableDownload | QuestionKind::ModdedSource, Answer::LeaveOut) => {
+                false
+            }
             (_, Answer::LeaveOut) => self.leave_out.is_some(),
         }
     }
@@ -302,6 +311,7 @@ impl Question {
             QuestionKind::ChangedDownload | QuestionKind::UnreviewedTool => {
                 answer == Answer::LeaveOut
             }
+            QuestionKind::ModdedSource => false,
         }
     }
 
@@ -322,6 +332,13 @@ impl Question {
                 self.served.is_some()
                     && self.reason.is_none()
                     && self.artifact_kind == ArtifactKind::Tool
+            }
+            // About a source game: only its identity, as `reviewed` names it.
+            QuestionKind::ModdedSource => {
+                self.served.is_none()
+                    && self.reason.is_none()
+                    && self.leave_out.is_none()
+                    && is_source_subject(&self.artifact_id)
             }
         };
         if !shape_ok {
@@ -345,6 +362,19 @@ impl Question {
         }
         Ok(())
     }
+}
+
+/// The subject a [`QuestionKind::ModdedSource`] question names for the source game of `role`:
+/// `source-bg1` or `source-bg2`, never an artifact id of the recipe.
+pub const fn source_subject(role: crate::games::GameRole) -> &'static str {
+    match role {
+        crate::games::GameRole::BgeeSod => "source-bg1",
+        crate::games::GameRole::Bg2ee => "source-bg2",
+    }
+}
+
+fn is_source_subject(value: &str) -> bool {
+    matches!(value, "source-bg1" | "source-bg2")
 }
 
 /// Whether `value` is a decision id: 16 lowercase hexadecimal digits.
@@ -382,7 +412,7 @@ impl PresetAnswers {
                 .find(|candidate| candidate.flag_name() == kind)
                 .ok_or_else(|| {
                     format!(
-                        "unknown question {kind:?}; use changed-download, unusable-download or unreviewed-tool"
+                        "unknown question {kind:?}; use changed-download, unusable-download, unreviewed-tool or modded-source"
                     )
                 })?;
             let answer = Answer::parse(answer)?;

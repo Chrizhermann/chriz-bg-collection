@@ -33,7 +33,7 @@ export function downloadDecisionDialog(model: DownloadDecisionModel): HTMLElemen
   dialog.setAttribute("aria-labelledby", "decision-title");
   dialog.setAttribute("aria-describedby", "decision-message");
   dialog.setAttribute("aria-busy", String(model.busy));
-  const title = element("h2", undefined, "A download needs your answer");
+  const title = element("h2", undefined, model.decision.kind === "modded_source" ? "Your game needs your answer" : "A download needs your answer");
   title.id = "decision-title";
   const message = element("p", undefined, decision.message);
   message.id = "decision-message";

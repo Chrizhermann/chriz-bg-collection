@@ -237,7 +237,7 @@ export interface PendingDecision {
   readonly decisionId: string;
   /** Binds the answer to exactly this question. */
   readonly token: string;
-  readonly kind: "changed_download" | "unusable_download" | "unreviewed_tool";
+  readonly kind: "changed_download" | "unusable_download" | "unreviewed_tool" | "modded_source";
   readonly artifactId: string;
   readonly message: string;
   readonly details: readonly string[];

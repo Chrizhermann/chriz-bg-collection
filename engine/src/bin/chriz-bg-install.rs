@@ -44,9 +44,9 @@ enum Command {
     /// Resume one exact frozen managed installation.
     Resume {
         managed_root: PathBuf,
-        /// Answer a question about a download for this run only, for tests and automation:
-        /// changed-download=yes|no|leave-out, unusable-download=yes|no or
-        /// unreviewed-tool=yes|no|leave-out. Repeat for several questions.
+        /// Answer a question for this run only, for tests and automation:
+        /// changed-download=yes|no|leave-out, unusable-download=yes|no,
+        /// unreviewed-tool=yes|no|leave-out or modded-source=yes|no. Repeat for several questions.
         #[arg(long = "answer")]
         answers: Vec<String>,
     },
@@ -210,9 +210,9 @@ struct InstallArgs {
     /// Advanced pause after a selected component: run-id:component. Repeat for multiple pauses.
     #[arg(long = "manual-pause-after", value_parser = parse_manual_breakpoint)]
     manual_breakpoints: Vec<bg_engine::manual_checkpoint::ManualBreakpoint>,
-    /// Answer a question about a download for this run only, for tests and automation:
-    /// changed-download=yes|no|leave-out, unusable-download=yes|no or
-    /// unreviewed-tool=yes|no|leave-out. Repeat for several questions.
+    /// Answer a question for this run only, for tests and automation:
+    /// changed-download=yes|no|leave-out, unusable-download=yes|no,
+    /// unreviewed-tool=yes|no|leave-out or modded-source=yes|no. Repeat for several questions.
     #[arg(long = "answer")]
     answers: Vec<String>,
 }

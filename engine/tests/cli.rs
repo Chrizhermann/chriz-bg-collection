@@ -2471,6 +2471,74 @@ fn leftovers_in_a_source_game_are_left_out_and_the_installation_completes() {
     }
 }
 
+/// A source game whose files mods change differ (here `chitin.key`) asks once before it is
+/// copied: "Your game looks modded already …", with the focus on No. No stops; a resume with
+/// Yes copies it and completes, and the end summary names the answer.
+#[cfg(windows)]
+#[test]
+fn a_modded_source_game_asks_first_and_installs_after_yes() {
+    let fixture = executable_fixture();
+    fs::write(fixture.bg1.join("chitin.key"), b"changed by an earlier mod").unwrap();
+    let (code, response) = run_installer(
+        &fixture,
+        None,
+        &install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+    );
+    assert_eq!(code, Some(0), "{response:#}");
+    assert_eq!(
+        response["status"]["status"], "decision_required",
+        "{response:#}"
+    );
+    assert_eq!(response["status"]["step_id"], "stage:bg1", "{response:#}");
+    assert!(!fixture.managed.join("bg1/chitin.key").exists());
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+    assert_eq!(
+        decision["texts"]["message"],
+        "Your game looks modded already. Installing on top of it may fail later. Continue anyway? If you're not sure, choose No."
+    );
+    assert_eq!(decision["texts"]["focus"], "no");
+    assert_eq!(
+        labels(&decision),
+        ["Yes, continue anyway", "No, stop the installation"]
+    );
+
+    let (_, stopped) = resume_answering(&fixture, None, &["modded-source=no"]);
+    assert_eq!(stopped["status"]["status"], "failed", "{stopped:#}");
+    assert!(stopped["status"]["reason"]
+        .as_str()
+        .unwrap()
+        .starts_with("You chose to stop"));
+    assert!(!fixture.managed.join("bg1/chitin.key").exists());
+
+    let (code, completed) = resume_answering(&fixture, None, &["modded-source=yes"]);
+    assert_eq!(code, Some(0), "{completed:#}");
+    assert_eq!(completed["status"]["status"], "complete", "{completed:#}");
+    assert_eq!(
+        fs::read(fixture.managed.join("bg1/chitin.key")).unwrap(),
+        b"changed by an earlier mod"
+    );
+    let receipt = read_install_receipt(&fixture);
+    assert!(receipt.decisions.iter().any(|decision| decision.kind
+        == bg_engine::decision::QuestionKind::ModdedSource
+        && decision.answer == bg_engine::decision::Answer::Yes));
+    let (code, report) = run_installer(
+        &fixture,
+        None,
+        &["--json", "report", fixture.managed.to_str().unwrap()],
+    );
+    assert_eq!(code, Some(0), "{report:#}");
+    assert!(report.to_string().contains(
+        "You chose to install on top of your Baldur's Gate game, which looks modded already."
+    ));
+}
+
 /// A failed optional run once stopped the installation. Now it is left out, with everything
 /// that needs it, and the installation completes; the receipt names the failed run.
 #[test]

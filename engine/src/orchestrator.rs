@@ -524,6 +524,14 @@ pub trait StagingService {
     /// Stage or safely resume one source-game copy. BG1 staging also isolates its save identity.
     fn stage(&mut self, role: GameRole) -> Result<(), StepFailure>;
 
+    /// The question to ask before the source game of `role` is copied, when it looks modded
+    /// already ([`QuestionKind::ModdedSource`]): installing on top of it may fail later.
+    /// `None` copies it without asking.
+    fn source_question(&mut self, role: GameRole) -> Result<Option<Question>, StepFailure> {
+        let _ = role;
+        Ok(None)
+    }
+
     /// Patch and read back final BG2 identity after every EET-end/tail run.
     fn finalize_identity(&mut self) -> Result<(), StepFailure>;
 }
@@ -1060,6 +1068,10 @@ impl Progress {
                         PipelineKind::Materialize(task) => {
                             task.artifact_id == question.artifact_id
                                 && question.kind == QuestionKind::UnusableDownload
+                        }
+                        PipelineKind::Stage(role) => {
+                            question.kind == QuestionKind::ModdedSource
+                                && question.artifact_id == crate::decision::source_subject(*role)
                         }
                         _ => false,
                     };
@@ -1825,10 +1837,18 @@ where
             }
             PipelineKind::Acquire(identity, kind) => self.acquire_execution(identity, *kind),
             PipelineKind::Stage(role) => {
-                let target = role_target(*role);
-                self.recheck(step, target, MutationKind::Stage)
-                    .and_then(|()| self.dependencies.stage(*role))
-                    .map(|()| SimpleExecution::Complete)
+                // A game that looks modded is asked about once, before anything is copied; a
+                // Yes in an earlier attempt of this step still stands.
+                let question = if self.source_answered_yes(step)? {
+                    Ok(None)
+                } else {
+                    self.dependencies.source_question(*role)
+                };
+                match question {
+                    Ok(Some(question)) => Ok(SimpleExecution::Ask(Box::new(question))),
+                    Ok(None) => self.stage_source(step, *role),
+                    Err(failure) => Err(failure),
+                }
             }
             PipelineKind::Materialize(task) => match self
                 .recheck(step, task.target, MutationKind::Materialize)
@@ -1954,7 +1974,7 @@ where
         let fits = match question_kind {
             QuestionKind::ChangedDownload => true,
             QuestionKind::UnreviewedTool => kind == ArtifactKind::Tool,
-            QuestionKind::UnusableDownload => false,
+            QuestionKind::UnusableDownload | QuestionKind::ModdedSource => false,
         };
         if !fits {
             return Err(StepFailure::new(format!(
@@ -2212,6 +2232,16 @@ where
             );
             return self.failed(step, attempt, reason);
         }
+        if pending.question.kind == QuestionKind::ModdedSource {
+            let PipelineKind::Stage(role) = step.kind else {
+                return Err(OrchestratorError::InvalidCampaign(format!(
+                    "question {} about a source game stands at step {:?}, which copies none",
+                    pending.decision_id, step.id
+                )));
+            };
+            let execution = self.stage_source(step, role);
+            return self.finish_simple(step, attempt, execution);
+        }
         if pending.question.leaves_out(answer) {
             return self.apply_leave_out(step, attempt, pending);
         }
@@ -2396,6 +2426,44 @@ where
             Ok(AnsweredAcquisition::LinkChanged { detail }) => self.failed(step, attempt, detail),
             Err(failure) => self.failed(step, attempt, failure.into_message()),
         }
+    }
+
+    /// Copies the source game of `role` after the immediate safety recheck.
+    fn stage_source(
+        &mut self,
+        step: &PipelineStep,
+        role: GameRole,
+    ) -> Result<SimpleExecution, StepFailure> {
+        self.recheck(step, role_target(role), MutationKind::Stage)
+            .and_then(|()| self.dependencies.stage(role))
+            .map(|()| SimpleExecution::Complete)
+    }
+
+    /// Whether the player already answered Yes to this staging step's question about its
+    /// source game, in any attempt.
+    fn source_answered_yes(&self, step: &PipelineStep) -> Result<bool, OrchestratorError> {
+        let records = self.store.replay()?.records;
+        let asked = records
+            .iter()
+            .filter_map(|record| match &record.event {
+                SessionEvent::DecisionRequired {
+                    step_id,
+                    decision_id,
+                    question,
+                    ..
+                } if *step_id == step.id && question.kind == QuestionKind::ModdedSource => {
+                    Some(decision_id.clone())
+                }
+                _ => None,
+            })
+            .collect::<BTreeSet<_>>();
+        Ok(records.iter().any(|record| {
+            matches!(
+                &record.event,
+                SessionEvent::DecisionAnswered { decision_id, answer: Answer::Yes, .. }
+                    if asked.contains(decision_id)
+            )
+        }))
     }
 
     /// Withdraws the standing question of this step: the situation it asked about changed.

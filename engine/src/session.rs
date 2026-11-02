@@ -973,7 +973,7 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
             if !own_step_of(step_id, &question.artifact_id) {
                 return Err(ledger_error(
                     path,
-                    "a question must be asked by the acquisition or placing step of its artifact",
+                    "a question must be asked by the acquisition or placing step of its artifact, or by the staging step of its source game",
                 ));
             }
             if question.decision_id(step_id, *attempt) != *decision_id {
@@ -1018,7 +1018,11 @@ fn validate_decision(step_id: &str, attempt: u32, decision_id: &str, path: &Path
 
 /// Whether `step_id` acquires or places `artifact_id`.
 fn own_step_of(step_id: &str, artifact_id: &str) -> bool {
-    step_id.strip_prefix("acquire:") == Some(artifact_id)
+    // A question about a source game is asked by the staging step of that game.
+    matches!(
+        (step_id, artifact_id),
+        ("stage:bg1", "source-bg1") | ("stage:bg2", "source-bg2")
+    ) || step_id.strip_prefix("acquire:") == Some(artifact_id)
         || step_id
             .strip_prefix("materialize:")
             .and_then(|rest| rest.strip_prefix(artifact_id))
