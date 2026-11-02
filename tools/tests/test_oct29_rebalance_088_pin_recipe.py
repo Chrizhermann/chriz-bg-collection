@@ -9,7 +9,10 @@ post-EET-end Rebalance run, after every Artisan's Kitpack run (the late tweak ru
 1010000 included), Yeslick NPC and EEex.
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
-Nothing here is a game installation or gameplay acceptance.
+Nothing here is a game installation or gameplay acceptance. The November 2 intake
+(test_nov02_kitpack_rebalance_fix_pins_recipe) supersedes this pin with v0.8.9, which changes
+only texts of 210 and 211 and no component; the v0.8.8 record and artifacts stay as verified
+here.
 """
 
 from pathlib import Path
@@ -33,6 +36,9 @@ FILENAME = "chriz-bg-rebalance-v0.8.8-windows.zip"
 SHA256 = "dec0544b3cc0f2197b5791e89cf0eb73d2cdb563d3ae35c254d0da719d89a2e3"
 LENGTH = 1_839_187
 TAG_COMMIT = "92479d1baa83e8b0780b7dfc3009dc8820478cc6"
+# The November 2 intake moves both profiles to v0.8.9.
+SUCCESSOR = "chriz-bg-rebalance-0.8.9"
+SUCCESSOR_TAG = "v0.8.9"
 RUN = "chriz-bg-rebalance-bg2"
 EEEX_RUN = "eeex-bg2"
 YESLICK_RUN = "yeslicknpc-bg2"
@@ -127,12 +133,13 @@ class Oct29RebalanceV088PinTests(unittest.TestCase):
         after = previous.index(302) + 1
         self.assertEqual(record["native_components"], previous[:after] + [410, 411] + previous[after:])
 
-    def test_both_profiles_pin_v088_keep_v087_and_leave_the_standalone_packages_out(self):
+    def test_both_profiles_keep_v088_and_v087_and_leave_the_standalone_packages_out(self):
         for profile_name, directory in self.directories:
             with self.subTest(profile=str(directory)):
                 self.assertIn(profile_name, self.record["recipe_profiles"])
                 mod = _load(directory / f"mods/{MOD}.toml")
-                self.assertEqual(mod["artifact_id"], PIN)
+                # A superseded pin stays available as history, verified as recorded here.
+                self.assertEqual(mod["artifact_id"], SUCCESSOR)
                 artifact = _load(directory / f"artifacts/{PIN}.toml")
                 previous = _load(directory / f"artifacts/{PREVIOUS}.toml")
                 self.assertEqual(artifact["id"], PIN)
@@ -247,15 +254,16 @@ class Oct29RebalanceV088PinTests(unittest.TestCase):
         for component in NEW:
             self.assertEqual(rows[component].decision, Decision.DEFAULT)
         text = (ROOT / "docs/curation/components/CHRIZ-BG-REBALANCE.md").read_text(encoding="utf-8")
-        self.assertIn(f"**{TAG}**", text)
-        self.assertIn(f"`{TAG_COMMIT[:7]}`", text)
+        # The catalog names the current pin and keeps v0.8.8 as its predecessor.
+        self.assertIn(f"**{SUCCESSOR_TAG}**", text)
+        self.assertIn(f"{TAG} (2026-10-29 10:00 UTC, tag commit `{TAG_COMMIT[:7]}`)", text)
         for phrase in ("36 curated entries, 27 recommended selections",
                        "Christopher's decision, 2026-10-29", "`LK_ALAGHOR`", "`C0PR#CL.SPL`",
                        "`..., 408, 302, 410, 411, 420, 421, ...`", "`1010000` rebuilds", EVIDENCE):
             self.assertIn(phrase, text)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
         for phrase in ("**Druid weapons** — **Default.**", "**Alaghor of Clangeddin weapons** — **Default.**",
-                       "BG Rebalance v0.8.8 (was v0.8.2)", "Rebalance to v0.8.8",
+                       f"BG Rebalance {SUCCESSOR_TAG} (was v0.8.2)", f"Rebalance to {SUCCESSOR_TAG}",
                        "**Rebalance `410` and `411`**"):
             self.assertIn(phrase, changelog)
 

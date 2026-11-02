@@ -2,9 +2,10 @@
 
 Refreshed for the selected Artisan fork release **v4.81a-dev.85928f9-chriz.1**
 (`0798dc4ee3d09b5d97c56b69c80d9d2ac2317911`). The recipes pin
-**v4.81a-dev.85928f9-chriz.5** (tag commit `10a4a29`, pinned 2026-10-29): its tweak TP2
-declares chriz.1's 18 components in the same order and adds `7205` between `7203` and
-`8204` (below). The tweak installer uses the main
+**v4.81a-dev.85928f9-chriz.6** (tag commit `d70d213`, pinned 2026-11-02), which replaced
+chriz.5 (tag commit `10a4a29`, pinned 2026-10-29) and changes only the tweak TP2's version:
+its tweak TP2 declares chriz.1's 18 components in the same order and adds `7205` between
+`7203` and `8204` (below). The tweak installer uses the main
 installer's libraries, so the sorcerer and kit weapon fixes (see
 [ARTISANSKITPACK](ARTISANSKITPACK.md)) reach `8204` (Arcane Trickster sorcerer thief
 equipment, selected in Recommended) and `1010000` (Update EEex-based Weapon Usability

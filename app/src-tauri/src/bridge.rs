@@ -835,7 +835,7 @@ impl NativeBridge {
         }
         profiles.push(InstallProfileResponse {
             id: "public-alpha".to_owned(),
-            label: "Smaller downloadable alpha".to_owned(),
+            label: "Smaller downloadable setup".to_owned(),
             description: "Limited setup using automatically downloadable mods only.".to_owned(),
         });
         profiles
@@ -2507,7 +2507,7 @@ impl NativeBridge {
                 "build_already_running",
                 "Another installer build is already running.",
                 "Wait for the current build to finish or cancel it first.",
-                "the private alpha permits one active WeiDU campaign per process",
+                "CEBG permits one active WeiDU campaign per process",
             ));
         }
         runtime.active_runs.insert(run_id.clone(), controls);

@@ -8,8 +8,9 @@ decision changes (Christopher took v0.8.7 into alpha.22 on 2026-10-28).
 
 Static pin, evidence, component, selection and order checks for both recipe profiles only.
 Nothing here is a game installation or gameplay acceptance. BG Rebalance v0.8.8 (October 29,
-test_oct29_rebalance_088_pin_recipe) supersedes this pin and adds 410 and 411; the v0.8.7
-record and artifacts stay as verified here.
+test_oct29_rebalance_088_pin_recipe) supersedes this pin and adds 410 and 411, and v0.8.9
+(November 2, test_nov02_kitpack_rebalance_fix_pins_recipe) supersedes v0.8.8 in turn; the
+v0.8.7 record and artifacts stay as verified here.
 """
 
 from pathlib import Path
@@ -46,8 +47,9 @@ RECOMMENDED = {100, 101, 111, 120, 121, 200, 210, 211, 400, 401, 404, 405, 407, 
                310, 130, 220, 320, 331, 332, 340, 360}
 # The v0.8.8 intake (test_oct29_rebalance_088_pin_recipe) replaces this pin and declares
 # Druid weapons 410 and Alaghor of Clangeddin weapons 411, both defaults, which are checked
-# against its own record.
-SUCCESSOR = "chriz-bg-rebalance-0.8.8"
+# against its own record; the November 2 intake replaces v0.8.8 with v0.8.9, which changes
+# no component.
+SUCCESSOR = "chriz-bg-rebalance-0.8.9"
 LATER = {410, 411}
 
 
@@ -228,8 +230,9 @@ class Oct29RebalanceV087PinTests(unittest.TestCase):
                        "Christopher, 2026-10-28"):
             self.assertIn(phrase, text)
         changelog = (ROOT / "docs/plans/2026-10-14-next-release-changelogs.md").read_text(encoding="utf-8")
-        # v0.8.8 replaced v0.8.7 in the version list and the release-note entry.
-        for phrase in (f"**{NAME}** — **Default.**", "BG Rebalance v0.8.8 (was v0.8.2)", "Rebalance to v0.8.8",
+        # v0.8.8 replaced v0.8.7 in the version list and the release-note entry, and v0.8.9
+        # replaced v0.8.8.
+        for phrase in (f"**{NAME}** — **Default.**", "BG Rebalance v0.8.9 (was v0.8.2)", "Rebalance to v0.8.9",
                        "`CBR_TRUE_TIMESTOP`", "(Rebalance v0.8.6; named in v0.8.7)"):
             self.assertIn(phrase, changelog)
 

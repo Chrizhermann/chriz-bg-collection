@@ -1,9 +1,8 @@
 schema = 1
 recipe_id = "chriz-bg-collection"
-version = "0.1.0-alpha.22"
-# PLACEHOLDER: the release step sets the exact UTC publication time before packaging.
-published_at = "2026-10-29T00:00:00Z"
-minimum_app_version = "0.1.0-alpha.22"
+version = "0.1.0"
+published_at = "2026-11-02T00:00:00Z"
+minimum_app_version = "0.1.0"
 supersedes = "0.1.0-alpha.20"
 
 [[changes]]
@@ -169,9 +168,19 @@ covers = [
 ]
 
 [[changes]]
+id = "rebalance-pierce-magic-spellstrike-texts"
+title = "Pierce Magic and Spellstrike describe what they do"
+summary = "Recommended new installations describe Pierce Magic and Spellstrike the way Spell Revisions describes its other spells: level, school, range, duration, casting time, area of effect and saving throw, the list of protections the spell removes, and the changed effects. Pierce Magic halves Magic Resistance for 5 rounds, by at least 10 and at most 40 points; Spellstrike gives a 15% chance of spell failure for 2 rounds. Their scrolls, the Wand of Spell Striking's Pierce Magic charge and the monk's Spellstrike show the new texts. Only the texts change. (BG Rebalance v0.8.9)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:chriz-bg-rebalance-0.8.9",
+]
+
+[[changes]]
 id = "kitpack-kit-weapon-fixes"
 title = "Kit weapon fixes"
-summary = "New installations use the Artisan's Kitpack fork chriz.5. Sorcerers, the Dragon Disciple included, can equip daggers, quarterstaves, darts and slings again without proficiency points, like mages. Eldritch Knight and Arcane Trickster sorcerers keep their kit weapons when they level up or join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the start. The Invisible Blade and Bardic Wonders' Dancer can use katanas and the rogue and bard items that kept them out by mistake, also those that later mods add, such as SCS's Drow Katana; the Shapeshifter and the Elementalist still cannot use them. Existing games keep the old weapon behavior."
+summary = "New installations use the Artisan's Kitpack fork chriz.6. Sorcerers, the Dragon Disciple included, can equip daggers, quarterstaves, darts and slings again without proficiency points, like mages. Eldritch Knight and Arcane Trickster sorcerers keep their kit weapons when they level up or join the party. Monks can equip quarterstaves with Monk Revisions, and shamans without a kit, Sacred Fists, Enlightened Fists and Ninjas are held to their weapons from the start. The Invisible Blade and Bardic Wonders' Dancer can use katanas and the rogue and bard items that kept them out by mistake, also those that later mods add, such as SCS's Drow Katana; the Shapeshifter and the Elementalist still cannot use them. Existing games keep the old weapon behavior."
 save_applicability = "next-playthrough"
 urgency = "recommended"
 covers = [
@@ -180,6 +189,16 @@ covers = [
   "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.5",
   "feature:feature:artisanskitpack-tweak:component-7205",
   "run:artisanskitpack-tweak-late-bg2",
+]
+
+[[changes]]
+id = "kitpack-white-werewolf-crash-fix"
+title = "White werewolves no longer crash the game"
+summary = "Recommended new installations fix the Shapeshifter's white and greater white werewolf forms, which use Artisan's Kitpack's werewolf sprites: their overhand swing had no animation in five of the eight directions, and drawing it next to a wall could crash the game or silently corrupt memory. In those directions the swing now shows the same werewolf's other attack. Existing games keep the old files. (Artisan's Kitpack fork chriz.6)"
+save_applicability = "next-playthrough"
+urgency = "recommended"
+covers = [
+  "artifact:artisans-kitpack-4.81a-dev.85928f9-chriz.6",
 ]
 
 [[changes]]
@@ -497,26 +516,28 @@ covers = [
 ]
 
 [[changes]]
-id = "buffbot-1-12-1"
-title = "BuffBot 1.12.1"
-summary = "New installations use BuffBot v1.12.1 (was v1.10.0). The \"Combat detected - casting stopped\" and \"casting timed out\" notices now appear over the party leader's head; before, both were always lost, although stopping the buff run worked. New: an optional 2x or 4x speed while a buff run lasts (Normal stays the default), presets that cast their longest-lasting buffs first (Order: Duration; your own order stays the default), and casting buffs that are nearly over again, through the EEex options (off by default) or the panel's Active toggle. Also new: a search by buff name and item powers that work through a spell found automatically. The panel wears the theme's artwork and colours, so its columns are readable on dark themes. The F12 preset abilities are gone: right-click the HUD gear to pick a named preset. BuffBot no longer adds text to the game's dialog.tlk."
+id = "buffbot-1-12-6"
+title = "BuffBot 1.12.6"
+summary = "New installations use BuffBot v1.12.6 (was v1.10.0). The \"Combat detected - casting stopped\" and \"casting timed out\" notices now appear over the party leader's head; before, both were always lost, although stopping the buff run worked. New: an optional 2x or 4x speed while a buff run lasts (Normal stays the default), presets that cast their longest-lasting buffs first (Order: Duration; your own order stays the default), and casting buffs that are nearly over again, through the EEex options (off by default) or the panel's Active toggle. Also new: a search by buff name and item powers that work through a spell found automatically. The panel wears the theme's artwork and colours, so its columns are readable on dark themes, and a button you press looks pressed. The colour schemes carry the right game's names: the default looks as before and is now called Baldur's Gate. The F12 preset abilities are gone: right-click the HUD gear to pick a named preset. BuffBot no longer adds text to the game's dialog.tlk."
 save_applicability = "next-playthrough"
 urgency = "recommended"
 covers = [
   "artifact:buffbot-1.10.1",
   "artifact:buffbot-1.11.0",
   "artifact:buffbot-1.12.1",
+  "artifact:buffbot-1.12.6",
 ]
 
 [[changes]]
-id = "buffbot-fixes-to-1-12-1"
+id = "buffbot-fixes-to-1-12-6"
 title = "BuffBot fixes"
-summary = "Fixed in BuffBot v1.11.0 to v1.12.1: a configured spell variant no longer skips its casting time and aura, wearable items are no longer refused to characters without a kit, and restoring temporarily equipped items no longer risks overwriting the first backpack slot on BG2:EE 2.7.3.0, which could corrupt the character's name and crash the game. On a small panel, button captions no longer spill onto the neighbouring buttons, so a click lands on the button you see; spare tab slots stay inside the panel; and the quick-preset menu's captions move with the menu."
+summary = "Fixed in BuffBot v1.11.0 to v1.12.6: a configured spell variant no longer skips its casting time and aura, wearable items are no longer refused to characters without a kit, and restoring temporarily equipped items no longer risks overwriting the first backpack slot on BG2:EE 2.7.3.0, which could corrupt the character's name and crash the game. On a small panel, button captions no longer spill onto the neighbouring buttons, so a click lands on the button you see; spare tab slots stay inside the panel; and the quick-preset menu's captions move with the menu. With a party of one to five the panel can switch from the Summons view back to the party again, and a companion who joins while the panel is open gets a tab of their own. The Summons view lists only creatures your party summoned or cloned, so a friendly NPC or a charmed enemy no longer shows up there. A buff run no longer speeds the game up while the options, the character record, a level-up, the journal, a shop or another mod's dialog is open."
 save_applicability = "next-playthrough"
 urgency = "recommended"
 covers = [
   "artifact:buffbot-1.11.0",
   "artifact:buffbot-1.12.1",
+  "artifact:buffbot-1.12.6",
 ]
 
 [[changes]]
