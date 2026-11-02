@@ -9,7 +9,7 @@ does not make it permanent curation for later releases.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
-| 0 | Ice Island Level Two Restoration | Restored content |  | ✓ | default |
+| 0 | Ice Island Level Two Restoration | Restored content |  | ✓ | optional |
 | 1 | The Mysterious Vial | Restored content |  |  | |
 | 2 | Additional Elminster Encounter | Restored content |  |  | |
 | 3 | Angelo Notices Shar-teel | Restored content |  |  | |
@@ -20,30 +20,40 @@ does not make it permanent curation for later releases.
 | 8 | Safana the Flirt | Restored content |  |  | |
 | 9 | Appropriate Albert and Rufie Reward | Restored content |  |  | |
 | 10 | Place Entar Silvershield in His Home | Restored content |  |  | |
-| 11 | Scar and the Sashenstar's Daughter | Restored content |  | ✓ | default |
-| 12 | Quoningar, the Cleric | Restored content |  | ✓ | default |
-| 13 | Shilo Chen and the Ogre-Magi | Restored content |  | ✓ | default |
-| 14 | Edie, the Merchant League Applicant | Restored content |  | ✓ | default |
+| 11 | Scar and the Sashenstar's Daughter | Restored content |  | ✓ | optional |
+| 12 | Quoningar, the Cleric | Restored content |  | ✓ | optional |
+| 13 | Shilo Chen and the Ogre-Magi | Restored content |  | ✓ | optional |
+| 14 | Edie, the Merchant League Applicant | Restored content |  | ✓ | optional |
 | 15 | Flaming Fist Mercenary Reinforcements | Restored content |  |  | |
-| 16 | Creature Corrections | Fixes and restorations |  | ✓ | default |
-| 17 | Creature Restorations | Fixes and restorations |  | ✓ | default |
-| 18 | Creature Name Restorations | Fixes and restorations |  | ✓ | default |
-| 19 | Minor Dialogue Restorations | Fixes and restorations |  | ✓ | default |
+| 16 | Creature Corrections | Fixes and restorations |  | ✓ | optional |
+| 17 | Creature Restorations | Fixes and restorations |  | ✓ | optional |
+| 18 | Creature Name Restorations | Fixes and restorations |  | ✓ | optional |
+| 19 | Minor Dialogue Restorations | Fixes and restorations |  | ✓ | optional |
 | 20 | Audio Restorations | Fixes and restorations |  |  | |
-| 21 | Store, Tavern and Inn Fixes and Restorations | Fixes and restorations |  | ✓ | default |
-| 22 | Item Corrections and Restorations | Fixes and restorations |  | ✓ | default |
+| 21 | Store, Tavern and Inn Fixes and Restorations | Fixes and restorations |  | ✓ | optional |
+| 22 | Item Corrections and Restorations | Fixes and restorations |  | ✓ | optional |
 | 23 | Area Corrections and Restorations | Fixes and restorations |  |  | |
 | 24 | Permanent Corpses | Tweaks |  |  | |
 | 25 | Elven Charm and Sleep Racial Resistance | Tweaks |  |  | |
 | 26 | The Original Saga Music Playlist Corrections | Fixes and restorations |  |  | |
 | 27 | Sarevok's Diary Corrections | Fixes and restorations |  |  | |
 | 28 | Prism and the Emeralds Tweak | Tweaks |  |  | |
-| 29 | Duke Eltan in the Harbor Master's Building | Restored content |  | ✓ | default |
-| 30 | Nim Furlwing Encounter | Restored content |  | ✓ | default |
+| 29 | Duke Eltan in the Harbor Master's Building | Restored content |  | ✓ | optional |
+| 30 | Nim Furlwing Encounter | Restored content |  | ✓ | optional |
 | 31 | Restored Elfsong Tavern Movie | Restored content |  |  | |
-| 32 | Svlast, the Fallen Paladin Encounter | Restored content |  | ✓ | default |
-| 33 | Mal-Kalen, the Ulcaster Ghost | Restored content |  | ✓ | default |
-| 34 | Chapter 6 Dialogue Restorations | Fixes and restorations |  | ✓ | default |
+| 32 | Svlast, the Fallen Paladin Encounter | Restored content |  | ✓ | optional |
+| 33 | Mal-Kalen, the Ulcaster Ghost | Restored content |  | ✓ | optional |
+| 34 | Chapter 6 Dialogue Restorations | Fixes and restorations |  | ✓ | optional |
+
+## UI/dependency notes
+
+- All offered BG1 Unfinished Business components are optional and unchecked by default
+  at Christopher's request (2026-10-23), like Unfinished Business for BG2; keep them
+  available for opt-in in Customize. Recommended no longer runs `bg1ub-bg1`.
+- `30` (Nim Furlwing) and `32` (Svlast) restore the same encounters as NTotSC `4` and `6`,
+  and NTotSC refuses those two when BG1UB's creatures exist. When both mods are selected,
+  BG1UB's version is kept and NTotSC `4`/`6` show as unavailable with the reason; unticking
+  `30` or `32` here makes NTotSC's version available.
 
 ## Collection behavior
 

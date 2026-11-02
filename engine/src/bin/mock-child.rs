@@ -76,6 +76,14 @@ fn weidu_install(args: &[OsString]) -> io::Result<()> {
     let tp2 = env::var("CHRIZ_TEST_MOCK_WEIDU_TP2")
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "missing synthetic TP2"))?;
 
+    // A mod that reads a configuration file needs it before WeiDU installs anything.
+    if let Some(required) = env::var_os("CHRIZ_TEST_MOCK_WEIDU_REQUIRE_FILE") {
+        if !env::current_dir()?.join(&required).is_file() {
+            eprintln!("synthetic WeiDU requires {}", required.to_string_lossy());
+            return Err(io::Error::other("synthetic required file is missing"));
+        }
+    }
+
     if let Some(marker) = env::var_os("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE") {
         let marker = PathBuf::from(marker);
         if !marker.exists() {

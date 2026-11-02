@@ -41,6 +41,22 @@ enum Command {
     Install(InstallArgs),
     /// Resume one exact frozen managed installation.
     Resume { managed_root: PathBuf },
+    /// Inspect append-only additions at a declared manual installation pause.
+    CheckManualCheckpoint {
+        managed_root: PathBuf,
+        #[arg(long)]
+        install_id: String,
+    },
+    /// Explicitly accept exactly the inspected checkpoint token, without starting a worker.
+    AcceptManualCheckpoint {
+        managed_root: PathBuf,
+        #[arg(long)]
+        install_id: String,
+        #[arg(long)]
+        review_token: String,
+        #[arg(long)]
+        accept_additions: bool,
+    },
     /// Read the newest immutable attempt receipt.
     Report { managed_root: PathBuf },
     /// Export a create-once sanitized diagnostic bundle.
@@ -81,6 +97,9 @@ struct PlanArgs {
     preset: String,
     #[arg(long, default_value = "windows")]
     platform: String,
+    /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
+    #[arg(long = "group")]
+    groups: Vec<String>,
     /// Override one semantic feature as `id=on|off`.
     #[arg(long = "feature")]
     features: Vec<String>,
@@ -92,8 +111,10 @@ struct PlanArgs {
 impl PlanArgs {
     fn overrides(&self) -> SelectionOverrides {
         SelectionOverrides {
+            groups: self.groups.clone(),
             features: self.features.clone(),
             inputs: self.inputs.clone(),
+            manual_breakpoints: Vec::new(),
         }
     }
 }
@@ -150,10 +171,31 @@ struct InstallArgs {
     cache: PathBuf,
     #[arg(long, default_value = "windows")]
     platform: String,
+    /// Switch a feature group as `group-id=on|off`; an explicit `--feature` wins for a member.
+    #[arg(long = "group")]
+    groups: Vec<String>,
+    /// Override one semantic feature as `id=on|off`.
     #[arg(long = "feature")]
     features: Vec<String>,
     #[arg(long = "input")]
     inputs: Vec<String>,
+    /// Advanced pause after a selected component: run-id:component. Repeat for multiple pauses.
+    #[arg(long = "manual-pause-after", value_parser = parse_manual_breakpoint)]
+    manual_breakpoints: Vec<bg_engine::manual_checkpoint::ManualBreakpoint>,
+}
+
+fn parse_manual_breakpoint(
+    value: &str,
+) -> Result<bg_engine::manual_checkpoint::ManualBreakpoint, String> {
+    let (run_id, component) = value
+        .rsplit_once(':')
+        .ok_or("Use run-id:component for a manual pause.")?;
+    Ok(bg_engine::manual_checkpoint::ManualBreakpoint {
+        run_id: run_id.into(),
+        component: component
+            .parse()
+            .map_err(|_| "Manual pause component must be a nonnegative integer.")?,
+    })
 }
 
 fn main() -> ExitCode {
@@ -169,6 +211,30 @@ fn main() -> ExitCode {
 
 fn execute(cli: &Cli) -> Result<(), CliError> {
     match &cli.command {
+        Command::CheckManualCheckpoint {
+            managed_root,
+            install_id,
+        } => {
+            let checkpoint =
+                bg_engine::cli::inspect_manual_checkpoint(managed_root, install_id, true)?;
+            print_json(
+                &json!({ "command": "check-manual-checkpoint", "ok": true, "checkpoint": checkpoint }),
+            );
+        }
+        Command::AcceptManualCheckpoint {
+            managed_root,
+            install_id,
+            review_token,
+            accept_additions,
+        } => {
+            bg_engine::cli::accept_manual_checkpoint(
+                managed_root,
+                install_id,
+                review_token,
+                *accept_additions,
+            )?;
+            print_json(&json!({ "command": "accept-manual-checkpoint", "ok": true }));
+        }
         Command::Validate(args) => {
             let report = validate_recipe(&args.recipe, args.profile.into())?;
             if cli.json {
@@ -209,6 +275,7 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                     "preset": report.preset,
                     "normalized_selection": report.evaluation.normalized_selection,
                     "findings": report.evaluation.findings,
+                    "groups": report.evaluation.groups,
                     "plan": report.evaluation.plan,
                 }));
             } else {
@@ -278,8 +345,10 @@ fn execute(cli: &Cli) -> Result<(), CliError> {
                 preset: args.preset.clone(),
                 platform: args.platform.clone(),
                 overrides: SelectionOverrides {
+                    groups: args.groups.clone(),
                     features: args.features.clone(),
                     inputs: args.inputs.clone(),
+                    manual_breakpoints: args.manual_breakpoints.clone(),
                 },
                 bg1: args.bg1.clone(),
                 bg2: args.bg2.clone(),
@@ -381,6 +450,8 @@ fn command_name(command: &Command) -> &'static str {
         }) => "games inspect",
         Command::Install(_) => "install",
         Command::Resume { .. } => "resume",
+        Command::CheckManualCheckpoint { .. } => "check-manual-checkpoint",
+        Command::AcceptManualCheckpoint { .. } => "accept-manual-checkpoint",
         Command::Report { .. } => "report",
         Command::Diagnostics { .. } => "diagnostics",
     }
@@ -414,7 +485,10 @@ fn finish_json_campaign(
     report: bg_engine::cli::CampaignReport,
     events: Vec<EngineEvent>,
 ) -> Result<(), CliError> {
-    if report.status == CampaignStatus::Complete {
+    if matches!(
+        report.status,
+        CampaignStatus::Complete | CampaignStatus::Paused { .. }
+    ) {
         print_json(&json!({
             "command": command,
             "ok": true,
@@ -431,6 +505,13 @@ fn finish_json_campaign(
 }
 
 fn finish_human_campaign(report: bg_engine::cli::CampaignReport) -> Result<(), CliError> {
+    if let CampaignStatus::Paused { after_step_id } = &report.status {
+        println!(
+            "Managed installation paused at {after_step_id}: {}",
+            report.managed_root.display()
+        );
+        return Ok(());
+    }
     if report.status == CampaignStatus::Complete {
         println!(
             "Managed installation ready at {}",

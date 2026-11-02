@@ -1,13 +1,39 @@
 // @vitest-environment jsdom
 
-import { getByRole, getByText } from "@testing-library/dom";
+import { getByRole, getByText, queryByRole } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ManagedInstallation } from "../src/contracts";
 import { homeScreen } from "../src/screens/home";
 
 describe("launcher support", () => {
   afterEach(() => document.body.replaceChildren());
+
+  it("keeps a recoverable game folder accessible but never advertises or allows Play", async () => {
+    const installation: ManagedInstallation = {
+      id: "recover", name: "My game", path: "D:\\CEBG", status: "Ready to play",
+      receiptPath: null, launchPath: "D:\\CEBG\\game\\InfinityLoader.exe",
+      completedAtMillis: 1, available: true, resumable: false, patchRecoveryNeeded: true,
+    };
+    const launch = vi.fn();
+    const openFolder = vi.fn();
+    const root = homeScreen([installation], installation, {
+      begin: vi.fn(), launch, openFolder, resume: vi.fn(), select: vi.fn(), createShortcut: vi.fn(), diagnostics: vi.fn(),
+    }, { installId: "recover", state: "failed" }, { installId: "recover", state: "failed" });
+    document.body.append(root);
+    expect(getByRole(root, "heading", { name: "Installation needs recovery" })).toBeTruthy();
+    expect(root.textContent).not.toMatch(/ready to play|game is ready|game is ready to play/i);
+    expect(root.textContent).toContain("Open Updates");
+    expect(root.textContent).not.toContain("folder moved");
+    const play = getByRole(root, "button", { name: "Play Chriz Easy BG" }) as HTMLButtonElement;
+    expect(play.disabled).toBe(true);
+    await userEvent.setup().click(play);
+    expect(launch).not.toHaveBeenCalled();
+    expect(queryByRole(root, "button", { name: "Continue installation" })).toBeNull();
+    await userEvent.setup().click(getByRole(root, "button", { name: "Open game folder" }));
+    expect(openFolder).toHaveBeenCalledWith("recover");
+    expect(root.querySelector(".first-play-guide")).toBeNull();
+  });
 
   it("shows recorded component status and only advertises BuffBot when present", async () => {
     const diagnostics: string[] = [];

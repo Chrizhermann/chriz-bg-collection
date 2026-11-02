@@ -1,13 +1,14 @@
 {
   "name": "chriz-bg-app",
   "private": true,
-  "version": "0.1.0-alpha.15",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "build": "vite build",
+    "check:recipe-defaults": "cd .. && python -m tools.evandra_defaults --recipe recipes/curated-full-current",
     "tauri": "tauri",
     "check": "npm run typecheck && npm test -- --run && npm run build"
   },

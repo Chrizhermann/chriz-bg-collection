@@ -1,0 +1,32 @@
+id = "voicepack-imoen-bg1-1.0.1"
+name = "Imoen (BG1) player voicepack"
+version = "1.0.1"
+acquisition = "fetch-only"
+
+[source]
+kind = "github-release"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/download/v1.1.0/imoen-bg1-player-voicepack-v1.0.1.zip"
+reference = "v1.1.0"
+expected_filename = "imoen-bg1-player-voicepack-v1.0.1.zip"
+expected_length = 1796373
+sha256 = "cda87d6b56a15437025c536e2ea50194330565adf8a5e55f1cbdbbcaf8de79bb"
+redirect_hosts = ["release-assets.githubusercontent.com"]
+
+[archive]
+kind = "zip"
+root_rule = "direct"
+publish_roots = ["cd_imobg1"]
+tp2_paths = ["cd_imobg1/cd_imobg1.tp2"]
+
+[archive.limits]
+max_depth = 8
+max_entries = 256
+max_entry_uncompressed_bytes = 4194304
+max_total_uncompressed_bytes = 16777216
+max_compression_ratio = 100
+
+[provenance]
+homepage = "https://github.com/Chrizhermann/chriz-bg-voicepacks"
+license = "Fetch-only Christopher Hermann release; the collection does not redistribute it"
+url = "https://github.com/Chrizhermann/chriz-bg-voicepacks/releases/tag/v1.1.0"
+reviewed_on = "2026-10-22"

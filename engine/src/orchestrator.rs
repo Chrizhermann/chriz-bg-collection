@@ -170,6 +170,7 @@ pub struct MutationCheck {
 #[error("{message}")]
 pub struct StepFailure {
     message: String,
+    before_preparation: bool,
 }
 
 impl StepFailure {
@@ -182,6 +183,18 @@ impl StepFailure {
             } else {
                 message
             },
+            before_preparation: false,
+        }
+    }
+
+    /// Marks a failure of an install attempt that happened before it prepared anything for
+    /// WeiDU, such as getting the WeiDU executable, or while placing recipe configuration files,
+    /// which a retry repeats safely. The orchestrator records the same pre-spawn evidence as for
+    /// a failed safety guard, so that the run can be retried.
+    pub fn before_preparation(self) -> Self {
+        Self {
+            before_preparation: true,
+            ..self
         }
     }
 
@@ -350,6 +363,20 @@ pub trait ProcessRunner<I> {
 
 /// Owns durable before/debug/raw/after evidence and strict WeiDU.log reconciliation.
 pub trait InstallLogVerifier {
+    /// Explicit frozen manual boundaries; absent in ordinary campaigns.
+    fn manual_checkpoints(&self) -> Vec<crate::manual_checkpoint::FrozenCheckpoint> {
+        Vec::new()
+    }
+
+    /// Persist a durable baseline or verify explicit acceptance. False means remain paused.
+    fn manual_checkpoint(
+        &mut self,
+        _checkpoint: &crate::manual_checkpoint::FrozenCheckpoint,
+    ) -> Result<bool, StepFailure> {
+        Err(StepFailure::new(
+            "Manual checkpoints are not supported by this backend.",
+        ))
+    }
     /// Reconcile an earlier attempt whose logical step did not complete.
     fn recover(
         &mut self,
@@ -464,7 +491,7 @@ where
     D: CampaignDependencies,
     S: EventSink,
 {
-    let schedule = build_schedule(request)?;
+    let schedule = build_schedule(request, &dependencies.manual_checkpoints())?;
     reject_protected_or_relative_target(&request.created.managed_root)?;
     reject_lock_registry_overlap(request)?;
 
@@ -559,12 +586,16 @@ enum PipelineKind {
     Stage(GameRole),
     Materialize(MaterializationTask),
     Install(usize),
+    ManualCheckpoint(Box<crate::manual_checkpoint::FrozenCheckpoint>),
     FinalIdentity,
     FinalVerify,
     Receipt,
 }
 
-fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, OrchestratorError> {
+fn build_schedule(
+    request: &CampaignRequest,
+    checkpoints: &[crate::manual_checkpoint::FrozenCheckpoint],
+) -> Result<Vec<PipelineStep>, OrchestratorError> {
     let actual_plan = plan_digest(&request.plan)?;
     if actual_plan != request.created.plan_sha256 {
         return Err(OrchestratorError::InvalidCampaign(format!(
@@ -670,6 +701,16 @@ fn build_schedule(request: &CampaignRequest) -> Result<Vec<PipelineStep>, Orches
             label: format!("Install {}", run.mod_id),
             kind: PipelineKind::Install(index),
         });
+        for checkpoint in checkpoints
+            .iter()
+            .filter(|checkpoint| checkpoint.after_run_id == run.run_id)
+        {
+            schedule.push(PipelineStep {
+                id: format!("checkpoint:{}", checkpoint.checkpoint_id),
+                label: "Paused for your mods".to_owned(),
+                kind: PipelineKind::ManualCheckpoint(Box::new(checkpoint.clone())),
+            });
+        }
     }
     schedule.extend([
         PipelineStep {
@@ -969,7 +1010,9 @@ where
             };
             if let Some(outcome) = outcome {
                 let replay = self.store.replay()?;
-                write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
+                if !matches!(outcome, CampaignOutcome::Paused { .. }) {
+                    write_terminal_receipt(self.dependencies, self.request, &replay, &outcome)?;
+                }
                 return Ok(outcome);
             }
             if self.progress.completed_prefix < self.schedule.len()
@@ -989,6 +1032,19 @@ where
     ) -> Result<Option<CampaignOutcome>, OrchestratorError> {
         let attempt = self.begin_or_resume(step)?;
         let execution = match &step.kind {
+            PipelineKind::ManualCheckpoint(checkpoint) => {
+                // The preceding WeiDU invocation has exited and its exact log/debug
+                // evidence is complete. Never hand over a suspended child process.
+                match self.dependencies.manual_checkpoint(checkpoint) {
+                    Ok(false) => {
+                        return Ok(Some(CampaignOutcome::Paused {
+                            after_step_id: step.id.clone(),
+                        }))
+                    }
+                    Ok(true) => Ok(SimpleExecution::Complete),
+                    Err(error) => Err(error),
+                }
+            }
             PipelineKind::Preflight => {
                 let replay = self.store.replay()?;
                 self.dependencies
@@ -1213,7 +1269,19 @@ where
             attempt,
             MutationKind::InvocationBuild,
         )?;
-        let built = self.dependencies.build(run, components, attempt)?;
+        let built = match self.dependencies.build(run, components, attempt) {
+            Ok(built) => built,
+            Err(failure) if failure.before_preparation => {
+                return Err(self.pre_spawn_failure(
+                    run,
+                    components,
+                    attempt,
+                    MutationKind::InvocationBuild,
+                    failure,
+                ));
+            }
+            Err(failure) => return Err(failure),
+        };
         if built.identity_digest.trim().is_empty() {
             return Err(StepFailure::new("invocation identity digest is empty"));
         }
@@ -1238,15 +1306,29 @@ where
         attempt: &StepAttempt,
         kind: MutationKind,
     ) -> Result<(), StepFailure> {
-        if let Err(failure) = self.recheck(step, run.target, kind) {
-            let digest = self
-                .dependencies
-                .record_pre_spawn_failure(run, components, attempt, kind, &failure)?;
-            return Err(StepFailure::new(format!(
-                "{failure}\nPre-spawn evidence SHA-256: {digest}"
-            )));
+        self.recheck(step, run.target, kind)
+            .map_err(|failure| self.pre_spawn_failure(run, components, attempt, kind, failure))
+    }
+
+    /// Records durable evidence that `failure` happened before WeiDU could start and binds that
+    /// record into the ledger failure, so that retrying can prove the run never started.
+    fn pre_spawn_failure(
+        &mut self,
+        run: &PlannedRun,
+        components: &[u32],
+        attempt: &StepAttempt,
+        kind: MutationKind,
+        failure: StepFailure,
+    ) -> StepFailure {
+        match self
+            .dependencies
+            .record_pre_spawn_failure(run, components, attempt, kind, &failure)
+        {
+            Ok(digest) => {
+                StepFailure::new(format!("{failure}\nPre-spawn evidence SHA-256: {digest}"))
+            }
+            Err(error) => error,
         }
-        Ok(())
     }
 
     fn postcondition_failure(

@@ -257,6 +257,24 @@ pub struct Component {
     /// Ordered output-gated prompt answers for this component.
     #[serde(default)]
     pub prompts: Vec<PromptStep>,
+    /// Configuration files the installer reads while installing this component.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub config_files: Vec<ConfigFile>,
+}
+
+/// Largest configuration file a component may place.
+pub const MAX_CONFIG_FILE_BYTES: usize = 64 * 1024;
+
+/// A recipe-authored text file that a mod reads at install time, such as the Tweaks
+/// Anthology's `cdtweaks.txt`. It is placed before the run that installs its component.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConfigFile {
+    /// Normalized path relative to the staged target root, below a folder that the installer's
+    /// artifact publishes.
+    pub path: String,
+    /// Exact file content.
+    pub content: String,
 }
 
 /// A single installer definition from `mods/<id>.toml`.
@@ -519,12 +537,54 @@ pub struct Feature {
     /// Other features that must be effective first.
     #[serde(default)]
     pub requires: Vec<String>,
+    /// At least one of these features must be effective; empty means no OR gate.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub requires_any: Vec<String>,
     /// Directional compatibility rules that disable this feature.
     #[serde(default)]
     pub conflicts: Vec<Conflict>,
     /// Typed configuration owned by this feature.
     #[serde(default)]
     pub inputs: Vec<InputSpec>,
+}
+
+/// A player-facing group of optional features that can be switched together.
+///
+/// Group state is always derived from the member features' selections and is never stored in
+/// selections, presets, or receipts; members remain individually selectable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroup {
+    /// Stable kebab-case group id.
+    pub id: String,
+    /// Player-facing title, also used to mark each member.
+    pub title: String,
+    /// Player-facing explanation shown with the group control.
+    pub description: String,
+    /// Member feature ids in player-facing order.
+    pub members: Vec<String>,
+    /// Choice-group alternatives the group picks while it is on, in player-facing order.
+    /// Omitted when empty so groups without variants serialize, and therefore freeze and
+    /// digest, exactly as before variants existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<FeatureGroupVariant>,
+}
+
+/// One alternative of an authored choice group that a feature group picks while it is on.
+///
+/// Switching the group on picks `option` and deselects the choice group's other options;
+/// switching it off restores the choice group's recipe default. Like member state, whether the
+/// variant is picked is derived from the selection and never stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FeatureGroupVariant {
+    /// Authored `choice_group` id shared by the alternatives.
+    pub choice_group: String,
+    /// Feature id of the alternative picked while the group is on; never the recipe default.
+    pub option: String,
+    /// Short player-facing name for the picked alternative; the option title when omitted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 /// Minimal preset metadata loaded from `presets/<id>.toml`.
@@ -553,4 +613,8 @@ pub struct Collection {
     /// Player-facing semantic features in authored display order.
     #[serde(default)]
     pub features: Vec<Feature>,
+    /// Optional player-facing feature groups. Omitted when empty so recipes without groups
+    /// serialize, and therefore freeze and digest, exactly as before groups existed.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub feature_groups: Vec<FeatureGroup>,
 }

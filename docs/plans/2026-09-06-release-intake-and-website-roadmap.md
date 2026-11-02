@@ -3,6 +3,41 @@
 User decisions: 2026-09-06. Keep this task focused on releasing CEBG;
 owning mod tasks retain implementation and detailed design work.
 
+## Next-release triage — Randomiser (2026-09-18)
+
+[Community compatibility report and feature ideas](2026-09-18-randomiser-next-release-triage.md)
+are queued for discussion: proficiency compatibility, editable RR/EE pools, cursed
+item variety, new-game randomisation and optional challenge reward placement.
+Recorded only; no investigation or commitment to ship all ideas in the next release.
+
+## Later installer UX follow-up (2026-09-16)
+
+Installer UX follow-up added 2026-09-16: [simpler My installs and unique installation
+names](2026-09-07-managed-install-cleanup.md#follow-up-roadmap-my-installs-clarity-and-unique-names--september-16).
+**Planned**, not included in alpha.17: compact presentation, persistent names even
+for failed copies, numbered defaults and unambiguous selection/removal feedback.
+This records the requirement; it does not authorize a website deployment.
+
+### Background WeiDU launches — requested September 16
+
+Implemented in source after the alpha.17 package: WeiDU's normal runner and version
+probe (`engine/src/weidu/runner.rs` and `invocation.rs`) now set the Windows-only
+`CREATE_NO_WINDOW` flag before spawning. Captured output, prompt handling and process
+supervision remain unchanged. All 15 existing runner tests and 3 version-probe
+tests pass, including output, prompt responses and process-tree cancellation.
+No full install, packaged foreground-focus smoke or helper-window acceptance was
+run. Mod-spawned helpers may need separate handling; do not promise every descendant
+honors the parent launch settings. The existing alpha.17 EXE is unchanged; include
+this source change in the next build. Do not restart the user's running install.
+
+## Later roadmap addition — Challenge Mode (2026-09-13)
+
+Record as **Planned**, not shipped: [Challenge Mode scope and complete run-rule
+inventory](2026-09-13-challenge-mode-outlook.md). It combines owner-maintained SoD
+and dragon work with practical rule enforcement, including explicit encounter
+exceptions. No implementation, public website edit or current-release scope change
+was requested at this checkpoint; presentation stays with the website task.
+
 ## Approved next recipe
 
 - Progressive utility XP **610**: include in the recommended installation;

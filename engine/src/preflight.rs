@@ -128,6 +128,14 @@ impl PreflightHost for SystemPreflight {
     }
 
     fn running_executable_paths(&self) -> io::Result<Vec<PathBuf>> {
+        // Test and debug builds only: tests that run the installer declare which programs run,
+        // so that another program's WeiDU on the same PC never decides their outcome.
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
+        if let Some(declared) = std::env::var_os("CHRIZ_BG_COLLECTION_TEST_RUNNING_EXECUTABLES") {
+            return Ok(std::env::split_paths(&declared)
+                .filter(|path| !path.as_os_str().is_empty())
+                .collect());
+        }
         system_running_executable_paths()
     }
 
@@ -276,27 +284,7 @@ pub fn initial_preflight_with(
     }
 
     let cache = validate_cache_root(&frozen.cache_root)?;
-    if is_creator_protected_destination(&cache) {
-        return Err(PreflightError::CacheNotWritable {
-            path: cache,
-            source: io::Error::new(
-                io::ErrorKind::PermissionDenied,
-                "cache root is inside a protected creator reference path",
-            ),
-        });
-    }
-    if path_is_under(&cache, &bg1)
-        || path_is_under(&bg1, &cache)
-        || path_is_under(&cache, &bg2)
-        || path_is_under(&bg2, &cache)
-        || path_is_under(&cache, &target)
-        || path_is_under(&target, &cache)
-    {
-        return Err(PreflightError::CacheNotWritable {
-            path: cache,
-            source: io::Error::other("cache root overlaps a source game or managed target"),
-        });
-    }
+    check_cache_root_placement(&cache, &bg1, &bg2, &target)?;
     host.probe_directory_writable(&writable_root)
         .map_err(|source| PreflightError::DestinationNotWritable {
             path: writable_root.clone(),
@@ -435,6 +423,39 @@ pub fn recheck_staging_target_before_mutation_with(
     };
     check_processes_under(&target, host)?;
     probe_existing_tlks(&target, language, host)
+}
+
+/// Refuses a download cache at `cache` inside a protected creator reference path, or overlapping
+/// a read-only source game or the managed `target`. Only paths are compared, so a deleted cache
+/// can be checked before it is created again.
+pub(crate) fn check_cache_root_placement(
+    cache: &Path,
+    bg1: &Path,
+    bg2: &Path,
+    target: &Path,
+) -> Result<(), PreflightError> {
+    if is_creator_protected_destination(cache) {
+        return Err(PreflightError::CacheNotWritable {
+            path: cache.to_path_buf(),
+            source: io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "cache root is inside a protected creator reference path",
+            ),
+        });
+    }
+    if path_is_under(cache, bg1)
+        || path_is_under(bg1, cache)
+        || path_is_under(cache, bg2)
+        || path_is_under(bg2, cache)
+        || path_is_under(cache, target)
+        || path_is_under(target, cache)
+    {
+        return Err(PreflightError::CacheNotWritable {
+            path: cache.to_path_buf(),
+            source: io::Error::other("cache root overlaps a source game or managed target"),
+        });
+    }
+    Ok(())
 }
 
 /// True only for either protected creator reference root or one of its descendants.
@@ -732,6 +753,16 @@ fn probe_existing_tlks(
         })
 }
 
+/// Refuses while a program started from inside `folder` runs, such as the game, its loader or an
+/// overlay kept in the game folder.
+pub(crate) fn check_no_program_running_under(
+    folder: &Path,
+    host: &dyn PreflightHost,
+) -> Result<(), PreflightError> {
+    let target = validate_target_directory(folder)?;
+    check_processes_under(&target, host)
+}
+
 fn check_processes_under(target: &Path, host: &dyn PreflightHost) -> Result<(), PreflightError> {
     let running = host
         .running_executable_paths()
@@ -897,7 +928,7 @@ fn absolute_path(path: &Path) -> io::Result<PathBuf> {
     }
 }
 
-fn paths_equal(left: &Path, right: &Path) -> bool {
+pub(crate) fn paths_equal(left: &Path, right: &Path) -> bool {
     #[cfg(windows)]
     {
         windows_path_key(left) == windows_path_key(right)
@@ -1271,9 +1302,14 @@ mod process_tests {
     use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
 
+    /// Not named like an installer or the game: tests running in parallel use the real process
+    /// list, which fails closed on such a program that it cannot inspect, for example while it
+    /// starts. The checks below still treat the fixture as `weidu.exe` by its process name.
+    const FIXTURE_IMAGE: &str = "process-fixture.exe";
+
     fn fixture_process(script: &str) -> (tempfile::TempDir, Child) {
         let temp = tempfile::tempdir().expect("create process fixture folder");
-        let executable = temp.path().join("weidu.exe");
+        let executable = temp.path().join(FIXTURE_IMAGE);
         fs::copy(
             std::env::var_os("COMSPEC").expect("locate Windows command interpreter"),
             &executable,
@@ -1298,6 +1334,11 @@ mod process_tests {
             "weidu.exe",
             child.id(),
         )
+    }
+
+    #[test]
+    fn fixture_processes_are_not_relevant_to_parallel_process_checks() {
+        assert!(!is_relevant_process_name(FIXTURE_IMAGE));
     }
 
     #[test]
@@ -1348,7 +1389,7 @@ mod process_tests {
         );
         drop(child.stdin.take());
         child.wait().expect("wait for fixture after stdin closes");
-        let expected = fs::canonicalize(temp.path().join("weidu.exe")).unwrap();
+        let expected = fs::canonicalize(temp.path().join(FIXTURE_IMAGE)).unwrap();
         for found in [waitable, query_only] {
             let path = found
                 .expect("inspect live process")

@@ -1,4 +1,4 @@
-import type { FeatureControl, SelectionEvaluation } from "./contracts";
+import type { FeatureControl, FeatureGroup, FeatureGroupVariant, SelectionEvaluation } from "./contracts";
 
 export type ChoiceControl = FeatureControl;
 
@@ -28,11 +28,11 @@ export function commonBundles(evaluation: SelectionEvaluation): CommonBundle[] {
   const controls = evaluation.view.controls;
   const existing = new Set(controls.map(c => c.id));
   const bundles: CommonBundle[] = [
-    { id: "original-companions", title: "Original companion classes & kits", description: "Use the games’ original classes and mod companions’ author defaults. Keep portraits, voices, spellbook tweaks and unrelated fixes. This changes a new installation, not an existing save.", ids: controls.filter(c => originalConversions.has(c.id) || c.id.startsWith("feature:artisanskitpack-npc:component-")).map(c => c.id) },
-    { id: "randomiser", title: "Item Randomiser", description: "Randomize item locations. Turning this off also removes its options.", ids: ["mod:randomiser"] },
-    { id: "artisan", title: "Artisan’s Kitpack", description: "Class and kit overhauls, companion kit assignments, and associated tweaks. All three parts switch together.", ids: ["mod:artisanskitpack", "mod:artisanskitpack-npc", "mod:artisanskitpack-tweak"] },
-    { id: "bardic", title: "Artisan’s Bardic Wonders", description: "Bard kits, abilities and related patches. Dependent companion choices follow automatically.", ids: existing.has("mod:bardicwonders") ? ["mod:bardicwonders"] : controls.filter(c => c.id.startsWith("feature:bardicwonders:")).map(c => c.id) },
-    { id: "spell-revisions", title: "Spell Revisions", description: "Revised spells and their compatibility fixes. Turning this off can make previously incompatible choices available.", ids: ["mod:spell-rev"] },
+    { id: "original-companions", title: "Original companion classes & kits", description: "Use the games’ original classes and mod companions’ author defaults. Keep portraits, voices and spellbook tweaks. Keeping Yeslick’s original class also leaves out the combined Yeslick/Keldorn dispel fix. New installations only; existing saves stay unchanged.", ids: controls.filter(c => originalConversions.has(c.id) || c.id.startsWith("feature:artisanskitpack-npc:component-")).map(c => c.id) },
+    { id: "randomiser", title: "Item Randomiser", description: "Randomizes eligible item locations. Turning this off leaves out the Randomiser and its options, not other item changes.", ids: ["mod:randomiser"] },
+    { id: "artisan", title: "Artisan’s Kitpack", description: "Class and kit overhauls, companion kit assignments and related tweaks. Turning this off leaves out all three parts and fixes that need them.", ids: ["mod:artisanskitpack", "mod:artisanskitpack-npc", "mod:artisanskitpack-tweak"] },
+    { id: "bardic", title: "Artisan’s Bardic Wonders", description: "Adds bard kits, abilities and spells. Turning this off also leaves out companion kit choices and patches that need it.", ids: existing.has("mod:bardicwonders") ? ["mod:bardicwonders"] : controls.filter(c => c.id.startsWith("feature:bardicwonders:")).map(c => c.id) },
+    { id: "spell-revisions", title: "Spell Revisions", description: "Rebalances many existing spells. Turning this off does not remove IWDification’s Icewind Dale spells or other mods’ spell tweaks. Related fixes follow automatically.", ids: ["mod:spell-rev"] },
     { id: "sod-remix", title: "SoD Remix", description: "Include or exclude the curated SoD Remix bundle. The bundle includes an optional in-game prompt to skip the SoD story; this switch does not skip it automatically.", ids: ["mod:chriz-sod-remix"] },
   ];
   return bundles.map(b => ({ ...b, ids: b.ids.filter(id => existing.has(id)) })).filter(b => b.ids.length > 0);
@@ -114,7 +114,8 @@ export function exclusiveChoiceChanges(group: ExclusiveChoiceGroup, selectedId: 
 
 export function bulkCategoryChanges(e: SelectionEvaluation, category: string, selected: boolean): Record<string, boolean> {
   const controls = e.view.controls;
-  const candidates = controls.filter(c => c.category === category && c.interactive && c.decision !== "mandatory");
+  // A category's "include all" must never choose a whole interface overhaul.
+  const candidates = controls.filter(c => c.category === category && c.interactive && c.decision !== "mandatory" && c.choiceGroup !== "game-interface");
   if (!selected) return Object.fromEntries(candidates.map(c => [c.id, false]));
   const retained = controls.filter(c => c.selected);
   const changes: Record<string, boolean> = {};
@@ -126,4 +127,35 @@ export function bulkCategoryChanges(e: SelectionEvaluation, category: string, se
     retained.push(candidate);
   }
   return changes;
+}
+
+/**
+ * Member changes that switch a feature group on (`on` true) or off. Mirrors the engine's
+ * `feature_group_changes`: on selects every currently available member and picks every
+ * available variant option, deselecting its alternatives; off deselects every member and
+ * restores each variant's choice group to its recipe default. Unavailable members and
+ * variants are never forced on and no other feature is touched.
+ */
+export function featureGroupChanges(group: FeatureGroup, on: boolean): Record<string, boolean> {
+  const changes: Record<string, boolean> = on
+    ? Object.fromEntries(group.availableMembers.map(id => [id, true]))
+    : Object.fromEntries(group.members.map(id => [id, false]));
+  for (const variant of group.variants ?? []) {
+    if (on && !variant.available) continue;
+    for (const option of variant.options) {
+      changes[option] = on ? option === variant.option : variant.recipeDefault.includes(option);
+    }
+  }
+  return changes;
+}
+
+/** Feature group that owns each member feature (validation allows at most one). */
+export function featureGroupsByMember(evaluation: SelectionEvaluation): Map<string, FeatureGroup> {
+  return new Map((evaluation.featureGroups ?? []).flatMap(group => group.members.map(id => [id, group] as const)));
+}
+
+/** Group variant that switches each choice group (validation allows at most one). */
+export function featureGroupVariantsByChoiceGroup(evaluation: SelectionEvaluation): Map<string, { readonly group: FeatureGroup; readonly variant: FeatureGroupVariant }> {
+  return new Map((evaluation.featureGroups ?? []).flatMap(group =>
+    (group.variants ?? []).map(variant => [variant.choiceGroup, { group, variant }] as const)));
 }

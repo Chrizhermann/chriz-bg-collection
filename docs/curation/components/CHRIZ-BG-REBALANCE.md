@@ -1,11 +1,41 @@
 # CHRIZ-BG-REBALANCE — components
 
-The 14-component baseline menu below was captured from public release **v0.3.1**, tag commit
-`d31fda2c6723610c8ac1c6b712306446a9dbfd5b`. It includes the accepted component `120`
+The October 7 target is **v0.8.1**. For the next release, Christopher moved
+component `301` out of normal defaults into the planned Challenge Mode choices.
+It stays available, but unchecked; all other existing defaults stay unchanged.
+The historical September/October release decisions below still describe those
+released versions. Christopher approved component
+`301` as a recommended default on **2026-09-26**, based on earlier in-game testing;
+fix any issue in a follow-up rather than gating on more testing. The
+[September 16 candidate](../../alpha16-candidate-2026-09-16.md) approved dragon
+components `110` and `111` as optional, unchecked additions. On September 29,
+Christopher changed `111` to a recommended default; `110` stays unchecked.
+The release retains component `120`
 weapon-protection repair, component `121` EEex/SCS ambient-readiness bridge, and the
 component `401` correction for Artisan CLAB cells packed into `ABILITY1`.
 
-14 entries, 10 current-alpha selections. ✓ = selected and receipt-verified in the isolated
+The recipe pins **v0.8.9** (published 2026-11-01 21:45 UTC, tag commit `bb3f11b`; pinned
+2026-11-02 for CEBG 0.1.0, Christopher's OK of that day). It changes no mechanic and no
+component: Pierce Magic `210` and Spellstrike `211` now write their spell descriptions in
+Spell Revisions' layout (header block, intro, the list of protections removed, the
+changed effect), and repoint what still showed the old mechanic: the scrolls, the Wand of
+Spell Striking's Pierce Magic line and sibling spells that cast the same payload, such as
+Artisan's Kitpack's monk Spellstrike `C0MK#009` and SCS's wand spell `DW#WNDSS`. Its
+texts-only tail components `212`/`213` for existing installations live in the separate
+`CBR_SR_ANTIMAGIC` package, which the recipe does not install; the recipe installs `210`
+and `211` fresh, so its selection does not change.
+v0.8.8 (2026-10-29 10:00 UTC, tag commit `92479d1`) added Druid weapons `410` and Alaghor
+of Clangeddin weapons `411`, both defaults (see below).
+v0.8.7 (2026-10-28, tag commit `2c0aae4`) renamed `360` to True Time Stop – fair Haste &
+Slow and left its behaviour unchanged. v0.8.6 (2026-10-27, tag commit `43b8811`) added `360`; v0.8.5 (2026-10-25) added
+Chris Revisions `340`; v0.8.3 added potion uniqueness `330`/`331` and the Heroism family
+`332`; v0.8.4 (2026-10-23) released the October 8 compatibility follow-ups for existing
+components (see below).
+
+36 curated entries, 27 recommended selections for the next release. Bard spell-level
+ceilings `420`/`421` are one checked choice: **default (Christopher's decision,
+2026-10-13)** (see below).
+✓ = selected and receipt-verified in the isolated
 2026-09-03 release candidate. Subgroup = choose one.
 
 ## Bard progression release and intended default
@@ -24,15 +54,29 @@ EEex version or executable-offset requirement.
 Christopher reported "Works great" after the BG2EE/EET live smoke test on 2026-09-20.
 IWDEE 2.7.3 has binary and offline installer coverage, not live runtime acceptance.
 See the [selected policy and release integration boundary](../../research/2026-09-19-bard-progression-policy.md).
-These components are not yet selected by the published collection recipe; the table
-below retains its existing release-candidate provenance.
+On 2026-10-13 Christopher made `420`/`421` a recommended default; see the bard
+spell-level ceilings section below. The table below retains its existing
+release-candidate provenance.
 
 | # | Component | Group | Subgroup | ✓ | Decision |
 |---|---|---|---|---|---|
+| 130 | EET elemental arrows: BG2 damage | Item balance |  | | default |
+| 200 | Hardiness: 40% physical resistance | Spell balance | Hardiness physical resistance | | default |
+| 201 | Hardiness: 30% physical resistance | Spell balance | Hardiness physical resistance | | optional |
+| 202 | Hardiness: 20% elemental and magic-damage resistance | Spell balance |  | | optional |
+| 210 | Spell Revisions Pierce Magic: bounded resistance reduction | Spell balance |  | | default |
+| 211 | Spell Revisions Spellstrike: short spell failure | Spell balance |  | | default |
+| 220 | Bracers of Blinding Strike: SR Improved Haste | Item balance |  | | default |
+| 310 | Party physical resistance: diminishing returns above 80%, maximum 90% | Combat balance |  | | default |
+| 320 | Combat cloud forms: replace damage immunity with 75% resistance | Combat balance |  | | default |
 | 100 | SCS: Telekinetic Storm — restore save vs. spell for half damage (+ bypass Mirror Image) | SCS adjustments |  | ✓ | mandatory |
 | 101 | SCS: Adventurer's Mart — restore the five Freedom scrolls (spell tweak orphaned in v35) | SCS adjustments |  | ✓ | default |
+| 110 | SCS: dragon melee delivery and death-protection rebalance | SCS adjustments |  |  | optional |
+| 111 | SCS: dragon wing-buffet spacing rebalance | SCS adjustments |  |  | default |
 | 120 | SCS + Spell Revisions: repair false weapon-protection semantics | SCS adjustments |  | ✓ | mandatory |
 | 121 | EEex + SCS: ambient caster readiness and one honest first-contact defense | SCS adjustments |  | ✓ | default |
+| 301 | Emotion, Courage / Emotion, Hope — mutually exclusive beneficial emotions | Cross-cutting audits |  |  | optional |
+| 302 | Flail of the Ages — tiered Slow saves and haste-compatible +5 | Item balance |  |  | default |
 | 400 | Cleric of Tempus: weapon training — axe, longsword, crossbow, and two-pip mastery | Class and kit revisions |  | ✓ | default |
 | 401 | Cleric of Tempus: Holy Power — automatic semantic detection (recommended) | Class and kit revisions | Cleric of Tempus: Holy Power compatibility | ✓ | default |
 | 402 | Cleric of Tempus: Holy Power — force true-doubling compatibility | Class and kit revisions | Cleric of Tempus: Holy Power compatibility |  | |
@@ -43,6 +87,15 @@ below retains its existing release-candidate provenance.
 | 407 | EEex variant: exactly +1/2 attack while wielding a specialized weapon (recommended) | Class and kit revisions | Cleric of Tempus: weapon specialization grants extra attacks | ✓ | default |
 | 409 | Cleric of Tempus: EEex specialization APR — re-ship the listener (migration repair for the v0.1.0 runaway-APR build) | Class and kit revisions |  |  | |
 | 408 | Cleric of Tempus: updated kit and ability descriptions | Class and kit revisions |  | ✓ | default |
+| 410 | Druids may use axes and short bows; fighter/druids also long bows | Class and kit revisions |  |  | default |
+| 411 | Alaghor of Clangeddin (Yeslick): the cleric weapons plus axes, with fighter/cleric weapon limits (EEex) | Class and kit revisions |  |  | default |
+| 420 | EEex: independent kit spell-progression provider | Class and kit revisions |  |  | default |
+| 421 | Bard progression: IWD through level 7; Blade and Skald use original progression through level 6 | Class and kit revisions |  |  | default |
+| 330 | Potion uniqueness: all temporary potion types | Cross-cutting audits | Potion uniqueness |  | optional |
+| 331 | Potion uniqueness: all temporary potion types except Potions of Genius | Cross-cutting audits | Potion uniqueness |  | default |
+| 332 | Heroism family: Heroism, Greater Heroism and the Potion of Heroism do not combine | Cross-cutting audits |  |  | default |
+| 340 | Chris Revisions: Christopher's spell balance changes (Aid, Luck, Bless, Chaotic Commands, Prayer and Recitation) | Spell balance |  |  | default |
+| 360 | True Time Stop – fair Haste & Slow | Spell balance |  |  | default |
 
 ## Atomic Tempus UI behavior
 
@@ -60,6 +113,11 @@ below retains its existing release-candidate provenance.
   includes it. Component `101` requires SCS `2000` or `5900`. Both run after SCS.
 - Components `120` and `121` inspect the effective SCS/SR/EEex stack and therefore run as
   late compatibility components. On the researched stack, run `120` before `121`.
+- Dragon `110` requires Smarter Dragons and EEex; `111` requires Smarter Dragons and
+  spaces wing buffets 18 seconds apart rather than 6. `111` is default-on and can
+  be disabled; `110` stays unchecked. They are independent options.
+  Their inclusion is source-screened; native combat acceptance
+  remains pending as recorded in the September 16 candidate.
 - Run the Tempus bundle after SCS, final Spell Revisions processing, Artisan's Kitpack
   proficiency infrastructure, and EEex.
 - Component `400` requires Artisan's `C0PR#C4`, its permission spells, and its custom
@@ -68,13 +126,251 @@ below retains its existing release-candidate provenance.
   `401` family. The atomic bundle guarantees that chain. Component `401` supports either
   SR or non-SR spell mappings, but must inspect the final installed resources.
 
+## Bard spell-level ceilings — default (Christopher's decision, 2026-10-13)
+
+- `420` (provider) and `421` (base bard policy) form one atomic choice,
+  **Bard spell-level ceilings**: Bard and Jester reach 7th-level spells at bard
+  level 21; Blade and Skald stop at 6th. Requires EEex. Existing characters get
+  the new capacity at their next normal level-up.
+- Bardic Wonders `3010` extends it to Bardic Wonders kits and requires this choice
+  (see `BARDICWONDERS.md`). Deselecting Bardic Wonders leaves `420`/`421` valid.
+- Both are **default (Christopher's decision, 2026-10-13)**: checked in the
+  recommended preset and still deselectable. `3010` is selected whenever Bardic
+  Wonders and the base ceilings are selected. Its late run carries its own
+  release-tail approval and static evidence in the curated profile's release gate.
+- Order follows the v0.8.1 TP2: `...408, 302, 420, 421, 310, 130, 220, 320` in the
+  existing post-EET-end run.
+
+## Potion uniqueness and the Heroism family — v0.8.3 (Christopher's decision, 2026-10-14)
+
+- `330` and `331` are one at-most-one choice. Each temporary potion type works once at
+  a time on its drinker: max-HP potions (Heroism, Power and similar) keep the first dose,
+  every other type restarts its duration instead of stacking. `331` lets Potions of
+  Genius stack as before; `330` does not.
+- **`331` is default** in the recommended preset; `330` is offered and unchecked.
+  Challenge Mode picks `330` instead and switching it off restores `331` (Christopher,
+  2026-10-14; a group [variant](../../plans/2026-10-13-challenge-mode-group.md#variants-switching-a-choice)).
+- **`332` is default**: Heroism, Greater Heroism (Bardic Wonders), their copies and the
+  Potion of Heroism do not combine; the first one active wins. It works with or without
+  `330`/`331`.
+- No EEex. Potions are recognised by what they do, so potions from other mods are
+  included; they run at the end of the existing Rebalance run in TP2 order
+  (`..., 320, 330/331, 332`). Later runs (Modpack, Safana, Klatu, BuffBot, EEex Remote)
+  add no potion types. Effects already active in an existing save can stack once more.
+
+## Chris Revisions — v0.8.5 (Christopher's decision, 2026-10-25)
+
+- `340` bundles Christopher's spell balance changes of 2026-10-23 and 2026-10-25
+  ([BG Rebalance PR #13](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/13)),
+  with or without Spell Revisions:
+  - Aid grants 1d8 hit points +1 per caster level (at most +10) for one turn per level
+    and no longer gives +1 to attack rolls, damage and saving throws; casting it again
+    replaces the bonus. Exact copies, such as Bardic Wonders' Troubadour Aid, change
+    with it.
+  - Luck and its exact copies last 15 rounds; the bonuses are unchanged.
+  - Bless lasts 30 seconds + 1 round per caster level (36 to 150 seconds). Exact copies
+    and SCS's instant prebuff copy change with it. Spell Revisions' druid exclusion is
+    removed, so druids and rangers can cast Bless again.
+  - Chaotic Commands: only Spell Revisions' druid exclusion is removed, so druids can
+    cast it again.
+  - Prayer and Recitation no longer stack: on each creature, Recitation's bonus or
+    penalty replaces Prayer's of the same kind and blocks it while it lasts. Bless and
+    Chant are unchanged.
+  - A part whose spells are missing is skipped; a part that cannot be changed safely is
+    left unchanged with an installer warning.
+- **`340` is default** in the recommended preset (Christopher, 2026-10-25) and can be
+  deselected. Its TP2 requires BG2:EE or EET only; it needs no EEex.
+- The TP2 declares `340` last, after `332`, so it runs at the end of the existing
+  post-EET-end Rebalance run (`..., 330/331, 332, 340`): after SCS, Spell Revisions and
+  Bardic Wonders, whose copies it changes, and before Spell Revisions' NPC spellbook
+  pass `60` and Modpack's scroll policy `430`.
+- Not run in a game yet; the owner's checks are automated WeiDU tests.
+
+## True Time Stop – fair Haste & Slow — v0.8.6 (Christopher's decision, 2026-10-27)
+
+v0.8.6 released `360` as *Time Stop and Haste effect clocks*; v0.8.7 renamed it (see the
+next section).
+
+- `360` follows Christopher's rule: in a Time Stop everything but the caster stops, and
+  Haste and Slow change only actions and movement.
+  - Time Stop: the frozen creatures' spell and item durations, delayed effects, poison,
+    disease, regeneration and repeated effects wait and continue after the stop with
+    the time they had left. The caster and creatures immune to Time Stop keep their
+    normal clocks. Clouds and other area effects already wait out a stop natively and
+    are left alone. This works with or without Spell Revisions.
+  - Haste and Slow no longer speed up or slow down regeneration, poison, disease and
+    repeated effects; actions, attacks and movement stay hasted or slowed. Spell
+    Revisions' Haste and Improved Haste do not use the engine's Haste and stay as they
+    are; engine Haste from items, potions such as Oil of Speed and other mods is
+    corrected.
+  - It installs two Lua files (`CBRTC.lua`, `M_CBRTC.lua`) and changes no resource,
+    script or saved game. At every game start it checks EEex, the executable and the
+    eight code locations it changes; if anything does not match, the game runs
+    natively and only InfinityLoader's log says why.
+- **`360` is default** in the recommended preset (Christopher, 2026-10-27) and can be
+  deselected.
+- **For players:** install it before a playthrough; adding or removing it during one is
+  not supported. Saving, dispel, cure and death during a Time Stop are not covered yet.
+- Install-time requirements in its TP2, beyond BG2:EE or EET:
+  - EEex, installed before it (`M___EEex.lua` must exist). The feature therefore
+    requires EEex's core components, and in both recipe profiles the `eeex-bg2` run
+    comes before the Rebalance run.
+  - `data/PATCH27.BIF`, EEex's own marker of a 2.7.3.0 game. CEBG's game check does not
+    fingerprint this file.
+  - A 64-bit executable (`Baldur.exe`, else `BaldurII.exe`) with PE machine `0x8664`
+    and PE timestamp `0x6a18d73d`, BG2:EE 2.7.3.0 x64; any other build stops the
+    installation of `360`. CEBG accepts exactly one BG2:EE executable, the
+    fingerprinted Steam `Baldur.exe` (SHA-256 `b51093a4…`, product version 2.7.3.0),
+    and that file has exactly this timestamp (checked by the coordinator,
+    2026-10-27). So every build CEBG accepts passes this check.
+- The TP2 declares `360` last, after `340`, so it runs at the end of the existing
+  post-EET-end Rebalance run (`..., 332, 340, 360`).
+- Owner checks: 769 automated tests (31 for `360`). In a BG2:EE 2.7.3.0 lab with EEex
+  1.3.1 it corrected a Time Stop, Haste and a save and reload; in the full CEBG stack
+  (EET, Recommended preset, Spell Revisions) it switched itself on, stayed on through
+  loading a save and corrected Spell Revisions' Time Stop and Oil of Speed. Both labs
+  used EEex's LuaJIT option. Not accepted in real gameplay yet (its release notes).
+
+## v0.8.7: the new name and the standalone package
+
+- Christopher, 2026-10-28: v0.8.7 goes into alpha.22 as well.
+- v0.8.7 renames `360` from *Time Stop and Haste effect clocks* to **True Time Stop – fair
+  Haste & Slow**. WeiDU shows it with a plain hyphen (`True Time Stop - fair Haste & Slow`);
+  its description, number, label `cbr_time_stop_haste_clocks` and two Lua files stay the
+  same, and so does what it does in the game.
+- The release also offers the same correction as a standalone download for games without
+  BG Rebalance, `CBR_TRUE_TIMESTOP-v0.8.7-windows.zip`. The collection neither pins nor
+  installs it.
+- `360` has one new install check: it refuses while the standalone package is installed
+  (`@9366`), and the package refuses while `360` is installed. CEBG never installs the
+  package, so the check always passes in a CEBG installation.
+- `360`'s install steps moved from the TP2 into `lib/time_stop_haste_clocks.tpa`, which
+  both installers call. The executable check (`Baldur.exe`, else `BaldurII.exe`, PE
+  machine `0x8664`, PE timestamp `0x6a18d73d`) and the two files it copies are the same;
+  its messages now say "True Time Stop".
+- Against v0.8.6 the TP2 changes only its VERSION and `360`'s block: its comment, the new
+  check and the moved steps. `360`'s `BEGIN` line (number, `GROUP`, `LABEL`) and its other
+  three checks are unchanged, and no other component changes, so the components, their
+  order and every recorded decision stay: `360` remains a default in the spells category,
+  marked ready, at the end of the Rebalance run. Fresh-download evidence:
+  `manifest/evidence/release-intake-20261029-rebalance.toml`.
+
+## Druid weapons and Alaghor of Clangeddin weapons — v0.8.8 (Christopher's decision, 2026-10-29)
+
+- Christopher, 2026-10-29: both go into alpha.22, and both are defaults in the recommended
+  preset; each can be deselected.
+- **`410` Druid weapons:** druids and every druid kit train axes and short bows to one
+  pip and can use them; fighter/druids and their kits also long bows, with up to two pips
+  in all three. A higher limit another mod set stays. With Artisan's Kitpack it adds the
+  druid and fighter/druid grants to the Kitpack's class weapon grants (`C0PR#CL.SPL`);
+  without the Kitpack it removes the druid and fighter/druid restrictions from those
+  weapons. The English druid and fighter/druid descriptions name the new weapons.
+- **`411` Alaghor of Clangeddin weapons:** Yeslick's kit trains and uses the cleric
+  weapons plus axes, with fighter/cleric limits up to two pips; the thief weapons its
+  weapon list allowed drop out, and pips already spent stay. An EEex hook makes the
+  engine read the kit's own weapon column for fighter/clerics with this kit. The English
+  kit description names the axes.
+- Existing party members get the new weapons at their next level-up at the latest: the
+  Kitpack's `C0PR#CL` applies its grants when a creature is created and at each level-up.
+- Install-time requirements in the TP2: `410` needs BG2:EE or EET, `WEAPPROF.2DA`,
+  `KITLIST.2DA` and the DRUID and FIGHTER_DRUID classes, so its feature requires nothing
+  else. `411` also needs the kit `LK_ALAGHOR` (Yeslick NPC's Fighter-Alaghor, `1`), the
+  Kitpack's EEex weapon usability (`C0PR#CL.SPL`, `C0PR#92.SPL`, `SPLPROT.2DA`; within the
+  collection Eldritch Knight `20000` with EEex or Arcane Trickster sorcerer equipment
+  `8204` creates it) and EEex with its extra-pattern loader; before it writes anything, it
+  checks that its hook site occurs exactly once in `Baldur.exe` (else `BaldurII.exe`). Its
+  feature therefore requires EEex's core components and Yeslick's Fighter-Alaghor, and
+  `20000` or `8204`.
+- **Order:** the TP2 declares `410` and `411` between `302` and `420`, so the post-EET-end
+  Rebalance run reads `..., 408, 302, 410, 411, 420, 421, ...`. In both recipe profiles
+  that run comes after every Artisan's Kitpack run, the late tweak run with `1010000`
+  included, after Yeslick NPC and after EEex, as the release notes ask.
+  - `1010000` rebuilds the class weapon grants in `C0PR#CL.SPL` from `WEAPPROF.2DA` as it
+    is then. `410` runs afterwards: it raises the druid and fighter/druid columns and adds
+    its grants after the Kitpack's own, with the Kitpack's marker, so a later rebuild would
+    recreate them from the raised columns. No Kitpack run follows the Rebalance run, so
+    nothing rebuilds those grants, and the druids keep the axes and bows that carry the
+    Kitpack's weapon check.
+  - In the October 29 EET lab install (before `410`), no axe or bow in `override` that
+    fighters may use carried the druid usability bit or the bits of the Totemic Druid, the Shapeshifter or
+    the Avenger; 83 of the 88 axes, 37 of the 42 short bows and 22 of the 25 long bows
+    carried the Kitpack's weapon check. So every druid kit gets them through `410`'s
+    class grants.
+  - Weapons that later runs add keep their own restrictions, as with `1010000`.
+- Owner checks: 11 automated checks for `410` and 22 for `411` run WeiDU or the hook's Lua
+  on synthetic games. `410` was installed in BG2:EE 2.7.3.0 labs with EEex 1.3.1, with and
+  without the Kitpack; `411` and `410` on 2026-10-29 in CEBG's order (Yeslick NPC, Spell
+  Revisions, the Kitpack chriz.4 with `1010000`, then `410` and `411`). Not EET, and not in
+  the collection's full stack (its release notes). Fresh-download evidence:
+  `manifest/evidence/release-intake-20261029-rebalance-088.toml`.
+
+## v0.8.4 compatibility follow-ups
+
+v0.8.4 (2026-10-23) released the October 8 compatibility audit's follow-ups for
+components the collection already offers; no component was added or removed and the TP2
+order is unchanged. `130`, `220`, `301`, `320`, `400`, `401`–`403` and `404` now keep
+other mods' changes to the resources they patch and find their targets by what they do;
+where a change cannot be applied correctly, the installation now stops with the reason
+instead of guessing. `220` and SR's Haste or Improved Haste no longer stack when the
+spell is cast first, and `310` leaves short full-immunity windows, such as SCS's Divine
+Protection, uncapped. These are fixes of the existing defaults, so no decision changes.
+The owner's 2.7.3.0 lab of 2026-10-20 ran `130`, `220`, `301`, `320` and `404` in game;
+`220`'s fix was then checked on patched copies of the two SR spells, and `400`–`403`
+were not run in game.
+
+## Emotion — optional for the next release
+
+The October 9 decision supersedes the September 26 default: `301` remains an
+independent, ready option and is off in the normal recommended preset. Baeloth's
+separate challenge choice also remains optional/off. The broader Challenge Mode
+group is separate work; this change does not move any other default.
+
+### Historical September 26 release decision
+
+Component `301` replaces the other beneficial Emotion on each target; the latest
+wins and recasting refreshes. In the collection it rebuilds IWDification's Courage
+and Hope in place. The post-EET-end run follows IWDification, SCS `5900` and Spell
+Revisions. Later CDTweaks `2312` keeps hostile save-coupled removers aligned and
+does not change Courage/Hope; Modpack `430` leaves their fixed-level scrolls alone.
+The offered run follows source order:
+`100, 101, 110, 111, 120, 121, 301, 400, 401, 404, 405, 407, 408`.
+Dragon `110` remains unchecked; `111` is default-on following the September 29 decision.
+
+The v0.4.0-to-v0.6.0 intake adds `301` and the unselected `420`/`421`; all previously
+selected components are unchanged. This default applies to new installations /
+the next playthrough, not an automatic edit to an existing game. Earlier live
+checks used standalone spells; IWDification provider mode has installer and
+transformer fixture coverage only. A quick Hope/Courage replacement and refresh
+check in the next install is worthwhile, explicitly **not a release gate**.
+
 ## Remaining follow-up
-- Stage the fixed APR implementation against EEex v1.2 and verify 1.5 APR with a two-pip
+
+September 29: Flail component `302` is an approved default in released v0.7.0.
+The +5 Free Action permits Haste/Improved Haste. Slow saves versus Breath at
+-2 for +3, -4 for both +4 variants, and -6 for +5; proc chance, duration and damage
+remain unchanged. It follows `301` in the existing post-EET-end run, after SR,
+SCS and item-description changes, without an EEex dependency. Thirteen focused
+real-WeiDU synthetic/resource checks and the owner's full suite passed; this is
+not live gameplay acceptance. Existing `301` stays selected and `420`/`421`
+stay unselected.
+
+- Stage the fixed APR implementation against the pinned EEex (v1.3.1 since 2026-10-18) and verify 1.5 APR with a two-pip
   weapon, 2.5 under Holy Power, no cycling, and prompt return to normal with a zero-pip
   weapon. The earlier installed test used EEex v0.11, so it is not target acceptance.
 - Components `120` and `121` are now curated and selected. Current-version component `121`
   passed ambient delivery/accounting and the neutral-to-hostile urgent path; its older-EEex
   fallback remains a nonblocking compatibility check.
-- Revisit planned `110`, `200`, and `301` only if they enter the real menu.
+- Hardiness `200` is the 40% physical-resistance default; `201` is an exclusive
+  30% alternative. Optional `202` adds 20% elemental/magic-damage resistance to
+  either physical choice. All require SR `65`; this is not magic resistance.
+- Pierce Magic `210` requires SR main and EEex; Spellstrike `211` and bracers
+  `220` require SR main. These are approved defaults, independently selectable.
+- Physical resistance `310` requires EEex: half effectiveness above 80%, capped
+  at 90%, for party members only. The unimplemented 95% alternative is not offered.
+- EET arrows `130` follows SCS `2000` and item writers. Cloud `320` replaces
+  cloud-granted damage immunity with 75% resistance; other values and scripted
+  escapes stay unchanged.
+- The offered batch follows TP2 declaration order, including its nonnumeric tail:
+  `...407, 408, 302, 310, 130, 220, 320`. Never sort component IDs numerically.
 - Recheck whether the final SCS release supersedes `100` or `101`, and refresh the source
   repository's stale component documentation before publishing.

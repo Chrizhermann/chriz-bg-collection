@@ -29,6 +29,15 @@ function Test-PathWithin {
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $resolvedRecipe = (Resolve-Path -LiteralPath $RecipeRoot).Path
+Push-Location -LiteralPath $repositoryRoot
+try {
+    & python -m tools.evandra_defaults --recipe $resolvedRecipe
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Recipe defaults are incomplete. Publish and pin the Evandra fixes before packaging.'
+    }
+} finally {
+    Pop-Location
+}
 $resolvedKey = (Resolve-Path -LiteralPath $SigningKeyPath).Path
 $keyItem = Get-Item -LiteralPath $resolvedKey -Force
 if ($keyItem.PSIsContainer -or $null -ne $keyItem.LinkType) {

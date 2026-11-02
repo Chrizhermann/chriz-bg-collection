@@ -1,22 +1,27 @@
 //! Immutable artifact acquisition and content-addressed caching.
 
+use std::fmt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 mod archive;
 mod cache;
+mod damaged;
+mod entry_lock;
 mod http;
 mod inspect;
 mod manual;
 mod materialize;
 
 pub use archive::{
-    extract_archive, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements,
-    ExtractedArtifact,
+    extract_archive, extract_archive_reporting_repair, extract_archive_with_stop, ArchiveFormat,
+    ArchiveLimits, ArchiveMode, ArchiveRequirements, ExtractedArtifact,
 };
 pub use cache::ArtifactCache;
+pub use damaged::CacheRepair;
 pub use http::validate_redirect_target;
 pub use inspect::{download_for_inspection, QuarantinedDownload};
 pub use manual::{provide_manual_archive, publish_manual_archive, VerifiedManualArchive};
@@ -24,6 +29,42 @@ pub use materialize::{
     materialize, MaterializationRequest, MaterializationResult, PublicationManifest, PublishedPath,
     SignedCollisionRule,
 };
+
+/// Standard archive budget: initial attempt, then retries after 0, 2, 10 and 30 seconds.
+pub const DEFAULT_DOWNLOAD_ATTEMPTS: u32 = 5;
+
+/// Whether the user stopped the operation that is acquiring or extracting an artifact.
+///
+/// Waiting for another download or extraction of the same cache entry has no time limit,
+/// because that work may still be progressing; this signal ends such a wait instead, and keeps
+/// a stopped operation from starting a download or extraction.
+#[derive(Clone, Default)]
+pub struct StopSignal(Option<Arc<dyn Fn() -> bool + Send + Sync>>);
+
+impl StopSignal {
+    /// A signal that never stops, for callers without a way to stop.
+    pub fn never() -> Self {
+        Self(None)
+    }
+
+    /// Asks `requested` whenever a wait checks whether to give up.
+    pub fn new(requested: impl Fn() -> bool + Send + Sync + 'static) -> Self {
+        Self(Some(Arc::new(requested)))
+    }
+
+    fn requested(&self) -> bool {
+        self.0.as_ref().is_some_and(|requested| requested())
+    }
+}
+
+impl fmt::Debug for StopSignal {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_tuple("StopSignal")
+            .field(&self.0.is_some())
+            .finish()
+    }
+}
 
 /// One immutable HTTP artifact requested by a recipe.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,7 +79,8 @@ pub struct DownloadRequest {
     pub expected_sha256: String,
     /// Cross-host redirect destinations reviewed in the signed artifact contract.
     pub redirect_hosts: Vec<String>,
-    /// Maximum number of transient transport attempts. Must be at least one.
+    /// Maximum number of transient transport attempts, including the first request.
+    /// Must be at least one. Retries wait 0, 2, 10, then at most 30 seconds each.
     pub max_attempts: u32,
 }
 
@@ -81,6 +123,8 @@ pub struct AcquiredArtifact {
     pub metadata: ArtifactMetadata,
     /// Whether this call downloaded or reused the object.
     pub disposition: CacheDisposition,
+    /// A damaged cache entry that this call set aside before downloading the object again.
+    pub repaired: Option<CacheRepair>,
 }
 
 /// Failure while validating, transferring, or publishing an immutable artifact.
@@ -259,4 +303,11 @@ pub enum AcquireError {
     /// The system clock is earlier than the Unix epoch.
     #[error("system clock is earlier than the Unix epoch")]
     InvalidClock,
+    /// The user stopped before a download or extraction took the lock of its cache entry, either
+    /// while another download or extraction of the same file held it or before it started.
+    #[error("stopped by the user before this download or unpacking could start (lock `{lock}`)")]
+    Stopped {
+        /// Lock file of the cache entry that was being waited for.
+        lock: PathBuf,
+    },
 }

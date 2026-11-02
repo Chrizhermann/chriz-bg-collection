@@ -1,0 +1,11 @@
+id = "leui-bg1ee"
+artifact_id = "leui-bg1ee-4.9.1"
+name = "Lefreut's Enhanced UI: BG1 style"
+tp2 = "LeUI-BG1EE/LeUI-BG1EE.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Lefreut's Enhanced UI: BG1 style - core interface"

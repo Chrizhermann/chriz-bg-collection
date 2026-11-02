@@ -1,0 +1,28 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-28"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 buffbot/setup-buffbot.tp2; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id buffbot --archive <fresh downloaded ZIP>"
+scope = "BuffBot v1.12.1 (published 2026-10-27 14:25 UTC, a normal GitHub release, annotated tag on commit a644013) replaces v1.11.0 in both recipe profiles. It contains v1.12.0 (published 2026-10-26 19:52 UTC), which neither recipe pinned. The release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset. Its 229 entries (6,862,439 bytes uncompressed, largest entry 1,364,992 bytes, depth 4) stay within the unchanged archive limits of the v1.11.0 pin, the expected TP2 matches directly, and all 223 files under the published buffbot folder are byte-identical to the tag commit's tree. The native TP2 declaration order matches both recipes. The v1.11.0 record in release-intake-20261026.toml and its artifact TOMLs stay as history. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance; the owner's lab results are in the release notes."
+
+# Against v1.11.0 the TP2 changes its VERSION, and both components also accept IWD:EE
+# (GAME_IS ~bgee bg2ee eet iwdee~). The main component no longer appends the eight F12
+# innate names to the TLK, no longer writes override/bfbot_strrefs.txt and no longer copies
+# BFBOTIB.BAM, and it copies the new BfBotPln.lua. The EEex and LuaJIT checks, the LANGUAGE
+# list and every BEGIN, DESIGNATED and LABEL line are unchanged, so components 1 and 0,
+# their order and the recorded decisions stay. Against v1.12.0 the TP2 changes only its
+# VERSION.
+[[artifacts]]
+mod_id = "buffbot"
+artifact_id = "buffbot-1.12.1"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v1.12.1"
+source_commit = "a644013b2d858a213b822422e65703169556eb93"
+immutable_source_url = "https://github.com/Chrizhermann/bg-eeex-buffbot/releases/download/v1.12.1/buffbot-v1.12.1.zip"
+actual_length = 5698539
+actual_sha256 = "7ab5f040b05d474edfb846b11bff5fda134ee468e3e3a289e6f788f33e34ed22"
+tp2_sha256 = "3faaf881e5d5f5b20071ca1364115d007df35f5d410dafc46ac4290c66faa1bd"
+native_components = [1, 0]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

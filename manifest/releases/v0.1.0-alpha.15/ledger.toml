@@ -1,0 +1,14 @@
+schema = 1
+recipe_id = "chriz-bg-collection"
+version = "0.1.0-alpha.15"
+published_at = "2026-09-16T00:00:00Z"
+minimum_app_version = "0.1.0-alpha.17"
+supersedes = "0.1.0-alpha.14"
+
+[[changes]]
+id = "sod-skie-khalid-compatibility"
+title = "Fix SoD Skie recruitment installation"
+summary = "Updates SoD Remix to v0.6.11 so Skie recruitment installs alongside Khalid continuity and the bridge changes. Keeps all existing component choices and defaults."
+save_applicability = "new-game-only"
+urgency = "recommended"
+covers = ["artifact:chriz-sod-remix-0.6.10", "artifact:chriz-sod-remix-0.6.11"]

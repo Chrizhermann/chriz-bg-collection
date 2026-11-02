@@ -1,7 +1,16 @@
 # ARTISANSKITPACK_NPC — components
 
 Refreshed for the selected Artisan fork release **chriz-v1.3.1**
-(`ac718614991e34b4f720807bec5edc96266c6c5e`).
+(`ac718614991e34b4f720807bec5edc96266c6c5e`). The recipes pin
+**v4.81a-dev.85928f9-chriz.6** (tag commit `d70d213`, pinned 2026-11-02), which replaced
+chriz.5 (tag commit `10a4a29`, pinned 2026-10-29); its NPC TP2
+declares the same 18 components in the same order as chriz.1 (the sorcerer, kit and
+class weapon fixes are in the main installer's libraries, see
+[ARTISANSKITPACK](ARTISANSKITPACK.md)). Besides its version, chriz.4's NPC TP2 only ends
+the two components that add kits, Rashemi Berserker Minsc `2001` and Red Wizard Edwin
+`5102`, with the pass that gives every class and kit ability table "apply `C0PR#CL`" at
+every level. chriz.5's and chriz.6's NPC TP2s change only their version; no component or
+decision changes.
 18 entries, 6 reference-installed. ✓ = installed in the reference. Subgroup = choose one.
 
 ## UI/dependency notes
@@ -14,7 +23,11 @@ Refreshed for the selected Artisan fork release **chriz-v1.3.1**
   `3101/3102→3001`, `5101→5001`, `7101→7001`, `7102→7003`,
   `7104→7005`, `21001→20001`, `9101→SoD+9001`, `10004→10003`,
   `20002→20000`, `200010→8004` plus tweak `8204`, and `99001→Bardic Wonders 1008`.
-- `5102` and `10004` are unavailable with Spell Revisions.
+- Red Wizard Edwin `5102` is default-checked with or without Spell Revisions and
+  remains optional. The unsupported SR conflict was removed on 2026-09-10 after
+  independent source review; see `../../handoffs/2026-09-10-red-wizard-sr-default.md`
+  for bounded evidence and narrower spellbook follow-ups. NPC `10004` retains its
+  separate existing SR gate; this review does not establish that gate's rationale.
 - Garrick uses `99001` exactly once. Script the embedded Bardic Wonders `1008`
   Garrick prompt as **No** so the same assignment is not also performed there.
 

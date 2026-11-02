@@ -22,6 +22,7 @@ use bg_engine::weidu::verify::{reconcile, ExpectedRun, Reconciliation};
 use pelite::image::IMAGE_FILE_MACHINE_AMD64;
 use pelite::pe64::{Pe, PeFile};
 use sha2::{Digest, Sha256};
+use support::environment::ScopedEnvVar;
 use support::fakegame::FakeGame;
 use tempfile::TempDir;
 use walkdir::WalkDir;
@@ -235,9 +236,10 @@ fn staged_root_argument_survives_eet_style_path_sanitization() {
         ),
         Reconciliation::ProvenDone
     );
+    // Compare with the fixture as checked out: its line endings follow the local Git settings.
     assert_eq!(
         fs::read(harness.game.override_dir().join("tmpathok.txt")).unwrap(),
-        b"EET-style path accepted\n"
+        fs::read(fixture_root().join("testmod/path-result.txt")).unwrap()
     );
 }
 
@@ -501,11 +503,108 @@ fn tested_explicit_relative_tp2_mode_runs_without_becoming_the_default() {
     harness.assert_override_publications(&["tmfolder.txt"]);
 }
 
+#[test]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+fn at_now_runs_a_bare_batch_name_from_the_game_folder_even_if_the_parent_disables_that_search() {
+    // EET's desktop shortcut failed this way when the installer started from a shell that sets
+    // this variable (Claude Code's does): cmd.exe then skipped the game folder for `shortcut.bat`.
+    let _parent = ScopedEnvVar::set("NoDefaultCurrentDirectoryInExePath", "1");
+    let harness = Harness::new();
+    let components = [60];
+    let invocation = harness.invocation(
+        "bare-name",
+        InvocationMode::SetupName,
+        &components,
+        Vec::new(),
+    );
+
+    let evidence = harness.run_sync(invocation, "bare-name");
+
+    assert_eq!(
+        evidence.outcome,
+        RunOutcome::Exited { code: 0 },
+        "real WeiDU output:\n{}\ndebug log:\n{}",
+        evidence.output,
+        evidence.debug
+    );
+    assert_eq!(
+        reconcile(
+            &evidence.before_log,
+            &evidence.after_log,
+            &evidence.output,
+            &expected_run(&components, 0),
+        ),
+        Reconciliation::ProvenDone
+    );
+    harness.assert_protected_unchanged();
+    harness.assert_override_publications(&["tmbare.txt"]);
+    assert_eq!(
+        fs::read_to_string(harness.game.override_dir().join("tmbare.txt"))
+            .unwrap()
+            .trim(),
+        "bare batch ran"
+    );
+}
+
 fn fixture_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .join("fixtures")
         .join("testmod")
+}
+
+#[test]
+#[ignore = "requires CHRIZ_WEIDU_EXE pointing to the pinned WeiDU 249 Windows binary"]
+fn setup_name_discovers_the_infinity_ui_folder_layout() {
+    let harness = Harness::new();
+    fs::create_dir(harness.game.root.join("infinity_ui")).unwrap();
+    fs::rename(
+        harness.game.root.join(TESTMOD_TP2),
+        harness.game.root.join("infinity_ui/infinity_ui.tp2"),
+    )
+    .unwrap();
+    let attempt = harness._temp.path().join("infinity-layout");
+    fs::create_dir(&attempt).unwrap();
+    let invocation = build(
+        &InvocationInput {
+            target: GameRoot::Bg2,
+            tp2: "infinity_ui/infinity_ui.tp2".into(),
+            mode: InvocationMode::SetupName,
+            explicit_tp2_tested: false,
+            language: 0,
+            remaining_components: vec![0],
+            run_args: vec![],
+            prompts: vec![],
+        },
+        &harness.roots,
+        &harness.tool,
+        &attempt,
+    )
+    .unwrap();
+    assert_eq!(
+        invocation.program.file_name().unwrap(),
+        "Setup-infinity_ui.exe"
+    );
+    assert!(!invocation
+        .args
+        .iter()
+        .any(|arg| arg == "infinity_ui/infinity_ui.tp2"));
+    let evidence = harness.run_sync(invocation, "infinity-layout");
+    assert!(
+        matches!(evidence.outcome, RunOutcome::Exited { code: 0 }),
+        "{:?}\n{}\n{}",
+        evidence.outcome,
+        evidence.output,
+        evidence.debug
+    );
+    let entries = parse_active_entries(&evidence.after_log).unwrap();
+    assert_eq!(entries.last().unwrap().component, 0);
+    assert!(evidence
+        .after_log
+        .to_ascii_lowercase()
+        .contains("infinity_ui/infinity_ui.tp2"));
+    harness.assert_protected_unchanged();
+    harness.assert_override_publications(&["tmcopy.ids"]);
 }
 
 fn copy_fixture(source: &Path, target_root: &Path) {

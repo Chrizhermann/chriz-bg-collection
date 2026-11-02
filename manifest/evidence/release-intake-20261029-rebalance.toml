@@ -1,0 +1,38 @@
+schema = 1
+evidence_kind = "published-release-download-and-native-order-verification"
+verified_on = "2026-10-29"
+command = "chriz-bg-author artifact inspect <release asset URL> --cache-root <fresh cache> --expected-tp2 setup-chriz-bg-rebalance.tp2; chriz-bg-author artifact verify <artifact.toml> --cache-root <fresh cache>; python tools/check_native_component_order.py --recipe-root manifest --recipe-root recipes/curated-full-current --mod-id chriz-bg-rebalance --archive <fresh downloaded ZIP>"
+scope = "BG Rebalance v0.8.7 (published 2026-10-28 16:03 UTC, a normal GitHub release, annotated tag on merge commit 2c0aae4) replaces v0.8.6 in both recipe profiles. The release ZIP was downloaded anonymously into a fresh cache for the inspection and for each profile's artifact TOML, and passed the production acquisition and extraction contracts; its length and SHA-256 match the digest GitHub publishes for the asset. Its 62 entries (2,699,641 bytes uncompressed, largest entry 1,364,992 bytes, depth 4) stay within the unchanged archive limits of the v0.8.6 pin, and the expected TP2 matches directly. All 57 files under the published roots (the chriz-bg-rebalance folder and setup-chriz-bg-rebalance.tp2) match the tag commit's tree: 13 byte for byte and 44 apart from their CRLF line endings. The native TP2 declaration order matches both recipes. The v0.8.6 record in release-intake-20261027.toml and its artifact TOMLs stay as history. The release's standalone packages CBR_SR_ANTIMAGIC, CBR_SR_HARDINESS and CBR_TRUE_TIMESTOP are not used by either recipe and are not pinned. This is automated source/package verification, not a full combined WeiDU install or gameplay acceptance; the owner's lab results are in the release notes."
+
+# Against v0.8.6 five files change: the TP2, the English setup.tra,
+# chriz-bg-rebalance/lib/time_stop_haste_clocks.tpa, the README and the CHANGELOG. The TP2
+# changes its VERSION and only 360's block. 360 is renamed: @360 now reads "True Time Stop -
+# fair Haste & Slow: ..." with an unchanged description, and its messages @9360-@9365 say
+# "True Time Stop". It gains REQUIRE_PREDICATE NOT (MOD_IS_INSTALLED
+# ~cbr_true_timestop/setup-cbr_true_timestop.tp2~ 360) @9366 against the release's new
+# standalone package, which CEBG never installs. Its executable check (Baldur.exe, else
+# BaldurII.exe, with PE machine 0x8664 and PE timestamp 0x6a18d73d) and the copy of CBRTC.lua
+# and M_CBRTC.lua into override moved unchanged from the TP2 into the library function
+# cbr_install_time_stop_haste_component. 360's BEGIN line (DESIGNATED 360, GROUP @1300,
+# LABEL ~cbr_time_stop_haste_clocks~), its three other REQUIRE_PREDICATEs and every other
+# component are unchanged, so the components, their order and every recorded decision stay;
+# both recipes' Rebalance runs follow this order. Christopher took v0.8.7 into alpha.22 on
+# 2026-10-28.
+[[artifacts]]
+mod_id = "chriz-bg-rebalance"
+artifact_id = "chriz-bg-rebalance-0.8.7"
+recipe_profiles = ["manifest", "recipes/curated-full-current"]
+source_reference = "v0.8.7"
+source_commit = "2c0aae47c8960e51c006061eaa68ed66b5b96f6a"
+immutable_source_url = "https://github.com/Chrizhermann/chriz-bg-rebalance/releases/download/v0.8.7/chriz-bg-rebalance-v0.8.7-windows.zip"
+actual_length = 1818389
+actual_sha256 = "0f0edbf5f37fc5528f6cf3e5fbeffda126dcd0c18814c68f9da81a002793b072"
+tp2_sha256 = "377486282b0b6a0547aa7bd29a52f7820d3ba8e86a1e08bcd65a9327200e5291"
+native_components = [
+  100, 101, 110, 111, 120, 121, 200, 201, 202, 210, 211, 301, 400, 401, 402, 403, 404, 405, 406,
+  407, 409, 408, 302, 420, 421, 310, 130, 220, 320, 330, 331, 332, 340, 360
+]
+fresh_download = true
+fresh_extraction = true
+published_release_verified = true
+native_component_order_verified = true

@@ -7,6 +7,13 @@ use url::{Host, Url};
 use super::AcquireError;
 
 const MAX_REDIRECTS: u32 = 10;
+const RESOLVE_TIMEOUT: Duration = Duration::from_secs(30);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+/// Also bounds the wait for the response headers.
+const SEND_REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+/// An attempt fails when no body bytes arrive for this long. A transfer that keeps
+/// progressing has no total time limit.
+const BODY_STALL_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Clone)]
 pub(crate) struct HttpClient {
@@ -19,11 +26,34 @@ pub(crate) struct HttpResponse {
     pub final_url: String,
 }
 
+/// Connection setup, header wait and body stall limits of one request.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct HttpTimeouts {
+    pub resolve: Duration,
+    pub connect: Duration,
+    pub send_request: Duration,
+    pub body_stall: Duration,
+}
+
+impl HttpTimeouts {
+    const PRODUCTION: Self = Self {
+        resolve: RESOLVE_TIMEOUT,
+        connect: CONNECT_TIMEOUT,
+        send_request: SEND_REQUEST_TIMEOUT,
+        body_stall: BODY_STALL_TIMEOUT,
+    };
+}
+
 impl HttpClient {
     pub fn new() -> Self {
+        Self::with_timeouts(HttpTimeouts::PRODUCTION)
+    }
+
+    /// A client with other limits, so that tests can exercise them in milliseconds.
+    pub(crate) fn with_timeouts(timeouts: HttpTimeouts) -> Self {
         Self {
-            agent: build_agent(Proxy::try_from_env()),
-            direct_agent: build_agent(None),
+            agent: build_agent(Proxy::try_from_env(), timeouts),
+            direct_agent: build_agent(None, timeouts),
         }
     }
 
@@ -113,11 +143,19 @@ impl HttpClient {
     }
 }
 
-fn build_agent(proxy: Option<Proxy>) -> Agent {
+// ureq also applies the limit of the phase before the current one, counted from that phase's
+// end: send_request therefore bounds the wait for the response headers too. recv_response is
+// left unset because, for the same reason, it would cap the whole body after the headers;
+// recv_body is checked anew before every read and so only detects a stall. A global or
+// per-call limit would cap the whole transfer, so neither is set.
+fn build_agent(proxy: Option<Proxy>, timeouts: HttpTimeouts) -> Agent {
     Agent::config_builder()
         .http_status_as_error(false)
         .max_redirects(0)
-        .timeout_global(Some(Duration::from_secs(30)))
+        .timeout_resolve(Some(timeouts.resolve))
+        .timeout_connect(Some(timeouts.connect))
+        .timeout_send_request(Some(timeouts.send_request))
+        .timeout_recv_body(Some(timeouts.body_stall))
         .proxy(proxy)
         .tls_config(
             TlsConfig::builder()
@@ -205,5 +243,24 @@ mod tests {
             RootCerts::PlatformVerifier
         ));
         assert_eq!(client.agent.config().max_redirects(), 0);
+    }
+
+    #[test]
+    fn production_agents_bound_setup_and_stalls_but_not_the_whole_transfer() {
+        assert_eq!(RESOLVE_TIMEOUT, Duration::from_secs(30));
+        assert_eq!(CONNECT_TIMEOUT, Duration::from_secs(30));
+        assert_eq!(SEND_REQUEST_TIMEOUT, Duration::from_secs(60));
+        assert_eq!(BODY_STALL_TIMEOUT, Duration::from_secs(60));
+        let client = HttpClient::new();
+        for agent in [&client.agent, &client.direct_agent] {
+            let timeouts = agent.config().timeouts();
+            assert_eq!(timeouts.global, None);
+            assert_eq!(timeouts.per_call, None);
+            assert_eq!(timeouts.resolve, Some(RESOLVE_TIMEOUT));
+            assert_eq!(timeouts.connect, Some(CONNECT_TIMEOUT));
+            assert_eq!(timeouts.send_request, Some(SEND_REQUEST_TIMEOUT));
+            assert_eq!(timeouts.recv_response, None);
+            assert_eq!(timeouts.recv_body, Some(BODY_STALL_TIMEOUT));
+        }
     }
 }

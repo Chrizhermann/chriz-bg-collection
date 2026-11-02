@@ -38,6 +38,7 @@ fn fixture() -> Manifest {
             },
         ],
         requires: Vec::new(),
+        requires_any: Vec::new(),
         conflicts: Vec::new(),
         inputs: Vec::new(),
     }];

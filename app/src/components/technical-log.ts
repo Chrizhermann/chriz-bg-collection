@@ -1,4 +1,5 @@
 import { actionButton, element } from "./app-shell";
+import { persistDisclosure } from "./disclosure";
 
 const MAX_VISIBLE_LINES = 200;
 
@@ -30,7 +31,7 @@ export function technicalLog(
   output.tabIndex = 0;
   output.textContent = lines.slice(-MAX_VISIBLE_LINES).join("\n");
   details.append(summary, toolbar, output);
-  details.addEventListener("toggle", () => onStateChange({ paused, open: details.open }));
+  persistDisclosure(details, summary, (open) => onStateChange({ paused, open }));
   if (!paused) queueMicrotask(() => { output.scrollTop = output.scrollHeight; });
   return details;
 }

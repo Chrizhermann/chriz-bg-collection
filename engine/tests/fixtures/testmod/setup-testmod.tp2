@@ -50,3 +50,16 @@ ACTION_IF FILE_EXISTS ~%testmod_bg1_dir%/movies/sodcin05.wbm~ BEGIN
 END ELSE BEGIN
   FAIL ~TESTMOD_EET_PATH_SENTINEL_MISSING~
 END
+
+BEGIN ~Run a bare batch name from the game folder~
+DESIGNATED 60
+
+// Like EET's desktop shortcut: place a batch file in the game folder and run it by bare name.
+<<<<<<<< .../testmod-inlined/tmbare.bat
+@echo off
+echo bare batch ran>testmod\bare-result.txt
+>>>>>>>>
+COPY + ~.../testmod-inlined/tmbare.bat~ ~tmbare.bat~
+AT_NOW ~tmbare.bat~
+DELETE + ~tmbare.bat~
+COPY ~testmod/bare-result.txt~ ~override/tmbare.txt~

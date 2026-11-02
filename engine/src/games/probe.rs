@@ -308,7 +308,7 @@ fn inspect_with_profile<F: FileSystemProvider>(
         findings.push(GameFinding {
             kind: FindingKind::UnsupportedLocale,
             message: format!(
-                "Profile locale {:?} is not the verified alpha locale en_US.",
+                "Profile locale {:?} is not the verified locale en_US.",
                 profile.locale
             ),
             paths: vec![root.join("lang")],
@@ -453,7 +453,7 @@ fn inspect_with_profile<F: FileSystemProvider>(
     {
         findings.push(GameFinding {
             kind: FindingKind::UnverifiedStorefront,
-            message: "GOG remains an unverified storefront for this alpha.".to_owned(),
+            message: "GOG remains an unverified storefront for this version.".to_owned(),
             paths: Vec::new(),
         });
     }

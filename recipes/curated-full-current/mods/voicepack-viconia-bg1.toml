@@ -1,0 +1,11 @@
+id = "voicepack-viconia-bg1"
+artifact_id = "voicepack-viconia-bg1-1.0.0"
+name = "Viconia (BG1) player voicepack"
+tp2 = "cd_vicbg1/cd_vicbg1.tp2"
+language = 0
+weidu_artifact_id = "weidu-249-amd64"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Viconia (BG1): original BG1 companion soundset"
