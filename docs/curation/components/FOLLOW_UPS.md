@@ -524,6 +524,9 @@ Cross-repository status. Component detail stays in the sections below and in the
       was not run with the package; the same two files ran as `360` on EET.
     - Adding or removing it during a playthrough stays unsupported (Christopher's rule).
     - Pinned for alpha.22 in PR #56.
+- Spell Revisions, Artisan's Kitpack and Bardic Wonders forks frozen (Christopher,
+  2026-11-03): no more fixes or balancing; CEBG keeps the current pins until the own spell
+  mod and own kit mod replace them (design chats running).
 
 **Ready to start**
 
