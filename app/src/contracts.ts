@@ -213,6 +213,31 @@ export interface ManualCheckpointStatus {
   readonly customized: boolean;
 }
 
+/** One answer to a question about a download, as the engine spells it. */
+export type DecisionAnswer = "yes" | "no" | "leave_out";
+
+/**
+ * A question about a download that an installation waits for: a newer download, a download
+ * that cannot be used, or a newer installer tool from a host the collection did not review.
+ * The engine renders every text; the app only shows them.
+ */
+export interface PendingDecision {
+  readonly installId: string;
+  readonly stepId: string;
+  readonly decisionId: string;
+  /** Binds the answer to exactly this question. */
+  readonly token: string;
+  readonly kind: "changed_download" | "unusable_download" | "unreviewed_tool";
+  readonly artifactId: string;
+  readonly message: string;
+  readonly details: readonly string[];
+  readonly answers: readonly { readonly answer: DecisionAnswer; readonly label: string }[];
+  readonly focus: DecisionAnswer;
+  readonly afterNo: string;
+  /** The answer already stored and waiting for the resume. */
+  readonly answered: DecisionAnswer | null;
+}
+
 export interface FrozenReview {
   readonly reviewToken: string;
   readonly digest: string;
@@ -235,6 +260,8 @@ export type EngineEvent =
   | { readonly type: "manual_download_needed"; readonly mod_id: string; readonly page: string; readonly expected_sha256: string; readonly drop_dir: string }
   /** A mod's changed download cannot be used: the installation continues without it and what needs it. */
   | { readonly type: "artifact_left_out"; readonly artifact_id: string; readonly reason: string; readonly runs: readonly string[]; readonly changed_runs: readonly string[] }
+  /** A step asks the player a question about a download; the installation waits for the answer. */
+  | { readonly type: "decision_required"; readonly install_id: string; readonly step_id: string; readonly decision_id: string }
   | { readonly type: "error"; readonly step_id: string | null; readonly message: string };
 
 export interface RunEventEnvelope {
@@ -281,6 +308,7 @@ export interface RunSnapshot {
 
 export type BuildState =
   | "waiting-manual"
+  | "decision"
   | "attention"
   | "failed"
   | "running"
@@ -313,6 +341,8 @@ export interface BuildSnapshot {
   readonly failureReason?: string;
   readonly commandError?: CommandErrorPayload;
   readonly freshCopyRequired?: boolean;
+  /** The installation stopped because the player answered "Stop the installation". */
+  readonly stoppedByAnswer?: boolean;
 }
 
 export interface ManagedInstallation {

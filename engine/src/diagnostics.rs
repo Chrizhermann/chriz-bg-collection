@@ -117,6 +117,9 @@ struct SelectedEntry {
     source: PathBuf,
     archive_name: String,
     binary: bool,
+    /// For evidence that must stay inside the installation: the folder its open handle must
+    /// really lie in when it is read.
+    contained_in: Option<PathBuf>,
 }
 
 #[derive(Deserialize)]
@@ -266,6 +269,52 @@ fn select_entries(
         }
     }
 
+    // Answers to questions about downloads; the questions themselves are in the ledger.
+    // Each folder on the way must be a direct folder of the installation: a link, junction or
+    // other reparse point could lead the export to files outside it.
+    let evidence = state_root.join("evidence");
+    let decisions = evidence.join("decisions");
+    let mut present = true;
+    for folder in [&evidence, &decisions] {
+        match fs::symlink_metadata(folder) {
+            Ok(metadata) => {
+                if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+                    return Err(unsafe_path(
+                        folder,
+                        "links and reparse points are forbidden in diagnostics evidence",
+                    ));
+                }
+                validate_direct_directory(folder)?;
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                present = false;
+                break;
+            }
+            Err(source) => {
+                return Err(DiagnosticsError::Io {
+                    path: folder.clone(),
+                    source,
+                })
+            }
+        }
+    }
+    if present {
+        for entry in read_directory(&decisions)? {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let is_answer = name
+                .strip_suffix(".json")
+                .is_some_and(crate::decision::is_decision_id);
+            if !is_answer {
+                continue;
+            }
+            let archive_name = format!("evidence/decisions/{name}");
+            add_optional(&mut selected, entry.path(), &archive_name, false)?;
+            if let Some(selected) = selected.get_mut(&archive_name) {
+                selected.contained_in = Some(evidence.clone());
+            }
+        }
+    }
+
     Ok(selected.into_values().collect())
 }
 
@@ -380,6 +429,7 @@ fn add_required(
             source,
             archive_name: archive_name.to_owned(),
             binary,
+            contained_in: None,
         },
     );
     Ok(())
@@ -597,6 +647,18 @@ fn read_selected_entry(entry: &SelectedEntry) -> Result<Vec<u8>, DiagnosticsErro
     // Recheck the selected file before opening; bound new patch evidence even if it grew
     // after selection. Existing receipt/recipe/log behavior remains unchanged.
     validate_direct_file(&entry.source)?;
+    if let Some(root) = &entry.contained_in {
+        // Read through a handle whose real path lies inside the installation's evidence, so that
+        // a folder replaced after the checks above never leads the export elsewhere.
+        return crate::contained::read_inside(&entry.source, root)
+            .map_err(|source| DiagnosticsError::Io {
+                path: entry.source.clone(),
+                source,
+            })?
+            .ok_or_else(|| DiagnosticsError::MissingEvidence {
+                path: entry.source.clone(),
+            });
+    }
     if !entry.archive_name.starts_with("patches/cebg-v1/")
         && !entry.archive_name.starts_with("mod-upgrades/v1/")
     {
@@ -1130,6 +1192,18 @@ fn canonical_direct_directory(path: &Path) -> Result<PathBuf, DiagnosticsError> 
         path: path.to_path_buf(),
         source,
     })
+}
+
+#[cfg(windows)]
+fn is_reparse_point(metadata: &fs::Metadata) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    // FILE_ATTRIBUTE_REPARSE_POINT
+    metadata.file_attributes() & 0x400 != 0
+}
+
+#[cfg(not(windows))]
+fn is_reparse_point(_metadata: &fs::Metadata) -> bool {
+    false
 }
 
 fn validate_direct_directory(path: &Path) -> Result<(), DiagnosticsError> {

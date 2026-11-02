@@ -279,6 +279,7 @@ mod tests {
             final_state: None,
             left_out: Vec::new(),
             installed_plan: None,
+            decisions: Vec::new(),
         }
     }
 

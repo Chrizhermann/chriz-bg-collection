@@ -178,6 +178,7 @@ fn fixture() -> Fixture {
         final_state: None,
         left_out: Vec::new(),
         installed_plan: None,
+        decisions: Vec::new(),
     };
     let base_bytes = write_base(&root, &base);
 

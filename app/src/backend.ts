@@ -29,6 +29,8 @@ import type {
   ManualCheckpointOption,
   ManualCheckpointStatus,
   ManagedInstallation,
+  DecisionAnswer,
+  PendingDecision,
   ModUpgradePreview,
   OperationProgress,
   NormalizedSelection,
@@ -67,6 +69,10 @@ export interface Backend {
   checkManualCheckpoint?(installId: string): Promise<ManualCheckpointStatus>;
   acceptManualCheckpoint?(installId: string, reviewToken: string, acceptAdditions: boolean): Promise<void>;
   openManualCheckpointFolder?(installId: string): Promise<void>;
+  /** The question about a download that a resumable installation waits for, or null. */
+  getPendingDecision?(installId: string): Promise<PendingDecision | null>;
+  /** Stores the answer; resuming the installation applies it. */
+  answerDecision?(installId: string, decisionId: string, token: string, answer: DecisionAnswer): Promise<void>;
   startBuild(reviewToken: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse>;
   supplyManualArchive(artifactId: string): Promise<ManualArchiveSupply | null>;
@@ -556,6 +562,14 @@ export class NativeBackend implements Backend {
 
   openManualCheckpointFolder(installId: string): Promise<void> {
     return this.#command("open_manual_checkpoint_folder", { installId });
+  }
+
+  getPendingDecision(installId: string): Promise<PendingDecision | null> {
+    return this.#command("get_pending_decision", { installId });
+  }
+
+  answerDecision(installId: string, decisionId: string, token: string, answer: DecisionAnswer): Promise<void> {
+    return this.#command("answer_decision", { installId, decisionId, token, answer });
   }
 
   async resumeBuild(installId: string, onEvent: (event: RunEventEnvelope) => void): Promise<StartBuildResponse> {

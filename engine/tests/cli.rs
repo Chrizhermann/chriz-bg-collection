@@ -49,6 +49,9 @@ struct Answer {
     body: Vec<u8>,
     /// The announced length; `None` announces the body's.
     announced: Option<u64>,
+    /// A path on this server under the host name `localhost`, which a recipe never reviews, to
+    /// redirect to.
+    elsewhere: Option<&'static str>,
 }
 
 impl Answer {
@@ -57,6 +60,7 @@ impl Answer {
             status: "200 OK",
             body,
             announced: None,
+            elsewhere: None,
         }
     }
 
@@ -65,6 +69,17 @@ impl Answer {
             status,
             body: Vec::new(),
             announced: None,
+            elsewhere: None,
+        }
+    }
+
+    /// A redirect to `path` on this server through another host name.
+    fn elsewhere(path: &'static str) -> Self {
+        Self {
+            status: "302 Found",
+            body: Vec::new(),
+            announced: None,
+            elsewhere: Some(path),
         }
     }
 }
@@ -193,9 +208,13 @@ Connection: close
             answer
         })
         .unwrap_or_else(|| Answer::status("404 Not Found"));
+    let location = answer.elsewhere.map_or_else(String::new, |path| {
+        let port = stream.local_addr().expect("artifact server address").port();
+        format!("Location: http://localhost:{port}{path}\r\n")
+    });
     write!(
         stream,
-        "HTTP/1.1 {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {}\r\n{location}Content-Length: {}\r\nConnection: close\r\n\r\n",
         answer.status,
         answer.announced.unwrap_or(answer.body.len() as u64)
     )
@@ -360,6 +379,19 @@ fn install_args<'a>(
         cache.to_str().unwrap(),
     ]
 }
+
+/// `args` with a preset `--answer` for each of `answers`, as tests and automation give them.
+fn answering<'a>(mut args: Vec<&'a str>, answers: &[&'a str]) -> Vec<&'a str> {
+    for answer in answers {
+        args.extend(["--answer", answer]);
+    }
+    args
+}
+
+/// Installs a changed download, as the player's "Install it" does.
+const INSTALL_CHANGED: &str = "changed-download=yes";
+/// Continues without a mod whose download cannot be used, as "Continue without them" does.
+const CONTINUE_WITHOUT: &str = "unusable-download=yes";
 
 fn install_request(fixture: &ExecutableFixture) -> InstallCommandRequest {
     InstallCommandRequest {
@@ -1022,6 +1054,8 @@ fn help_exposes_the_complete_safe_command_surface_without_bypasses() {
         "resume",
         "report",
         "diagnostics",
+        "check-decision",
+        "decide",
     ] {
         assert!(text.contains(command), "missing {command} in:\n{text}");
     }
@@ -2161,10 +2195,58 @@ fn install_executes_the_frozen_recipe_and_publishes_complete_durable_evidence() 
             "left_out",
             "installed_plan",
             "\"reviewed\"",
+            "decisions",
         ] {
             assert!(!text.contains(field), "{field} in {text}");
         }
     }
+    // A receipt of an installation that asked nothing has exactly the fields it had before
+    // questions existed, in their order, and its bytes are what the receipt type writes.
+    let receipt_text = fs::read_to_string(&receipt_path).unwrap();
+    let top_level = receipt_text
+        .lines()
+        .filter_map(|line| line.strip_prefix("  \""))
+        .filter_map(|line| line.split_once('"').map(|(key, _)| key))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        top_level,
+        [
+            "schema_version",
+            "install_id",
+            "attempt_id",
+            "evidence_attempt_id",
+            "managed_root",
+            "staged_bg1",
+            "staged_bg2",
+            "started_at_millis",
+            "completed_at_millis",
+            "outcome",
+            "versions",
+            "source_games",
+            "recipe_payload_sha256",
+            "recipe_envelope_sha256",
+            "selection_sha256",
+            "normalized_selection",
+            "plan_sha256",
+            "plan",
+            "artifacts",
+            "weidu_tools",
+            "runs",
+            "final_state",
+        ]
+    );
+    let mut rewritten = serde_json::to_vec_pretty(&receipt).unwrap();
+    rewritten.push(b'\n');
+    assert_eq!(rewritten, receipt_text.as_bytes()); // Nothing was asked: no answer was stored, and the ledger holds no question.
+    assert!(!evidence.join("decisions").exists());
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert!(!replay.records.iter().any(|record| matches!(
+        record.event,
+        bg_engine::session::SessionEvent::DecisionRequired { .. }
+    )));
     assert_eq!(receipt.schema_version, RECEIPT_SCHEMA_VERSION);
     assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
     assert_eq!(receipt.versions.recipe, "0.1.0-alpha.2");
@@ -2849,12 +2931,15 @@ fn a_changed_download_is_installed_recorded_and_kept_when_the_installation_resum
             "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
             "materialize:materialize:eefixpack:bg1",
         )
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED],
         ))
         .output()
         .expect("start the installation");
@@ -2942,10 +3027,19 @@ fn a_changed_download_is_installed_recorded_and_kept_when_the_installation_resum
     assert_eq!(
         report_json(&fixture)["notes"],
         serde_json::json!([
-            "Installed a newer or different download than the reviewed version: EE Fixpack.",
+            "You chose to install a newer download of EE Fixpack (eefixpack.zip).",
             "If something does not work as expected, please report it so the collection can be fixed."
         ])
     );
+    let decisions = &receipt.decisions;
+    assert_eq!(decisions.len(), 1, "{decisions:#?}");
+    assert_eq!(decisions[0].step_id, "acquire:eefixpack");
+    assert_eq!(decisions[0].answer, bg_engine::decision::Answer::Yes);
+    assert_eq!(
+        decisions[0].source,
+        bg_engine::decision::AnswerSource::Preset
+    );
+    assert_eq!(decisions[0].served, Some(difference.served.clone()));
 }
 
 /// Adds Snowytoes, a second mod from its own download, to the executable fixture's recipe.
@@ -3037,12 +3131,15 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     let failed = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[CONTINUE_WITHOUT],
         ))
         .output()
         .expect("start the installation");
@@ -3081,7 +3178,7 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     assert_eq!(
         summary,
         [
-            "Left out: Snowytoes. Its download could not be used.",
+            "You chose to continue without Snowytoes (the newer download is packed in a way the installer can't read).",
             "If something does not work as expected, please report it so the collection can be fixed."
         ],
         "{printed}"
@@ -3127,7 +3224,18 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
     let report = report_json(&fixture);
     assert_eq!(
         report["notes"][0],
-        "Left out: Snowytoes. Its download could not be used."
+        "You chose to continue without Snowytoes (the newer download is packed in a way the installer can't read)."
+    );
+    let decision = &receipt.decisions[..];
+    assert_eq!(decision.len(), 1, "{decision:#?}");
+    assert_eq!(
+        decision[0].kind,
+        bg_engine::decision::QuestionKind::UnusableDownload
+    );
+    assert_eq!(decision[0].removed_runs, ["snowytoes-bg2"]);
+    assert_eq!(
+        decision[0].reason.as_ref().map(|reason| &reason.detail),
+        Some(&snowytoes.reason)
     );
 }
 
@@ -3143,14 +3251,16 @@ const NO_RETRY_WAIT: &str = "CHRIZ_BG_COLLECTION_TEST_NO_RETRY_WAIT";
 fn a_mod_whose_link_serves_no_archive_is_left_out_after_every_attempt() {
     let page =
         b"<!DOCTYPE html>\n<html><body>This download is not available right now.</body></html>\n";
-    for (served, reason) in [
+    for (served, reason, short) in [
         (
             Some(page.to_vec()),
             "its official link does not serve the archive (it does not begin like a ZIP archive but with the text \"<!DOCTYPE html> <html><body>This\"), and still did not on the last of 5 attempts; the last answer came from 127.0.0.1",
+            "its link no longer serves the archive",
         ),
         (
             None,
             "its official link answers HTTP 404 (no such file) from 127.0.0.1, and still did on the last of 5 attempts",
+            "its link no longer has the file",
         ),
     ] {
         let fixture = executable_fixture();
@@ -3169,12 +3279,15 @@ fn a_mod_whose_link_serves_no_archive_is_left_out_after_every_attempt() {
         let output = executable_command(&fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env(NO_RETRY_WAIT, "1")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3211,7 +3324,7 @@ fn a_mod_whose_link_serves_no_archive_is_left_out_after_every_attempt() {
         assert_eq!(
             report_json(&fixture)["notes"],
             serde_json::json!([
-                "Left out: Snowytoes. Its download could not be used.",
+                format!("You chose to continue without Snowytoes ({short})."),
                 "If something does not work as expected, please report it so the collection can be fixed."
             ])
         );
@@ -3251,12 +3364,15 @@ fn a_changed_archive_that_would_overwrite_another_mods_file_is_left_out() {
     let failed = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED, CONTINUE_WITHOUT],
         ))
         .output()
         .expect("start the installation");
@@ -3357,12 +3473,15 @@ fn a_changed_archive_that_meets_a_file_or_folder_of_another_mod_is_left_out() {
 
         let output = executable_command(&fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[INSTALL_CHANGED, CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3429,12 +3548,15 @@ fn an_interrupted_placing_of_a_changed_archive_stays_sealed_when_its_file_change
             "CHRIZ_BG_COLLECTION_TEST_INTERRUPT_PUBLICATION",
             "snowytoes",
         )
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED],
         ))
         .output()
         .expect("start the installation");
@@ -3506,12 +3628,15 @@ fn an_interrupted_record_that_a_placing_step_begins_leaves_the_step_to_begin_aga
         let interrupted = executable_command(fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD", "publications")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[INSTALL_CHANGED],
             ))
             .output()
             .expect("start the installation");
@@ -3542,7 +3667,13 @@ fn an_interrupted_record_that_a_placing_step_begins_leaves_the_step_to_begin_aga
     };
     let resume = |fixture: &ExecutableFixture| {
         let resumed = executable_command(fixture)
-            .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+            .args([
+                "--json",
+                "resume",
+                fixture.managed.to_str().unwrap(),
+                "--answer",
+                CONTINUE_WITHOUT,
+            ])
             .output()
             .expect("resume the installation");
         assert!(
@@ -3672,12 +3803,15 @@ fn a_damaged_changed_archive_is_asked_for_again_and_left_out_only_when_it_stays_
         let output = executable_command(fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env(NO_RETRY_WAIT, "1")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[INSTALL_CHANGED, CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3814,6 +3948,7 @@ fn a_mod_whose_link_is_gone_or_serves_too_much_is_left_out() {
                 status: "200 OK",
                 body: Vec::new(),
                 announced: Some(limit + 1),
+                elsewhere: None,
             },
             format!(
                 "its official link now serves a download of at least {} bytes, more than the {limit} bytes the installer accepts for a changed download",
@@ -3838,12 +3973,15 @@ fn a_mod_whose_link_is_gone_or_serves_too_much_is_left_out() {
         let output = executable_command(&fixture)
             .env(DOWNLOAD_ORIGIN, &link.base_url)
             .env(NO_RETRY_WAIT, "1")
-            .args(install_args(
-                &fixture.recipe,
-                &fixture.bg1,
-                &fixture.bg2,
-                &fixture.managed,
-                &fixture.cache,
+            .args(answering(
+                install_args(
+                    &fixture.recipe,
+                    &fixture.bg1,
+                    &fixture.bg2,
+                    &fixture.managed,
+                    &fixture.cache,
+                ),
+                &[CONTINUE_WITHOUT],
             ))
             .output()
             .expect("run the installation");
@@ -3887,12 +4025,15 @@ fn a_changed_weidu_download_is_checked_used_and_recorded() {
 
     let output = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
-        .args(install_args(
-            &fixture.recipe,
-            &fixture.bg1,
-            &fixture.bg2,
-            &fixture.managed,
-            &fixture.cache,
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED],
         ))
         .output()
         .expect("run the installation");
@@ -3939,7 +4080,7 @@ fn a_changed_weidu_download_is_checked_used_and_recorded() {
     assert_eq!(
         report_json(&fixture)["notes"],
         serde_json::json!([
-            "Used a newer or different installer tool than the reviewed version: WeiDU (WeiDU 24900).",
+            "You chose to install a newer download of WeiDU (weidu.zip).",
             "If something does not work as expected, please report it so the collection can be fixed."
         ])
     );
@@ -4642,4 +4783,1822 @@ fn missing_manual_archive_is_reported_as_a_persistent_machine_readable_action() 
         .as_str()
         .unwrap()
         .ends_with("cache\\manual"));
+}
+
+// ----- Questions about downloads, end to end -----
+
+/// Adds Snowfall, a mod from its own download whose feature needs Snowytoes.
+#[cfg(windows)]
+fn add_snowfall(fixture: &ExecutableFixture, reviewed: &[u8]) {
+    fs::write(
+        fixture.recipe.join("artifacts/snowfall.toml"),
+        artifact_toml(
+            "snowfall",
+            "Snowfall",
+            "2.0",
+            "https://example.invalid/snowfall.zip",
+            "Snowfall-v2.0.zip",
+            reviewed,
+            &["Snowfall"],
+            &["Snowfall/setup-snowfall.tp2"],
+            None,
+        ),
+    )
+    .expect("write the Snowfall download");
+    fs::write(
+        fixture.recipe.join("mods/snowfall.toml"),
+        r#"id = "snowfall"
+artifact_id = "snowfall"
+name = "Snowfall"
+tp2 = "Snowfall/setup-snowfall.tp2"
+language = 0
+weidu_artifact_id = "weidu"
+invocation_mode = "setup-name"
+
+[[components]]
+id = 0
+name = "Falling snow"
+"#,
+    )
+    .expect("write the Snowfall installer");
+    let collection = fixture.recipe.join("collection.toml");
+    let mut text = fs::read_to_string(&collection).expect("read fixture collection");
+    text.push_str(
+        r#"
+[[runs]]
+run_id = "snowfall-bg2"
+mod_id = "snowfall"
+phase = "bg2-preparation"
+components = [0]
+args = []
+
+[[features]]
+id = "snowfall"
+title = "Snowfall"
+description = "Fixture Snowfall"
+category = "foundation"
+decision = "default"
+readiness = "ready"
+requires = ["snowytoes"]
+components = [{ run_id = "snowfall-bg2", component = 0 }]
+"#,
+    );
+    fs::write(collection, text).expect("add Snowfall to the fixture collection");
+}
+
+/// Makes Snowytoes a part the collection always installs.
+#[cfg(windows)]
+fn make_snowytoes_fixed(fixture: &ExecutableFixture) {
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection).expect("read fixture collection");
+    let optional =
+        "description = \"Fixture Snowytoes\"\ncategory = \"foundation\"\ndecision = \"default\"";
+    assert_eq!(text.matches(optional).count(), 1);
+    fs::write(
+        collection,
+        text.replace(
+            optional,
+            "description = \"Fixture Snowytoes\"\ncategory = \"foundation\"\ndecision = \"mandatory\"",
+        ),
+    )
+    .expect("make Snowytoes fixed");
+}
+
+#[cfg(windows)]
+fn snowytoes_release(version: &str) -> Vec<u8> {
+    zip_bytes(&[(
+        "Snowytoes/setup-snowytoes.tp2",
+        format!("BEGIN ~Snowytoes {version}~\nDESIGNATED 0\n").as_bytes(),
+    )])
+}
+
+#[cfg(windows)]
+fn snowfall_release() -> Vec<u8> {
+    zip_bytes(&[(
+        "Snowfall/setup-snowfall.tp2",
+        b"BEGIN ~Snowfall~\nDESIGNATED 0\n",
+    )])
+}
+
+/// Exit code and JSON output of one installer command of `fixture`, with the link `origin`.
+#[cfg(windows)]
+fn run_installer(
+    fixture: &ExecutableFixture,
+    origin: Option<&ArtifactServer>,
+    args: &[&str],
+) -> (Option<i32>, Value) {
+    run_installer_with(fixture, origin, &[], args)
+}
+
+/// [`run_installer`] with further environment variables.
+#[cfg(windows)]
+fn run_installer_with(
+    fixture: &ExecutableFixture,
+    origin: Option<&ArtifactServer>,
+    envs: &[(&str, &std::ffi::OsStr)],
+    args: &[&str],
+) -> (Option<i32>, Value) {
+    let mut command = executable_command(fixture);
+    command.envs(envs.iter().copied());
+    command.env(NO_RETRY_WAIT, "1");
+    if let Some(origin) = origin {
+        command.env(DOWNLOAD_ORIGIN, &origin.base_url);
+    }
+    let output = command.args(args).output().expect("run the installer");
+    (output.status.code(), json_stdout(&output))
+}
+
+#[cfg(windows)]
+fn install_answering(
+    fixture: &ExecutableFixture,
+    origin: &ArtifactServer,
+    answers: &[&str],
+) -> (Option<i32>, Value) {
+    let args = answering(
+        install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+        answers,
+    );
+    run_installer(fixture, Some(origin), &args)
+}
+
+#[cfg(windows)]
+fn resume_answering(
+    fixture: &ExecutableFixture,
+    origin: Option<&ArtifactServer>,
+    answers: &[&str],
+) -> (Option<i32>, Value) {
+    let args = answering(
+        vec!["--json", "resume", fixture.managed.to_str().unwrap()],
+        answers,
+    );
+    run_installer(fixture, origin, &args)
+}
+
+/// The question the installation waits for, as `check-decision` shows it, or `null`.
+#[cfg(windows)]
+fn check_decision(fixture: &ExecutableFixture, install_id: &str) -> Value {
+    let (code, response) = run_installer(
+        fixture,
+        None,
+        &[
+            "--json",
+            "check-decision",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            install_id,
+        ],
+    );
+    assert_eq!(code, Some(0), "{response:#}");
+    response["decision"].clone()
+}
+
+/// Answers `decision` with `answer` and `token`; exit code and JSON output.
+#[cfg(windows)]
+fn decide_with(
+    fixture: &ExecutableFixture,
+    decision: &Value,
+    token: &str,
+    answer: &str,
+) -> (Option<i32>, Value) {
+    run_installer(
+        fixture,
+        None,
+        &[
+            "--json",
+            "decide",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            decision["install_id"].as_str().unwrap(),
+            "--decision",
+            decision["decision_id"].as_str().unwrap(),
+            "--token",
+            token,
+            "--answer",
+            answer,
+        ],
+    )
+}
+
+#[cfg(windows)]
+fn decide(fixture: &ExecutableFixture, decision: &Value, answer: &str) {
+    let (code, response) = decide_with(
+        fixture,
+        decision,
+        decision["token"].as_str().unwrap(),
+        answer,
+    );
+    assert_eq!(code, Some(0), "{response:#}");
+}
+
+/// The id of the question a response says the installation waits for.
+#[cfg(windows)]
+fn waiting_for(code: Option<i32>, response: &Value, step_id: &str) -> String {
+    assert_eq!(code, Some(0), "{response:#}");
+    assert_eq!(response["ok"], true, "{response:#}");
+    assert_eq!(
+        response["status"]["status"], "decision_required",
+        "{response:#}"
+    );
+    assert_eq!(response["status"]["step_id"], step_id, "{response:#}");
+    let decision_id = response["status"]["decision_id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(
+        response["events"].as_array().unwrap().iter().any(|event| {
+            event["type"] == "decision_required" && event["decision_id"] == decision_id.as_str()
+        }),
+        "{response:#}"
+    );
+    decision_id
+}
+
+#[cfg(windows)]
+fn labels(decision: &Value) -> Vec<String> {
+    decision["texts"]["answers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|answer| answer["label"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+#[cfg(windows)]
+fn is_cached(fixture: &ExecutableFixture, bytes: &[u8]) -> bool {
+    let digest = sha256_bytes(bytes);
+    fixture
+        .cache
+        .join("sha256")
+        .join(&digest[..2])
+        .join(format!("{digest}.archive"))
+        .exists()
+}
+
+/// A link that counts the requests for `path`.
+#[cfg(windows)]
+fn counting_link(
+    answers: BTreeMap<String, Vec<Answer>>,
+    path: &'static str,
+) -> (ArtifactServer, Arc<AtomicU64>) {
+    let asked = Arc::new(AtomicU64::new(0));
+    let counted = Arc::clone(&asked);
+    let link = ArtifactServer::start_answering(answers, move |requested| {
+        if requested == path {
+            counted.fetch_add(1, Ordering::SeqCst);
+        }
+    });
+    (link, asked)
+}
+
+/// A changed download stops the installation with a question and records nothing; check-decision
+/// shows it with its texts and token, and a resume without an answer asks the link nothing.
+/// "Stop" ends the attempt; the next resume asks the link again and the question comes back
+/// with a new id, which an answer to the old one cannot answer. "Install it" then completes
+/// with an end-summary line, and the receipt keeps both answers.
+#[cfg(windows)]
+#[test]
+fn a_changed_download_waits_for_the_players_answer() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let newer = zip_bytes(&[
+        (
+            "EE_Fixpack/EE_Fixpack.tp2",
+            b"BEGIN ~Synthetic EE Fixpack~\nDESIGNATED 0\n",
+        ),
+        (
+            "EE_Fixpack/new-in-2026.09.txt",
+            b"added by the newer release",
+        ),
+    ]);
+    let (link, asked) = counting_link(
+        BTreeMap::from([(
+            "/eefixpack.zip".to_owned(),
+            vec![Answer::file(newer.clone())],
+        )]),
+        "/eefixpack.zip",
+    );
+
+    let (code, response) = install_answering(&fixture, &link, &[]);
+    let first_id = waiting_for(code, &response, "acquire:eefixpack");
+    assert_eq!(response["status"]["question"]["kind"], "changed_download");
+    assert_eq!(asked.load(Ordering::SeqCst), 1);
+    assert!(!fixture
+        .managed
+        .join(".chriz/evidence/artifacts/eefixpack.json")
+        .exists());
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+
+    let decision = check_decision(&fixture, &install_id);
+    assert_eq!(decision["decision_id"], first_id.as_str());
+    assert_eq!(
+        decision["texts"]["message"],
+        "A newer version of EE Fixpack was found. The reviewed version is no longer available at this link. Install it anyway?"
+    );
+    assert_eq!(
+        labels(&decision),
+        [
+            "Install it",
+            "Leave it out and continue",
+            "Stop the installation"
+        ]
+    );
+    assert_eq!(decision["texts"]["focus"], "yes");
+    assert_eq!(decision["texts"]["details"][0], "File: eefixpack.zip");
+    assert!(decision.get("answer").is_none(), "{decision:#}");
+    // The human form prints the exact command lines that answer it.
+    let human = executable_command(&fixture)
+        .args([
+            "check-decision",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            &install_id,
+        ])
+        .output()
+        .unwrap();
+    let printed = stdout(&human);
+    assert!(
+        printed.contains(&format!(
+            "Install it: chriz-bg-install decide \"{}\" --install-id {install_id} --decision {first_id} --token {} --answer yes",
+            fixture.managed.display(),
+            decision["token"].as_str().unwrap()
+        )),
+        "{printed}"
+    );
+
+    // Without an answer, a resume stops again with the same question and no download.
+    let (code, response) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(waiting_for(code, &response, "acquire:eefixpack"), first_id);
+    assert_eq!(asked.load(Ordering::SeqCst), 1);
+
+    // A stale token is refused; the same answer twice is accepted, another one refused.
+    let (code, refused) = decide_with(&fixture, &decision, &"0".repeat(64), "no");
+    assert_eq!(code, Some(1));
+    assert_eq!(refused["error"]["code"], "decision_stale", "{refused:#}");
+    decide(&fixture, &decision, "no");
+    decide(&fixture, &decision, "no");
+    let (code, refused) = decide_with(
+        &fixture,
+        &decision,
+        decision["token"].as_str().unwrap(),
+        "yes",
+    );
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        refused["error"]["code"], "decision_already_answered",
+        "{refused:#}"
+    );
+    assert_eq!(check_decision(&fixture, &install_id)["answer"], "no");
+
+    let (code, stopped) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(1), "{stopped:#}");
+    assert_eq!(stopped["status"]["status"], "failed");
+    assert_eq!(stopped["status"]["step_id"], "acquire:eefixpack");
+    assert_eq!(
+        stopped["status"]["reason"],
+        "You chose to stop: a newer version of EE Fixpack was found at its link."
+    );
+    assert_eq!(check_decision(&fixture, &install_id), Value::Null);
+
+    // The next attempt asks the link again; the question comes back with a new id.
+    let (code, response) = resume_answering(&fixture, Some(&link), &[]);
+    let second_id = waiting_for(code, &response, "acquire:eefixpack");
+    assert_ne!(first_id, second_id);
+    assert_eq!(asked.load(Ordering::SeqCst), 2);
+    let (code, refused) = decide_with(
+        &fixture,
+        &decision,
+        decision["token"].as_str().unwrap(),
+        "yes",
+    );
+    assert_eq!(code, Some(1));
+    assert_eq!(refused["error"]["code"], "decision_stale", "{refused:#}");
+
+    decide(&fixture, &check_decision(&fixture, &install_id), "yes");
+    let (code, finished) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(0), "{finished:#}");
+    assert_eq!(finished["status"]["status"], "complete");
+    let receipt = read_install_receipt(&fixture);
+    let answers = receipt
+        .decisions
+        .iter()
+        .map(|decision| {
+            (
+                decision.decision_id.as_str(),
+                decision.answer,
+                decision.source,
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        answers,
+        [
+            (
+                first_id.as_str(),
+                bg_engine::decision::Answer::No,
+                bg_engine::decision::AnswerSource::Player
+            ),
+            (
+                second_id.as_str(),
+                bg_engine::decision::Answer::Yes,
+                bg_engine::decision::AnswerSource::Player
+            ),
+        ]
+    );
+    for game in ["bg1", "game"] {
+        assert!(fixture
+            .managed
+            .join(game)
+            .join("EE_Fixpack/new-in-2026.09.txt")
+            .is_file());
+    }
+    assert_eq!(
+        report_json(&fixture)["notes"],
+        serde_json::json!([
+            "You chose to install a newer download of EE Fixpack (eefixpack.zip).",
+            "If something does not work as expected, please report it so the collection can be fixed."
+        ])
+    );
+    // The diagnostics export carries both answers beside the ledger that holds the questions.
+    let bundle = fixture._temp.path().join("diagnostics.zip");
+    let (code, exported) = run_installer(
+        &fixture,
+        None,
+        &[
+            "--json",
+            "diagnostics",
+            fixture.managed.to_str().unwrap(),
+            "--output",
+            bundle.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(code, Some(0), "{exported:#}");
+    let entries = exported["entries"].as_array().unwrap();
+    for id in [&first_id, &second_id] {
+        assert!(
+            entries
+                .iter()
+                .any(|entry| entry == &format!("evidence/decisions/{id}.json")),
+            "{entries:#?}"
+        );
+    }
+
+    // Each receipt names exactly the answers the ledger recorded up to it: the report refuses
+    // a receipt whose answers are missing, cut short or reordered, the failed receipt of the
+    // "No" included.
+    let attempts = fixture.managed.join(".chriz/attempts");
+    let receipts = fs::read_dir(&attempts)
+        .unwrap()
+        .map(|entry| entry.unwrap().path().join("receipt.json"))
+        .filter(|path| path.is_file())
+        .collect::<Vec<_>>();
+    let failed = receipts
+        .iter()
+        .find(|path| {
+            path.parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .starts_with("terminal-")
+        })
+        .expect("the failed receipt of the No");
+    let succeeded = receipts.iter().find(|path| *path != failed).unwrap();
+    type Edit = fn(&mut Value);
+    let edits: [(&PathBuf, Edit); 4] = [
+        (succeeded, |receipt| {
+            receipt.as_object_mut().unwrap().remove("decisions");
+        }),
+        (succeeded, |receipt| {
+            receipt["decisions"].as_array_mut().unwrap().truncate(1);
+        }),
+        (succeeded, |receipt| {
+            receipt["decisions"].as_array_mut().unwrap().reverse();
+        }),
+        (failed, |receipt| {
+            receipt.as_object_mut().unwrap().remove("decisions");
+        }),
+    ];
+    for (path, edit) in edits {
+        let original = fs::read(path).unwrap();
+        let mut receipt: Value = serde_json::from_slice(&original).unwrap();
+        assert_eq!(
+            receipt["decisions"].as_array().map(Vec::len),
+            Some(if path == failed { 1 } else { 2 })
+        );
+        edit(&mut receipt);
+        fs::write(path, serde_json::to_vec_pretty(&receipt).unwrap()).unwrap();
+        let output = executable_command(&fixture)
+            .args(["--json", "report", fixture.managed.to_str().unwrap()])
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(1), "{}", stdout(&output));
+        assert!(
+            stdout(&output).contains("answers to questions differ from the campaign ledger"),
+            "{}",
+            stdout(&output)
+        );
+        fs::write(path, original).unwrap();
+    }
+    report_json(&fixture);
+}
+
+/// A mod whose link has no file any more (410), whose newer download stays damaged, or whose
+/// newer download would replace another mod's file is asked about with the mods that depend on
+/// it. "Continue without them" leaves them out; "Stop" stops.
+#[cfg(windows)]
+#[test]
+fn an_unusable_download_asks_with_the_mods_that_depend_on_it() {
+    let fixpack_tp2: &[u8] = b"BEGIN ~Synthetic EE Fixpack~\nDESIGNATED 0\n";
+    let data: Vec<u8> = (0..4096_u32)
+        .map(|index| (index.wrapping_mul(2_654_435_761) >> 11) as u8)
+        .collect();
+    let mut damaged = zip_bytes(&[
+        (
+            "Snowytoes/setup-snowytoes.tp2",
+            b"BEGIN ~Snowytoes 1.7~\nDESIGNATED 0\n",
+        ),
+        ("Snowytoes/data.bin", &data),
+    ]);
+    let data_start = damaged
+        .windows(data.len())
+        .position(|window| window == data.as_slice())
+        .unwrap();
+    damaged[data_start + 100] ^= 0x55;
+    let cases = [
+        (
+            "gone",
+            Answer::status("410 Gone"),
+            "its link no longer has the file",
+            "acquire:snowytoes",
+        ),
+        (
+            "damaged",
+            Answer::file(damaged.clone()),
+            "the newer download is damaged",
+            "acquire:snowytoes",
+        ),
+        (
+            "collision",
+            Answer::file(zip_bytes(&[
+                (
+                    "Snowytoes/setup-snowytoes.tp2",
+                    b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+                ),
+                ("EE_Fixpack/EE_Fixpack.tp2", b"BEGIN ~Its own edit~\n"),
+            ])),
+            "the newer download would replace files of another mod",
+            "materialize:snowytoes:bg2",
+        ),
+    ];
+    for (case, served, short, step) in cases {
+        for answer in ["yes", "no"] {
+            let fixture = executable_fixture();
+            if case == "collision" {
+                let reviewed = zip_bytes(&[
+                    (
+                        "Snowytoes/setup-snowytoes.tp2",
+                        b"BEGIN ~Snowytoes~\nDESIGNATED 0\n",
+                    ),
+                    ("EE_Fixpack/EE_Fixpack.tp2", fixpack_tp2),
+                ]);
+                add_snowytoes_publishing(&fixture, &reviewed, &["Snowytoes", "EE_Fixpack"]);
+            } else {
+                add_snowytoes(&fixture, &snowytoes_release("1.6"));
+            }
+            add_snowfall(&fixture, &snowfall_release());
+            let link = ArtifactServer::start_answering(
+                BTreeMap::from([
+                    ("/snowytoes.zip".to_owned(), vec![served.clone()]),
+                    (
+                        "/snowfall.zip".to_owned(),
+                        vec![Answer::file(snowfall_release())],
+                    ),
+                ]),
+                |_| {},
+            );
+            // The changed download in the collision case passes its checks; it is installed,
+            // and only placing it finds the other mod's file.
+            let presets: &[&str] = if case == "collision" {
+                &[INSTALL_CHANGED]
+            } else {
+                &[]
+            };
+
+            let (code, response) = install_answering(&fixture, &link, presets);
+
+            waiting_for(code, &response, step);
+            let install_id = response["install_id"].as_str().unwrap().to_owned();
+            let decision = check_decision(&fixture, &install_id);
+            assert_eq!(decision["question"]["kind"], "unusable_download", "{case}");
+            assert_eq!(
+                decision["texts"]["message"],
+                format!(
+                    "Snowytoes can't be installed ({short}). It and the mods that depend on it (Snowfall) will be left out. Continue the installation?"
+                ),
+                "{case}"
+            );
+            assert_eq!(
+                labels(&decision),
+                ["Continue without them", "Stop the installation"],
+                "{case}"
+            );
+            assert_eq!(
+                decision["question"]["leave_out"]["removed_runs"],
+                serde_json::json!(["snowytoes-bg2", "snowfall-bg2"]),
+                "{case}"
+            );
+            decide(&fixture, &decision, answer);
+            let (code, response) = resume_answering(&fixture, Some(&link), &[]);
+            if answer == "no" {
+                assert_eq!(code, Some(1), "{case}: {response:#}");
+                assert_eq!(response["status"]["step_id"], step, "{case}");
+                assert_eq!(
+                    response["status"]["reason"],
+                    format!("You chose to stop: Snowytoes can't be installed ({short})."),
+                    "{case}"
+                );
+                assert!(!fixture.managed.join(".chriz/install-receipt.json").exists());
+                let report = report_json(&fixture);
+                // The collision case also holds the preset answer that installed the newer
+                // download before placing it found the other mod's file.
+                let decisions = report["receipt"]["decisions"].as_array().unwrap();
+                assert_eq!(
+                    decisions.len(),
+                    if case == "collision" { 2 } else { 1 },
+                    "{case}"
+                );
+                let last = decisions.last().unwrap();
+                assert_eq!(last["answer"], "no", "{case}");
+                assert_eq!(last["outcome"], "applied", "{case}");
+                // Only the newer download that the collision case installed took effect.
+                let expected = if case == "collision" {
+                    serde_json::json!([
+                        "You chose to install a newer download of Snowytoes (snowytoes.zip).",
+                        "If something does not work as expected, please report it so the collection can be fixed."
+                    ])
+                } else {
+                    serde_json::json!([])
+                };
+                assert_eq!(report["notes"], expected, "{case}");
+                continue;
+            }
+            assert_eq!(code, Some(0), "{case}: {response:#}");
+            let receipt = read_install_receipt(&fixture);
+            assert_eq!(receipt.left_out.len(), 1, "{case}");
+            assert_eq!(
+                receipt.left_out[0].runs,
+                ["snowytoes-bg2", "snowfall-bg2"],
+                "{case}"
+            );
+            assert_eq!(
+                receipt.decisions.len(),
+                if case == "collision" { 2 } else { 1 },
+                "{case}"
+            );
+            assert_eq!(
+                receipt.decisions.last().unwrap().removed_runs,
+                ["snowytoes-bg2", "snowfall-bg2"],
+                "{case}"
+            );
+            assert!(!fixture.managed.join("game/Snowfall").exists(), "{case}");
+            assert_eq!(
+                report_json(&fixture)["notes"][0],
+                format!(
+                    "You chose to continue without Snowytoes ({short}). Also left out: Snowfall."
+                ),
+                "{case}"
+            );
+        }
+    }
+}
+
+/// A newer installer tool came from a host the recipe did not review, and the download folder
+/// holds no reviewed one: its file is not kept and the player is asked, with the focus on "No".
+/// "Install it" downloads it again and accepts only the same file, also after a crash and a
+/// lost download folder; a link that serves a third file ends that attempt, the next one asks
+/// anew, and "Install it" then installs the third file. No refused file ever runs.
+#[cfg(windows)]
+#[test]
+fn a_tool_from_an_unreviewed_host_is_asked_about_and_downloaded_again() {
+    let reviewed_tool = fs::read(MOCK_CHILD).expect("read the synthetic WeiDU");
+    let program = |suffix: &[u8]| {
+        let mut bytes = reviewed_tool.clone();
+        bytes.extend_from_slice(suffix);
+        bytes
+    };
+    let newer_program = program(b"\0a newer build from elsewhere");
+    let third_program = program(b"\0yet another build");
+    let newer = zip_bytes(&[("weidu.exe", &newer_program)]);
+    let third = zip_bytes(&[("weidu.exe", &third_program)]);
+    let ran = |log: &Path, program: &[u8]| {
+        fs::read_to_string(log)
+            .unwrap_or_default()
+            .lines()
+            .any(|line| line == sha256_bytes(program))
+    };
+
+    // The same file again: accepted, also after a crash once it was recorded and a lost
+    // download folder.
+    let fixture = executable_fixture();
+    let log = fixture._temp.path().join("runs.log");
+    remove_cached_download(&fixture, &fixture.tool_archive);
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([
+            (
+                "/weidu.zip".to_owned(),
+                vec![Answer::elsewhere("/moved/weidu.zip")],
+            ),
+            (
+                "/moved/weidu.zip".to_owned(),
+                vec![Answer::file(newer.clone())],
+            ),
+        ]),
+        |_| {},
+    );
+    let logged = [("CHRIZ_TEST_MOCK_RUN_LOG", log.as_os_str())];
+    let install = answering(
+        install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+        &[],
+    );
+    let (code, response) = run_installer_with(&fixture, Some(&link), &logged, &install);
+    waiting_for(code, &response, "acquire:weidu");
+    // Refused before it was unpacked: it never ran.
+    assert!(!ran(&log, &newer_program));
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+    assert_eq!(decision["question"]["kind"], "unreviewed_tool");
+    assert_eq!(
+        decision["question"]["served"]["unreviewed_hosts"],
+        serde_json::json!(["localhost"])
+    );
+    let final_url = decision["question"]["served"]["final_url"]
+        .as_str()
+        .unwrap();
+    assert!(
+        final_url.starts_with("http://localhost:") && final_url.ends_with("/moved/weidu.zip"),
+        "{final_url}"
+    );
+    assert_ne!(decision["question"]["served"]["link"], final_url);
+    assert_eq!(decision["question"]["served"]["filename"], "weidu.zip");
+    assert_eq!(
+        decision["texts"]["message"],
+        "A newer version of WeiDU was found. The reviewed version is no longer available at this link. Install it anyway? It came from localhost, which the collection did not review. If you're not sure, stop the installation."
+    );
+    assert_eq!(labels(&decision), ["Install it", "Stop the installation"]);
+    assert_eq!(decision["texts"]["focus"], "no");
+    assert!(!is_cached(&fixture, &newer));
+    decide(&fixture, &decision, "yes");
+    let resume = vec!["--json", "resume", fixture.managed.to_str().unwrap()];
+    let crashed = executable_command(&fixture)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .env("CHRIZ_BG_COLLECTION_TEST_EXIT_AFTER_ACCEPTED", "weidu")
+        .env("CHRIZ_TEST_MOCK_RUN_LOG", &log)
+        .args(&resume)
+        .output()
+        .unwrap();
+    assert_eq!(crashed.status.code(), Some(86), "{}", stdout(&crashed));
+    assert!(fixture
+        .managed
+        .join(".chriz/evidence/artifacts/weidu.json")
+        .is_file());
+    remove_cached_download(&fixture, &newer);
+    let (code, finished) = run_installer_with(&fixture, Some(&link), &logged, &resume);
+    assert_eq!(code, Some(0), "{finished:#}");
+    let receipt = read_install_receipt(&fixture);
+    let archive = receipt
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.id == "weidu")
+        .unwrap();
+    assert_eq!(archive.sha256, sha256_bytes(&newer));
+    assert_eq!(archive.final_url, final_url);
+    assert_eq!(
+        archive.served_difference.as_ref().unwrap().unreviewed_hosts,
+        ["localhost"]
+    );
+    assert!(ran(&log, &newer_program));
+    assert_eq!(
+        report_json(&fixture)["notes"],
+        serde_json::json!([
+            "You chose to use a newer installer tool WeiDU (WeiDU 24900), which came from localhost.",
+            "If something does not work as expected, please report it so the collection can be fixed."
+        ])
+    );
+
+    // A third file when downloading again: the attempt ends, the next one asks anew, and
+    // "Install it" installs the third file.
+    let fixture = executable_fixture();
+    let log = fixture._temp.path().join("runs.log");
+    let logged = [("CHRIZ_TEST_MOCK_RUN_LOG", log.as_os_str())];
+    remove_cached_download(&fixture, &fixture.tool_archive);
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([
+            (
+                "/weidu.zip".to_owned(),
+                vec![Answer::elsewhere("/moved/weidu.zip")],
+            ),
+            (
+                "/moved/weidu.zip".to_owned(),
+                vec![Answer::file(newer.clone()), Answer::file(third.clone())],
+            ),
+        ]),
+        |_| {},
+    );
+    let install = answering(
+        install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ),
+        &[],
+    );
+    let resume = vec!["--json", "resume", fixture.managed.to_str().unwrap()];
+    let (code, response) = run_installer_with(&fixture, Some(&link), &logged, &install);
+    let first_id = waiting_for(code, &response, "acquire:weidu");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    decide(&fixture, &check_decision(&fixture, &install_id), "yes");
+    let (code, stopped) = run_installer_with(&fixture, Some(&link), &logged, &resume);
+    assert_eq!(code, Some(1), "{stopped:#}");
+    assert_eq!(stopped["status"]["step_id"], "acquire:weidu");
+    assert!(
+        stopped["status"]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("its link changed again"),
+        "{stopped:#}"
+    );
+    assert!(!is_cached(&fixture, &third));
+    let (code, response) = run_installer_with(&fixture, Some(&link), &logged, &resume);
+    let second_id = waiting_for(code, &response, "acquire:weidu");
+    assert_ne!(first_id, second_id);
+    assert_eq!(
+        response["status"]["question"]["served"]["sha256"],
+        sha256_bytes(&third)
+    );
+    // Neither refused file has run.
+    assert!(!ran(&log, &newer_program));
+    assert!(!ran(&log, &third_program));
+    decide(&fixture, &check_decision(&fixture, &install_id), "yes");
+    let (code, finished) = run_installer_with(&fixture, Some(&link), &logged, &resume);
+    assert_eq!(code, Some(0), "{finished:#}");
+    assert!(ran(&log, &third_program));
+    assert!(!ran(&log, &newer_program));
+    let receipt = read_install_receipt(&fixture);
+    let outcomes = receipt
+        .decisions
+        .iter()
+        .map(|decision| (decision.decision_id.as_str(), decision.outcome))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outcomes,
+        [
+            (
+                first_id.as_str(),
+                bg_engine::decision::DecisionOutcome::Failed
+            ),
+            (
+                second_id.as_str(),
+                bg_engine::decision::DecisionOutcome::Applied
+            ),
+        ]
+    );
+    assert_eq!(
+        report_json(&fixture)["notes"],
+        serde_json::json!([
+            "You chose to use a newer installer tool WeiDU (WeiDU 24900), which came from localhost.",
+            "If something does not work as expected, please report it so the collection can be fixed."
+        ])
+    );
+}
+
+/// An answer file that someone wrote with an answer its question does not offer is not
+/// applied: the question is withdrawn, the attempt ends, and the next one asks anew.
+#[cfg(windows)]
+#[test]
+fn a_stored_answer_the_question_does_not_offer_is_refused() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.tool_archive);
+    let reviewed_tool = fs::read(MOCK_CHILD).expect("read the synthetic WeiDU");
+    let mut program = reviewed_tool.clone();
+    program.extend_from_slice(b"\0a newer build from elsewhere");
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([
+            (
+                "/weidu.zip".to_owned(),
+                vec![Answer::elsewhere("/moved/weidu.zip")],
+            ),
+            (
+                "/moved/weidu.zip".to_owned(),
+                vec![Answer::file(zip_bytes(&[("weidu.exe", &program)]))],
+            ),
+        ]),
+        |_| {},
+    );
+    let (code, response) = install_answering(&fixture, &link, &[]);
+    let first_id = waiting_for(code, &response, "acquire:weidu");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+    let decisions = fixture.managed.join(".chriz/evidence/decisions");
+    fs::create_dir_all(&decisions).unwrap();
+    fs::write(
+        decisions.join(format!("{first_id}.json")),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "decision_id": first_id,
+            "token": decision["token"],
+            "answer": "leave_out",
+            "answered_at": 1,
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let (code, refused) = run_installer(
+        &fixture,
+        None,
+        &[
+            "--json",
+            "check-decision",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            &install_id,
+        ],
+    );
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        refused["error"]["code"], "decision_needs_attention",
+        "{refused:#}"
+    );
+    let (code, stopped) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(1), "{stopped:#}");
+    assert!(
+        stopped["status"]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("which the question does not offer"),
+        "{stopped:#}"
+    );
+    let (code, response) = resume_answering(&fixture, Some(&link), &[]);
+    let second_id = waiting_for(code, &response, "acquire:weidu");
+    assert_ne!(first_id, second_id);
+    decide(&fixture, &check_decision(&fixture, &install_id), "yes");
+    let (code, finished) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(0), "{finished:#}");
+}
+
+/// Answers are read and written only inside the installation: when `.chriz/evidence` is a
+/// junction to a folder elsewhere, an answer there is never used, `decide` writes nothing, and
+/// the diagnostics export refuses to follow it.
+#[cfg(windows)]
+#[test]
+fn answers_are_never_read_or_written_through_a_redirected_evidence_folder() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/eefixpack.zip".to_owned(),
+        zip_bytes(&[(
+            "EE_Fixpack/EE_Fixpack.tp2",
+            b"BEGIN ~A newer release~\nDESIGNATED 0\n",
+        )]),
+    )]));
+    let (code, response) = install_answering(&fixture, &link, &[]);
+    let decision_id = waiting_for(code, &response, "acquire:eefixpack");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+
+    // The evidence moves elsewhere, and a junction takes its place, with an answer there.
+    let evidence = fixture.managed.join(".chriz/evidence");
+    let elsewhere = fixture._temp.path().join("elsewhere-evidence");
+    fs::rename(&evidence, &elsewhere).unwrap();
+    let linked = Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(&evidence)
+        .arg(&elsewhere)
+        .output()
+        .unwrap();
+    assert!(linked.status.success(), "{}", stderr(&linked));
+    fs::create_dir_all(elsewhere.join("decisions")).unwrap();
+    fs::write(
+        elsewhere.join(format!("decisions/{decision_id}.json")),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "decision_id": decision_id,
+            "token": decision["token"],
+            "answer": "yes",
+            "answered_at": 1,
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let (code, refused) = run_installer(
+        &fixture,
+        None,
+        &[
+            "--json",
+            "check-decision",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            &install_id,
+        ],
+    );
+    assert_eq!(code, Some(1), "{refused:#}");
+    let (code, refused) = decide_with(
+        &fixture,
+        &decision,
+        decision["token"].as_str().unwrap(),
+        "no",
+    );
+    assert_eq!(code, Some(1), "{refused:#}");
+    assert_eq!(
+        refused["error"]["code"], "decision_needs_attention",
+        "{refused:#}"
+    );
+    assert_eq!(
+        fs::read_dir(elsewhere.join("decisions")).unwrap().count(),
+        1,
+        "decide wrote through the junction"
+    );
+    let (code, stopped) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(1), "{stopped:#}");
+    // The answer elsewhere is never used: the question is withdrawn and the installation stops.
+    assert!(
+        stopped
+            .to_string()
+            .contains("is not a direct folder of this installation"),
+        "{stopped:#}"
+    );
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert!(!replay.records.iter().any(|record| matches!(
+        record.event,
+        bg_engine::session::SessionEvent::DecisionAnswered { .. }
+    )));
+    assert!(!replay.records.iter().any(|record| matches!(
+        &record.event,
+        bg_engine::session::SessionEvent::StepCompleted { step_id, .. }
+            if step_id == "acquire:eefixpack"
+    )));
+}
+
+/// The diagnostics export never follows a junction in place of the evidence folder or of its
+/// answers folder.
+#[cfg(windows)]
+fn assert_diagnostics_refuse_a_junction_at(fixture: &ExecutableFixture, folder: &Path) {
+    let elsewhere = fixture._temp.path().join("moved-away");
+    fs::rename(folder, &elsewhere).unwrap();
+    let linked = Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(folder)
+        .arg(&elsewhere)
+        .output()
+        .unwrap();
+    assert!(linked.status.success(), "{}", stderr(&linked));
+    let bundle = fixture._temp.path().join("diagnostics.zip");
+    let (code, exported) = run_installer(
+        fixture,
+        None,
+        &[
+            "--json",
+            "diagnostics",
+            fixture.managed.to_str().unwrap(),
+            "--output",
+            bundle.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(code, Some(1), "{exported:#}");
+    assert!(
+        exported
+            .to_string()
+            .contains("forbidden in diagnostics evidence"),
+        "{exported:#}"
+    );
+    assert!(!bundle.exists());
+    fs::remove_dir(folder).unwrap();
+    fs::rename(&elsewhere, folder).unwrap();
+}
+
+/// check-decision, then "Leave it out", then resume: the reviewed archive came back to the
+/// download folder meanwhile, so the question no longer applies and the mod is installed.
+#[cfg(windows)]
+#[test]
+fn leave_it_out_installs_the_mod_when_its_reviewed_file_came_back() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/eefixpack.zip".to_owned(),
+        zip_bytes(&[
+            (
+                "EE_Fixpack/EE_Fixpack.tp2",
+                b"BEGIN ~A newer release~\nDESIGNATED 0\n",
+            ),
+            ("EE_Fixpack/newer.txt", b"new in this release"),
+        ]),
+    )]));
+    let (code, response) = install_answering(&fixture, &link, &[]);
+    waiting_for(code, &response, "acquire:eefixpack");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+    assert!(labels(&decision).contains(&"Leave it out and continue".to_owned()));
+
+    // Another installation downloads the reviewed archive meanwhile.
+    let (sink, _events) = ChannelSink::unbounded();
+    ArtifactCache::open(&fixture.cache)
+        .unwrap()
+        .acquire(
+            &DownloadRequest {
+                request_id: "another-installation".to_owned(),
+                url: format!("{}/eefixpack.zip", fixture._server.base_url),
+                expected_length: fixture.payload.len() as u64,
+                expected_sha256: sha256_bytes(&fixture.payload),
+                redirect_hosts: Vec::new(),
+                max_attempts: 1,
+            },
+            &sink,
+        )
+        .unwrap();
+    decide(&fixture, &decision, "leave-out");
+    let (code, finished) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(0), "{finished:#}");
+    let receipt = read_install_receipt(&fixture);
+    assert!(receipt.left_out.is_empty());
+    let recorded = receipt
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.id == "eefixpack")
+        .unwrap();
+    assert_eq!(recorded.sha256, sha256_bytes(&fixture.payload));
+    assert_eq!(recorded.served_difference, None);
+    assert_eq!(
+        receipt.decisions[0].outcome,
+        bg_engine::decision::DecisionOutcome::Withdrawn
+    );
+    assert!(!fixture.managed.join("game/EE_Fixpack/newer.txt").exists());
+    assert!(fixture
+        .managed
+        .join("game/EE_Fixpack/EE_Fixpack.tp2")
+        .is_file());
+    assert_eq!(report_json(&fixture)["notes"], serde_json::json!([]));
+
+    // The diagnostics export refuses a junction at either folder on the way to the answers.
+    let evidence = fixture.managed.join(".chriz/evidence");
+    assert!(evidence.join("decisions").is_dir());
+    assert_diagnostics_refuse_a_junction_at(&fixture, &evidence.join("decisions"));
+    assert_diagnostics_refuse_a_junction_at(&fixture, &evidence);
+    let bundle = fixture._temp.path().join("diagnostics.zip");
+    let (code, exported) = run_installer(
+        &fixture,
+        None,
+        &[
+            "--json",
+            "diagnostics",
+            fixture.managed.to_str().unwrap(),
+            "--output",
+            bundle.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(code, Some(0), "{exported:#}");
+}
+
+/// A part the collection always installs never becomes a question, even with a preset answer:
+/// the installation stops and says why.
+#[cfg(windows)]
+#[test]
+fn an_unusable_fixed_part_stops_without_a_question() {
+    let fixture = executable_fixture();
+    add_snowytoes(&fixture, &snowytoes_release("1.6"));
+    make_snowytoes_fixed(&fixture);
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([(
+            "/snowytoes.zip".to_owned(),
+            vec![Answer::status("410 Gone")],
+        )]),
+        |_| {},
+    );
+
+    let (code, response) = install_answering(&fixture, &link, &[CONTINUE_WITHOUT]);
+
+    assert_eq!(code, Some(1), "{response:#}");
+    assert_eq!(response["status"]["status"], "failed");
+    assert_eq!(response["status"]["step_id"], "acquire:snowytoes");
+    let reason = response["status"]["reason"].as_str().unwrap();
+    assert!(
+        reason.starts_with(
+            "Snowytoes can't be installed (its link no longer has the file), and the collection can't be installed without it. Try again later; if it keeps happening, please report it.\n"
+        ),
+        "{reason}"
+    );
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert!(!replay.records.iter().any(|record| matches!(
+        record.event,
+        bg_engine::session::SessionEvent::DecisionRequired { .. }
+    )));
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    assert_eq!(check_decision(&fixture, &install_id), Value::Null);
+}
+
+/// "Leave it out and continue" is offered for a changed download of a mod the recipe can do
+/// without, and leaves it out with the mods that need it. A mod the collection always installs
+/// is only offered "Install it" and "Stop": a preset "leave it out" leaves the question waiting,
+/// and the answer is refused.
+#[cfg(windows)]
+#[test]
+fn leaving_out_is_offered_only_for_a_changed_mod_the_collection_can_do_without() {
+    let changed = snowytoes_release("1.7");
+
+    let fixture = executable_fixture();
+    add_snowytoes(&fixture, &snowytoes_release("1.6"));
+    add_snowfall(&fixture, &snowfall_release());
+    let link = ArtifactServer::start(BTreeMap::from([
+        ("/snowytoes.zip".to_owned(), changed.clone()),
+        ("/snowfall.zip".to_owned(), snowfall_release()),
+    ]));
+    let (code, response) = install_answering(&fixture, &link, &["changed-download=leave-out"]);
+    assert_eq!(code, Some(0), "{response:#}");
+    assert_eq!(response["status"]["status"], "complete");
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.left_out.len(), 1);
+    assert_eq!(receipt.left_out[0].artifact_id, "snowytoes");
+    assert_eq!(receipt.left_out[0].runs, ["snowytoes-bg2", "snowfall-bg2"]);
+    assert_eq!(
+        receipt.decisions[0].answer,
+        bg_engine::decision::Answer::LeaveOut
+    );
+    assert_eq!(
+        report_json(&fixture)["notes"][0],
+        "You chose to continue without Snowytoes (a newer download than the reviewed one was found: snowytoes.zip). Also left out: Snowfall."
+    );
+    assert!(!fixture.managed.join("game/Snowytoes").exists());
+
+    let fixture = executable_fixture();
+    add_snowytoes(&fixture, &snowytoes_release("1.6"));
+    make_snowytoes_fixed(&fixture);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/snowytoes.zip".to_owned(),
+        changed.clone(),
+    )]));
+    let (code, response) = install_answering(&fixture, &link, &["changed-download=leave-out"]);
+    waiting_for(code, &response, "acquire:snowytoes");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+    assert_eq!(labels(&decision), ["Install it", "Stop the installation"]);
+    assert!(decision["question"].get("leave_out").is_none());
+    let (code, refused) = decide_with(
+        &fixture,
+        &decision,
+        decision["token"].as_str().unwrap(),
+        "leave-out",
+    );
+    assert_eq!(code, Some(1));
+    assert_eq!(
+        refused["error"]["code"], "decision_answer_invalid",
+        "{refused:#}"
+    );
+}
+
+/// An answer is written complete or not at all: an interrupted `decide` leaves only a temporary
+/// file, which counts as no answer, and the question still waits until it is answered again.
+#[cfg(windows)]
+#[test]
+fn an_interrupted_answer_leaves_the_question_waiting() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/eefixpack.zip".to_owned(),
+        zip_bytes(&[(
+            "EE_Fixpack/EE_Fixpack.tp2",
+            b"BEGIN ~A newer release~\nDESIGNATED 0\n",
+        )]),
+    )]));
+    let (code, response) = install_answering(&fixture, &link, &[]);
+    let decision_id = waiting_for(code, &response, "acquire:eefixpack");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+
+    let interrupted = executable_command(&fixture)
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD", "decisions")
+        .args([
+            "--json",
+            "decide",
+            fixture.managed.to_str().unwrap(),
+            "--install-id",
+            &install_id,
+            "--decision",
+            &decision_id,
+            "--token",
+            decision["token"].as_str().unwrap(),
+            "--answer",
+            "yes",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(
+        interrupted.status.code(),
+        Some(1),
+        "{}",
+        stdout(&interrupted)
+    );
+    let left_behind = files(&fixture.managed.join(".chriz/evidence/decisions"));
+    assert_eq!(left_behind.len(), 1, "{left_behind:?}");
+    assert_ne!(
+        left_behind[0]
+            .extension()
+            .and_then(|extension| extension.to_str()),
+        Some("json")
+    );
+    assert!(check_decision(&fixture, &install_id)
+        .get("answer")
+        .is_none());
+    let (code, response) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(
+        waiting_for(code, &response, "acquire:eefixpack"),
+        decision_id
+    );
+
+    decide(&fixture, &decision, "yes");
+    let (code, finished) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(0), "{finished:#}");
+    assert_eq!(finished["status"]["status"], "complete");
+}
+
+/// Writes a one-shot script that the engine runs right before it opens an evidence file, in
+/// test builds: it moves `.chriz/evidence` elsewhere and puts a junction in its place, after
+/// every path check passed, as another program could.
+#[cfg(windows)]
+fn swap_evidence_before_use(fixture: &ExecutableFixture) -> (PathBuf, PathBuf) {
+    // cmd neither runs scripts at nor moves folders by `\\?\` paths.
+    let plain = |path: &Path| {
+        PathBuf::from(
+            path.to_string_lossy()
+                .trim_start_matches(r"\\?\")
+                .to_owned(),
+        )
+    };
+    let evidence = plain(&fixture.managed.join(".chriz").join("evidence"));
+    let elsewhere = plain(&fixture._temp.path().join("swapped-evidence"));
+    let script = plain(&fixture._temp.path().join("swap-evidence.cmd"));
+    fs::write(
+        &script,
+        format!(
+            "@move \"{}\" \"{}\" >nul\r\n@mklink /J \"{}\" \"{}\" >nul\r\n",
+            evidence.display(),
+            elsewhere.display(),
+            evidence.display(),
+            elsewhere.display()
+        ),
+    )
+    .unwrap();
+    (script, elsewhere)
+}
+
+/// Puts the evidence folder back after [`swap_evidence_before_use`] ran.
+#[cfg(windows)]
+fn undo_evidence_swap(fixture: &ExecutableFixture, elsewhere: &Path) {
+    let evidence = fixture.managed.join(".chriz").join("evidence");
+    fs::remove_dir(&evidence).unwrap();
+    fs::rename(elsewhere, &evidence).unwrap();
+}
+
+const BEFORE_EVIDENCE_USE: &str = "CHRIZ_BG_COLLECTION_TEST_BEFORE_EVIDENCE_USE";
+
+/// The evidence folder is replaced by a junction after every path check, right before an
+/// evidence file is opened. Answers are then neither written nor read through it, and the
+/// diagnostics export does not follow it: each checks the handle it actually uses.
+#[cfg(windows)]
+#[test]
+fn a_folder_replaced_after_the_checks_never_leads_answers_or_diagnostics_elsewhere() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/eefixpack.zip".to_owned(),
+        zip_bytes(&[(
+            "EE_Fixpack/EE_Fixpack.tp2",
+            b"BEGIN ~A newer release~\nDESIGNATED 0\n",
+        )]),
+    )]));
+    let (code, response) = install_answering(&fixture, &link, &[]);
+    let decision_id = waiting_for(code, &response, "acquire:eefixpack");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    let decision = check_decision(&fixture, &install_id);
+    let decide_args = |answer: &'static str| {
+        vec![
+            "--json".to_owned(),
+            "decide".to_owned(),
+            fixture.managed.to_str().unwrap().to_owned(),
+            "--install-id".to_owned(),
+            install_id.clone(),
+            "--decision".to_owned(),
+            decision_id.clone(),
+            "--token".to_owned(),
+            decision["token"].as_str().unwrap().to_owned(),
+            "--answer".to_owned(),
+            answer.to_owned(),
+        ]
+    };
+
+    // Publishing: nothing is written through the junction.
+    let (script, elsewhere) = swap_evidence_before_use(&fixture);
+    let decided = executable_command(&fixture)
+        .env(BEFORE_EVIDENCE_USE, &script)
+        .args(decide_args("yes"))
+        .output()
+        .unwrap();
+    assert!(
+        elsewhere.is_dir(),
+        "the swap did not run: {}",
+        script.display()
+    );
+    assert_eq!(
+        decided.status.code(),
+        Some(1),
+        "{} {:?}",
+        stdout(&decided),
+        files(&elsewhere.join("decisions"))
+    );
+    assert!(
+        !elsewhere
+            .join(format!("decisions/{decision_id}.json"))
+            .exists(),
+        "the answer was written through the junction"
+    );
+    undo_evidence_swap(&fixture, &elsewhere);
+
+    // Reading: an answer reached only through the junction is never applied.
+    decide(&fixture, &decision, "yes");
+    let (script, elsewhere) = swap_evidence_before_use(&fixture);
+    let resumed = executable_command(&fixture)
+        .env(BEFORE_EVIDENCE_USE, &script)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(resumed.status.code(), Some(1), "{}", stdout(&resumed));
+    assert!(elsewhere.is_dir(), "the swap did not run");
+    undo_evidence_swap(&fixture, &elsewhere);
+    let replay = SessionStore::open(&fixture.managed)
+        .unwrap()
+        .replay()
+        .unwrap();
+    assert!(!replay.records.iter().any(|record| matches!(
+        record.event,
+        bg_engine::session::SessionEvent::DecisionAnswered { .. }
+    )));
+
+    // Diagnostics: a terminal receipt with an answer, then the swap while exporting.
+    let (code, response) = resume_answering(&fixture, Some(&link), &[]);
+    waiting_for(code, &response, "acquire:eefixpack");
+    decide(&fixture, &check_decision(&fixture, &install_id), "no");
+    let (code, stopped) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(1), "{stopped:#}");
+    let (script, elsewhere) = swap_evidence_before_use(&fixture);
+    let bundle = fixture._temp.path().join("diagnostics.zip");
+    let exported = executable_command(&fixture)
+        .env(BEFORE_EVIDENCE_USE, &script)
+        .args([
+            "--json",
+            "diagnostics",
+            fixture.managed.to_str().unwrap(),
+            "--output",
+            bundle.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(exported.status.code(), Some(1), "{}", stdout(&exported));
+    assert!(
+        stdout(&exported).contains("is not inside this installation's evidence"),
+        "{}",
+        stdout(&exported)
+    );
+    assert!(!bundle.exists());
+    undo_evidence_swap(&fixture, &elsewhere);
+    let (code, exported) = run_installer(
+        &fixture,
+        None,
+        &[
+            "--json",
+            "diagnostics",
+            fixture.managed.to_str().unwrap(),
+            "--output",
+            bundle.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(code, Some(0), "{exported:#}");
+}
+
+/// Artifact and tool evidence is read and written only inside the installation as well: an
+/// evidence folder that is a junction to a copy elsewhere stops the resume instead of being
+/// followed.
+#[cfg(windows)]
+#[test]
+fn artifact_evidence_is_never_followed_through_a_junction() {
+    let fixture = executable_fixture();
+    let stopped = executable_command(&fixture)
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            "materialize:materialize:eefixpack:bg1",
+        )
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .unwrap();
+    assert_eq!(stopped.status.code(), Some(1), "{}", stdout(&stopped));
+    let evidence = fixture.managed.join(".chriz/evidence");
+    assert!(evidence.join("artifacts/eefixpack.json").is_file());
+    let elsewhere = fixture._temp.path().join("elsewhere-evidence");
+    fs::rename(&evidence, &elsewhere).unwrap();
+    let linked = Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(&evidence)
+        .arg(&elsewhere)
+        .output()
+        .unwrap();
+    assert!(linked.status.success(), "{}", stderr(&linked));
+    let before = files(&elsewhere.join("artifacts")).len();
+
+    let (code, resumed) = resume_answering(&fixture, None, &[]);
+
+    assert_eq!(code, Some(1), "{resumed:#}");
+    assert!(
+        resumed
+            .to_string()
+            .contains("is not a direct folder of this installation"),
+        "{resumed:#}"
+    );
+    assert_eq!(files(&elsewhere.join("artifacts")).len(), before);
+    assert!(!fixture.managed.join("game/EE_Fixpack").exists());
+}
+
+/// Artifact evidence is written complete or not at all: an installation interrupted while it
+/// writes the record of an accepted download leaves only a temporary file, and the resume
+/// records it and completes instead of stopping on a half-written record forever.
+#[cfg(windows)]
+#[test]
+fn an_interrupted_artifact_record_leaves_the_installation_resumable() {
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.payload);
+    let link = ArtifactServer::start(BTreeMap::from([(
+        "/eefixpack.zip".to_owned(),
+        zip_bytes(&[(
+            "EE_Fixpack/EE_Fixpack.tp2",
+            b"BEGIN ~A newer release~\nDESIGNATED 0\n",
+        )]),
+    )]));
+    let interrupted = executable_command(&fixture)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD", "artifacts")
+        .args(answering(
+            install_args(
+                &fixture.recipe,
+                &fixture.bg1,
+                &fixture.bg2,
+                &fixture.managed,
+                &fixture.cache,
+            ),
+            &[INSTALL_CHANGED],
+        ))
+        .output()
+        .unwrap();
+    assert_eq!(
+        interrupted.status.code(),
+        Some(1),
+        "{}",
+        stdout(&interrupted)
+    );
+    let artifacts = fixture.managed.join(".chriz/evidence/artifacts");
+    let left_behind = files(&artifacts);
+    assert_eq!(left_behind.len(), 1, "{left_behind:?}");
+    assert_ne!(
+        left_behind[0]
+            .extension()
+            .and_then(|extension| extension.to_str()),
+        Some("json"),
+        "{left_behind:?}"
+    );
+
+    let (code, finished) = resume_answering(&fixture, Some(&link), &[INSTALL_CHANGED]);
+
+    assert_eq!(code, Some(0), "{finished:#}");
+    assert!(artifacts.join("eefixpack.json").is_file());
+    assert_eq!(
+        read_install_receipt(&fixture).outcome,
+        ReceiptOutcome::Succeeded
+    );
+}
+
+/// An accepted tool's record survived a crash, the download folder was lost, the next resume
+/// could not reach its link, and a later one fetched it again without asking. The answer that
+/// supplied the installed tool took effect, and the end summary says so.
+#[cfg(windows)]
+#[test]
+fn an_answer_whose_recorded_file_is_installed_after_a_failed_recovery_took_effect() {
+    let reviewed_tool = fs::read(MOCK_CHILD).expect("read the synthetic WeiDU");
+    let mut program = reviewed_tool.clone();
+    program.extend_from_slice(b"\0a newer build from elsewhere");
+    let newer = zip_bytes(&[("weidu.exe", &program)]);
+    let fixture = executable_fixture();
+    remove_cached_download(&fixture, &fixture.tool_archive);
+    let unavailable = Answer::status("503 Service Unavailable");
+    let link = ArtifactServer::start_answering(
+        BTreeMap::from([
+            (
+                "/weidu.zip".to_owned(),
+                vec![Answer::elsewhere("/moved/weidu.zip")],
+            ),
+            (
+                "/moved/weidu.zip".to_owned(),
+                vec![
+                    Answer::file(newer.clone()),
+                    Answer::file(newer.clone()),
+                    unavailable.clone(),
+                    unavailable.clone(),
+                    unavailable.clone(),
+                    unavailable.clone(),
+                    unavailable,
+                    Answer::file(newer.clone()),
+                ],
+            ),
+        ]),
+        |_| {},
+    );
+    let (code, response) = install_answering(&fixture, &link, &[]);
+    waiting_for(code, &response, "acquire:weidu");
+    let install_id = response["install_id"].as_str().unwrap().to_owned();
+    decide(&fixture, &check_decision(&fixture, &install_id), "yes");
+    let crashed = executable_command(&fixture)
+        .env(DOWNLOAD_ORIGIN, &link.base_url)
+        .env("CHRIZ_BG_COLLECTION_TEST_EXIT_AFTER_ACCEPTED", "weidu")
+        .args(["--json", "resume", fixture.managed.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(crashed.status.code(), Some(86), "{}", stdout(&crashed));
+    remove_cached_download(&fixture, &newer);
+
+    let (code, failed) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(1), "{failed:#}");
+    assert_eq!(failed["status"]["step_id"], "acquire:weidu");
+    let (code, finished) = resume_answering(&fixture, Some(&link), &[]);
+    assert_eq!(code, Some(0), "{finished:#}");
+
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.decisions.len(), 1);
+    assert_eq!(
+        receipt.decisions[0].outcome,
+        bg_engine::decision::DecisionOutcome::Applied
+    );
+    assert_eq!(
+        report_json(&fixture)["notes"],
+        serde_json::json!([
+            "You chose to use a newer installer tool WeiDU (WeiDU 24900), which came from localhost.",
+            "If something does not work as expected, please report it so the collection can be fixed."
+        ])
+    );
+}
+
+/// The records of WeiDU attempts are read and written only inside the installation: an
+/// `evidence/runs` folder that is a junction to a copy elsewhere stops the resume instead of
+/// being followed.
+#[cfg(windows)]
+#[test]
+fn run_attempt_records_are_never_followed_through_a_junction() {
+    let fixture = executable_fixture();
+    let stopped = executable_command(&fixture)
+        .env(
+            "CHRIZ_BG_COLLECTION_TEST_FAIL_RECHECK",
+            "invocation-build:install:eefixpack-bg2",
+        )
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .unwrap();
+    assert_eq!(stopped.status.code(), Some(1), "{}", stdout(&stopped));
+    let runs = fixture.managed.join(".chriz/evidence/runs");
+    assert!(runs.join("eefixpack-bg1/attempt-0001.json").is_file());
+    let elsewhere = fixture._temp.path().join("elsewhere-runs");
+    fs::rename(&runs, &elsewhere).unwrap();
+    let linked = Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(&runs)
+        .arg(&elsewhere)
+        .output()
+        .unwrap();
+    assert!(linked.status.success(), "{}", stderr(&linked));
+
+    let (code, resumed) = resume_answering(&fixture, None, &[]);
+
+    assert_eq!(code, Some(1), "{resumed:#}");
+    assert!(
+        resumed
+            .to_string()
+            .contains("is not a direct folder of this installation"),
+        "{resumed:#}"
+    );
+    assert!(!elsewhere.join("eefixpack-bg2").exists());
+    assert!(!fixture.managed.join(".chriz/install-receipt.json").exists());
+}
+
+/// A WeiDU attempt record is written complete or not at all: an installation interrupted while
+/// it writes one leaves only a temporary file, and the resume completes.
+#[cfg(windows)]
+#[test]
+fn an_interrupted_run_attempt_record_leaves_the_installation_resumable() {
+    let fixture = executable_fixture();
+    let interrupted = executable_command(&fixture)
+        .env("CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD", "eefixpack-bg1")
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ))
+        .output()
+        .unwrap();
+    assert_eq!(
+        interrupted.status.code(),
+        Some(1),
+        "{}",
+        stdout(&interrupted)
+    );
+    let records = fixture.managed.join(".chriz/evidence/runs/eefixpack-bg1");
+    let left_behind = files(&records);
+    assert!(
+        !left_behind.is_empty()
+            && left_behind.iter().all(|path| path
+                .extension()
+                .and_then(|extension| extension.to_str())
+                != Some("json")),
+        "{left_behind:?}"
+    );
+    // The leftover has the publisher's reserved name; only exactly that is skipped.
+    let leftover = left_behind[0].file_name().unwrap().to_str().unwrap();
+    assert!(
+        leftover.starts_with(".cebg-record-")
+            && leftover.ends_with(".partial")
+            && leftover.len() == ".cebg-record-".len() + 12 + ".partial".len(),
+        "{leftover}"
+    );
+
+    // Look-alikes and a folder in the reserved format are refused, not skipped.
+    for (name, folder) in [
+        (".tmpA1b2C3", false),
+        (".cebg-record-short.partial", false),
+        (".cebg-record-abcdefghijkl.partial.json", false),
+        (".cebg-record-abcdefghijkl.partial", true),
+    ] {
+        let impostor = records.join(name);
+        if folder {
+            fs::create_dir(&impostor).unwrap();
+        } else {
+            fs::write(&impostor, b"{}").unwrap();
+        }
+        let (code, refused) = resume_answering(&fixture, None, &[]);
+        assert_eq!(code, Some(1), "{name}: {refused:#}");
+        assert!(
+            refused.to_string().contains("unexpected run evidence file"),
+            "{name}: {refused:#}"
+        );
+        if folder {
+            fs::remove_dir(&impostor).unwrap();
+        } else {
+            fs::remove_file(&impostor).unwrap();
+        }
+    }
+
+    let (code, finished) = resume_answering(&fixture, None, &[]);
+
+    assert_eq!(code, Some(0), "{finished:#}");
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.outcome, ReceiptOutcome::Succeeded);
+    assert!(receipt
+        .runs
+        .iter()
+        .find(|run| run.run_id == "eefixpack-bg1")
+        .is_some_and(|run| !run.attempts.is_empty()));
 }

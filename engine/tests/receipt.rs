@@ -152,6 +152,7 @@ fn success_receipt(root: &Path) -> InstallReceipt {
         }),
         left_out: Vec::new(),
         installed_plan: None,
+        decisions: Vec::new(),
     }
 }
 
@@ -398,6 +399,7 @@ fn task13_receipt_seam_publishes_the_real_receipt_and_registry_record() {
         plan: frozen_plan,
         left_out: Vec::new(),
         installed_plan: None,
+        decisions: Vec::new(),
     };
     let mut writer = ManagedReceiptWriter::new(
         store,
@@ -491,6 +493,7 @@ fn real_writer_publishes_failure_attempt_without_claiming_or_registering_success
         plan: frozen_plan,
         left_out: Vec::new(),
         installed_plan: None,
+        decisions: Vec::new(),
     };
     let mut writer = ManagedReceiptWriter::new(
         store,

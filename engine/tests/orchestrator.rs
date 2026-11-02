@@ -2,18 +2,22 @@ use std::collections::{BTreeMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use bg_engine::decision::{
+    Answer, AnswerSource, DecisionOutcome, PendingDecision, Question, QuestionKind, ServedDownload,
+    UnusableKind, UnusableReason,
+};
 use bg_engine::digest::{plan_digest, selection_digest, sha256_bytes};
 use bg_engine::events::{EngineEvent, EventSink, StepOutcome};
 use bg_engine::games::GameRole;
 use bg_engine::lock::{LockError, TargetLock};
 use bg_engine::manifest::{GameRoot, Phase, Postcondition, RunArg};
 use bg_engine::orchestrator::{
-    run_campaign, run_campaign_controlled, AcquisitionOutcome, ArtifactAcquirer, ArtifactKind,
-    ArtifactMaterializer, BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight,
-    CampaignRecorder, CampaignRequest, InstallLogVerifier, InstallReconciliation,
-    InvocationBuilder, LeftOutArtifact, MaterializationOutcome, MaterializationTask, MutationCheck,
-    MutationKind, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptDraftOutcome, ReceiptWriter,
-    StagingService, StepAttempt, StepFailure,
+    run_campaign, run_campaign_controlled, AcquisitionOutcome, AnsweredAcquisition,
+    ArtifactAcquirer, ArtifactKind, ArtifactMaterializer, BuiltInvocation, CampaignClock,
+    CampaignOutcome, CampaignPreflight, CampaignRecorder, CampaignRequest, InstallLogVerifier,
+    InstallReconciliation, InvocationBuilder, LeftOutArtifact, MaterializationOutcome,
+    MaterializationTask, MutationCheck, MutationKind, ProcessResult, ProcessRunner, ReceiptDraft,
+    ReceiptDraftOutcome, ReceiptWriter, StagingService, StepAttempt, StepFailure,
 };
 use bg_engine::recipe_view::NormalizedSelection;
 use bg_engine::resolve::{InstallPlan, PlannedRun};
@@ -214,6 +218,22 @@ struct FakeDeps {
     checkpoint_plans: Vec<InstallPlan>,
     /// The plan final verification received.
     verified_plans: Vec<InstallPlan>,
+    /// Answers this run gives to questions, by kind, as a preset or as the player.
+    answers: BTreeMap<QuestionKind, (Answer, AnswerSource)>,
+    /// How often the campaign asked for an answer.
+    answer_requests: usize,
+    /// Payloads or tools whose link serves a changed file that passed every check.
+    changed: BTreeMap<String, ServedDownload>,
+    /// Tools whose changed file came from a host the recipe did not review.
+    unreviewed: BTreeMap<String, ServedDownload>,
+    /// What applying "install it" finds, in turn; `Accepted` once they are used up.
+    answered_results: VecDeque<AnsweredAcquisition>,
+    /// Every "install it" applied, by artifact id.
+    answered_calls: Vec<String>,
+    /// The link keeps serving the changed file even after "install it" was applied.
+    keep_changed: bool,
+    /// Payloads whose reviewed archive is back in the download folder.
+    reviewed_back: Vec<String>,
 }
 
 impl CampaignRecorder for FakeDeps {
@@ -271,12 +291,73 @@ impl ArtifactAcquirer for FakeDeps {
             self.controls.as_ref().unwrap().pause_after_boundary();
         }
         self.maybe_fail(&operation)?;
+        // Once "install it" was applied, as after a withdrawal, the reviewed file is there,
+        // unless the link keeps serving the changed one.
+        if (self.answered_calls.contains(&identity.id) && !self.keep_changed)
+            || self.reviewed_back.contains(&identity.id)
+        {
+            return Ok(AcquisitionOutcome::Ready);
+        }
+        if let Some(served) = self.changed.get(&identity.id) {
+            return Ok(AcquisitionOutcome::Ask {
+                kind: QuestionKind::ChangedDownload,
+                served: served.clone(),
+            });
+        }
+        if let Some(served) = self.unreviewed.get(&identity.id) {
+            return Ok(AcquisitionOutcome::Ask {
+                kind: QuestionKind::UnreviewedTool,
+                served: served.clone(),
+            });
+        }
         Ok(match self.leave_out.get(&identity.id) {
             Some(reason) => AcquisitionOutcome::LeaveOut {
-                reason: reason.clone(),
+                reason: UnusableReason::new(
+                    UnusableKind::Layout {
+                        message: reason.clone(),
+                    },
+                    reason.clone(),
+                ),
             },
             None => AcquisitionOutcome::Ready,
         })
+    }
+
+    fn artifact_name(&self, artifact_id: &str) -> String {
+        format!("The {artifact_id} mod")
+    }
+
+    fn decision_answer(
+        &mut self,
+        decision: &PendingDecision,
+    ) -> Result<Option<(Answer, AnswerSource)>, StepFailure> {
+        self.trace.push(format!("answer?:{}", decision.decision_id));
+        self.answer_requests += 1;
+        Ok(self.answers.get(&decision.question.kind).copied())
+    }
+
+    fn reviewed_is_available(
+        &mut self,
+        identity: &FrozenIdentity,
+        _kind: ArtifactKind,
+    ) -> Result<bool, StepFailure> {
+        self.trace.push(format!("reviewed?:{}", identity.id));
+        Ok(self.reviewed_back.contains(&identity.id))
+    }
+
+    fn acquire_answered(
+        &mut self,
+        identity: &FrozenIdentity,
+        _kind: ArtifactKind,
+        question: &Question,
+    ) -> Result<AnsweredAcquisition, StepFailure> {
+        assert_eq!(identity, &question.reviewed);
+        self.trace.push(format!("install-anyway:{}", identity.id));
+        self.answered_calls.push(identity.id.clone());
+        Ok(self
+            .answered_results
+            .pop_front()
+            .unwrap_or(AnsweredAcquisition::Accepted))
     }
 
     fn plan_without(
@@ -359,7 +440,13 @@ impl ArtifactMaterializer for FakeDeps {
         self.maybe_fail(&operation)?;
         if let Some(reason) = self.unplaceable.get(&operation) {
             return Ok(MaterializationOutcome::LeaveOut {
-                reason: reason.clone(),
+                reason: UnusableReason::new(
+                    UnusableKind::Collision {
+                        path: "Shared/file.txt".to_owned(),
+                        message: reason.clone(),
+                    },
+                    reason.clone(),
+                ),
             });
         }
         Ok(self
@@ -1566,9 +1653,19 @@ fn eefix_recipe_deps() -> FakeDeps {
     }
 }
 
+/// A preset answer for this run that continues without a mod whose download cannot be used,
+/// as `--answer unusable-download=yes` gives it.
+fn continue_without() -> BTreeMap<QuestionKind, (Answer, AnswerSource)> {
+    BTreeMap::from([(
+        QuestionKind::UnusableDownload,
+        (Answer::Yes, AnswerSource::Preset),
+    )])
+}
+
 fn eefix_unusable_deps() -> FakeDeps {
     FakeDeps {
         leave_out: BTreeMap::from([("eefix".to_owned(), LAYOUT_CHANGED.to_owned())]),
+        answers: continue_without(),
         ..eefix_recipe_deps()
     }
 }
@@ -1777,6 +1874,7 @@ fn a_changed_archive_that_cannot_be_placed_is_left_out_while_none_of_its_files_a
         unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
         pause_after_operation: Some("materialize:eefix:bg1".to_owned()),
         controls: Some(controls.clone()),
+        answers: continue_without(),
         ..eefix_recipe_deps()
     };
 
@@ -1954,10 +2052,15 @@ fn a_tool_whose_download_cannot_be_used_is_never_left_out() {
     };
     assert_eq!(step_id, "acquire:weidu");
     assert!(
-        reason.contains("cannot continue without this tool"),
+        reason.starts_with(
+            "The weidu mod can't be installed (the newer download is packed in a way the installer can't read), and the collection can't be installed without it. Try again later; if it keeps happening, please report it.\n"
+        ),
         "{reason}"
     );
+    assert!(reason.ends_with("its program does not run"), "{reason}");
     assert!(deps.plan_without_calls.is_empty());
+    // A tool is never a question.
+    assert_eq!(deps.answer_requests, 0);
 }
 
 #[test]
@@ -1989,4 +2092,998 @@ fn a_manual_pause_after_a_left_out_run_keeps_its_place_and_sees_the_remaining_pl
     assert!(position("materialize:tweaks:bg2") < position("checkpoint:manual-1"));
     assert!(position("checkpoint:manual-1") < position("install:eet-core"));
     assert_eq!(deps.checkpoint_plans, vec![fixture.plan_without_eefix()]);
+}
+
+// ----- Questions about downloads -----
+
+fn ledger_events(root: &Path) -> Vec<SessionEvent> {
+    SessionStore::open(root)
+        .unwrap()
+        .replay()
+        .unwrap()
+        .records
+        .into_iter()
+        .map(|record| record.event)
+        .collect()
+}
+
+/// Every question in the ledger: its step, id and question.
+fn asked(root: &Path) -> Vec<(String, String, Question)> {
+    ledger_events(root)
+        .into_iter()
+        .filter_map(|event| match event {
+            SessionEvent::DecisionRequired {
+                step_id,
+                decision_id,
+                question,
+                ..
+            } => Some((step_id, decision_id, *question)),
+            _ => None,
+        })
+        .collect()
+}
+
+fn count_events(root: &Path, kind: &str) -> usize {
+    ledger_events(root)
+        .iter()
+        .filter(|event| {
+            let name = match event {
+                SessionEvent::DecisionRequired { .. } => "required",
+                SessionEvent::DecisionAnswered { .. } => "answered",
+                SessionEvent::DecisionWithdrawn { .. } => "withdrawn",
+                SessionEvent::ArtifactLeftOut { .. } => "left-out",
+                _ => "",
+            };
+            name == kind
+        })
+        .count()
+}
+
+fn served(byte: &str) -> ServedDownload {
+    ServedDownload {
+        filename: Some("newer.zip".to_owned()),
+        length: 99,
+        sha256: byte.repeat(32),
+        link: "https://example.invalid/newer.zip".to_owned(),
+        final_url: "https://cdn.example.invalid/newer.zip".to_owned(),
+        hosts: vec![
+            "example.invalid".to_owned(),
+            "cdn.example.invalid".to_owned(),
+        ],
+        unreviewed_hosts: vec!["cdn.example.invalid".to_owned()],
+    }
+}
+
+fn answer(kind: QuestionKind, answer: Answer) -> BTreeMap<QuestionKind, (Answer, AnswerSource)> {
+    BTreeMap::from([(kind, (answer, AnswerSource::Player))])
+}
+
+fn waiting_for(outcome: &CampaignOutcome) -> (String, String) {
+    match outcome {
+        CampaignOutcome::DecisionRequired {
+            step_id,
+            decision_id,
+        } => (step_id.clone(), decision_id.clone()),
+        other => panic!("expected a question, got {other:?}"),
+    }
+}
+
+/// An unusable download stops the campaign with a question: the closure of everything that
+/// needs the mod is computed and recorded, nothing is left out, no receipt is written, and the
+/// step stays unresolved. A resume without an answer stops again with the same question and
+/// asks the link nothing.
+#[test]
+fn an_unusable_download_asks_and_a_resume_without_an_answer_asks_nothing_again() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        leave_out: BTreeMap::from([("eefix".to_owned(), LAYOUT_CHANGED.to_owned())]),
+        ..eefix_recipe_deps()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let (step_id, decision_id) = waiting_for(&outcome);
+    assert_eq!(step_id, "acquire:eefix");
+    let questions = asked(root);
+    assert_eq!(questions.len(), 1);
+    let question = &questions[0].2;
+    assert_eq!(questions[0].1, decision_id);
+    assert_eq!(question.kind, QuestionKind::UnusableDownload);
+    assert_eq!(question.reason.as_ref().unwrap().detail, LAYOUT_CHANGED);
+    let closure = question.leave_out.as_ref().unwrap();
+    let remaining = fixture.plan_without_eefix();
+    assert_eq!(
+        closure.removed_runs,
+        ["eefix-bg1", "eefix-bg2", "needs-eefix"]
+    );
+    assert_eq!(closure.changed_runs, vec![remaining.runs[1].clone()]);
+    assert_eq!(closure.plan_sha256, plan_digest(&remaining).unwrap());
+    assert_eq!(count_events(root, "left-out"), 0);
+    assert!(deps.receipts.is_empty());
+    assert_eq!(
+        SessionStore::open(root)
+            .unwrap()
+            .replay()
+            .unwrap()
+            .unresolved_step(),
+        Some("acquire:eefix")
+    );
+    assert!(sink.events().contains(&EngineEvent::DecisionRequired {
+        install_id: "install-alpha".to_owned(),
+        step_id: "acquire:eefix".to_owned(),
+        decision_id: decision_id.clone(),
+    }));
+
+    let mut resumed = eefix_recipe_deps();
+    let again = run_campaign(&fixture.request, &mut resumed, &sink).unwrap();
+    assert_eq!(waiting_for(&again), (step_id, decision_id));
+    assert_eq!(resumed.acquisitions.get("eefix"), None);
+    assert!(resumed.plan_without_calls.is_empty());
+    assert_eq!(resumed.answer_requests, 1);
+    assert_eq!(count_events(root, "required"), 1);
+}
+
+/// "Continue without them" leaves the mod out with exactly the closure recorded with the
+/// question, even when the recipe would now derive another one, and is applied once.
+#[test]
+fn continuing_without_a_mod_applies_the_recorded_closure_once() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        leave_out: BTreeMap::from([("eefix".to_owned(), LAYOUT_CHANGED.to_owned())]),
+        ..eefix_recipe_deps()
+    };
+    let (_, decision_id) = waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+
+    // This derivation would keep everything; the recorded closure still applies.
+    let mut resumed = FakeDeps {
+        answers: answer(QuestionKind::UnusableDownload, Answer::Yes),
+        ..FakeDeps::default()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert!(resumed.plan_without_calls.is_empty());
+    assert_eq!(resumed.acquisitions.get("eefix"), None);
+    let remaining = fixture.plan_without_eefix();
+    assert_eq!(
+        left_out_records(root),
+        vec![(
+            "acquire:eefix".to_owned(),
+            "eefix".to_owned(),
+            LAYOUT_CHANGED.to_owned(),
+            plan_digest(&remaining).unwrap(),
+        )]
+    );
+    assert_eq!(resumed.verified_plans, vec![remaining.clone()]);
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(receipt.decisions.len(), 1);
+    assert_eq!(receipt.decisions[0].decision_id, decision_id);
+    assert_eq!(receipt.decisions[0].answer.answer, Answer::Yes);
+    assert_eq!(receipt.decisions[0].answer.source, AnswerSource::Player);
+    assert_eq!(receipt.decisions[0].outcome, DecisionOutcome::Applied);
+
+    // Applied once: resuming the complete campaign changes nothing.
+    let mut again = FakeDeps {
+        answers: answer(QuestionKind::UnusableDownload, Answer::Yes),
+        ..FakeDeps::default()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut again, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(count_events(root, "answered"), 1);
+    assert_eq!(count_events(root, "left-out"), 1);
+    assert_eq!(again.answer_requests, 0);
+}
+
+/// "Stop the installation" fails the attempt and nothing is left out. The next resume begins a
+/// new attempt that asks the link again, and a question that comes back has a new id.
+#[test]
+fn stopping_ends_the_attempt_and_the_next_attempt_asks_again_with_a_new_id() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        answers: answer(QuestionKind::UnusableDownload, Answer::No),
+        ..eefix_unusable_deps()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let CampaignOutcome::Failed { step_id, reason } = outcome else {
+        panic!("expected a stop, got {outcome:?}");
+    };
+    assert_eq!(step_id, "acquire:eefix");
+    assert_eq!(
+        reason,
+        "You chose to stop: The eefix mod can't be installed (the newer download is packed in a way the installer can't read)."
+    );
+    assert_eq!(count_events(root, "left-out"), 0);
+    let receipt = deps.receipts.last().unwrap();
+    assert_eq!(receipt.decisions.len(), 1);
+    assert_eq!(receipt.decisions[0].answer.answer, Answer::No);
+    let first_id = receipt.decisions[0].decision_id.clone();
+
+    let mut resumed = FakeDeps {
+        leave_out: BTreeMap::from([("eefix".to_owned(), LAYOUT_CHANGED.to_owned())]),
+        ..eefix_recipe_deps()
+    };
+    let (_, second_id) = waiting_for(&run_campaign(&fixture.request, &mut resumed, &sink).unwrap());
+    assert_eq!(resumed.acquisitions.get("eefix"), Some(&1));
+    assert_ne!(first_id, second_id);
+    assert_eq!(count_events(root, "required"), 2);
+}
+
+/// The link of a mod serves a newer file that passed every check. Nothing records it until the
+/// player says "Install it"; leaving the mod out is offered too, since the recipe can do without
+/// it. The answer installs exactly that file.
+#[test]
+fn a_changed_download_is_installed_only_once_the_player_says_so() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        ..eefix_recipe_deps()
+    };
+
+    let (step_id, decision_id) =
+        waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+    assert_eq!(step_id, "acquire:eefix");
+    let question = asked(root).remove(0).2;
+    assert_eq!(question.kind, QuestionKind::ChangedDownload);
+    assert_eq!(question.served, Some(served("ab")));
+    assert!(question.offers(Answer::LeaveOut));
+    assert!(deps.answered_calls.is_empty());
+
+    let mut resumed = FakeDeps {
+        answers: answer(QuestionKind::ChangedDownload, Answer::Yes),
+        ..eefix_recipe_deps()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.answered_calls, ["eefix"]);
+    assert_eq!(resumed.acquisitions.get("eefix"), None);
+    assert!(completed_step_ids(root).contains(&"acquire:eefix".to_owned()));
+    assert_eq!(count_events(root, "left-out"), 0);
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.decisions.len(), 1);
+    assert_eq!(receipt.decisions[0].decision_id, decision_id);
+    assert_eq!(receipt.installed_plan, None);
+}
+
+/// "Leave it out and continue" for an optional mod with a changed download leaves it and
+/// everything that needs it out, exactly as for an unusable download.
+#[test]
+fn leaving_out_an_optional_changed_mod_takes_what_needs_it_along() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        answers: answer(QuestionKind::ChangedDownload, Answer::LeaveOut),
+        ..eefix_recipe_deps()
+    };
+
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(deps.plan_without_calls, vec![vec!["eefix".to_owned()]]);
+    assert!(deps.answered_calls.is_empty());
+    let remaining = fixture.plan_without_eefix();
+    let records = left_out_records(root);
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].0, "acquire:eefix");
+    assert_eq!(
+        records[0].2,
+        format!(
+            "its official link now serves a different file (newer.zip, 99 bytes, SHA-256 {}), and you chose to leave it out",
+            "ab".repeat(32)
+        )
+    );
+    assert_eq!(records[0].3, plan_digest(&remaining).unwrap());
+    let receipt = deps.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan.as_ref(), Some(&remaining));
+    assert_eq!(
+        receipt.left_out[0].runs,
+        ["eefix-bg1", "eefix-bg2", "needs-eefix"]
+    );
+    assert_eq!(receipt.decisions[0].answer.answer, Answer::LeaveOut);
+}
+
+/// A changed download of a part the recipe cannot do without is only offered "Install it" and
+/// "Stop": a preset "leave it out" does not answer it, so the installation waits.
+#[test]
+fn a_changed_part_the_recipe_cannot_do_without_is_never_offered_for_leaving_out() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        essential: vec!["eefix".to_owned()],
+        answers: BTreeMap::from([(
+            QuestionKind::ChangedDownload,
+            (Answer::LeaveOut, AnswerSource::Preset),
+        )]),
+        ..eefix_recipe_deps()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    waiting_for(&outcome);
+    let question = asked(root).remove(0).2;
+    assert_eq!(question.leave_out, None);
+    assert!(!question.offers(Answer::LeaveOut));
+    assert_eq!(count_events(root, "answered"), 0);
+    assert_eq!(count_events(root, "left-out"), 0);
+}
+
+/// A changed tool from a host the recipe did not review is asked about, never offered for
+/// leaving out, and "Install it" gets exactly that file.
+#[test]
+fn an_unreviewed_tool_is_asked_about_and_never_offered_for_leaving_out() {
+    let fixture = Fixture::new();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        unreviewed: BTreeMap::from([("weidu".to_owned(), served("cd"))]),
+        ..FakeDeps::default()
+    };
+
+    let (step_id, _) = waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+    assert_eq!(step_id, "acquire:weidu");
+    let question = asked(root).remove(0).2;
+    assert_eq!(question.kind, QuestionKind::UnreviewedTool);
+    assert_eq!(question.artifact_kind, ArtifactKind::Tool);
+    assert_eq!(question.leave_out, None);
+    assert!(deps.plan_without_calls.is_empty());
+
+    let mut resumed = FakeDeps {
+        answers: answer(QuestionKind::UnreviewedTool, Answer::Yes),
+        ..FakeDeps::default()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.answered_calls, ["weidu"]);
+}
+
+/// "Install it" finds the reviewed file back in the download folder: the question is withdrawn,
+/// never applied, and the step acquires as without it.
+#[test]
+fn a_question_whose_reviewed_file_is_back_is_withdrawn_and_never_applied() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        answers: answer(QuestionKind::ChangedDownload, Answer::Yes),
+        answered_results: VecDeque::from([AnsweredAcquisition::Withdrawn {
+            why: "the reviewed version is in the download folder now".to_owned(),
+        }]),
+        ..eefix_recipe_deps()
+    };
+
+    assert_eq!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(count_events(root, "withdrawn"), 1);
+    assert_eq!(count_events(root, "left-out"), 0);
+    // Acquired once for the question and once more after the withdrawal.
+    assert_eq!(deps.acquisitions.get("eefix"), Some(&2));
+    let receipt = deps.receipts.last().unwrap();
+    assert_eq!(receipt.decisions[0].outcome, DecisionOutcome::Withdrawn);
+}
+
+/// A link that keeps switching back to the same changed file after its question was withdrawn
+/// ends the attempt instead of asking in a loop.
+#[test]
+fn the_same_question_after_its_withdrawal_ends_the_attempt() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        answers: answer(QuestionKind::ChangedDownload, Answer::Yes),
+        answered_results: VecDeque::from([AnsweredAcquisition::Withdrawn {
+            why: "its link serves the reviewed version again".to_owned(),
+        }]),
+        keep_changed: true,
+        ..eefix_recipe_deps()
+    };
+
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+
+    let CampaignOutcome::Failed { step_id, reason } = outcome else {
+        panic!("expected a failed attempt, got {outcome:?}");
+    };
+    assert_eq!(step_id, "acquire:eefix");
+    assert!(reason.contains("Its link keeps changing"), "{reason}");
+}
+
+/// The file the player accepted is gone and the link serves yet another one: the attempt ends,
+/// and the next one asks anew with a new id.
+#[test]
+fn an_accepted_file_whose_link_changed_again_ends_the_attempt_and_is_asked_anew() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        answers: answer(QuestionKind::ChangedDownload, Answer::Yes),
+        answered_results: VecDeque::from([AnsweredAcquisition::LinkChanged {
+            detail: "its link changed again".to_owned(),
+        }]),
+        ..eefix_recipe_deps()
+    };
+    let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+    assert!(matches!(
+        outcome,
+        CampaignOutcome::Failed { ref step_id, ref reason }
+            if step_id == "acquire:eefix" && reason == "its link changed again"
+    ));
+
+    let mut resumed = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ef"))]),
+        ..eefix_recipe_deps()
+    };
+    waiting_for(&run_campaign(&fixture.request, &mut resumed, &sink).unwrap());
+    let questions = asked(root);
+    assert_eq!(questions.len(), 2);
+    assert_ne!(questions[0].1, questions[1].1);
+    assert_eq!(questions[1].2.served, Some(served("ef")));
+}
+
+/// A placing step asks before it leaves a mod out whose files meet another mod's. On resume it
+/// plans again: once the files can be placed after all, the question is withdrawn and the mod
+/// is installed.
+#[test]
+fn a_placing_question_is_withdrawn_when_the_files_can_be_placed_after_all() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
+        ..eefix_recipe_deps()
+    };
+    let (step_id, _) = waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+    assert_eq!(step_id, "materialize:eefix:bg1");
+    let question = asked(root).remove(0).2;
+    assert_eq!(question.kind, QuestionKind::UnusableDownload);
+    assert!(matches!(
+        question.reason.as_ref().unwrap().kind,
+        UnusableKind::Collision { .. }
+    ));
+
+    let mut resumed = FakeDeps {
+        answers: answer(QuestionKind::UnusableDownload, Answer::Yes),
+        ..eefix_recipe_deps()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(count_events(root, "withdrawn"), 1);
+    assert_eq!(count_events(root, "left-out"), 0);
+    assert!(completed_step_ids(root).contains(&"materialize:eefix:bg1".to_owned()));
+    assert!(resumed
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("build:eefix-bg1")));
+}
+
+/// The files of a placing step meet another obstacle on resume than the one asked about: the
+/// old question is withdrawn and the new one asked, with a new id.
+#[test]
+fn a_placing_question_whose_obstacle_changed_is_asked_anew() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        unplaceable: BTreeMap::from([("materialize:eefix:bg1".to_owned(), UNPLACEABLE.to_owned())]),
+        ..eefix_recipe_deps()
+    };
+    waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+
+    let mut resumed = FakeDeps {
+        unplaceable: BTreeMap::from([(
+            "materialize:eefix:bg1".to_owned(),
+            "another file is in the way now".to_owned(),
+        )]),
+        answers: BTreeMap::from([(
+            QuestionKind::UnusableDownload,
+            (Answer::Yes, AnswerSource::Player),
+        )]),
+        ..eefix_recipe_deps()
+    };
+    // The player's answer was for the first obstacle; the new question gets this run's answer.
+    let outcome = run_campaign(&fixture.request, &mut resumed, &sink).unwrap();
+    assert!(
+        matches!(
+            outcome,
+            CampaignOutcome::Paused { .. } | CampaignOutcome::Complete
+        ),
+        "{outcome:?}"
+    );
+    let questions = asked(root);
+    assert_eq!(questions.len(), 2);
+    assert_ne!(questions[0].1, questions[1].1);
+    assert_eq!(
+        questions[1].2.reason.as_ref().unwrap().detail,
+        "another file is in the way now"
+    );
+    assert_eq!(count_events(root, "withdrawn"), 1);
+    let left_out = left_out_records(root);
+    assert_eq!(left_out.len(), 1);
+    assert_eq!(left_out[0].2, "another file is in the way now");
+}
+
+/// Parts the recipe cannot do without and tools never ask: they stop as before.
+#[test]
+fn fixed_parts_and_tools_never_ask() {
+    for (fixture, mut deps, step) in [
+        (
+            Fixture::with_dependents(),
+            FakeDeps {
+                essential: vec!["eefix".to_owned()],
+                ..eefix_unusable_deps()
+            },
+            "acquire:eefix",
+        ),
+        (
+            Fixture::new(),
+            FakeDeps {
+                leave_out: BTreeMap::from([(
+                    "weidu".to_owned(),
+                    "its program does not run".to_owned(),
+                )]),
+                answers: continue_without(),
+                ..FakeDeps::default()
+            },
+            "acquire:weidu",
+        ),
+    ] {
+        let sink = RecordingSink::default();
+        let outcome = run_campaign(&fixture.request, &mut deps, &sink).unwrap();
+        let CampaignOutcome::Failed { step_id, reason } = outcome else {
+            panic!("expected a stop, got {outcome:?}");
+        };
+        assert_eq!(step_id, step);
+        assert!(
+            reason.contains("and the collection can't be installed without it. Try again later; if it keeps happening, please report it."),
+            "{reason}"
+        );
+        assert_eq!(deps.answer_requests, 0);
+        assert!(asked(&fixture.request.created.managed_root).is_empty());
+    }
+}
+
+/// The ledger keeps question events in its hash chain and refuses those that break the rules:
+/// one standing question per step, answered once, withdrawn only while it stands, never ended
+/// while unanswered, and with an id derived from its question.
+#[test]
+fn the_ledger_keeps_questions_in_order_and_refuses_broken_ones() {
+    let fixture = Fixture::new();
+    let root = fixture.request.created.managed_root.clone();
+    std::fs::create_dir_all(&root).unwrap();
+    let store = SessionStore::create(
+        &root,
+        SessionEvent::Created(Box::new(fixture.request.created.clone())),
+    )
+    .unwrap();
+    store
+        .append(SessionEvent::StepStarted {
+            step_id: "acquire:eefix".to_owned(),
+            attempt: 1,
+        })
+        .unwrap();
+    let question = Question {
+        kind: QuestionKind::ChangedDownload,
+        artifact_id: "eefix".to_owned(),
+        artifact_kind: ArtifactKind::Payload,
+        reviewed: frozen("eefix", "33", 10),
+        served: Some(served("ab")),
+        reason: None,
+        leave_out: None,
+    };
+    let decision_id = question.decision_id("acquire:eefix", 1);
+    let required = |id: &str| SessionEvent::DecisionRequired {
+        step_id: "acquire:eefix".to_owned(),
+        attempt: 1,
+        decision_id: id.to_owned(),
+        question: Box::new(question.clone()),
+    };
+    let answered = |answer: Answer| SessionEvent::DecisionAnswered {
+        step_id: "acquire:eefix".to_owned(),
+        attempt: 1,
+        decision_id: decision_id.clone(),
+        answer,
+        source: AnswerSource::Player,
+    };
+    let completed = SessionEvent::StepCompleted {
+        step_id: "acquire:eefix".to_owned(),
+        attempt: 1,
+    };
+
+    assert!(store.append(answered(Answer::Yes)).is_err());
+    assert!(store.append(required("0123456789abcdef")).is_err());
+    assert!(store
+        .append(SessionEvent::DecisionRequired {
+            step_id: "acquire:eet".to_owned(),
+            attempt: 1,
+            decision_id: question.decision_id("acquire:eet", 1),
+            question: Box::new(question.clone()),
+        })
+        .is_err());
+    store.append(required(&decision_id)).unwrap();
+    assert!(store.append(required(&decision_id)).is_err());
+    assert!(store.append(completed.clone()).is_err());
+
+    let replay = store.replay().unwrap();
+    assert_eq!(replay.unresolved_step(), Some("acquire:eefix"));
+    let pending = replay.pending_decision().unwrap();
+    assert_eq!(pending.decision_id, decision_id);
+    assert_eq!(pending.answer, None);
+    // Every record survives a round trip through its JSON exactly.
+    for record in &replay.records {
+        let bytes = serde_json::to_vec(record).unwrap();
+        assert_eq!(
+            &serde_json::from_slice::<bg_engine::session::LedgerRecord>(&bytes).unwrap(),
+            record
+        );
+    }
+
+    store.append(answered(Answer::Yes)).unwrap();
+    assert!(store.append(answered(Answer::No)).is_err());
+    let pending = store.replay().unwrap().pending_decision().unwrap();
+    assert_eq!(
+        pending.answer.map(|recorded| recorded.answer),
+        Some(Answer::Yes)
+    );
+    store
+        .append(SessionEvent::DecisionWithdrawn {
+            step_id: "acquire:eefix".to_owned(),
+            attempt: 1,
+            decision_id: decision_id.clone(),
+            why: "the reviewed file is back".to_owned(),
+        })
+        .unwrap();
+    assert_eq!(store.replay().unwrap().pending_decision(), None);
+    assert!(store
+        .append(SessionEvent::DecisionWithdrawn {
+            step_id: "acquire:eefix".to_owned(),
+            attempt: 1,
+            decision_id: decision_id.clone(),
+            why: "again".to_owned(),
+        })
+        .is_err());
+    store.append(completed).unwrap();
+    assert_eq!(store.replay().unwrap().unresolved_step(), None);
+}
+
+/// After "Stop", a link that works again on the next attempt is no question any more.
+#[test]
+fn a_link_that_works_again_on_the_next_attempt_asks_nothing() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        answers: answer(QuestionKind::UnusableDownload, Answer::No),
+        ..eefix_unusable_deps()
+    };
+    assert!(matches!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { .. }
+    ));
+
+    let mut resumed = eefix_recipe_deps();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.acquisitions.get("eefix"), Some(&1));
+    assert_eq!(resumed.answer_requests, 0);
+    assert_eq!(count_events(root, "required"), 1);
+    assert_eq!(count_events(root, "left-out"), 0);
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan, None);
+    assert_eq!(receipt.decisions.len(), 1);
+    assert_eq!(receipt.decisions[0].answer.answer, Answer::No);
+}
+
+/// The installation stopped right after it recorded an answer, before applying it: the resume
+/// applies the recorded answer without asking for one again.
+#[test]
+fn a_recorded_answer_is_applied_after_a_stop_before_its_application() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        ..eefix_recipe_deps()
+    };
+    let (step_id, decision_id) =
+        waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+    SessionStore::open(root)
+        .unwrap()
+        .append(SessionEvent::DecisionAnswered {
+            step_id,
+            attempt: 1,
+            decision_id,
+            answer: Answer::Yes,
+            source: AnswerSource::Player,
+        })
+        .unwrap();
+
+    let mut resumed = eefix_recipe_deps();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.answer_requests, 0);
+    assert_eq!(resumed.answered_calls, ["eefix"]);
+    assert_eq!(count_events(root, "answered"), 1);
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.decisions[0].outcome, DecisionOutcome::Applied);
+}
+
+/// The installation stopped right after it withdrew a question, before it went on: the resume
+/// acquires as without the question and asks nothing.
+#[test]
+fn a_withdrawn_question_stays_withdrawn_after_a_stop_before_the_step_went_on() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        ..eefix_recipe_deps()
+    };
+    let (step_id, decision_id) =
+        waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+    let store = SessionStore::open(root).unwrap();
+    store
+        .append(SessionEvent::DecisionAnswered {
+            step_id: step_id.clone(),
+            attempt: 1,
+            decision_id: decision_id.clone(),
+            answer: Answer::Yes,
+            source: AnswerSource::Player,
+        })
+        .unwrap();
+    store
+        .append(SessionEvent::DecisionWithdrawn {
+            step_id,
+            attempt: 1,
+            decision_id,
+            why: "the reviewed version is in the download folder now".to_owned(),
+        })
+        .unwrap();
+
+    let mut resumed = eefix_recipe_deps();
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(resumed.answer_requests, 0);
+    assert!(resumed.answered_calls.is_empty());
+    assert_eq!(resumed.acquisitions.get("eefix"), Some(&1));
+    assert_eq!(count_events(root, "required"), 1);
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.decisions[0].outcome, DecisionOutcome::Withdrawn);
+}
+
+/// "Leave it out" finds the reviewed archive back in the download folder: the question is
+/// withdrawn and the mod installed, without asking its link while the question waited.
+#[test]
+fn leaving_out_a_mod_whose_reviewed_file_is_back_installs_it() {
+    let fixture = Fixture::with_dependents();
+    let root = &fixture.request.created.managed_root;
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        ..eefix_recipe_deps()
+    };
+    waiting_for(&run_campaign(&fixture.request, &mut deps, &sink).unwrap());
+
+    // Waiting asks neither the link nor the download folder.
+    let mut waiting = eefix_recipe_deps();
+    waiting_for(&run_campaign(&fixture.request, &mut waiting, &sink).unwrap());
+    assert!(!waiting
+        .trace
+        .iter()
+        .any(|entry| entry.starts_with("acquire:") || entry.starts_with("reviewed?:")));
+
+    let mut resumed = FakeDeps {
+        reviewed_back: vec!["eefix".to_owned()],
+        answers: answer(QuestionKind::ChangedDownload, Answer::LeaveOut),
+        ..eefix_recipe_deps()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    assert_eq!(count_events(root, "withdrawn"), 1);
+    assert_eq!(count_events(root, "left-out"), 0);
+    assert_eq!(resumed.acquisitions.get("eefix"), Some(&1));
+    let receipt = resumed.receipts.last().unwrap();
+    assert_eq!(receipt.installed_plan, None);
+    assert_eq!(receipt.decisions[0].outcome, DecisionOutcome::Withdrawn);
+}
+
+/// An answer whose application failed stays in the history but is not what took effect: the
+/// answer of the next attempt is.
+#[test]
+fn only_the_answer_that_took_effect_is_applied_in_the_history() {
+    let fixture = Fixture::with_dependents();
+    let sink = RecordingSink::default();
+    let mut deps = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ab"))]),
+        answers: answer(QuestionKind::ChangedDownload, Answer::Yes),
+        answered_results: VecDeque::from([AnsweredAcquisition::LinkChanged {
+            detail: "its link changed again".to_owned(),
+        }]),
+        ..eefix_recipe_deps()
+    };
+    assert!(matches!(
+        run_campaign(&fixture.request, &mut deps, &sink).unwrap(),
+        CampaignOutcome::Failed { .. }
+    ));
+    let mut resumed = FakeDeps {
+        changed: BTreeMap::from([("eefix".to_owned(), served("ef"))]),
+        answers: answer(QuestionKind::ChangedDownload, Answer::Yes),
+        ..eefix_recipe_deps()
+    };
+    assert_eq!(
+        run_campaign(&fixture.request, &mut resumed, &sink).unwrap(),
+        CampaignOutcome::Complete
+    );
+    let receipt = resumed.receipts.last().unwrap();
+    let outcomes = receipt
+        .decisions
+        .iter()
+        .map(|decision| {
+            (
+                decision.question.served.clone().unwrap().sha256,
+                decision.outcome,
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outcomes,
+        [
+            ("ab".repeat(32), DecisionOutcome::Failed),
+            ("ef".repeat(32), DecisionOutcome::Applied),
+        ]
+    );
+}
+
+/// The ledger refuses histories whose answers contradict what follows: an answer the question
+/// does not offer, a completed step after "No", a leave-out after "Install it", and a leave-out
+/// that removes something else than the closure recorded with the question.
+#[test]
+fn the_ledger_refuses_answers_that_contradict_their_outcome() {
+    let closure = bg_engine::decision::LeaveOutClosure {
+        removed_runs: vec!["eefix-bg1".to_owned(), "eefix-bg2".to_owned()],
+        changed_runs: Vec::new(),
+        plan_sha256: "77".repeat(32),
+    };
+    let changed = Question {
+        kind: QuestionKind::ChangedDownload,
+        artifact_id: "eefix".to_owned(),
+        artifact_kind: ArtifactKind::Payload,
+        reviewed: frozen("eefix", "33", 10),
+        served: Some(served("ab")),
+        reason: None,
+        leave_out: Some(closure.clone()),
+    };
+    let tool = Question {
+        kind: QuestionKind::UnreviewedTool,
+        artifact_id: "weidu".to_owned(),
+        artifact_kind: ArtifactKind::Tool,
+        reviewed: frozen("weidu", "66", 40),
+        served: Some(served("cd")),
+        reason: None,
+        leave_out: None,
+    };
+    let left_out = |removed: Vec<String>| SessionEvent::ArtifactLeftOut {
+        step_id: "acquire:eefix".to_owned(),
+        attempt: 1,
+        artifact_id: "eefix".to_owned(),
+        detail: "left out".to_owned(),
+        plan_sha256: "77".repeat(32),
+        removed_runs: removed,
+        changed_runs: Vec::new(),
+    };
+    let completed = |step: &str| SessionEvent::StepCompleted {
+        step_id: step.to_owned(),
+        attempt: 1,
+    };
+    // (question, answer, the end that must be refused, an end that fits)
+    let cases = [
+        (
+            tool.clone(),
+            Answer::LeaveOut,
+            None,
+            SessionEvent::StepFailed {
+                step_id: "acquire:weidu".to_owned(),
+                attempt: 1,
+                detail: "stopped".to_owned(),
+            },
+        ),
+        (
+            changed.clone(),
+            Answer::No,
+            Some(completed("acquire:eefix")),
+            SessionEvent::StepFailed {
+                step_id: "acquire:eefix".to_owned(),
+                attempt: 1,
+                detail: "You chose to stop".to_owned(),
+            },
+        ),
+        (
+            changed.clone(),
+            Answer::Yes,
+            Some(left_out(closure.removed_runs.clone())),
+            completed("acquire:eefix"),
+        ),
+        (
+            changed.clone(),
+            Answer::LeaveOut,
+            Some(left_out(vec!["eefix-bg1".to_owned()])),
+            left_out(closure.removed_runs.clone()),
+        ),
+    ];
+    for (question, given, refused, fits) in cases {
+        let fixture = Fixture::new();
+        let root = fixture.request.created.managed_root.clone();
+        std::fs::create_dir_all(&root).unwrap();
+        let store = SessionStore::create(
+            &root,
+            SessionEvent::Created(Box::new(fixture.request.created.clone())),
+        )
+        .unwrap();
+        let step_id = format!("acquire:{}", question.artifact_id);
+        store
+            .append(SessionEvent::StepStarted {
+                step_id: step_id.clone(),
+                attempt: 1,
+            })
+            .unwrap();
+        let decision_id = question.decision_id(&step_id, 1);
+        store
+            .append(SessionEvent::DecisionRequired {
+                step_id: step_id.clone(),
+                attempt: 1,
+                decision_id: decision_id.clone(),
+                question: Box::new(question.clone()),
+            })
+            .unwrap();
+        let answered = store.append(SessionEvent::DecisionAnswered {
+            step_id: step_id.clone(),
+            attempt: 1,
+            decision_id,
+            answer: given,
+            source: AnswerSource::Player,
+        });
+        if question.offers(given) {
+            answered.unwrap();
+        } else {
+            assert!(answered.is_err(), "{given:?} is not offered");
+            continue;
+        }
+        if let Some(refused) = refused {
+            assert!(store.append(refused.clone()).is_err(), "{refused:?}");
+        }
+        store.append(fits).unwrap();
+    }
 }

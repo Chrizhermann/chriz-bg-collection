@@ -51,6 +51,8 @@ pub fn run() -> tauri::Result<()> {
             commands::get_manual_checkpoint,
             commands::check_manual_checkpoint,
             commands::accept_manual_checkpoint,
+            commands::get_pending_decision,
+            commands::answer_decision,
             commands::open_manual_checkpoint_folder,
             commands::supply_manual_archive,
             commands::open_manual_source,

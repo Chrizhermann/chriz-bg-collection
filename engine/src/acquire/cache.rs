@@ -17,7 +17,7 @@ use super::http::{
 };
 use super::{
     AcquireError, AcquiredArtifact, ArchiveFormat, ArchiveLimits, ArtifactMetadata,
-    CacheDisposition, DownloadRequest, StopSignal,
+    CacheDisposition, DownloadRequest, RefusedDownload, StopSignal,
 };
 
 const BUFFER_SIZE: usize = 64 * 1024;
@@ -86,6 +86,52 @@ pub struct ServedRules {
     /// archive is complete reads its files only within these limits; an archive beyond them is
     /// left to unpacking, which refuses it without reading any file's data.
     pub limits: ArchiveLimits,
+    /// The one changed file the player accepted, when the download folder lost it and its link
+    /// is asked again: only exactly these bytes, or the reviewed archive, are accepted, from
+    /// whichever host. Any other file is refused ([`AcquireError::AuthorizedContentChanged`])
+    /// and not kept.
+    pub authorized: Option<AuthorizedContent>,
+}
+
+/// The identity of one changed file that a player accepted.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AuthorizedContent {
+    length: u64,
+    sha256: [u8; 32],
+}
+
+impl AuthorizedContent {
+    /// The file of `length` bytes with the SHA-256 `sha256` (64 hexadecimal digits).
+    pub fn new(length: u64, sha256: &str) -> Result<Self, AcquireError> {
+        let digest = validate_sha256(sha256, "authorized sha256")?;
+        let mut bytes = [0_u8; 32];
+        for (index, byte) in bytes.iter_mut().enumerate() {
+            *byte = u8::from_str_radix(&digest[index * 2..index * 2 + 2], 16).map_err(|_| {
+                AcquireError::InvalidRequest("authorized sha256 is not hexadecimal".to_owned())
+            })?;
+        }
+        Ok(Self {
+            length,
+            sha256: bytes,
+        })
+    }
+
+    /// The accepted length.
+    pub fn length(&self) -> u64 {
+        self.length
+    }
+
+    /// The accepted lowercase SHA-256.
+    pub fn sha256(&self) -> String {
+        self.sha256
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect()
+    }
+
+    fn matches(&self, length: u64, sha256: &str) -> bool {
+        self.length == length && self.sha256().eq_ignore_ascii_case(sha256)
+    }
 }
 
 /// Which hosts a download that may differ from its pin may come from. Its HTTPS redirects are
@@ -548,16 +594,34 @@ impl ArtifactCache {
             let pinned = length == request.expected_length
                 && sha256.eq_ignore_ascii_case(&request.expected_sha256);
             if !pinned {
-                let refusal = if rules.redirects == ServedRedirects::ReviewedHostsForChanges
+                let refusal = if let Some(authorized) = rules
+                    .authorized
+                    .filter(|authorized| !authorized.matches(length, &sha256))
+                {
+                    Some(AttemptFailure::Fatal(
+                        AcquireError::AuthorizedContentChanged {
+                            url: request.url.clone(),
+                            length,
+                            sha256: sha256.clone(),
+                            authorized_length: authorized.length(),
+                            authorized_sha256: authorized.sha256(),
+                        },
+                    ))
+                } else if rules.authorized.is_none()
+                    && rules.redirects == ServedRedirects::ReviewedHostsForChanges
                     && !transfer.unreviewed_hosts.is_empty()
                 {
-                    Some(AttemptFailure::Fatal(AcquireError::UnreviewedSource {
-                        url: request.url.clone(),
-                        length,
-                        sha256: sha256.clone(),
-                        hosts: transfer.hosts.clone(),
-                        unreviewed_hosts: transfer.unreviewed_hosts.clone(),
-                    }))
+                    Some(AttemptFailure::Fatal(AcquireError::UnreviewedSource(
+                        Box::new(RefusedDownload {
+                            url: request.url.clone(),
+                            final_url: transfer.final_url.clone(),
+                            filename: transfer.served_filename.clone(),
+                            length,
+                            sha256: sha256.clone(),
+                            hosts: transfer.hosts.clone(),
+                            unreviewed_hosts: transfer.unreviewed_hosts.clone(),
+                        }),
+                    )))
                 } else {
                     served_container_problem(&paths.partial, rules.format, &rules.limits, stop)
                         .map_err(AttemptFailure::Fatal)?
@@ -1782,6 +1846,7 @@ mod tests {
                 format: ArchiveFormat::Zip,
                 redirects: ServedRedirects::AnyHttpsHost,
                 limits: ArchiveLimits::default(),
+                authorized: None,
             },
         };
 

@@ -2,6 +2,20 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
+## November 3 — questions about changed or unusable downloads (PR 80, for 0.1.1)
+
+PR 80 (`claude/drift-dialogs`), on top of PR 69, for 0.1.1. The installer no longer
+decides silently: a changed download that passed every check, a mod whose download cannot
+be used (with the mods that need it), and a changed installer tool from a host the recipe
+did not review each stop the installation with a question recorded in the ledger
+(`DecisionRequired`). The app shows it in a modal dialog (`components/download-decision.ts`),
+stores the answer through `answer_decision` and resumes; "Decide later" leaves the
+installation waiting, and its card offers "Answer the question". On the CLI, `check-decision`
+shows the question with its English texts and token, `decide` stores the answer once under
+the target lock, and `resume` records and applies it. `--answer <question>=<answer>` on
+`install` and `resume` answers for one run, for tests and automation. Parts the collection
+cannot do without and tools still stop without a question. Christopher's live test of the
+dialogs is still to come.
 ## November 2 — app and collection 0.1.0 published
 
 **App and collection 0.1.0 are public**, the first CEBG release without the alpha label:

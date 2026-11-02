@@ -100,6 +100,16 @@ pub enum EngineEvent {
         /// Planned runs still installed with fewer components or other prompt answers.
         changed_runs: Vec<String>,
     },
+    /// A step asked the player a question about a download and the installation waits for the
+    /// answer; `check-decision` shows it and `decide` answers it, then the campaign resumes.
+    DecisionRequired {
+        /// Stable managed-install identity that can be resumed once answered.
+        install_id: String,
+        /// The step that asks.
+        step_id: String,
+        /// The question's id.
+        decision_id: String,
+    },
     /// Something went wrong, either inside a step or at the run level.
     Error {
         /// Step the error belongs to, or `None` for run-level errors.
@@ -225,6 +235,13 @@ impl ConsoleSink {
                 }
                 line
             }
+            EngineEvent::DecisionRequired {
+                install_id,
+                step_id,
+                decision_id,
+            } => format!(
+                "?? [{step_id}] Campaign {install_id} waits for the answer to question {decision_id}"
+            ),
             EngineEvent::Error { step_id, message } => {
                 let step_id = step_id.as_deref().unwrap_or("-");
                 format!("!! [{step_id}] {message}")

@@ -7,8 +7,8 @@ use std::time::{Duration, Instant};
 
 use bg_engine::acquire::{
     served_length_limit, validate_redirect_target, AcceptedContent, AcquireError, ArchiveFormat,
-    ArchiveLimits, ArtifactCache, CacheDisposition, DownloadRequest, ServedRedirects, ServedRules,
-    StopSignal,
+    ArchiveLimits, ArtifactCache, AuthorizedContent, CacheDisposition, DownloadRequest,
+    ServedRedirects, ServedRules, StopSignal,
 };
 use bg_engine::events::{ChannelSink, EngineEvent};
 use sha2::{Digest, Sha256};
@@ -192,6 +192,7 @@ const ZIP: ServedRules = ServedRules {
     format: ArchiveFormat::Zip,
     redirects: ServedRedirects::AnyHttpsHost,
     limits: ArchiveLimits::GENERAL,
+    authorized: None,
 };
 
 /// What a changed installer tool must still be.
@@ -782,6 +783,105 @@ fn a_changed_download_follows_a_redirect_to_another_host_and_reports_it() {
     ));
 }
 
+/// A player accepted one changed tool from a host the recipe did not review, whose file was not
+/// kept. Its link is asked again with exactly that identity authorized: the same bytes are
+/// accepted from that host, another file is refused and not kept, and the reviewed file is still
+/// accepted.
+#[test]
+fn an_authorized_download_accepts_exactly_the_accepted_file() {
+    let reviewed = zip_archive(b"the reviewed WeiDU");
+    let accepted = zip_archive(b"the WeiDU the player accepted");
+    let third = zip_archive(b"yet another WeiDU");
+    let (accepted_body, third_body, reviewed_body) =
+        (accepted.clone(), third.clone(), reviewed.clone());
+    let redirect = |seen: &SeenRequest| {
+        let port = seen.headers["host"].rsplit(':').next().unwrap().to_owned();
+        Reply {
+            status: 302,
+            headers: vec![("Location", format!("http://localhost:{port}/weidu.zip"))],
+            body: Vec::new(),
+            advertised_length: Some(0),
+        }
+    };
+    let server = TestServer::start(5, move |index, seen| match index {
+        0 | 3 => redirect(seen),
+        1 => Reply::complete(&accepted_body, "\"accepted\""),
+        2 => Reply::complete(&third_body, "\"third\""),
+        4 => Reply::complete(&reviewed_body, "\"reviewed\""),
+        _ => unreachable!(),
+    });
+    let other = TempDir::new().unwrap();
+    let other_cache = cache(&other);
+    let temp = TempDir::new().unwrap();
+    let cache = cache(&temp);
+    let (sink, _) = ChannelSink::unbounded();
+    let download = request("weidu", server.url("/weidu"), &reviewed, 1);
+    let authorized = AuthorizedContent::new(accepted.len() as u64, &sha256(&accepted)).unwrap();
+    let rules = ServedRules {
+        authorized: Some(authorized),
+        ..TOOL
+    };
+    let content = AcceptedContent {
+        length: accepted.len() as u64,
+        sha256: sha256(&accepted),
+    };
+
+    let served = cache
+        .acquire_as_served(
+            &download,
+            Some(&content),
+            rules,
+            &sink,
+            &StopSignal::never(),
+        )
+        .unwrap();
+    assert_eq!(served.artifact.metadata.sha256, sha256(&accepted));
+    assert_eq!(served.unreviewed_hosts, ["localhost"]);
+    // Asked again, the download folder has it: no request.
+    let again = cache
+        .acquire_as_served(
+            &download,
+            Some(&content),
+            rules,
+            &sink,
+            &StopSignal::never(),
+        )
+        .unwrap();
+    assert_eq!(again.artifact.metadata.sha256, sha256(&accepted));
+
+    let refused = other_cache.acquire_as_served(
+        &download,
+        Some(&content),
+        rules,
+        &sink,
+        &StopSignal::never(),
+    );
+    assert!(
+        matches!(&refused, Err(AcquireError::AuthorizedContentChanged { length, sha256: digest, authorized_length, authorized_sha256, .. })
+            if *length == third.len() as u64
+                && *digest == sha256(&third)
+                && *authorized_length == accepted.len() as u64
+                && *authorized_sha256 == sha256(&accepted)),
+        "{refused:?}"
+    );
+    for file in partial_files(&other, "weidu") {
+        assert!(!file.exists(), "{}", file.display());
+    }
+    assert_eq!(cached_objects(&other), 0);
+
+    let pinned = other_cache
+        .acquire_as_served(
+            &download,
+            Some(&content),
+            rules,
+            &sink,
+            &StopSignal::never(),
+        )
+        .unwrap();
+    assert!(pinned.matches_pin(&download));
+    assert_eq!(server.finish().len(), 5);
+}
+
 /// The program that runs every mod comes only from where it was reviewed: a changed tool from a
 /// host its recipe did not review is refused and not kept. The reviewed tool is accepted from
 /// such a host, since its digest proves it, so a moved download host stops nothing.
@@ -811,12 +911,15 @@ fn a_changed_tool_comes_only_from_its_reviewed_hosts() {
 
     let refused = cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never());
     assert!(
-        matches!(&refused, Err(AcquireError::UnreviewedSource { url, length, sha256: digest, hosts, unreviewed_hosts })
-            if *url == download.url
-                && *length == changed.len() as u64
-                && *digest == sha256(&changed)
-                && *hosts == ["127.0.0.1", "localhost"]
-                && *unreviewed_hosts == ["localhost"]),
+        matches!(&refused, Err(AcquireError::UnreviewedSource(refused))
+            if refused.url == download.url
+                && refused.final_url.ends_with("/weidu.zip")
+                && refused.final_url.starts_with("http://localhost:")
+                && refused.filename.as_deref() == Some("weidu.zip")
+                && refused.length == changed.len() as u64
+                && refused.sha256 == sha256(&changed)
+                && refused.hosts == ["127.0.0.1", "localhost"]
+                && refused.unreviewed_hosts == ["localhost"]),
         "{refused:?}"
     );
     // A refusal is final: no further attempt, and nothing was kept.
@@ -901,10 +1004,10 @@ fn a_resumed_changed_tool_keeps_the_unreviewed_host_of_its_first_part() {
     let refused = cache.acquire_as_served(&download, None, TOOL, &sink, &StopSignal::never());
 
     assert!(
-        matches!(&refused, Err(AcquireError::UnreviewedSource { length, sha256: digest, unreviewed_hosts, .. })
-            if *length == changed.len() as u64
-                && *digest == sha256(&changed)
-                && *unreviewed_hosts == ["localhost"]),
+        matches!(&refused, Err(AcquireError::UnreviewedSource(refused))
+            if refused.length == changed.len() as u64
+                && refused.sha256 == sha256(&changed)
+                && refused.unreviewed_hosts == ["localhost"]),
         "{refused:?}"
     );
     for file in partial_files(&temp, "weidu") {

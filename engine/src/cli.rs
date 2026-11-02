@@ -18,9 +18,13 @@ use thiserror::Error;
 use crate::acquire::{
     announce_and_wait_before_asking_again, extract_archive_with_stop, extract_served_archive,
     plan_materialization, provide_manual_archive, AcceptedContent, AcquireError, ArchiveFormat,
-    ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache, CacheDisposition, CacheRepair,
-    DownloadRequest, ExtractedArtifact, MaterializationRequest, ServedRedirects, ServedRules,
-    StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
+    ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache, AuthorizedContent,
+    CacheDisposition, CacheRepair, DownloadRequest, ExtractedArtifact, MaterializationRequest,
+    ServedRedirects, ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
+};
+use crate::decision::{
+    answered_decisions, Answer, AnswerSource, PendingDecision, PresetAnswers, Question,
+    QuestionKind, ServedDownload, UnusableKind, UnusableReason,
 };
 use crate::diagnostics::{export_diagnostics, DiagnosticsBundle, DiagnosticsRequest};
 use crate::digest::{plan_digest, selection_digest, sha256_bytes};
@@ -35,12 +39,12 @@ use crate::manifest::{
     GameRoot, InvocationMode, ModFile, PresetFile,
 };
 use crate::orchestrator::{
-    run_campaign_controlled, AcquisitionOutcome, ArtifactAcquirer, ArtifactKind,
-    ArtifactMaterializer, BuiltInvocation, CampaignClock, CampaignOutcome, CampaignPreflight,
-    CampaignRecorder, CampaignRequest, InstallLogVerifier, InstallReconciliation,
-    InvocationBuilder, MaterializationOutcome, MaterializationTask, MutationCheck, MutationKind,
-    ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter, StagingService, StepAttempt,
-    StepFailure,
+    run_campaign_controlled, AcquisitionOutcome, AnsweredAcquisition, ArtifactAcquirer,
+    ArtifactKind, ArtifactMaterializer, BuiltInvocation, CampaignClock, CampaignOutcome,
+    CampaignPreflight, CampaignRecorder, CampaignRequest, InstallLogVerifier,
+    InstallReconciliation, InvocationBuilder, MaterializationOutcome, MaterializationTask,
+    MutationCheck, MutationKind, ProcessResult, ProcessRunner, ReceiptDraft, ReceiptWriter,
+    StagingService, StepAttempt, StepFailure,
 };
 use crate::preflight::{
     initial_preflight, recheck_staging_target_before_mutation, recheck_target_before_mutation,
@@ -109,8 +113,12 @@ const ARTIFACT_REACQUISITIONS_EVIDENCE: &str = "artifact-reacquisitions";
 const CACHE_REPAIRS_EVIDENCE: &str = "cache-repairs";
 /// Placing steps of changed downloads that began to write files into a game copy. Stored as
 /// `<category>/<materialization-id>.json` before the first file is written, complete or not at
-/// all ([`publish_bytes_once`]): a step without the record has not begun to write.
+/// all ([`publish_contained_json`]): a step without the record has not begun to write.
 const PUBLICATIONS_EVIDENCE: &str = "publications";
+/// Answers to questions about downloads, written by `decide` under the target lock and read by
+/// the campaign worker on resume. Stored as `<category>/<decision-id>.json`, complete or not at
+/// all ([`publish_contained_json`]), once per question.
+const DECISIONS_EVIDENCE: &str = "decisions";
 const BEFORE_LOG_FILE: &str = "before.log";
 const AFTER_LOG_FILE: &str = "after.log";
 const INVOCATION_FILE: &str = "invocation.json";
@@ -357,6 +365,73 @@ pub enum CampaignStatus {
         /// Durable, user-facing reason.
         reason: String,
     },
+    /// A step asked a question about a download and waits for the answer: `check-decision`
+    /// shows it, `decide` answers it, and `resume` continues. Resumable, not an error.
+    DecisionRequired {
+        /// The step that asks.
+        step_id: String,
+        /// The question's id.
+        decision_id: String,
+        /// The question, exactly as the ledger keeps it.
+        question: Box<Question>,
+    },
+}
+
+/// A question about a download that waits for the player's answer, for `check-decision`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DecisionStatus {
+    /// Managed-install identity.
+    pub install_id: String,
+    /// The step that asks.
+    pub step_id: String,
+    /// The question's id, for `decide --decision`.
+    pub decision_id: String,
+    /// Binds an answer to exactly this question, for `decide --token`.
+    pub token: String,
+    /// The question, exactly as the ledger keeps it.
+    pub question: Question,
+    /// The question in the player's words.
+    pub texts: QuestionTexts,
+    /// The answer already given and waiting for `resume`, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answer: Option<Answer>,
+}
+
+/// A question in English, as the installer shows it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QuestionTexts {
+    /// The question itself.
+    pub message: String,
+    /// Further details, shown collapsed.
+    pub details: Vec<String>,
+    /// The answers offered, in the order shown.
+    pub answers: Vec<AnswerText>,
+    /// The answer that has the initial focus.
+    pub focus: Answer,
+    /// What the installer says after "No".
+    pub after_no: String,
+}
+
+/// One offered answer and its button label.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AnswerText {
+    /// The answer.
+    pub answer: Answer,
+    /// Its label.
+    pub label: String,
+}
+
+/// An answer to a question about a download, stored once per question by `decide`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AnswerRecord {
+    decision_id: String,
+    token: String,
+    answer: Answer,
+    answered_at: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -489,6 +564,12 @@ impl CliError {
             CampaignStatus::Paused { .. } => (
                 "invalid_campaign_result",
                 "a paused campaign is resumable and cannot be represented as an error".to_owned(),
+            ),
+            CampaignStatus::DecisionRequired { decision_id, .. } => (
+                "decision_required",
+                format!(
+                    "the installation waits for the answer to question {decision_id}; answer it, then resume"
+                ),
             ),
             CampaignStatus::Failed { step_id, reason } => {
                 let code = if let Some(code) = folder_step_code(reason) {
@@ -689,8 +770,25 @@ pub fn install_campaign_controlled<S: EventSink + Sync>(
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
+    install_campaign_with_answers(request, &PresetAnswers::none(), sink, controls)
+}
+
+/// [`install_campaign_controlled`] with preset answers to the questions this run may ask
+/// (`--answer`, for tests and automation). Each answer it gives is recorded as a preset
+/// answer; a question without one stops the installation as usual.
+pub fn install_campaign_with_answers<S: EventSink + Sync>(
+    request: &InstallCommandRequest,
+    answers: &PresetAnswers,
+    sink: &S,
+    controls: &RunnerControlHandle,
+) -> Result<CampaignReport, CliError> {
     let prepared = prepare_install(request)?;
-    execute_frozen_campaign(prepared.created, prepared.frozen, sink, controls)
+    execute_frozen_campaign(prepared.created, prepared.frozen, answers, sink, controls)
+}
+
+/// Parses repeatable `--answer <question>=<answer>` values.
+pub fn parse_preset_answers(values: &[String]) -> Result<PresetAnswers, CliError> {
+    PresetAnswers::parse(values).map_err(|message| CliError::new("invalid_answer", message))
 }
 
 /// Resolve the complete engine-owned identity that a UI must show and bind at Review.
@@ -718,7 +816,13 @@ pub fn install_campaign_reviewed<S: EventSink + Sync>(
             "the installation name, recipe, selection, sources, destination, or cache changed after Review; review the build again",
         ));
     }
-    execute_frozen_campaign(prepared.created, prepared.frozen, sink, controls)
+    execute_frozen_campaign(
+        prepared.created,
+        prepared.frozen,
+        &PresetAnswers::none(),
+        sink,
+        controls,
+    )
 }
 
 fn prepare_install(request: &InstallCommandRequest) -> Result<PreparedInstall, CliError> {
@@ -883,7 +987,18 @@ pub fn resume_campaign_controlled<S: EventSink + Sync>(
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
-    resume_campaign_internal(managed_root, None, sink, controls)
+    resume_campaign_with_answers(managed_root, &PresetAnswers::none(), sink, controls)
+}
+
+/// [`resume_campaign_controlled`] with preset answers for this run, as
+/// [`install_campaign_with_answers`] takes them.
+pub fn resume_campaign_with_answers<S: EventSink + Sync>(
+    managed_root: &Path,
+    answers: &PresetAnswers,
+    sink: &S,
+    controls: &RunnerControlHandle,
+) -> Result<CampaignReport, CliError> {
+    resume_campaign_internal(managed_root, None, answers, sink, controls)
 }
 
 /// Resume only when the requested install id owns the frozen campaign ledger at this path.
@@ -893,12 +1008,19 @@ pub fn resume_campaign_controlled_expected<S: EventSink + Sync>(
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
-    resume_campaign_internal(managed_root, Some(expected_install_id), sink, controls)
+    resume_campaign_internal(
+        managed_root,
+        Some(expected_install_id),
+        &PresetAnswers::none(),
+        sink,
+        controls,
+    )
 }
 
 fn resume_campaign_internal<S: EventSink + Sync>(
     managed_root: &Path,
     expected_install_id: Option<&str>,
+    answers: &PresetAnswers,
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
@@ -924,7 +1046,7 @@ fn resume_campaign_internal<S: EventSink + Sync>(
     })?;
     let created = replay.created().clone();
     let frozen = resumable_frozen_recipe(&created, &managed_root, expected_install_id)?;
-    execute_frozen_campaign(created, frozen, sink, controls)
+    execute_frozen_campaign(created, frozen, answers, sink, controls)
 }
 
 /// The frozen recipe of a campaign that this request may resume.
@@ -1127,6 +1249,523 @@ fn manual_error(error: impl std::fmt::Display) -> CliError {
     CliError::new("manual_checkpoint_needs_attention", error.to_string())
 }
 
+/// The campaign at `managed_root`, which must belong to `expected_install_id` and may still be
+/// resumed, for a question about a download.
+fn open_decision_campaign(
+    managed_root: &Path,
+    expected_install_id: &str,
+) -> Result<(SessionReplay, FrozenCliRecipe), CliError> {
+    // A question can be answered without the downloads; resuming recreates the cache.
+    let replay = SessionStore::open(managed_root)
+        .and_then(|store| store.replay_for_inspection())
+        .map_err(|error| CliError::new("decision_unavailable", error.to_string()))?;
+    if replay.created().install_id != expected_install_id || replay.fresh_copy_required().is_some()
+    {
+        return Err(CliError::new(
+            "decision_unavailable",
+            "The saved campaign identity is unavailable or requires attention.",
+        ));
+    }
+    let frozen: FrozenCliRecipe = serde_json::from_slice(&replay.created().recipe_payload)
+        .map_err(|error| CliError::new("decision_unavailable", error.to_string()))?;
+    validate_frozen_cli_recipe(replay.created(), &frozen)?;
+    Ok((replay, frozen))
+}
+
+/// The evidence folder of the campaign at `managed_root`, which must be its canonical path.
+fn evidence_root_of(managed_root: &Path) -> PathBuf {
+    managed_root.join(STATE_DIRECTORY).join(EVIDENCE_DIRECTORY)
+}
+
+/// The folder `.chriz/evidence/<category>` of the campaign at `managed_root`, which must be its
+/// canonical path. Every folder on the way is a direct folder, never a link, junction or other
+/// reparse point that could lead outside the installation. With `create`, missing folders are
+/// created; otherwise `None` when one is missing.
+fn contained_evidence_directory(
+    managed_root: &Path,
+    category: &Path,
+    create: bool,
+) -> Result<Option<PathBuf>, String> {
+    let mut names = vec![
+        std::ffi::OsString::from(STATE_DIRECTORY),
+        std::ffi::OsString::from(EVIDENCE_DIRECTORY),
+    ];
+    for component in category.components() {
+        match component {
+            Component::Normal(name) => names.push(name.to_owned()),
+            _ => {
+                return Err(format!(
+                    "{} is not a plain evidence category",
+                    category.display()
+                ))
+            }
+        }
+    }
+    let mut path = managed_root.to_path_buf();
+    for name in names {
+        path.push(name);
+        match fs::symlink_metadata(&path) {
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                if !create {
+                    return Ok(None);
+                }
+                match fs::create_dir(&path) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+                    Err(error) => return Err(format!("{}: {error}", path.display())),
+                }
+            }
+            Err(error) => return Err(format!("{}: {error}", path.display())),
+        }
+        let metadata =
+            fs::symlink_metadata(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+        if metadata.file_type().is_symlink() || metadata_is_reparse(&metadata) || !metadata.is_dir()
+        {
+            return Err(format!(
+                "{} is not a direct folder of this installation",
+                path.display()
+            ));
+        }
+    }
+    Ok(Some(path))
+}
+
+/// Where `decide` stores the answer to `decision_id`; `None` when no answer folder exists yet
+/// and `create` is false.
+fn decision_answer_path(
+    managed_root: &Path,
+    decision_id: &str,
+    create: bool,
+) -> Result<Option<PathBuf>, String> {
+    if !crate::decision::is_decision_id(decision_id) {
+        return Err(format!("{decision_id:?} is not a question id"));
+    }
+    Ok(
+        contained_evidence_directory(managed_root, Path::new(DECISIONS_EVIDENCE), create)?
+            .map(|directory| directory.join(format!("{decision_id}.json"))),
+    )
+}
+
+/// The JSON evidence at `path`, read through a handle that really lies inside `root`, the
+/// installation's evidence folder; `None` when there is none.
+fn read_contained_json<T: for<'de> Deserialize<'de>>(
+    path: &Path,
+    root: &Path,
+) -> Result<Option<T>, StepFailure> {
+    let Some(bytes) = crate::contained::read_inside(path, root).map_err(step_error)? else {
+        return Ok(None);
+    };
+    serde_json::from_slice(&bytes)
+        .map(Some)
+        .map_err(|error| StepFailure::new(format!("{}: {error}", path.display())))
+}
+
+/// Publishes `value` as JSON evidence at `path`, complete or not at all and only inside `root`,
+/// the installation's evidence folder ([`crate::contained::publish_inside`]). The same record
+/// again is accepted; a different one is refused.
+fn publish_contained_json<T: Serialize>(
+    path: &Path,
+    value: &T,
+    root: &Path,
+) -> Result<(), StepFailure> {
+    let mut bytes = serde_json::to_vec_pretty(value).map_err(step_error)?;
+    bytes.push(b'\n');
+    let published = crate::contained::publish_inside(path, &bytes, root, |temporary| {
+        #[cfg(any(debug_assertions, feature = "test-hooks"))]
+        let temporary = interrupt_record_for_test(temporary, path, &bytes)
+            .map_err(|failure| std::io::Error::other(failure.to_string()))?;
+        Ok(temporary)
+    })
+    .map_err(step_error)?;
+    match published {
+        crate::contained::Published::Written | crate::contained::Published::AlreadyThere => Ok(()),
+        crate::contained::Published::Differs => Err(StepFailure::new(format!(
+            "create-once evidence differs at {}",
+            path.display()
+        ))),
+    }
+}
+
+/// The answer file of `decision`, when `decide` wrote one for exactly this question with an
+/// answer the question offers.
+fn read_decision_answer(
+    managed_root: &Path,
+    decision: &PendingDecision,
+) -> Result<Option<AnswerRecord>, String> {
+    let Some(path) = decision_answer_path(managed_root, &decision.decision_id, false)? else {
+        return Ok(None);
+    };
+    let Some(record) = read_contained_json::<AnswerRecord>(&path, &evidence_root_of(managed_root))
+        .map_err(|failure| failure.to_string())?
+    else {
+        return Ok(None);
+    };
+    if record.decision_id != decision.decision_id || record.token != decision.question.token() {
+        return Err(format!(
+            "the answer stored for question {} was given to another question",
+            decision.decision_id
+        ));
+    }
+    if !decision.question.offers(record.answer) {
+        return Err(format!(
+            "the answer stored for question {} is {}, which the question does not offer",
+            decision.decision_id,
+            record.answer.flag_value()
+        ));
+    }
+    Ok(Some(record))
+}
+/// The question about a download that the installation at `managed_root` waits for, with its
+/// English texts and the token that `decide` needs; `None` when it waits for nothing.
+pub fn inspect_decision(
+    managed_root: &Path,
+    expected_install_id: &str,
+) -> Result<Option<DecisionStatus>, CliError> {
+    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
+        .map_err(|error| CliError::new("decision_busy", error.to_string()))?;
+    let managed_root = canonical_existing_directory(managed_root, "managed root")?;
+    let (replay, frozen) = open_decision_campaign(&managed_root, expected_install_id)?;
+    let Some(pending) = replay.pending_decision() else {
+        return Ok(None);
+    };
+    let answer = match pending.answer {
+        Some(recorded) => Some(recorded.answer),
+        None => read_decision_answer(&managed_root, &pending)
+            .map_err(|message| CliError::new("decision_needs_attention", message))?
+            .map(|record| record.answer),
+    };
+    Ok(Some(DecisionStatus {
+        install_id: replay.created().install_id.clone(),
+        step_id: pending.step_id.clone(),
+        decision_id: pending.decision_id.clone(),
+        token: pending.question.token(),
+        texts: render_question(&frozen, &pending.question, &left_out_runs(&replay)),
+        question: pending.question,
+        answer,
+    }))
+}
+
+/// Answers the question `decision_id` of the installation at `managed_root` with `answer`,
+/// under the target lock and without touching the ledger: the answer is stored once, complete
+/// or not at all, and `resume` applies it. `token` must be that of the question as it stands,
+/// so that a stale window cannot answer a question that has changed. The same answer again is
+/// accepted; a different one is refused.
+pub fn answer_decision(
+    managed_root: &Path,
+    expected_install_id: &str,
+    decision_id: &str,
+    token: &str,
+    answer: Answer,
+) -> Result<(), CliError> {
+    let lock_root = application_data_root()?.join(LOCKS_DIRECTORY);
+    let _lock = crate::lock::TargetLock::try_acquire(&lock_root, managed_root)
+        .map_err(|error| CliError::new("decision_busy", error.to_string()))?;
+    let managed_root = canonical_existing_directory(managed_root, "managed root")?;
+    let (replay, _) = open_decision_campaign(&managed_root, expected_install_id)?;
+    let pending = replay
+        .pending_decision()
+        .filter(|pending| pending.decision_id == decision_id)
+        .ok_or_else(|| {
+            CliError::new(
+                "decision_stale",
+                "This question no longer waits for an answer. Check the installation again.",
+            )
+        })?;
+    if token.is_empty() || pending.question.token() != token {
+        return Err(CliError::new(
+            "decision_stale",
+            "The question changed since it was shown. Check it again before answering.",
+        ));
+    }
+    if !pending.question.offers(answer) {
+        return Err(CliError::new(
+            "decision_answer_invalid",
+            format!(
+                "{} is not an answer this question offers.",
+                answer.flag_value()
+            ),
+        ));
+    }
+    let given = match pending.answer {
+        Some(recorded) => Some(recorded.answer),
+        None => read_decision_answer(&managed_root, &pending)
+            .map_err(|message| CliError::new("decision_needs_attention", message))?
+            .map(|record| record.answer),
+    };
+    match given {
+        Some(given) if given == answer => return Ok(()),
+        Some(given) => {
+            return Err(CliError::new(
+                "decision_already_answered",
+                format!(
+                    "This question was already answered with {}.",
+                    given.flag_value()
+                ),
+            ))
+        }
+        None => {}
+    }
+    let record = AnswerRecord {
+        decision_id: pending.decision_id.clone(),
+        token: token.to_owned(),
+        answer,
+        answered_at: unix_millis()
+            .map_err(|failure| CliError::new("decision_failed", failure.to_string()))?,
+    };
+    let path = decision_answer_path(&managed_root, &pending.decision_id, true)
+        .map_err(|message| CliError::new("decision_unavailable", message))?
+        .ok_or_else(|| {
+            CliError::new(
+                "decision_unavailable",
+                "the installation has no state folder",
+            )
+        })?;
+    publish_contained_json(&path, &record, &evidence_root_of(&managed_root))
+        .map_err(|failure| CliError::new("decision_failed", failure.to_string()))
+}
+
+/// The player-facing name of the artifact `id` in the frozen recipe.
+fn frozen_artifact_name(frozen: &FrozenCliRecipe, id: &str) -> String {
+    frozen
+        .artifacts
+        .get(id)
+        .map_or_else(|| id.to_owned(), |artifact| artifact.name.clone())
+}
+
+/// Every run that the leave-outs recorded in `replay` removed.
+fn left_out_runs(replay: &SessionReplay) -> BTreeSet<String> {
+    replay
+        .records
+        .iter()
+        .filter_map(|record| match &record.event {
+            SessionEvent::ArtifactLeftOut { removed_runs, .. } => Some(removed_runs.clone()),
+            _ => None,
+        })
+        .flatten()
+        .collect()
+}
+/// One sentence that names `question`, for the installation log and "You chose to stop: …".
+fn question_summary(frozen: &FrozenCliRecipe, question: &Question) -> String {
+    let name = frozen_artifact_name(frozen, &question.artifact_id);
+    match (question.kind, &question.reason, &question.served) {
+        (QuestionKind::UnusableDownload, Some(reason), _) => {
+            format!("{name} can't be installed ({}).", reason.short())
+        }
+        (QuestionKind::UnreviewedTool, _, Some(served)) => format!(
+            "a newer version of {name} came from {}, which the collection did not review.",
+            served.unreviewed_hosts.join(", ")
+        ),
+        _ => format!("a newer version of {name} was found at its link."),
+    }
+}
+
+/// The mods that leaving out `artifact_id` affects, split into those left out entirely and
+/// those still installed without some of their parts: a mod with a run in `remaining`, the
+/// runs still planned without it, keeps being installed even when it loses other runs.
+fn affected_mods(
+    frozen: &FrozenCliRecipe,
+    artifact_id: &str,
+    removed: &[String],
+    changed: &[String],
+    remaining: &BTreeSet<String>,
+) -> (Vec<String>, Vec<String>) {
+    let name = |mod_id: &str| {
+        frozen
+            .mods
+            .get(mod_id)
+            .map_or_else(|| mod_id.to_owned(), |installer| installer.name.clone())
+    };
+    let (mut left_out, mut reduced) = (Vec::<String>::new(), Vec::<String>::new());
+    for run in frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| removed.contains(&run.run_id) && run.artifact_id != artifact_id)
+    {
+        let keeps_runs = frozen
+            .plan
+            .runs
+            .iter()
+            .any(|other| other.mod_id == run.mod_id && remaining.contains(&other.run_id));
+        let list = if keeps_runs {
+            &mut reduced
+        } else {
+            &mut left_out
+        };
+        let name = name(&run.mod_id);
+        if !list.contains(&name) {
+            list.push(name);
+        }
+    }
+    // A mod that lost parts but no longer has any run in `remaining` was left out later on
+    // its own account, or with another mod: it is not installed, so it is not named here.
+    for run in frozen
+        .plan
+        .runs
+        .iter()
+        .filter(|run| changed.contains(&run.run_id))
+    {
+        let still_installed = frozen
+            .plan
+            .runs
+            .iter()
+            .any(|other| other.mod_id == run.mod_id && remaining.contains(&other.run_id));
+        let name = name(&run.mod_id);
+        if still_installed && !reduced.contains(&name) && !left_out.contains(&name) {
+            reduced.push(name);
+        }
+    }
+    (left_out, reduced)
+}
+
+/// `question` in the player's words, as the app and the command line show it. `earlier` are
+/// the runs that earlier leave-outs of this installation removed.
+fn render_question(
+    frozen: &FrozenCliRecipe,
+    question: &Question,
+    earlier: &BTreeSet<String>,
+) -> QuestionTexts {
+    let name = frozen_artifact_name(frozen, &question.artifact_id);
+    let (dependents, reduced) = question.leave_out.as_ref().map_or_else(
+        || (Vec::new(), Vec::new()),
+        |closure| {
+            let remaining = frozen
+                .plan
+                .runs
+                .iter()
+                .map(|run| run.run_id.clone())
+                .filter(|run_id| {
+                    !earlier.contains(run_id) && !closure.removed_runs.contains(run_id)
+                })
+                .collect::<BTreeSet<_>>();
+            let changed = closure
+                .changed_runs
+                .iter()
+                .map(|run| run.run_id.clone())
+                .collect::<Vec<_>>();
+            affected_mods(
+                frozen,
+                &question.artifact_id,
+                &closure.removed_runs,
+                &changed,
+                &remaining,
+            )
+        },
+    );
+    let stop = AnswerText {
+        answer: Answer::No,
+        label: "Stop the installation".to_owned(),
+    };
+    let after_no = "You chose to stop. Resume this installation to check the download again.";
+    match question.kind {
+        QuestionKind::UnusableDownload => {
+            let short = question
+                .reason
+                .as_ref()
+                .map_or("its download can't be used", UnusableReason::short);
+            let mut message = if dependents.is_empty() {
+                format!("{name} can't be installed ({short}). It will be left out.")
+            } else {
+                format!(
+                    "{name} can't be installed ({short}). It and the mods that depend on it ({}) will be left out.",
+                    dependents.join(", ")
+                )
+            };
+            if !reduced.is_empty() {
+                message.push_str(&format!(
+                    " Installed without the parts that need it: {}.",
+                    reduced.join(", ")
+                ));
+            }
+            message.push_str(" Continue the installation?");
+            let mut details = Vec::new();
+            if let Some(reason) = &question.reason {
+                details.push(reason.detail.clone());
+            }
+            QuestionTexts {
+                message,
+                details,
+                answers: vec![
+                    AnswerText {
+                        answer: Answer::Yes,
+                        label: if dependents.is_empty() && reduced.is_empty() {
+                            "Continue without it".to_owned()
+                        } else {
+                            "Continue without them".to_owned()
+                        },
+                    },
+                    stop,
+                ],
+                focus: Answer::Yes,
+                after_no: after_no.to_owned(),
+            }
+        }
+        QuestionKind::ChangedDownload | QuestionKind::UnreviewedTool => {
+            let mut message = format!(
+                "A newer version of {name} was found. The reviewed version is no longer available at this link. Install it anyway?"
+            );
+            let served = question.served.as_ref();
+            if question.kind == QuestionKind::UnreviewedTool {
+                message.push_str(&format!(
+                    " It came from {}, which the collection did not review. If you're not sure, stop the installation.",
+                    served.map_or_else(String::new, |served| served.unreviewed_hosts.join(", "))
+                ));
+            }
+            if question.offers(Answer::LeaveOut) {
+                if !dependents.is_empty() {
+                    message.push_str(&format!(
+                        " If you leave it out, the mods that depend on it are left out too: {}.",
+                        dependents.join(", ")
+                    ));
+                }
+                if !reduced.is_empty() {
+                    message.push_str(&format!(
+                        " Without it, these are installed without the parts that need it: {}.",
+                        reduced.join(", ")
+                    ));
+                }
+            }
+            let mut details = Vec::new();
+            if let Some(served) = served {
+                if let Some(filename) = &served.filename {
+                    details.push(format!("File: {filename}"));
+                }
+                details.push(format!("Size: {} bytes", served.length));
+                details.push(format!("SHA-256: {}", served.sha256));
+                details.push(format!("From: {}", served.hosts.join(", ")));
+            }
+            details.push(format!(
+                "Reviewed version: {} ({} bytes, SHA-256 {})",
+                question.reviewed.version, question.reviewed.length, question.reviewed.sha256
+            ));
+            let mut answers = vec![AnswerText {
+                answer: Answer::Yes,
+                label: "Install it".to_owned(),
+            }];
+            if question.offers(Answer::LeaveOut) {
+                answers.push(AnswerText {
+                    answer: Answer::LeaveOut,
+                    label: "Leave it out and continue".to_owned(),
+                });
+            }
+            answers.push(stop);
+            QuestionTexts {
+                message,
+                details,
+                answers,
+                focus: if question.kind == QuestionKind::UnreviewedTool {
+                    Answer::No
+                } else {
+                    Answer::Yes
+                },
+                after_no: after_no.to_owned(),
+            }
+        }
+    }
+}
+
 fn verify_manual_prefix(
     root: &Path,
     frozen_prefix: &InstallPlan,
@@ -1158,6 +1797,7 @@ fn verify_manual_prefix(
 fn execute_frozen_campaign<S: EventSink + Sync>(
     created: CampaignCreated,
     frozen: FrozenCliRecipe,
+    answers: &PresetAnswers,
     sink: &S,
     controls: &RunnerControlHandle,
 ) -> Result<CampaignReport, CliError> {
@@ -1178,23 +1818,45 @@ fn execute_frozen_campaign<S: EventSink + Sync>(
         app_data,
         sink,
         controls.clone(),
-    );
+    )
+    .with_preset_answers(answers.clone());
     let outcome = run_campaign_controlled(&request, &mut dependencies, sink, controls)
         .map_err(|error| map_orchestrator_error(error, &created))?;
+    let status = match outcome {
+        CampaignOutcome::Complete => CampaignStatus::Complete,
+        CampaignOutcome::Paused { after_step_id } => CampaignStatus::Paused { after_step_id },
+        CampaignOutcome::Failed { step_id, reason } => CampaignStatus::Failed { step_id, reason },
+        CampaignOutcome::FreshCopyRequired { step_id, reason } => {
+            CampaignStatus::FreshCopyRequired { step_id, reason }
+        }
+        CampaignOutcome::DecisionRequired {
+            step_id,
+            decision_id,
+        } => {
+            let question = SessionStore::open(&created.managed_root)
+                .and_then(|store| store.replay_for_inspection())
+                .map_err(|error| map_orchestrator_error(error.into(), &created))?
+                .pending_decision()
+                .filter(|pending| pending.decision_id == decision_id)
+                .ok_or_else(|| {
+                    CliError::new(
+                        "campaign_error",
+                        format!("the ledger does not hold question {decision_id}"),
+                    )
+                })?
+                .question;
+            CampaignStatus::DecisionRequired {
+                step_id,
+                decision_id,
+                question: Box::new(question),
+            }
+        }
+    };
     Ok(CampaignReport {
         install_id: created.install_id,
         managed_root: created.managed_root,
         plan_sha256: created.plan_sha256,
-        status: match outcome {
-            CampaignOutcome::Complete => CampaignStatus::Complete,
-            CampaignOutcome::Paused { after_step_id } => CampaignStatus::Paused { after_step_id },
-            CampaignOutcome::Failed { step_id, reason } => {
-                CampaignStatus::Failed { step_id, reason }
-            }
-            CampaignOutcome::FreshCopyRequired { step_id, reason } => {
-                CampaignStatus::FreshCopyRequired { step_id, reason }
-            }
-        },
+        status,
     })
 }
 
@@ -1344,7 +2006,7 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
         )
     })?;
     let recovery = recovery::report_recovery(&managed_root, &receipt, &frozen)?;
-    let notes = receipt_notes(&receipt, &frozen.mods, &frozen.artifacts);
+    let notes = receipt_notes(&receipt, &frozen);
     Ok(ManagedReport {
         managed_root,
         receipt,
@@ -1353,49 +2015,124 @@ pub fn report_managed_install(managed_root: &Path) -> Result<ManagedReport, CliE
     })
 }
 
-/// End-summary lines, in English, for what a receipt records about changed downloads.
-fn receipt_notes(
-    receipt: &InstallReceipt,
-    mods: &BTreeMap<String, ModFile>,
-    artifacts: &BTreeMap<String, Artifact>,
-) -> Vec<String> {
-    let artifact_name = |id: &str| {
-        artifacts
-            .get(id)
-            .map_or_else(|| id.to_owned(), |artifact| artifact.name.clone())
+/// End-summary lines, in English, for what a receipt records about changed downloads: one per
+/// answer that took effect, and the earlier generic lines for whatever no answer covers.
+fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<String> {
+    let artifact_name = |id: &str| frozen_artifact_name(frozen, id);
+    // A mod still installed with other runs lost only parts; one without runs was left out.
+    let remaining = receipt
+        .effective_plan()
+        .runs
+        .iter()
+        .map(|run| run.run_id.clone())
+        .collect::<BTreeSet<_>>();
+    let affected = |artifact_id: &str, removed: &[String], changed: &[String]| {
+        affected_mods(frozen, artifact_id, removed, changed, &remaining)
     };
-    let mod_names = |run_ids: &[String], skip_artifact: Option<&str>| {
-        let mut names = Vec::<String>::new();
-        for run in receipt
-            .plan
-            .runs
-            .iter()
-            .filter(|run| run_ids.contains(&run.run_id))
-            .filter(|run| Some(run.artifact_id.as_str()) != skip_artifact)
-        {
-            let name = mods
-                .get(&run.mod_id)
-                .map_or_else(|| run.mod_id.clone(), |installer| installer.name.clone());
-            if !names.contains(&name) {
-                names.push(name);
-            }
-        }
-        names
+    let effective = receipt
+        .decisions
+        .iter()
+        .filter(|decision| {
+            decision.outcome == crate::decision::DecisionOutcome::Applied
+                && decision.answer != Answer::No
+        })
+        .collect::<Vec<_>>();
+    let answered_leave_out = |id: &str| {
+        effective.iter().any(|decision| {
+            decision.artifact_id == id
+                && match decision.kind {
+                    QuestionKind::UnusableDownload => decision.answer == Answer::Yes,
+                    _ => decision.answer == Answer::LeaveOut,
+                }
+        })
+    };
+    let answered_install = |id: &str| {
+        effective.iter().any(|decision| {
+            decision.artifact_id == id
+                && decision.kind != QuestionKind::UnusableDownload
+                && decision.answer == Answer::Yes
+        })
     };
     let mut notes = Vec::new();
-    for left_out in &receipt.left_out {
+    let left_out_in_the_end = |id: &str| {
+        receipt
+            .left_out
+            .iter()
+            .any(|left_out| left_out.artifact_id == id)
+    };
+    for decision in &effective {
+        let name = artifact_name(&decision.artifact_id);
+        let file = decision.served.as_ref().map_or_else(String::new, |served| {
+            served
+                .filename
+                .clone()
+                .unwrap_or_else(|| format!("{} bytes", served.length))
+        });
+        match (decision.kind, decision.answer) {
+            // A newer download that was installed, then left out after all, as when placing
+            // its files met another mod's, has only its leave-out line.
+            (QuestionKind::ChangedDownload | QuestionKind::UnreviewedTool, Answer::Yes)
+                if left_out_in_the_end(&decision.artifact_id) => {}
+            (QuestionKind::ChangedDownload, Answer::Yes) => {
+                notes.push(format!(
+                    "You chose to install a newer download of {name} ({file})."
+                ));
+            }
+            (QuestionKind::UnreviewedTool, Answer::Yes) => {
+                let version = receipt
+                    .weidu_tools
+                    .iter()
+                    .find(|tool| tool.id == decision.artifact_id)
+                    .map_or_else(String::new, |tool| format!(" (WeiDU {})", tool.version));
+                notes.push(format!(
+                    "You chose to use a newer installer tool {name}{version}, which came from {}.",
+                    decision.unreviewed_hosts.join(", ")
+                ));
+            }
+            (kind, _) => {
+                let why = match (kind, &decision.reason) {
+                    (QuestionKind::UnusableDownload, Some(reason)) => reason.short().to_owned(),
+                    _ => format!("a newer download than the reviewed one was found: {file}"),
+                };
+                let mut note = format!("You chose to continue without {name} ({why}).");
+                let (dependents, changed) = affected(
+                    &decision.artifact_id,
+                    &decision.removed_runs,
+                    &decision.changed_runs,
+                );
+                if !dependents.is_empty() {
+                    note.push_str(&format!(" Also left out: {}.", dependents.join(", ")));
+                }
+                if !changed.is_empty() {
+                    note.push_str(&format!(
+                        " Installed without the parts that need it: {}.",
+                        changed.join(", ")
+                    ));
+                }
+                notes.push(note);
+            }
+        }
+    }
+    for left_out in receipt
+        .left_out
+        .iter()
+        .filter(|left_out| !answered_leave_out(&left_out.artifact_id))
+    {
         let mut note = format!(
             "Left out: {}. Its download could not be used.",
             artifact_name(&left_out.artifact_id)
         );
-        let dependents = mod_names(&left_out.runs, Some(&left_out.artifact_id));
+        let (dependents, changed) = affected(
+            &left_out.artifact_id,
+            &left_out.runs,
+            &left_out.changed_runs,
+        );
         if !dependents.is_empty() {
             note.push_str(&format!(
                 " Also left out because they need it: {}.",
                 dependents.join(", ")
             ));
         }
-        let changed = mod_names(&left_out.changed_runs, None);
         if !changed.is_empty() {
             note.push_str(&format!(
                 " Installed without the parts that need it: {}.",
@@ -1408,6 +2145,7 @@ fn receipt_notes(
         .artifacts
         .iter()
         .filter(|artifact| artifact.served_difference.is_some())
+        .filter(|artifact| !answered_install(&artifact.id))
         .filter(|artifact| {
             !receipt
                 .left_out
@@ -1433,6 +2171,7 @@ fn receipt_notes(
         .weidu_tools
         .iter()
         .filter(|tool| tool.reviewed.is_some())
+        .filter(|tool| !answered_install(&tool.id))
         .map(|tool| format!("{} (WeiDU {})", artifact_name(&tool.id), tool.version))
         .collect::<Vec<_>>();
     if !changed_tools.is_empty() {
@@ -1533,6 +2272,23 @@ fn validate_report_receipt(
 
     let succeeded = matches!(receipt.outcome, ReceiptOutcome::Succeeded);
     validate_receipt_left_out(receipt, replay, succeeded)?;
+    // A receipt names exactly the answers the ledger recorded up to it: a terminal receipt up to
+    // the ledger record its attempt id names, a successful one all of them.
+    let cutoff = if succeeded {
+        replay.records.len()
+    } else {
+        terminal_receipt_sequence(&receipt.attempt_id)
+            .and_then(|sequence| sequence.checked_add(1))
+            .filter(|cutoff| *cutoff <= replay.records.len())
+            .ok_or_else(|| "terminal receipt sequence is absent from the ledger".to_owned())?
+    };
+    let answered = crate::receipt::decision_receipts(
+        &answered_decisions(&replay.records[..cutoff]),
+        &receipt.artifacts,
+    );
+    if receipt.decisions != answered {
+        return Err("answers to questions differ from the campaign ledger".to_owned());
+    }
     let installed = receipt.effective_plan();
     for artifact in &receipt.artifacts {
         if let Some(difference) = &artifact.served_difference {
@@ -1715,6 +2471,15 @@ fn validate_receipt_outcome_link(
     Ok(())
 }
 
+/// The ledger sequence that a terminal receipt's attempt id, `terminal-<sequence>-<digest>`,
+/// names.
+fn terminal_receipt_sequence(attempt_id: &str) -> Option<usize> {
+    let (sequence, _) = attempt_id.strip_prefix("terminal-")?.split_once('-')?;
+    if sequence.len() != 10 || !sequence.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    sequence.parse().ok()
+}
 fn validate_terminal_receipt_link(
     receipt: &InstallReceipt,
     replay: &SessionReplay,
@@ -2268,6 +3033,8 @@ struct GuardedCliDependencies<'a, S> {
     app_data: PathBuf,
     sink: &'a S,
     controls: RunnerControlHandle,
+    /// Answers given for this run to the questions it may ask.
+    preset_answers: PresetAnswers,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -2348,6 +3115,15 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             app_data,
             sink,
             controls,
+            preset_answers: PresetAnswers::none(),
+        }
+    }
+
+    /// The same dependencies, answering questions of this run with `answers`.
+    fn with_preset_answers(self, answers: PresetAnswers) -> Self {
+        Self {
+            preset_answers: answers,
+            ..self
         }
     }
 
@@ -2463,15 +3239,18 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         artifact: &Artifact,
     ) -> Result<(PathBuf, ArtifactReceipt), AcquisitionFailure> {
         let first = self.load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?;
-        let fetched = self.fetch_archive(artifact, first.as_ref())?;
+        let fetched = self.fetch_archive(artifact, first.as_ref(), None)?;
         Ok(self.record_acquisition(artifact, first, fetched)?)
     }
 
-    /// Gets an artifact's archive into the download folder, without recording anything.
+    /// Gets an artifact's archive into the download folder, without recording anything. With
+    /// `authorized`, only exactly that changed file, or the reviewed archive, is accepted:
+    /// the file a player accepted, which the download folder may have lost.
     fn fetch_archive(
         &self,
         artifact: &Artifact,
         first: Option<&ArtifactReceipt>,
+        authorized: Option<AuthorizedContent>,
     ) -> Result<FetchedArchive, AcquisitionFailure> {
         let expected_length = artifact.source.expected_length.ok_or_else(|| {
             StepFailure::new(format!(
@@ -2480,19 +3259,27 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             ))
         })?;
         let mut unreviewed_hosts = Vec::new();
+        let mut hosts = Vec::new();
         let (archive_path, original_url, final_url, length, sha256, cache_outcome, difference) =
             match artifact.acquisition {
                 AcquisitionPolicy::FetchOnly | AcquisitionPolicy::BundlePermitted => {
                     let request = self.download_request(artifact)?;
                     // Once this campaign accepted a changed download, every later step uses
                     // exactly that file again, even if the link has changed once more.
-                    let accepted =
-                        first
+                    // Only that file is accepted from its link then, from whichever host it was
+                    // accepted from, so that a lost download folder can be filled again.
+                    let authorized = match authorized {
+                        Some(authorized) => Some(authorized),
+                        None => first
                             .filter(|first| first.served_difference.is_some())
-                            .map(|first| AcceptedContent {
-                                length: first.length,
-                                sha256: first.sha256.clone(),
-                            });
+                            .map(|first| AuthorizedContent::new(first.length, &first.sha256))
+                            .transpose()
+                            .map_err(step_error)?,
+                    };
+                    let accepted = authorized.map(|authorized| AcceptedContent {
+                        length: authorized.length(),
+                        sha256: authorized.sha256(),
+                    });
                     let rules = ServedRules {
                         format: archive_format(artifact),
                         // A changed program that runs every mod comes only from where it was
@@ -2503,6 +3290,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                             ServedRedirects::AnyHttpsHost
                         },
                         limits: reviewed_limits(artifact).for_served_archive(),
+                        authorized,
                     };
                     let served = ArtifactCache::open(&self.created.cache_root)
                         .and_then(|cache| {
@@ -2536,6 +3324,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                         CacheDisposition::Downloaded => ArtifactCacheOutcome::Downloaded,
                     };
                     unreviewed_hosts = served.unreviewed_hosts;
+                    hosts = served.hosts;
                     let difference = (!matches_pin).then(|| ServedDifference {
                         reviewed: DownloadIdentity {
                             filename: artifact.source.expected_filename.clone(),
@@ -2628,6 +3417,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 cache_outcome,
                 served_difference: difference,
             },
+            hosts,
             unreviewed_hosts,
         })
     }
@@ -2644,6 +3434,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             path: archive_path,
             receipt: mut observed_receipt,
             unreviewed_hosts,
+            ..
         } = fetched;
         let receipt = match first {
             Some(first) => {
@@ -2844,10 +3635,11 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     }
 
     /// Acquires a mod's archive. A changed download is unpacked now, before anything is
-    /// staged, so that a mod whose new archive cannot be used is left out instead of stopping
-    /// the installation later. The archive is unpacked once into the shared extraction cache
-    /// either way. A changed download is recorded only once it unpacked, so that a damaged one
-    /// can be asked for again ([`Self::first_acquisition`]).
+    /// staged, so that a mod whose new archive cannot be used is asked about here instead of
+    /// stopping the installation later. The archive is unpacked once into the shared
+    /// extraction cache either way. A changed download is recorded only once the player
+    /// accepted it ([`Self::acquire_answered`]), so that nothing records a file nobody
+    /// accepted and a damaged one can be asked for again ([`Self::first_acquisition`]).
     fn acquire_payload(
         &self,
         artifact: &Artifact,
@@ -2880,14 +3672,120 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             };
         }
         match self.first_acquisition(artifact)? {
-            FirstAcquisition::Reviewed(fetched) | FirstAcquisition::Changed(fetched, _) => {
+            FirstAcquisition::Reviewed(fetched) => {
                 self.record_acquisition(artifact, None, fetched)?;
                 Ok(AcquisitionOutcome::Ready)
             }
+            FirstAcquisition::Changed(fetched, _) => Ok(AcquisitionOutcome::Ask {
+                kind: QuestionKind::ChangedDownload,
+                served: served_download(&fetched),
+            }),
             FirstAcquisition::Unusable(unusable) => Ok(AcquisitionOutcome::LeaveOut {
                 reason: unusable.reason(),
             }),
         }
+    }
+
+    /// Records exactly the changed file that the player accepted in `question`: from the
+    /// download folder, or downloaded again when the folder lost it, accepting only the same
+    /// length and SHA-256. A tool's program is checked again as a changed tool. When the
+    /// reviewed archive is in the download folder now, or its link serves it again, the
+    /// question no longer applies.
+    fn acquire_answered_file(
+        &self,
+        artifact: &Artifact,
+        question: &Question,
+    ) -> Result<AnsweredAcquisition, StepFailure> {
+        let served = question.served.as_ref().ok_or_else(|| {
+            StepFailure::new(format!(
+                "the question about {} names no served file",
+                artifact.id
+            ))
+        })?;
+        // An earlier run of this answered step may have recorded the file already.
+        if let Some(first) =
+            self.load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?
+        {
+            if first.length != served.length || !first.sha256.eq_ignore_ascii_case(&served.sha256) {
+                return Err(StepFailure::new(format!(
+                    "the download recorded for {} differs from the one the player accepted",
+                    artifact.id
+                )));
+            }
+            if artifact.tool.is_some() {
+                self.verified_tool(&artifact.id)?;
+            }
+            return Ok(AnsweredAcquisition::Accepted);
+        }
+        if self.cached_reviewed_archive(artifact)?.is_some() {
+            return Ok(AnsweredAcquisition::Withdrawn {
+                why: format!(
+                    "the reviewed version of {} is in the download folder now",
+                    artifact.name
+                ),
+            });
+        }
+        let authorized =
+            AuthorizedContent::new(served.length, &served.sha256).map_err(step_error)?;
+        let fetched = match self.fetch_archive(artifact, None, Some(authorized)) {
+            Ok(fetched) => fetched,
+            Err(AcquisitionFailure::Unavailable(error)) => {
+                return Ok(AnsweredAcquisition::LinkChanged {
+                    detail: format!(
+                        "The download of {} that you accepted is no longer in the download folder, and its link changed again: {}. The next attempt asks again.",
+                        artifact.name,
+                        unavailable_reason(&error).detail
+                    ),
+                })
+            }
+            Err(AcquisitionFailure::Step(failure)) => return Err(failure),
+        };
+        if fetched.receipt.served_difference.is_none() {
+            return Ok(AnsweredAcquisition::Withdrawn {
+                why: format!(
+                    "the link of {} serves the reviewed version again",
+                    artifact.name
+                ),
+            });
+        }
+        // The same bytes: the record describes them as the player saw them.
+        let mut fetched = fetched;
+        fetched.receipt.final_url.clone_from(&served.final_url);
+        if let Some(difference) = fetched.receipt.served_difference.as_mut() {
+            difference.served.filename.clone_from(&served.filename);
+            difference
+                .unreviewed_hosts
+                .clone_from(&served.unreviewed_hosts);
+        }
+        fetched.hosts.clone_from(&served.hosts);
+        fetched
+            .unreviewed_hosts
+            .clone_from(&served.unreviewed_hosts);
+        let extracted = self
+            .extract_from(artifact, &fetched.path, &fetched.receipt)
+            .map_err(|failure| match failure {
+                ExtractionFailure::Step(failure) => failure,
+                ExtractionFailure::Unusable(error) => StepFailure::new(format!(
+                    "the accepted download of {} cannot be unpacked any more: {error}",
+                    artifact.name
+                )),
+            })?;
+        match &artifact.tool {
+            Some(contract) => {
+                let (_, tool) = check_tool(artifact, contract, &extracted, true)
+                    .map_err(|error| unusable_changed_tool(&artifact.id, &error))?;
+                self.record_acquisition(artifact, None, fetched)?;
+                #[cfg(any(debug_assertions, feature = "test-hooks"))]
+                exit_after_accepted_for_test(&artifact.id);
+                self.persist_named_evidence("tools", &artifact.id, &tool)?;
+            }
+            None => {
+                self.record_acquisition(artifact, None, fetched)?;
+                #[cfg(any(debug_assertions, feature = "test-hooks"))]
+                exit_after_accepted_for_test(&artifact.id);
+            }
+        }
+        Ok(AnsweredAcquisition::Accepted)
     }
 
     /// Gets an artifact's archive for its first acquisition, unpacking a changed download, and
@@ -2901,7 +3799,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     ) -> Result<FirstAcquisition, AcquisitionFailure> {
         let mut attempt = 1;
         loop {
-            let fetched = self.fetch_archive(artifact, None)?;
+            let fetched = self.fetch_archive(artifact, None, None)?;
             let Some(difference) = fetched.receipt.served_difference.clone() else {
                 return Ok(FirstAcquisition::Reviewed(fetched));
             };
@@ -2948,11 +3846,14 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             .map_err(step_error)
     }
 
-    /// Acquires an installer tool. A changed download is recorded only once its WeiDU program
-    /// passed the checks for a changed tool, so that a resumed campaign asks its link again
-    /// instead of keeping a program it cannot use. When a changed download cannot be used but
-    /// the download folder holds the reviewed archive by now, as when another installation
-    /// finished downloading it meanwhile, the reviewed tool is used.
+    /// Acquires an installer tool. A changed download whose WeiDU program passed the checks
+    /// for a changed tool is asked about, and recorded only once the player accepted it, so
+    /// that a resumed campaign asks its link again instead of keeping a program nobody
+    /// accepted. When a changed download cannot be used but the download folder holds the
+    /// reviewed archive by now, as when another installation finished downloading it
+    /// meanwhile, the reviewed tool is used. A changed tool from a host the recipe did not
+    /// review, without a reviewed one to use instead, is asked about too: its file is not
+    /// kept, so the answer "use it" downloads it again ([`Self::acquire_answered_file`]).
     fn acquire_tool(&self, artifact: &Artifact) -> Result<AcquisitionOutcome, AcquisitionFailure> {
         let contract = tool_contract(artifact)?;
         let first = self.load_named_evidence::<ArtifactReceipt>("artifacts", &artifact.id)?;
@@ -2966,11 +3867,25 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         let acquisition = match self.first_acquisition(artifact) {
             Ok(acquisition) => acquisition,
             Err(AcquisitionFailure::Unavailable(error)) => {
-                return if self.use_cached_reviewed_tool(artifact, &unavailable_reason(&error))? {
-                    Ok(AcquisitionOutcome::Ready)
-                } else {
-                    Err(AcquisitionFailure::Unavailable(error))
-                };
+                if self.use_cached_reviewed_tool(artifact, &unavailable_reason(&error).detail)? {
+                    return Ok(AcquisitionOutcome::Ready);
+                }
+                if let AcquireError::UnreviewedSource(refused) = error {
+                    let refused = *refused;
+                    return Ok(AcquisitionOutcome::Ask {
+                        kind: QuestionKind::UnreviewedTool,
+                        served: ServedDownload {
+                            filename: refused.filename,
+                            length: refused.length,
+                            sha256: refused.sha256.to_ascii_lowercase(),
+                            link: refused.url,
+                            final_url: refused.final_url,
+                            hosts: refused.hosts,
+                            unreviewed_hosts: refused.unreviewed_hosts,
+                        },
+                    });
+                }
+                return Err(AcquisitionFailure::Unavailable(error));
             }
             Err(failure) => return Err(failure),
         };
@@ -2981,10 +3896,11 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
             }
             FirstAcquisition::Changed(fetched, extracted) => {
                 match check_tool(artifact, contract, &extracted, true) {
-                    Ok((_, tool)) => {
-                        self.record_acquisition(artifact, None, fetched)?;
-                        self.persist_named_evidence("tools", &artifact.id, &tool)?;
-                        return Ok(AcquisitionOutcome::Ready);
+                    Ok(_) => {
+                        return Ok(AcquisitionOutcome::Ask {
+                            kind: QuestionKind::ChangedDownload,
+                            served: served_download(&fetched),
+                        });
                     }
                     Err(error) => error.to_string(),
                 }
@@ -3057,6 +3973,7 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                 cache_outcome: ArtifactCacheOutcome::Hit,
                 served_difference: None,
             },
+            hosts: Vec::new(),
             unreviewed_hosts: Vec::new(),
         }))
     }
@@ -3081,29 +3998,38 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         id: &str,
     ) -> Result<PathBuf, StepFailure> {
         validate_cli_identifier(id, "evidence id").map_err(StepFailure::new)?;
-        let directory = self.evidence_root().join(category);
-        ensure_directories(&directory)?;
+        let directory =
+            contained_evidence_directory(&self.created.managed_root, category.as_ref(), true)
+                .map_err(StepFailure::new)?
+                .ok_or_else(|| StepFailure::new("the installation has no state folder"))?;
         Ok(directory.join(format!("{id}.json")))
     }
 
+    /// Records named evidence once, complete or not at all, so that an interruption never
+    /// leaves a half-written record that would stop every resume, and only inside this
+    /// installation's evidence folder ([`publish_contained_json`]).
     fn persist_named_evidence<T: Serialize>(
         &self,
         category: impl AsRef<Path>,
         id: &str,
         value: &T,
     ) -> Result<(), StepFailure> {
-        write_json_once(&self.named_evidence_path(category, id)?, value)
+        publish_contained_json(
+            &self.named_evidence_path(category, id)?,
+            value,
+            &self.evidence_root(),
+        )
     }
 
     /// [`Self::persist_named_evidence`] for a record whose absence has a meaning, such as that a
-    /// step has not begun to write: it appears complete or not at all ([`publish_bytes_once`]).
+    /// step has not begun to write.
     fn publish_named_evidence_once<T: Serialize>(
         &self,
         category: impl AsRef<Path>,
         id: &str,
         value: &T,
     ) -> Result<(), StepFailure> {
-        publish_json_once(&self.named_evidence_path(category, id)?, value)
+        self.persist_named_evidence(category, id, value)
     }
 
     fn load_named_evidence<T: for<'de> Deserialize<'de>>(
@@ -3111,7 +4037,10 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         category: impl AsRef<Path>,
         id: &str,
     ) -> Result<Option<T>, StepFailure> {
-        read_optional_json(&self.named_evidence_path(category, id)?)
+        read_contained_json(
+            &self.named_evidence_path(category, id)?,
+            &self.evidence_root(),
+        )
     }
 
     /// Keep the provenance of a later acquisition that was accepted against, but differs
@@ -3154,45 +4083,56 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         )
     }
 
-    fn run_attempt_path(&self, run_id: &str, attempt: u32) -> Result<PathBuf, StepFailure> {
+    /// The folder of the attempt records of `run_id`: every folder on the way a direct folder
+    /// of this installation ([`contained_evidence_directory`]); `None` without `create` when it
+    /// does not exist.
+    fn run_evidence_directory(
+        &self,
+        run_id: &str,
+        create: bool,
+    ) -> Result<Option<PathBuf>, StepFailure> {
         validate_cli_identifier(run_id, "run id").map_err(StepFailure::new)?;
+        contained_evidence_directory(
+            &self.created.managed_root,
+            &Path::new("runs").join(run_id),
+            create,
+        )
+        .map_err(StepFailure::new)
+    }
+
+    fn run_attempt_path(&self, run_id: &str, attempt: u32) -> Result<PathBuf, StepFailure> {
         if attempt == 0 {
             return Err(StepFailure::new("run attempt number must be positive"));
         }
-        let directory = self.evidence_root().join("runs").join(run_id);
-        ensure_directories(&directory)?;
+        let directory = self
+            .run_evidence_directory(run_id, true)?
+            .ok_or_else(|| StepFailure::new("the installation has no state folder"))?;
         Ok(directory.join(format!("attempt-{attempt:04}.json")))
     }
 
+    /// Records one WeiDU attempt once, complete or not at all and only inside this
+    /// installation's evidence ([`publish_contained_json`]).
     fn persist_run_attempt(
         &self,
         run_id: &str,
         receipt: &RunAttemptReceipt,
     ) -> Result<(), StepFailure> {
-        write_json_once(&self.run_attempt_path(run_id, receipt.attempt)?, receipt)
+        publish_contained_json(
+            &self.run_attempt_path(run_id, receipt.attempt)?,
+            receipt,
+            &self.evidence_root(),
+        )
     }
 
     fn load_run_receipt(&self, run: &PlannedRun) -> Result<RunReceipt, StepFailure> {
-        validate_cli_identifier(&run.run_id, "run id").map_err(StepFailure::new)?;
-        let directory = self.evidence_root().join("runs").join(&run.run_id);
-        let metadata = match fs::symlink_metadata(&directory) {
-            Ok(metadata) => metadata,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(RunReceipt {
-                    run_id: run.run_id.clone(),
-                    target: run.target,
-                    components: run.components.clone(),
-                    attempts: Vec::new(),
-                })
-            }
-            Err(error) => return Err(step_error(error)),
+        let Some(directory) = self.run_evidence_directory(&run.run_id, false)? else {
+            return Ok(RunReceipt {
+                run_id: run.run_id.clone(),
+                target: run.target,
+                components: run.components.clone(),
+                attempts: Vec::new(),
+            });
         };
-        if metadata.file_type().is_symlink() || !metadata.is_dir() {
-            return Err(StepFailure::new(format!(
-                "run evidence path is not a direct directory: {}",
-                directory.display()
-            )));
-        }
         let mut paths = fs::read_dir(&directory)
             .map_err(step_error)?
             .map(|entry| entry.map(|entry| entry.path()).map_err(step_error))
@@ -3206,13 +4146,22 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                     path.display()
                 )));
             };
+            // The temporary file of a record whose publication was interrupted, in exactly the
+            // publisher's reserved format; nothing reads it. Every other entry is refused.
+            if crate::contained::is_interrupted_publication(&directory, name) {
+                continue;
+            }
             if !name.starts_with("attempt-") || !name.ends_with(".json") {
                 return Err(StepFailure::new(format!(
                     "unexpected run evidence file: {}",
                     path.display()
                 )));
             }
-            attempts.push(read_required_json(&path)?);
+            attempts.push(
+                read_contained_json(&path, &self.evidence_root())?.ok_or_else(|| {
+                    StepFailure::new(format!("{} disappeared while it was read", path.display()))
+                })?,
+            );
         }
         Ok(RunReceipt {
             run_id: run.run_id.clone(),
@@ -3358,6 +4307,51 @@ impl<S: EventSink> ArtifactAcquirer for GuardedCliDependencies<'_, S> {
         }
     }
 
+    fn artifact_name(&self, artifact_id: &str) -> String {
+        frozen_artifact_name(self.frozen, artifact_id)
+    }
+
+    fn describe_question(&self, question: &Question) -> String {
+        question_summary(self.frozen, question)
+    }
+
+    fn decision_answer(
+        &mut self,
+        decision: &PendingDecision,
+    ) -> Result<Option<(Answer, AnswerSource)>, StepFailure> {
+        if let Some(record) =
+            read_decision_answer(&self.created.managed_root, decision).map_err(StepFailure::new)?
+        {
+            return Ok(Some((record.answer, AnswerSource::Player)));
+        }
+        Ok(self
+            .preset_answers
+            .get(decision.question.kind)
+            .map(|answer| (answer, AnswerSource::Preset)))
+    }
+
+    fn reviewed_is_available(
+        &mut self,
+        identity: &FrozenIdentity,
+        _kind: ArtifactKind,
+    ) -> Result<bool, StepFailure> {
+        let artifact = self.artifact(&identity.id)?;
+        if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied {
+            return Ok(false);
+        }
+        Ok(self.cached_reviewed_archive(artifact)?.is_some())
+    }
+
+    fn acquire_answered(
+        &mut self,
+        identity: &FrozenIdentity,
+        _kind: ArtifactKind,
+        question: &Question,
+    ) -> Result<AnsweredAcquisition, StepFailure> {
+        let artifact = self.artifact(&identity.id)?;
+        self.acquire_answered_file(artifact, question)
+    }
+
     fn plan_without(
         &mut self,
         plan: &InstallPlan,
@@ -3431,7 +4425,28 @@ impl From<StepFailure> for AcquisitionFailure {
 struct FetchedArchive {
     path: PathBuf,
     receipt: ArtifactReceipt,
+    /// Every host the download came through; empty without a transfer.
+    hosts: Vec<String>,
     unreviewed_hosts: Vec<String>,
+}
+
+/// What the link served for `fetched`, a changed download, for a question.
+fn served_download(fetched: &FetchedArchive) -> ServedDownload {
+    let served = fetched
+        .receipt
+        .served_difference
+        .as_ref()
+        .map(|difference| difference.served.filename.clone())
+        .unwrap_or_default();
+    ServedDownload {
+        filename: served,
+        length: fetched.receipt.length,
+        sha256: fetched.receipt.sha256.to_ascii_lowercase(),
+        link: fetched.receipt.original_url.clone(),
+        final_url: fetched.receipt.final_url.clone(),
+        hosts: fetched.hosts.clone(),
+        unreviewed_hosts: fetched.unreviewed_hosts.clone(),
+    }
 }
 
 /// The first acquisition of a fetched artifact, before anything about it is recorded.
@@ -3453,12 +4468,24 @@ struct UnusableDownload {
 }
 
 impl UnusableDownload {
-    /// Why its mod is left out, for the ledger and the receipt.
-    fn reason(&self) -> String {
-        format!(
-            "its official link now serves a different archive ({}), which cannot be installed: {}",
-            describe_download(&self.served),
-            self.problem()
+    /// Why its mod cannot be installed, for the question, the ledger and the receipt.
+    fn reason(&self) -> UnusableReason {
+        let kind = match &self.error {
+            AcquireError::CorruptArchiveData { entry, .. } => UnusableKind::Damaged {
+                entry: Some(entry.clone()),
+                attempts: self.attempts.unwrap_or(1),
+            },
+            other => UnusableKind::Layout {
+                message: other.to_string(),
+            },
+        };
+        UnusableReason::new(
+            kind,
+            format!(
+                "its official link now serves a different archive ({}), which cannot be installed: {}",
+                describe_download(&self.served),
+                self.problem()
+            ),
         )
     }
 
@@ -3552,7 +4579,8 @@ fn download_unavailable(error: &AcquireError) -> bool {
             | AcquireError::ServedNotArchive { .. }
             | AcquireError::RedirectDowngrade { .. }
             | AcquireError::UnreviewedRedirect { .. }
-            | AcquireError::UnreviewedSource { .. }
+            | AcquireError::UnreviewedSource(_)
+            | AcquireError::AuthorizedContentChanged { .. }
             | AcquireError::HttpStatus {
                 status: 404 | 410,
                 ..
@@ -3560,38 +4588,67 @@ fn download_unavailable(error: &AcquireError) -> bool {
     )
 }
 
-/// The ledger and receipt reason for an official link whose answer cannot be used.
-fn unavailable_reason(error: &AcquireError) -> String {
+/// The question, ledger and receipt reason for an official link whose answer cannot be used.
+fn unavailable_reason(error: &AcquireError) -> UnusableReason {
+    let other = |detail: String| {
+        UnusableReason::new(
+            UnusableKind::Other {
+                message: error.to_string(),
+            },
+            detail,
+        )
+    };
     match error {
-        AcquireError::ServedDownloadTooLarge { length, limit } => format!(
-            "its official link now serves a download of at least {length} bytes, more than the {limit} bytes the installer accepts for a changed download"
+        AcquireError::ServedDownloadTooLarge { length, limit } => UnusableReason::new(
+            UnusableKind::TooLarge {
+                announced: *length,
+                limit: *limit,
+            },
+            format!(
+                "its official link now serves a download of at least {length} bytes, more than the {limit} bytes the installer accepts for a changed download"
+            ),
         ),
-        AcquireError::ServedNotArchive { url, problem } => format!(
-            "its official link does not serve the archive ({problem}), and still did not on the last of {DEFAULT_DOWNLOAD_ATTEMPTS} attempts; the last answer came from {}",
-            final_host(url)
+        AcquireError::ServedNotArchive { url, problem } => UnusableReason::new(
+            UnusableKind::NotArchive {
+                problem: problem.clone(),
+                attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
+            },
+            format!(
+                "its official link does not serve the archive ({problem}), and still did not on the last of {DEFAULT_DOWNLOAD_ATTEMPTS} attempts; the last answer came from {}",
+                final_host(url)
+            ),
         ),
-        AcquireError::HttpStatus { url, status } => format!(
-            "its official link answers HTTP {status} (no such file) from {}, and still did on the last of {DEFAULT_DOWNLOAD_ATTEMPTS} attempts",
-            final_host(url)
+        AcquireError::HttpStatus { url, status } => UnusableReason::new(
+            UnusableKind::HttpStatus {
+                status: *status,
+                attempts: DEFAULT_DOWNLOAD_ATTEMPTS,
+            },
+            format!(
+                "its official link answers HTTP {status} (no such file) from {}, and still did on the last of {DEFAULT_DOWNLOAD_ATTEMPTS} attempts",
+                final_host(url)
+            ),
         ),
-        AcquireError::RedirectDowngrade { to, .. } => format!(
-            "its official link redirects to plain HTTP ({}), which the installer never follows",
-            final_host(to)
+        AcquireError::RedirectDowngrade { to, .. } => UnusableReason::new(
+            UnusableKind::Downgrade,
+            format!(
+                "its official link redirects to plain HTTP ({}), which the installer never follows",
+                final_host(to)
+            ),
         ),
-        AcquireError::UnreviewedRedirect { to, .. } => format!(
+        AcquireError::UnreviewedRedirect { to, .. } => other(format!(
             "its official link now serves a different file from {}, a host the recipe did not review for it",
             final_host(to)
-        ),
-        AcquireError::UnreviewedSource {
-            length,
-            sha256,
-            unreviewed_hosts,
-            ..
-        } => format!(
-            "its official link now serves a different file ({length} bytes, SHA-256 {sha256}), at least in part through {}, which the recipe did not review for it",
-            unreviewed_hosts.join(", ")
-        ),
-        other => format!("its official link cannot be used: {other}"),
+        )),
+        AcquireError::UnreviewedSource(refused) => other(format!(
+            "its official link now serves a different file ({} bytes, SHA-256 {}), at least in part through {}, which the recipe did not review for it",
+            refused.length,
+            refused.sha256,
+            refused.unreviewed_hosts.join(", ")
+        )),
+        AcquireError::AuthorizedContentChanged { length, sha256, .. } => other(format!(
+            "its official link now serves yet another file ({length} bytes, SHA-256 {sha256})"
+        )),
+        error => other(format!("its official link cannot be used: {error}")),
     }
 }
 
@@ -3626,6 +4683,24 @@ fn describe_collision(error: &AcquireError) -> String {
             format!("its file `{path}` cannot be placed: {message}")
         }
         other => other.to_string(),
+    }
+}
+
+/// The kind of a collision found while planning to place a changed archive.
+fn collision_kind(error: &AcquireError) -> UnusableKind {
+    match error {
+        AcquireError::UndeclaredOverwrite { path } => UnusableKind::Collision {
+            path: path.clone(),
+            message: describe_collision(error),
+        },
+        AcquireError::DestinationKindConflict { path, message }
+        | AcquireError::CollisionRuleRejected { path, message } => UnusableKind::Collision {
+            path: path.clone(),
+            message: message.clone(),
+        },
+        other => UnusableKind::Other {
+            message: other.to_string(),
+        },
     }
 }
 
@@ -3721,10 +4796,13 @@ impl<S: EventSink> ArtifactMaterializer for GuardedCliDependencies<'_, S> {
                     .is_some();
                 return match served {
                     Some(difference) if !started => Ok(MaterializationOutcome::LeaveOut {
-                        reason: format!(
-                            "its official link now serves a different archive ({}), which cannot be installed: {}",
-                            describe_download(&difference.served),
-                            describe_collision(&error)
+                        reason: UnusableReason::new(
+                            collision_kind(&error),
+                            format!(
+                                "its official link now serves a different archive ({}), which cannot be installed: {}",
+                                describe_download(&difference.served),
+                                describe_collision(&error)
+                            ),
                         ),
                     }),
                     _ => fresh_copy(error),
@@ -4840,46 +5918,6 @@ fn write_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
     file.sync_all().map_err(step_error)
 }
 
-/// [`write_json_once`] for a record whose absence has a meaning ([`publish_bytes_once`]).
-fn publish_json_once<T: Serialize>(path: &Path, value: &T) -> Result<(), StepFailure> {
-    let mut bytes = serde_json::to_vec_pretty(value).map_err(step_error)?;
-    bytes.push(b'\n');
-    publish_bytes_once(path, &bytes)
-}
-
-/// [`write_bytes_once`], but the file at `path` appears complete or not at all: `bytes` go to a
-/// temporary file in the same folder, which is synced and only then published under `path`,
-/// never replacing a file there. An interruption, such as a crash or a full disk, leaves at most
-/// that temporary file, which nothing reads, so the record still counts as absent and the next
-/// attempt writes it anew.
-fn publish_bytes_once(path: &Path, bytes: &[u8]) -> Result<(), StepFailure> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| StepFailure::new(format!("path has no parent: {}", path.display())))?;
-    ensure_directories(parent)?;
-    if holds_once(path, bytes)? {
-        return Ok(());
-    }
-    let temporary = tempfile::NamedTempFile::new_in(parent).map_err(step_error)?;
-    #[cfg(any(debug_assertions, feature = "test-hooks"))]
-    let temporary = interrupt_record_for_test(temporary, path, bytes)?;
-    let mut temporary = temporary;
-    temporary.write_all(bytes).map_err(step_error)?;
-    temporary.as_file().sync_all().map_err(step_error)?;
-    match crate::fs_retry::persist_noclobber(temporary, path) {
-        Ok(()) => Ok(()),
-        // An earlier attempt published it after all; it must be the same record.
-        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-            if holds_once(path, bytes)? {
-                Ok(())
-            } else {
-                Err(step_error(error))
-            }
-        }
-        Err(error) => Err(step_error(error)),
-    }
-}
-
 /// Whether the create-once file `path` exists already, which is only fine when it is a direct
 /// file holding exactly `bytes`.
 fn holds_once(path: &Path, bytes: &[u8]) -> Result<bool, StepFailure> {
@@ -4908,7 +5946,20 @@ fn holds_once(path: &Path, bytes: &[u8]) -> Result<bool, StepFailure> {
     }
 }
 
-/// Test builds stop [`publish_bytes_once`] halfway through a record in the evidence folder that
+/// Test builds end the process, as a crash would, right after the accepted changed download of
+/// the artifact that `CHRIZ_BG_COLLECTION_TEST_EXIT_AFTER_ACCEPTED` names is recorded and before
+/// its step completes.
+#[cfg(any(debug_assertions, feature = "test-hooks"))]
+fn exit_after_accepted_for_test(artifact_id: &str) {
+    if std::env::var("CHRIZ_BG_COLLECTION_TEST_EXIT_AFTER_ACCEPTED")
+        .ok()
+        .as_deref()
+        == Some(artifact_id)
+    {
+        std::process::exit(86);
+    }
+}
+/// Test builds stop [`publish_contained_json`] halfway through a record in the evidence folder that
 /// `CHRIZ_BG_COLLECTION_TEST_INTERRUPT_RECORD` names, as a crash would: half of the record is
 /// written and its temporary file stays behind.
 #[cfg(any(debug_assertions, feature = "test-hooks"))]
@@ -5613,10 +6664,11 @@ mod tests {
 
     use super::{
         archive_content_error, download_unavailable, install_interrupt_handler_with,
-        non_prefix_component_diagnostic, retain_first_acquisition_receipt,
+        non_prefix_component_diagnostic, render_question, retain_first_acquisition_receipt,
         select_terminal_evidence, selection_choices, stack_disturbed_reconciliation,
-        validate_frozen_cli_recipe, AcquireError, FrozenCliRecipe, FrozenSource,
-        InstallReconciliation, LaterAcquisition, SelectionOverrides, CLI_FROZEN_RECIPE_SCHEMA,
+        validate_frozen_cli_recipe, AcquireError, Answer, ArtifactKind, FrozenCliRecipe,
+        FrozenIdentity, FrozenSource, GameRoot, InstallReconciliation, LaterAcquisition, Question,
+        QuestionKind, SelectionOverrides, ServedDownload, CLI_FROZEN_RECIPE_SCHEMA,
     };
 
     fn downloaded_artifact_receipt() -> ArtifactReceipt {
@@ -5862,6 +6914,181 @@ mod tests {
             staged_bg1: managed.join("bg1"),
             staged_bg2: managed.join("game"),
         }
+    }
+
+    /// "Leave it out" names whole mods that depend on the mod in one sentence and mods that only
+    /// lose parts in another, each when it applies and both when both do.
+    #[test]
+    fn leave_out_texts_name_dependent_mods_and_reduced_mods_where_each_applies() {
+        let mut frozen = frozen_recipe_fixture();
+        let run = |run_id: &str, mod_id: &str| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![0],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        frozen.plan.runs = vec![
+            run("snowytoes-bg2", "snowytoes"),
+            run("snowfall-bg2", "snowfall"),
+            run("tweaks-bg2", "tweaks"),
+        ];
+        let question = |removed: &[&str], changed: &[&str]| Question {
+            kind: QuestionKind::ChangedDownload,
+            artifact_id: "snowytoes".to_owned(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: "snowytoes".to_owned(),
+                version: "1.6".to_owned(),
+                sha256: "11".repeat(32),
+                length: 10,
+            },
+            served: Some(ServedDownload {
+                filename: Some("snowytoes.zip".to_owned()),
+                length: 12,
+                sha256: "22".repeat(32),
+                link: "https://example.invalid/snowytoes.zip".to_owned(),
+                final_url: "https://example.invalid/snowytoes.zip".to_owned(),
+                hosts: vec!["example.invalid".to_owned()],
+                unreviewed_hosts: Vec::new(),
+            }),
+            reason: None,
+            leave_out: Some(crate::decision::LeaveOutClosure {
+                removed_runs: removed.iter().map(|id| (*id).to_owned()).collect(),
+                changed_runs: changed.iter().map(|id| run(id, "tweaks")).collect(),
+                plan_sha256: "33".repeat(32),
+            }),
+        };
+        let base = "A newer version of snowytoes was found. The reviewed version is no longer available at this link. Install it anyway?";
+        let dependents =
+            " If you leave it out, the mods that depend on it are left out too: snowfall.";
+        let reduced = " Without it, these are installed without the parts that need it: tweaks.";
+        for (removed, changed, expected) in [
+            (&["snowytoes-bg2"][..], &[][..], base.to_owned()),
+            (
+                &["snowytoes-bg2", "snowfall-bg2"][..],
+                &[][..],
+                format!("{base}{dependents}"),
+            ),
+            (
+                &["snowytoes-bg2"][..],
+                &["tweaks-bg2"][..],
+                format!("{base}{reduced}"),
+            ),
+            (
+                &["snowytoes-bg2", "snowfall-bg2"][..],
+                &["tweaks-bg2"][..],
+                format!("{base}{dependents}{reduced}"),
+            ),
+        ] {
+            let texts = render_question(
+                &frozen,
+                &question(removed, changed),
+                &std::collections::BTreeSet::new(),
+            );
+            assert_eq!(texts.message, expected);
+            assert_eq!(texts.focus, Answer::Yes);
+        }
+    }
+
+    /// A mod that loses one of its runs, such as Modpack's interface compatibility run for a
+    /// left-out interface mod, is still installed: it is named among the mods installed without
+    /// some parts, not among those left out, unless no run of it remains.
+    #[test]
+    fn a_mod_that_keeps_other_runs_is_installed_without_parts_not_left_out() {
+        let mut frozen = frozen_recipe_fixture();
+        let run = |run_id: &str, mod_id: &str| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![0],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        frozen.plan.runs = vec![
+            run("lefreut-bg2", "lefreut"),
+            run("modpack-main-bg2", "modpack"),
+            run("modpack-ui-bg2", "modpack"),
+        ];
+        let question = Question {
+            kind: QuestionKind::UnusableDownload,
+            artifact_id: "lefreut".to_owned(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: "lefreut".to_owned(),
+                version: "1".to_owned(),
+                sha256: "11".repeat(32),
+                length: 10,
+            },
+            served: None,
+            reason: Some(crate::decision::UnusableReason::new(
+                crate::decision::UnusableKind::HttpStatus {
+                    status: 410,
+                    attempts: 5,
+                },
+                "its official link answers HTTP 410",
+            )),
+            leave_out: Some(crate::decision::LeaveOutClosure {
+                removed_runs: vec!["lefreut-bg2".to_owned(), "modpack-ui-bg2".to_owned()],
+                changed_runs: Vec::new(),
+                plan_sha256: "33".repeat(32),
+            }),
+        };
+        let texts = render_question(&frozen, &question, &std::collections::BTreeSet::new());
+        assert_eq!(
+            texts.message,
+            "lefreut can't be installed (its link no longer has the file). It will be left out. Installed without the parts that need it: modpack. Continue the installation?"
+        );
+        assert_eq!(texts.answers[0].label, "Continue without them");
+        // With its other run left out earlier, Modpack goes along entirely.
+        let earlier = std::collections::BTreeSet::from(["modpack-main-bg2".to_owned()]);
+        let texts = render_question(&frozen, &question, &earlier);
+        assert_eq!(
+            texts.message,
+            "lefreut can't be installed (its link no longer has the file). It and the mods that depend on it (modpack) will be left out. Continue the installation?"
+        );
+    }
+
+    /// A mod that lost parts because one mod was left out, and was then left out itself, is
+    /// not described as installed without those parts: by the final remaining runs it is not
+    /// installed at all. While a run of it remains, it is.
+    #[test]
+    fn a_reduced_mod_left_out_later_is_not_named_as_installed() {
+        let mut frozen = frozen_recipe_fixture();
+        let run = |run_id: &str, mod_id: &str| crate::resolve::PlannedRun {
+            run_id: run_id.to_owned(),
+            mod_id: mod_id.to_owned(),
+            target: GameRoot::Bg2,
+            phase: crate::manifest::Phase::Main,
+            components: vec![0],
+            args: Vec::new(),
+            postconditions: Vec::new(),
+            artifact_id: mod_id.to_owned(),
+            weidu_artifact_id: "weidu".to_owned(),
+            prompt_scripts: Vec::new(),
+        };
+        frozen.plan.runs = vec![run("snowy-bg2", "snowy"), run("tweaks-bg2", "tweaks")];
+        let removed = vec!["snowy-bg2".to_owned()];
+        let changed = vec!["tweaks-bg2".to_owned()];
+        let still_there = std::collections::BTreeSet::from(["tweaks-bg2".to_owned()]);
+        assert_eq!(
+            super::affected_mods(&frozen, "snowy", &removed, &changed, &still_there),
+            (Vec::<String>::new(), vec!["tweaks".to_owned()])
+        );
+        let gone_later = std::collections::BTreeSet::new();
+        assert_eq!(
+            super::affected_mods(&frozen, "snowy", &removed, &changed, &gone_later),
+            (Vec::<String>::new(), Vec::<String>::new())
+        );
     }
 
     #[test]
