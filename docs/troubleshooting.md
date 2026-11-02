@@ -1,7 +1,7 @@
 # Chriz Easy BG: quick help
 
-CEBG is still in alpha. If something fails, you usually do not need to delete
-your games or downloads to find out why.
+If something fails, you usually do not need to delete your games or downloads to
+find out why.
 
 ## Which update do I need?
 

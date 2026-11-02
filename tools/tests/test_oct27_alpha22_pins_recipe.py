@@ -40,9 +40,10 @@ SHA256 = "8d08fc2be48c45b1d17a79abc010b085868696fb00f045c75d057f9c72a73336"
 LENGTH = 89_682_621
 TAG_COMMIT = "afa3316cdcf0d9dd8c0678c5e578b2621a3373ee"
 # The October 29 Kitpack intake replaces chriz.4 with chriz.5 for all three installers; its
-# tweak TP2 declares 7205 between 7203 and 8204 (checked against its own record).
-KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
-KITPACK_SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.5"
+# tweak TP2 declares 7205 between 7203 and 8204 (checked against its own record). The
+# November 2 intake replaces chriz.5 with chriz.6, which changes no component.
+KITPACK_SUCCESSOR = "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
+KITPACK_SUCCESSOR_TAG = "v4.81a-dev.85928f9-chriz.6"
 KITPACK_LATER = {"artisanskitpack-tweak": {7205}}
 KITPACK_LATER_ROWS = {"ARTISANSKITPACK_TWEAK": {7205}}
 # Mod id, its TP2 and the catalog that lists its components.
@@ -273,8 +274,9 @@ REBALANCE_SHA256 = "24e3117e9a32485fa848f37c213fc4c4c24bb0166a04c229a1b3fe7a28ed
 REBALANCE_LENGTH = 1_817_306
 REBALANCE_COMMIT = "43b8811abe04ad71575c89d5589866919801bdff"
 # The October 29 intakes replace v0.8.6 with v0.8.7, which renames 360, and v0.8.7 with
-# v0.8.8, which declares 410 and 411 (checked against its own record).
-REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.8"
+# v0.8.8, which declares 410 and 411 (checked against its own record). The November 2
+# intake replaces v0.8.8 with v0.8.9, which changes no component.
+REBALANCE_SUCCESSOR = "chriz-bg-rebalance-0.8.9"
 REBALANCE_LATER = {410, 411}
 CLOCKS_TITLE = "True Time Stop – fair Haste & Slow"
 REBALANCE_RUN = "chriz-bg-rebalance-bg2"

@@ -19,7 +19,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 **In progress (separate sessions)**
 
-- CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order:
+- CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order. On
+  2026-11-01 Christopher decided that it is released as app and collection **0.1.0**,
+  without a pre-release suffix and with the same content:
   1. One pin batch: Modpack alpha.14 (released on 2026-10-26, see below), BG Rebalance
      v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
      fork `v4.81a-dev.85928f9-chriz.3` (sorcerer and kit weapon fixes, below), EEex `9`
@@ -85,23 +87,40 @@ Cross-repository status. Component detail stays in the sections below and in the
      2026-10-29; evidence in `manifest/evidence/release-intake-20261029-kitpack-chriz5.toml`),
      with its new tweak `7205` as a default in the late tweak run (Christopher, 2026-10-29;
      see Weapon access below).
-     Still open in this step: #75 and #74, BuffBot v1.12.6 for both installers (above);
-     #51 is superseded.
+     #75 and #74, BuffBot v1.12.6 for both installers (above), merged on 2026-11-01; #51
+     is closed as superseded.
+     Christopher took two fixes into 0.1.0 on 2026-11-02, both released on 2026-11-01
+     (UTC) and pinned in both recipes in
+     [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (evidence in
+     `manifest/evidence/release-intake-20261102-kitpack-chriz6-rebalance-089.toml`): the
+     Artisan's Kitpack fork chriz.6 (white werewolf crash, below) and BG Rebalance v0.8.9
+     (Pierce Magic and Spellstrike texts, below). Neither changes a component, the order
+     or a decision.
   2. Issues [#7](https://github.com/Chrizhermann/chriz-bg-collection/issues/7) and
      [#8](https://github.com/Chrizhermann/chriz-bg-collection/issues/8), with the alpha.22
      update ledger: [PR #67](https://github.com/Chrizhermann/chriz-bg-collection/pull/67),
      merged on 2026-10-30. The ledger supersedes alpha.20 (alpha.21 shipped
      the alpha.20 recipe), covers all 231 recorded differences, BuffBot v1.12.6 from #75
-     included, and needs app alpha.22, so the app release that ships it must carry that
-     version. Its publication date is a placeholder that the release step sets. If the
-     recipe changes again before the release, the recorded differences and the ledger need
-     the new subjects (steps in #67).
+     included, and needs the app version that ships it. Since PR #76 it is the 0.1.0 ledger
+     (`releases/v0.1.0/ledger.toml`), needs app 0.1.0 and is dated 2026-11-02; the rename
+     left the recorded differences unchanged, because release.json and the ledgers are not
+     part of the recipe diff. The chriz.6 and v0.8.9 pins (step 1) add two differences, so
+     the ledger covers 233, with two new entries. If the recipe changes again before the
+     release, the recorded differences and the ledger need the new subjects (steps in #67).
   3. A full lab run of the Recommended selection. The Sirene BG1 lab of 2026-10-29
      installed this selection with #58, #60 and the SoD Remix v0.6.16 candidate. Its
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
      v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44), now
-     v1.12.6 (#75), came after it.
-  4. Acceptance, build, signing and publishing, and the website.
+     v1.12.6 (#75), came after it, and so did Kitpack chriz.6 and Rebalance v0.8.9 (#76).
+  4. Acceptance, build, signing and publishing, and the website. A signed release
+     candidate of app and collection 0.1.0 for Christopher's own test is built from
+     [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (exact package
+     and test results in `docs/package-acceptance-0.1.0-2026-11-02.md`); nothing is
+     tagged or published. The ledger is renamed to 0.1.0 and dated 2026-11-02 (step 2),
+     and #77 is fixed in the same PR (below). The candidate was rebuilt on 2026-11-02 with
+     Kitpack chriz.6 and Rebalance v0.8.9 (step 1); the first 0.1.0 candidate and the
+     alpha.22 candidate of 2026-11-01 are superseded. Still open before publishing: his
+     test and OK and the lab run (step 3).
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).
@@ -317,6 +336,19 @@ Cross-repository status. Component detail stays in the sections below and in the
       `7205` as a default. Since PR #66 (merged on 2026-10-29) chriz.5 is pinned for all
       three Kitpack installers in place of chriz.4, and `7205` joins the late tweak run
       before `8204`; no other component, order or decision changes.
+  - [chriz.6](https://github.com/Chrizhermann/The-Artisan-s-Kitpack-Chriz-Balance-Patch/releases/tag/v4.81a-dev.85928f9-chriz.6),
+    released on 2026-11-01 (UTC; fork PR #17, for new installations): the Shapeshifter's
+    white and greater white werewolf forms (`5110`) had no attack 1 frames in the five base
+    directions, which crashes BG2:EE 2.7.3.0 or corrupts memory near a wall. Both files are
+    now copies of the same fur's attack 2; the three TP2s change only their VERSION.
+    - Seen in play in his stream game; in a lab on a copy of it, the old greater white
+      file crashed after 107 s, and with the A2 copy in `override` the same scene ran
+      424 s without a crash. The white fur was checked offline only, and no WeiDU install
+      of the release ran in a game. A one-off repair of the stream game waits for
+      Christopher.
+    - Christopher took chriz.6 into 0.1.0 on 2026-11-02; pinned for all three Kitpack
+      installers in place of chriz.5 in PR #76. Existing games keep the old files; there
+      is no tail.
 - ChrizFader's voicepacks v1.1.0, released on 2026-10-22: all 18 player voicepacks are
   in both recipes since [PR #24](https://github.com/Chrizhermann/chriz-bg-collection/pull/24) (merged on 2026-10-22) as defaults under "Voicepacks"
   (Christopher's decision), one catalog each (`CD_*.md`), in their own runs after the
@@ -415,6 +447,15 @@ Cross-repository status. Component detail stays in the sections below and in the
     new name and its guard against the standalone package, which CEBG never installs.
   - Since PR #64 (merged on 2026-10-29) v0.8.8 replaces v0.8.7. It adds `410` and `411`
     (Weapon access, above) as defaults between `302` and `420`; nothing else changes.
+  - v0.8.9 (released on 2026-11-01 UTC,
+    [PR #25](https://github.com/Chrizhermann/chriz-bg-rebalance/pull/25)) gives Pierce
+    Magic `210` and Spellstrike `211` descriptions in Spell Revisions' layout that match
+    their effects, and repoints the scrolls, the Wand of Spell Striking and sibling
+    spells such as the Kitpack monk's Spellstrike and SCS's wand spell. No mechanic and no
+    component of the main TP2 changes. Its texts-only components `212`/`213` for existing
+    installations ship in the release's separate `CBR_SR_ANTIMAGIC` package, which CEBG
+    does not install. Christopher took v0.8.9 into 0.1.0 on 2026-11-02; pinned in place
+    of v0.8.8 in PR #76.
   - Open in-game checks: the fork's level-5 replacements for Rogue Rebalancing, and BG
     Rebalance `220` as released and `400`-`403`.
   - The fork's next version, v4.21-chriz.8, moves Chaos back to level 5. It is on draft
@@ -545,6 +586,14 @@ Cross-repository status. Component detail stays in the sections below and in the
     keeps +3/2 attacks per round and +8 to hit / +10 damage ([CDTWEAKS](CDTWEAKS.md)); how
     strong it should be is decided later.
   - Edwin: whether he is too strong; a later discussion.
+  - Pierce Magic: its description does not match what the spell does (Christopher, seen on
+    stream 2026-11-02 in his 2026-09-16 stream install). Check which mod shapes the live
+    spell and its text there and in 0.1.0, then make the description match the effects.
+    Done for new installations: BG Rebalance `210`/`211` shape both spells with Spell
+    Revisions, and v0.8.9 (pinned in 0.1.0 by PR #76) describes Pierce Magic and
+    Spellstrike as they work. Existing installations, such as his stream game, keep the
+    old texts; the release's separate texts-only package (`212`/`213`) is meant for them,
+    and applying it there waits for Christopher.
 
 **Ideas for later (community, recorded 2026-10-20)**
 
@@ -579,6 +628,15 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Challenge Mode rules: Time Stop at most once per caster per rest and never chained,
   also not through a Wild Mage's Reckless Dweomer; no rest loops through Wish. They add
   to the remaining Challenge Mode rules under Larger projects.
+
+**Ideas for later (Christopher, 2026-11-01)**
+
+- Challenge Mode: no travel back into an earlier campaign's areas. After leaving BG1 for
+  Siege of Dragonspear there is no return to BG1; from BG2 (Shadows of Amn) no return to
+  BG1; from Throne of Bhaal no return to Shadows of Amn. More freedom inside one campaign
+  is fine. Optional quest mods that need such travel must say that they don't work with
+  Challenge Mode. Reasons: fewer bugs, and no exploits through shops or stashed items. The
+  exact area list is defined together with Christopher later.
 
 **Larger projects:** Time Stop/Haste (Rebalance `360`, above); script engine / Fight Director
 (design with Christopher; it also takes enemy mages' Dispelling Screen, Christopher,
@@ -646,6 +704,18 @@ content, evaluated component by component (keep, fix or extend).
   files v0.6.16 ships unchanged) installed `3500`, `256`, the default Imoen choice `292`
   and the rest of the remix run without errors. Data only for `256`: the bridge fight
   was not played.
+- [x] "Smaller downloadable setup" (`manifest/`, was "Smaller downloadable alpha"): its
+  Artisan's Kitpack main run requested `10002` before `10001` and `1100` after `1009`, and
+  its Randomiser run `1100` last, against the TP2s' declaration order
+  ([#77](https://github.com/Chrizhermann/chriz-bg-collection/issues/77); found in the
+  alpha.22 package acceptance, unchanged since chriz.1). WeiDU installs a batch in TP2 order
+  and the engine's reconciliation expects the requested order, so an installation with this
+  profile and the default selection would likely have stopped there. Fixed in
+  [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (Christopher's
+  decision of 2026-11-01): both runs follow the TP2 order, the native order checker accepts
+  both profiles against the pinned archives, and `tools/tests/test_native_run_orders.py`
+  checks both profiles against the generator's audited orders and every native order an
+  intake recorded.
 - [ ] Modpack `430` (scrolls at the reader's caster level) failed on 2.7.3.0 with EEex
   v1.3.1 in alpha.11 to alpha.13: on the first load, a new game or an NPC join it showed
   its EEex error box ("copied action construction overlaps an existing lifetime") and

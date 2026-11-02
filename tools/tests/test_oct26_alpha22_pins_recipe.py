@@ -63,6 +63,11 @@ SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.5"
                    for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
 LATER_COMPONENTS["artisanskitpack-tweak"] = {7205}
 LATER_ROWS["ARTISANSKITPACK_TWEAK"] = {7205}
+# The November 2 intake (test_nov02_kitpack_rebalance_fix_pins_recipe) replaces chriz.5 with
+# chriz.6 and Rebalance v0.8.8 with v0.8.9; neither changes a component or the order.
+SUCCESSORS.update({mod_id: "artisans-kitpack-4.81a-dev.85928f9-chriz.6"
+                   for mod_id in ("artisanskitpack", "artisanskitpack-npc", "artisanskitpack-tweak")})
+SUCCESSORS["chriz-bg-rebalance"] = "chriz-bg-rebalance-0.8.9"
 # Per mod: the new pin, the superseded pin (kept as history), its tag, the archive name and
 # the catalog that lists the mod's components.
 PINS = {
