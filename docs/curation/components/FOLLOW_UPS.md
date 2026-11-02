@@ -21,7 +21,9 @@ Cross-repository status. Component detail stays in the sections below and in the
 
 - CEBG alpha.22, the next release (Christopher's plan of 2026-10-25), in this order. On
   2026-11-01 Christopher decided that it is released as app and collection **0.1.0**,
-  without a pre-release suffix and with the same content:
+  without a pre-release suffix and with the same content. **Published on 2026-11-02**
+  (step 4); still open: merging the next-release branch back into `main`, which
+  Christopher decides.
   1. One pin batch: Modpack alpha.14 (released on 2026-10-26, see below), BG Rebalance
      v0.8.5, Spell Revisions fork v4.21-chriz.7, BuffBot v1.11.0, the Artisan's Kitpack
      fork `v4.81a-dev.85928f9-chriz.3` (sorcerer and kit weapon fixes, below), EEex `9`
@@ -112,15 +114,21 @@ Cross-repository status. Component detail stays in the sections below and in the
      install was clean and the lab is kept; it ran Sirene's checks only. BG Rebalance
      v0.8.8 (#64), Kitpack chriz.5 with `7205` (#66) and BuffBot v1.12.1 (#44), now
      v1.12.6 (#75), came after it, and so did Kitpack chriz.6 and Rebalance v0.8.9 (#76).
-  4. Acceptance, build, signing and publishing, and the website. A signed release
-     candidate of app and collection 0.1.0 for Christopher's own test is built from
-     [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) (exact package
-     and test results in `docs/package-acceptance-0.1.0-2026-11-02.md`); nothing is
-     tagged or published. The ledger is renamed to 0.1.0 and dated 2026-11-02 (step 2),
-     and #77 is fixed in the same PR (below). The candidate was rebuilt on 2026-11-02 with
-     Kitpack chriz.6 and Rebalance v0.8.9 (step 1); the first 0.1.0 candidate and the
-     alpha.22 candidate of 2026-11-01 are superseded. Still open before publishing: his
-     test and OK and the lab run (step 3).
+     Done on 2026-11-02: a fresh full lab install from the final build source `50a4239`
+     finished without errors, and Christopher tested it and called 0.1.0 ready.
+  4. Acceptance, build, signing and publishing, and the website. **Done:** app and
+     collection 0.1.0 are published since 2026-11-02, built from
+     [PR #76](https://github.com/Chrizhermann/chriz-bg-collection/pull/76) at `50a4239`
+     (exact package, test and publication results in
+     `docs/package-acceptance-0.1.0-2026-11-02.md`). PR #76 merged into the next-release
+     branch as `44235d8`; the
+     [v0.1.0 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0)
+     (a normal release, marked Latest) and the `alpha` update channel serve 0.1.0, and
+     website PR 45 is live. The ledger is renamed to 0.1.0 and dated 2026-11-02 (step 2),
+     and #77 is fixed in the same PR (below) and closed. The candidate was rebuilt on
+     2026-11-02 with Kitpack chriz.6 and Rebalance v0.8.9 (step 1); the first 0.1.0
+     candidate and the alpha.22 candidate of 2026-11-01 were superseded and never
+     published.
 - Installers keep going when a mod's official link serves a newer file (Christopher,
   2026-10-30: as few blockers as possible; a newer version under the same link is
   installed and logged, and players report problems afterwards).
@@ -166,7 +174,7 @@ Cross-repository status. Component detail stays in the sections below and in the
     (Christopher, 2026-10-27). EEex installs at the start of the order, so moving an
     existing installation would mean reinstalling everything after it. The changelog
     draft (`docs/plans/2026-10-14-next-release-changelogs.md`) still calls this open; the
-    alpha.22 release notes take the decision.
+    0.1.0 release notes state the decision.
 - SoD Remix v0.6.16, released on 2026-10-29 (Christopher's OK of the same day), pinned in
   both recipes since [PR #63](https://github.com/Chrizhermann/chriz-bg-collection/pull/63)
   (fresh-download and native-order evidence in
@@ -715,7 +723,7 @@ content, evaluated component by component (keep, fix or extend).
   decision of 2026-11-01): both runs follow the TP2 order, the native order checker accepts
   both profiles against the pinned archives, and `tools/tests/test_native_run_orders.py`
   checks both profiles against the generator's audited orders and every native order an
-  intake recorded.
+  intake recorded. Released in 0.1.0; #77 is closed.
 - [ ] Modpack `430` (scrolls at the reader's caster level) failed on 2.7.3.0 with EEex
   v1.3.1 in alpha.11 to alpha.13: on the first load, a new game or an NPC join it showed
   its EEex error box ("copied action construction overlaps an existing lifetime") and

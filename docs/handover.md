@@ -2,7 +2,18 @@
 
 Live entry point for anyone (user, future agent) picking up work on this repo.
 
-## November 1–2 — 0.1.0 release candidate for Christopher's own test (not published)
+## November 2 — app and collection 0.1.0 published
+
+**App and collection 0.1.0 are public**, the first CEBG release without the alpha label:
+the [v0.1.0 release](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0)
+(a normal release, marked Latest), the `alpha` update channel, which every installed CEBG
+version reads, and [the collection page](https://bg.chrizfader.org/collection). Christopher
+gave the go on 2026-11-02 after testing the final lab install of the build source. PR #76
+merged into the next-release branch as `44235d8`; the release, its seven assets and the
+channel feed were checked anonymously; website PR 45 merged as `867438c`; #77 is closed.
+Details: the Publication section of the
+[0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md). The rest of this
+section describes how the release was prepared.
 
 Christopher decided on 2026-11-01 that the release prepared as alpha.22 is **0.1.0**,
 without a pre-release suffix; the content stays the same. Branch `claude/release-alpha22`
@@ -48,12 +59,9 @@ Christopher's test folder: the first 0.1.0 candidate, built on November 1 from `
 earlier that day (`1101253f…`,
 [record](package-acceptance-alpha22-2026-11-01.md)).
 
-This candidate is for Christopher's own test. Nothing is tagged, published or uploaded,
-the alpha channel still announces alpha.21, and the website is unchanged. Not in it: the
-open PRs against the next-release branch, #69 (install what a mod's official link serves
-when it differs from the pin) and #53 (own-mod pin check). Still open before publication:
-his test and OK, and the work queue's lab run of the Recommended selection
-(`docs/curation/components/FOLLOW_UPS.md`, step 3).
+Not in 0.1.0: the open PRs against the next-release branch, #69 (install what a mod's
+official link serves when it differs from the pin) and #53 (own-mod pin check). The
+next-release branch has not been merged back into `main` yet; Christopher decides when.
 
 ## October 14 — app alpha.21 and its website published (installer fixes)
 

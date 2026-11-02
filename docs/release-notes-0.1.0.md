@@ -1,6 +1,7 @@
 # Chriz Easy BG 0.1.0
 
-**Release candidate, not published:** app 0.1.0 / collection 0.1.0.
+**Published:** app 0.1.0 / collection 0.1.0, on 2026-11-02.
+[Download and release page](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0).
 Exact package and test results: [0.1.0 package verification](package-acceptance-0.1.0-2026-11-02.md).
 
 This update brings a new recommended mod setup with new choices, updated mods and many

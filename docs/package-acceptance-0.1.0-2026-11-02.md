@@ -1,9 +1,9 @@
 # 0.1.0 package verification — November 2
 
 App **0.1.0**, bundled collection **0.1.0**. Build source:
-`50a42395be6112a687a9d0bf81dd2a23d1849b95` (PR #76). This is a release candidate for
-Christopher's own test; nothing is tagged, published or uploaded. Later documentation does
-not alter the verified package.
+`50a42395be6112a687a9d0bf81dd2a23d1849b95` (PR #76). It was verified as a release candidate
+for Christopher's own test and published on 2026-11-02 (see [Publication](#publication)).
+Later documentation does not alter the verified package.
 
 ## Why this rebuild
 
@@ -140,3 +140,23 @@ publisher certificate.
   from the pin) and #53 (own-mod pin check), both open against the next-release branch.
 - The README still describes app and collection alpha.20 as the published release; update
   it together with the website at publication.
+
+## Publication
+
+Christopher gave the go on 2026-11-02 after testing the final lab install of this build
+source. PR #76 merged into the next-release branch as `44235d8` (11:55 UTC), and
+[0.1.0](https://github.com/Chrizhermann/chriz-easy-bg/releases/tag/v0.1.0) was published
+seconds later as a normal release, marked Latest, with the tag `v0.1.0` on the distribution
+repository's `main`, like every alpha. 0.1.0 drops the alpha label, so it is not marked as a
+pre-release. All seven versioned assets were downloaded anonymously and matched the hashes
+above: setup, signature, feed, checksums, component inventory, license and notices. The
+license and notices are the committed file bytes.
+
+The alpha channel, which every installed CEBG version reads, serves the 0.1.0 feed since
+11:56 UTC; the previous alpha.21 feed is kept for rollback. An anonymous download of the
+channel feed matches the feed hash above. Versioned assets are immutable.
+
+The [collection website](https://bg.chrizfader.org/collection) was updated with website
+PR 45, merged as `867438c` and live from 20:57 local time; its live content file names 0.1.0
+with the setup URL and hash above. Issue #77 was closed by hand, because PR #76 merged into
+the next-release branch rather than `main`.
