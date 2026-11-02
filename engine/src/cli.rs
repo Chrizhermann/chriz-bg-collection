@@ -4146,8 +4146,9 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                     path.display()
                 )));
             };
-            // The temporary file of a record whose writing was interrupted; nothing reads it.
-            if name.starts_with(".tmp") {
+            // The temporary file of a record whose publication was interrupted, in exactly the
+            // publisher's reserved format; nothing reads it. Every other entry is refused.
+            if crate::contained::is_interrupted_publication(&directory, name) {
                 continue;
             }
             if !name.starts_with("attempt-") || !name.ends_with(".json") {

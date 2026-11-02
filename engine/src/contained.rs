@@ -12,6 +12,31 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
+/// The temporary file of a record being published is named `.cebg-record-<12 letters or
+/// digits>.partial`, a format reserved for it, so that a reader can tell the leftover of an
+/// interrupted publication from every other entry.
+const TEMPORARY_PREFIX: &str = ".cebg-record-";
+const TEMPORARY_SUFFIX: &str = ".partial";
+const TEMPORARY_RANDOM: usize = 12;
+
+/// Whether the entry `name` in `folder` is the leftover temporary file of an interrupted
+/// publication: a direct regular file, not a link, folder or other reparse point, whose name
+/// has exactly the reserved format.
+pub(crate) fn is_interrupted_publication(folder: &Path, name: &str) -> bool {
+    let Some(random) = name
+        .strip_prefix(TEMPORARY_PREFIX)
+        .and_then(|rest| rest.strip_suffix(TEMPORARY_SUFFIX))
+    else {
+        return false;
+    };
+    if random.len() != TEMPORARY_RANDOM || !random.bytes().all(|byte| byte.is_ascii_alphanumeric())
+    {
+        return false;
+    }
+    fs::symlink_metadata(folder.join(name)).is_ok_and(|metadata| {
+        metadata.is_file() && !metadata.file_type().is_symlink() && !is_reparse_point(&metadata)
+    })
+}
 /// The real path of an open file or folder.
 #[cfg(windows)]
 fn final_path(file: &File, _opened: &Path) -> io::Result<PathBuf> {
@@ -181,7 +206,11 @@ pub(crate) fn publish_inside(
             Published::Differs
         });
     }
-    let temporary = tempfile::NamedTempFile::new_in(folder)?;
+    let temporary = tempfile::Builder::new()
+        .prefix(TEMPORARY_PREFIX)
+        .suffix(TEMPORARY_SUFFIX)
+        .rand_bytes(TEMPORARY_RANDOM)
+        .tempfile_in(folder)?;
     confirm_inside(temporary.as_file(), temporary.path(), root)?;
     let mut temporary = interrupt(temporary)?;
     temporary.write_all(bytes)?;

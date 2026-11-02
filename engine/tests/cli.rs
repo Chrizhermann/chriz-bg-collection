@@ -6556,6 +6556,40 @@ fn an_interrupted_run_attempt_record_leaves_the_installation_resumable() {
                 != Some("json")),
         "{left_behind:?}"
     );
+    // The leftover has the publisher's reserved name; only exactly that is skipped.
+    let leftover = left_behind[0].file_name().unwrap().to_str().unwrap();
+    assert!(
+        leftover.starts_with(".cebg-record-")
+            && leftover.ends_with(".partial")
+            && leftover.len() == ".cebg-record-".len() + 12 + ".partial".len(),
+        "{leftover}"
+    );
+
+    // Look-alikes and a folder in the reserved format are refused, not skipped.
+    for (name, folder) in [
+        (".tmpA1b2C3", false),
+        (".cebg-record-short.partial", false),
+        (".cebg-record-abcdefghijkl.partial.json", false),
+        (".cebg-record-abcdefghijkl.partial", true),
+    ] {
+        let impostor = records.join(name);
+        if folder {
+            fs::create_dir(&impostor).unwrap();
+        } else {
+            fs::write(&impostor, b"{}").unwrap();
+        }
+        let (code, refused) = resume_answering(&fixture, None, &[]);
+        assert_eq!(code, Some(1), "{name}: {refused:#}");
+        assert!(
+            refused.to_string().contains("unexpected run evidence file"),
+            "{name}: {refused:#}"
+        );
+        if folder {
+            fs::remove_dir(&impostor).unwrap();
+        } else {
+            fs::remove_file(&impostor).unwrap();
+        }
+    }
 
     let (code, finished) = resume_answering(&fixture, None, &[]);
 
