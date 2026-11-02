@@ -30,6 +30,10 @@ pub struct ManagedLayout {
     bg1_root: PathBuf,
     game_root: PathBuf,
     state_root: PathBuf,
+    /// Root entry patterns of leftovers that the BGEE+SoD copy leaves out.
+    bg1_left_out: Vec<String>,
+    /// Root entry patterns of leftovers that the BG2EE copy leaves out.
+    bg2_left_out: Vec<String>,
 }
 
 impl ManagedLayout {
@@ -87,7 +91,28 @@ impl ManagedLayout {
             bg1_root,
             game_root,
             state_root,
+            bg1_left_out: Vec::new(),
+            bg2_left_out: Vec::new(),
         })
+    }
+
+    /// This layout with `patterns` naming the root entries of `role`'s source that its copy
+    /// leaves out: leftovers of earlier mod installs, such as `WeiDU.log` and `setup-*`
+    /// programs (see [`crate::games::left_out_root_patterns`]). Matching is case-insensitive
+    /// with `*` and `?` wildcards, on direct entries of the source root only.
+    pub fn leaving_out(mut self, role: GameRole, patterns: Vec<String>) -> Self {
+        match role {
+            GameRole::BgeeSod => self.bg1_left_out = patterns,
+            GameRole::Bg2ee => self.bg2_left_out = patterns,
+        }
+        self
+    }
+
+    fn left_out(&self, role: GameRole) -> &[String] {
+        match role {
+            GameRole::BgeeSod => &self.bg1_left_out,
+            GameRole::Bg2ee => &self.bg2_left_out,
+        }
     }
 
     /// Canonical managed root.
@@ -859,7 +884,8 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
     observer: &mut O,
 ) -> Result<StageReport> {
     let (source, target, scratch) = layout.paths_for(role);
-    let before = snapshot_tree(source)?;
+    let left_out = layout.left_out(role);
+    let before = snapshot_tree_without(source, left_out)?;
     create_directories(target)?;
     ensure_expected_destination_entries(target, &before)?;
     create_directories(&scratch)?;
@@ -909,7 +935,7 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
             }
         }
 
-        let after = snapshot_tree(source)?;
+        let after = snapshot_tree_without(source, left_out)?;
         if after != before {
             return Err(source_changed_error(
                 source,
@@ -923,7 +949,7 @@ pub fn stage_game_copy_with_observer<O: StageObserver>(
 
     if let Err(error) = copy_result {
         let already_source_changed = matches!(&error, EngineError::StagingSourceChanged { .. });
-        match snapshot_tree(source) {
+        match snapshot_tree_without(source, left_out) {
             Ok(after) if !already_source_changed && after == before => return Err(error),
             Ok(after) => {
                 discard_role_stage(layout, target, &scratch)?;
@@ -981,9 +1007,14 @@ enum SnapshotKind {
 }
 
 fn snapshot_tree(root: &Path) -> Result<TreeSnapshot> {
+    snapshot_tree_without(root, &[])
+}
+
+/// The snapshot of `root` without its direct entries that match one of `left_out`.
+fn snapshot_tree_without(root: &Path, left_out: &[String]) -> Result<TreeSnapshot> {
     ensure_direct_directory(root)?;
     let mut entries = Vec::new();
-    collect_snapshot_entries(root, root, &mut entries)?;
+    collect_snapshot_entries(root, root, &mut entries, left_out)?;
     entries.sort_by_key(|entry| path_sort_key(&entry.relative));
 
     let mut digest = Sha256::new();
@@ -1031,6 +1062,7 @@ fn collect_snapshot_entries(
     root: &Path,
     directory: &Path,
     entries: &mut Vec<SnapshotEntry>,
+    left_out: &[String],
 ) -> Result<()> {
     let mut children = fs::read_dir(directory)
         .map_err(|source| EngineError::Io {
@@ -1046,6 +1078,14 @@ fn collect_snapshot_entries(
 
     for child in children {
         let path = child.path();
+        let name = child.file_name();
+        if directory == root
+            && left_out.iter().any(|pattern| {
+                crate::games::probe::wildcard_match(pattern, &name.to_string_lossy())
+            })
+        {
+            continue;
+        }
         let metadata = direct_metadata(&path)?;
         let relative = path
             .strip_prefix(root)
@@ -1060,7 +1100,7 @@ fn collect_snapshot_entries(
                 kind: SnapshotKind::Directory,
                 metadata_identity: source_metadata_identity(&path, &metadata)?,
             });
-            collect_snapshot_entries(root, &path, entries)?;
+            collect_snapshot_entries(root, &path, entries, &[])?;
         } else if metadata.is_file() {
             let (length, sha256) = hash_and_length(&path)?;
             entries.push(SnapshotEntry {

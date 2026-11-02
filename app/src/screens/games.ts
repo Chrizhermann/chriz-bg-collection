@@ -1,5 +1,6 @@
 import type { GameCandidate, GameDiscovery } from "../contracts";
 import { actionButton, element, screenActions, screenIntro } from "../components/app-shell";
+import { sourceStatus } from "../state";
 
 function candidateSelect(
   labelText: string,
@@ -34,7 +35,7 @@ function candidateSelect(
     const candidate = candidates.find((entry) => entry.id === select.value);
     path.textContent = candidate?.path ?? "";
     finding.replaceChildren();
-    candidate?.findings.forEach((message) => finding.append(element("p", candidate.eligible ? "finding ok" : "finding warning", message)));
+    candidate?.findings.forEach((message) => finding.append(element("p", sourceStatus(candidate) === "ready" ? "finding ok" : "finding warning", message)));
   };
   select.addEventListener("change", refresh);
   refresh();

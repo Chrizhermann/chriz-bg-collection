@@ -508,8 +508,9 @@ fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, Pat
     use_production_invocation_mode(&recipe);
     let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
     let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
-    fs::write(bg1.join("setup-dirty.exe"), b"modified")
-        .expect("add explicit modified-game residue");
+    // A game that misses a file every installation needs stays a stop. (Leftovers of earlier
+    // mod installs no longer are: the copy leaves them out.)
+    fs::remove_file(bg1.join("chitin.key")).expect("remove a required game file");
     let managed = temp.path().join("managed");
     let cache = temp.path().join("cache");
     let app_data = temp.path().join("app-data");
@@ -1659,7 +1660,7 @@ fn plan_group_whose_only_member_needs_an_explicit_prerequisite_turns_on() {
 fn install_group_switch_sees_an_explicit_prerequisite_override() {
     // `install` shares the plan's selection expansion. With the prerequisite switched on, the
     // group's only member is available, so selection and planning succeed and install reaches
-    // the source-game freshness guard, which the deliberately modified BG1 copy then trips.
+    // the source-game guard, which the BG1 copy without its chitin.key then trips.
     let temp = fixture_tempdir();
     let recipe = recipe_with_gated_group(&temp, &["challenge-c"]);
     use_production_invocation_mode(&recipe);
@@ -1671,7 +1672,7 @@ fn install_group_switch_sees_an_explicit_prerequisite_override() {
     );
     let bg1 = copied_game(&temp, "steam-bgee-sod", "bg1");
     let bg2 = copied_game(&temp, "steam-bg2ee", "bg2");
-    fs::write(bg1.join("setup-dirty.exe"), b"modified").expect("add modified-game residue");
+    fs::remove_file(bg1.join("chitin.key")).expect("remove a required game file");
     let cache = temp.path().join("cache");
     fs::create_dir(&cache).expect("create cache root");
     // Each attempt gets its own managed root and app data, so one guarded attempt's campaign
@@ -1782,7 +1783,7 @@ fn unknown_or_malformed_group_switches_are_rejected() {
 }
 
 #[test]
-fn path_errors_and_modified_games_fail_closed() {
+fn path_errors_and_games_missing_required_files_fail_closed() {
     let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
     let missing = temp.path().join("not-a-game");
@@ -1812,10 +1813,7 @@ fn path_errors_and_modified_games_fail_closed() {
     assert_eq!(response["error"]["code"], "source_not_fresh");
     let message = response["error"]["message"].as_str().unwrap();
     assert!(message.contains(&bg1.display().to_string()), "{message}");
-    assert!(
-        message.to_ascii_lowercase().contains("modified"),
-        "{message}"
-    );
+    assert!(message.contains("chitin.key"), "{message}");
     assert!(!managed.join("bg1").exists());
     assert!(!managed.join("game").exists());
 }
@@ -2332,6 +2330,52 @@ fn config_evidence(attempt: &Path) -> Value {
 }
 
 #[cfg(windows)]
+/// Leftovers of earlier mod installs in a source game once stopped the installation ("the
+/// game is modified"). Now the copy leaves them out, and the installation completes.
+#[test]
+fn leftovers_in_a_source_game_are_left_out_and_the_installation_completes() {
+    let fixture = executable_fixture();
+    let old_log =
+        "// Log of Currently Installed WeiDU Mods\n~OLD/SETUP-OLD.TP2~ #0 #0 // Old mod\n";
+    for game in [&fixture.bg1, &fixture.bg2] {
+        fs::write(game.join("WeiDU.log"), old_log).unwrap();
+        fs::write(game.join("setup-old.exe"), b"old installer").unwrap();
+        fs::create_dir_all(game.join("stratagems")).unwrap();
+        fs::write(game.join("stratagems/readme.txt"), b"old mod folder").unwrap();
+    }
+    let mut command = executable_command(&fixture);
+    command.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+
+    let output = command.output().expect("execute synthetic install");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    assert_eq!(json_stdout(&output)["status"]["status"], "complete");
+    for copy in ["bg1", "game"] {
+        let copy = fixture.managed.join(copy);
+        assert!(!copy.join("setup-old.exe").exists());
+        assert!(!copy.join("stratagems").exists());
+        if let Ok(log) = fs::read_to_string(copy.join("WeiDU.log")) {
+            assert!(!log.contains("SETUP-OLD"), "{log}");
+        }
+    }
+    // The source games are untouched.
+    for game in [&fixture.bg1, &fixture.bg2] {
+        assert_eq!(fs::read_to_string(game.join("WeiDU.log")).unwrap(), old_log);
+        assert!(game.join("stratagems/readme.txt").is_file());
+    }
+}
+
 #[test]
 fn install_places_component_config_files_before_weidu_in_both_games() {
     const CONTENT: &str = "OUTER_SET fixed = 1\n";

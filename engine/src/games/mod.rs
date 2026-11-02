@@ -10,10 +10,12 @@ pub mod probe;
 pub mod profile;
 
 pub use discovery::{
-    discover_games, discover_installed_games, RegistryHive, RegistryProvider, SystemRegistry,
+    discover_games, discover_games_with, discover_installed_games, RegistryHive, RegistryProvider,
+    SystemRegistry, BEAMDOG_FOLDERS, GOG_GAME_IDS,
 };
 pub use probe::{
-    inspect_game_path, DirectoryEntry, FileKind, FileSystemProvider, SystemFileSystem,
+    detect_storefront, inspect_game_path, inspect_game_path_with_language, left_out_root_patterns,
+    DirectoryEntry, FileKind, FileSystemProvider, SystemFileSystem,
 };
 pub use profile::{
     AllowedCleanVariant, ExpectedInventoryEntry, FileFingerprint, ForbiddenResiduePattern,
@@ -36,20 +38,47 @@ pub enum GameRole {
 pub enum Storefront {
     /// Valve Steam installation.
     Steam,
-    /// GOG installation.
+    /// GOG installation, from the GOG installer or GOG Galaxy.
     Gog,
+    /// Beamdog client installation (the client closed in December 2025; installed games stay).
+    Beamdog,
+    /// Microsoft Store or Xbox app installation.
+    Microsoft,
+    /// A folder whose store CEBG cannot tell, such as a copied or moved game.
+    Other,
+}
+
+impl Storefront {
+    /// Player-facing store name.
+    pub const fn display_name(self) -> &'static str {
+        match self {
+            Self::Steam => "Steam",
+            Self::Gog => "GOG",
+            Self::Beamdog => "Beamdog",
+            Self::Microsoft => "Microsoft Store",
+            Self::Other => "Other",
+        }
+    }
 }
 
 /// Overall source eligibility derived after all findings have been accumulated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Eligibility {
-    /// Matches a verified Steam build profile and is suitable for staging.
+    /// Matches the tested clean game (store, version and files) and is suitable for staging.
     Eligible,
-    /// Matches a clean profile but its storefront has not completed release rehearsal.
+    /// Usable as a source, but it differs from the tested game: another store, version,
+    /// language or changed files. Its findings say how; the installation continues.
     Experimental,
-    /// Has one or more findings that forbid use as an installation source.
+    /// Has one or more findings that make an installation from it impossible.
     Ineligible,
+}
+
+impl Eligibility {
+    /// Whether an installation may use this source: tested, or usable with warnings.
+    pub const fn is_usable(self) -> bool {
+        matches!(self, Self::Eligible | Self::Experimental)
+    }
 }
 
 /// Stable category for one source-game inspection finding.
@@ -58,18 +87,39 @@ pub enum Eligibility {
 pub enum FindingKind {
     /// The source matches one complete verified clean variant.
     Fresh,
-    /// A mod-sensitive surface differs from its clean variant.
+    /// A mod-sensitive surface differs from its clean variant. A warning.
     Modified,
-    /// The executable ProductVersion is not represented by a supported profile.
+    /// The executable ProductVersion is not the tested one. A warning.
     UnsupportedVersion,
-    /// A required Siege of Dragonspear payload is absent or unsafe.
+    /// A required Siege of Dragonspear payload is absent or unsafe. Blocks.
     MissingSod,
-    /// The storefront is discoverable but has not completed release acceptance.
+    /// The store is not the tested one (Steam). A warning.
     UnverifiedStorefront,
-    /// Core fingerprints do not match any independently authored clean variant.
+    /// Core fingerprints do not match the tested clean game. A warning.
     UnknownFingerprint,
-    /// The candidate cannot prove the sole alpha locale, `en_US`.
+    /// The game is set to a language other than English. A warning.
     UnsupportedLocale,
+    /// Leftovers of earlier mod installs, which the copy leaves out. A warning.
+    LeftOut,
+    /// Siege of Dragonspear is already merged into the folder, as in Beamdog copies. A warning.
+    SodMerged,
+    /// Files every installation needs are missing or are links. Blocks.
+    MissingFiles,
+    /// Game files could not be read, so the source cannot be checked or copied. Blocks.
+    Unreadable,
+    /// The folder is protected by Windows (Microsoft Store), so it cannot be copied. Blocks.
+    ProtectedFolder,
+}
+
+impl FindingKind {
+    /// Whether this finding makes an installation from the source impossible. Every other
+    /// finding is a warning: the installation continues.
+    pub const fn blocks_installation(self) -> bool {
+        matches!(
+            self,
+            Self::MissingSod | Self::MissingFiles | Self::Unreadable | Self::ProtectedFolder
+        )
+    }
 }
 
 /// One user-visible reason contributing to source eligibility.

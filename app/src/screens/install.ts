@@ -8,7 +8,7 @@ import type {
   SelectionEvaluation,
 } from "../contracts";
 import { actionButton, element, screenIntro } from "../components/app-shell";
-import { installationReadiness, validateInstallationName } from "../state";
+import { installationReadiness, sourceStatus, sourceVersionNote, validateInstallationName } from "../state";
 import { invalidBreakpoints } from "../components/manual-checkpoints";
 
 export interface InstallScreenModel {
@@ -126,7 +126,12 @@ function sourceCard(
   const copy = element("div", "source-card-heading");
   copy.append(element("p", "source-title", title));
   copy.append(element("h2", undefined, candidate === undefined ? "Source needed" : candidates.length === 1 ? "Found source" : "Choose source"));
-  const status = element("span", `source-status ${candidate?.eligible === true ? "ok" : "warning"}`, candidate?.eligible === true ? "Ready" : "Needs attention");
+  const usable = sourceStatus(candidate);
+  const status = element(
+    "span",
+    `source-status ${usable === "ready" ? "ok" : "warning"}`,
+    usable === "ready" ? "Ready" : usable === "less-tested" ? "Less tested" : "Needs attention",
+  );
   card.append(copy, status);
 
   if (candidates.length > 1 || (candidate === undefined && candidates.length > 0)) {
@@ -154,6 +159,9 @@ function sourceCard(
   }
 
   card.append(element("p", "path", candidate?.path ?? "No installation detected"));
+  if (usable === "less-tested") {
+    card.append(element("p", "source-note", "You can install from this copy. It differs from the tested setup; Details says how."));
+  }
   const details = element("details", "source-details");
   details.append(element("summary", undefined, "Details"));
   if (candidate === undefined) {
@@ -161,7 +169,7 @@ function sourceCard(
   } else if (candidate.findings.length === 0) {
     details.append(element("p", "finding", "No additional findings."));
   } else {
-    for (const finding of candidate.findings) details.append(element("p", `finding ${candidate.eligible ? "ok" : "warning"}`, finding));
+    for (const finding of candidate.findings) details.append(element("p", `finding ${usable === "ready" ? "ok" : "warning"}`, finding));
   }
   const changeSource = actionButton("Change source", () => actions.browseSource(game), "quiet compact");
   changeSource.setAttribute("aria-label", game === "bg1" ? "Change Baldur's Gate source" : "Change Baldur's Gate II source");
@@ -192,6 +200,15 @@ export function installScreen(model: InstallScreenModel, actions: InstallScreenA
     sourceCard("bg1", "Baldur's Gate + Siege of Dragonspear", model.discovery.bg1Candidates, model.selectedBg1Id, model.starting, actions),
     sourceCard("bg2", "Baldur's Gate II", model.discovery.bg2Candidates, model.selectedBg2Id, model.starting, actions),
   );
+  const versionNote = sourceVersionNote(
+    selectedCandidate(model.discovery.bg1Candidates, model.selectedBg1Id),
+    selectedCandidate(model.discovery.bg2Candidates, model.selectedBg2Id),
+  );
+  if (versionNote !== null) {
+    const note = element("p", "source-note source-version-note", versionNote);
+    note.setAttribute("role", "status");
+    sources.append(note);
+  }
 
   const settings = element("section", "install-settings card");
   settings.append(element("h2", undefined, "Your installation"));
