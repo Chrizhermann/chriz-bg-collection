@@ -321,6 +321,8 @@ export interface ManagedInstallation {
   readonly status: string;
   readonly receiptPath: string | null;
   readonly launchPath: string | null;
+  /** Isolated game profile in Documents: saves and custom portraits. */
+  readonly profilePath?: string | null;
   readonly completedAtMillis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;

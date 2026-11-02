@@ -398,6 +398,7 @@ describe("native command adapter", () => {
               status: "Ready to play",
               receipt_path: "D:\\Campaigns\\Ready\\install-receipt.json",
               launch_path: "D:\\Campaigns\\Ready\\InfinityLoader.exe",
+              profile_path: "C:\\Users\\Player\\Documents\\Ready campaign - 0123456789ab",
               completed_at_millis: 1_788_451_200_000,
               available: true,
               resumable: false,
@@ -409,6 +410,7 @@ describe("native command adapter", () => {
               status: "Build interrupted — ready to resume",
               receipt_path: null,
               launch_path: null,
+              profile_path: null,
               completed_at_millis: null,
               available: false,
               resumable: true,
@@ -425,6 +427,9 @@ describe("native command adapter", () => {
           return { installId: "install-ready", radar: { state: "not-requested", detail: null, technicalDetail: null },
             gameSettings: { state: "unchanged", technicalDetail: null }, gameLog: { state: "kept", technicalDetail: null } };
         case "open_install_folder":
+          expect(args).toEqual({ installId: "install-ready" });
+          return null;
+        case "open_profile_folder":
           expect(args).toEqual({ installId: "install-ready" });
           return null;
         case "create_desktop_shortcut":
@@ -444,6 +449,7 @@ describe("native command adapter", () => {
         status: "Ready to play",
         receiptPath: "D:\\Campaigns\\Ready\\install-receipt.json",
         launchPath: "D:\\Campaigns\\Ready\\InfinityLoader.exe",
+        profilePath: "C:\\Users\\Player\\Documents\\Ready campaign - 0123456789ab",
         completedAtMillis: 1_788_451_200_000,
         available: true,
         resumable: false,
@@ -455,6 +461,7 @@ describe("native command adapter", () => {
         status: "Build interrupted — ready to resume",
         receiptPath: null,
         launchPath: null,
+        profilePath: null,
         completedAtMillis: null,
         available: false,
         resumable: true,
@@ -469,6 +476,7 @@ describe("native command adapter", () => {
       gameSettings: { state: "unchanged", technicalDetail: null }, gameLog: { state: "kept", technicalDetail: null },
     });
     await expect(backend.openInstallFolder("install-ready")).resolves.toBeUndefined();
+    await expect(backend.openProfileFolder("install-ready")).resolves.toBeUndefined();
     await expect(backend.createDesktopShortcut("install-ready")).resolves.toEqual({
       path: "C:\\Users\\Player\\Desktop\\Chriz Easy BG.lnk",
     });

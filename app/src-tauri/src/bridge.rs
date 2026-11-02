@@ -105,6 +105,9 @@ pub trait BridgeEngine: Send + Sync {
     /// Brings a completed installation's isolated game profile up to date with the
     /// settings its installed components need. Returns whether the profile changed.
     fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String>;
+    /// Proves the installation's isolated game profile is still its own and adds the
+    /// portraits folder the game does not create. Returns the profile folder.
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String>;
 }
 
 /// Operating-system actions kept behind the native bridge's validated identity boundary.
@@ -243,6 +246,16 @@ impl BridgeEngine for SystemBridgeEngine {
         )
         .map_err(|error| error.to_string())
     }
+
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String> {
+        bg_engine::stage::prepare_installed_profile_folder(
+            &record.managed_root,
+            &record.install_id,
+            &record.engine_name,
+            &record.managed_save_root,
+        )
+        .map_err(|error| error.to_string())
+    }
 }
 
 struct DiscovererBridgeEngine {
@@ -299,6 +312,10 @@ impl BridgeEngine for DiscovererBridgeEngine {
 
     fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String> {
         self.system.repair_profile_settings(record)
+    }
+
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String> {
+        self.system.prepare_profile_folder(record)
     }
 }
 
@@ -519,6 +536,8 @@ pub struct ManagedInstallationResponse {
     pub receipt_path: Option<String>,
     /// Display-only verified launcher path; actions still accept only the registry id.
     pub launch_path: Option<String>,
+    /// Display-only isolated game profile (saves, portraits); actions accept the registry id.
+    pub profile_path: Option<String>,
     /// Successful receipt completion time used only for launcher display and ordering.
     pub completed_at_millis: Option<u64>,
     pub available: bool,
@@ -1512,6 +1531,31 @@ impl NativeBridge {
                     error,
                 )
             })
+    }
+
+    /// Opens only the isolated game profile of one available immutable registry id,
+    /// after proving it still belongs to that installation.
+    pub fn open_profile_folder(&self, install_id: &str) -> Result<(), CommandError> {
+        let record = self.available_managed_install(install_id)?.record;
+        let profile = self
+            .engine
+            .prepare_profile_folder(&record)
+            .map_err(|error| {
+                CommandError::new(
+                    "profile_folder_unavailable",
+                    "The saves & portraits folder could not be prepared.",
+                    "Export diagnostics and share them when you ask for help.",
+                    error,
+                )
+            })?;
+        self.system.open_folder(&profile).map_err(|error| {
+            CommandError::new(
+                "profile_folder_open_failed",
+                "The saves & portraits folder could not be opened.",
+                "Check that the folder in your Documents is still available, then try again.",
+                error,
+            )
+        })
     }
 
     /// Creates a launcher shortcut only after reloading an available registry identity.
@@ -3241,6 +3285,7 @@ fn project_managed_install(
     let receipt = record.managed_root.join(".chriz/install-receipt.json");
     let receipt_path = display_windows_path(&receipt)?;
     let launch_path = display_windows_path(&record.launch_path)?;
+    let profile_path = display_windows_path(&record.managed_save_root)?;
     Ok(ManagedInstallationResponse {
         id: record.install_id,
         name: record.display_name,
@@ -3256,6 +3301,7 @@ fn project_managed_install(
         },
         receipt_path: Some(receipt_path),
         launch_path: Some(launch_path),
+        profile_path: Some(profile_path),
         completed_at_millis: Some(record.completed_at_millis),
         available,
         patch_recovery_needed,
@@ -3296,6 +3342,7 @@ fn project_managed_campaign(
         status: status.to_owned(),
         receipt_path: None,
         launch_path: None,
+        profile_path: None,
         completed_at_millis: None,
         consistency: None,
         patch_recovery_needed: false,

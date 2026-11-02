@@ -5,10 +5,11 @@ use std::time::{Duration, SystemTime};
 
 use bg_engine::games::GameRole;
 use bg_engine::stage::{
-    finalize_game_identity, propose_save_identity, read_engine_name,
-    repair_installed_profile_settings, reserve_save_identity, stage_bgee_sod, stage_game_copy,
-    stage_game_copy_with_observer, stage_initial_games, verify_profile_settings, DocumentsLocator,
-    ManagedLayout, ReservedSaveIdentity, StageObserver, SystemDocuments, TEST_DOCUMENTS_VARIABLE,
+    finalize_game_identity, prepare_installed_profile_folder, propose_save_identity,
+    read_engine_name, repair_installed_profile_settings, reserve_save_identity, stage_bgee_sod,
+    stage_game_copy, stage_game_copy_with_observer, stage_initial_games, verify_profile_settings,
+    DocumentsLocator, ManagedLayout, ReservedSaveIdentity, StageObserver, SystemDocuments,
+    TEST_DOCUMENTS_VARIABLE,
 };
 
 mod support;
@@ -1208,6 +1209,97 @@ fn existing_installation_repair_records_eet_state_once_and_only_in_its_own_save_
     );
     assert!(!repair());
     verify_profile_settings(&layout, &identity).unwrap();
+}
+
+#[test]
+fn opening_an_installed_profile_adds_its_portraits_folder_only_in_its_own_save_folder() {
+    let (_temp, layout, identity) = eet_profile_fixture("");
+    finalize_game_identity(&layout, &identity).unwrap();
+    let portraits = identity.save_root.join("portraits");
+    assert!(!portraits.exists(), "the game never creates it");
+
+    for (install_id, engine_name) in [
+        ("another-install", identity.engine_name.as_str()),
+        ("eet-state-test", "Another Game"),
+    ] {
+        assert!(prepare_installed_profile_folder(
+            layout.root(),
+            install_id,
+            engine_name,
+            &identity.save_root
+        )
+        .is_err());
+        assert!(!portraits.exists());
+    }
+    let elsewhere = layout.root().join(&identity.engine_name);
+    fs::create_dir(&elsewhere).unwrap();
+    assert!(prepare_installed_profile_folder(
+        layout.root(),
+        "eet-state-test",
+        &identity.engine_name,
+        &elsewhere
+    )
+    .is_err());
+    assert!(!elsewhere.join("portraits").exists());
+
+    let prepare = || {
+        prepare_installed_profile_folder(
+            layout.root(),
+            "eet-state-test",
+            &identity.engine_name,
+            &identity.save_root,
+        )
+        .unwrap()
+    };
+    assert_eq!(prepare(), identity.save_root);
+    assert!(portraits.is_dir());
+    let portrait = portraits.join("CUSTOML.bmp");
+    fs::write(&portrait, b"player portrait").unwrap();
+    assert_eq!(prepare(), identity.save_root);
+    assert_eq!(fs::read(&portrait).unwrap(), b"player portrait");
+}
+
+#[test]
+fn opening_an_installed_profile_keeps_a_portraits_entry_the_player_made() {
+    for linked in [false, true] {
+        let (temp, layout, identity) = eet_profile_fixture("");
+        finalize_game_identity(&layout, &identity).unwrap();
+        let portraits = identity.save_root.join("portraits");
+        if linked {
+            // A portraits folder shared between installations.
+            let shared = temp.path().join("shared portraits");
+            fs::create_dir(&shared).unwrap();
+            if let Err(error) = symlink_directory(&shared, &portraits) {
+                if cfg!(windows)
+                    && matches!(
+                        error.kind(),
+                        io::ErrorKind::PermissionDenied | io::ErrorKind::Unsupported
+                    )
+                {
+                    continue;
+                }
+                panic!("could not create test directory symlink: {error}");
+            }
+        } else {
+            fs::write(&portraits, b"not a folder").unwrap();
+        }
+        let before = fs::symlink_metadata(&portraits).unwrap().file_type();
+
+        assert_eq!(
+            prepare_installed_profile_folder(
+                layout.root(),
+                "eet-state-test",
+                &identity.engine_name,
+                &identity.save_root,
+            )
+            .unwrap(),
+            identity.save_root
+        );
+        assert_eq!(
+            fs::symlink_metadata(&portraits).unwrap().file_type(),
+            before
+        );
+    }
 }
 
 #[cfg(unix)]

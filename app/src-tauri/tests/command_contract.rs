@@ -237,6 +237,8 @@ struct FakeBridgeEngine {
     install_released: Mutex<bool>,
     profile_repairs: Mutex<Vec<String>>,
     profile_repair_result: Mutex<Result<bool, String>>,
+    profile_folders: Mutex<Vec<String>>,
+    profile_folder_error: Mutex<Option<String>>,
 }
 
 impl FakeBridgeEngine {
@@ -253,6 +255,8 @@ impl FakeBridgeEngine {
             install_released: Mutex::new(false),
             profile_repairs: Mutex::new(Vec::new()),
             profile_repair_result: Mutex::new(Ok(false)),
+            profile_folders: Mutex::new(Vec::new()),
+            profile_folder_error: Mutex::new(None),
         }
     }
 
@@ -435,6 +439,17 @@ impl BridgeEngine for FakeBridgeEngine {
             .unwrap()
             .push(record.install_id.clone());
         self.profile_repair_result.lock().unwrap().clone()
+    }
+
+    fn prepare_profile_folder(&self, record: &ManagedInstallRecord) -> Result<PathBuf, String> {
+        self.profile_folders
+            .lock()
+            .unwrap()
+            .push(record.install_id.clone());
+        match self.profile_folder_error.lock().unwrap().as_ref() {
+            Some(error) => Err(error.clone()),
+            None => Ok(record.managed_save_root.clone()),
+        }
     }
 
     fn discover(&self, _recipe: &Path) -> Result<Vec<GameCandidate>, bg_engine::cli::CliError> {
@@ -1898,7 +1913,7 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         "recommended",
         cache,
         app_data,
-        engine,
+        engine.clone(),
         system.clone(),
     );
     let cards = bridge.list_managed_installations().unwrap();
@@ -1932,9 +1947,16 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
         .unwrap()
         .starts_with(r"\\?\"));
     assert_eq!(cards[0].completed_at_millis, Some(1));
+    let save_root = managed.parent().unwrap().join("saves");
+    let expected_profile = display_windows_path(&save_root).unwrap();
+    assert_eq!(
+        cards[0].profile_path.as_deref(),
+        Some(expected_profile.as_str())
+    );
 
     bridge.launch_install("install-task23", false).unwrap();
     bridge.open_install_folder("install-task23").unwrap();
+    bridge.open_profile_folder("install-task23").unwrap();
     assert_eq!(
         system.launches.lock().unwrap().as_slice(),
         &[(
@@ -1944,7 +1966,11 @@ fn managed_actions_reload_only_the_exact_available_registry_identity() {
     );
     assert_eq!(
         system.folders.lock().unwrap().as_slice(),
-        &[canonical_managed]
+        &[canonical_managed, save_root]
+    );
+    assert_eq!(
+        engine.profile_folders.lock().unwrap().as_slice(),
+        ["install-task23"]
     );
     assert_eq!(
         bridge
@@ -2703,6 +2729,40 @@ fn stale_managed_install_is_listed_but_cannot_be_launched_or_opened() {
             .code,
         "managed_install_stale"
     );
+    assert_eq!(
+        bridge
+            .open_profile_folder("install-stale")
+            .unwrap_err()
+            .code,
+        "managed_install_stale"
+    );
+}
+
+#[test]
+fn profile_folder_opens_only_after_the_engine_proves_it_belongs_to_the_install() {
+    let fixture = RadarLaunchFixture::new();
+    assert_eq!(
+        fixture
+            .bridge
+            .open_profile_folder("not-a-registry-id")
+            .unwrap_err()
+            .code,
+        "managed_install_unknown"
+    );
+    assert!(fixture.engine.profile_folders.lock().unwrap().is_empty());
+
+    *fixture.engine.profile_folder_error.lock().unwrap() =
+        Some("ownership marker belongs to a different managed installation".to_owned());
+    let error = fixture
+        .bridge
+        .open_profile_folder("radar-fixture")
+        .unwrap_err();
+    assert_eq!(error.code, "profile_folder_unavailable");
+    assert_eq!(
+        fixture.engine.profile_folders.lock().unwrap().as_slice(),
+        ["radar-fixture"]
+    );
+    assert!(fixture.system.folders.lock().unwrap().is_empty());
 }
 
 #[test]

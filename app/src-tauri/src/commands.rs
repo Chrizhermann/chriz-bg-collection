@@ -593,6 +593,19 @@ pub async fn open_install_folder(
 }
 
 #[tauri::command]
+pub async fn open_profile_folder(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone();
+    background(move || bridge.open_profile_folder(&install_id)).await
+}
+
+#[tauri::command]
 pub async fn create_desktop_shortcut(
     state: State<'_, BridgeState>,
     install_id: String,

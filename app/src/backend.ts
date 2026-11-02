@@ -89,6 +89,7 @@ export interface Backend {
   /** Turns the game log on or off for the next game start. */
   setGameLog?(installId: string, enabled: boolean): Promise<GameLogStatus>;
   openInstallFolder(installId: string): Promise<void>;
+  openProfileFolder(installId: string): Promise<void>;
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }>;
   installRadar(installId: string): Promise<void>;
   getUpdates(): Promise<UpdateSummary>;
@@ -240,6 +241,7 @@ type ManagedInstallationWire = {
   readonly status: string;
   readonly receipt_path: string | null;
   readonly launch_path: string | null;
+  readonly profile_path?: string | null;
   readonly completed_at_millis: number | null;
   readonly available: boolean;
   readonly resumable: boolean;
@@ -620,6 +622,7 @@ export class NativeBackend implements Backend {
     return installations.map(({
       receipt_path: receiptPath,
       launch_path: launchPath,
+      profile_path: profilePath,
       completed_at_millis: completedAtMillis,
       recipe_version: recipeVersion,
       radar_version: radarVersion,
@@ -630,6 +633,7 @@ export class NativeBackend implements Backend {
       ...installation,
       receiptPath,
       launchPath,
+      profilePath,
       completedAtMillis,
       recipeVersion,
       radarVersion,
@@ -666,6 +670,10 @@ export class NativeBackend implements Backend {
 
   async openInstallFolder(installId: string): Promise<void> {
     await this.#command("open_install_folder", { installId });
+  }
+
+  async openProfileFolder(installId: string): Promise<void> {
+    await this.#command("open_profile_folder", { installId });
   }
 
   createDesktopShortcut(installId: string): Promise<{ readonly path: string }> {
@@ -1013,6 +1021,7 @@ export class FixtureBackend implements Backend {
       status: "Ready to play",
       receiptPath: "D:\\Fixture Installations\\Chriz Easy BG\\install-receipt.json",
       launchPath: "D:\\Fixture Installations\\Chriz Easy BG\\InfinityLoader.exe",
+      profilePath: "C:\\Users\\Player\\Documents\\Chriz Easy BG - 0123456789ab",
       completedAtMillis: 1_788_451_200_000,
       available: true,
       resumable: false,
@@ -1065,6 +1074,10 @@ export class FixtureBackend implements Backend {
   }
 
   openInstallFolder(_installId: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  openProfileFolder(_installId: string): Promise<void> {
     return Promise.resolve();
   }
 

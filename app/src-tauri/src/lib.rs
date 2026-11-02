@@ -67,6 +67,7 @@ pub fn run() -> tauri::Result<()> {
             commands::set_game_log,
             commands::install_radar,
             commands::open_install_folder,
+            commands::open_profile_folder,
             commands::create_desktop_shortcut,
             commands::check_updates,
             commands::record_install_lookup_client,
