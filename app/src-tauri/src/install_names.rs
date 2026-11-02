@@ -240,12 +240,24 @@ mod installation_name_tests {
             bridge.suggest_installation_name().unwrap().name,
             "Chriz Easy BG (2)"
         );
+        // A taken name is numbered and a name Windows cannot use is cleaned, never refused.
         assert_eq!(
             bridge
                 .validate_installation_name(" chriz EASY bg ", None)
-                .unwrap_err()
-                .code,
-            "duplicate_display_name"
+                .unwrap()
+                .name,
+            "chriz EASY bg (2)"
+        );
+        assert_eq!(
+            bridge
+                .validate_installation_name("Run: 2/3?", None)
+                .unwrap()
+                .name,
+            "Run- 2-3-"
+        );
+        assert_eq!(
+            bridge.validate_installation_name("  ", None).unwrap().name,
+            "Chriz Easy BG (2)"
         );
         assert_eq!(
             bridge
@@ -290,7 +302,7 @@ mod installation_name_tests {
     }
 
     #[test]
-    fn naming_rejects_unknown_ids_invalid_names_and_active_operations() {
+    fn naming_rejects_unknown_ids_and_active_operations_and_cleans_names() {
         let (_temp, bridge, _managed) = fixture();
         assert_eq!(
             bridge
@@ -301,10 +313,18 @@ mod installation_name_tests {
         );
         assert_eq!(
             bridge
+                .rename_installation("name-fixture", "My <best> run")
+                .unwrap()
+                .name,
+            "My -best- run"
+        );
+        // A blank name becomes the default name; the copy's own earlier name does not count.
+        assert_eq!(
+            bridge
                 .rename_installation("name-fixture", "  ")
-                .unwrap_err()
-                .code,
-            "invalid_display_name"
+                .unwrap()
+                .name,
+            "Chriz Easy BG"
         );
         bridge.runtime_lock().removal_active = true;
         assert_eq!(
@@ -408,6 +428,43 @@ mod installation_name_tests {
             display_windows_path(&home.join("Games").join("Chriz Easy BG (3)")).unwrap()
         );
         assert_eq!(snapshot(temp.path()), before);
+    }
+
+    #[test]
+    fn another_installations_folder_is_never_the_parent_of_a_new_one() {
+        let (temp, bridge, managed) = fixture_at("Games/Chriz Easy BG");
+        let sources = temp.path().join("sources");
+        for game in ["bg1", "bg2"] {
+            fs::create_dir_all(sources.join(game)).unwrap();
+        }
+        let cache = temp.path().join("cache");
+        let registered = bridge.registered_install_roots().unwrap();
+        let inspect = |path: &Path| {
+            inspect_destination_path(
+                path,
+                &sources.join("bg1"),
+                &sources.join("bg2"),
+                &cache,
+                &registered,
+            )
+        };
+        for inside in [managed.clone(), managed.join("game")] {
+            let error = inspect(&inside).unwrap_err();
+            assert_eq!(error.code, "destination_unsafe");
+            assert!(
+                error.technical_detail.contains("another CEBG installation"),
+                "{}",
+                error.technical_detail
+            );
+        }
+        // The folder that holds it is the player's own: CEBG installs beside it.
+        let games = managed.parent().unwrap();
+        let beside = inspect(games).unwrap();
+        assert!(beside.safe);
+        assert_eq!(
+            PathBuf::from(display_windows_path(Path::new(&beside.path)).unwrap()),
+            PathBuf::from(display_windows_path(&games.join("Chriz Easy BG (2)")).unwrap())
+        );
     }
 
     #[test]

@@ -74,15 +74,12 @@ fn validate_context(ctx: &Context<'_>) -> Result<(), String> {
     let root = &ctx.record.managed_root;
     files::direct(root)?;
     files::direct(&ctx.game())?;
+    // No folder-name heuristic (such as `steamapps` or Program Files): what keeps a fix inside a
+    // CEBG copy is that the root is a registered installation whose receipt matches, below.
     if !root.is_absolute()
         || root.parent().is_none()
         || root.components().count() < 3
         || crate::preflight::is_creator_protected_destination(root)
-        || root
-            .to_string_lossy()
-            .to_ascii_lowercase()
-            .split(['\\', '/'])
-            .any(|s| matches!(s, "steamapps" | "program files" | "program files (x86)"))
     {
         return Err("Patching is restricted to a separate managed game installation.".into());
     }

@@ -114,14 +114,6 @@ export function reduce(state: AppState, action: AppAction): AppState {
   }
 }
 
-export function validateInstallationName(name: string): string | null {
-  const trimmed = name.trim();
-  if (trimmed.length === 0) return "Enter an install name.";
-  if (/[\u0000-\u001f\u007f]/u.test(name)) return "The install name cannot contain control characters.";
-  if (/[<>:"/\\|?*]/u.test(name)) return "The install name cannot contain < > : \" / \\ | ? or *.";
-  if (trimmed === "." || trimmed === "..") return "Choose a name that can be used as a folder.";
-  return null;
-}
 
 /** How a source can be used: the tested setup, usable with warnings, or not at all. */
 export type SourceStatus = "ready" | "less-tested" | "blocked";
@@ -146,7 +138,6 @@ export function automaticInstallationPath(defaultPath: string, name: string): st
 
 export interface InstallationReadinessInput {
   readonly starting: boolean;
-  readonly name: string;
   readonly bg1: GameCandidate | undefined;
   readonly bg2: GameCandidate | undefined;
   readonly destination: DestinationEvaluation;
@@ -156,8 +147,8 @@ export interface InstallationReadinessInput {
 }
 
 export function installationReadiness(input: InstallationReadinessInput): boolean {
+  // The name never blocks: CEBG saves any name in a usable form (see installationNameNote).
   return !input.starting
-    && validateInstallationName(input.name) === null
     && input.bg1?.eligible === true
     && input.bg2?.eligible === true
     && input.destination.safe
