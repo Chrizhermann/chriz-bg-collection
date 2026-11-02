@@ -1729,6 +1729,29 @@ class AppController implements AppHandle {
       : error instanceof Error ? error.message : fallback;
   }
 
+  /**
+   * Closes the question without an answer. The installation keeps waiting; its card in My
+   * installs offers "Answer the question" to open it again.
+   */
+  async #decideLater(): Promise<void> {
+    if (this.#decisionBusy || this.#decision === null) return;
+    const installId = this.#installId;
+    ++this.#decisionRevision;
+    this.#decision = null;
+    this.#decisionError = undefined;
+    try {
+      this.#installations = await this.backend.listManagedInstallations();
+    } catch {
+      // The card list is refreshed again on the next visit; the question stays stored.
+    }
+    if (installId !== null && this.#installations.some(installation => installation.id === installId)) {
+      this.#installId = installId;
+      rememberInstallId(installId);
+    }
+    this.#dispatch({ type: "navigate", route: "home", remember: false });
+    this.#render();
+  }
+
   /** Stores the player's answer, then resumes the installation, which applies it. */
   async #answerDecision(answer: DecisionAnswer): Promise<void> {
     const installId = this.#installId;
@@ -2202,6 +2225,7 @@ class AppController implements AppHandle {
         detailsOpen: this.#decisionDetailsOpen,
         onDetailsOpen: (open) => { this.#decisionDetailsOpen = open; },
         answer: (answer) => this.#safely(() => this.#answerDecision(answer)),
+        later: () => this.#safely(() => this.#decideLater()),
       }));
       focusDownloadDecision(this.root, model, decisionFocusId);
     }

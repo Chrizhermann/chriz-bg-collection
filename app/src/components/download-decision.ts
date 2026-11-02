@@ -6,7 +6,8 @@ import { persistDisclosure } from "./disclosure";
  * The modal question about a download that an installation waits for. The engine renders
  * the question, its details, the offered answers and their order; this component only shows
  * them, puts the initial focus on the engine's chosen answer and keeps the focus inside the
- * dialog until the player answers. It names no product, so both app flavors share it.
+ * dialog until the player answers or chooses to decide later. It names no product, so both
+ * app flavors share it.
  */
 export interface DownloadDecisionModel {
   readonly decision: PendingDecision;
@@ -15,6 +16,8 @@ export interface DownloadDecisionModel {
   readonly detailsOpen?: boolean;
   readonly onDetailsOpen?: (open: boolean) => void;
   readonly answer: (answer: DecisionAnswer) => void;
+  /** Closes the dialog without an answer; the installation keeps waiting. Never the initial focus. */
+  readonly later?: () => void;
 }
 
 export function decisionAnswerId(answer: DecisionAnswer): string {
@@ -67,9 +70,16 @@ export function downloadDecisionDialog(model: DownloadDecisionModel): HTMLElemen
     button.disabled = model.busy;
     actions.append(button);
   }
+  if (model.later) {
+    const later = model.later;
+    const button = actionButton("Decide later", () => { if (!model.busy) later(); }, "quiet");
+    button.id = "decision-later";
+    button.disabled = model.busy;
+    actions.append(button);
+  }
   dialog.append(actions);
   dialog.addEventListener("keydown", (event) => {
-    // The question can only be answered; Escape does not dismiss it.
+    // Escape does not dismiss the question; only an answer or "Decide later" does.
     if (event.key === "Escape") {
       event.preventDefault();
       return;
@@ -120,7 +130,8 @@ export function focusDownloadDecision(
     if (target !== null) target.tabIndex = -1;
   } else {
     target = dialog.querySelector<HTMLElement>(`#${decisionAnswerId(model.decision.focus)}`)
-      ?? dialog.querySelector<HTMLElement>("button");
+      // Never "Decide later": the fallback is the first answer.
+      ?? dialog.querySelector<HTMLElement>("button[data-answer]");
   }
   target?.focus({ preventScroll: true });
 }

@@ -280,6 +280,31 @@ describe("download question flow", () => {
     expect(backend.resumes).toEqual([]);
   });
 
+  it("closes the question with Decide later and keeps the installation waiting for it", async () => {
+    const backend = new DecisionBackend();
+    backend.installations = [waiting];
+    const { root, user } = await mounted(backend);
+    await waitFor(() => getByRole(root, "dialog"));
+    expect(buttonLabels(root)).toEqual(["Install it", "Leave it out and continue", "Stop the installation", "Decide later"]);
+    expect(document.activeElement?.textContent).toBe("Install it");
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    // Let any closing work finish before checking that Escape changed nothing.
+    await new Promise(resolve => window.setTimeout(resolve, 50));
+    expect(root.querySelector(".decision-dialog")).not.toBeNull();
+    expect(queryByRole(root, "button", { name: "Answer the question" })).toBeNull();
+    await user.click(getByRole(getByRole(root, "dialog"), "button", { name: "Decide later" }));
+    expect(root.querySelector(".decision-dialog")).toBeNull();
+    expect((root.querySelector(".app-shell") as HTMLElement).inert).toBeFalsy();
+    expect(getByText(root, "Waiting for your answer")).toBeTruthy();
+    expect(backend.answers).toEqual([]);
+    expect(backend.resumes).toEqual([]);
+    await user.click(getByRole(root, "button", { name: "Answer the question" }));
+    await waitFor(() => expect(getByRole(root, "dialog")).toBeTruthy());
+    expect(document.activeElement?.textContent).toBe("Install it");
+    expect(backend.reads).toEqual(["waiting-install", "waiting-install"]);
+    expect(backend.resumes).toEqual([]);
+  });
+
   it("offers Answer the question on the installation card, which opens the question", async () => {
     const backend = new DecisionBackend();
     const ready: ManagedInstallation = { id: "ready-install", name: "Finished game", path: "D:\\Finished", status: "Ready",
