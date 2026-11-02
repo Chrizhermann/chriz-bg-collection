@@ -80,8 +80,12 @@ class PublicComponentCreditsTests(unittest.TestCase):
         self.assertEqual(actual["chriz-bg-rebalance-bg2"][actual["chriz-bg-rebalance-bg2"].index(302) + 1:][:2], [410, 411])
         # October 29: the Kitpack chriz.5 pin adds default 7205 before 8204 in the late tweak run.
         self.assertEqual(actual["artisanskitpack-tweak-late-bg2"][-3:], [7205, 8204, 1010000])
-        self.assertEqual(self.result["componentCount"], 476)
-        self.assertEqual(len(actual), 70)
+        # November 3: BG1 NPC Project is optional and off (Christopher, 2026-11-03); its run
+        # and the Kivan quest guard Modpack 130 leave the defaults.
+        self.assertNotIn("bg1npc-bg1", actual)
+        self.assertNotIn(130, actual["chriz-bg-modpack-bg2"])
+        self.assertEqual(self.result["componentCount"], 467)
+        self.assertEqual(len(actual), 69)
 
     def test_contains_only_public_credit_fields_and_distinct_versions(self) -> None:
         # The app and bundled collection are versioned independently; each field must come from its own source.

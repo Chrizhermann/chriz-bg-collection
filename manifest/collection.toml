@@ -792,7 +792,7 @@ id = "mod:bg1npc"
 title = "The BG1 NPC Project"
 description = "Adds the reviewed BG1 NPC banters, quests, dialogue, and convenience features before EET."
 category = "bg1-npcs"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 
 [[features]]

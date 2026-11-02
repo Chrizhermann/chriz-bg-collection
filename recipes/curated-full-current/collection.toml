@@ -914,7 +914,7 @@ description = "Adds the reviewed BG1 NPC banters, quests, dialogue, and convenie
 category = "bg1-npcs"
 source_label = "The BG1 NPC Project"
 group_label = "BG1 NPCs"
-decision = "default"
+decision = "optional"
 readiness = "ready"
 
 [[features]]
