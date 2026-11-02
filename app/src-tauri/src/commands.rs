@@ -911,6 +911,35 @@ pub async fn open_manual_checkpoint_folder(
 }
 
 #[tauri::command]
+pub async fn get_pending_decision(
+    state: State<'_, BridgeState>,
+    install_id: String,
+) -> Result<Option<crate::bridge::PendingDecisionResponse>, CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.get_pending_decision(&install_id)).await
+}
+
+#[tauri::command]
+pub async fn answer_decision(
+    state: State<'_, BridgeState>,
+    install_id: String,
+    decision_id: String,
+    token: String,
+    answer: bg_engine::decision::Answer,
+) -> Result<(), CommandError> {
+    let bridge = state
+        .bridge
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+    background(move || bridge.answer_decision(&install_id, &decision_id, &token, answer)).await
+}
+
+#[tauri::command]
 pub async fn accept_manual_checkpoint(
     state: State<'_, BridgeState>,
     install_id: String,

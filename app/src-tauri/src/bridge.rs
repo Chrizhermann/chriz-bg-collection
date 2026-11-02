@@ -105,6 +105,91 @@ pub trait BridgeEngine: Send + Sync {
     /// Brings a completed installation's isolated game profile up to date with the
     /// settings its installed components need. Returns whether the profile changed.
     fn repair_profile_settings(&self, record: &ManagedInstallRecord) -> Result<bool, String>;
+    /// The question about a download that the installation at `managed_root` waits for.
+    fn inspect_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+    ) -> Result<Option<bg_engine::cli::DecisionStatus>, CliError> {
+        bg_engine::cli::inspect_decision(managed_root, expected_install_id)
+    }
+    /// Stores the player's answer to that question, under the installation's lock.
+    fn answer_decision(
+        &self,
+        managed_root: &Path,
+        expected_install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), CliError> {
+        bg_engine::cli::answer_decision(
+            managed_root,
+            expected_install_id,
+            decision_id,
+            token,
+            answer,
+        )
+    }
+}
+
+/// A question about a download that an installation waits for, as the app shows it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingDecisionResponse {
+    pub install_id: String,
+    pub step_id: String,
+    pub decision_id: String,
+    /// Binds the answer to exactly this question.
+    pub token: String,
+    pub kind: bg_engine::decision::QuestionKind,
+    pub artifact_id: String,
+    /// The question in English, with the mods that depend on the download.
+    pub message: String,
+    /// Further details, shown collapsed.
+    pub details: Vec<String>,
+    /// The answers offered, in order, with their button labels.
+    pub answers: Vec<PendingDecisionAnswer>,
+    /// The answer whose button has the initial focus.
+    pub focus: bg_engine::decision::Answer,
+    /// What the app says after "Stop the installation".
+    pub after_no: String,
+    /// The answer already stored and waiting for the resume, if any.
+    pub answered: Option<bg_engine::decision::Answer>,
+}
+
+/// One offered answer and its button label.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PendingDecisionAnswer {
+    pub answer: bg_engine::decision::Answer,
+    pub label: String,
+}
+
+impl From<bg_engine::cli::DecisionStatus> for PendingDecisionResponse {
+    fn from(status: bg_engine::cli::DecisionStatus) -> Self {
+        Self {
+            install_id: status.install_id,
+            step_id: status.step_id,
+            decision_id: status.decision_id,
+            token: status.token,
+            kind: status.question.kind,
+            artifact_id: status.question.artifact_id,
+            message: status.texts.message,
+            details: status.texts.details,
+            answers: status
+                .texts
+                .answers
+                .into_iter()
+                .map(|answer| PendingDecisionAnswer {
+                    answer: answer.answer,
+                    label: answer.label,
+                })
+                .collect(),
+            focus: status.texts.focus,
+            after_no: status.texts.after_no,
+            answered: status.answer,
+        }
+    }
 }
 
 /// Operating-system actions kept behind the native bridge's validated identity boundary.
@@ -1786,6 +1871,34 @@ impl NativeBridge {
             })
     }
 
+    /// The question about a download that a resumable installation waits for; `None` when it
+    /// waits for none.
+    pub fn get_pending_decision(
+        &self,
+        install_id: &str,
+    ) -> Result<Option<PendingDecisionResponse>, CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        self.engine
+            .inspect_decision(&root, install_id)
+            .map(|decision| decision.map(PendingDecisionResponse::from))
+            .map_err(CommandError::from_cli)
+    }
+
+    /// Stores the player's answer to the question `decision_id` of a resumable installation.
+    /// The app then resumes the installation, which applies it.
+    pub fn answer_decision(
+        &self,
+        install_id: &str,
+        decision_id: &str,
+        token: &str,
+        answer: bg_engine::decision::Answer,
+    ) -> Result<(), CommandError> {
+        let root = self.resumable_campaign(install_id)?;
+        self.engine
+            .answer_decision(&root, install_id, decision_id, token, answer)
+            .map_err(CommandError::from_cli)
+    }
+
     pub fn accept_manual_checkpoint(
         &self,
         install_id: &str,
@@ -2460,7 +2573,11 @@ fn finish_worker(
             (Some(report), None)
         }
         Ok(Ok(report))
-            if matches!(report.status, bg_engine::cli::CampaignStatus::Paused { .. }) =>
+            if matches!(
+                report.status,
+                bg_engine::cli::CampaignStatus::Paused { .. }
+                    | bg_engine::cli::CampaignStatus::DecisionRequired { .. }
+            ) =>
         {
             (Some(report), None)
         }
@@ -2503,6 +2620,10 @@ fn finish_worker(
         if let Some(snapshot) = state.run_snapshots.get_mut(run_id) {
             snapshot.status = match report.as_ref().map(|report| &report.status) {
                 Some(bg_engine::cli::CampaignStatus::Paused { .. }) => "paused".to_owned(),
+                // Resumable, not a failure: the app shows the question.
+                Some(bg_engine::cli::CampaignStatus::DecisionRequired { .. }) => {
+                    "decision_required".to_owned()
+                }
                 _ if error.is_some() => "failed".to_owned(),
                 _ => "complete".to_owned(),
             };
@@ -3288,18 +3409,24 @@ fn project_managed_campaign(
     card: ManagedCampaignCard,
 ) -> Result<ManagedInstallationResponse, CommandError> {
     let path = display_windows_path(&card.record.managed_root)?;
-    let manual_pause = bg_engine::session::SessionStore::open(&card.record.managed_root)
+    let replay = bg_engine::session::SessionStore::open(&card.record.managed_root)
         .and_then(|store| store.replay_for_inspection())
-        .ok()
-        .is_some_and(|replay| {
-            replay
-                .unresolved_step()
-                .is_some_and(|step| step.starts_with("checkpoint:manual-"))
-        });
+        .ok();
+    let manual_pause = replay.as_ref().is_some_and(|replay| {
+        replay
+            .unresolved_step()
+            .is_some_and(|step| step.starts_with("checkpoint:manual-"))
+    });
+    // A question about a download waits for the player's answer.
+    let waiting_for_answer = replay
+        .as_ref()
+        .and_then(|replay| replay.pending_decision())
+        .is_some();
     let customized =
         bg_engine::manual_checkpoint::is_customized(&card.record.managed_root).unwrap_or(true);
     let (status, resumable) = match card.availability {
         CampaignAvailability::Resumable if manual_pause => ("Paused for your mods", true),
+        CampaignAvailability::Resumable if waiting_for_answer => ("Waiting for your answer", true),
         CampaignAvailability::Resumable => ("Build interrupted — ready to resume", true),
         CampaignAvailability::FreshCopyRequired => {
             ("Needs attention — automatic resume unavailable", false)
