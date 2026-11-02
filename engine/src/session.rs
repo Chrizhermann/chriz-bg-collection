@@ -148,6 +148,11 @@ pub enum SessionEvent {
         /// components, other prompt answers or without their recipe checks. Together with
         /// `removed_runs` this rebuilds the remaining plan on a resume.
         changed_runs: Vec<PlannedRun>,
+        /// Set when the part is left out at its own install step because its installer
+        /// failed there, instead of at the payload's acquisition or placing step. Absent in
+        /// every record of an earlier kind, which stay byte-identical.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        failed_run: Option<FailedRun>,
     },
     /// An acquisition or placing step asks the player a question ([`crate::decision`]) and
     /// stops until it is answered. The step stays unresolved, as at a manual checkpoint.
@@ -186,6 +191,18 @@ pub enum SessionEvent {
         /// What changed.
         why: String,
     },
+}
+
+/// The run whose installer failed, and the components it left uninstalled, when a mod is left
+/// out at its install step ([`SessionEvent::ArtifactLeftOut`]).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FailedRun {
+    /// The planned run that failed; its step is `install:<run_id>`.
+    pub run_id: String,
+    /// Its components that WeiDU did not install, in run order. Components before them that
+    /// it did install stay installed.
+    pub components: Vec<u32>,
 }
 
 /// One immutable JSON record in the campaign hash chain.
@@ -887,19 +904,34 @@ fn validate_progress_event(event: &SessionEvent, path: &Path) -> Result<()> {
             plan_sha256,
             removed_runs,
             changed_runs,
+            failed_run,
         } => {
             validate_step(step_id, *attempt, path)?;
             validate_artifact_identifier(artifact_id, "left-out artifact", path)?;
-            let own_step = step_id.strip_prefix("acquire:") == Some(artifact_id.as_str())
-                || step_id
-                    .strip_prefix("materialize:")
-                    .and_then(|rest| rest.strip_prefix(artifact_id.as_str()))
-                    .is_some_and(|root| matches!(root, ":bg1" | ":bg2"));
-            if !own_step {
-                return Err(ledger_error(
-                    path,
-                    "a left-out artifact must end its own acquisition or placing step",
-                ));
+            match failed_run {
+                None => {
+                    let own_step = step_id.strip_prefix("acquire:") == Some(artifact_id.as_str())
+                        || step_id
+                            .strip_prefix("materialize:")
+                            .and_then(|rest| rest.strip_prefix(artifact_id.as_str()))
+                            .is_some_and(|root| matches!(root, ":bg1" | ":bg2"));
+                    if !own_step {
+                        return Err(ledger_error(
+                            path,
+                            "a left-out artifact must end its own acquisition or placing step",
+                        ));
+                    }
+                }
+                Some(failed) => {
+                    if step_id.strip_prefix("install:") != Some(failed.run_id.as_str())
+                        || failed.components.is_empty()
+                    {
+                        return Err(ledger_error(
+                            path,
+                            "a run left out after its installer failed must end its own install step and name the components it did not install",
+                        ));
+                    }
+                }
             }
             let mut runs = BTreeSet::new();
             if removed_runs

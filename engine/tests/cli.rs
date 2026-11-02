@@ -502,6 +502,27 @@ fn display_name_cli_default_is_exact_and_custom_name_reaches_the_registry() {
     );
 }
 
+/// Makes the fixture's BG1 EE Fixpack part a fixed part of the collection, so that a run
+/// failing there (`CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE`) stops the installation, as these resume
+/// tests need. An optional part that fails is left out instead.
+fn fail_once_at_a_fixed_part(fixture: &ExecutableFixture) {
+    let collection = fixture.recipe.join("collection.toml");
+    let text = fs::read_to_string(&collection)
+        .unwrap()
+        .replace("\r\n", "\n");
+    let feature = "id = \"eefix-bg1\"\n";
+    let start = text.find(feature).expect("fixture BG1 fixes feature");
+    let decision = start
+        + text[start..]
+            .find("decision = \"default\"")
+            .expect("fixture BG1 fixes decision");
+    let mut changed = text.clone();
+    changed.replace_range(
+        decision..decision + "decision = \"default\"".len(),
+        "decision = \"mandatory\"",
+    );
+    fs::write(collection, changed).unwrap();
+}
 fn failed_install_fixture() -> (TempDir, PathBuf, PathBuf, PathBuf, PathBuf, PathBuf) {
     let temp = fixture_tempdir();
     let recipe = recipe_with_profiles(&temp);
@@ -2376,6 +2397,57 @@ fn leftovers_in_a_source_game_are_left_out_and_the_installation_completes() {
     }
 }
 
+/// A failed optional run once stopped the installation. Now it is left out, with everything
+/// that needs it, and the installation completes; the receipt names the failed run.
+#[test]
+fn a_failed_optional_run_is_left_out_and_the_installation_completes() {
+    let fixture = executable_fixture();
+    let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    let mut command = executable_command(&fixture);
+    command
+        .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
+        .args(install_args(
+            &fixture.recipe,
+            &fixture.bg1,
+            &fixture.bg2,
+            &fixture.managed,
+            &fixture.cache,
+        ));
+
+    let output = command.output().expect("execute synthetic install");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    let response = json_stdout(&output);
+    assert_eq!(response["status"]["status"], "complete");
+    assert!(marker.is_file(), "the first run failed once");
+    assert!(response["events"].as_array().unwrap().iter().any(|event| {
+        event["type"] == "step_finished"
+            && event["id"] == "install:eefixpack-bg1"
+            && event["outcome"] == "skipped"
+    }));
+    let receipt = read_install_receipt(&fixture);
+    assert_eq!(receipt.left_out.len(), 1, "{:?}", receipt.left_out);
+    let left_out = &receipt.left_out[0];
+    assert_eq!(left_out.artifact_id, "eefixpack");
+    assert_eq!(left_out.failed_run.as_deref(), Some("eefixpack-bg1"));
+    assert_eq!(left_out.runs, vec!["eefixpack-bg1".to_owned()]);
+    let installed = receipt.installed_plan.as_ref().unwrap();
+    assert!(installed.components_for("eefixpack-bg1").is_none());
+    assert!(installed.components_for("eefixpack-bg2").is_some());
+    // The receipt verifies against the ledger, as every completed installation's does.
+    let report = cli()
+        .env("LOCALAPPDATA", &fixture.app_data)
+        .args(["--json", "report", fixture.managed.to_str().unwrap()])
+        .output()
+        .expect("run report");
+    assert!(report.status.success(), "{}", stderr(&report));
+}
+
 #[test]
 fn install_places_component_config_files_before_weidu_in_both_games() {
     const CONTENT: &str = "OUTER_SET fixed = 1\n";
@@ -2566,6 +2638,7 @@ fn setup_name_log_override_reconciles_from_attempt_owned_stdout() {
 fn display_name_and_recipe_are_both_frozen_across_a_failed_install_resume() {
     let fixture = executable_fixture();
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    fail_once_at_a_fixed_part(&fixture);
     let mut install = executable_command(&fixture);
     install
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
@@ -2705,6 +2778,7 @@ fn resume_retains_first_acquisition_after_a_lost_cache_is_redownloaded_via_a_new
         reacquire_through_signed_redirect(&fixture, path, bytes);
     }
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    fail_once_at_a_fixed_part(&fixture);
     let failed = executable_command(&fixture)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
         .args(install_args(
@@ -2814,6 +2888,7 @@ fn resume_retains_first_acquisition_after_a_lost_cache_is_redownloaded_via_a_new
 fn resume_recreates_a_deleted_download_cache() {
     let fixture = executable_fixture();
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    fail_once_at_a_fixed_part(&fixture);
     let failed = executable_command(&fixture)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
         .args(install_args(
@@ -3171,6 +3246,7 @@ fn a_mod_whose_changed_download_cannot_be_used_is_left_out_and_named_in_the_end_
         unusable.clone(),
     )]));
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    fail_once_at_a_fixed_part(&fixture);
 
     let failed = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
@@ -3404,6 +3480,7 @@ fn a_changed_archive_that_would_overwrite_another_mods_file_is_left_out() {
         changed.clone(),
     )]));
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    fail_once_at_a_fixed_part(&fixture);
 
     let failed = executable_command(&fixture)
         .env(DOWNLOAD_ORIGIN, &link.base_url)
@@ -4234,6 +4311,7 @@ fn published_extraction(fixture: &ExecutableFixture, bytes: &[u8]) -> PathBuf {
 fn resume_rebuilds_a_partially_deleted_extraction_and_records_the_repair() {
     let fixture = executable_fixture();
     let marker = fixture._temp.path().join("mock-weidu-failed-once");
+    fail_once_at_a_fixed_part(&fixture);
     let failed = executable_command(&fixture)
         .env("CHRIZ_TEST_MOCK_WEIDU_FAIL_ONCE", &marker)
         .args(install_args(

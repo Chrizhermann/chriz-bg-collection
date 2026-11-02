@@ -9,8 +9,10 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use bg_engine::manifest::Feature;
-use bg_engine::recipe_view::{evaluate, plan_without_artifacts, SelectionEvaluation};
+use bg_engine::manifest::{ComponentRef, Decision, Feature};
+use bg_engine::recipe_view::{
+    evaluate, plan_without_artifacts, plan_without_parts, LeaveOutError, SelectionEvaluation,
+};
 use bg_engine::resolve::{InstallPlan, Selection};
 use bg_engine::Manifest;
 
@@ -348,4 +350,90 @@ fn leaving_out_scs(spell_revisions: bool) {
             evaluation.plan.runs.iter().find(|run| run.run_id == run_id)
         );
     }
+}
+
+/// A component whose installer failed is left out like unticking its feature: the feature and
+/// everything that needs it go, nothing is added, and runs that keep all their components stay
+/// identical. Checked on the first selected optional features of the recommended setup, with
+/// and without Spell Revisions.
+#[test]
+fn a_failed_component_is_left_out_like_unticking_its_feature() {
+    let manifest = curated();
+    for spell_revisions in [true, false] {
+        let selection = recommended(&manifest, spell_revisions);
+        let evaluation = evaluate(&manifest, &selection).unwrap();
+        let candidates = manifest
+            .collection
+            .features
+            .iter()
+            .filter(|feature| {
+                matches!(feature.decision, Decision::Default | Decision::Optional)
+                    && evaluation
+                        .view
+                        .control(&feature.id)
+                        .is_some_and(|control| control.selected)
+                    && feature.components.iter().any(|component| {
+                        evaluation
+                            .plan
+                            .components_for(&component.run_id)
+                            .is_some_and(|components| components.contains(&component.component))
+                    })
+            })
+            .take(6)
+            .collect::<Vec<_>>();
+        assert!(candidates.len() >= 3, "too few optional features to check");
+        for feature in candidates {
+            let failed = feature
+                .components
+                .iter()
+                .find(|component| {
+                    evaluation
+                        .plan
+                        .components_for(&component.run_id)
+                        .is_some_and(|components| components.contains(&component.component))
+                })
+                .unwrap()
+                .clone();
+            let remaining = plan_without_parts(
+                &manifest,
+                &evaluation.normalized_selection,
+                &evaluation.plan,
+                &BTreeSet::new(),
+                &BTreeSet::from([failed.clone()]),
+            )
+            .unwrap_or_else(|error| panic!("{}: {error}", feature.id));
+            let mut unticked_selection = selection.clone();
+            unticked_selection.set_feature(&feature.id, false);
+            let unticked = evaluate(&manifest, &unticked_selection).unwrap().plan;
+            assert_only_removes(&evaluation.plan, &remaining);
+            assert_matches_unticking(&evaluation.plan, &remaining, &unticked);
+            assert!(
+                !remaining
+                    .components_for(&failed.run_id)
+                    .is_some_and(|components| components.contains(&failed.component)),
+                "{}: the failed component is still planned",
+                feature.id
+            );
+        }
+    }
+}
+
+/// A component the recipe always installs cannot be left out when its installer fails: DLC
+/// Merger's merge of Siege of Dragonspear is a fixed part.
+#[test]
+fn a_failed_fixed_component_cannot_be_left_out() {
+    let manifest = curated();
+    let evaluation = evaluate(&manifest, &recommended(&manifest, true)).unwrap();
+    let error = plan_without_parts(
+        &manifest,
+        &evaluation.normalized_selection,
+        &evaluation.plan,
+        &BTreeSet::new(),
+        &BTreeSet::from([ComponentRef {
+            run_id: "dlcmerger-bg1".to_owned(),
+            component: 1,
+        }]),
+    )
+    .unwrap_err();
+    assert!(matches!(error, LeaveOutError::Required { .. }), "{error}");
 }
