@@ -225,6 +225,9 @@ fn candidate(
     }
 }
 
+/// An answer the fake engine stored: managed root, install id, decision id, token and answer.
+type StoredAnswer = (PathBuf, String, String, String, bg_engine::decision::Answer);
+
 struct FakeBridgeEngine {
     bg1: PathBuf,
     bg2: PathBuf,
@@ -239,8 +242,8 @@ struct FakeBridgeEngine {
     profile_repair_result: Mutex<Result<bool, String>>,
     /// The question a campaign waits for, as the engine would report it.
     decision: Mutex<Option<bg_engine::cli::DecisionStatus>>,
-    /// Every answer stored: managed root, install id, decision id, token and answer.
-    answers: Mutex<Vec<(PathBuf, String, String, String, bg_engine::decision::Answer)>>,
+    /// Every answer stored.
+    answers: Mutex<Vec<StoredAnswer>>,
     /// What a resume ends with; complete by default.
     resume_status: Mutex<Option<CampaignStatus>>,
 }
