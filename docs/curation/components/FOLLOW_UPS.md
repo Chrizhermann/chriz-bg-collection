@@ -527,6 +527,15 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Spell Revisions, Artisan's Kitpack and Bardic Wonders forks frozen (Christopher,
   2026-11-03): no more fixes or balancing; CEBG keeps the current pins until the own spell
   mod and own kit mod replace them (design chats running).
+- BG1 NPC Project out of the default (Christopher, 2026-11-03). Today it is on in
+  Recommended (bg1npc v32: components 0, 10, 90, 111, 120, 130, 240, 200). Turn it off by
+  default, and keep it optional. Check what depends on it, e.g. Modpack's "BG1NPC Kivan
+  sea-elf quest: SCS dialogue-phase guard", and the Recommended preset.
+- Boomerang Dagger without BG1 NPC Project (Christopher, 2026-11-03). Put it into the
+  Item Randomiser's BG1 pool in the standard preset. Without the randomiser, place it with
+  a strong rogue, thief or assassin enemy in a BG1 fight; one of our own mods does that,
+  design with Christopher. First verify where the dagger comes from today (its resref and
+  whether BG1 NPC Project adds it).
 
 **Ready to start**
 
