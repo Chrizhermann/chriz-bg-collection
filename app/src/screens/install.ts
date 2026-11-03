@@ -63,7 +63,7 @@ function manualDownloadPanel(model: InstallScreenModel, actions: InstallScreenAc
   heading.id = "manual-download-title";
   panel.append(
     heading,
-    element("p", "manual-download-intro", "CEBG cannot redistribute this mod. Download its official file, then choose that file here so CEBG can verify it."),
+    element("p", "manual-download-intro", "CEBG cannot redistribute this mod. Download its file from the mod's page, then choose that file here. A newer version than the one named below works too."),
   );
 
   for (const requirement of model.manualDownloads) {
@@ -75,7 +75,7 @@ function manualDownloadPanel(model: InstallScreenModel, actions: InstallScreenAc
       element("h3", undefined, requirement.ready ? `${requirement.title} is ready` : requirement.title),
       element("p", undefined, requirement.detail ?? (requirement.ready
         ? "The official file passed its identity check."
-        : "Choose the exact official file shown below.")),
+        : "Choose the file you downloaded. The name below is the version the collection was tested with.")),
       element("p", "manual-download-file", `${requirement.filename} (${formatFileSize(requirement.length)})`),
     );
     const status = element("p", `manual-download-status ${requirement.ready ? "is-ready" : "needs-file"}`, requirement.ready ? "Verified and ready" : "File required");

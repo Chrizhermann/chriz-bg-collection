@@ -29,7 +29,10 @@ pub use cache::{
 pub use damaged::CacheRepair;
 pub use http::validate_redirect_target;
 pub use inspect::{download_for_inspection, QuarantinedDownload};
-pub use manual::{provide_manual_archive, publish_manual_archive, VerifiedManualArchive};
+pub use manual::{
+    inspect_manual_archive, provide_manual_archive, publish_chosen_manual_archive,
+    publish_manual_archive, ChosenManualArchive, VerifiedManualArchive,
+};
 pub use materialize::{
     materialize, plan_materialization, MaterializationRequest, MaterializationResult,
     PlannedMaterialization, PublicationManifest, PublishedPath, SignedCollisionRule,

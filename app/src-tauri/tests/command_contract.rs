@@ -1769,6 +1769,22 @@ fn manual_archive_selection_uses_only_the_trusted_recipe_identity_and_owned_cach
         bytes
     );
     assert_eq!(fs::read(selected).expect("read original selection"), bytes);
+
+    // A newer file than the reviewed one, which once was refused, is published as chosen.
+    let newer = temp.path().join("manual-fixture-newer.zip");
+    fs::write(&newer, b"a newer manual fixture archive").unwrap();
+    let supplied = bridge
+        .supply_manual_archive("manual-fixture", Some(newer))
+        .expect("supply a newer manual archive")
+        .expect("manual archive response");
+    assert_eq!(
+        supplied.length,
+        b"a newer manual fixture archive".len() as u64
+    );
+    assert_eq!(
+        fs::read(temp.path().join(".chriz-cache/manual/manual-fixture.zip")).unwrap(),
+        b"a newer manual fixture archive"
+    );
     assert_eq!(
         bridge
             .supply_manual_archive("not-a-recipe-artifact", Some(temp.path().join("missing")))
@@ -1822,7 +1838,7 @@ fn manual_picker_filter_accepts_each_declared_archive_kind_without_executing_sfx
 }
 
 #[test]
-fn manual_download_inspection_is_selection_scoped_deduped_read_only_and_exact() {
+fn manual_download_inspection_is_selection_scoped_deduped_read_only_and_accepts_a_newer_file() {
     let (temp, recipe) = recipe_with_profiles();
     let expected = b"exact manual fixture";
     make_eefixpack_manual(&recipe, "eefix-official.zip", expected);
@@ -1860,23 +1876,19 @@ fn manual_download_inspection_is_selection_scoped_deduped_read_only_and_exact() 
 
     let cached = cache.join("manual/eefix-official.zip");
     fs::create_dir_all(cached.parent().unwrap()).unwrap();
-    fs::write(&cached, b"short").unwrap();
-    let wrong_length = bridge.inspect_manual_downloads(&selection).unwrap();
-    assert!(!wrong_length[0].ready);
-    assert!(wrong_length[0]
-        .detail
-        .as_deref()
-        .unwrap()
-        .contains("length"));
-
-    fs::write(&cached, vec![b'x'; expected.len()]).unwrap();
-    let wrong_hash = bridge.inspect_manual_downloads(&selection).unwrap();
-    assert!(!wrong_hash[0].ready);
-    assert!(wrong_hash[0]
-        .detail
-        .as_deref()
-        .unwrap()
-        .contains("does not match"));
+    // A different file, for example a newer version, once blocked the installation; now it is
+    // ready and installed as chosen, with a note that says so.
+    for different in [b"short".to_vec(), vec![b'x'; expected.len()]] {
+        fs::write(&cached, &different).unwrap();
+        let chosen = bridge.inspect_manual_downloads(&selection).unwrap();
+        assert!(chosen[0].ready);
+        let note = chosen[0].detail.as_deref().unwrap();
+        assert!(note.contains("differs from the reviewed version"), "{note}");
+        assert!(
+            note.contains(&format!("{} bytes", different.len())),
+            "{note}"
+        );
+    }
 
     fs::write(&cached, expected).unwrap();
     let ready = bridge.inspect_manual_downloads(&selection).unwrap();

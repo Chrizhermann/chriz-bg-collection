@@ -16,10 +16,10 @@ use thiserror::Error;
 
 use crate::acquire::{
     announce_and_wait_before_asking_again, extract_archive_with_stop, extract_served_archive,
-    plan_materialization, provide_manual_archive, AcceptedContent, AcquireError, ArchiveFormat,
-    ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache, AuthorizedContent,
-    CacheDisposition, CacheRepair, DownloadRequest, ExtractedArtifact, MaterializationRequest,
-    ServedRedirects, ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
+    inspect_manual_archive, plan_materialization, served_length_limit, AcceptedContent,
+    AcquireError, ArchiveFormat, ArchiveLimits, ArchiveMode, ArchiveRequirements, ArtifactCache,
+    AuthorizedContent, CacheDisposition, CacheRepair, DownloadRequest, ExtractedArtifact,
+    MaterializationRequest, ServedRedirects, ServedRules, StopSignal, DEFAULT_DOWNLOAD_ATTEMPTS,
 };
 use crate::decision::{
     answered_decisions, Answer, AnswerSource, PendingDecision, PresetAnswers, Question,
@@ -3413,23 +3413,57 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
                             drop_dir: drop_dir.display().to_string(),
                         });
                     }
-                    let verified = provide_manual_archive(&path, &artifact.source.sha256)
-                        .map_err(step_error)?;
-                    if verified.length != expected_length {
+                    // The player chose this file. A newer or different one than the reviewed
+                    // archive is installed and recorded under its own checksum, as a newer file
+                    // under a mod's official link is; it is unpacked with the rules for served
+                    // archives. Once recorded, only that file is used again.
+                    let chosen = inspect_manual_archive(&path).map_err(step_error)?;
+                    let reviewed = chosen.sha256.eq_ignore_ascii_case(&artifact.source.sha256)
+                        && chosen.length == expected_length;
+                    let recorded = authorized
+                        .map(|authorized| (authorized.length(), authorized.sha256()))
+                        .or_else(|| {
+                            first
+                                .filter(|first| first.served_difference.is_some())
+                                .map(|first| (first.length, first.sha256.clone()))
+                        });
+                    if let Some((length, sha256)) = &recorded {
+                        if chosen.length != *length || !chosen.sha256.eq_ignore_ascii_case(sha256) {
+                            return Err(StepFailure::new(format!(
+                                "the file chosen for {} changed after this installation recorded it; choose the recorded file ({length} bytes, SHA-256 {sha256}) again, or start a new installation",
+                                artifact.name
+                            ))
+                            .into());
+                        }
+                    }
+                    if !reviewed && chosen.length > served_length_limit(expected_length) {
                         return Err(StepFailure::new(format!(
-                        "manual artifact {:?} length mismatch: expected {expected_length}, got {}",
-                        artifact.id, verified.length
-                    ))
+                            "the file chosen for {} has {} bytes, more than a newer version of it may have",
+                            artifact.name, chosen.length
+                        ))
                         .into());
                     }
+                    let difference = (!reviewed).then(|| ServedDifference {
+                        reviewed: DownloadIdentity {
+                            filename: artifact.source.expected_filename.clone(),
+                            length: expected_length,
+                            sha256: artifact.source.sha256.to_ascii_lowercase(),
+                        },
+                        served: DownloadIdentity {
+                            filename: Some(filename.to_owned()),
+                            length: chosen.length,
+                            sha256: chosen.sha256.clone(),
+                        },
+                        unreviewed_hosts: Vec::new(),
+                    });
                     (
-                        verified.path,
+                        chosen.path,
                         artifact.source.url.clone(),
                         artifact.source.url.clone(),
-                        verified.length,
-                        verified.sha256,
+                        chosen.length,
+                        chosen.sha256,
                         ArtifactCacheOutcome::Manual,
-                        None,
+                        difference,
                     )
                 }
                 AcquisitionPolicy::Blocked => {
@@ -3511,6 +3545,16 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
     ) {
         let host = final_host(&receipt.final_url);
         let mut line = match &receipt.served_difference {
+            Some(difference) if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied => {
+                format!(
+                    "The file you chose for {} {} is newer or different than the reviewed version. \
+                     Reviewed: {}. Installing the file you chose: {}.",
+                    artifact.name,
+                    artifact.version,
+                    describe_download(&difference.reviewed),
+                    describe_download(&difference.served),
+                )
+            }
             Some(difference) => format!(
                 "The download of {} {} is newer or different than the reviewed version. \
                  Reviewed: {}. Installing what its official link serves: {}, from {host}.",
@@ -3708,6 +3752,14 @@ impl<'a, S: EventSink> GuardedCliDependencies<'a, S> {
         }
         match self.first_acquisition(artifact)? {
             FirstAcquisition::Reviewed(fetched) => {
+                self.record_acquisition(artifact, None, fetched)?;
+                Ok(AcquisitionOutcome::Ready)
+            }
+            // The player chose a manual download's file themselves, which answers the question
+            // a changed link download asks: it is recorded and installed as chosen.
+            FirstAcquisition::Changed(fetched, _)
+                if artifact.acquisition == AcquisitionPolicy::ManualUserSupplied =>
+            {
                 self.record_acquisition(artifact, None, fetched)?;
                 Ok(AcquisitionOutcome::Ready)
             }
