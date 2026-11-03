@@ -4907,6 +4907,69 @@ fn missing_manual_archive_is_reported_as_a_persistent_machine_readable_action() 
         .ends_with("cache\\manual"));
 }
 
+/// A manual download whose chosen file is newer than the reviewed one once stopped the
+/// installation ("does not match the exact archive"). Now it is installed as chosen and
+/// recorded under its own checksum, like a newer file under a mod's official link, without a
+/// question: choosing the file is the player's answer.
+#[cfg(windows)]
+#[test]
+fn a_newer_manual_download_is_installed_as_chosen_and_recorded() {
+    let fixture = executable_fixture();
+    let artifact = fixture.recipe.join("artifacts/eefixpack.toml");
+    let text = fs::read_to_string(&artifact)
+        .unwrap()
+        .replace(
+            "acquisition = \"fetch-only\"",
+            "acquisition = \"manual-user-supplied\"",
+        )
+        .replace("kind = \"github-release\"", "kind = \"manual\"");
+    fs::write(artifact, text).unwrap();
+    let newer = zip_bytes(&[(
+        "EE_Fixpack/EE_Fixpack.tp2",
+        b"BEGIN ~Synthetic EE Fixpack, a newer version~\nDESIGNATED 0\n",
+    )]);
+    let manual = fixture.cache.join("manual");
+    fs::create_dir_all(&manual).unwrap();
+    fs::write(manual.join("ee-fixpack.zip"), &newer).unwrap();
+    let mut command = executable_command(&fixture);
+    command.args(install_args(
+        &fixture.recipe,
+        &fixture.bg1,
+        &fixture.bg2,
+        &fixture.managed,
+        &fixture.cache,
+    ));
+
+    let output = command.output().expect("execute manual-artifact campaign");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        stdout(&output),
+        stderr(&output)
+    );
+    let response = json_stdout(&output);
+    assert_eq!(response["status"]["status"], "complete");
+    let events = response["events"].as_array().unwrap();
+    assert!(!events
+        .iter()
+        .any(|event| event["type"] == "decision_required"));
+    assert!(events.iter().any(|event| event["type"] == "console_line"
+        && event["line"]
+            .as_str()
+            .is_some_and(|line| line.contains("The file you chose for EE Fixpack"))));
+    let receipt = read_install_receipt(&fixture);
+    let recorded = receipt
+        .artifacts
+        .iter()
+        .find(|artifact| artifact.id == "eefixpack")
+        .unwrap();
+    assert_eq!(recorded.sha256, sha256_bytes(&newer));
+    let difference = recorded.served_difference.as_ref().unwrap();
+    assert_eq!(difference.served.sha256, sha256_bytes(&newer));
+    assert_eq!(difference.reviewed.sha256, sha256_bytes(&fixture.payload));
+}
+
 // ----- Questions about downloads, end to end -----
 
 /// Adds Snowfall, a mod from its own download whose feature needs Snowytoes.

@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use bg_engine::acquire::{provide_manual_archive, publish_manual_archive, AcquireError};
+use bg_engine::acquire::{
+    provide_manual_archive, publish_chosen_manual_archive, publish_manual_archive, AcquireError,
+};
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
 
@@ -108,4 +110,45 @@ fn verified_manual_selection_replaces_a_read_only_invalid_cache_file() {
         .collect::<Vec<_>>();
     assert_eq!(names, ["expected.zip"]);
     assert_eq!(std::fs::read(&selected).unwrap(), bytes);
+}
+
+/// The file a player chose for a manual download is published as chosen: the reviewed one, or
+/// a newer one, which once was refused. Only a file larger than a newer version may be is
+/// refused, and nothing is published then.
+#[test]
+fn a_chosen_manual_archive_is_published_reviewed_or_newer_within_its_size_bound() {
+    let temp = TempDir::new().unwrap();
+    let reviewed = b"reviewed archive";
+    let destination = temp.path().join("cache/manual/mod.zip");
+    for (bytes, is_reviewed) in [
+        (&reviewed[..], true),
+        (&b"a newer archive, a bit longer"[..], false),
+    ] {
+        let selected = temp.path().join("chosen.zip");
+        std::fs::write(&selected, bytes).unwrap();
+        let chosen = publish_chosen_manual_archive(
+            &selected,
+            &destination,
+            &sha256(reviewed),
+            reviewed.len() as u64,
+            64,
+        )
+        .unwrap();
+        assert_eq!(chosen.reviewed, is_reviewed);
+        assert_eq!(chosen.archive.sha256, sha256(bytes));
+        assert_eq!(std::fs::read(&destination).unwrap(), bytes);
+    }
+
+    let too_large = temp.path().join("too-large.zip");
+    std::fs::write(&too_large, vec![b'x'; 65]).unwrap();
+    let error = publish_chosen_manual_archive(
+        &too_large,
+        &temp.path().join("cache/manual/other.zip"),
+        &sha256(reviewed),
+        reviewed.len() as u64,
+        64,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("more than"), "{error}");
+    assert!(!temp.path().join("cache/manual/other.zip").exists());
 }
