@@ -1219,7 +1219,7 @@ class AppController implements AppHandle {
         this.#installId = event.install_id;
         this.#stopAnswer = null;
         this.#activeStepId = null;
-        next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.step_id} waits for your answer about a download`) };
+        next = { ...current, logTail: log(`${envelope.sequenceAsString}: ${event.step_id} waits for your answer`) };
         break;
       case "campaign_finished":
         this.#stopAnswer = null;

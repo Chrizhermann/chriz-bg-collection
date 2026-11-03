@@ -1581,6 +1581,13 @@ fn left_out_runs(replay: &SessionReplay) -> BTreeSet<String> {
 }
 /// One sentence that names `question`, for the installation log and "You chose to stop: …".
 fn question_summary(frozen: &FrozenCliRecipe, question: &Question) -> String {
+    if question.kind == QuestionKind::ModdedSource {
+        let (game, source) = source_of_question(frozen, question);
+        return format!(
+            "your {game} game at {} looks modded already.",
+            source.root.display()
+        );
+    }
     let name = frozen_artifact_name(frozen, &question.artifact_id);
     match (question.kind, &question.reason, &question.served) {
         (QuestionKind::UnusableDownload, Some(reason), _) => {
@@ -1653,6 +1660,18 @@ fn affected_mods(
     (left_out, reduced)
 }
 
+/// The game a [`QuestionKind::ModdedSource`] question is about, and its frozen source.
+fn source_of_question<'a>(
+    frozen: &'a FrozenCliRecipe,
+    question: &Question,
+) -> (&'static str, &'a FrozenSource) {
+    if question.artifact_id == crate::decision::source_subject(GameRole::Bg2ee) {
+        ("Baldur's Gate II", &frozen.bg2)
+    } else {
+        ("Baldur's Gate", &frozen.bg1)
+    }
+}
+
 /// `question` in the player's words, as the app and the command line show it. `earlier` are
 /// the runs that earlier leave-outs of this installation removed.
 fn render_question(
@@ -1693,6 +1712,33 @@ fn render_question(
     };
     let after_no = "You chose to stop. Resume this installation to check the download again.";
     match question.kind {
+        QuestionKind::ModdedSource => {
+            let (game, source) = source_of_question(frozen, question);
+            QuestionTexts {
+                message: "Your game looks modded already. Installing on top of it may fail later. Continue anyway? If you're not sure, choose No."
+                    .to_owned(),
+                details: vec![
+                    format!("{game}: {}", source.root.display()),
+                    format!(
+                        "Version: {}",
+                        source.build.as_deref().unwrap_or("unknown")
+                    ),
+                    "For the best result, restore a clean game first, for example with your store's verify or repair option.".to_owned(),
+                ],
+                answers: vec![
+                    AnswerText {
+                        answer: Answer::Yes,
+                        label: "Yes, continue anyway".to_owned(),
+                    },
+                    AnswerText {
+                        answer: Answer::No,
+                        label: "No, stop the installation".to_owned(),
+                    },
+                ],
+                focus: Answer::No,
+                after_no: "You chose to stop. Restore a clean game, or resume this installation to be asked again.".to_owned(),
+            }
+        }
         QuestionKind::UnusableDownload => {
             let short = question
                 .reason
@@ -2109,6 +2155,17 @@ fn receipt_notes(receipt: &InstallReceipt, frozen: &FrozenCliRecipe) -> Vec<Stri
             (QuestionKind::ChangedDownload, Answer::Yes) => {
                 notes.push(format!(
                     "You chose to install a newer download of {name} ({file})."
+                ));
+            }
+            (QuestionKind::ModdedSource, Answer::Yes) => {
+                let game =
+                    if decision.artifact_id == crate::decision::source_subject(GameRole::Bg2ee) {
+                        "Baldur's Gate II"
+                    } else {
+                        "Baldur's Gate"
+                    };
+                notes.push(format!(
+                    "You chose to install on top of your {game} game, which looks modded already."
                 ));
             }
             (QuestionKind::UnreviewedTool, Answer::Yes) => {
@@ -4866,6 +4923,38 @@ impl<S: EventSink> StagingService for GuardedCliDependencies<'_, S> {
                 .map(|_| ())
                 .map_err(stage_error),
         }
+    }
+
+    fn source_question(&mut self, role: GameRole) -> Result<Option<Question>, StepFailure> {
+        let (candidate, frozen) = match role {
+            GameRole::BgeeSod => (&self.current_bg1, &self.frozen.bg1),
+            GameRole::Bg2ee => (&self.current_bg2, &self.frozen.bg2),
+        };
+        // Clearly modded: files that mods change differ from a clean game, or files sit in
+        // the override folder, which a clean game leaves empty. Leftovers alone that the copy
+        // leaves out are no reason to ask.
+        let modded = candidate
+            .findings
+            .iter()
+            .any(|finding| finding.kind == crate::games::FindingKind::Modified);
+        if !modded {
+            return Ok(None);
+        }
+        let subject = crate::decision::source_subject(role).to_owned();
+        Ok(Some(Question {
+            kind: QuestionKind::ModdedSource,
+            artifact_id: subject.clone(),
+            artifact_kind: ArtifactKind::Payload,
+            reviewed: FrozenIdentity {
+                id: subject,
+                version: frozen.build.clone().unwrap_or_else(|| "unknown".to_owned()),
+                sha256: frozen.fingerprint.clone(),
+                length: 0,
+            },
+            served: None,
+            reason: None,
+            leave_out: None,
+        }))
     }
 
     fn finalize_identity(&mut self) -> Result<(), StepFailure> {

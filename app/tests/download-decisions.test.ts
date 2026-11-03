@@ -43,6 +43,14 @@ const unreviewedTool: PendingDecision = {
   focus: "no",
 };
 
+const moddedSource: PendingDecision = {
+  ...changedOptional, kind: "modded_source", stepId: "stage:bg1", artifactId: "source-bg1",
+  message: "Your game looks modded already. Installing on top of it may fail later. Continue anyway? If you're not sure, choose No.",
+  details: ["Baldur's Gate: D:\\Games\\BGEE", "Version: 2.7.3.0", "For the best result, restore a clean game first, for example with your store's verify or repair option."],
+  answers: [{ answer: "yes", label: "Yes, continue anyway" }, { answer: "no", label: "No, stop the installation" }],
+  focus: "no", afterNo: "You chose to stop. Restore a clean game, or resume this installation to be asked again.",
+};
+
 function buttonLabels(container: HTMLElement): string[] {
   return [...container.querySelectorAll(".decision-dialog button")].map(button => button.textContent ?? "");
 }
@@ -98,6 +106,17 @@ describe("download question dialog", () => {
     expect(root.textContent).toContain("It came from mirror.example.test, which the collection did not review. If you're not sure, stop the installation.");
     expect(buttonLabels(root)).toEqual(["Install it", "Stop the installation"]);
     expect(document.activeElement?.textContent).toBe("Stop the installation");
+  });
+
+  it("asks once about a source game that looks modded, with the advice to choose No and the focus on No", async () => {
+    const { root, answer } = shown(moddedSource);
+    const dialog = getByRole(root, "dialog", { name: "Your game needs your answer" });
+    expect(getByText(dialog, moddedSource.message)).toBeTruthy();
+    expect(dialog.textContent).toContain("If you're not sure, choose No.");
+    expect(buttonLabels(root)).toEqual(["Yes, continue anyway", "No, stop the installation"]);
+    expect(document.activeElement?.textContent).toBe("No, stop the installation");
+    await userEvent.setup().click(getByRole(dialog, "button", { name: "Yes, continue anyway" }));
+    expect(answer).toHaveBeenCalledWith("yes");
   });
 
   it("disables every answer while one is saved and shows a failure as an alert", async () => {
