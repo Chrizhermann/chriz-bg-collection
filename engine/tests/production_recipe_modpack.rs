@@ -30,9 +30,8 @@ const CONTINUITY_COMPONENTS: &[u32] = &[199];
 /// alpha.14 pin adds alpha.13's Dorn ambush fix 135 after 130 and its party AI
 /// Defensive Stance fix 460 after 450, in TP2 order. The November 3 alpha.15 pin adds
 /// Marek's Boomerang Dagger 670 after 660, in TP2 order.
-const POST_EET_END_COMPONENTS: &[u32] = &[
-    130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670,
-];
+const POST_EET_END_COMPONENTS: &[u32] =
+    &[130, 135, 400, 410, 440, 450, 460, 610, 611, 630, 660, 670];
 
 const RECOMMENDED_PRE_CONTINUITY_COMPONENTS: &[u32] = &[
     110, 140, 170, 188, 190, 192, 193, 194, 195, 196, 197, 198, 220, 221, 230, 231, 232, 233, 234,
