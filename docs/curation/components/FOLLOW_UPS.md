@@ -594,6 +594,15 @@ Cross-repository status. Component detail stays in the sections below and in the
 - Christopher's own Elementalist Druid mod: the design continues right after alpha.22
   (Christopher, 2026-10-25). A design record from May/June 2026 exists; which sprites
   the forms use is still open.
+- Open saves & portraits folder
+  ([PR #82](https://github.com/Chrizhermann/chriz-bg-collection/pull/82), 2026-11-02): a
+  YouTube viewer could not find where custom portraits go. Each installation keeps its
+  saves and portraits in its own Documents folder, `<installation name> - <12-character
+  code>`, and the game never creates the `portraits` folder there. My installs gets a
+  button that creates it and opens the folder, the folder's path under Installation
+  details and a first-play tip. It goes into 0.1.1, the release after 0.1.0 (Christopher,
+  2026-11-02), through the next-release branch. Still open: Chriz Easy IWD
+  (`claude/iwdee-app`) needs the same change afterwards.
 - Fewer installer stops in both installers, as quick patches after the release (blocker
   audit of 2026-10-30; Christopher: as few blockers as possible, only PC and source-game
   safety stays strict):

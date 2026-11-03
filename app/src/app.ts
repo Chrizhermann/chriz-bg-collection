@@ -1475,6 +1475,10 @@ class AppController implements AppHandle {
     await this.backend.openInstallFolder(installId);
   }
 
+  async #openProfileFolder(installId: string): Promise<void> {
+    await this.backend.openProfileFolder(installId);
+  }
+
   async #createDesktopShortcut(installId: string): Promise<void> {
     if (!this.#installations.some((installation) => installation.id === installId && installation.available)) return;
     try {
@@ -1961,6 +1965,7 @@ class AppController implements AppHandle {
         launch: (installId, startRadar) => safely(() => this.#launchInstall(installId, startRadar)),
         setStartRadar: (installId, enabled) => this.#radarLaunchPreferences.set(installId, enabled),
         openFolder: (installId) => safely(() => this.#openInstallFolder(installId)),
+        openProfileFolder: (installId) => safely(() => this.#openProfileFolder(installId)),
         resume: (installId) => safely(() => this.#resumeManagedInstall(installId)),
         select: (installId) => this.#selectManagedInstallation(installId),
         createShortcut: (installId) => this.#createDesktopShortcut(installId),
