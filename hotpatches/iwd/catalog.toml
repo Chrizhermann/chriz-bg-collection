@@ -73,3 +73,93 @@ id = "iwd-0.1.5"
 label = "Chriz Easy IWD 0.1.5"
 recipe_version = "0.1.5"
 content_sha256 = "03620b43e93a779bc03d8375bbd6d2568e9a3224cf064d6ce7e4e8d5cfa2f365"
+
+[[bases]]
+id = "iwd-0.1.6"
+label = "Chriz Easy IWD 0.1.6"
+recipe_version = "0.1.6"
+content_sha256 = "8e988385fb500f4efd6463bb391ca37a82c2187037bd1ce8742696899ee233ad"
+
+# Christopher's twelve boss fights (Chriz IWD Encounters 0.2.0, 2026-11-04) for installations of
+# the releases before 0.1.6, which install them itself. Each fight takes effect where the party
+# has not been yet; the orog raid's changes also while the raid has not happened.
+[[hotpatches]]
+id = "chriz-iwd-encounters-0.2.0-fights"
+title = "Twelve boss fights"
+summary = "Christopher's twelve boss fights from Chriz IWD Encounters 0.2.0 for the game you are playing: harder through behaviour and tactics, from the orog raid on Kuldahar to Belhifet."
+bases = ["iwd-0.1.1", "iwd-0.1.2", "iwd-0.1.3", "iwd-0.1.4", "iwd-0.1.5"]
+artifact = "chriz-iwd-encounters-0.2.0"
+mod = "chriz-iwd-encounters"
+components = [300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410]
+
+[[hotpatches.changes]]
+title = "The orog raid on Kuldahar"
+summary = "Once one group wakes, all the orogs wake and come for the party; their three leaders charge after a war horn."
+save_applicability = "before-event"
+condition_note = "Your game gets it if the raid on Kuldahar has not happened yet."
+
+[[hotpatches.changes]]
+title = "Yxunomei's temple"
+summary = "Her mages come when the fight starts and walk to the party, her champions join her, yuan-ti elites on Hard and Insane."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached Yxunomei's level of the Dragon's Eye yet."
+
+[[hotpatches.changes]]
+title = "Joril's throne room"
+summary = "More hit points for Joril, Berserker rage and Hold Person for his court, Gorg's wolves come to him."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached Joril's court in Wyrm's Tooth yet."
+
+[[hotpatches.changes]]
+title = "Maiden Ilmadia's forge"
+summary = "Her Blackguard abilities and more hit points; her fire giants gather at her side."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached the Great Forge in Lower Dorn's Deep yet."
+
+[[hotpatches.changes]]
+title = "The Idol"
+summary = "One spell per round, each on a cooldown and only where it works; more hit points; its undead come when it is attacked."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached Poquelin's temple in Lower Dorn's Deep yet."
+
+[[hotpatches.changes]]
+title = "Poquelin in the Ascension Cave"
+summary = "More hit points; below three quarters he jumps away, calls Fire Storm and the next wave comes at once."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached the Ascension Cave yet."
+
+[[hotpatches.changes]]
+title = "Cryshal-Tirith"
+summary = "Pomab's images look like him and hide him again after every hit; his sentries guard him."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached Pomab's tower yet."
+
+[[hotpatches.changes]]
+title = "Belhifet's final fight"
+summary = "No blanket spell immunity, more hit points by difficulty, his cornugons as a second wave."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached the final battle yet."
+
+[[hotpatches.changes]]
+title = "Mebdinga's barrow"
+summary = "Her wails come on time, an honour guard of wights and drowned dead, a Lament below half on Hard and Insane."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not been to the barrow under the Burial Isle yet."
+
+[[hotpatches.changes]]
+title = "Icasaracht's lair"
+summary = "More hit points for her and her soul gem, no second gem, the second underpriestess repaired."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached Icasaracht's lair yet."
+
+[[hotpatches.changes]]
+title = "Lord Maluradek"
+summary = "His banishment rooms fill with animated plates that fight; more hit points; all rooms wake below half."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached the upper floor of the Luremaster's keep yet."
+
+[[hotpatches.changes]]
+title = "The Luremaster"
+summary = "He opens with Improved Invisibility, hops away when an enemy reaches him, his Dispel Magic works."
+save_applicability = "before-area-visit"
+condition_note = "Your game gets it if you have not reached the Luremaster's hall yet."
